@@ -1,8 +1,9 @@
 /** Closed portable-manifest property schema. */
 const MANIFEST_KEYS = new Set(['schemaVersion', 'manifestId', 'sourceSha256', 'rulesPreference', 'spellcastingGroups']);
-const GROUP_KEYS = new Set(['groupId', 'featureItemKey', 'ability', 'saveDc', 'attackBonus', 'spellRefs']);
+const GROUP_KEYS = new Set(['groupId', 'featureItemKey', 'ability', 'saveDc', 'attackBonus', 'recharge', 'spellRefs']);
 const REF_KEYS = new Set([
   'refId',
+  'reuseOf',
   'identifier',
   'originalName',
   'englishName',
@@ -42,6 +43,7 @@ export function listUnknownManifestProperties(value: unknown): UnknownManifestPr
       if (!isRecord(ref)) return;
       const refPath = `${groupPath}/spellRefs/${refIndex}`;
       collectUnknownKeys(ref, REF_KEYS, refPath, result);
+      if (isRecord(ref.reuseOf)) collectUnknownKeys(ref.reuseOf, new Set(['groupId','refId']), `${refPath}/reuseOf`, result);
       if (isRecord(ref.uses)) collectUnknownKeys(ref.uses, USES_KEYS, `${refPath}/uses`, result);
       collectRestrictions(ref.restrictions, `${refPath}/restrictions`, result);
       collectEvidenceArray(ref.evidence, `${refPath}/evidence`, result);

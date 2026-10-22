@@ -455,10 +455,29 @@ export function decodeForgeActorResult(value: unknown): ForgeDecodeResult<ForgeA
     return success({ ...base, status, ...(artifact ? { artifact } : {}) });
   }
 
-  if (Object.prototype.hasOwnProperty.call(record, 'artifact')) {
-    issue(issues, '$/artifact', 'UNEXPECTED_FIELD', 'Failed results must not include artifact.');
+  const artifact = Object.prototype.hasOwnProperty.call(record, 'artifact')
+    ? readJsonObject(record, 'artifact', '$', issues)
+    : undefined;
+  if (artifact && !isUsableActorCandidateArtifact(artifact)) {
+    issue(issues, '$/artifact', 'INVALID_ACTOR_CANDIDATE', 'A failed result may retain only a structurally usable NPC candidate.');
   }
-  return issues.length > 0 ? failure(issues) : success({ ...base, status });
+  return issues.length > 0 ? failure(issues) : success({ ...base, status, ...(artifact ? { artifact } : {}) });
+}
+
+/** Candidate delivery is independent of its semantic verdict, but still
+ * requires JSON-safe document containers. This is not semantic acceptance. */
+export function isUsableActorCandidateArtifact(value: unknown): value is JsonObject {
+  if (!isJsonObject(value) || typeof value.name !== 'string' || !value.name.trim()
+    || value.type !== 'npc' || !isJsonObject(value.system) || !Array.isArray(value.items)
+    || value.items.some(item => !isJsonObject(item) || typeof item.name !== 'string'
+      || !item.name.trim() || typeof item.type !== 'string' || !item.type.trim() || !isJsonObject(item.system))
+    || (value.effects !== undefined && (!Array.isArray(value.effects) || value.effects.some(effect => !isJsonObject(effect))))) return false;
+  const safeKeys = (entry: JsonValue): boolean => {
+    if (!entry || typeof entry !== 'object') return true;
+    if (Array.isArray(entry)) return entry.every(safeKeys);
+    return Object.entries(entry).every(([key, child]) => !['__proto__', 'prototype', 'constructor'].includes(key) && safeKeys(child));
+  };
+  return safeKeys(value);
 }
 
 export function decodeForgeItemResult(value: unknown): ForgeDecodeResult<ForgeItemResult> {

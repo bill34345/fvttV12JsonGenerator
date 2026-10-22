@@ -56,6 +56,19 @@ test('ordinary spells with no source duration override retain every effect field
   expect(planSpellEffectDuration(original, original, undefined)).toEqual({ effects: original.effects, changedEffectIds: [], unresolvedEffectIds: [] });
 });
 
+test('reviewed PHB2024 Charm Person lifetime effect inherits24h without rewriting its source3600 or other rules',()=>{
+  const original=source();original._stats.compendiumSource='Compendium.dnd-players-handbook.spells.Item.phbsplCharmPerso';original.system.identifier='charm-person';
+  original.effects[0]!._id='78JcD7wFiSCOfmns';original.effects[0]!.description='<p>The target is Charmed until the spell ends.</p>';
+  Object.assign(original.effects[0]!,{statuses:['charmed']});original.system.activities.utility.type='save';
+  original.system.activities.utility.effects[0]!._id='78JcD7wFiSCOfmns';
+  const before=structuredClone(original),result=planSpellEffectDuration(original,original,override);
+  expect(result.changedEffectIds).toEqual(['78JcD7wFiSCOfmns']);expect(result.effects[0]!.duration.value).toBe(86400);
+  expect(result.effects.slice(1)).toEqual(before.effects.slice(1));expect(result.effects[0]!.description).toBe(before.effects[0]!.description);expect(original).toEqual(before);
+  for(const mutate of [(data:any)=>{data._stats.compendiumSource='Compendium.custom.spells.Item.phbsplCharmPerso';},(data:any)=>{data.system.identifier='other-spell';},(data:any)=>{data.effects[0]._id='UnreviewedEffect';data.system.activities.utility.effects[0]._id='UnreviewedEffect';},(data:any)=>{data.system.activities.utility.type='utility';},(data:any)=>{data.effects[0].statuses=['poisoned'];}]){
+    const unrelated=structuredClone(original);mutate(unrelated);expect(planSpellEffectDuration(unrelated,unrelated,override).changedEffectIds).toEqual([]);
+  }
+});
+
 
 test('a linked independent effect with the same duration is retained for GM review', () => {
   const original = source();

@@ -25,7 +25,8 @@ import { completeSourceFeatureEvidence, sourceFeatureLegendaryCost, sourceRuleTe
 import {sourceStatHeader} from './staged-source';
 import {sourceSenseQualifier} from './staged-source-facts';
 import {headerPresentation} from './header-presentation';
-import {sourceAttackDamageModes,sourceFeatureResources,sourceOperationTargetType,sourceOperationSelfTarget,sourceOperationSelfArea} from '@fvtt-json-generator/models/source-operations';
+import {sizeChoiceProgramNote} from './source-size';
+import {sourceAttackDamageModes,sourceFeatureResources,sourceOperationTargetType,sourceOperationTargetCount,sourceLegendaryLairResistance,sourceOperationSelfTarget,sourceOperationSelfArea,isNeutralSourceAttack} from '@fvtt-json-generator/models/source-operations';
 
 export interface IntakeVerificationReport {
   schemaVersion: 1;
@@ -83,6 +84,15 @@ export function verifyMonsterIntake(
   if(expected.identity.swarmSize===undefined&&projection.swarmSize!==undefined)add('ACTOR_SWARM_SIZE_DRIFT','/creature/identity/swarmSize','An ordinary creature cannot acquire a swarm member size without source evidence.');
   if(expected.legendary)compare(add,'ACTOR_LEGENDARY_BUDGET_DRIFT','/creature/legendary/max',expected.legendary.max,
     numeric(asRecord(asRecord(asRecord(asRecord(actor).system).resources).legact).max));
+  if(expected.legendary?.lairMax){
+    const resources=asRecord(asRecord(asRecord(actor).system).resources),lair=asRecord(resources.lair);
+    const marker=asRecord(asRecord(asRecord(asRecord(actor).flags).fvttJsonGenerator).sourceLegendaryLedger);
+    if(lair.value!==true||lair.inside!==false||marker.version!==1||marker.max!==expected.legendary.max||marker.lairMax!==expected.legendary.lairMax||marker.recovery!==expected.legendary.recovery)
+      add('ACTOR_LEGENDARY_LAIR_DRIFT','/creature/legendary','Both native lair choices and source recovery boundary must survive into the Actor.');
+    const resistance=expected.traits.flatMap(feature=>{const value=sourceLegendaryLairResistance(feature.name,feature.description,[expected.identity.name,expected.identity.englishName].filter((name):name is string=>!!name));return value?[value]:[];})[0];
+    if(resistance&&(numeric(asRecord(resources.legres).max)!==resistance.max||marker.resistanceMax!==resistance.max||marker.resistanceLairMax!==resistance.lairMax))
+      add('ACTOR_LEGENDARY_RESISTANCE_DRIFT','/creature/legendary','Conditional resistance counter must retain the same native base/lair choices.');
+  }
   compare(add, 'ACTOR_TYPE_DRIFT', '/creature/identity/creatureType', normalizeCreatureTypeFixed(expected.identity.creatureType), normalizeCreatureTypeFixed(projection.creatureType));
   compare(add, 'ACTOR_CREATURE_TYPE_CUSTOM_DRIFT', '/creature/identity/creatureTypeCustom', compact(expected.identity.creatureTypeCustom), compact(projection.creatureTypeCustom));
   for (const ability of ['str', 'dex', 'con', 'int', 'wis', 'cha'] as AbilityKey[]) {
@@ -130,6 +140,18 @@ export function verifyMonsterIntake(
   // decoded description, while retaining the exact source evidence separately.
   const decodedDescriptions:string[]=[];
   const frontmatter=markdown.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/u);
+  const sizeChoiceNote=sizeChoiceProgramNote(expected.identity);
+  if(sizeChoiceNote){
+    let document:Record<string,unknown>={};
+    if(frontmatter){try{document=asRecord(yaml.load(frontmatter[1]!));}catch{/* The formal parser rejects malformed YAML. */}}
+    const notes=asRecord(document['intake-biography-presentation']).programNotes;
+    if(!Array.isArray(notes)||!notes.includes(sizeChoiceNote)||!String(document['传记']??'').includes(sizeChoiceNote))
+      add('MARKDOWN_SIZE_OPTIONS_LOSS','/markdown/传记','Rendered Markdown must visibly retain every source size option and its current-size/GM-selection boundary.');
+    const presentation=asRecord(asRecord(asRecord(actor).flags).fvttJsonGenerator).biographyPresentation;
+    const actualNotes=asRecord(presentation).programNotes;
+    if(!Array.isArray(actualNotes)||!actualNotes.includes(sizeChoiceNote)||!String(projection.biography??'').includes(sizeChoiceNote))
+      add('ACTOR_SIZE_OPTIONS_LOSS','/creature/identity/sourceSize','The final Actor must visibly retain every source size option; metadata alone cannot replace the GM rule.');
+  }
   if(frontmatter){try{
     const document=asRecord(yaml.load(frontmatter[1]!));
     for(const section of ['特性','动作','附赠动作','反应','传奇动作','神话动作']){
@@ -247,6 +269,8 @@ function verifyPortableSpellResolution(
     if(!group.usageGroups.length||!group.activationType)continue;
     const feature=items.find((item:any)=>item.flags?.[RESOLVER_MODULE_ID]?.groupId===group.groupId);
     if(feature?.flags?.fvttJsonGenerator?.spellcastingActivationType!==group.activationType)add('SPELL_ACTIVATION_DRIFT','/actor/items','Explicit source casting timing must survive into the generated feature marker.');
+    if(group.legendaryCost!==undefined&&feature?.flags?.fvttJsonGenerator?.spellcastingActivationCost!==group.legendaryCost)add('SPELL_LEGENDARY_COST_DRIFT','/actor/items','Legendary Cast source cost must survive on the linked feature.');
+    if(group.recharge&&(String(feature?.system?.uses?.max)!=='1'||!feature?.system?.uses?.recovery?.some((recovery:any)=>recovery.period==='recharge'&&String(recovery.formula)===String(group.recharge![0]))))add('SPELL_RECHARGE_DRIFT','/actor/items','Recharge Cast must retain its source-owned parent pool.');
   }
   for(const group of ir.creature.spellcasting??[]){
     const shared=group.usageGroups.find(usage=>usage.usage==='daily-shared');
@@ -613,12 +637,14 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
       range: asRecord(activity.range),
       attackMode: asRecord(asRecord(activity.attack).type).value,
       attackData:asRecord(activity.attack),
+      rollData:asRecord(activity.roll),
       sourceOperation:asRecord(asRecord(asRecord(activity.flags).fvttJsonGenerator).sourceOperation),
       onSave:activityDamage.onSave,
       includeBase:activityDamage.includeBase,
       targetSpecial:asRecord(asRecord(activity.target).affects).special,
       targetAffects:asRecord(asRecord(activity.target).affects),
       targetPrompt:asRecord(activity.target).prompt,
+      targetOverride:asRecord(activity.target).override,
       healing:{formula:damageFormulaFromActivityPart(asRecord(activity.healing),activity,damageAbilities),types:arrayValues(asRecord(activity.healing).types)},
       damageParts:parts.map(part=>({formula:damageFormulaFromActivityPart(part,activity,damageAbilities),types:arrayValues(part.types)})),
       effectLinks: Array.isArray(activity.effects)?activity.effects.length:0,
@@ -644,7 +670,9 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
     section: tidyFlags.section ?? tidyFlags.actionSection,
     activation: activation.type ?? activityActivation.type,
     activationValue: activation.value ?? activityActivation.value,
-    description: stripHtml(String(activityDescription.chatFlavor ?? description.value ?? '')),
+    // The visible Item rule must stand on its own. A preserved Activity chat
+    // flavor cannot certify a truncated or replaced Item description.
+    description: stripHtml(String(description.value ?? '')),
     attackType: asRecord(attack.type).value==='melee'?(asRecord(attack.type).classification==='spell'?'msak':'mwak')
       :asRecord(attack.type).value==='ranged'?(asRecord(attack.type).classification==='spell'?'rsak':'rwak'):asRecord(attack.type).value,
     toHit,
@@ -776,6 +804,10 @@ function compareFeatureSections(
     }
     const description = String(found.description ?? '');
     const path=`/creature/${section}/${index}`;
+    // The established legendary projection defaults an unlabelled action to
+    // one. Verify that value for manual and SourceOP Items as well as explicit
+    // Costs-N actions; an omitted IR field must not disable final readback.
+    if(expectedItemActivation==='legendary')compare(add,'ACTOR_LEGENDARY_COST_DRIFT',path+'/legendaryCost',feature.legendaryCost??1,found.activationValue);
     const sharedPool=context.ir.creature.sourceResourcePools?.find(pool=>pool.members.some(member=>member.collection===section&&member.index===index));
     const sharedCarrier=sharedPool?items.find(item=>item.sourceFeatureId===sharedPool.members[0]!.featureId):undefined;
     const isSharedCarrier=sharedPool?.members[0]?.featureId===feature.sourceFeatureId;
@@ -800,7 +832,6 @@ function compareFeatureSections(
       const expectedMax=feature.uses?.max??(feature.recharge?1:undefined),recovery=feature.uses?[{period:({day:'day',longRest:'lr',shortRest:'sr',dawn:'dawn'} as const)[feature.uses.period],type:'recoverAll'}]:feature.recharge?[{period:'recharge',type:'recoverAll',formula:String(feature.recharge[0])}]:[];
       if(uses.max!==expectedMax||JSON.stringify(found.useRecovery)!==JSON.stringify(recovery))
         add('ACTOR_MANUAL_RESOURCE_DRIFT',path,'Manual maximum and recovery must match the source-proven optional counter; no additional native counter may appear.');
-      if(feature.legendaryCost!==undefined)compare(add,'ACTOR_LEGENDARY_COST_DRIFT',path+'/legendaryCost',feature.legendaryCost,found.activationValue);
       continue;
     }
     if(feature.sourceOperations){
@@ -818,7 +849,7 @@ function compareFeatureSections(
         ];
       });
       const dual=(op:ViewOp)=>Boolean(!(modes?.kind==='versatile'&&op.id===modes.attackId)&&op.attack?.reach!==undefined&&op.attack.range!==undefined&&op.attack.type.startsWith('m'));
-      if(activities.length!==viewOps.reduce((count,op)=>count+(dual(op)?2:1),0)||found.effectCount!==expectedEffectCount)add('ACTOR_SOURCE_OPERATION_COUNT_DRIFT',path,'Only source-proven operations and mutually exclusive attack modes may execute.');
+      if(activities.length!==viewOps.reduce((count,op)=>count+(isNeutralSourceAttack(op)?1+(op.damage?.length?1:0):dual(op)?2:1),0)||found.effectCount!==expectedEffectCount)add('ACTOR_SOURCE_OPERATION_COUNT_DRIFT',path,'Only source-proven operations and mutually exclusive attack modes may execute.');
       if(modes?.kind==='versatile'){
         const native=asRecord(found.nativeWeapon),damage=asRecord(native.damage),weaponType=asRecord(native.type),range=asRecord(native.range),op=feature.sourceOperations.find(op=>op.id===modes.attackId)!;
         const partMatches=(value:unknown,expected:typeof modes.ordinary)=>{const part=asRecord(value);return compact(damageFormulaFromActivityPart(part,{attack:{ability:'none'}},{}))===compact(expected.formula)&&JSON.stringify(arrayValues(part.types))===JSON.stringify(expected.types??[expected.type]);};
@@ -829,6 +860,30 @@ function compareFeatureSections(
         const nativeVersatile=modes?.kind==='versatile'&&op.id===modes.attackId;
         const matches=activities.filter(activity=>asRecord(activity.sourceOperation).id===op.id&&asRecord(activity.sourceOperation).damageMode===op.damageMode),activity=matches[0]??{};
         const condition=[contexts.join('\n'),op.condition,feature.description].filter(Boolean).join('\n');
+        if(matches.some(entry=>JSON.stringify(asRecord(entry.sourceOperation).damageAdjustment)!==JSON.stringify(op.damageAdjustment)))add('ACTOR_SOURCE_OPERATION_DAMAGE_ADJUSTMENT_DRIFT',path+'/sourceOperations/'+op.id,'The source-bound outgoing damage condition and factor must be retained without an extra roll or automatic effect.');
+        if(isNeutralSourceAttack(op)){
+          const rolls=matches.filter(entry=>asRecord(entry.sourceOperation).role==='attack-roll'),damages=matches.filter(entry=>asRecord(entry.sourceOperation).role==='damage');
+          if(rolls.length!==1||damages.length!==(op.damage?.length?1:0)||matches.length!==rolls.length+damages.length||found.type==='weapon')add('ACTOR_GM_ATTACK_IDENTITY_DRIFT',path+'/sourceOperations/'+op.id,'Unclassified attacks require one explicitly labelled GM roll and, if present, one separately triggered damage roll.');
+          for(const entry of matches){
+            const marker=asRecord(entry.sourceOperation),damageRole=marker.role==='damage',roll=asRecord(entry.rollData),range=asRecord(entry.range),parts=Array.isArray(entry.damageParts)?entry.damageParts.map(asRecord):[];
+            if(marker.sourceText!==op.sourceText||marker.attackClassification!=='unspecified'||marker.attackKind!==op.attack!.type||marker.relationship!==(damageRole?'follow-up':op.relationship)
+              ||entry.type!==(damageRole?'damage':'utility')||entry.name!==op.name+(damageRole?'（命中后伤害）':'（GM攻击检定）')||entry.condition!==condition
+              ||entry.activation!==(damageRole||op.relationship==='follow-up'?'special':expectedActivation??'')||Object.keys(asRecord(entry.attackData)).length
+              ||Object.keys(asRecord(entry.saveData)).length||arrayValues(entry.effectIds).length||entry.includeBase!==undefined) add('ACTOR_GM_ATTACK_IDENTITY_DRIFT',path+'/sourceOperations/'+op.id,'A generic GM roll cannot silently become a native weapon/spell Attack or automatic follow-up.');
+            if(!damageRole&&(roll.formula!=='1d20'+(op.attack!.toHit>=0?'+':'')+op.attack!.toHit||roll.name!=='GM辅助攻击检定'||roll.prompt!==true||roll.visible!==false||parts.length))add('ACTOR_GM_ATTACK_ROLL_DRIFT',path+'/sourceOperations/'+op.id,'GM attack formula must use exactly the source total once, without damage or inferred ability/proficiency.');
+            if(damageRole&&(Object.keys(roll).length||parts.length!==(op.damage?.length??0)||parts.some((part,index)=>compact(String(part.formula??''))!==compact(op.damage![index]!.formula)||JSON.stringify(arrayValues(part.types))!==JSON.stringify(op.damage![index]!.types??[op.damage![index]!.type]))))add('ACTOR_SOURCE_OPERATION_DAMAGE_DRIFT',path+'/sourceOperations/'+op.id,'GM-triggered hit damage must retain its one complete source roll.');
+            if(range.override!==true||range.units!=='ft'||range.value!==(op.attack!.range??op.attack!.reach??null)||(range.long??undefined)!==op.attack!.longRange) add('ACTOR_SOURCE_OPERATION_RANGE_DRIFT',path+'/sourceOperations/'+op.id,'The GM attack and damage must retain the exact source distance, including zero.');
+            if(entry.targetSpecial!==(op.targetSpecial??'')||asRecord(entry.targetAffects).type!==(sourceOperationTargetType(feature.description,op)??'any'))add('ACTOR_SOURCE_OPERATION_TARGET_DRIFT',path+'/sourceOperations/'+op.id,'Unknown target kinds cannot be guessed into creatures for a GM attack.');
+            const template=asRecord(entry.areaTemplate),target=asRecord(entry.targetAffects),empty=(value:unknown)=>value===undefined||value===null||value==='';
+            if(entry.targetOverride!==true||entry.targetPrompt!==true||target.count!==(sourceOperationTargetCount(feature.description,op)??'')||target.choice!==false||template.type!==''||template.units!=='ft'
+              ||['size','width','height','count'].some(key=>!empty(template[key]))||template.contiguous!==undefined&&template.contiguous!==false) add('ACTOR_SOURCE_OPERATION_TARGET_DRIFT',path+'/sourceOperations/'+op.id,'A GM attack cannot acquire an unprinted target count or area template.');
+            const costs=asRecord(entry.consumption).targets,expectedCost=!damageRole&&op.relationship!=='follow-up'&&Boolean(feature.uses||feature.recharge);
+            if(!Array.isArray(costs)||costs.length!==(expectedCost?1:0)||expectedCost&&(asRecord(costs[0]).type!=='itemUses'||asRecord(costs[0]).target!==resourceTarget||String(asRecord(costs[0]).value)!=='1'))add('ACTOR_SOURCE_OPERATION_RESOURCE_DRIFT',path+'/sourceOperations/'+op.id,'GM hit damage cannot consume the attack resource a second time.');
+            const consumption=asRecord(entry.consumption),scaling=asRecord(consumption.scaling);
+            if(consumption.spellSlot!==false||scaling.allowed!==false||scaling.max!==''||Array.isArray(costs)&&costs.some(cost=>asRecord(asRecord(cost).scaling).mode!==''||asRecord(asRecord(cost).scaling).formula!==''))add('ACTOR_SOURCE_OPERATION_RESOURCE_DRIFT',path+'/sourceOperations/'+op.id,'A generic GM roll cannot add spell-slot consumption or resource scaling.');
+          }
+          continue;
+        }
         if(matches.length!==(dual(op)?2:1)||activity.type!==op.type||activity.name!==(dual(op)?op.name+' (近战)':op.name)+(op.nameSuffix??'')||activity.condition!==condition||activity.activation!==(op.relationship==='follow-up'?'special':expectedActivation??''))add('ACTOR_SOURCE_OPERATION_IDENTITY_DRIFT',path+'/sourceOperations/'+op.id,'Operation identity, type, source condition or GM timing changed.');
         if(op.attack){
           const attack=asRecord(activity.attackData),type=asRecord(attack.type),range=asRecord(activity.range);
@@ -870,6 +925,7 @@ function compareFeatureSections(
         }
         if(op.proof.upgrade&&(asRecord(activity.targetAffects).type!=='creature'||String(asRecord(activity.targetAffects).count)!=='1'||activity.targetSpecial!==op.proof.damage![0]))add('ACTOR_SOURCE_OPERATION_TARGET_DRIFT',path+'/sourceOperations/'+op.id,'Upgraded damage must retain the one creature hit under the complete original trigger.');
         if(op.targetSpecial!==undefined&&(activity.targetSpecial!==op.targetSpecial||asRecord(activity.targetAffects).type!==(sourceOperationTargetType(feature.description,op)??'creature')))add('ACTOR_SOURCE_OPERATION_TARGET_DRIFT',path+'/sourceOperations/'+op.id,'Source target restrictions or explicit recipient kind changed.');
+        if(!op.healing&&!op.proof.upgrade&&op.targetSpecial!==undefined&&asRecord(activity.targetAffects).count!==(sourceOperationTargetCount(feature.description,op)??''))add('ACTOR_SOURCE_OPERATION_TARGET_DRIFT',path+'/sourceOperations/'+op.id,'Explicit singular source recipients must retain their native count and complete qualification.');
         const costs=asRecord(activity.consumption).targets,expectedCost=op.relationship!=='follow-up'&&Boolean(feature.uses||feature.recharge);
         if(!Array.isArray(costs)||costs.length!==(expectedCost?1:0)||expectedCost&&(asRecord(costs[0]).type!=='itemUses'||asRecord(costs[0]).target!==resourceTarget||String(asRecord(costs[0]).value)!=='1'))add('ACTOR_SOURCE_OPERATION_RESOURCE_DRIFT',path+'/sourceOperations/'+op.id,'A follow-up cannot consume again; source alternatives share exactly one feature pool.');
       }
@@ -972,7 +1028,7 @@ function compareFeatureSections(
     }
     if(feature.range!==undefined)compare(add,'ACTOR_RANGE_DRIFT',`/creature/${section}/${index}/range`,feature.range,numericOrUndefined(found.range));
     if(feature.targetSpecial!==undefined)compare(add,'ACTOR_TARGET_RESTRICTION_DRIFT',`/creature/${section}/${index}/targetSpecial`,feature.targetSpecial,found.targetSpecial);
-    if (feature.legendaryCost !== undefined) {
+    if (feature.legendaryCost !== undefined && expectedItemActivation!=='legendary') {
       compare(add, 'ACTOR_LEGENDARY_COST_DRIFT', `/creature/${section}/${index}/legendaryCost`, feature.legendaryCost, found.activationValue);
     }
     for (const [damageIndex, damage] of (feature.damage ?? []).entries()) {

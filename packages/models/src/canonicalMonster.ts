@@ -1,7 +1,7 @@
 import type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';
 import type { PortableSpellRef } from '@fvtt-json-generator/spell-manifest-contracts';
 import type { ManualSpellUseRecord, GmTriggeredSave, NativeFailureStatus, HealingPart } from './action';
-import type { SourceOperation,SourceResourcePool } from './sourceOperationTypes';
+import type { SourceOperation,SourceResourcePool,SourceCandidateReview,SourceCandidateCounter } from './sourceOperationTypes';
 
 export type AbilityKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 export type CreatureSize = 'tiny' | 'small' | 'medium' | 'large' | 'huge' | 'gargantuan';
@@ -24,6 +24,8 @@ export interface CanonicalAppliedCondition {
 }
 
 export interface CanonicalFeature {
+  candidateReview?: SourceCandidateReview;
+  candidateCounters?: SourceCandidateCounter[];
   sourceFeatureId?:string;
   /** Source-backed, independently clickable operations; never automatic triggers. */
   sourceOperations?: SourceOperation[];
@@ -80,7 +82,7 @@ export interface CanonicalFeature {
 
 export type CanonicalSpellRef = Pick<
   PortableSpellRef,
-  'refId' | 'identifier' | 'originalName' | 'englishName' | 'chineseName' | 'aliases' | 'restrictions' | 'evidence'
+  'refId' | 'identifier' | 'originalName' | 'englishName' | 'chineseName' | 'aliases' | 'restrictions' | 'evidence' | 'reuseOf'
 >;
 
 export interface CanonicalSpellComponentWaiver {
@@ -125,9 +127,14 @@ export type CanonicalSpellUsageGroup =
   | CanonicalPreparedSlotUsageGroup;
 
 export interface CanonicalSpellcastingGroup {
+  candidateReview?: SourceCandidateReview;
+  candidateCounters?: SourceCandidateCounter[];
   /** Complete source grants requiring GM adjudication; never executable placeholder spells. */
   manualGrants?: EvidenceRef[];
-  activationType?: 'action' | 'bonus' | 'reaction';
+  activationType?: 'action' | 'bonus' | 'reaction' | 'legendary';
+  /** Source-owned parent cooldown; Casts spend this Item pool, not a new pool. */
+  recharge?: [number, number];
+  legendaryCost?: number;
   groupId: string;
   featureName: string;
   featureEnglishName?: string;
@@ -146,6 +153,7 @@ export interface CanonicalSpellcastingGroup {
 }
 
 export interface CanonicalMonster {
+  candidateReview?: SourceCandidateReview;
   sourceResourcePools?:SourceResourcePool[];
   identity: {
     name: string;
@@ -155,7 +163,8 @@ export interface CanonicalMonster {
     swarmSize?: CreatureSize;
     creatureType: string;
     creatureTypeCustom?: string;
-    /** Source label retained for an explicitly approved largest-native size mapping. */
+    /** Complete source size alternatives, or the label of an explicitly
+     * approved largest-native mapping. size remains one current native value. */
     sourceSize?: string;
     alignment?: string;
   };
@@ -187,6 +196,9 @@ export interface CanonicalMonster {
   biography?: string;
   legendary?: {
     max: number;
+    /** Native lair checkbox adds exactly one; both source choices remain. */
+    lairMax?: number;
+    recovery?: 'own-turn-start';
     preamble: string;
     evidence: EvidenceRef[];
   };

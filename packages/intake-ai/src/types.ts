@@ -140,6 +140,8 @@ export interface MonsterIntakeAiProvider {
   readonly providerName: string;
   readonly extractionModel: string;
   readonly reviewModel: string;
+  /** Bounded pre-IR corrections for this exact extraction request, including failed corrections. */
+  getExtractionCorrectionCount?(request: ExtractionRequest): 0 | 1;
   discover(request: DiscoveryRequest): Promise<DiscoveryResult>;
   extract(request: ExtractionRequest): Promise<MonsterIntakeIR>;
   review(request: ReviewRequest): Promise<AiReviewResult>;

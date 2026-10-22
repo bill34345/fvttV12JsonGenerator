@@ -187,13 +187,43 @@ export function assertOwnedJournalCacheProjection(
   throw Error('Owned cache does not match its original native or complete transaction-planned projection.');
 }
 
-export function assertNativeCacheProjectionMatches(expectedProjection: unknown, actualDocument: any): void {
+export function assertNativeCacheProjectionMatches(expectedProjection: unknown, actualDocument: any, phase?: string): void {
   const expected = captureNativeCacheProjection(expectedProjection);
   const actual = captureNativeCacheProjection(actualDocument);
   const actualExpectedShape = retainExpectedShape(expected, actual);
   if (computeManagedSourceHash(expected) !== computeManagedSourceHash(actualExpectedShape)) {
-    throw new Error('Native cache does not match the complete prepared Activity public getter projection.');
+    // Diagnostics deliberately use the same complete hash boundary as above.
+    // Only paths are exposed; source text, effect values and flags stay private.
+    const paths = changedManagedProjectionPaths(expected, actualExpectedShape);
+    throw new Error('Native cache does not match the complete prepared Activity public getter projection.'
+      + (phase ? ` Phase: ${phase}.` : '')
+      + (paths.length ? ` Business paths: ${paths.join(', ')}.` : ''));
   }
+}
+
+function changedManagedProjectionPaths(expected: Record<string, any>, actual: unknown): string[] {
+  const paths: string[] = [];
+  const expectedHash = computeManagedSourceHash(expected);
+  const visit = (left: unknown, right: unknown, path: string[]) => {
+    if (paths.length >= 12 || Object.is(left, right)) return;
+    if (Array.isArray(left) && Array.isArray(right) && left.length === right.length) {
+      left.forEach((value, index) => visit(value, right[index], [...path, String(index)]));
+      return;
+    }
+    if (isRecord(left) && isRecord(right)) {
+      for (const key of Object.keys(left)) visit(left[key], right[key], [...path, key]);
+      return;
+    }
+    const candidate = structuredClone(expected);
+    let parent: any = candidate;
+    for (const key of path.slice(0, -1)) parent = parent[key];
+    parent[path.at(-1)!] = right;
+    if (computeManagedSourceHash(candidate) !== expectedHash) {
+      paths.push('/' + path.map(key => key.replace(/~/gu, '~0').replace(/\//gu, '~1')).join('/'));
+    }
+  };
+  visit(expected, actual, []);
+  return paths;
 }
 
 function retainExpectedShape(expected: unknown, actual: unknown): unknown {

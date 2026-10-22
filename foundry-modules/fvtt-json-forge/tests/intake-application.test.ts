@@ -603,7 +603,7 @@ describe('Forge Intake Application review workspace', () => {
     expect(calls).toEqual({ generate: 1, review: 1, approve: 1, create: 1 });
     const bundle = (application as any).buildBundle({ mode: 'ai-item', displayName: root.displayName.value,
       protocol: root.protocol.value, region: root.region.value, reasoning: root.reasoning.value,
-      structuredOutput: root.structuredOutput.value });
+      structuredOutput: root.structuredOutput.value, autoCorrect: false });
     const imported = decodeForgeIntakeReviewBundleText(JSON.stringify(bundle));
     expect(imported.bundle.modelReviewStatus).toBe('needs_review');
     expect(imported.bundle.aiReviewFindings).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'AI_WARNING', blocking: true })]));
@@ -751,6 +751,71 @@ describe('Forge Intake Application review workspace', () => {
     expect(reviews).toBe(0);
     await (application as any).create(root);
     expect({ reviews, approvals, creates }).toEqual({ reviews: 0, approvals: 1, creates: 1 });
+  });
+
+  test('retains an ordinary Actor semantic failure and creates only through explicit reviewed-candidate approval', async () => {
+    if (!('result' in acceptedActor) || acceptedActor.result.status !== 'accepted') throw new Error('Actor fixture required.');
+    const source='Complete Actor source with a semantic concern';
+    const finding={...blocking('SOURCE_REVIEW_REQUIRED'),origin:'semantic' as const,path:'/creature/actions/0'};
+    const analysis={...readyActorAnalysis(source),status:'needs_review',findings:[finding],
+      validation:{findings:[finding],blocking:[finding],warnings:[]}};
+    const {artifactHash:_artifactHash,...base}=structuredClone(acceptedActor.result);
+    const response:ForgeActorResponse={protocolVersion:1,requestId:acceptedActor.requestId,result:{...base,status:'failed',
+      verification:{...base.verification,status:'failed'},diagnostics:[{code:'SOURCE_REVIEW_REQUIRED',severity:'error',
+        stage:'semantic',path:'actor',message:'The complete source rule still needs review.'}]}};
+    let reviews=0,repairs=0,approvals=0,strictCreates=0,reviewedCreates=0;
+    const downloads:Array<{fileName:string;content:string}>=[];
+    const {application,root,notifications}=makeApplication({
+      createBrowserAiProvider:(()=>({})) as any,
+      analyzeBrowserActorSourceWithAi:(async()=>analysis) as any,
+      repairBrowserActorIntake:(async()=>{repairs++;throw new Error('No implicit correction.');}) as any,
+      generateBrowserActorIntakeCandidate:(async()=>({status:'ready_for_gm_review',candidateAvailable:true,analysis,
+        rawSourceHash:hashSource(source),finalSource:ACTOR_SOURCE,finalSourceHash:base.sourceIdentity.sourceHash,
+        candidateResponse:response,formalStatus:'failed',intakeVerificationStatus:'needs_review',modelReviewStatus:'not_requested',
+        deterministicFindings:[finding],findings:[finding],stages:[],provider:analysis.provider,calls:analysis.calls})) as any,
+      reviewBrowserActorIntakeCandidate:(async()=>{reviews++;throw new Error('No implicit paid review.');}) as any,
+      approveBrowserActorIntakeCandidateForGm:((_input:any,current:any,gmId:string)=>{
+        approvals++;expect(gmId).toBe('test-user');expect(current.findings).toContainEqual(finding);
+        return{...current,response,gmApproval:{gmId,finalSourceHash:base.sourceIdentity.sourceHash,artifactHash:hashArtifact(base.artifact)}};
+      }) as any,
+      createAcceptedForgeActor:(async()=>{strictCreates++;throw new Error('Unaccepted candidate reached strict creation.');}) as any,
+      createReviewedForgeActorCandidate:(async(input:any)=>{
+        reviewedCreates++;expect(input.response).toBe(response);expect(input.rawSourceHash).toBe(hashSource(source));
+        expect(input.reviewApproval).toMatchObject({gmId:'test-user',sourceHash:base.sourceIdentity.sourceHash,artifactHash:hashArtifact(base.artifact)});
+        expect(input.reviewApproval.findingsHash).toMatch(/^[a-f0-9]{64}$/u);
+        expect(input.response.result.status).toBe('failed');expect(input.response.result.diagnostics[0].severity).toBe('error');
+        expect(input.response.result.artifact.items).toEqual(base.artifact.items);
+        return actorCreateResult();
+      }) as any,
+      downloadReviewBundle:((fileName:string,content:string)=>downloads.push({fileName,content})) as any,
+    });
+    const query=root.querySelector.bind(root),download=control('');
+    root.querySelector=(selector:string)=>selector==='[data-action="download-actor"]'?download:query(selector);
+    (application as any)._onRender({},{});
+    setAiForm(application,root,'ai-monster',source);
+    await (application as any).analyze(root);
+    expect((application as any).status).toBe('needs_review');expect(root.generate.disabled).toBe(false);
+    await (application as any).generate(root);
+    expect((application as any).status).toBe('ready_for_gm_review');expect(root.create.disabled).toBe(false);
+    expect((application as any).generation.formalStatus).toBe('failed');
+    expect(JSON.parse(root.json.textContent)).toEqual(base.artifact);
+    expect(root.rawSource.textContent).toBe(source);
+    expect(root.canonical.textContent).toBe(ACTOR_SOURCE);
+    expect(root.diagnostics.hidden).toBe(false);
+    expect(root.diagnosticList.innerHTML).toContain('SOURCE_REVIEW_REQUIRED');
+    expect(root.humanSummary.textContent).toContain('本地检查仍有待核对问题');
+    expect(root.humanSummary.textContent).toContain('AI 尚未审核');
+    expect(root.humanSummary.textContent).not.toContain('本地校验通过');
+    expect(download.disabled).toBe(false);download.onclick?.();
+    expect(downloads).toHaveLength(1);expect(downloads[0]!.fileName).toMatch(/^forge-actor-.+\.json$/u);
+    expect(JSON.parse(downloads[0]!.content)).toEqual(base.artifact);
+    expect({repairs,reviews,approvals,strictCreates,reviewedCreates}).toEqual({repairs:0,reviews:0,approvals:0,strictCreates:0,reviewedCreates:0});
+    await (application as any).create(root);
+    expect({repairs,reviews,approvals,strictCreates,reviewedCreates}).toEqual({repairs:0,reviews:0,approvals:1,strictCreates:0,reviewedCreates:1});
+    expect((application as any).generation.formalStatus).toBe('failed');
+    expect((application as any).response.result.status).toBe('failed');
+    expect(notifications.errors).toEqual([]);
+    await application.close();
   });
 
   test('keeps a candidate pending when the final local GM hash check rejects it', async () => {
@@ -2202,7 +2267,7 @@ function setAiForm(application: any, root: FakeRoot, mode: 'ai-monster' | 'ai-it
 function authorizeAiConnection(application: any, root: FakeRoot) {
   (application as any).connectionProbe = { status: 'connected', providerId: 'custom', protocol: root.protocol.value, model: root.model.value, models: [], capabilities: {}, message: 'test connection' };
   (application as any).connectionProbeRevision = (application as any).connectionCredentialRevision;
-  (application as any).connectionProbeIdentity = JSON.stringify({ providerId: 'custom', endpoint: root.endpoint.value, protocol: root.protocol.value, authScheme: root.authScheme.value, region: root.region.value, model: root.model.value, reviewModel: root.model.value, useSeparateReviewModel: false, reasoning: root.reasoning.value, structuredOutput: root.structuredOutput.value });
+  (application as any).connectionProbeIdentity = JSON.stringify({ providerId: 'custom', endpoint: root.endpoint.value, protocol: root.protocol.value, authScheme: root.authScheme.value, region: root.region.value, model: root.model.value, reviewModel: root.model.value, useSeparateReviewModel: false, reasoning: root.reasoning.value, structuredOutput: root.structuredOutput.value, autoCorrect: false });
 }
 function currentSnapshot(_application: any, root: FakeRoot): any {
   return createForgeIntakeSnapshot({

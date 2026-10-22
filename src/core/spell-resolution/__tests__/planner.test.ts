@@ -435,3 +435,19 @@ describe('all-or-nothing hydration preflight', () => {
     }
   });
 });
+
+test('explicit Cast reuse requires one common selected source, including manual mappings',()=>{
+ const value=manifest(),parent=value.spellcastingGroups[0]!,ref=structuredClone(parent.spellRefs[0]!);
+ ref.refId='legendary-fireball';ref.reuseOf={groupId:parent.groupId,refId:parent.spellRefs[0]!.refId};
+ ref.evidence=[{start:50,end:58,quote:'Fireball'}];
+ value.spellcastingGroups.push({...structuredClone(parent),groupId:'legendary',featureItemKey:'legendary-feature',spellRefs:[ref]});
+ const candidates=[spell('fireball'),spell('cure-wounds')];
+ const normal=requireReady(plan({manifest:value,candidates}));
+ const target=normal.plan.selections.find(s=>s.refId==='fireball')!,reuse=normal.plan.selections.find(s=>s.refId==='legendary-fireball')!;
+ expect(target.uuid).toBe(reuse.uuid);
+ const alternate=spell('fireball',{id:'other',uuid:'Compendium.module-z.spells.Item.fireballmodulezzz',packageId:'module-z'}),inventory=[...candidates,alternate];
+ const inventoryHash=hashSourceInventoryMetadata(inventory);
+ const mapping:SavedSpellMapping={logicalRefKey:reuse.logicalRefKey,selectedUuid:alternate.uuid,rules:'2024',sourceInventoryHash:inventoryHash,candidateMetadataHash:inventoryHash,resolutionConfigHash:hashResolutionConfiguration(DEFAULT_SPELL_RESOLUTION_CONFIGURATION),selectionOrigin:'manual-review'};
+ const blocked=requireBlocked(plan({manifest:value,candidates:inventory,savedMappings:[mapping]}));
+ expect(blocked.findings.some(f=>f.code==='SPELL_REUSE_SELECTION_CONFLICT')).toBe(true);
+});

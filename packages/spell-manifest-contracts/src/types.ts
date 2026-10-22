@@ -18,6 +18,9 @@ export interface PortableSpellcastingGroup {
   ability?: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
   saveDc?: number;
   attackBonus?: number;
+  /** Optional source-owned parent Recharge pool. Absent keeps v1 semantics;
+   * older closed-schema consumers reject this field instead of free casting. */
+  recharge?: [number, number];
   spellRefs: PortableSpellRef[];
 }
 
@@ -33,6 +36,9 @@ export type PortableSpellSchool =
   | 'transmutation';
 
 export interface PortableSpellRef {
+  /** A second source-proven at-will Cast carrier of this existing definition.
+   * No chains, new quota, profile override or independent world selection. */
+  reuseOf?: { groupId: string; refId: string };
   refId: string;
   identifier: string;
   originalName: string;

@@ -135,7 +135,7 @@ function collectActionMechanics(
   if (raw.useAction?.limitedUses || raw.uses || raw.perLongRest || raw.recharge) {
     const value=raw.useAction?.limitedUses ?? raw.uses ?? raw.perLongRest ?? raw.recharge;
     result.push(mechanic('uses', `${path}/uses`, raw.executionMode==='gm-manual'&&raw.uses
-      ? {...raw.uses,executionMode:'gm-manual',sourceText:raw.describe} : value));
+      ? {...raw.uses,executionMode:'gm-manual',sourceText:raw.describe} : raw.uses&&raw.spellcastingFeatureKey?{...raw.uses,spellcastingFeatureKey:raw.spellcastingFeatureKey}:value));
   }
   if (raw.range || attack?.range) result.push(mechanic('range', `${path}/range`, raw.range ?? attack.range));
   if (raw.passiveEffect) result.push(mechanic('effect', `${path}/passiveEffect`, raw));
@@ -203,6 +203,7 @@ export function adaptParsedActorToCanonical(
     logicalPath: `actor/${parsed.name ?? 'unnamed'}`,
     mechanics,
     compatibilitySource: parsed,
+    ...(parsed.candidateReview?{candidateReview:structuredClone(parsed.candidateReview)}:{}),
   };
 }
 

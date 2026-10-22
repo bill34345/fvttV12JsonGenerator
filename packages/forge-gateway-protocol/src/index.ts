@@ -25,6 +25,7 @@ export {
   decodeForgeActorRequest,
   decodeForgeActorResponse,
   decodeForgeActorResult,
+  isUsableActorCandidateArtifact,
   decodeForgeCapability,
   decodeForgeError,
   decodeForgeHealth,

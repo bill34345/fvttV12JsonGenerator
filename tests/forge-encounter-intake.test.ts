@@ -116,18 +116,39 @@ describe('human Markdown multi-actor encounter intake',()=>{
     expect(result.prepared?.hash).toBe(result.report.packageHash);
     expect(result.prepared?.actors).toHaveLength(2);
   });
-  test('rejected automation review exhausts one repair and never returns an importable result',async()=>{
+  test('a negative automation review keeps the full candidate with zero default corrections',async()=>{
     const env=fixture();env.automationProvider.review=async()=>({verdict:'needs_review',findings:['Source rule was omitted.']});
     const result=await generateEncounterFromHumanMarkdown({source,label:'test',...env});
-    expect(result.report.status).toBe('needs_review');expect(result.prepared).toBeUndefined();expect(env.automationCalls).toBe(2);
+    expect(result.report.status).toBe('ready_for_gm_review');expect(result.prepared?.actors).toHaveLength(2);expect(env.automationCalls).toBe(1);
+    expect(result.report.automationReview).toEqual({verdict:'needs_review',findings:['Source rule was omitted.']});
+    expect(result.report.findings).toContain('Source rule was omitted.');
+    const withoutIdentity=(text:string)=>text.replace(/^forge-source-id:.*\r?\n/mu,'');
+    expect(result.prepared?.bundle.actors.map(actor=>withoutIdentity(actor.source))).toEqual(result.report.actors.map(actor=>withoutIdentity(actor.generation!.finalSource!)));
+    expect(result.report.actors.map(actor=>actor.source)).toEqual([RAT_WARLOCK_SOURCE,LURKER_SOURCE]);
   });
-  test('prior proposals skip extraction but receive fresh validation and independent review',async()=>{
+  test('an explicitly enabled automation correction stays bounded and retains the strict negative report and candidate',async()=>{
+    const env=fixture();let reviews=0;
+    env.automationProvider.review=async()=>{reviews++;return{verdict:'needs_review',findings:['The same source concern remains.']};};
+    const result=await generateEncounterFromHumanMarkdown({source,label:'one correction',...env,
+      requestedOptions:{protocol:'openai-chat',reasoning:'auto',autoCorrect:true}});
+    expect(env.automationCalls).toBe(2);expect(reviews).toBe(2);
+    expect(result.report.status).toBe('ready_for_gm_review');expect(result.prepared?.actors).toHaveLength(2);
+    expect(result.report.automationReview).toEqual({verdict:'needs_review',findings:['The same source concern remains.']});
+    expect(result.report.findings).toContain('The same source concern remains.');
+    expect(result.report.actors.every(actor=>actor.generation?.candidateAvailable)).toBe(true);
+  });
+  test('prior proposals skip extraction and retain candidates when explicit fresh reviews fail',async()=>{
     const env=fixture();let extracts=0,reviews=0;
     env.provider.extract=async()=>{extracts++;throw new Error('must use proposal');};
     env.provider.review=async()=>{reviews++;throw new Error('Fresh review is unavailable');};
     const result=await generateEncounterFromHumanMarkdown({source,label:'draft',...env,draftParentHash:'a'.repeat(64),
-      drafts:[{key:'actor-1',source:RAT_WARLOCK_SOURCE,ir:buildRatWarlockIr()}]});
-    expect(extracts).toBe(0);expect(reviews).toBe(1);expect(result.prepared).toBeUndefined();
+      drafts:[{key:'actor-1',source:RAT_WARLOCK_SOURCE,ir:buildRatWarlockIr()},
+        {key:'actor-2',source:LURKER_SOURCE,ir:buildValidLurkerIr()}]});
+    expect(extracts).toBe(0);expect(reviews).toBe(2);expect(result.prepared?.actors).toHaveLength(2);
+    expect(result.report.status).toBe('ready_for_gm_review');
+    expect(result.report.actors.map(actor=>actor.generation?.modelReviewStatus)).toEqual(['failed','failed']);
+    expect(result.report.actors.map(actor=>actor.generation?.calls.repair)).toEqual([0,0]);
+    expect(result.report.actors.every(actor=>actor.generation?.modelReviewError?.length)).toBe(true);
     expect(result.report.actors[0]?.origin).toBe('prior-proposal');
     expect(result.report.actors[0]?.analysis.calls.extraction).toBe(0);
     expect(result.report.recovery?.mode).toBe('fresh-validation-and-review');
@@ -138,17 +159,25 @@ describe('human Markdown multi-actor encounter intake',()=>{
     const result=await generateEncounterFromHumanMarkdown({source,label:'draft',...env,draftParentHash:'a'.repeat(64),drafts:[{key:'actor-1',source:RAT_WARLOCK_SOURCE,ir}]});
     expect(result.report.status).toBe('failed');expect(calls).toBe(0);expect(result.prepared).toBeUndefined();
   });
-  test('invalid prior quotation stays blocked until provider actually repairs it',async()=>{
+  test('an unchanged invalid quotation remains flagged after one explicitly enabled repair while candidates remain available',async()=>{
     const env=fixture();let repairs=0;const ir=buildRatWarlockIr();ir.claims[0]!.evidence[0]!.quote='invented absent quote';
     env.provider.repair=async r=>{repairs++;return r.ir;};
-    const result=await generateEncounterFromHumanMarkdown({source,label:'draft',...env,draftParentHash:'a'.repeat(64),drafts:[{key:'actor-1',source:RAT_WARLOCK_SOURCE,ir}]});
-    expect(repairs).toBe(1);expect(result.report.status).toBe('needs_review');expect(result.prepared).toBeUndefined();expect(env.automationCalls).toBe(0);
+    const result=await generateEncounterFromHumanMarkdown({source,label:'draft',...env,requestedOptions:{protocol:'openai-chat',reasoning:'auto',autoCorrect:true},draftParentHash:'a'.repeat(64),drafts:[{key:'actor-1',source:RAT_WARLOCK_SOURCE,ir}]});
+    expect(repairs).toBe(1);expect(result.report.status).toBe('ready_for_gm_review');expect(result.prepared?.actors).toHaveLength(2);expect(env.automationCalls).toBe(0);
+    expect(result.report.actors[0]!.analysis.ir!.claims[0]!.evidence[0]!.quote).toBe('invented absent quote');
+    expect(result.report.actors[0]!.analysis.findings.some(finding=>finding.blocking)).toBe(true);
+    expect(result.report.findings.length).toBeGreaterThan(0);
+    const items=result.prepared?.actors[0]?.artifact.items;
+    expect(Array.isArray(items)).toBe(true);expect((items as unknown[]).length).toBeGreaterThan(0);
   });
   test('source review feedback enters actual repair and never skips independent review',async()=>{
     const env=fixture();let repairs=0,reviews=0;
     env.provider.repair=async r=>{repairs++;expect(r.deterministicFindings).toContainEqual(expect.objectContaining({code:'SOURCE_REVIEW_FEEDBACK',blocking:true}));return r.ir;};
     env.provider.review=async()=>{reviews++;throw new Error('Review unavailable');};
-    const result=await generateEncounterFromHumanMarkdown({source,label:'feedback',...env,draftParentHash:'a'.repeat(64),drafts:[{key:'actor-1',source:RAT_WARLOCK_SOURCE,ir:buildRatWarlockIr()}],sourceFeedback:[{actorKey:'actor-1',path:'/creature/identity/size',message:'Recheck this source-backed size.'}]});
-    expect(repairs).toBe(1);expect(reviews).toBe(1);expect(result.prepared).toBeUndefined();expect(result.report.sourceFeedback).toHaveLength(1);
+    const result=await generateEncounterFromHumanMarkdown({source,label:'feedback',...env,requestedOptions:{protocol:'openai-chat',reasoning:'auto',autoCorrect:true},draftParentHash:'a'.repeat(64),drafts:[{key:'actor-1',source:RAT_WARLOCK_SOURCE,ir:buildRatWarlockIr()}],sourceFeedback:[{actorKey:'actor-1',path:'/creature/identity/size',message:'Recheck this source-backed size.'}]});
+    expect(repairs).toBe(1);expect(reviews).toBe(2);expect(result.prepared?.actors).toHaveLength(2);expect(result.report.sourceFeedback).toHaveLength(1);
+    expect(result.report.sourceFeedback![0]).toMatchObject({actorKey:'actor-1',path:'/creature/identity/size',message:'Recheck this source-backed size.'});
+    expect(result.report.actors[0]!.analysis.repairCount).toBe(1);
+    expect(result.report.actors[0]!.generation?.modelReviewStatus).toBe('failed');
   });
 });

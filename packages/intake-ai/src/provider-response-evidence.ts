@@ -2,6 +2,18 @@ import { sha256 } from '@fvtt-json-generator/contracts/hash';
 import { localizationHash } from '@fvtt-json-generator/contracts/localization';
 import {sanitizeFailureReply,type TransportFailureEvidence,type TransportFailureDiagnostic} from './transport-failure-evidence';
 
+/** Deterministic syntax recovery only. Hashes bind the complete original
+ * response and the unchanged JSON object; the discarded tail is punctuation. */
+export interface ProviderJsonFormatRecovery {
+  version:1;
+  kind:'drop-json-terminal-delimiters';
+  originalResponseHash:string;
+  parsedObjectHash:string;
+  objectLength:number;
+  /** One/two closers (legacy interstitial whitespace allowed), or quote+closer. */
+  removedTail:string;
+}
+
 /** Opt-in diagnostic data, never part of a Forge response, bundle or audit log.
  * The owner must choose a private sink. Capturing a reply does not approve it. */
 export interface ProviderResponseEvidence {
@@ -19,6 +31,7 @@ export interface ProviderResponseEvidence {
   redacted: boolean;
   kind?: 'transport-failure';
   transportFailure?: Omit<TransportFailureDiagnostic,'evidenceStatus'>;
+  formatRecovery?:ProviderJsonFormatRecovery;
 }
 
 /** Same private sink as content evidence, but runs when framing/parsing never produced content. */
@@ -49,7 +62,8 @@ export interface ProviderResponseEvidenceSink {
   onStorageFailure?(): void;
 }
 
-/** Run immediately after transport framing, before JSON/IR/token validation.
+/** Run immediately after transport framing, before any JSON/IR/token rejection.
+ * Local JSON syntax analysis may attach its bounded recovery receipt.
  * A broken evidence sink must not trigger another model request. No filesystem,
  * credential discovery or default logging exists at this boundary. */
 export async function captureProviderResponse(

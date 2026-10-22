@@ -5,6 +5,8 @@ import { hashArtifact, type ForgeActorResponse, type JsonObject } from '@fvtt-js
 import { splitCollection } from '@fvtt-json-generator/ingest-plaintext/plaintext-core';
 import {
   createAcceptedForgeActor,
+  createReviewedForgeActorCandidate,
+  forgeActorCandidateReviewHash,
   assertActorSemantics,
   ForgeTemporaryActorCleanupError,
   MODULE_ID,
@@ -31,6 +33,86 @@ beforeAll(async () => {
 });
 
 describe('Foundry Forge Actor creation boundary', () => {
+  test('normalizes only native StringField activation-condition whitespace and still rejects changed rule text',()=>{
+    if(!('result'in acceptedResponse)||acceptedResponse.result.status!=='accepted')throw Error('Expected accepted fixture');
+    for(const condition of ['  Only while hidden.  ','Actions\n\nRend. Melee Attack Roll: +11.\n','\r\n仅当目标可见。\r\n']){
+      const expected:any=structuredClone(acceptedResponse.result.artifact);
+      const index=expected.items.findIndex((item:any)=>Object.keys(item.system?.activities??{}).length);
+      const key=Object.keys(expected.items[index].system.activities)[0]!;
+      expected.items[index].system.activities[key].activation.condition=condition;
+      const actual=structuredClone(expected);actual.items[index].system.activities[key].activation.condition=condition.trim();
+      const before=hashArtifact(expected);
+      expect(()=>assertActorSemantics(expected,actual)).not.toThrow();
+      expect(hashArtifact(expected)).toBe(before);
+      actual.items[index].system.activities[key].activation.condition='The source condition was lost.';
+      expect(()=>assertActorSemantics(expected,actual)).toThrow('activation.condition');
+    }
+  });
+  test('imports explicitly reviewed candidates while preserving failed or needs-review verdicts', async () => {
+    for (const strictStatus of ['needs_review', 'failed'] as const) {
+      const response = reviewedCandidateResponse(strictStatus);
+      const collection = new FakeActorCollection();
+      const game = { ...supportedGame(collection), user: { isGM: true, id: 'candidate-gm' } };
+      const approval = candidateApproval(response);
+      await expect(createAcceptedForgeActor({ game, response })).rejects.toThrow(/accepted/u);
+      const created = await createReviewedForgeActorCandidate({ game, response, reviewApproval: approval });
+      expect(created.status).toBe('created');
+      expect(collection.createInputs).toHaveLength(1);
+      const sourceResult = 'result' in response ? response.result : undefined;
+      expect(collection.contents[0]!.data.flags[MODULE_ID].candidateReview).toMatchObject({
+        version: 1, gmId: 'candidate-gm', strictStatus,
+        sourceHash: approval.sourceHash, artifactHash: approval.artifactHash,
+        diagnostics: sourceResult!.diagnostics, verification: sourceResult!.verification,
+      });
+      expect(collection.contents[0]!.data.items).toHaveLength((sourceResult!.artifact!.items as unknown[]).length);
+      expect((await createReviewedForgeActorCandidate({ game, response, reviewApproval: approval })).status).toBe('existing');
+      expect(collection.createCount).toBe(1);
+      collection.contents[0]!.data.flags[MODULE_ID].candidateReview.strictStatus = 'accepted';
+      await expect(createReviewedForgeActorCandidate({ game, response, reviewApproval: approval })).rejects.toThrow(/failed readback verification/u);
+      expect(collection.createCount).toBe(1);
+    }
+  });
+
+  test('rejects stale GM candidate approvals, wrong identities and malformed candidates before writes', async () => {
+    const response = reviewedCandidateResponse('failed');
+    const approval = candidateApproval(response);
+    const collection = new FakeActorCollection();
+    const game = { ...supportedGame(collection), user: { isGM: true, id: 'candidate-gm' } };
+    for (const changed of [
+      { ...approval, gmId: 'another-gm' }, { ...approval, sourceHash: hashArtifact({ changed: 'source' }) },
+      { ...approval, artifactHash: hashArtifact({ changed: 'artifact' }) }, { ...approval, findingsHash: hashArtifact({ changed: 'findings' }) },
+    ]) await expect(createReviewedForgeActorCandidate({ game, response, reviewApproval: changed })).rejects.toThrow(/approval/u);
+    const changedReport = structuredClone(response);
+    if (!('result' in changedReport)) throw new Error('Candidate fixture result required.');
+    changedReport.result.diagnostics[0]!.message = 'Additional source concern.';
+    await expect(createReviewedForgeActorCandidate({ game, response: changedReport, reviewApproval: approval })).rejects.toThrow(/approval/u);
+    await expect(createReviewedForgeActorCandidate({ game: { ...game, user: { id: 'candidate-gm', isGM: false } }, response, reviewApproval: approval })).rejects.toThrow(/GM/u);
+    await expect(createReviewedForgeActorCandidate({ game: { ...game, version: '14.368' }, response, reviewApproval: approval })).rejects.toThrow(/response target/u);
+    const malformed = structuredClone(response);
+    if (!('result' in malformed)) throw new Error('Candidate fixture result required.');
+    malformed.result.artifact!.items = 'invalid';
+    await expect(createReviewedForgeActorCandidate({ game, response: malformed, reviewApproval: approval })).rejects.toThrow(/decoded/u);
+    const parseFailure = structuredClone(response);
+    if (!('result' in parseFailure)) throw new Error('Candidate fixture result required.');
+    parseFailure.result.diagnostics[0]!.stage = 'parse';
+    await expect(createReviewedForgeActorCandidate({ game, response: parseFailure, reviewApproval: candidateApproval(parseFailure) })).rejects.toThrow(/structural or parsing/u);
+    expect(collection.createCount).toBe(0);
+  });
+
+  test('cleans only its new candidate when semantic or approval readback changes', async () => {
+    const response = reviewedCandidateResponse('failed');
+    for (const failure of ['readback', 'candidate-review-readback'] as const) {
+      const collection = new FakeActorCollection({ failure });
+      const game = { ...supportedGame(collection), user: { isGM: true, id: 'candidate-gm' } };
+      const baseline = collection.seed({ _id: 'baseline', name: 'Protected Actor' });
+      await expect(createReviewedForgeActorCandidate({ game, response, reviewApproval: candidateApproval(response) })).rejects.toThrow();
+      expect(collection.createCount).toBe(1);
+      expect(collection.contents).toEqual([baseline]);
+      expect(baseline.deleted).toBe(false);
+      expect(collection.created[0]!.deleted).toBe(true);
+    }
+  });
+
   test('rejects lost embedded Item artwork during Actor readback', () => {
     if (!('result' in acceptedResponse) || acceptedResponse.result.status !== 'accepted') throw new Error('Fixture is not accepted.');
     const artifact = acceptedResponse.result.artifact;
@@ -551,12 +633,17 @@ class FakeActor implements ForgeActorLike {
 
   public toObject(): unknown {
     if (this.failure === 'readback' || this.failure === 'readback-delete') return { ...structuredClone(this.data), name: 'readback drift' };
+    if (this.failure === 'candidate-review-readback') {
+      const changed = structuredClone(this.data);
+      delete changed.flags[MODULE_ID].candidateReview;
+      return changed;
+    }
     return structuredClone(this.data);
   }
 }
 
 interface FakeActorCollectionOptions {
-  failure?: 'readback' | 'delete' | 'readback-delete';
+  failure?: 'readback' | 'delete' | 'readback-delete' | 'candidate-review-readback';
   createGate?: Promise<void>;
   onCreateStarted?: () => void;
 }
@@ -614,6 +701,20 @@ class FakeActorCollection implements ForgeActorCollectionLike {
 
 function supportedGame(actors: FakeActorCollection): ForgeGameLike {
   return { version: '14.364', system: { id: 'dnd5e', version: '5.3.3' }, user: { isGM: true }, actors };
+}
+
+function reviewedCandidateResponse(status: 'needs_review' | 'failed'): ForgeActorResponse {
+  if (!('result' in acceptedResponse) || acceptedResponse.result.status !== 'accepted') throw new Error('Accepted source fixture required.');
+  const { artifactHash: _artifactHash, ...base } = structuredClone(acceptedResponse.result);
+  return { protocolVersion: 1, requestId: acceptedResponse.requestId, result: { ...base, status,
+    verification: { ...base.verification, status }, diagnostics: [{ code: 'SOURCE_REVIEW_REQUIRED',
+      severity: status === 'failed' ? 'error' : 'warning', stage: 'semantic', path: 'actor', message: 'Source rules need GM review.' }] } };
+}
+
+function candidateApproval(response: ForgeActorResponse) {
+  if (!('result' in response) || !response.result.artifact) throw new Error('Candidate source fixture required.');
+  return { gmId: 'candidate-gm', sourceHash: response.result.sourceIdentity.sourceHash,
+    artifactHash: hashArtifact(response.result.artifact), findingsHash: forgeActorCandidateReviewHash(response) };
 }
 
 function conflictingResponse(response: ForgeActorResponse): ForgeActorResponse {

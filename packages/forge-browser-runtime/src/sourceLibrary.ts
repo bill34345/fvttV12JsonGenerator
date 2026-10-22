@@ -23,7 +23,7 @@ const ISO_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const OBJECT_KINDS = ['actor', 'item'] as const;
 const MODES = ['plaintext-actor', 'ai-monster', 'ai-item'] as const;
-const STATUSES = ['empty', 'analyzing', 'ready_to_generate', 'generating_and_reviewing', 'ready_for_gm_review', 'repairing', 'regenerating', 'accepted', 'needs_review', 'failed', 'rejected', 'committing_and_reading_back'] as const;
+const STATUSES = ['empty', 'analyzing', 'ready_to_generate', 'generating_and_reviewing', 'ready_for_gm_review', 'reviewed_candidate', 'repairing', 'regenerating', 'accepted', 'needs_review', 'failed', 'rejected', 'committing_and_reading_back'] as const;
 const SECRET_TEXT_PATTERNS = [
   /(?:^|\n)\s*(?:authorization|proxy-authorization|cookie|set-cookie)\s*:/iu,
   /\bBearer\s+[A-Za-z0-9._~+/=-]{8,}/iu,

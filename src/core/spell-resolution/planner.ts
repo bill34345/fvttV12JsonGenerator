@@ -1,3 +1,4 @@
+import {conflictingSpellReuseBindings} from '@fvtt-json-generator/spell-manifest-contracts';
 import { hashManifest } from './hash';
 import { sha256 } from '@fvtt-json-generator/contracts/hash';
 import { DEFAULT_SPELL_RESOLUTION_CONFIGURATION, hashResolutionConfiguration, hashSourceInventoryMetadata, isSpellResolutionConfiguration, logicalSpellRefKey, resolveSpellRef } from './resolver';
@@ -124,6 +125,10 @@ export function planSpellHydration(input: PlanSpellHydrationInput): HydrationPre
       selectionOrigin: result.origin,
       ...(projection?.manualConflict && (decision === 'keep' || decision === 'overwrite') ? { manualDecision: decision } : {}),
     });
+  }
+
+  for(const conflict of conflictingSpellReuseBindings(manifestValidation.value,selections.map(selection=>({...selection,value:selection.uuid})))){
+    findings.push(finding('SPELL_REUSE_SELECTION_CONFLICT',logicalSpellRefKey(manifestId,conflict.groupId,conflict.refId),'A referenced spell and its source definition must select the same source document.'));
   }
 
   const stableFindings = sortFindings(findings);

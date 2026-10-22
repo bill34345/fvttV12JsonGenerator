@@ -1,4 +1,4 @@
-import { hashArtifact, type JsonObject } from '@fvtt-json-generator/forge-gateway-protocol';
+import { hashArtifact,readForgeSourceId,createForgeSourceId, type JsonObject } from '@fvtt-json-generator/forge-gateway-protocol';
 import type { IconReviewReport } from '@fvtt-json-generator/contracts/icon-review';
 import { buildForgeActorRequest, convertFinalActorSource } from './index';
 import { decodeForgeEncounterPackageText, encounterPackageHash, type ForgeEncounterPackage } from './encounterPackage';
@@ -14,7 +14,8 @@ export interface PreparedEncounterActor {
   artifact: JsonObject;
   artifactHash: string;
   sourceHash: string;
-  status: 'accepted' | 'needs_review';
+  status: 'accepted' | 'needs_review' | 'failed';
+  reviewFindings?: readonly string[];
   requirements: EncounterRequirement[];
   iconReview?: IconReviewReport;
   /** Regenerated locally; never decoded from a package or a Forge response field. */
@@ -28,6 +29,7 @@ export interface EncounterRequirement {
   detailJson:string;
 }
 export interface PreparedForgeEncounter {
+  reviewFindings?: readonly string[];
   label: string;
   macros: readonly ForgeEncounterPackageMacro[];
   bundle: Readonly<ForgeEncounterPackage>;
@@ -51,38 +53,47 @@ export async function prepareForgeEncounter(text: string, signal?: AbortSignal):
   }
   for (const input of bundle.actors) {
     signal?.throwIfAborted();
+    const digest=hashArtifact({packageId:bundle.id,key:input.key,sourceHash:input.sourceHash});
+    const stableId=createForgeSourceId(()=>`${digest.slice(0,8)}-${digest.slice(8,12)}-4${digest.slice(13,16)}-a${digest.slice(17,20)}-${digest.slice(20,32)}`);
     const request = buildForgeActorRequest({ content: input.source, displayName: input.label,
-      requestId: `encounter-${bundle.id}-${input.key}`, fvttVersion: bundle.target.foundry, systemVersion: bundle.target.systemVersion });
+      requestId: `encounter-${bundle.id}-${input.key}`, fvttVersion: bundle.target.foundry, systemVersion: bundle.target.systemVersion,
+      ...(readForgeSourceId(input.source).status==='missing'?{sourceId:stableId}:{}) });
     const response = await convertFinalActorSource(request, { captureRulePresentation: true,
       reviewedLocalization: bundle.localization?.actors.find(actor => actor.key === input.key)?.translation });
     signal?.throwIfAborted();
     if (!('result' in response)) throw new Error(`${input.label}：正式生成请求失败。`);
     const result = response.result;
-    if (result.status === 'failed' || !result.artifact) throw new Error(`${input.label}：正式生成失败：${result.diagnostics.map(d => d.message).join('；')}`);
+    if (!result.artifact) throw new Error(`${input.label}：尚无可解析的 Actor 候选：${result.diagnostics.map(d => d.message).join('；')}`);
+    const retainedReviews=[{label:String(result.artifact.name),review:(result.artifact.flags as any)?.fvttJsonGenerator?.candidateReview},
+      ...(Array.isArray(result.artifact.items)?result.artifact.items:[]).map((item:any)=>({label:String(item.name),review:item.flags?.fvttJsonGenerator?.candidateReview}))];
+    const originalFindings=retainedReviews.flatMap(({label,review})=>Array.isArray(review?.findings)
+      ?review.findings.map((f:any)=>`${label}：${String(f.message)}（${String(f.code)}；${String(f.path)}）`):[]);
+    const reviewFindings=[...new Set([...originalFindings,...result.diagnostics.map(d=>`${d.code}：${d.message}`),...result.actorVerification.warnings])];
     const artifact = result.artifact;
     assertEncounterStagedMarkerIntegrity(artifact);
     if(result.verification.mechanicsCoverage.some(m=>m.status==='literal-only'
       &&(!m.kind.startsWith('behavior-')||m.expressionCoverage!=='literal'||!['gm-assisted','external-rule'].includes(m.executionMode??'')))){
-      throw new Error(`${input.label}：文字保留机制不属于可绑定配套宏的明确GM审核范围。`);
+      reviewFindings.push('文字保留机制尚未完成自动化核对，请按完整来源由 GM 处理。');
     }
     if (result.actorVerification.warnings.length || result.diagnostics.some(d => d.severity === 'error' || !ASSISTED_CODES.has(d.code))) {
-      throw new Error(`${input.label}：存在配套宏不能代替解决的来源或生成问题：${result.diagnostics.map(d => d.message).join('；')}`);
+      reviewFindings.push('来源或生成检查仍有疑点；候选保留，检查不视为通过。');
     }
     const mechanics = (result.artifact.items as any[] ?? []).flatMap(item => item.flags?.fvttJsonGenerator?.behaviorMechanics ?? []);
     const required = mechanics.filter(m => ['gm-assisted', 'external-rule'].includes(m.executionMode));
     for (const mechanic of required) {
       const covering = bundle.macros.filter(m => m.covers.some(c => c.actorKey === input.key && c.mechanicId === mechanic.id));
-      if (covering.length !== 1) throw new Error(`${input.label}：机制 ${mechanic.id} 必须明确关联唯一配套宏。`);
-      if (!Object.values(covering[0]!.bindings).includes(input.key)) throw new Error(`${covering[0]!.name}：未绑定其声明负责的角色 ${input.key}。`);
+      if (covering.length !== 1) reviewFindings.push(`机制 ${mechanic.id} 没有唯一配套控制，须由 GM 按原文处理。`);
+      else if (!Object.values(covering[0]!.bindings).includes(input.key)) throw new Error(`${covering[0]!.name}：未绑定其声明负责的角色 ${input.key}。`);
     }
     for (const macro of bundle.macros) for (const cover of macro.covers.filter(c => c.actorKey === input.key)) {
       if (!required.some(m => m.id === cover.mechanicId)) throw new Error(`${macro.name}：关联了来源中不存在的待处理机制 ${cover.mechanicId}。`);
     }
-    if (result.status === 'needs_review' && !required.length) throw new Error(`${input.label}：未识别的待审核状态，不能通过整包导入绕过。`);
+    if (result.status !== 'accepted' && !reviewFindings.length) reviewFindings.push(`严格检查状态：${result.status}；此产物仅为待核对候选。`);
     actors.push({ key: input.key, name: String(result.artifact.name), artifact: result.artifact,
       artifactHash: hashArtifact(result.artifact), sourceHash: request.source.utf8Sha256, status: result.status,
       ...(result.iconReview ? { iconReview: result.iconReview } : {}),
       ...(actorRulePresentation(response) ? { rulePresentation: actorRulePresentation(response) } : {}),
+      reviewFindings,
       requirements: required.map(m => ({actorKey:input.key,actorName:String(artifact.name),mechanicId:m.id,
         name:m.name??m.id,mode:m.executionMode,gmSteps:[...(m.gmSteps??[])],conditions:[...(m.conditions??[])],
         trigger:m.trigger?{event:m.trigger.event,frequency:m.trigger.frequency,condition:m.trigger.condition??''}:null,
@@ -92,7 +103,7 @@ export async function prepareForgeEncounter(text: string, signal?: AbortSignal):
   }
   const presentation = localizedEncounterPresentation(bundle, actors);
   const result: PreparedForgeEncounter = freeze({ bundle, hash: encounterPackageHash(bundle), actors, ...presentation,
-    requirements: actors.flatMap(a => a.requirements) });
+    requirements: actors.flatMap(a => a.requirements),reviewFindings:actors.flatMap(a=>(a.reviewFindings??[]).map(f=>`${a.name}：${f}`)) });
   preparedProofs.add(result);
   return result;
 }

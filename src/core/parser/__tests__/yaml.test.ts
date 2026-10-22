@@ -279,7 +279,7 @@ ${keyFor('cr')}: "1/4 (50 XP)"
   });
 
   it.each([
-    ['a legendary section', (markdown: string) => markdown.replace('特性:', '传奇动作:'), 'InvalidSpellcastingFeatureLinkSection'],
+    ['an unsupported mythic section', (markdown: string) => markdown.replace('特性:', '神话动作:'), 'InvalidSpellcastingFeatureLinkSection'],
     ['an unsupported special activation', (markdown: string) => markdown.replace(
       'spellcastingFeatureKey: innate-wisdom-feature',
       'spellcastingFeatureKey: innate-wisdom-feature\n    activationType: special',
@@ -289,8 +289,11 @@ ${keyFor('cr')}: "1/4 (50 XP)"
 
     expect(() => parser.parse(markdown)).toThrow(code);
   });
-  it.each([['动作','action'],['附赠动作','bonus'],['反应','reaction']] as const)('retains source spellcasting linkage in %s', (section, activation) => {
+  it.each([['动作','action'],['附赠动作','bonus'],['反应','reaction'],['传奇动作','legendary']] as const)('retains source spellcasting linkage in %s', (section, activation) => {
     const markdown=readFileSync('src/core/parser/__tests__/fixtures/yaml-spell-manifest.md','utf-8').replace('特性:',section+':');
-    const parsed=parser.parse(markdown);expect(parsed.structuredActions![section]!.find(entry=>entry.spellcastingFeatureKey)!.activation?.type).toBe(activation);
+    const parsed=parser.parse(markdown),linked=parsed.structuredActions![section]!.filter(entry=>entry.spellcastingFeatureKey);
+    expect(linked).toHaveLength(1);expect(linked[0]!.activation?.type).toBe(activation);
+    expect(linked[0]!.spellcastingFeatureKey).toBe('innate-wisdom-feature');
+    expect(validatePortableSpellManifestStructure(parsed.spellManifest).ok).toBe(true);
   });
 });

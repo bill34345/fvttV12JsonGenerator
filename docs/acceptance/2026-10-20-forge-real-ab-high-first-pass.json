@@ -1,0 +1,201 @@
+{
+  "status": "HIGH_FIRST_PASS_FINISHED_SOURCE_REVIEW_COMPLETE",
+  "condition": {
+    "thinking": {
+      "type": "enabled"
+    },
+    "reasoning_effort": "high"
+  },
+  "actualHttp": 14,
+  "retries": 0,
+  "repairs": 0,
+  "machineAndSourcePasses": {
+    "A": 1,
+    "B": 0
+  },
+  "cases": [
+    {
+      "case": "S1",
+      "arm": "A",
+      "sourceCandidateAccepted": false,
+      "machineStatus": "FAILED",
+      "stage": "extraction",
+      "http": 1,
+      "extractionSeconds": 14.0895398,
+      "httpWaitSeconds": 13.965462599999999,
+      "formalSeconds": 0.0,
+      "estimatedListUSD": 0.0021354,
+      "error": {
+        "name": "MonsterIntakeProviderError",
+        "code": "invalid_response",
+        "message": "Staged extraction rejected FEATURE_FACT_CONFLICT at /features/unit-1/facts/sourceOperations/0/damage/0/condition.",
+        "stagedDiagnostic": {
+          "stage": "response",
+          "code": "FEATURE_FACT_CONFLICT",
+          "path": "/features/unit-1/facts/sourceOperations/0/damage/0/condition"
+        }
+      }
+    },
+    {
+      "case": "S1",
+      "arm": "B",
+      "sourceCandidateAccepted": false,
+      "machineStatus": "FAILED",
+      "stage": "extraction",
+      "http": 1,
+      "extractionSeconds": 5.4841242999999995,
+      "httpWaitSeconds": 5.389777300000001,
+      "formalSeconds": 0.0,
+      "estimatedListUSD": 0.0012860999999999999,
+      "error": {
+        "name": "CategoryMdError",
+        "code": "MD_SYNTAX",
+        "message": "MD_SYNTAX: /response/markdown"
+      }
+    },
+    {
+      "case": "S2",
+      "arm": "B",
+      "sourceCandidateAccepted": false,
+      "machineStatus": "FAILED",
+      "stage": "extraction",
+      "http": 1,
+      "extractionSeconds": 54.0521996,
+      "httpWaitSeconds": 53.92538040000001,
+      "formalSeconds": 0.0,
+      "estimatedListUSD": 0.008028846,
+      "error": {
+        "name": "StagedExtractionError",
+        "code": "FEATURE_FACT_CONFLICT",
+        "message": "Staged extraction rejected FEATURE_FACT_CONFLICT at /features/unit-6/facts/sourceOperations/0/proof/attack/clause-boundary."
+      }
+    },
+    {
+      "case": "S2",
+      "arm": "A",
+      "sourceCandidateAccepted": false,
+      "machineStatus": "FAILED",
+      "stage": "extraction",
+      "http": 3,
+      "extractionSeconds": 20.25592809999999,
+      "httpWaitSeconds": 19.95928940000001,
+      "formalSeconds": 0.0,
+      "estimatedListUSD": 0.0029251859999999998,
+      "error": {
+        "name": "MonsterIntakeProviderError",
+        "code": "invalid_response",
+        "message": "Staged extraction rejected FEATURE_FACT_CONFLICT at /features/unit-6/facts/sourceOperations/0/proof/attack/clause-boundary.",
+        "stagedDiagnostic": {
+          "stage": "response",
+          "code": "FEATURE_FACT_CONFLICT",
+          "path": "/features/unit-6/facts/sourceOperations/0/proof/attack/clause-boundary"
+        }
+      }
+    },
+    {
+      "case": "S3",
+      "arm": "A",
+      "sourceCandidateAccepted": true,
+      "machineStatus": "PASS_MACHINE_GATES_PENDING_SOURCE_REVIEW",
+      "stage": "complete",
+      "http": 7,
+      "extractionSeconds": 22.093660300000003,
+      "httpWaitSeconds": 21.313755099999995,
+      "formalSeconds": 0.1216987999999983,
+      "estimatedListUSD": 0.0032366339999999995,
+      "error": null
+    },
+    {
+      "case": "S3",
+      "arm": "B",
+      "sourceCandidateAccepted": false,
+      "machineStatus": "FAILED",
+      "stage": "extraction",
+      "http": 1,
+      "extractionSeconds": 34.33374749999998,
+      "httpWaitSeconds": 34.21588379999999,
+      "formalSeconds": 0.0,
+      "estimatedListUSD": 0.005165496,
+      "error": {
+        "name": "StagedExtractionError",
+        "code": "FEATURE_FACT_CONFLICT",
+        "message": "Staged extraction rejected FEATURE_FACT_CONFLICT at /features/unit-7/facts/sourceOperations/0/attack/type-or-bonus."
+      }
+    }
+  ],
+  "arms": {
+    "A": {
+      "sourcePass": 1,
+      "sourceCount": 3,
+      "actualHttp": 11,
+      "extractionSeconds": 56.43912819999999,
+      "httpWaitSeconds": 55.2385071,
+      "estimatedListUSD": 0.00829722,
+      "usage": {
+        "prompt_tokens": 35198,
+        "completion_tokens": 10674,
+        "total_tokens": 45872,
+        "prompt_cache_hit_tokens": 23040,
+        "prompt_cache_miss_tokens": 12158
+      },
+      "reasoningTokens": 9631
+    },
+    "B": {
+      "sourcePass": 0,
+      "sourceCount": 3,
+      "actualHttp": 3,
+      "extractionSeconds": 93.87007139999999,
+      "httpWaitSeconds": 93.5310415,
+      "estimatedListUSD": 0.014480442,
+      "usage": {
+        "prompt_tokens": 11939,
+        "completion_tokens": 22341,
+        "total_tokens": 34280,
+        "prompt_cache_hit_tokens": 4864,
+        "prompt_cache_miss_tokens": 7075
+      },
+      "reasoningTokens": 20322
+    }
+  },
+  "actualBilledUSD": "UNKNOWN",
+  "sharedRequestParity": 11,
+  "estimatedListUSD": 0.022777662,
+  "lowRound": {
+    "A": {
+      "sourcePass": 0,
+      "sourceCount": 3,
+      "actualHttp": 9,
+      "extractionSeconds": 40.9286529,
+      "httpWaitSeconds": 39.99341299999998,
+      "estimatedListUSD": 0.005619708,
+      "usage": {
+        "prompt_tokens": 28298,
+        "completion_tokens": 7372,
+        "total_tokens": 35670,
+        "prompt_cache_hit_tokens": 20736,
+        "prompt_cache_miss_tokens": 7562
+      },
+      "reasoningTokens": 6454
+    },
+    "B": {
+      "sourcePass": 0,
+      "sourceCount": 3,
+      "actualHttp": 4,
+      "extractionSeconds": 84.0753445,
+      "httpWaitSeconds": 83.61007040000001,
+      "estimatedListUSD": 0.012909641999999999,
+      "usage": {
+        "prompt_tokens": 15331,
+        "completion_tokens": 18875,
+        "total_tokens": 34206,
+        "prompt_cache_hit_tokens": 4864,
+        "prompt_cache_miss_tokens": 10467
+      },
+      "reasoningTokens": 16455
+    }
+  },
+  "responseModels": [
+    "deepseek-flash"
+  ],
+  "allFinishStop": true
+}

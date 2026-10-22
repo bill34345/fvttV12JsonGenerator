@@ -1,0 +1,31 @@
+{
+  "note": "Source-derived offline header fixtures for R3/R4. The frozen trial never called their base stage. These are not model responses or evidence of base extraction accuracy; validateStagedBaseFacts independently checks them against the frozen original headers.",
+  "R3": {
+    "schemaVersion": 1,
+    "creature": {
+      "identity": {"name":"Ancient Red Dragon","size":"gargantuan","creatureType":"dragon","alignment":"chaotic evil"},
+      "abilities": {"str":30,"dex":10,"con":29,"int":18,"wis":15,"cha":23},
+      "attributes": {"ac":22,"acKind":"natural","acNote":"natural armor","hp":{"value":546,"formula":"28d20 + 252"},"movement":{"walk":40,"climb":40,"fly":80},"cr":24,"xp":62000},
+      "saves":{"dex":7,"con":16,"wis":9,"cha":13},
+      "skills":{"perception":16,"stealth":7},
+      "defenses":{"resistances":[],"immunities":["fire"],"vulnerabilities":[],"conditionImmunities":[]},
+      "senses":{"blindsight":60,"darkvision":120,"passivePerception":26},
+      "languages":{"values":["common","draconic"]}
+    },
+    "uncertainties":[]
+  },
+  "R4": {
+    "schemaVersion": 1,
+    "creature": {
+      "identity":{"name":"Vampire","size":"medium","creatureType":"undead","creatureTypeCustom":"shapechanger","alignment":"lawful evil"},
+      "abilities":{"str":18,"dex":18,"con":18,"int":17,"wis":15,"cha":18},
+      "attributes":{"ac":16,"acKind":"natural","acNote":"natural armor","hp":{"value":144,"formula":"17d8 + 68"},"movement":{"walk":30},"cr":13,"xp":10000},
+      "saves":{"dex":9,"wis":7,"cha":9},
+      "skills":{"perception":7,"stealth":9},
+      "defenses":{"resistances":["necrotic"],"immunities":[],"vulnerabilities":[],"conditionImmunities":[]},
+      "senses":{"darkvision":120,"passivePerception":17},
+      "languages":{"values":[],"custom":"the languages it knew in life"}
+    },
+    "uncertainties":[]
+  }
+}

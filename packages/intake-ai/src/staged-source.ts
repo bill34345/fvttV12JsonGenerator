@@ -25,7 +25,7 @@ export interface StagedMonsterSource {
 }
 
 export class StagedExtractionError extends Error {
-  constructor(readonly code: string, readonly path: string) {
+  constructor(readonly code: string, readonly path: string, readonly related:ReadonlyArray<{code:string;path:string}>=[]) {
     super(`Staged extraction rejected ${code} at ${path}.`);
     this.name = 'StagedExtractionError';
   }
@@ -336,7 +336,7 @@ function textIncludesLabel(quote:string,label:string,firstSectionContent=false):
  * legendary rule. Conditional/unknown budgets remain full literal context. */
 /** The 2024 shared ledger proves one use per action independently of its
  * conditional pool ceiling. Unknown additions remain complete GM context. */
-export function stagedLegendaryLedger(unit:StagedSourceUnit,actorName?:string|readonly string[]):{cost:1;max?:number;conditional:boolean}|undefined{
+export function stagedLegendaryLedger(unit:StagedSourceUnit,actorName?:string|readonly string[]):{cost:1;max?:number;lairMax?:number;conditional:boolean}|undefined{
   if(unit.destination!=='context'||unit.section!=='legendary')return;
   const body=unit.quote.replace(/^[^\r\n]*(?:\r\n|\n|\r|$)/u,'').replace(/\s+/gu,' ').trim();
   const match=/^Legendary Action Uses:\s*(\d+)(?:\s*\((\d+) in Lair\))?\. Immediately after another creature['’]s turn, (?<owner>[\p{L}'’ \-]+?) can expend a use to take one of the following actions\. (?<recoveryOwner>[\p{L}'’ \-]+?) regains all expended uses at the start of each of its turns\.$/iu.exec(body);
@@ -350,7 +350,7 @@ export function stagedLegendaryLedger(unit:StagedSourceUnit,actorName?:string|re
   }
   const base=Number(match[1]),lair=match[2]===undefined?base:Number(match[2]);
   if(![base,lair].every(value=>Number.isSafeInteger(value)&&value>0))return;
-  return {cost:1,...(base===lair?{max:base}:{}),conditional:base!==lair};
+  return {cost:1,...(base===lair?{max:base}:lair===base+1?{max:base,lairMax:lair}:{}),conditional:base!==lair};
 }
 export function stagedLegendaryActionCost(plan:StagedMonsterSource,unit:StagedSourceUnit,actorName?:string|readonly string[]):number|undefined{
   if(unit.section!=='legendary'||!actorName)return;
@@ -359,15 +359,20 @@ export function stagedLegendaryActionCost(plan:StagedMonsterSource,unit:StagedSo
 }
 
 export function stagedLegendaryBudget(plan: StagedMonsterSource,actorName?:string|readonly string[]): CanonicalMonster['legendary'] {
+  return stagedLegendaryBudgetFromContexts(plan.units,actorName);
+}
+/** The ledger is owned by complete, bounded source context units; it does not
+ * require unrelated abilities to be partitionable by the automatic scanner. */
+export function stagedLegendaryBudgetFromContexts(units:readonly StagedSourceUnit[],actorName?:string|readonly string[]): CanonicalMonster['legendary'] {
   const words:Record<string,number>={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10};
-  const budgets=plan.units.filter(unit=>unit.destination==='context'&&unit.section==='legendary').flatMap(unit=>{
+  const budgets=units.filter(unit=>unit.destination==='context'&&unit.section==='legendary').flatMap(unit=>{
     const body=unit.quote.replace(/^[^\r\n]*(?:\r\n|\n|\r|$)/u,'').replace(/\s+/gu,' ').trim();
     const match=body.match(/^[\p{L}'’ \-]+?\bcan take (\d+|one|two|three|four|five|six|seven|eight|nine|ten) legendary actions?(?:, choosing from (?:the )?options below)?\./iu);
     const modern=actorName?stagedLegendaryLedger(unit,actorName):undefined;
     if(!match&&modern?.max===undefined)return [];
     const max=modern?.max??(words[match![1]!.toLowerCase()]??Number(match![1]));
     if(!Number.isSafeInteger(max)||max<1)return [];
-    return [{max,preamble:unit.quote.trim(),evidence:[{start:unit.start,end:unit.end,quote:unit.quote}]}];
+    return [{max,...(modern?.lairMax?{lairMax:modern.lairMax}:{}),...(modern?{recovery:'own-turn-start' as const}:{}),preamble:unit.quote.trim(),evidence:[{start:unit.start,end:unit.end,quote:unit.quote}]}];
   });
   if(budgets.length>1&&new Set(budgets.map(budget=>budget.max)).size>1)throw new StagedExtractionError('CONFLICTING_LEGENDARY_BUDGET','/creature/legendary/max');
   return budgets[0];

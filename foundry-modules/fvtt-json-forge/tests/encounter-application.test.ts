@@ -12,6 +12,14 @@ import {createForgeEncounterApplicationClass} from '../src/encounterApplication'
 import type {ConfiguredConditionDefinition} from '@fvtt-json-generator/contracts/configured-conditions';
 import {draftForgeEncounterLocalization} from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
 
+test('uploaded candidates display retained findings without an AI report',()=>{
+  const html=Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))({
+    hasReport:false,hasPackage:true,aiFindings:['Legendary Resistance: source recovery needs review (MANUAL_RESOURCE_SOURCE_CONFLICT)']});
+  const document=new JSDOM(html).window.document;
+  expect(document.querySelector('[data-candidate-findings]')?.textContent).toContain('MANUAL_RESOURCE_SOURCE_CONFLICT');
+  expect(document.querySelector('[data-candidate-findings]')?.textContent).toContain('Legendary Resistance');
+});
+
 describe('configured state directory in the actual Forge entry',()=>{
   test('reads saved state definitions, exposes configuration entry, and supplies a fresh snapshot to generation',async()=>{
     const definition:ConfiguredConditionDefinition={schemaVersion:1,id:'configured.frost-mark',name:'霜印 Frost Mark',description:'降低速度',aliases:['Frost Mark','霜印'],components:[{kind:'movement-reduction',feet:10}]};

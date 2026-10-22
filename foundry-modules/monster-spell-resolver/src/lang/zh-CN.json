@@ -100,5 +100,7 @@
   "FVTTJSONSPELL.Finding.INVALID_MANUAL_DECISION_TARGET": "人工决定指向了未声明的冲突。",
   "FVTTJSONSPELL.Finding.DUPLICATE_PREFLIGHT_KEY": "预检中包含重复法术引用。",
   "FVTTJSONSPELL.Finding.UNKNOWN_PREFLIGHT_KEY": "预检中包含未知法术引用。",
-  "FVTTJSONSPELL.Notification.RecoveryRequired": "法术水合仍有未解决的恢复数据。请保留并查看报告，经归属核对后再受控恢复；普通重新解析和自动重试已阻止。"
+  "FVTTJSONSPELL.Notification.RecoveryRequired": "法术水合仍有未解决的恢复数据。请保留并查看报告，经归属核对后再受控恢复；普通重新解析和自动重试已阻止。",
+  "FVTTJSONSPELL.Review.SourceMaintenance": "来源绑定缓存维护",
+  "FVTTJSONSPELL.Review.ConditionalDamageIsolation": "当前缓存仍把施法豁免与“已被魅惑的生物违背命令时”才发生的伤害放在同一活动中。选择覆盖后，仅将该伤害分离为GM主动操作，保留施法配置、已消耗次数、完整正文和其他法术引用。保留不能完成这项修复；是否违令及每个目标每天的伤害上限仍由GM裁定。"
 }

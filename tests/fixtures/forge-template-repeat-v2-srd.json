@@ -1,0 +1,215 @@
+{
+  "attribution": "This work includes material taken from the System Reference Document 5.1 (SRD 5.1) by Wizards of the Coast LLC and available at https://dnd.wizards.com/resources/systems-reference-document. The SRD 5.1 is licensed under the Creative Commons Attribution 4.0 International License available at https://creativecommons.org/licenses/by/4.0/legalcode.",
+  "normalization": [
+    "Extracted each PDF column separately; removed only page footers and adjacent monsters; normalized soft-hyphen compound to a single hyphen (90-foot). No rules changed."
+  ],
+  "pdfSha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+  "cases": [
+    {
+      "id": "R3",
+      "source": "Ancient Red Dragon\nGargantuan dragon, chaotic evil\nArmor Class 22 (natural armor)\nHit Points 546 (28d20 + 252)\nSpeed 40 ft., climb 40 ft., fly 80 ft.\nSTR DEX CON INT WIS CHA\n30 (+10) 10 (+0) 29 (+9) 18 (+4) 15 (+2) 23 (+6)\nSaving Throws Dex +7, Con +16, Wis +9, Cha +13\nSkills Perception +16, Stealth +7\nDamage Immunities fire\nSenses blindsight 60 ft., darkvision 120 ft., passive\nPerception 26\nLanguages Common, Draconic\nChallenge 24 (62,000 XP)\nLegendary Resistance (3/Day). If the dragon fails a\nsaving throw, it can choose to succeed instead.\nActions\nMultiattack. The dragon can use its Frightful Presence.\nIt then makes three attacks: one with its bite and two\nwith its claws.\nBite. Melee Weapon Attack: +17 to hit, reach 15 ft.,\none target. Hit: 21 (2d10 + 10) piercing damage plus 14\n(4d6) fire damage.\nClaw. Melee Weapon Attack: +17 to hit, reach 10 ft.,\none target. Hit: 17 (2d6 + 10) slashing damage.\n\nTail. Melee Weapon Attack: +17 to hit, reach 20 ft., one\ntarget. Hit: 19 (2d8 + 10) bludgeoning damage.\nFrightful Presence. Each creature of the dragon’s\nchoice that is within 120 feet of the dragon and aware\nof it must succeed on a DC 21 Wisdom saving throw or\nbecome frightened for 1 minute. A creature can repeat\nthe saving throw at the end of each of its turns, ending\nthe effect on itself on a success. If a creature’s saving\nthrow is successful or the effect ends for it, the\ncreature is immune to the dragon’s Frightful Presence\nfor the next 24 hours.\nFire Breath (Recharge 5–6). The dragon exhales fire in\na 90-foot cone. Each creature in that area must make a\nDC 24 Dexterity saving throw, taking 91 (26d6) fire\ndamage on a failed save, or half as much damage on a\nsuccessful one.\nLegendary Actions\nThe dragon can take 3 legendary actions, choosing\nfrom the options below. Only one legendary action\noption can be used at a time and only at the end of\nanother creature’s turn. The dragon regains spent\nlegendary actions at the start of its turn.\nDetect. The dragon makes a Wisdom (Perception)\ncheck.\nTail Attack. The dragon makes a tail attack.\nWing Attack (Costs 2 Actions). The dragon beats its\nwings. Each creature within 15 feet of the dragon\nmust succeed on a DC 25 Dexterity saving throw or\ntake 17 (2d6 + 10) bludgeoning damage and be\nknocked prone. The dragon can then fly up to half its\nflying speed.\n",
+      "sourceSha256": "5afdcb4bfb2d1a273fa36aa256f1509a101d8dfd118c93b98a0b1977bfe5eb40",
+      "baseContext": "Ancient Red Dragon\nGargantuan dragon, chaotic evil\nArmor Class 22 (natural armor)\nHit Points 546 (28d20 + 252)\nSpeed 40 ft., climb 40 ft., fly 80 ft.\nSTR DEX CON INT WIS CHA\n30 (+10) 10 (+0) 29 (+9) 18 (+4) 15 (+2) 23 (+6)\nSaving Throws Dex +7, Con +16, Wis +9, Cha +13\nSkills Perception +16, Stealth +7\nDamage Immunities fire\nSenses blindsight 60 ft., darkvision 120 ft., passive\nPerception 26\nLanguages Common, Draconic\nChallenge 24 (62,000 XP)",
+      "units": [
+        {
+          "id": "r3-1",
+          "section": "trait",
+          "name": "Legendary Resistance (3/Day)",
+          "quote": "Legendary Resistance (3/Day). If the dragon fails a\nsaving throw, it can choose to succeed instead.",
+          "context": []
+        },
+        {
+          "id": "r3-2",
+          "section": "action",
+          "name": "Multiattack",
+          "quote": "Multiattack. The dragon can use its Frightful Presence.\nIt then makes three attacks: one with its bite and two\nwith its claws.",
+          "context": []
+        },
+        {
+          "id": "r3-3",
+          "section": "action",
+          "name": "Bite",
+          "quote": "Bite. Melee Weapon Attack: +17 to hit, reach 15 ft.,\none target. Hit: 21 (2d10 + 10) piercing damage plus 14\n(4d6) fire damage.",
+          "context": []
+        },
+        {
+          "id": "r3-4",
+          "section": "action",
+          "name": "Claw",
+          "quote": "Claw. Melee Weapon Attack: +17 to hit, reach 10 ft.,\none target. Hit: 17 (2d6 + 10) slashing damage.",
+          "context": []
+        },
+        {
+          "id": "r3-5",
+          "section": "action",
+          "name": "Tail",
+          "quote": "Tail. Melee Weapon Attack: +17 to hit, reach 20 ft., one\ntarget. Hit: 19 (2d8 + 10) bludgeoning damage.",
+          "context": []
+        },
+        {
+          "id": "r3-6",
+          "section": "action",
+          "name": "Frightful Presence",
+          "quote": "Frightful Presence. Each creature of the dragon’s\nchoice that is within 120 feet of the dragon and aware\nof it must succeed on a DC 21 Wisdom saving throw or\nbecome frightened for 1 minute. A creature can repeat\nthe saving throw at the end of each of its turns, ending\nthe effect on itself on a success. If a creature’s saving\nthrow is successful or the effect ends for it, the\ncreature is immune to the dragon’s Frightful Presence\nfor the next 24 hours.",
+          "context": []
+        },
+        {
+          "id": "r3-7",
+          "section": "action",
+          "name": "Fire Breath (Recharge 5–6)",
+          "quote": "Fire Breath (Recharge 5–6). The dragon exhales fire in\na 90-foot cone. Each creature in that area must make a\nDC 24 Dexterity saving throw, taking 91 (26d6) fire\ndamage on a failed save, or half as much damage on a\nsuccessful one.",
+          "context": []
+        },
+        {
+          "id": "r3-8",
+          "section": "legendary",
+          "name": "Detect",
+          "quote": "Detect. The dragon makes a Wisdom (Perception)\ncheck.",
+          "context": [
+            "Legendary Actions\nThe dragon can take 3 legendary actions, choosing\nfrom the options below. Only one legendary action\noption can be used at a time and only at the end of\nanother creature’s turn. The dragon regains spent\nlegendary actions at the start of its turn."
+          ]
+        },
+        {
+          "id": "r3-9",
+          "section": "legendary",
+          "name": "Tail Attack",
+          "quote": "Tail Attack. The dragon makes a tail attack.",
+          "context": [
+            "Legendary Actions\nThe dragon can take 3 legendary actions, choosing\nfrom the options below. Only one legendary action\noption can be used at a time and only at the end of\nanother creature’s turn. The dragon regains spent\nlegendary actions at the start of its turn."
+          ]
+        },
+        {
+          "id": "r3-10",
+          "section": "legendary",
+          "name": "Wing Attack (Costs 2 Actions)",
+          "quote": "Wing Attack (Costs 2 Actions). The dragon beats its\nwings. Each creature within 15 feet of the dragon\nmust succeed on a DC 25 Dexterity saving throw or\ntake 17 (2d6 + 10) bludgeoning damage and be\nknocked prone. The dragon can then fly up to half its\nflying speed.",
+          "context": [
+            "Legendary Actions\nThe dragon can take 3 legendary actions, choosing\nfrom the options below. Only one legendary action\noption can be used at a time and only at the end of\nanother creature’s turn. The dragon regains spent\nlegendary actions at the start of its turn."
+          ]
+        }
+      ],
+      "sourceUrl": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+      "pdfPages": [
+        286,
+        287
+      ]
+    },
+    {
+      "id": "R4",
+      "source": "Vampire\nMedium undead (shapechanger), lawful evil\nArmor Class 16 (natural armor)\nHit Points 144 (17d8 + 68)\nSpeed 30 ft.\nSTR DEX CON INT WIS CHA\n18 (+4) 18 (+4) 18 (+4) 17 (+3) 15 (+2) 18 (+4)\nSaving Throws Dex +9, Wis +7, Cha +9\nSkills Perception +7, Stealth +9\nDamage Resistances necrotic; bludgeoning, piercing,\nand slashing from nonmagical attacks\nSenses darkvision 120 ft., passive Perception 17\nLanguages the languages it knew in life\nChallenge 13 (10,000 XP)\nShapechanger. If the vampire isn’t in sunlight or\nrunning water, it can use its action to polymorph into a\nTiny bat or a Medium cloud of mist, or back into its\ntrue form.\nWhile in bat form, the vampire can’t speak, its\nwalking speed is 5 feet, and it has a flying speed of 30\nfeet. Its statistics, other than its size and speed, are\nunchanged. Anything it is wearing transforms with it,\nbut nothing it is carrying does. It reverts to its true\nform if it dies.\nWhile in mist form, the vampire can’t take any\nactions, speak, or manipulate objects. It is weightless,\nhas a flying speed of 20 feet, can hover, and can enter\na hostile creature’s space and stop there. In addition, if\nair can pass through a space, the mist can do so\nwithout squeezing, and it can’t pass through water. It\nhas advantage on Strength, Dexterity, and Constitution\n\nsaving throws, and it is immune to all nonmagical\ndamage, except the damage it takes from sunlight.\nLegendary Resistance (3/Day). If the vampire fails a\nsaving throw, it can choose to succeed instead.\nMisty Escape. When it drops to 0 hit points outside its\nresting place, the vampire transforms into a cloud of\nmist (as in the Shapechanger trait) instead of falling\nunconscious, provided that it isn’t in sunlight or\nrunning water. If it can’t transform, it is destroyed.\nWhile it has 0 hit points in mist form, it can’t revert\nto its vampire form, and it must reach its resting place\nwithin 2 hours or be destroyed. Once in its resting\nplace, it reverts to its vampire form. It is then paralyzed\nuntil it regains at least 1 hit point. After spending 1\nhour in its resting place with 0 hit points, it regains 1 hit\npoint.\nRegeneration. The vampire regains 20 hit points at the\nstart of its turn if it has at least 1 hit point and isn’t in\nsunlight or running water. If the vampire takes radiant\ndamage or damage from holy water, this trait doesn’t\nfunction at the start of the vampire’s next turn.\nSpider Climb. The vampire can climb difficult surfaces,\nincluding upside down on ceilings, without needing to\nmake an ability check.\nVampire Weaknesses. The vampire has the following\nflaws:\nForbiddance. The vampire can’t enter a residence\nwithout an invitation from one of the occupants.\nHarmed by Running Water. The vampire takes 20\nacid damage if it ends its turn in running water.\nStake to the Heart. If a piercing weapon made of\nwood is driven into the vampire’s heart while the\nvampire is incapacitated in its resting place, the\nvampire is paralyzed until the stake is removed.\nSunlight Hypersensitivity. The vampire takes 20\nradiant damage when it starts its turn in sunlight.\nWhile in sunlight, it has disadvantage on attack rolls\nand ability checks.\nActions\nMultiattack (Vampire Form Only). The vampire makes\ntwo attacks, only one of which can be a bite attack.\nUnarmed Strike (Vampire Form Only). Melee Weapon\nAttack: +9 to hit, reach 5 ft., one creature. Hit: 8 (1d8 +\n4) bludgeoning damage. Instead of dealing damage,\nthe vampire can grapple the target (escape DC 18).\nBite (Bat or Vampire Form Only). Melee Weapon\nAttack: +9 to hit, reach 5 ft., one willing creature, or a\ncreature that is grappled by the vampire, incapacitated,\nor restrained. Hit: 7 (1d6 + 4) piercing damage plus 10\n(3d6) necrotic damage. The target’s hit point maximum\nis reduced by an amount equal to the necrotic damage\ntaken, and the vampire regains hit points equal to that\namount. The reduction lasts until the target finishes a\nlong rest. The target dies if this effect reduces its hit\npoint maximum to 0. A humanoid slain in this way and\nthen buried in the ground rises the following night as a\nvampire spawn under the vampire’s control.\nCharm. The vampire targets one humanoid it can see\nwithin 30 feet of it. If the target can see the vampire,\nthe target must succeed on a DC 17 Wisdom saving\nthrow against this magic or be charmed by the vampire.\nThe charmed target regards the vampire as a trusted\nfriend to be heeded and protected. Although the target\nisn’t under the vampire’s control, it takes the vampire’s\nrequests or actions in the most favorable way it can,\nand it is a willing target for the vampire’s bite attack.\nEach time the vampire or the vampire’s companions\ndo anything harmful to the target, it can repeat the\nsaving throw, ending the effect on itself on a success.\nOtherwise, the effect lasts 24 hours or until the\nvampire is destroyed, is on a different plane of\nexistence than the target, or takes a bonus action to\nend the effect.\nChildren of the Night (1/Day). The vampire magically\ncalls 2d4 swarms of bats or rats, provided that the sun\nisn’t up. While outdoors, the vampire can call 3d6\nwolves instead. The called creatures arrive in 1d4\nrounds, acting as allies of the vampire and obeying its\nspoken commands. The beasts remain for 1 hour, until\nthe vampire dies, or until the vampire dismisses them\nas a bonus action.\nLegendary Actions\nThe vampire can take 3 legendary actions, choosing\nfrom the options below. Only one legendary action\noption can be used at a time and only at the end of\nanother creature’s turn. The vampire regains spent\nlegendary actions at the start of its turn.\nMove. The vampire moves up to its speed without\nprovoking opportunity attacks.\nUnarmed Strike. The vampire makes one unarmed\nstrike.\nBite (Costs 2 Actions). The vampire makes one bite\nattack.\n",
+      "sourceSha256": "df2887243768f2b0949098e86289f67cdae94fd945450f6e21f4674177677611",
+      "baseContext": "Vampire\nMedium undead (shapechanger), lawful evil\nArmor Class 16 (natural armor)\nHit Points 144 (17d8 + 68)\nSpeed 30 ft.\nSTR DEX CON INT WIS CHA\n18 (+4) 18 (+4) 18 (+4) 17 (+3) 15 (+2) 18 (+4)\nSaving Throws Dex +9, Wis +7, Cha +9\nSkills Perception +7, Stealth +9\nDamage Resistances necrotic; bludgeoning, piercing,\nand slashing from nonmagical attacks\nSenses darkvision 120 ft., passive Perception 17\nLanguages the languages it knew in life\nChallenge 13 (10,000 XP)",
+      "units": [
+        {
+          "id": "r4-1",
+          "section": "trait",
+          "name": "Shapechanger",
+          "quote": "Shapechanger. If the vampire isn’t in sunlight or\nrunning water, it can use its action to polymorph into a\nTiny bat or a Medium cloud of mist, or back into its\ntrue form.\nWhile in bat form, the vampire can’t speak, its\nwalking speed is 5 feet, and it has a flying speed of 30\nfeet. Its statistics, other than its size and speed, are\nunchanged. Anything it is wearing transforms with it,\nbut nothing it is carrying does. It reverts to its true\nform if it dies.\nWhile in mist form, the vampire can’t take any\nactions, speak, or manipulate objects. It is weightless,\nhas a flying speed of 20 feet, can hover, and can enter\na hostile creature’s space and stop there. In addition, if\nair can pass through a space, the mist can do so\nwithout squeezing, and it can’t pass through water. It\nhas advantage on Strength, Dexterity, and Constitution\n\nsaving throws, and it is immune to all nonmagical\ndamage, except the damage it takes from sunlight.",
+          "context": []
+        },
+        {
+          "id": "r4-2",
+          "section": "trait",
+          "name": "Legendary Resistance (3/Day)",
+          "quote": "Legendary Resistance (3/Day). If the vampire fails a\nsaving throw, it can choose to succeed instead.",
+          "context": []
+        },
+        {
+          "id": "r4-3",
+          "section": "trait",
+          "name": "Misty Escape",
+          "quote": "Misty Escape. When it drops to 0 hit points outside its\nresting place, the vampire transforms into a cloud of\nmist (as in the Shapechanger trait) instead of falling\nunconscious, provided that it isn’t in sunlight or\nrunning water. If it can’t transform, it is destroyed.\nWhile it has 0 hit points in mist form, it can’t revert\nto its vampire form, and it must reach its resting place\nwithin 2 hours or be destroyed. Once in its resting\nplace, it reverts to its vampire form. It is then paralyzed\nuntil it regains at least 1 hit point. After spending 1\nhour in its resting place with 0 hit points, it regains 1 hit\npoint.",
+          "context": []
+        },
+        {
+          "id": "r4-4",
+          "section": "trait",
+          "name": "Regeneration",
+          "quote": "Regeneration. The vampire regains 20 hit points at the\nstart of its turn if it has at least 1 hit point and isn’t in\nsunlight or running water. If the vampire takes radiant\ndamage or damage from holy water, this trait doesn’t\nfunction at the start of the vampire’s next turn.",
+          "context": []
+        },
+        {
+          "id": "r4-5",
+          "section": "trait",
+          "name": "Spider Climb",
+          "quote": "Spider Climb. The vampire can climb difficult surfaces,\nincluding upside down on ceilings, without needing to\nmake an ability check.",
+          "context": []
+        },
+        {
+          "id": "r4-6",
+          "section": "trait",
+          "name": "Vampire Weaknesses",
+          "quote": "Vampire Weaknesses. The vampire has the following\nflaws:\nForbiddance. The vampire can’t enter a residence\nwithout an invitation from one of the occupants.\nHarmed by Running Water. The vampire takes 20\nacid damage if it ends its turn in running water.\nStake to the Heart. If a piercing weapon made of\nwood is driven into the vampire’s heart while the\nvampire is incapacitated in its resting place, the\nvampire is paralyzed until the stake is removed.\nSunlight Hypersensitivity. The vampire takes 20\nradiant damage when it starts its turn in sunlight.\nWhile in sunlight, it has disadvantage on attack rolls\nand ability checks.",
+          "context": []
+        },
+        {
+          "id": "r4-7",
+          "section": "action",
+          "name": "Multiattack (Vampire Form Only)",
+          "quote": "Multiattack (Vampire Form Only). The vampire makes\ntwo attacks, only one of which can be a bite attack.",
+          "context": []
+        },
+        {
+          "id": "r4-8",
+          "section": "action",
+          "name": "Unarmed Strike (Vampire Form Only)",
+          "quote": "Unarmed Strike (Vampire Form Only). Melee Weapon\nAttack: +9 to hit, reach 5 ft., one creature. Hit: 8 (1d8 +\n4) bludgeoning damage. Instead of dealing damage,\nthe vampire can grapple the target (escape DC 18).",
+          "context": []
+        },
+        {
+          "id": "r4-9",
+          "section": "action",
+          "name": "Bite (Bat or Vampire Form Only)",
+          "quote": "Bite (Bat or Vampire Form Only). Melee Weapon\nAttack: +9 to hit, reach 5 ft., one willing creature, or a\ncreature that is grappled by the vampire, incapacitated,\nor restrained. Hit: 7 (1d6 + 4) piercing damage plus 10\n(3d6) necrotic damage. The target’s hit point maximum\nis reduced by an amount equal to the necrotic damage\ntaken, and the vampire regains hit points equal to that\namount. The reduction lasts until the target finishes a\nlong rest. The target dies if this effect reduces its hit\npoint maximum to 0. A humanoid slain in this way and\nthen buried in the ground rises the following night as a\nvampire spawn under the vampire’s control.",
+          "context": []
+        },
+        {
+          "id": "r4-10",
+          "section": "action",
+          "name": "Charm",
+          "quote": "Charm. The vampire targets one humanoid it can see\nwithin 30 feet of it. If the target can see the vampire,\nthe target must succeed on a DC 17 Wisdom saving\nthrow against this magic or be charmed by the vampire.\nThe charmed target regards the vampire as a trusted\nfriend to be heeded and protected. Although the target\nisn’t under the vampire’s control, it takes the vampire’s\nrequests or actions in the most favorable way it can,\nand it is a willing target for the vampire’s bite attack.\nEach time the vampire or the vampire’s companions\ndo anything harmful to the target, it can repeat the\nsaving throw, ending the effect on itself on a success.\nOtherwise, the effect lasts 24 hours or until the\nvampire is destroyed, is on a different plane of\nexistence than the target, or takes a bonus action to\nend the effect.",
+          "context": []
+        },
+        {
+          "id": "r4-11",
+          "section": "action",
+          "name": "Children of the Night (1/Day)",
+          "quote": "Children of the Night (1/Day). The vampire magically\ncalls 2d4 swarms of bats or rats, provided that the sun\nisn’t up. While outdoors, the vampire can call 3d6\nwolves instead. The called creatures arrive in 1d4\nrounds, acting as allies of the vampire and obeying its\nspoken commands. The beasts remain for 1 hour, until\nthe vampire dies, or until the vampire dismisses them\nas a bonus action.",
+          "context": []
+        },
+        {
+          "id": "r4-12",
+          "section": "legendary",
+          "name": "Move",
+          "quote": "Move. The vampire moves up to its speed without\nprovoking opportunity attacks.",
+          "context": [
+            "Legendary Actions\nThe vampire can take 3 legendary actions, choosing\nfrom the options below. Only one legendary action\noption can be used at a time and only at the end of\nanother creature’s turn. The vampire regains spent\nlegendary actions at the start of its turn."
+          ]
+        },
+        {
+          "id": "r4-13",
+          "section": "legendary",
+          "name": "Unarmed Strike",
+          "quote": "Unarmed Strike. The vampire makes one unarmed\nstrike.",
+          "context": [
+            "Legendary Actions\nThe vampire can take 3 legendary actions, choosing\nfrom the options below. Only one legendary action\noption can be used at a time and only at the end of\nanother creature’s turn. The vampire regains spent\nlegendary actions at the start of its turn."
+          ]
+        },
+        {
+          "id": "r4-14",
+          "section": "legendary",
+          "name": "Bite (Costs 2 Actions)",
+          "quote": "Bite (Costs 2 Actions). The vampire makes one bite\nattack.",
+          "context": [
+            "Legendary Actions\nThe vampire can take 3 legendary actions, choosing\nfrom the options below. Only one legendary action\noption can be used at a time and only at the end of\nanother creature’s turn. The vampire regains spent\nlegendary actions at the start of its turn."
+          ]
+        }
+      ],
+      "sourceUrl": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf",
+      "pdfPages": [
+        352,
+        353
+      ]
+    }
+  ]
+}

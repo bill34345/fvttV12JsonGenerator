@@ -186,6 +186,17 @@ export function decodeEncounterRecovery(value: string): EncounterRecoverySnapsho
         ||!actor.analysis||typeof actor.analysis!=='object'||Array.isArray(actor.analysis))
       ||(report.packageHash!==undefined&&!/^[a-f0-9]{64}$/.test(report.packageHash)))
       throw new TypeError('战斗包来源报告与保存的任务不符。');
+    const actors=report.actors;
+    if(report.members!==undefined&&(!Array.isArray(report.members)||report.members.length<1||report.members.length>6
+      ||report.members.length<actors.length||report.members.some((member,index)=>!member||member.key!==`actor-${index+1}`
+        ||typeof member.label!=='string'||!member.label.trim()||member.label.length>500
+        ||!Number.isSafeInteger(member.start)||!Number.isSafeInteger(member.end)||member.start<0||member.end>sourceText.length||member.start>=member.end
+        ||(index>0&&member.start<report.members![index-1]!.end)
+        ||!['pending','running','available','failed','cancelled'].includes(member.status)
+        ||!Array.isArray(member.findings)||member.findings.some(finding=>typeof finding!=='string')
+        ||(actors[index]&&(actors[index]!.start!==member.start||actors[index]!.end!==member.end))
+        ||(member.status==='available'&&!actors.some(actor=>actor.key===member.key&&actor.generation?.candidateAvailable)))))
+      throw new TypeError('保存的逐个生物状态与完整来源清单不符。');
   }
   if (record.package !== undefined) {
     const expected = (record.report as EncounterIntakeReport | undefined)?.packageHash;

@@ -1,3 +1,4 @@
+import {conflictingSpellReuseBindings} from '@fvtt-json-generator/spell-manifest-contracts';
 import {
   hashManifest,
   logicalSpellRefKey,
@@ -9,7 +10,7 @@ import {
   type SpellHydrationPlan,
 } from '../../../src/core/spell-resolution';
 import { computeManagedSourceHash, generatedResolverDocumentId, type LiteralRestrictionReport } from './cast-activity';
-import { createHydrationJournal, hydrateManagedSelection, type HydrationJournal } from './hydrator';
+import { createHydrationJournal, hydrateManagedSelection, completeManagedSourceCache, type HydrationJournal } from './hydrator';
 import {
   assertNativeCacheProjectionMatches,
   assertOwnedJournalCacheProjection,
@@ -58,6 +59,9 @@ export interface HydrationFailureDiagnostic {
 }
 
 export interface ExecuteHydrationTransactionInput {
+  /** Explicit maintenance of an already valid owned cache's source notes or
+   * reviewed lifetime binding. Does not alter ownership or plan/hash checks. */
+  completeSourceCache?: boolean;
   actor: any;
   manifest: PortableSpellManifest;
   plan: SpellHydrationPlan;
@@ -108,7 +112,7 @@ async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<H
     if (resolution.managedProjectionHash !== beforeProjectionHash) {
       throw new Error('Same-plan Actor managed projection drifted structurally; refusing a false no-op.');
     }
-    return { status: 'noop', planHash: input.plan.planHash, managedProjectionHash: beforeProjectionHash };
+    if(!input.completeSourceCache)return { status: 'noop', planHash: input.plan.planHash, managedProjectionHash: beforeProjectionHash };
   }
   const explicitConflictKeys = input.plan.selections
     .filter((selection) => selection.manualDecision === 'keep' || selection.manualDecision === 'overwrite')
@@ -135,7 +139,7 @@ async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<H
     for (let index = 0; index < input.plan.selections.length; index++) {
       selectionIndex = index + 1;
       const selection = input.plan.selections[index]!;
-      const hydrated = await hydrateManagedSelection({
+      const hydrated = await (input.completeSourceCache?completeManagedSourceCache:hydrateManagedSelection)({
         actor: input.actor,
         manifest: input.manifest,
         selection,
@@ -291,6 +295,8 @@ function validateTransactionInput(input: ExecuteHydrationTransactionInput): void
   if (seen.size !== expected.size || [...expected.keys()].some((key) => !seen.has(key))) {
     throw new TypeError('Hydration plan must select every manifest ref exactly once before the first write.');
   }
+  if(conflictingSpellReuseBindings(validated.value,plan.selections.map(selection=>({...selection,value:selection.uuid}))).length)
+    throw new TypeError('Referenced spell bindings disagree with their source definition; no writes permitted.');
 }
 
 async function cleanupStaleManagedContent(
@@ -498,6 +504,7 @@ async function rollback(
   if (snapshot.spells.length) {
     await safeRollback(async () => {
       await requireApi(input.actor, 'createEmbeddedDocuments')('Item', structuredClone(snapshot.spells), { keepId: true });
+      for (const saved of snapshot.spells) await restoreSnapshotSourceEffectOrigins(input.actor, saved);
     }, rollbackErrors);
   }
   await safeRollback(async () => {
@@ -510,6 +517,54 @@ async function rollback(
     differences.push({ path: '/rollback/errors', after: [...new Set(rollbackErrors)] });
   }
   return differences;
+}
+
+/**
+ * In the pinned 5.3.3 runtime, embedded Item recreation can remap an original
+ * source Effect origin to its exact owned cache UUID. Restore only that observed
+ * remapping, after proving the same owned pair and every Effect business field.
+ * This is compensation, never permission to accept a different source/write.
+ */
+async function restoreSnapshotSourceEffectOrigins(actor: any, saved: Record<string, any>): Promise<void> {
+  if ((globalThis as any).game?.system?.version !== '5.3.3') return;
+  const identity = readIdentity(saved.flags?.[RESOLVER_MODULE_ID]);
+  const cache = findItem(actor, saved._id);
+  const feature = identity && findItem(actor, identity.featureId);
+  const activity = identity && getActivity(feature, identity.activityId);
+  if (!identity || !cache || !feature || !activity) throw Error('Restored snapshot Spell lost its exact owned pair.');
+  assertResolverDocumentOwnership(actor, feature, activity, identity, 'activity');
+  assertResolverDocumentOwnership(actor, feature, cache, identity, 'spell', activity.relativeUUID);
+  const current = documentSource(cache);
+  if (!Array.isArray(saved.effects) || !Array.isArray(current.effects)) return;
+  const restored = structuredClone(current.effects);
+  const updates: Array<{_id: string; origin: string}> = [];
+  if (saved.effects.length !== restored.length) throw Error('Restored snapshot Spell Effect membership changed.');
+  for (let index = 0; index < saved.effects.length; index++) {
+    const before = saved.effects[index], after = restored[index];
+    if (!isRecord(before) || !isRecord(after) || before._id !== after._id) {
+      throw Error('Restored snapshot Spell Effect identity changed.');
+    }
+    if (before.origin === after.origin) continue;
+    if (before.origin !== identity.selectedUuid || saved._stats?.compendiumSource !== identity.selectedUuid
+      || typeof actor.uuid !== 'string' || typeof cache.uuid !== 'string'
+      || cache.uuid !== `${actor.uuid}.Item.${documentId(cache)}` || after.origin !== cache.uuid) {
+      throw Error('Restored snapshot Spell Effect origin is not the exact source-to-owned-cache remapping.');
+    }
+    after.origin = before.origin;
+    updates.push({_id: before._id, origin: before.origin});
+  }
+  // Wrap the complete Effect sources so no top-level hash whitelist can discard
+  // an executable field. Only the existing managed volatile fields are ignored.
+  const expectedHash = computeManagedSourceHash({system: {snapshotEffects: saved.effects}});
+  if (expectedHash !== computeManagedSourceHash({system: {snapshotEffects: restored}})) {
+    throw Error('Restored snapshot Spell Effect business fields changed; refusing origin compensation.');
+  }
+  if (!updates.length) return;
+  await requireApi(cache, 'updateEmbeddedDocuments')('ActiveEffect', updates);
+  const readback = documentSource(findItem(actor, saved._id));
+  if (expectedHash !== computeManagedSourceHash({system: {snapshotEffects: readback.effects}})) {
+    throw Error('Restored snapshot Spell Effect origin compensation did not match the complete readback.');
+  }
 }
 
 async function deleteOwnedActivitySafely(
@@ -739,10 +794,21 @@ function diffSources(kind: string, before: Record<string, any>[], after: Record<
   for (const id of [...ids].sort()) {
     const left = beforeById.get(id);
     const right = afterById.get(id);
-    if (canonicalStringify(left) !== canonicalStringify(right)) {
+    if (restorationBusinessStringify(left) !== restorationBusinessStringify(right)) {
       output.push({ path: `/managed/${kind}/${id}`, ...(left === undefined ? {} : { before: left }), ...(right === undefined ? {} : { after: right }) });
     }
   }
+}
+
+function restorationBusinessStringify(value: unknown): string {
+  const normalize = (entry: unknown, parentKey?: string): unknown => {
+    if (Array.isArray(entry)) return entry.map(child => normalize(child));
+    if (!isRecord(entry)) return entry;
+    return Object.fromEntries(Object.keys(entry).sort()
+      .filter(key => parentKey !== '_stats' || !['createdTime', 'modifiedTime', 'lastModifiedBy'].includes(key))
+      .map(key => [key, normalize(entry[key], key)]));
+  };
+  return JSON.stringify(normalize(value));
 }
 
 function documentSource(document: any): Record<string, any> {

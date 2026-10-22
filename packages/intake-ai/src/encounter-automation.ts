@@ -589,7 +589,7 @@ export function renderEncounterActorSource(
   actorSource?: string,
 ): string {
   if (!Array.isArray(rules) || rules.length > MAX_RULES) throw new TypeError('Encounter automation rules exceed the supported limit.');
-  const renderedSource = renderMonsterIntakeMarkdown(ir);
+  const renderedSource = renderMonsterIntakeMarkdown(ir,actorSource);
   const staged = encounterStagedConditionRequirements(ir, actorSource);
   const manual=encounterManualConditionRequirements(ir,rules);
   const movement = actorSource === undefined ? [] : manualForcedMovementRequirements(ir, actorSource);

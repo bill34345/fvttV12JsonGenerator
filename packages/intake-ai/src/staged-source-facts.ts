@@ -2,29 +2,40 @@ import type { CanonicalMonster, CanonicalFeature, EvidenceRef } from './types';
 import { StagedExtractionError } from './staged-source';
 import yaml from 'js-yaml';
 import {headerPresentation} from './header-presentation';
+import {sourceSizeOptions} from './source-size';
 
 const sizeAliases: Record<string, string> = { tiny: 'tiny', 微型: 'tiny', small: 'small', 小型: 'small', medium: 'medium', 中型: 'medium', large: 'large', 大型: 'large', huge: 'huge', 巨型: 'huge', gargantuan: 'gargantuan', 超巨型: 'gargantuan', colossal:'colossal' };
 const typeAliases: Record<string, string> = { aberration: 'aberration', 异怪: 'aberration', beast: 'beast', 野兽: 'beast', celestial: 'celestial', 天界生物: 'celestial', 天族: 'celestial', construct: 'construct', 构装生物: 'construct', 构装体: 'construct', 构装: 'construct', dragon: 'dragon', 龙: 'dragon', elemental: 'elemental', 元素生物: 'elemental', fey: 'fey', 妖精: 'fey', fiend: 'fiend', 邪魔: 'fiend', giant: 'giant', 巨人: 'giant', humanoid: 'humanoid', 类人生物: 'humanoid', 类人: 'humanoid', monstrosity: 'monstrosity', 怪兽: 'monstrosity', ooze: 'ooze', 泥怪: 'ooze', plant: 'plant', 植物: 'plant', undead: 'undead', 亡灵: 'undead' };
 // Identity is read only from the bounded stat header. Ability prose never owns
 // the Actor size, creature type, or the size of individual swarm members.
 for (const [plural,singular] of Object.entries({aberrations:'aberration',beasts:'beast',celestials:'celestial',constructs:'construct',dragons:'dragon',elementals:'elemental',fiends:'fiend',giants:'giant',humanoids:'humanoid',monstrosities:'monstrosity',oozes:'ooze',plants:'plant'})) typeAliases[plural]=singular;
-interface HeaderIdentityRow {size:string;type:string;subtype?:string;swarmSize?:string;alignment?:string}
+export const stagedCreatureType=(value:string):string|undefined=>typeAliases[value.normalize('NFKC').trim().toLowerCase()];
+interface HeaderIdentityRow {size:string;type:string;literal:string;subtype?:string;swarmSize?:string;alignment?:string}
 function identityHeaderRows(source:string){
   const plain=headerPresentation(source).replace(/<!--\s*document-source\b[^]*?-->/gu,'').replace(/\*{1,3}|_{2,3}/gu,'').normalize('NFKC');
   const sizes=Object.keys(sizeAliases).sort((a,b)=>b.length-a.length).join('|');
   const types=Object.keys(typeAliases).sort((a,b)=>b.length-a.length).join('|');
+  const sizeExpression=`(?:${sizes})(?:(?:[ \\t]*[,、，][ \\t]*(?:or[ \\t]+)?|[ \\t]+or[ \\t]+|[ \\t]*或(?:者)?[ \\t]*)(?:${sizes}))*`;
   const identityView=plain.replace(/^[ \t]*(?:size|体型)[ \t]*:[ \t]*(["']?)([^\r\n]+?)\1[ \t]*$/gimu,'$2');
   const sizeTypeRows:HeaderIdentityRow[]=[];
-  const natural=new RegExp(`^[ \\t]*(${sizes})[ \\t]+(?:swarm[ \\t]+of[ \\t]*(?:\\r?\\n[ \\t]*)?(${sizes})[ \\t]+)?(${types})(?:[ \\t]*\\(([^\\r\\n)]+)\\))?(?:[ \\t]*[,，]([^\\r\\n]+))?[ \\t]*$`,'gimu');
+  const natural=new RegExp(`^[ \\t]*(${sizeExpression})[ \\t]+(?:swarm[ \\t]+of[ \\t]*(?:\\r?\\n[ \\t]*)?(${sizes})[ \\t]+)?(${types})(?:[ \\t]*\\(([^\\r\\n)]+)\\))?(?:[ \\t]*[,，]([^\\r\\n]+))?[ \\t]*$`,'gimu');
   const naturalMatches=[...identityView.matchAll(natural)];
-  for(const row of naturalMatches)sizeTypeRows.push({size:row[1]!,type:row[3]!,swarmSize:row[2],subtype:row[4],alignment:row[5]});
+  for(const row of naturalMatches)sizeTypeRows.push({size:row[1]!,type:row[3]!,literal:row[0].trim(),swarmSize:row[2],subtype:row[4],alignment:row[5]});
   // Chinese ordinary and explicit compound swarm identity lines.
-  const chinese=new RegExp(`^[ \\t]*(${sizes})[ \\t]*(?:(${sizes})[ \\t]*)?(${types})[ \\t]*(集群|虫群)?(?:[ \\t]*\\(([^\\r\\n)]+)\\))?(?:[ \\t]*[,，]([^\\r\\n]+))?[ \\t]*$`,'gimu');
-  for(const row of identityView.matchAll(chinese))if(!naturalMatches.some(match=>row.index!>=match.index!&&row.index!<match.index!+match[0].length))sizeTypeRows.push({size:row[1]!,type:row[3]!,swarmSize:row[4]?row[2]:undefined,subtype:row[5],alignment:row[6]});
+  const chinese=new RegExp(`^[ \\t]*(${sizeExpression})[ \\t]*(?:(${sizes})[ \\t]*)?(${types})[ \\t]*(集群|虫群)?(?:[ \\t]*\\(([^\\r\\n)]+)\\))?(?:[ \\t]*[,，]([^\\r\\n]+))?[ \\t]*$`,'gimu');
+  for(const row of identityView.matchAll(chinese))if(!naturalMatches.some(match=>row.index!>=match.index!&&row.index!<match.index!+match[0].length))sizeTypeRows.push({size:row[1]!,type:row[3]!,literal:row[0].trim(),swarmSize:row[4]?row[2]:undefined,subtype:row[5],alignment:row[6]});
   const initialSizes=[...identityView.matchAll(new RegExp(`^[ \\t]*(${sizes})[ \\t]*(?=(?:${types}|swarm\\b|集群|虫群))`,'gimu'))].filter(row=>!naturalMatches.some(match=>row.index!>=match.index!&&row.index!<match.index!+match[0].length)).map(row=>row[1]!);
   const chineseSwarm=new RegExp(`^[ \\t]*(${sizes})[ \\t]*(?:虫群|集群)[ \\t]*[,，][ \\t]*由[ \\t]*(${sizes})[ \\t]*(${types})[ \\t]*组成(?:[ \\t]*[,，]([^\\r\\n]+))?[ \\t]*$`,'gimu');
-  for(const row of identityView.matchAll(chineseSwarm))sizeTypeRows.push({size:row[1]!,swarmSize:row[2],type:row[3]!,alignment:row[4]});
-  const declaredSizes=[...plain.matchAll(/(?:\bSize|(?<![\p{L}])体型)\s*[:："']?\s*(\p{L}+)/giu)].map(row=>row[1]!).concat(sizeTypeRows.map(row=>row.size),initialSizes);
+  for(const row of identityView.matchAll(chineseSwarm))sizeTypeRows.push({size:row[1]!,swarmSize:row[2],type:row[3]!,literal:row[0].trim(),alignment:row[4]});
+  const sizeDeclarations=plain.replace(/(\bSize\b[^\r\n]*\([ \t]*Swarm\s+of)[ \t]*\r?\n[ \t]*(\p{L}+)[ \t]*\)/giu,'$1 $2)');
+  const declaredSizes=[...sizeDeclarations.matchAll(/(?:\bSize\b|(?<![\p{L}])体型)[ \t]*[:："']?[ \t]*([^\r\n]+)/giu)].map(row=>{
+    const literal=row[1]!.split(/\b(?:AC|Armor Class|HP|Hit Points|Initiative|Speed|Type|CR|Challenge|XP|Proficiency Bonus)\b|护甲等级|生命值|先攻|速度|类型|挑战等级|经验值|熟练加值/iu)[0]!.trim().replace(/^["']|["']$/gu,'').trim();
+    const naturalRow=sizeTypeRows.find(entry=>entry.literal===literal);
+    if(naturalRow)return naturalRow.size;
+    const swarm=literal.match(new RegExp(`^(${sizes})[ \\t]*\\([ \\t]*(?:Swarm\\s+of\\s+(?:${sizes})|由[ \\t]*(?:${sizes})[ \\t]*(?:个体|生物)?[ \\t]*组成的?(?:虫群|集群))[ \\t]*\\)$`,'iu'));
+    if(swarm)return swarm[1]!;
+    return /^Colossal(?:\s*\([^)]*\))?$/iu.test(literal)?'Colossal':literal;
+  }).concat(sizeTypeRows.map(row=>row.size),initialSizes);
   const explicitTypes=[...plain.matchAll(/(?:\bType\b|(?:生物)?类型)[ \t]*[:："']?[ \t]*(\p{L}+)(?:[ \t]*\(([^\r\n)]+)\))?/giu)];
   const declaredTypes=explicitTypes.map(row=>row[1]!).concat(sizeTypeRows.map(row=>row.type));
   const swarmSizes=sizeTypeRows.flatMap(row=>row.swarmSize?[row.swarmSize]:[]);
@@ -41,6 +52,12 @@ function identityHeaderRows(source:string){
  * model values and conflicting source declarations stay for the strict gate. */
 export function completeSourceHeaderIdentity(source:string,creature:CanonicalMonster):string[]{
   const facts=identityHeaderRows(source),paths:string[]=[];
+  const sizes=facts.declaredSizes.map(sourceSizeOptions);
+  const choice=facts.declaredSizes[0];
+  if(creature.identity.sourceSize===undefined&&choice&&sizes[0]&&sizes[0].length>1
+    &&sizes.every(options=>options&&JSON.stringify(options.slice().sort())===JSON.stringify(sizes[0]!.slice().sort()))){
+    creature.identity.sourceSize=choice;paths.push('/creature/identity/sourceSize');
+  }
   const canonicalType=typeAliases[creature.identity.creatureType?.toLowerCase()];
   if(canonicalType)creature.identity.creatureType=canonicalType;
   const swarm=[...new Set(facts.swarmSizes.map(value=>sizeAliases[value.toLowerCase()]))];
@@ -111,7 +128,7 @@ const HEADS: Array<[string, RegExp]> = [
   ['senses', /^(?:Senses|感官)\s*[:：]?\s*(.*)$/iu],
   ['languages', /^(?:Languages|语言)\s*[:：]?\s*(.*)$/iu],
 ];
-const METADATA = /^(?:---|#{1,6}\s|AC\b|Armor Class\b|armor_class:|HP\b|Hit Points\b|hit_points:|Speed\b|speed:|Initiative\b|Size\b|Type\b|Challenge\b|challenge:|CR\b|XP\b|Proficiency Bonus\b|Drives\b|MOD\b|SAVE\b|Str\b|Dex\b|Con\b|Int\b|Wis\b|Cha\b|Strength\b|Dexterity\b|Constitution\b|Intelligence\b|Wisdom\b|Charisma\b|name:|layout:|tags:|alignment:|护甲等级|生命值|速度|先攻|体型|类型|挑战等级|经验值|熟练加值|力量|敏捷|体质|智力|感知|魅力|调整)/iu;
+const METADATA = /^(?:---|#{1,6}\s|AC\b|Armor Class\b|armor_class:|HP\b|Hit Points\b|hit_points:|Speed\b|speed:|Initiative\b|Size\b|Type\b|Challenge\b|challenge:|CR\b|XP\b|Proficiency Bonus\b|Gear\b|Equipment\b|Drives\b|MOD\b|SAVE\b|Str\b|Dex\b|Con\b|Int\b|Wis\b|Cha\b|Strength\b|Dexterity\b|Constitution\b|Intelligence\b|Wisdom\b|Charisma\b|name:|layout:|tags:|alignment:|护甲等级|生命值|速度|先攻|体型|类型|挑战等级|经验值|熟练加值|装备|携带物品|力量|敏捷|体质|智力|感知|魅力|调整)/iu;
 /** Keep the field boundary when a numeric header label is emphasized directly
  * against its value, as in CHM-derived **AC**19. Source bytes stay unchanged. */
 export function unmarkStagedHeader(value:string):string {
@@ -124,7 +141,12 @@ export const stagedDamageLabels=Object.keys(DAMAGE);
 export const stagedDamageType=(value:string):string|undefined=>DAMAGE[token(value)];
 const empty = (value: string) => /^(?:none|—|-|无)[。.]?$/iu.test(clean(value));
 const parts = (value: string) => clean(value).split(/[,，;；、]/u).map(value => value.trim().replace(/^and\s+/iu, '')).filter(Boolean);
-const languageParts=(value:string)=>parts(value).flatMap(part=>part.split(/以及|\s+and\s+/iu)).map(part=>part.trim().replace(/^(?:以及|and\s+)/iu,'')).filter(Boolean);
+const languageParts=(value:string)=>parts(value).flatMap(part=>part.split(/以及|\s+and\s+/iu))
+  // A named language and an open-ended choice are separate facts. Retain the
+  // complete choice (including its number), whether supplied together or as
+  // a native language plus a custom note. Never invent the other languages.
+  .flatMap(part=>part.split(/\s+(?=plus\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+other\s+languages?\b)/iu))
+  .map(part=>part.trim().replace(/^(?:以及|and\s+)/iu,'')).filter(Boolean);
 /** Exact source language qualifiers remain notes, never inferred speaking
  * capabilities. Used only to restore an absent note; conflicts are not erased. */
 export function sourceLanguageNotes(source:string,values:readonly string[]):string|undefined {
@@ -415,14 +437,18 @@ export function validateStagedStaticSourceFacts(source: string, creature: Canoni
   }
   if(!field||field==='identity'){
   const {plain,declaredSizes,declaredTypes,swarmSizes,alignments,subtypes}=identityHeaderRows(source);
-  for (const [values, aliases, path] of [[declaredSizes, sizeAliases, 'identity/size'], [declaredTypes, typeAliases, 'identity/creatureType'],[swarmSizes,sizeAliases,'identity/swarmSize']] as const) {
+  for (const [values, aliases, path] of [[declaredTypes, typeAliases, 'identity/creatureType'],[swarmSizes,sizeAliases,'identity/swarmSize']] as const) {
     const canonical = values.map(value => aliases[value.toLowerCase()] ?? fail('UNSUPPORTED_STATIC_FACT', path));
     if (new Set(canonical).size > 1) fail('CONFLICTING_STATIC_FACT', path);
   }
   const size=declaredSizes[0];
-  if (!size || !sizeAliases[size.toLowerCase()]) fail('UNSUPPORTED_STATIC_FACT', 'identity/size');
-  if (creature.identity.size !== (size.toLowerCase()==='colossal'?'gargantuan':sizeAliases[size.toLowerCase()])) fail('BASE_STATIC_CONFLICT', 'identity/size');
-  const sourceSize=plain.match(/\bSize\s*[:："']?\s*(Colossal(?:\s*\([^)]*\))?)/iu)?.[1];
+  const options=declaredSizes.map(value=>value.toLowerCase()==='colossal'?['gargantuan']:sourceSizeOptions(value));
+  if(!size||options.some(value=>!value))fail('UNSUPPORTED_STATIC_FACT','identity/size');
+  const signatures=declaredSizes.map((value,index)=>value.toLowerCase()==='colossal'?'colossal':JSON.stringify(options[index]!.slice().sort()));
+  if(new Set(signatures).size>1)fail('CONFLICTING_STATIC_FACT','identity/size');
+  if(!options[0]!.includes(creature.identity.size))fail('BASE_STATIC_CONFLICT','identity/size');
+  const sourceSize=options[0]!.length>1?size:plain.match(/\bSize\s*[:："']?\s*(Colossal(?:\s*\([^)]*\))?)/iu)?.[1];
+  if(creature.identity.sourceSize!==undefined&&typeof creature.identity.sourceSize!=='string')fail('BASE_STATIC_CONFLICT','identity/sourceSize');
   if(sourceSize ? clean(creature.identity.sourceSize??'')!==clean(sourceSize) : creature.identity.sourceSize!==undefined)fail('BASE_STATIC_CONFLICT','identity/sourceSize');
   const explicitType=declaredTypes[0];
   if (!explicitType || !typeAliases[explicitType.toLowerCase()]) fail('UNSUPPORTED_STATIC_FACT', 'identity/creatureType');

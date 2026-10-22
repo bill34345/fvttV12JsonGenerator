@@ -13,3 +13,5 @@ export {
   validatePortableSpellManifest,
   validatePortableSpellManifestStructure,
 } from './validator';
+
+export {conflictingSpellReuseBindings} from './spellReuse';

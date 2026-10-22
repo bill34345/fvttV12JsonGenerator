@@ -130,19 +130,33 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     expect(projection.biography).toBe('Prosthetic limb (right hand).\nArmor Class: 13 (chain shirt)');
   });
 
-  test('projects the source-exact activity chat flavor before a lossy item HTML description', () => {
-    const projection = projectActor({
-      system: { abilities: {}, attributes: {}, traits: {}, details: {} },
-      items: [{
-        name: 'Spellcasting', type: 'feat',
-        system: {
-          description: { value: '<p>*Spellcasting**. lossy HTML</p>' },
-          activities: { one: { description: { chatFlavor: '**Spellcasting**. exact source' } } },
-        },
-      }],
-    });
+  test('keeps visible Item rules authoritative while retaining Activity flavor independently', async () => {
+    const item = {
+      name: 'Spellcasting', type: 'feat',
+      system: {
+        description: { value: '<p>**Spellcasting**. visible Item source</p>' },
+        activities: { one: { description: { chatFlavor: '**Spellcasting**. different Activity text' } } },
+      },
+    };
+    const actor = {system:{abilities:{},attributes:{},traits:{},details:{}},items:[item]};
+    const project=()=>((projectActor(actor).items as Array<Record<string, any>>)[0]!);
+    expect(project().description).toBe('**Spellcasting**. visible Item source');
+    expect(project().activities[0].description).toBe('**Spellcasting**. different Activity text');
+    item.system.description.value='<p>Truncated Item rule.</p>';
+    expect(project().description).toBe('Truncated Item rule.');
+    expect(project().description).not.toBe(project().activities[0].description);
 
-    expect((projection.items as Array<Record<string, unknown>>)[0]!.description).toBe('**Spellcasting**. exact source');
+    const generated=await generatedRatWarlock();
+    expect(verifyMonsterIntake(RAT_WARLOCK_SOURCE,generated.ir,generated.markdown,generated.actor).findings).toEqual([]);
+    const feature=generated.ir.creature.actions[0]!;
+    const generatedItem=generated.actor.items.find((entry:any)=>String(entry.name).includes(feature.name));
+    const activities=Object.values(generatedItem.system.activities) as any[];
+    expect(activities.length).toBeGreaterThan(0);
+    for(const activity of activities)activity.description={chatFlavor:feature.description};
+    generatedItem.system.description.value='<p>The complete rule was removed.</p>';
+    const report=verifyMonsterIntake(RAT_WARLOCK_SOURCE,generated.ir,generated.markdown,generated.actor);
+    expect(report.findings).toContainEqual(expect.objectContaining({code:'ACTOR_DESCRIPTION_LOSS',path:'/creature/actions/0/description'}));
+    expect(report.status).toBe('needs_review');
   });
 
   test('projects the explicit mythic display section separately from Foundry legendary activation', () => {
@@ -808,6 +822,9 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     const markdown = renderMonsterIntakeMarkdown(ir);
     const generated = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '12', effectProfile: 'core', translationService: null });
     const actor = structuredClone(generated.rawJson) as any;
+    expect(verifyMonsterIntake(LURKER_SOURCE,ir,markdown,actor).findings).toEqual([]);
+    const originalClaw=(projectActor(actor).items as Array<Record<string,unknown>>).find(item=>String(item.name).includes('爪击'));
+    expect(originalClaw).toMatchObject({toHit:6,reach:10,damageFormulas:['1d10+4'],damageTypes:['slashing']});
     actor.system.attributes.ac.flat = 20;
     actor.system.attributes.hp.value = 332;
     actor.system.attributes.init.bonus = 99;
@@ -820,8 +837,11 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     actor.items = actor.items.filter((item: any) => !['蛛行 Spider Climb', '纯真结界 Ward of Innocence'].includes(item.name));
     const claw = actor.items.find((item: any) => item.name.includes('爪击'));
     claw.system.range.reach = 5;
-    claw.system.damage.base.denomination = 6;
-    const clawActivity = Object.values(claw.system.activities)[0] as any;
+    const clawActivity = Object.values(claw.system.activities).find((activity:any)=>activity.type==='attack') as any;
+    expect(clawActivity.damage.parts).toHaveLength(1);
+    expect(clawActivity.damage.parts[0]).toMatchObject({number:1,denomination:10,bonus:'4',types:['slashing']});
+    clawActivity.damage.parts[0].denomination = 6;
+    clawActivity.damage.parts[0].types = ['fire'];
     clawActivity.range.reach = 5;
     const teleport = actor.items.find((item: any) => item.name.includes('黑暗传送'));
     const teleportActivity = Object.values(teleport.system.activities)[0] as any;
@@ -840,6 +860,7 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     expect(codes).toContain('ACTOR_LANGUAGE_NOTE_DRIFT');
     expect(codes).toContain('ACTOR_REACH_DRIFT');
     expect(codes).toContain('ACTOR_DAMAGE_FORMULA_DRIFT');
+    expect(codes).toContain('ACTOR_DAMAGE_TYPE_DRIFT');
     expect(codes).toContain('ACTOR_SAVE_DC_DRIFT');
     expect(codes).toContain('ACTOR_FEATURE_MISSING');
     expect(codes).toContain('ACTOR_FEATURE_COUNT_DRIFT');

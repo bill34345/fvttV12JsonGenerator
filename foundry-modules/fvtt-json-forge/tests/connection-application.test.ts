@@ -41,6 +41,45 @@ describe('Forge Connection ApplicationV2', () => {
     expect(notifications.infos).toContain('Forge AI 连接配置已保存。');
   });
 
+  test('shows correction off by default and saves an explicit opt-in without requesting a model', () => {
+    installStorage(makeStorage());
+    let calls = 0;
+    const { application, root } = makeApplication({ testForgeProviderConnection: async () => {
+      calls += 1;
+      throw new Error('Saving a preference must not call the provider.');
+    } });
+    expect(root.autoCorrect.checked).toBe(false);
+    fillDraft(root);
+    root.autoCorrect.checked = true;
+    root.autoCorrect.onchange?.();
+    root.save.onclick?.();
+    expect(calls).toBe(0);
+    expect(readForgeSessionSettings().autoCorrect).toBe(true);
+    application._onRender({}, {});
+    expect(root.autoCorrect.checked).toBe(true);
+
+    root.autoCorrect.checked = false;
+    root.autoCorrect.onchange?.();
+    root.save.onclick?.();
+    expect(readForgeSessionSettings().autoCorrect).toBe(false);
+    expect(calls).toBe(0);
+  });
+
+  test('does not reuse a draft connection proof after the correction preference changes', async () => {
+    installStorage(makeStorage());
+    const { application, root } = makeApplication({ testForgeProviderConnection: async input => ({
+      status: 'connected', providerId: input.providerId ?? 'custom', protocol: input.protocol ?? 'openai-chat',
+      model: input.model ?? '', models: [], capabilities: {} as any, message: 'ok',
+    }) });
+    fillDraft(root);
+    await (application as any).testConnection(root);
+    root.autoCorrect.checked = true;
+    root.autoCorrect.onchange?.();
+    root.save.onclick?.();
+    expect(readForgeSessionSettings().autoCorrect).toBe(true);
+    expect(isForgeSessionConnectionReady()).toBe(false);
+  });
+
   test('does not keep a previous ready state after a failed retry', async () => {
     installStorage(makeStorage());
     saveForgeSessionSettings({ providerId: 'custom', endpoint: 'https://provider.example/v1', protocol: 'openai-chat', model: 'extractor', apiKey: 'key' });
@@ -124,9 +163,11 @@ describe('Forge Connection ApplicationV2', () => {
     await Promise.resolve();
     expect(root.model.disabled).toBe(true);
     expect(root.apiKey.disabled).toBe(true);
+    expect(root.autoCorrect.disabled).toBe(true);
     await application.close();
     expect((application as any).testing).toBe(false);
     expect(root.model.disabled).toBe(false);
+    expect(root.autoCorrect.disabled).toBe(false);
     release();
     await pending;
   });
@@ -176,7 +217,7 @@ function fillDraft(root: FakeRoot): void {
 
 class FakeRoot {
   provider = control('openai', 'select'); endpoint = control('', 'url'); protocol = control('openai-responses', 'select'); authScheme = control('bearer', 'select'); region = control('', 'select'); reasoning = control('auto', 'select'); structuredOutput = control('json_schema', 'select');
-  model = control(''); reviewModel = control(''); apiKey = control('', 'password'); persistApiKey = control('', 'checkbox'); useSeparateReviewModel = control('', 'checkbox');
+  model = control(''); reviewModel = control(''); apiKey = control('', 'password'); persistApiKey = control('', 'checkbox'); useSeparateReviewModel = control('', 'checkbox'); autoCorrect = control('', 'checkbox');
   test = control(''); save = control(''); toggleKey = control(''); toggleEndpoint = control(''); clearKey = control(''); clearAllKeys = control('');
   summary = control(''); status = control(''); docs = control(''); reviewField = control(''); modelOptions = control('');
 
@@ -186,6 +227,7 @@ class FakeRoot {
       '[name="region"]': this.region, '[name="reasoning"]': this.reasoning, '[name="structuredOutput"]': this.structuredOutput,
       '[name="model"]': this.model, '[name="reviewModel"]': this.reviewModel, '[name="apiKey"]': this.apiKey,
       '[name="persistApiKey"]': this.persistApiKey, '[name="useSeparateReviewModel"]': this.useSeparateReviewModel,
+      '[name="autoCorrect"]': this.autoCorrect,
       '[data-action="test-connection"]': this.test, '[data-action="save"]': this.save, '[data-action="toggle-key"]': this.toggleKey,
       '[data-action="toggle-endpoint"]': this.toggleEndpoint, '[data-action="clear-key"]': this.clearKey, '[data-action="clear-all-keys"]': this.clearAllKeys,
       '[data-connection-summary]': this.summary, '[data-connection-status]': this.status, '[data-provider-docs]': this.docs,

@@ -15,6 +15,7 @@
     ,"./species": "./src/species.ts"
     ,"./display-name": "./src/displayName.ts"
     ,"./source-operations": "./src/sourceOperations.ts"
+    ,"./source-operation-scopes": "./src/sourceOperationScopes.ts"
     ,"./source-resource-pools": "./src/sourceResourcePools.ts"
   },
   "scripts": {

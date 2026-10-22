@@ -491,6 +491,23 @@ describe('fixed encounter automation runtime', () => {
     combat.round = 1; combat.turn = 1; combat.combatant = combat.combatants[1]; hooks.call('createCombat', combat); combat.turn = 0; combat.combatant = combat.combatants[0]; hooks.call('updateCombat', combat); await handle.settle();
     expect(dragon.updates.some((update) => update['system.resources.legact.spent'] === 0)).toBe(true);
   });
+  for(const inside of [false,true])test('source3/4 lair resources Start and restart from raw3 with derived'+(inside?4:3),async()=>{
+    const {env,dragon,hooks,combat}=fixture();
+    dragon.flags.fvttJsonGenerator={sourceLegendaryLedger:{version:1,max:3,lairMax:4,recovery:'own-turn-start'}};
+    dragon.system.resources={legact:{max:inside?4:3,spent:2},lair:{value:true,inside}};
+    (dragon as any)._source={system:{resources:{legact:{max:3,spent:2},lair:{value:true,inside}}}};
+    const input={packageId:'crystal-package',packageHash:'package-hash',bindings:{dragon:dragon.uuid},config:{version:1 as const,rules:[],legendaryRecovery:[{actorKey:'dragon',max:3,when:'own-turn-start' as const}]}};
+    const first=await installEncounterAutomation(env,input);first.stop();const resumed=await installEncounterAutomation(env,input);
+    const result:any={actor:{'system.resources.legact.spent':0}};hooks.call('dnd5e.combatRecovery',{id:'c-dragon',actor:dragon},['turnEnd'],result);
+    expect(result.actor).toEqual({});expect(dragon.system.resources.legact.spent).toBe(2);
+    combat.round=1;combat.turn=1;combat.combatant=combat.combatants[1];hooks.call('createCombat',combat);
+    combat.turn=0;combat.combatant=combat.combatants[0];hooks.call('updateCombat',combat);await resumed.settle();
+    expect(dragon.system.resources.legact.spent).toBe(0);expect((dragon as any)._source.system.resources.legact.max).toBe(3);expect(dragon.system.resources.legact.max).toBe(inside?4:3);resumed.stop();
+    for(const mutate of [(actor:any)=>{actor._source.system.resources.legact.max=4;},(actor:any)=>{actor.flags.fvttJsonGenerator.sourceLegendaryLedger.lairMax=5;},(actor:any)=>{actor.system.resources.legact.max=5;},(actor:any)=>{actor.system.resources.lair.value=false;}]){
+      const raw=structuredClone((dragon as any)._source),system=structuredClone(dragon.system),flags=structuredClone(dragon.flags);mutate(dragon);
+      await expect(installEncounterAutomation(env,input)).rejects.toThrow('来源传奇资源');(dragon as any)._source=raw;dragon.system=system;Object.assign(dragon.flags,flags);
+    }
+  });
 });
 
 function damageSummary(entries: any[], aggregate: { amount: number; temp?: number; tempMax?: number }) {

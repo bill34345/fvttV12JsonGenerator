@@ -1,0 +1,603 @@
+{
+  "version": 2,
+  "grading": "Format failure or any material numerical/condition/ownership/resource omission rejects that complete candidate. Complex prose allowed only for rules outside explicit supported fields. Harmless paraphrase/flavor omission is not an error. Manual requirements are semantic, not exact substring matches.",
+  "cases": {
+    "R1": [
+      {
+        "id": "unit-1",
+        "name": "Charge",
+        "checks": [
+          {
+            "kind": "damage",
+            "formula": "2d6",
+            "type": "slashing",
+            "multiplier": 1
+          },
+          {
+            "kind": "save",
+            "dc": 13,
+            "ability": "str"
+          }
+        ],
+        "manual": [
+          "直线朝目标至少20尺，且同一回合獠牙命中才额外2d6；不是独立无条件基础伤害。",
+          "仅目标为生物时DC13力量豁免，失败倒地；豁免须在冲锋命中条件下。"
+        ]
+      },
+      {
+        "id": "unit-2",
+        "name": "Relentless (Recharges after a Short or Long Rest)",
+        "checks": [
+          {
+            "kind": "uses",
+            "max": 1
+          }
+        ],
+        "manual": [
+          "伤害<=10且将使野猪降至0时改为1；保留短休或长休恢复。"
+        ]
+      },
+      {
+        "id": "unit-4",
+        "name": "Tusk",
+        "checks": [
+          {
+            "kind": "attack",
+            "toHit": 5,
+            "reach": 5
+          },
+          {
+            "kind": "damage",
+            "formula": "2d6+3",
+            "type": "slashing",
+            "multiplier": 1
+          }
+        ],
+        "manual": [
+          "近战武器攻击、单一目标，命中加值不重复加力量。"
+        ]
+      }
+    ],
+    "R2": [
+      {
+        "id": "unit-2",
+        "name": "Conniving Resistance",
+        "checks": [],
+        "manual": [
+          "对法术及其他魔法效果豁免优势；智力/感知只是看起来失败，不能变成实际强制失败。"
+        ]
+      },
+      {
+        "id": "unit-3",
+        "name": "Swarm",
+        "checks": [],
+        "manual": [
+          "互相占据生物空间；能通过单个mezzoloth可通过的开口。"
+        ]
+      },
+      {
+        "id": "unit-5",
+        "name": "Multiattack",
+        "checks": [],
+        "manual": [
+          "一次攻击加一次Weaverot Volley，不是两次任意攻击。"
+        ]
+      },
+      {
+        "id": "unit-6",
+        "name": "Spindly Shred",
+        "checks": [
+          {
+            "kind": "attack",
+            "toHit": 10,
+            "reach": 0
+          },
+          {
+            "kind": "damage",
+            "formula": "10d8+4",
+            "type": "slashing",
+            "multiplier": 1
+          },
+          {
+            "kind": "damage",
+            "formula": "10d8+4",
+            "type": "slashing",
+            "multiplier": 0.5
+          }
+        ],
+        "manual": [
+          "半伤条件主体是公司Bloodied；正常与半伤分支互斥，不能累加；不能以固定24/平均值替代骰子。",
+          "命中造成擒抱、逃脱DC18；被擒目标可用附赠动作尝试逃脱。"
+        ]
+      },
+      {
+        "id": "unit-7",
+        "name": "Weaverot Volley",
+        "checks": [
+          {
+            "kind": "save",
+            "dc": 18,
+            "ability": "dex"
+          },
+          {
+            "kind": "damage",
+            "formula": "4d6",
+            "type": "piercing",
+            "multiplier": 1
+          },
+          {
+            "kind": "damage",
+            "formula": "2d10",
+            "type": "necrotic",
+            "multiplier": 1
+          },
+          {
+            "kind": "area",
+            "size": 15
+          },
+          {
+            "kind": "distance",
+            "feet": 60
+          }
+        ],
+        "manual": [
+          "15尺半径球，范围内每个生物；失败受两种伤害，成功无伤害（成功倍率0）。",
+          "无论成功失败，结束影响目标的所有2环或以下法术。"
+        ]
+      },
+      {
+        "id": "unit-9",
+        "name": "Toxic Emission",
+        "checks": [
+          {
+            "kind": "save",
+            "dc": 17,
+            "ability": "con"
+          },
+          {
+            "kind": "damage",
+            "formula": "4d8",
+            "type": "poison",
+            "multiplier": 1
+          },
+          {
+            "kind": "area",
+            "size": 10
+          }
+        ],
+        "manual": [
+          "公司周围10尺每个生物；成功半伤（倍率0.5）；失败还目盲至目标自己的下一回合结束。"
+        ]
+      },
+      {
+        "id": "unit-10",
+        "name": "Strike-Gate (1/Day)",
+        "checks": [
+          {
+            "kind": "uses",
+            "max": 1
+          },
+          {
+            "kind": "distance",
+            "feet": 120
+          },
+          {
+            "kind": "save",
+            "dc": 16,
+            "ability": "cha"
+          }
+        ],
+        "manual": [
+          "公司传送至120尺内空间；只有被公司擒抱的生物进行DC16魅力，失败随公司一起传送；每日一次。",
+          "传送应放独立距离字段，不能虚构几何区域/大小0。"
+        ]
+      }
+    ],
+    "R3": [
+      {
+        "id": "r3-1",
+        "name": "Legendary Resistance (3/Day)",
+        "checks": [
+          {
+            "kind": "uses",
+            "max": 3
+          }
+        ],
+        "manual": [
+          "失败时可选择改为成功，每日3次；与传奇动作共享3点分开。"
+        ]
+      },
+      {
+        "id": "r3-2",
+        "name": "Multiattack",
+        "checks": [],
+        "manual": [
+          "可先恐惧威仪，再三次攻击=咬1+爪2；不是咬爪尾任选。"
+        ]
+      },
+      {
+        "id": "r3-3",
+        "name": "Bite",
+        "checks": [
+          {
+            "kind": "attack",
+            "toHit": 17,
+            "reach": 15
+          },
+          {
+            "kind": "damage",
+            "formula": "2d10+10",
+            "type": "piercing",
+            "multiplier": 1
+          },
+          {
+            "kind": "damage",
+            "formula": "4d6",
+            "type": "fire",
+            "multiplier": 1
+          }
+        ],
+        "manual": [
+          "近战武器攻击，单一目标，两种伤害同时生效。"
+        ]
+      },
+      {
+        "id": "r3-4",
+        "name": "Claw",
+        "checks": [
+          {
+            "kind": "attack",
+            "toHit": 17,
+            "reach": 10
+          },
+          {
+            "kind": "damage",
+            "formula": "2d6+10",
+            "type": "slashing",
+            "multiplier": 1
+          }
+        ],
+        "manual": [
+          "近战武器攻击，单一目标。"
+        ]
+      },
+      {
+        "id": "r3-5",
+        "name": "Tail",
+        "checks": [
+          {
+            "kind": "attack",
+            "toHit": 17,
+            "reach": 20
+          },
+          {
+            "kind": "damage",
+            "formula": "2d8+10",
+            "type": "bludgeoning",
+            "multiplier": 1
+          }
+        ],
+        "manual": [
+          "近战武器攻击，单一目标。"
+        ]
+      },
+      {
+        "id": "r3-6",
+        "name": "Frightful Presence",
+        "checks": [
+          {
+            "kind": "save",
+            "dc": 21,
+            "ability": "wis"
+          },
+          {
+            "kind": "distance",
+            "feet": 120
+          }
+        ],
+        "manual": [
+          "龙选择、120尺内且意识到龙的生物，失败恐惧1分钟。",
+          "各自回合结束可复豁免、成功结束；初次成功或效果结束后24小时免疫该龙此能力。"
+        ]
+      },
+      {
+        "id": "r3-7",
+        "name": "Fire Breath (Recharge 5–6)",
+        "checks": [
+          {
+            "kind": "save",
+            "dc": 24,
+            "ability": "dex"
+          },
+          {
+            "kind": "damage",
+            "formula": "26d6",
+            "type": "fire",
+            "multiplier": 1
+          },
+          {
+            "kind": "area",
+            "size": 90
+          }
+        ],
+        "manual": [
+          "5-6充能、90尺锥形；失败全伤成功半伤，保留骰子26d6，不改固定91/45。"
+        ]
+      },
+      {
+        "id": "r3-8",
+        "name": "Detect",
+        "checks": [
+          {
+            "kind": "legendary",
+            "cost": 1,
+            "pool": 3
+          }
+        ],
+        "manual": [
+          "做感知(察觉)检定，无攻击/伤害；共用传奇3点，其他生物回合结束仅一选项，自身回合开始恢复。"
+        ]
+      },
+      {
+        "id": "r3-9",
+        "name": "Tail Attack",
+        "checks": [
+          {
+            "kind": "legendary",
+            "cost": 1,
+            "pool": 3
+          }
+        ],
+        "manual": [
+          "引用同源Tail，不能变成其他攻击或重复扣普通动作；共享传奇时点/预算保留。"
+        ]
+      },
+      {
+        "id": "r3-10",
+        "name": "Wing Attack (Costs 2 Actions)",
+        "checks": [
+          {
+            "kind": "legendary",
+            "cost": 2,
+            "pool": 3
+          },
+          {
+            "kind": "save",
+            "dc": 25,
+            "ability": "dex"
+          },
+          {
+            "kind": "damage",
+            "formula": "2d6+10",
+            "type": "bludgeoning",
+            "multiplier": 1
+          },
+          {
+            "kind": "area",
+            "size": 15
+          }
+        ],
+        "manual": [
+          "周围15尺每个生物；失败伤害且倒地、成功无伤害，不是成功半伤。",
+          "之后龙可以飞至多自身飞行速度一半；共享传奇时点/预算保留。"
+        ]
+      }
+    ],
+    "R4": [
+      {
+        "id": "r4-1",
+        "name": "Shapechanger",
+        "checks": [],
+        "manual": [
+          "仅不在阳光或流水中才可用动作变微型(Tiny)蝙蝠/中型雾/真身；死亡变回真身；穿着随变、携带物不变，其他数值除体型/速度不变。",
+          "蝙蝠不能说话，步行5/飞行30；雾不能行动/说话/操作物件，无重量，飞行20悬浮，可进敌空间并停留。",
+          "雾可穿空气能过的空隙无需挤压、不能穿水；力量敏捷体质豁免优势；免疫非魔法伤害但阳光伤害例外。"
+        ]
+      },
+      {
+        "id": "r4-2",
+        "name": "Legendary Resistance (3/Day)",
+        "checks": [
+          {
+            "kind": "uses",
+            "max": 3
+          }
+        ],
+        "manual": [
+          "失败可选择成功，每日3；与传奇动作池分开。"
+        ]
+      },
+      {
+        "id": "r4-3",
+        "name": "Misty Escape",
+        "checks": [
+          {
+            "kind": "healing",
+            "formula": "1"
+          }
+        ],
+        "manual": [
+          "巢穴外降0且无阳光流水时变雾代替昏迷；不能变形则毁灭。",
+          "0血雾不能恢复真身，2小时内回巢否则毁灭；回巢变回、瘫痪至>=1HP，0血在巢1小时恢复1HP。"
+        ]
+      },
+      {
+        "id": "r4-4",
+        "name": "Regeneration",
+        "checks": [
+          {
+            "kind": "healing",
+            "formula": "20"
+          }
+        ],
+        "manual": [
+          "自身回合开始、已有至少1HP且无阳光/流水；光耀或圣水伤害只阻断下一回合开始的再生。"
+        ]
+      },
+      {
+        "id": "r4-5",
+        "name": "Spider Climb",
+        "checks": [],
+        "manual": [
+          "能爬困难表面、倒挂天花板，不需属性检定。"
+        ]
+      },
+      {
+        "id": "r4-6",
+        "name": "Vampire Weaknesses",
+        "checks": [
+          {
+            "kind": "damage",
+            "formula": "20",
+            "type": "acid",
+            "multiplier": 1
+          },
+          {
+            "kind": "damage",
+            "formula": "20",
+            "type": "radiant",
+            "multiplier": 1
+          }
+        ],
+        "manual": [
+          "未获住户邀请不能入住宅；流水中回合结束20酸，阳光中回合开始20光耀；阳光时攻击与属性检定劣势。",
+          "木质穿刺武器刺心仅巢穴内且失能时成立，瘫痪至拔除；不是任意木刺命中即杀死/瘫痪。"
+        ]
+      },
+      {
+        "id": "r4-7",
+        "name": "Multiattack (Vampire Form Only)",
+        "checks": [],
+        "manual": [
+          "仅吸血鬼形态两次攻击，至多一次咬。"
+        ]
+      },
+      {
+        "id": "r4-8",
+        "name": "Unarmed Strike (Vampire Form Only)",
+        "checks": [
+          {
+            "kind": "attack",
+            "toHit": 9,
+            "reach": 5
+          },
+          {
+            "kind": "damage",
+            "formula": "1d8+4",
+            "type": "bludgeoning",
+            "multiplier": 1
+          }
+        ],
+        "manual": [
+          "仅吸血鬼形态；目标生物；命中可用擒抱(逃脱DC18)替代伤害，不能同时自动造成伤害并擒抱，不能把逃脱当初始豁免。"
+        ]
+      },
+      {
+        "id": "r4-9",
+        "name": "Bite (Bat or Vampire Form Only)",
+        "checks": [
+          {
+            "kind": "attack",
+            "toHit": 9,
+            "reach": 5
+          },
+          {
+            "kind": "damage",
+            "formula": "1d6+4",
+            "type": "piercing",
+            "multiplier": 1
+          },
+          {
+            "kind": "damage",
+            "formula": "3d6",
+            "type": "necrotic",
+            "multiplier": 1
+          },
+          {
+            "kind": "dynamicHealing"
+          }
+        ],
+        "manual": [
+          "仅蝙蝠/吸血鬼形态；一个自愿生物，或被该吸血鬼擒抱、失能或束缚的生物。",
+          "目标HP上限下降量及吸血鬼回血都等于实际受到的黯蚀伤害，不是总伤害/固定10/直接按3d6无视实际伤害。",
+          "上限下降至目标长休恢复，上限0死亡；类人生物因此死亡且入土埋葬后次夜变受控衍体。"
+        ]
+      },
+      {
+        "id": "r4-10",
+        "name": "Charm",
+        "checks": [
+          {
+            "kind": "save",
+            "dc": 17,
+            "ability": "wis"
+          },
+          {
+            "kind": "distance",
+            "feet": 30
+          }
+        ],
+        "manual": [
+          "可见30尺一个类人生物，目标也看见吸血鬼时DC17感知；魅惑如信友、非完全控制、愿意被咬。",
+          "吸血鬼或其同伴做任何有害之事可复豁免成功结束；否则24小时，或吸血鬼毁灭/异位面/附赠动作主动结束。"
+        ]
+      },
+      {
+        "id": "r4-11",
+        "name": "Children of the Night (1/Day)",
+        "checks": [
+          {
+            "kind": "uses",
+            "max": 1
+          }
+        ],
+        "manual": [
+          "每日1，仅太阳未升；2d4蝙蝠或鼠群，室外可改3d6狼；1d4轮后到达，盟友听口头指令。",
+          "持续1小时，或吸血鬼死亡、用附赠动作遣散；召唤数量不能当伤害。"
+        ]
+      },
+      {
+        "id": "r4-12",
+        "name": "Move",
+        "checks": [
+          {
+            "kind": "legendary",
+            "cost": 1,
+            "pool": 3
+          }
+        ],
+        "manual": [
+          "移动至多自身速度，不触发借机；共用3传奇点、其他生物回合结束单选、自身回合开始恢复。"
+        ]
+      },
+      {
+        "id": "r4-13",
+        "name": "Unarmed Strike",
+        "checks": [
+          {
+            "kind": "legendary",
+            "cost": 1,
+            "pool": 3
+          }
+        ],
+        "manual": [
+          "引用同源徒手；保留吸血鬼形态与擒抱替代伤害规则；共用传奇预算/时点。"
+        ]
+      },
+      {
+        "id": "r4-14",
+        "name": "Bite (Costs 2 Actions)",
+        "checks": [
+          {
+            "kind": "legendary",
+            "cost": 2,
+            "pool": 3
+          }
+        ],
+        "manual": [
+          "花2传奇点引用同源咬；不能取消形态/目标条件或重复扣其他次数；共用传奇预算/时点。"
+        ]
+      }
+    ]
+  }
+}

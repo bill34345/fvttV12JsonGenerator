@@ -1,7 +1,9 @@
 import {
   decodeForgeActorResponse,
   hashArtifact,
+  isUsableActorCandidateArtifact,
   type ForgeActorResponse,
+  type ForgeActorResult,
   type ForgeAcceptedVerificationSummary,
   type ForgeSourceId,
   type JsonObject,
@@ -57,6 +59,30 @@ export interface ForgeAcceptedActorCreateInput {
   signal?: AbortSignal;
 }
 
+export interface ForgeActorCandidateReviewApproval {
+  gmId: string;
+  /** The final rendered source hash, distinct from the raw Intake source. */
+  sourceHash: Sha256;
+  artifactHash: Sha256;
+  findingsHash?: Sha256;
+}
+
+export interface ForgeReviewedActorCandidateCreateInput extends ForgeAcceptedActorCreateInput {
+  reviewApproval: ForgeActorCandidateReviewApproval;
+}
+
+interface ForgeActorCandidateReview {
+  version: 1;
+  gmId: string;
+  sourceHash: Sha256;
+  artifactHash: Sha256;
+  findingsHash: Sha256;
+  strictStatus: 'needs_review' | 'failed';
+  diagnostics: ForgeActorResult['diagnostics'];
+  verification: ForgeActorResult['verification'];
+  actorWarnings: string[];
+}
+
 export interface ForgeActorCreateResult {
   status: 'created' | 'existing';
   actor: ForgeActorLike;
@@ -98,6 +124,62 @@ export async function createAcceptedForgeActor(
     throw new Error('Forge Actor artifact hash does not match before creation.');
   }
 
+  return createForgeActorDocument(input, result);
+}
+
+/** Binds a GM's decision to the current candidate and the unchanged strict
+ * report. It never changes a failed/needs_review verdict into accepted. */
+export function forgeActorCandidateReviewHash(response: ForgeActorResponse): Sha256 {
+  const decoded = decodeForgeActorResponse(response);
+  if (!decoded.ok || !('result' in decoded.value) || !decoded.value.result.artifact) {
+    throw new Error('A decoded Actor candidate is required for GM review.');
+  }
+  const result = decoded.value.result;
+  return hashArtifact({
+    requestId: decoded.value.requestId, sourceIdentity: result.sourceIdentity, target: result.target,
+    artifactHash: hashArtifact(result.artifact!), strictStatus: result.status,
+    diagnostics: result.diagnostics, verification: result.verification,
+    actorWarnings: result.actorVerification.warnings,
+  } as unknown as JsonObject);
+}
+
+export async function createReviewedForgeActorCandidate(
+  input: ForgeReviewedActorCandidateCreateInput,
+): Promise<ForgeActorCreateResult> {
+  assertGm(input.game);
+  assertExactRuntime(input.game);
+  const decoded = decodeForgeActorResponse(input.response);
+  if (!decoded.ok || !('result' in decoded.value) || decoded.value.result.status === 'accepted'
+    || !decoded.value.result.artifact) throw new Error('A decoded unaccepted Actor candidate is required for explicit GM review.');
+  const result = decoded.value.result;
+  assertResponseTarget(result.target, input.game);
+  if (!isUsableActorCandidateArtifact(result.artifact)
+    || result.diagnostics.some(diagnostic => diagnostic.severity === 'error' && diagnostic.stage !== 'semantic')) {
+    throw new Error('Actor candidate has a structural or parsing error and cannot be imported.');
+  }
+  const approval = input.reviewApproval;
+  const artifactHash = hashArtifact(result.artifact);
+  const findingsHash = forgeActorCandidateReviewHash(decoded.value);
+  if (!approval || typeof approval.gmId !== 'string' || !approval.gmId.trim()
+    || approval.gmId !== input.game.user?.id || approval.sourceHash !== result.sourceIdentity.sourceHash
+    || approval.artifactHash !== artifactHash || (approval.findingsHash !== undefined && approval.findingsHash !== findingsHash)) {
+    throw new Error('GM candidate approval does not match the current user, source, artifact or findings.');
+  }
+  const candidateReview: ForgeActorCandidateReview = {
+    version: 1, gmId: approval.gmId, sourceHash: approval.sourceHash, artifactHash, findingsHash,
+    strictStatus: result.status, diagnostics: result.diagnostics, verification: result.verification,
+    actorWarnings: result.actorVerification.warnings,
+  };
+  return createForgeActorDocument(input, { sourceIdentity: result.sourceIdentity, artifact: result.artifact, artifactHash }, candidateReview);
+}
+
+async function createForgeActorDocument(
+  input: ForgeAcceptedActorCreateInput,
+  result: { sourceIdentity: ForgeActorResult['sourceIdentity']; artifact: JsonObject; artifactHash: Sha256 },
+  candidateReview?: ForgeActorCandidateReview,
+): Promise<ForgeActorCreateResult> {
+  throwIfAborted(input.signal);
+
   const collection = input.game.actors;
   if (!collection) throw new Error('Foundry world Actor collection is unavailable.');
   const importArtifact = prepareFoundryImportArtifact(result.artifact,input.game);
@@ -109,6 +191,7 @@ export async function createAcceptedForgeActor(
     sourceHash: result.sourceIdentity.sourceHash,
     ...(input.rawSourceHash ? { rawSourceHash: input.rawSourceHash } : {}),
     artifactHash: result.artifactHash,
+    ...(candidateReview ? { candidateReview } : {}),
   } as const;
   // Document.create() receives the complete verified Actor plus Forge identity.
   // A portable caster's phase-only update follows successful readback to release
@@ -131,6 +214,7 @@ export async function createAcceptedForgeActor(
       result.sourceIdentity.sourceId,
       result.sourceIdentity.sourceHash,
       result.artifactHash,
+      candidateReview,
     );
   }
   const idCollision = findActorById(collection, documentId);
@@ -160,6 +244,7 @@ export async function createAcceptedForgeActor(
           result.sourceIdentity.sourceId,
           result.sourceIdentity.sourceHash,
           result.artifactHash,
+          candidateReview,
         );
       }
       throw error;
@@ -179,6 +264,7 @@ export async function createAcceptedForgeActor(
       result.artifactHash,
       input.rawSourceHash,
     );
+    assertCandidateReviewReadback(readback, candidateReview);
     const uuid=requireActorUuid(actor);
     cleanupRequired = false;
     // Readback is committed before publishing completion. A failed phase
@@ -212,13 +298,14 @@ function prepareWorldCreateData(
     sourceHash: Sha256;
     rawSourceHash?: Sha256;
     artifactHash: Sha256;
+    candidateReview?: ForgeActorCandidateReview;
   },
   documentId: string,
 ): JsonObject {
   const copy = JSON.parse(JSON.stringify(artifact)) as JsonObject;
   const flags = getRecord(copy.flags);
   copy._id = documentId;
-  copy.flags = { ...flags, [MODULE_ID]: { ...identity } };
+  copy.flags = { ...flags, [MODULE_ID]: JSON.parse(JSON.stringify(identity)) as JsonObject };
   markForgeSpellImportPending(copy);
   return copy;
 }
@@ -249,6 +336,13 @@ export function prepareFoundryImportArtifact(artifact: JsonObject,game?:Pick<For
     if(midi.version!=='14.0.11')throw new Error('Independent sourceOperations require the verified midi-qol14.0.11 import adapter. Active unverified Midi version: stop before world writes.');
     for(const group of independent)for(const{activity}of group.activities){
       activity.midiProperties={...getRecord(activity.midiProperties),otherActivityCompatible:false,triggeredActivityId:'none'};
+      // Midi14.0.11 removes core damage buttons and may hide its replacement
+      // using GM automation settings. This source-bound mixed Save keeps an
+      // explicit manual damage entry without changing world settings, rolls,
+      // consumption or the GM-owned remainder.
+      if(activity.type==='save'&&Array.isArray(getRecord(activity.damage).parts)&&getRecord(activity.damage).parts.length){
+        activity.midiProperties.removeChatButtons='none';
+      }
       // Midi14.0.11 defines otherActivityId on Attack. Damage has no such
       // field. Empty Attack IDs otherwise auto-select a compatible sibling.
       if(activity.type==='attack')activity.otherActivityId='none';
@@ -291,8 +385,26 @@ function sourceOperationActivityGroups(artifact:unknown):Array<{index:number;act
     if(!activities.length||activities.some(({activity})=>{
       const marker=getRecord(getRecord(activity.flags).fvttJsonGenerator).sourceOperation;
       const matches=operations.filter((op:any)=>op?.id===marker?.id);
-      return matches.length!==1||matches[0].sourceText!==rule.sourceText||marker.sourceText!==rule.sourceText||marker.relationship!==matches[0].relationship||activity.type!==matches[0].type;
+      if(matches.length!==1||matches[0].sourceText!==rule.sourceText||marker.sourceText!==rule.sourceText)return true;
+      const op=matches[0],neutral=op.type==='attack'&&(op.attack?.type==='melee'||op.attack?.type==='ranged');
+      if(!neutral)return marker.relationship!==op.relationship||activity.type!==op.type;
+      // A source-neutral attack deliberately has two independent projections,
+      // bound to the same operation. They never become a native Attack or a
+      // guessed sibling chain in Midi.
+      const damage=marker.role==='damage';
+      return marker.role!=='attack-roll'&&!damage
+        ||marker.attackClassification!=='unspecified'||marker.attackKind!==op.attack.type
+        ||JSON.stringify(marker.damageAdjustment)!==JSON.stringify(op.damageAdjustment)
+        ||marker.relationship!==(damage?'follow-up':op.relationship)
+        ||activity.type!==(damage?'damage':'utility')
+        ||damage&&(!Array.isArray(op.damage)||!op.damage.length);
     }))throw new Error('Unbound source-operation Activity cannot enter the independent-activity import adapter.');
+    for(const op of operations.filter((op:any)=>op?.type==='attack'&&(op.attack?.type==='melee'||op.attack?.type==='ranged'))){
+      const roles=activities.filter(({activity})=>getRecord(getRecord(activity.flags).fvttJsonGenerator).sourceOperation?.id===op.id)
+        .map(({activity})=>getRecord(getRecord(activity.flags).fvttJsonGenerator).sourceOperation.role);
+      if(roles.filter(role=>role==='attack-roll').length!==1||roles.filter(role=>role==='damage').length!==(op.damage?.length?1:0))
+        throw new Error('Unbound source-operation Activity roles cannot enter the independent-activity import adapter.');
+    }
     groups.push({index,activities});
   }
   return groups;
@@ -307,6 +419,7 @@ function assertSourceOperationMidiSafety(artifact:unknown,readback:unknown):void
     if(expected.midiProperties===undefined&&actual?.midiProperties===undefined)continue;
     const midi=getRecord(actual?.midiProperties);
     if(midi.otherActivityCompatible!==false||midi.triggeredActivityId!=='none'
+      ||expected.midiProperties?.removeChatButtons==='none'&&midi.removeChatButtons!=='none'
       ||expected.type==='attack'&&actual?.otherActivityId!=='none'
       ||expected.type!=='attack'&&actual?.otherActivityId!==undefined&&actual.otherActivityId!=='none'){
       throw new Error('Foundry Actor semantics failed independent source-operation Midi safety readback. Missing or changed safety fields; use a new Forge source/package identity for unsafe existing Actors, which are not migrated.');
@@ -403,11 +516,13 @@ function verifyReusableActor(
   sourceId: ForgeSourceId,
   sourceHash: Sha256,
   artifactHash: Sha256,
+  candidateReview?: ForgeActorCandidateReview,
 ): ForgeActorCreateResult {
   if(isForgeSpellImportPending(actor.toObject()))throw new Error('Existing Forge Actor import is still pending; wait for or inspect that import before reuse.');
   try {
     const readback = actor.toObject();
     assertActorSemantics(artifact, readback);
+    assertCandidateReviewReadback(readback, candidateReview);
     const identity = getForgeIdentity(readback);
     if (
       identity?.protocolVersion !== 1
@@ -428,6 +543,13 @@ function verifyReusableActor(
     sourceId,
     artifactHash,
   };
+}
+
+function assertCandidateReviewReadback(readback: unknown, expected?: ForgeActorCandidateReview): void {
+  const actual = getRecord(getRecord(getRecord(readback).flags)[MODULE_ID]).candidateReview;
+  if (expected ? stableJson(actual) !== stableJson(expected) : actual !== undefined) {
+    throw new Error('Actor candidate review does not match the current explicit GM approval.');
+  }
 }
 
 function forgeActorDocumentId(sourceId: ForgeSourceId): string {
@@ -515,6 +637,12 @@ function itemSemantics(value: unknown, effectSource: 'artifact' | 'readback'): u
 
 function projectActivityReadback(value: unknown, itemRange: unknown): unknown {
   const activity = getRecord(stripDocumentNoise(value));
+  // dnd5e 5.3.3 ActivationField.condition is a default StringField. Core
+  // 14.368 cleans it with trim:true, confirmed against the real in-memory
+  // Document. Normalize only that native boundary; inner text stays strict
+  // and the complete source/evidence in flags is retained byte for byte.
+  const activation=getRecord(activity.activation);
+  if(typeof activation.condition==='string')activity.activation={...activation,condition:activation.condition.trim()};
   // Schema-derived: 5.3.3 Save/Damage have no includeBase field. Reject an
   // explicit value on either side, rather than dropping it as Doc noise.
   if((activity.type==='save'||activity.type==='damage')&&Object.hasOwn(getRecord(activity.damage),'includeBase')){

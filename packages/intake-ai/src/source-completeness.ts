@@ -1,5 +1,5 @@
 import type { CanonicalFeature, CanonicalSpellcastingGroup, EvidenceRef, IntakeFinding, MonsterIntakeIR } from './types';
-import { splitStagedMonsterSource, stagedLegendaryBudget, stagedLegendaryActionCost, stagedLegendaryLedger } from './staged-source';
+import { sourceStatHeader, sourceSectionHeading, sourceFeatureLabel, splitStagedMonsterSource, stagedLegendaryBudgetFromContexts, stagedLegendaryActionCost, stagedLegendaryLedger, type StagedSourceUnit } from './staged-source';
 import { stagedManualHeaderFeatures } from './staged-source-facts';
 import {sourceCastingGrantPolarity} from '@fvtt-json-generator/models/source-rule-facts';
 import {splitBilingualName,displayName} from '@fvtt-json-generator/models/display-name';
@@ -9,6 +9,23 @@ import {stagedFeatureMechanics} from './staged-feature-mechanics';
 
 const sections=['traits','actions','bonusActions','reactions','legendaryActions','mythicActions'] as const;
 const normalize=(value:string)=>value.replace(/<[^>]*>/gu,'').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
+
+/** Independently bound only an explicit Legendary Actions preamble. Stop at
+ * its first physical ability title or another section; never borrow prose or
+ * model-selected coverage when the rest of the source needs line partitioning. */
+function sourceLegendaryContexts(source:string,range:{start:number;end:number}):StagedSourceUnit[]{
+  const lines=[...source.slice(range.start,range.end).matchAll(/[^\r\n]*(?:\r\n|\n|\r|$)/gu)].filter(line=>line[0].length);
+  const result:StagedSourceUnit[]=[];
+  for(const [index,line]of lines.entries()){
+    if(sourceSectionHeading(line[0])!=='legendary')continue;
+    const next=lines.slice(index+1).find(row=>sourceSectionHeading(row[0])!==undefined||sourceFeatureLabel(row[0])!==undefined);
+    // Without a following physical feature, this is not a proved ledger unit.
+    if(!next||sourceSectionHeading(next[0])!==undefined)continue;
+    const start=range.start+line.index!,end=range.start+next.index!;
+    result.push({id:'legendary-context-'+start,destination:'context',section:'legendary',start,end,quote:source.slice(start,end)});
+  }
+  return result;
+}
 
 /** Presentation equivalence only; exact raw offsets are checked separately. */
 export const sourceRuleText=(value:string)=>value.replace(/<[^>]*>/gu,' ').replace(/\*{2,3}/gu,'').replace(/^\s*#{1,6}\s+/gmu,'')
@@ -44,10 +61,13 @@ function sourceHealingParentEvidence(source:string,ir:MonsterIntakeIR,feature:Ca
 
 function sourceHeaderFeatures(source:string,ir:MonsterIntakeIR,range:{start:number;end:number}):CanonicalFeature[]{
   try{
-    const plan=splitStagedMonsterSource({source,sourceSha256:ir.source.sha256,candidate:{id:'header-proof',label:ir.creature.identity.name,
+    // Header ownership is independent of later ability boundaries. A source
+    // that needs an explicit line partition must retain the same exact header
+    // rules; use the shared bounded header scanner, never a whole-source quote.
+    const base=sourceStatHeader({source,sourceSha256:ir.source.sha256,candidate:{id:'header-proof',label:ir.creature.identity.name,
       start:range.start,end:range.end,quote:source.slice(range.start,range.end)}});
-    return stagedManualHeaderFeatures(plan.base.quote).map(feature=>({...feature,evidence:feature.evidence!.map(ref=>({
-      ...ref,start:ref.start+plan.base.start,end:ref.end+plan.base.start,
+    return stagedManualHeaderFeatures(base.quote).map(feature=>({...feature,evidence:feature.evidence!.map(ref=>({
+      ...ref,start:ref.start+base.start,end:ref.end+base.start,
     }))}));
   }catch{return [];}
 }
@@ -144,7 +164,18 @@ export function sourceFeatureLegendaryCost(source:string,ir:MonsterIntakeIR,feat
     const content=(value:EvidenceRef)=>[value.start+value.quote.length-value.quote.trimStart().length,value.end-(value.quote.length-value.quote.trimEnd().length)].join(':');
     const unit=plan.features.find(unit=>unit.section==='legendary'&&content(unit)===content(parent));
     return unit?stagedLegendaryActionCost(plan,unit,[ir.creature.identity.name,ir.creature.identity.englishName].filter((value):value is string=>!!value)):undefined;
-  }catch{return;}
+  }catch{
+    // A valid source may require a supplied physical-line partition elsewhere.
+    // Bind the default one-use cost to the independent legendary preamble,
+    // not to a guessed whole-source split or a model's coverage selection.
+    const aliases=[ir.creature.identity.name,ir.creature.identity.englishName].filter((value):value is string=>!!value);
+    const context=sourceLegendaryContexts(source,range).find(unit=>unit.end<=parent.start&&stagedLegendaryLedger(unit,aliases));
+    if(context){
+      const headings=source.slice(context.start,parent.start).split(/\r\n|\n|\r/u).map(sourceSectionHeading).filter(Boolean);
+      if(headings.at(-1)==='legendary')return Number(/\bCosts?\s+(\d+)\s+Actions?/iu.exec(parent.quote.split(/\.(?:\s|$)/u)[0]!)?.[1]??1);
+    }
+    return;
+  }
 }
 
 /** Source-owned spell parent. Prefer an independent source partition so a
@@ -277,9 +308,19 @@ export function sourceCompletenessFindings(source:string, ir:MonsterIntakeIR,
       // Numbered subrules stay inside their source-complete manual parent. The
       // parent's target/choice context must not be lost by splitting them.
       const numbered=/^\d+\.\s/u.test(line),cadence=/^(?:随意|At Will|每项\s*\d+\s*[/／]\s*日|\d+\s*\/\s*Day(?:\s+Each)?)\s*[:：]?$/iu.test(name);
-      const parent=(numbered||cadence)&&features.some(({feature,path})=>(numbered?feature.executionMode==='gm-manual'
-        :/(?:施展[^。\n]{0,60}法术|casts? the following spells)/iu.test(sourceRuleText(feature.description)))
-        &&(()=>{const ref=completeSourceFeatureEvidence(source,ir,feature,path,range);return ref&&start>=ref.start&&evidence.end<=ref.end;})());
+      const parent=features.some(({feature,path})=>{
+        const ref=completeSourceFeatureEvidence(source,ir,feature,path,range);
+        if(!ref||start<=ref.start||evidence.end>ref.end)return false;
+        if(numbered)return feature.executionMode==='gm-manual';
+        if(cadence)return /(?:施展[^。\n]{0,60}法术|casts? the following spells)/iu.test(sourceRuleText(feature.description));
+        // Named children in a source-explicit list remain part of the complete
+        // parent. Their native atoms are still checked on that parent; this
+        // does not accept a title alone or an omitted/shortened child body.
+        const before=source.slice(ref.start,start);
+        return /\b(?:these|the following) [\p{L} '\u2019-]+:\s*\r?\n/iu.test(before)
+          &&!before.split(/\r\n|\n|\r/u).some(line=>sourceSectionHeading(line)!==undefined)
+          &&sourceRuleText(feature.description).includes(sourceRuleText(ref.quote));
+      });
       if(!parent)add('SOURCE_FEATURE_OMITTED','/creature',`来源能力“${name}”未在IR能力清单中保留。`,evidence);
       continue;
     }
@@ -326,15 +367,18 @@ export function sourceCompletenessFindings(source:string, ir:MonsterIntakeIR,
   }
   let budget:MonsterIntakeIR['creature']['legendary'];
   try{
-    const plan=splitStagedMonsterSource({source,sourceSha256:ir.source.sha256,candidate:{id:'legendary-budget-proof',label:ir.creature.identity.name,
-      start:range.start,end:range.end,quote:source.slice(range.start,range.end)}});
-    budget=stagedLegendaryBudget(plan,[ir.creature.identity.name,ir.creature.identity.englishName].filter((value):value is string=>!!value));
-    const foreign=plan.units.find(unit=>stagedLegendaryLedger(unit)&&!stagedLegendaryLedger(unit,[ir.creature.identity.name,ir.creature.identity.englishName].filter((value):value is string=>!!value)));
+    let contexts:readonly StagedSourceUnit[];
+    try{contexts=splitStagedMonsterSource({source,sourceSha256:ir.source.sha256,candidate:{id:'legendary-budget-proof',label:ir.creature.identity.name,
+      start:range.start,end:range.end,quote:source.slice(range.start,range.end)}}).units;}
+    catch{contexts=sourceLegendaryContexts(source,range);}
+    budget=stagedLegendaryBudgetFromContexts(contexts,[ir.creature.identity.name,ir.creature.identity.englishName].filter((value):value is string=>!!value));
+    const foreign=contexts.find(unit=>stagedLegendaryLedger(unit)&&!stagedLegendaryLedger(unit,[ir.creature.identity.name,ir.creature.identity.englishName].filter((value):value is string=>!!value)));
     if(foreign&&ir.creature.legendary!==undefined)add('SOURCE_LEGENDARY_OWNER_CONFLICT','/creature/legendary/max','另一个主体的传奇动作资源不能借给当前Actor。',foreign);
-    const conditional=plan.units.find(unit=>stagedLegendaryLedger(unit,[ir.creature.identity.name,ir.creature.identity.englishName].filter((value):value is string=>!!value))?.conditional);
-    if(conditional&&ir.creature.legendary!==undefined)add('SOURCE_LEGENDARY_MODE_REQUIRED','/creature/legendary/max','条件传奇动作总量没有当前模式证明，不能变成无条件固定最大值；保留完整GM账本。',conditional);
+    const conditional=contexts.find(unit=>stagedLegendaryLedger(unit,[ir.creature.identity.name,ir.creature.identity.englishName].filter((value):value is string=>!!value))?.conditional);
+    if(conditional&&ir.creature.legendary!==undefined&&(!budget?.lairMax||ir.creature.legendary.lairMax!==budget.lairMax))add('SOURCE_LEGENDARY_MODE_REQUIRED','/creature/legendary/max','条件传奇动作总量必须完整绑定原生base/lair选择，不能成为无条件单值。',conditional);
   }catch{/* Other source formats retain their existing checks. */}
   if(budget&&ir.creature.legendary?.max!==budget.max)add('SOURCE_LEGENDARY_BUDGET_OMITTED','/creature/legendary/max',
     '来源明确的共享传奇动作计数缺失或不符。',budget.evidence![0]!);
+  if(budget&&(ir.creature.legendary?.lairMax!==budget.lairMax||ir.creature.legendary?.recovery!==undefined&&ir.creature.legendary.recovery!==budget.recovery||ir.creature.legendary?.lairMax!==undefined&&ir.creature.legendary.recovery!==budget.recovery))add('SOURCE_LEGENDARY_BOUNDARY_DRIFT','/creature/legendary','传奇资源的巢穴选择及来源恢复时机必须保持。',budget.evidence![0]!);
   return findings;
 }

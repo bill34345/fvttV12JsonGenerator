@@ -120,6 +120,8 @@ export interface ParsedNPC {
   biographyRuleFacts?: SourceRuleFact[];
   /** Internal canonical Intake boundary; explicit features own all mechanics. */
   biographyMode?: 'literal';
+  sourceLegendaryLedger?:{max:number;lairMax:number;recovery:'own-turn-start';resistanceMax?:number;resistanceLairMax?:number};
+  candidateReview?: import('@fvtt-json-generator/models/source-operations').SourceCandidateReview;
   biographyPresentation?: SourceTextPresentation;
 
   traits: {

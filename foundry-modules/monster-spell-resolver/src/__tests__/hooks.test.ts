@@ -19,6 +19,8 @@ import { RESOLVER_STATUS_VALUES, readResolverStatus } from '../status';
 import { computeManagedSourceHash } from '../cast-activity';
 import { createResolverReviewSession } from '../review-app';
 import { HydrationTransactionError } from '../transaction';
+import {conditionalSpellFixture} from './conditional-spell-fixture';
+import {planSpellConditionalDamage} from '../spell-conditional-damage';
 
 const validManifest = {
   schemaVersion: 1 as const,
@@ -341,6 +343,65 @@ describe('Actor-level resolve pipeline', () => {
     target.updateCalls.length = 0;
     return { target, feature, activity, spell, logicalRefKey: selection.logicalRefKey };
   }
+  test('old valid owned hashes with missing usage GM notes become stale, stay read-only implicitly, and request explicit completion',async()=>{
+    const fixture=serviceFixture(),manifest=fixture.target.flags[RESOLVER_MODULE_ID].spellManifest,text='Cannot repeat until its next turn.';
+    manifest.spellcastingGroups[0].spellRefs[0].restrictions=[{kind:'other',text,evidence:[{start:0,end:text.length,quote:text}]}];
+    const {spell}=await installHydratedPair(fixture);fixture.target.flags[RESOLVER_MODULE_ID].spellResolution.manifestHash=hashManifest(manifest);
+    const before=computeManagedSourceHash(spell.toObject());expect(spell.flags[RESOLVER_MODULE_ID].generatedContentHash).toBe(before);
+    expect(fixture.service.status(fixture.target)).toBe('stale');expect(fixture.service.isAlreadyApplied(fixture.target)).toBe(false);
+    await fixture.service.processActor(fixture.target);expect(fixture.calls.execute).toEqual([]);expect(fixture.calls.review).toBe(0);
+    await fixture.service.resolve(fixture.target);expect(fixture.calls.execute).toHaveLength(1);expect(fixture.calls.execute[0]![3]).toEqual({completeSourceCache:true});
+    expect(spell.flags[RESOLVER_MODULE_ID].generatedContentHash).toBe(before);expect(fixture.calls.review).toBe(0);
+  });
+
+  async function installConditionalPair(){
+    const fixture=serviceFixture(),manifest=fixture.target.flags[RESOLVER_MODULE_ID].spellManifest;
+    const ref=manifest.spellcastingGroups[0].spellRefs[0];Object.assign(ref,{identifier:'geas',originalName:'Geas',englishName:'Geas',method:'innate',uses:{value:1,recovery:'day',shared:false},evidence:[{start:0,end:4,quote:'Geas'}]});
+    const runtime=fixture.dependencies.getRuntime(),candidate=runtime.sourceIndex.candidates[0];
+    Object.assign(candidate,{id:'phbsplGeas000000',uuid:'Compendium.dnd-players-handbook.spells.Item.phbsplGeas000000',packageId:'dnd-players-handbook',packId:'spells',name:'Geas',identifier:'geas',level:5,school:'enc'});
+    fixture.dependencies.getRuntime=()=>runtime;fixture.settings.sourcePriority=[{packageId:candidate.packageId,packId:candidate.packId}];
+    fixture.dependencies.fetchSelectedDocument=async(uuid:string)=>({documentName:'Item',type:'spell',uuid,name:'Geas',system:{...conditionalSpellFixture().system,identifier:'geas',source:{rules:'2024',book:'PHB'},level:5,school:'enc'}});
+    const pair=await installHydratedPair(fixture),{spell,activity}=pair;
+    spell.name='Geas';spell.system=conditionalSpellFixture().system;spell.effects=conditionalSpellFixture().effects;
+    spell.toObject=function(){return{_id:this.id,name:this.name,type:this.type,system:structuredClone(this.system),effects:structuredClone(this.effects),flags:structuredClone(this.flags),_stats:structuredClone(this._stats)};};
+    activity.uses={max:'1',spent:1,recovery:[{period:'day',type:'recoverAll'}]};activity.activation={type:'action',value:1,override:true};activity.consumption={spellSlot:false,targets:[{type:'activityUses',value:'1'}]};
+    activity.toObject=function(){return{_id:this.id,type:this.type,spell:structuredClone(this.spell),activation:structuredClone(this.activation),consumption:structuredClone(this.consumption),uses:structuredClone(this.uses),flags:structuredClone(this.flags)};};
+    activity.flags[RESOLVER_MODULE_ID].generatedContentHash=computeManagedSourceHash(activity.toObject());
+    spell.flags[RESOLVER_MODULE_ID].generatedContentHash=computeManagedSourceHash(spell.toObject());fixture.target.flags[RESOLVER_MODULE_ID].spellResolution.manifestHash=hashManifest(manifest);
+    return{...fixture,...pair,manifest};
+  }
+  async function conditionalRuntime(run:()=>Promise<void>,version='5.3.3'){
+    const descriptor=Object.getOwnPropertyDescriptor(globalThis,'game');Object.defineProperty(globalThis,'game',{configurable:true,value:{system:{version},modules:new Map()}});
+    try{await run();}finally{if(descriptor)Object.defineProperty(globalThis,'game',descriptor);else delete(globalThis as any).game;}
+  }
+  test('an unchanged hydrated mixed cache stays quiet on events, then normal Resolve requires specific maintenance review',async()=>{
+    await conditionalRuntime(async()=>{
+      const fixture=await installConditionalPair(),before=fixture.spell.toObject();
+      expect(fixture.service.status(fixture.target)).toBe('stale');expect(fixture.service.isAlreadyApplied(fixture.target)).toBe(false);
+      await fixture.service.processActor(fixture.target);expect(fixture.calls.execute).toEqual([]);expect(fixture.calls.review).toBe(0);expect(fixture.spell.toObject()).toEqual(before);
+      fixture.dependencies.openReview=async(model:any)=>{fixture.calls.review++;expect(model.spells[0].manualConflict).toBeUndefined();expect(model.spells[0].sourceMaintenance.kind).toBe('conditional-damage');return{action:'cancel'};};
+      await fixture.service.resolve(fixture.target);expect(fixture.calls.review).toBe(1);expect(fixture.calls.execute).toEqual([]);expect(fixture.spell.toObject()).toEqual(before);
+    });
+  });
+  test.each([false,true])('explicit maintenance Overwrite preserves Cast/spent and source text, actual manual edit=%s',async edited=>{
+    await conditionalRuntime(async()=>{
+      const fixture=await installConditionalPair();if(edited)fixture.spell.system.description.value+='<p>GM annotation</p>';
+      const castBefore=fixture.activity.toObject(),textBefore=structuredClone(fixture.spell.system.description),effectsBefore=structuredClone(fixture.spell.effects);
+      fixture.dependencies.openReview=async(model:any)=>{fixture.calls.review++;expect(Boolean(model.spells[0].manualConflict)).toBe(edited);const session=createResolverReviewSession(model);expect(()=>session.decideManual(fixture.logicalRefKey,'keep')).toThrow('cannot be kept');session.decideManual(fixture.logicalRefKey,'overwrite');return session.apply();};
+      fixture.dependencies.execute=async(...args:any[])=>{fixture.calls.execute.push(args);expect(args[3]).toEqual({completeSourceCache:true});if(edited)expect(args[2].selections[0].manualDecision).toBe('overwrite');else expect(args[2].selections[0].manualDecision).toBeUndefined();const plan=planSpellConditionalDamage(fixture.spell.toObject(),fixture.spell.toObject(),{systemVersion:'5.3.3'});fixture.spell.system=plan.expected.system;fixture.spell.flags[RESOLVER_MODULE_ID].generatedContentHash=computeManagedSourceHash(fixture.spell.toObject());};
+      await fixture.service.resolve(fixture.target);expect(fixture.calls.review).toBe(1);expect(fixture.calls.execute).toHaveLength(1);expect(fixture.activity.toObject()).toEqual(castBefore);expect(fixture.spell.system.description).toEqual(textBefore);expect(fixture.spell.effects).toEqual(effectsBefore);expect(Object.values(fixture.spell.system.activities)).toHaveLength(2);
+      expect(fixture.service.isAlreadyApplied(fixture.target)).toBe(true);await fixture.service.processActor(fixture.target);expect(fixture.calls.execute).toHaveLength(1);
+    });
+  });
+  test.each(['keep','missing','duplicate','malformed'])('normal Resolve cannot treat maintenance %s as approval',async decision=>{
+    await conditionalRuntime(async()=>{
+      const fixture=await installConditionalPair(),before=fixture.spell.toObject();fixture.dependencies.openReview=async()=>({action:'apply',manualDecisions:[],candidateSelections:[],...(decision==='missing'?{}:{sourceMaintenanceDecisions:decision==='malformed'?[null]:decision==='duplicate'?[{logicalRefKey:fixture.logicalRefKey,decision:'overwrite'},{logicalRefKey:fixture.logicalRefKey,decision:'overwrite'}]:[{logicalRefKey:fixture.logicalRefKey,decision:'keep'}]})});
+      await fixture.service.resolve(fixture.target);expect(fixture.calls.execute).toEqual([]);expect(fixture.spell.toObject()).toEqual(before);expect(fixture.service.isAlreadyApplied(fixture.target)).toBe(false);
+    });
+  });
+  test('the explicit maintenance detector does not run on an unreviewed6.x runtime',async()=>{
+    await conditionalRuntime(async()=>{const fixture=await installConditionalPair();expect(fixture.service.isAlreadyApplied(fixture.target)).toBe(true);await fixture.service.resolve(fixture.target);expect(fixture.calls.review).toBe(0);expect(fixture.calls.execute).toEqual([]);},'6.0.5');
+  });
 
   async function installCommittedOverwrite(fixture: ReturnType<typeof serviceFixture>) {
     const hydrated = await installHydratedPair(fixture);

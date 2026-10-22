@@ -22,8 +22,10 @@ function projectManifest(manifest: PortableSpellManifest): unknown {
       ability: group.ability,
       saveDc: group.saveDc,
       attackBonus: group.attackBonus,
+      recharge: group.recharge,
       spellRefs: group.spellRefs.map((ref) => compact({
         refId: ref.refId,
+        reuseOf: ref.reuseOf===undefined?undefined:{groupId:ref.reuseOf.groupId,refId:ref.reuseOf.refId},
         identifier: ref.identifier,
         originalName: ref.originalName,
         englishName: ref.englishName,

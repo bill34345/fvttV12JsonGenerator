@@ -36,7 +36,9 @@
     "./encounter-capabilities": "./src/encounter-capabilities.ts",
     "./source-facts": "./src/source-facts.ts",
     "./staged-source": "./src/staged-source.ts",
-    "./staged-extraction": "./src/staged-extraction.ts"
+    "./staged-extraction": "./src/staged-extraction.ts",
+    "./category-md": "./src/category-md.ts",
+    "./category-md-extraction": "./src/category-md-extraction.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --pretty false"

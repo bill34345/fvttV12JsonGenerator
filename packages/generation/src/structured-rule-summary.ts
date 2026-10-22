@@ -69,7 +69,8 @@ export function summarizeStructuredRule(input: {
 
   for(const op of sourceAction?.sourceOperations??[]){
     const prefix='sourceOperations/'+op.id;
-    if(op.attack)add(prefix+'/attack',({mwak:'近战武器',rwak:'远程武器',msak:'近战法术',rsak:'远程法术'}[op.attack.type])+'攻击，命中'+(op.attack.toHit>=0?'+':'')+op.attack.toHit+(op.attack.reach!==undefined?'，触及'+op.attack.reach+'尺':'')+(op.attack.range!==undefined?'，射程'+op.attack.range+(op.attack.longRange?'/'+op.attack.longRange:'')+'尺':''));
+    if(op.attack)add(prefix+'/attack',({mwak:'近战武器',rwak:'远程武器',msak:'近战法术',rsak:'远程法术',melee:'近战（分类未注明，GM辅助检定）',ranged:'远程（分类未注明，GM辅助检定）'}[op.attack.type])+'攻击，命中'+(op.attack.toHit>=0?'+':'')+op.attack.toHit+(op.attack.reach!==undefined?'，触及'+op.attack.reach+'尺':'')+(op.attack.range!==undefined?'，射程'+op.attack.range+(op.attack.longRange?'/'+op.attack.longRange:'')+'尺':''));
+    if(op.damageAdjustment)add(prefix+'/damageAdjustment','来源角色处于Bloodied时，本次造成的伤害减半；掷骰一次，由GM结算，不自动调整生命值');
     if(op.save)add(prefix+'/save','DC '+op.save.dc+op.save.abilities.map(ability=>ABILITY[ability]).join('或')+'豁免'+(op.save.choice==='target'?'，由目标选择属性':'')+(op.save.outcome==='half'?'，成功时伤害减半':''));
     if(op.healing)add(prefix+'/healing',op.healing.formula+'点'+(op.healing.type==='temphp'?'临时生命值':'治疗')+'，'+(op.healing.target.type==='self'?'自身':'同一来源受者')+'；时机与资格按完整原文');
     for(const[index,part]of(op.damage??[]).entries())add(prefix+'/damage/'+index,part.formula+'点'+(part.types??[part.type]).map(type=>DAMAGE[type]??type).join('或')+'伤害'+(part.types?'（同次掷骰自选一种类型）':'')+(['conditional','replacement'].includes(part.relationship)?'，由GM判断来源条件':''));

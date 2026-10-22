@@ -38,8 +38,13 @@
   </section>
 
   <section class="forge-connection-card" aria-labelledby="forge-connection-review-heading">
-    <h3 id="forge-connection-review-heading">审核方式</h3>
-    <p>生成候选时不会自动请求付费模型审核。只有在工作台明确点击“AI审核当前候选（额外API费用）”才使用当前生成模型复核；本地校验通过后也可由 GM 人工核对并确认创建。</p>
+    <h3 id="forge-connection-review-heading">纠错与审核</h3>
+    <label class="forge-inline-field" for="forge-connection-auto-correct">
+      <input id="forge-connection-auto-correct" name="autoCorrect" type="checkbox" aria-describedby="forge-connection-correction-note">
+      开启自动纠错（额外 API 费用）
+    </label>
+    <p id="forge-connection-correction-note">默认关闭。开启后，每只生物最多追加一次纠错请求。语义检查有疑点或纠错失败时，仍保留可用候选和问题提示，由你决定是否使用。</p>
+    <p>额外 AI 审核是独立操作：只有在工作台明确点击“AI审核当前候选（额外API费用）”才使用当前生成模型复核。生成候选时不会自动请求该审核；GM 可核对来源、候选和问题提示后明确确认创建。</p>
   </section>
 
   <details class="forge-advanced-settings">

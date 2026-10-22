@@ -7,12 +7,14 @@ import {
 } from '../../../src/core/spell-resolution';
 import {
   buildCastActivitySource,
+  literalRestrictionChatFlavor,
   computeManagedSourceHash,
   generatedResolverDocumentId,
   type LiteralRestrictionReport,
   type ResolverManagedIdentity,
 } from './cast-activity';
 import { planSpellEffectDuration } from './spell-effect-duration';
+import { planSpellConditionalDamage } from './spell-conditional-damage';
 import {
   assertAdoptableNativeCache,
   assertLinkedFeatureOwnership,
@@ -118,9 +120,16 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
     && item?.flags?.[RESOLVER_MODULE_ID]?.groupId === group.groupId);
   if (features.length !== 1) throw new TypeError('Manifest group must identify exactly one linked generated feature.');
   const feature = features[0]!;
-  if(ref.uses?.shared){
+  if(group.recharge){
     const uses=feature.system?.uses;
-    if(String(uses?.max)!==String(ref.uses.value)||!uses?.recovery?.some((r:any)=>r.period==='day'&&r.type==='recoverAll')){
+    if(String(uses?.max)!=='1'||!uses?.recovery?.some((recovery:any)=>recovery.period==='recharge'&&recovery.type==='recoverAll'&&String(recovery.formula)===String(group.recharge![0])))
+      throw new TypeError('Recharge Cast requires its exact source-generated parent Item pool.');
+  }
+  const parentUses=feature.flags?.fvttJsonGenerator?.spellcastingUsesParent===true;
+  if(parentUses&&(!ref.uses||group.spellRefs.length!==1||ref.uses.shared))throw new TypeError('Single-spell parent pool requires one matching daily ref.');
+  if(ref.uses?.shared||parentUses){
+    const uses=feature.system?.uses;
+    if(String(uses?.max)!==String(ref.uses!.value)||!uses?.recovery?.some((r:any)=>r.period==='day'&&r.type==='recoverAll')){
       throw new TypeError('Shared Cast requires the source-generated feature pool; refusing an absent or conflicting counter.');
     }
   }
@@ -132,6 +141,8 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
     ref,
     selectedUuid: input.selection.uuid,
     activationType: feature.flags?.fvttJsonGenerator?.spellcastingActivationType,
+    ...(parentUses?{useParentItemPool:true}:{}),
+    ...(feature.flags?.fvttJsonGenerator?.spellcastingActivationType==='legendary'?{activationCost:feature.flags?.fvttJsonGenerator?.spellcastingActivationCost}:{}),
   });
   if (built.identity.logicalRefKey !== input.selection.logicalRefKey) {
     throw new TypeError('Hydration selection logicalRefKey does not match the manifest identity.');
@@ -344,7 +355,46 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
   const finalCaches = await coalesceTransactionNativeCaches(input, preparedFeature, activity, built.identity);
   const finalOwned = finalCaches.find((entry) => entry.flags?.[RESOLVER_MODULE_ID]?.managed === true);
   if (finalOwned) cache = finalOwned;
-  if (!input.preserveExisting && built.activity.duration) {
+  cache=await projectOwnedSourceCache(input,preparedFeature,activity,cache,built,group,ref,nativeCacheSource,!input.preserveExisting);
+
+  const result: HydratedSelection = {
+    feature: preparedFeature,
+    activity,
+    cache,
+    identity: built.identity,
+    literalRestrictions: built.literalRestrictions,
+  };
+  return result;
+}
+
+async function projectOwnedSourceCache(input:HydrateManagedSelectionInput,preparedFeature:any,activity:any,cache:any,built:ReturnType<typeof buildCastActivitySource>,group:PortableSpellManifest['spellcastingGroups'][number],ref:PortableSpellManifest['spellcastingGroups'][number]['spellRefs'][number],nativeCacheSource:any,projectDuration:boolean,onlyIfChanged=false):Promise<any>{
+  let changed=false;
+  assertResolverDocumentOwnership(input.actor,preparedFeature,cache,built.identity,'spell',activity.relativeUUID);
+  const midi=(globalThis as any).game?.modules?.get?.('midi-qol');
+  const conditional=planSpellConditionalDamage(nativeCacheSource,documentSource(cache),{
+    systemVersion:(globalThis as any).game?.system?.version,
+    preserveExisting:input.preserveExisting,
+    ...(midi?.active?{midiVersion:String(midi.version??'')}:{}),
+  });
+  if(Object.keys(conditional.updates).length){
+    if(onlyIfChanged&&!input.preserveExisting&&input.selection.manualDecision!=='overwrite'&&cache.flags?.[RESOLVER_MODULE_ID]?.generatedContentHash!==computeManagedSourceHash(documentSource(cache))){
+      throw Error('Manually changed conditional Spell cache requires explicit Overwrite before isolation.');
+    }
+    changed=true;
+    const nativeEntry=input.journal.nativeCaches.find(entry=>entry.id===documentId(cache));
+    if(nativeEntry){nativeEntry.ownedProjections??=[];nativeEntry.ownedProjections.push(captureNativeCacheProjection(conditional.expected));}
+    await requireActorApi(input.actor,'updateEmbeddedDocuments')('Item',[{_id:documentId(cache),...conditional.updates}]);
+    cache=findItem(input.actor,documentId(cache));
+    if(!cache)throw Error('Owned cache disappeared while separating its source-conditional damage.');
+    assertResolverDocumentOwnership(input.actor,preparedFeature,cache,built.identity,'spell',activity.relativeUUID);
+    assertNativeCacheProjectionMatches(conditional.expected,cache,'source-conditional-cache-write');
+    // Materialized native defaults are allowed, but additional executable
+    // fields (effects, templates, scaling or Midi triggers) must still fail.
+    planSpellConditionalDamage(nativeCacheSource,documentSource(cache),{
+      systemVersion:(globalThis as any).game?.system?.version,preserveExisting:true,...(midi?.active?{midiVersion:String(midi.version??'')}:{}),
+    });
+  }
+  if (projectDuration && built.activity.duration) {
     assertResolverDocumentOwnership(input.actor, preparedFeature, cache, built.identity, 'spell', activity.relativeUUID);
     const expected = documentSource(cache);
     const durationPlan = planSpellEffectDuration(nativeCacheSource, expected, built.activity.duration);
@@ -357,6 +407,7 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
       });
     }
     if (durationPlan.changedEffectIds.length) {
+      changed=true;
       expected.effects = durationPlan.effects;
       const nativeEntry = input.journal.nativeCaches.find(entry => entry.id === documentId(cache));
       if (nativeEntry) {
@@ -373,19 +424,71 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
       cache = findItem(input.actor, documentId(cache));
       if (!cache) throw new Error('Owned cache disappeared while projecting its source-bound effect duration.');
       assertResolverDocumentOwnership(input.actor, preparedFeature, cache, built.identity, 'spell', activity.relativeUUID);
-      assertNativeCacheProjectionMatches(expected, cache);
+      assertNativeCacheProjectionMatches(expected, cache,'source-effect-duration-write');
     }
   }
-  cache = await refreshPreparedSpellHash(input.actor, preparedFeature, activity, cache, built.identity);
+  const sourceNote=literalRestrictionChatFlavor(built.literalRestrictions);
+  if(sourceNote){
+    assertResolverDocumentOwnership(input.actor,preparedFeature,cache,built.identity,'spell',activity.relativeUUID);
+    const expected=documentSource(cache),updates:Record<string,unknown>={_id:documentId(cache)};
+    const nativeActivities=expected.system?.activities;
+    if(!isRecord(nativeActivities)||!Object.keys(nativeActivities).length)throw Error('Owned Spell has no usage Activity for its complete GM source rules.');
+    for(const[id,child]of Object.entries(nativeActivities)){
+      if(!/^[A-Za-z0-9]+$/u.test(id)||!isRecord(child))throw Error('Owned Spell has an invalid source usage Activity identity.');
+      const previous=child.description?.chatFlavor??'';
+      if(typeof previous!=='string')throw Error('Owned Spell usage chatFlavor must remain native text.');
+      if(previous.includes(sourceNote))continue;
+      const next=previous?previous+'\n'+sourceNote:sourceNote;
+      child.description??={};child.description.chatFlavor=next;
+      updates[`system.activities.${id}.description.chatFlavor`]=next;
+    }
+    if(Object.keys(updates).length>1){
+      changed=true;
+      const nativeEntry=input.journal.nativeCaches.find(entry=>entry.id===documentId(cache));
+      if(nativeEntry){nativeEntry.ownedProjections??=[];nativeEntry.ownedProjections.push(captureNativeCacheProjection(expected));}
+      await requireActorApi(input.actor,'updateEmbeddedDocuments')('Item',[updates]);
+      cache=findItem(input.actor,documentId(cache));
+      if(!cache)throw Error('Owned cache disappeared while retaining its source GM usage rules.');
+      assertResolverDocumentOwnership(input.actor,preparedFeature,cache,built.identity,'spell',activity.relativeUUID);
+      assertNativeCacheProjectionMatches(expected,cache);
+    }
+  }
+  if(onlyIfChanged&&!changed)return cache;
+  return await refreshPreparedSpellHash(input.actor, preparedFeature, activity, cache, built.identity);
 
-  const result: HydratedSelection = {
-    feature: preparedFeature,
-    activity,
-    cache,
-    identity: built.identity,
-    literalRestrictions: built.literalRestrictions,
-  };
-  return result;
+
+}
+
+/** Read the exact native getter, then update only this already owned cache's
+ * source notes and reviewed Effect lifetime. Parent Cast/configuration, use
+ * counters, other refs and all official Spell rules remain untouched. */
+export async function completeManagedSourceCache(input:HydrateManagedSelectionInput):Promise<HydratedSelection>{
+  if(input.journal?.actor!==input.actor)throw Error('Source cache completion journal belongs to another Actor.');
+  const validation=validatePortableSpellManifestStructure(input.manifest);
+  if(!validation.ok)throw Error('Source cache completion requires its valid current manifest.');
+  const current=validatePortableSpellManifestStructure(input.actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
+  if(!current.ok||hashManifest(current.value)!==hashManifest(validation.value))throw Error('Source cache completion manifest changed.');
+  const group=validation.value.spellcastingGroups.find(group=>group.groupId===input.selection.groupId),ref=group?.spellRefs.find(ref=>ref.refId===input.selection.refId);
+  if(!group||!ref)throw Error('Source cache completion requires one current manifest ref.');
+  const features=iterate(input.actor.items).filter(item=>item.flags?.[RESOLVER_MODULE_ID]?.groupId===group.groupId&&item.flags?.[RESOLVER_MODULE_ID]?.featureItemKey===group.featureItemKey);
+  if(features.length!==1)throw Error('Source cache completion requires one linked generated feature.');
+  const feature=features[0],built=buildCastActivitySource({manifestId:validation.value.manifestId,featureId:documentId(feature),group,ref,selectedUuid:input.selection.uuid});
+  if(built.identity.logicalRefKey!==input.selection.logicalRefKey)throw Error('Source cache completion logical ref identity changed.');
+  const activity=getActivity(feature,built.activity._id);
+  if(!activity)throw Error('Source cache completion requires its existing owned Cast.');
+  assertResolverDocumentOwnership(input.actor,feature,activity,built.identity,'activity');
+  const caches=cachesForActivity(input.actor,activity);
+  if(caches.length!==1)throw Error('Source cache completion requires exactly one existing owned Spell.');
+  let cache=caches[0];assertResolverDocumentOwnership(input.actor,feature,cache,built.identity,'spell',activity.relativeUUID);
+  const nativeSource=await activity.getCachedSpellData();assertNativeCacheSource(nativeSource,activity,built.identity.selectedUuid);
+  cache=await projectOwnedSourceCache(input,feature,activity,cache,built,group,ref,nativeSource,true,true);
+  if(input.preserveExisting){
+    // Mark only the cache we maintained. Even a flag-only parent Cast update
+    // re-writes its cached enchantment in5.3.3 and could erase a kept change.
+    await requireActorApi(input.actor,'updateEmbeddedDocuments')('Item',[{_id:documentId(cache),[`flags.${RESOLVER_MODULE_ID}.protected`]:true}]);
+    cache=await refreshPreparedSpellHash(input.actor,feature,activity,findItem(input.actor,documentId(cache)),built.identity);
+  }
+  return{feature,activity,cache,identity:built.identity,literalRestrictions:built.literalRestrictions};
 }
 
 function resolverIdentityFromFlags(document: any): ResolverManagedIdentity {

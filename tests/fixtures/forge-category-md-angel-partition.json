@@ -1,0 +1,91 @@
+{
+  "provenance": "Existing saved source-line reply; fixed offline input only, not a new model call. Shared by A and B.",
+  "sourceSha256": "afc142b63f09c2ba0fcd52525bd4bbae3a909dc5305d16a56db7bc86a89441e2",
+  "originalReplyFileSha256": "fd5ca1eeb1ab4c028505738221a9d420ade6820c26583feb44f52ba9ac561a6e",
+  "partition": {
+    "schemaVersion": 1,
+    "units": [
+      {
+        "firstLine": 0,
+        "lastLine": 45,
+        "destination": "base"
+      },
+      {
+        "firstLine": 46,
+        "lastLine": 47,
+        "destination": "context"
+      },
+      {
+        "firstLine": 48,
+        "lastLine": 49,
+        "destination": "feature",
+        "section": "trait",
+        "name": "魔法抗性Magic Resistance"
+      },
+      {
+        "firstLine": 50,
+        "lastLine": 51,
+        "destination": "context"
+      },
+      {
+        "firstLine": 52,
+        "lastLine": 53,
+        "destination": "feature",
+        "section": "action",
+        "name": "多重攻击Multiattack"
+      },
+      {
+        "firstLine": 54,
+        "lastLine": 55,
+        "destination": "feature",
+        "section": "action",
+        "name": "啃咬Bite"
+      },
+      {
+        "firstLine": 56,
+        "lastLine": 57,
+        "destination": "feature",
+        "section": "action",
+        "name": "矛Spear"
+      },
+      {
+        "firstLine": 58,
+        "lastLine": 59,
+        "destination": "feature",
+        "section": "action",
+        "name": "光耀射线Radiant Ray"
+      },
+      {
+        "firstLine": 60,
+        "lastLine": 63,
+        "destination": "feature",
+        "section": "action",
+        "name": "施法Spellcasting"
+      },
+      {
+        "firstLine": 64,
+        "lastLine": 65,
+        "destination": "context"
+      },
+      {
+        "firstLine": 66,
+        "lastLine": 67,
+        "destination": "feature",
+        "section": "bonus",
+        "name": "护卫连结Warding Bond（1/日）"
+      },
+      {
+        "firstLine": 68,
+        "lastLine": 69,
+        "destination": "context"
+      },
+      {
+        "firstLine": 70,
+        "lastLine": 72,
+        "destination": "feature",
+        "section": "reaction",
+        "name": "护卫格挡Warding Parry"
+      }
+    ]
+  }
+}

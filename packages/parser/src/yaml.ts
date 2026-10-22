@@ -12,6 +12,7 @@ import { parseActorBehaviorSemantics } from './behaviorSemantics';
 import { validateForgeSourceMetadata } from './forgeSourceMetadata';
 import { FORGE_SOURCE_ID_FIELD } from '@fvtt-json-generator/contracts';
 import { decodeSourceTextPresentationBoundary } from '@fvtt-json-generator/models/source-text-presentation';
+import {isSourceCandidateReview} from '@fvtt-json-generator/models/source-operations';
 
 type YamlBodySectionKey =
   | 'traits'
@@ -94,6 +95,19 @@ export class YamlParser {
     }
 
     this.traverse(rawData, result, true);
+    if(rawData&&Object.hasOwn(rawData,'intake-candidate-review')){
+      if(!literalBiography||!isSourceCandidateReview(rawData['intake-candidate-review']))throw Error('InvalidSourceCandidateReview');
+      result.candidateReview=structuredClone(rawData['intake-candidate-review']);
+    }
+    if(rawData&&Object.hasOwn(rawData,'intake-legendary-ledger')){
+      const ledger=rawData['intake-legendary-ledger'];
+      const positive=(value:unknown)=>typeof value==='number'&&Number.isSafeInteger(value)&&value>0;
+      if(!literalBiography||!ledger||typeof ledger!=='object'||Array.isArray(ledger)||Object.keys(ledger).some(key=>!['max','lairMax','recovery','resistanceMax','resistanceLairMax'].includes(key))
+        ||!positive(ledger.max)||ledger.lairMax!==ledger.max+1||ledger.recovery!=='own-turn-start'
+        ||result.attributes.legact?.max!==ledger.max
+        ||(ledger.resistanceMax!==undefined||ledger.resistanceLairMax!==undefined)&&(!positive(ledger.resistanceMax)||ledger.resistanceLairMax!==ledger.resistanceMax+1))throw Error('InvalidSourceLegendaryLedger');
+      result.sourceLegendaryLedger=structuredClone(ledger);
+    }
 
     if (rawData && Object.hasOwn(rawData, 'intake-biography-presentation')) {
       if (!literalBiography) throw new Error('InvalidIntakeBiographyPresentation: literal mode required.');
@@ -158,6 +172,8 @@ export class YamlParser {
       if (isRoot && key === FORGE_SOURCE_ID_FIELD) continue;
       if (isRoot && key === 'intake-biography-mode') continue;
       if (isRoot && key === 'intake-biography-presentation') continue;
+      if (isRoot && key === 'intake-legendary-ledger') continue;
+      if (isRoot && key === 'intake-candidate-review') continue;
       const mapping = FIELD_MAPPING[key];
 
       if (mapping) {

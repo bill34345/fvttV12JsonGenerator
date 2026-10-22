@@ -76,7 +76,12 @@ describe('complete manual rules reach the formal Actor without native inference'
       if(native){
         const feature=data.ir.creature.actions[0]!,clauses=sourceOperationClauses(literal);
         feature.executionMode='native-with-gm';feature.nativeRuleText=literal;feature.manualRemainder=literal;
-        feature.sourceOperations=bindSourceOperations(literal,[{id:'attack',name:'Attack',type:'attack',relationship:'primary',attack:{type:'mwak',toHit:7,reach:5},damage:[{formula:'1d6+5',type:'slashing',relationship:'base'}],proof:{attack:clauses[1],damage:[clauses.find(clause=>clause.includes('Hit:'))!]}}],feature.evidence![0]!.start);
+        const supplied={id:'attack',name:'Attack',type:'attack',relationship:'primary',attack:{type:'mwak',toHit:7,reach:5},damage:[{formula:'1d6+5',type:'slashing',relationship:'base'}],proof:{attack:clauses[1],damage:[clauses.find(clause=>clause.includes('Hit:'))!]}};
+        // This authored fixture's modern header never classified the attack.
+        // Keep rejection of its old guessed type, then exercise the explicit
+        // new contract with the very same immutable source and literal values.
+        expect(()=>bindSourceOperations(literal,[supplied])).toThrow('attack/type-or-bonus');
+        feature.sourceOperations=bindSourceOperations(literal,[{...supplied,attack:{...supplied.attack,type:'melee'}}],feature.evidence![0]!.start);
       }
       const {result,calls}=await run(data);
       expect(result.report.findings).toEqual([]);expect(calls).toBe(0);
@@ -90,8 +95,8 @@ describe('complete manual rules reach the formal Actor without native inference'
       expect(item.effects).toEqual([]);
       const activity=Object.values(item.system.activities)[0] as any;
       expect(activity.description.chatFlavor).toContain(encoded);
-      expect(Object.keys(item.system.activities)).toHaveLength(1);expect(activity.type).toBe(native?'attack':'utility');
-      if(native){expect(activity.attack).toMatchObject({flat:true,bonus:'7'});expect(activity.damage.parts[0]).toMatchObject({number:1,denomination:6,bonus:'5'});}
+      expect(Object.keys(item.system.activities)).toHaveLength(native?2:1);expect(activity.type).toBe('utility');
+      if(native){expect(activity.attack).toBeUndefined();expect(activity.roll.formula).toBe('1d20+7');const damage=Object.values<any>(item.system.activities).find(a=>a.type==='damage')!;expect(damage.damage.parts[0]).toMatchObject({number:1,denomination:6,bonus:'5'});expect(damage.consumption.targets).toEqual([]);}
       else for(const key of ['attack','save','damage'])expect(activity[key]).toBeUndefined();
       expect(activity.effects??[]).toEqual([]);expect(activity.consumption?.targets??[]).toEqual([]);
       const markdown=renderMonsterIntakeMarkdown(data.ir);

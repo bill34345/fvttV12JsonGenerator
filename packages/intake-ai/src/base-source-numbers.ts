@@ -1,6 +1,8 @@
 import type {MonsterIntakeIR} from './types';
 import {StagedExtractionError} from './staged-source';
 import {unmarkStagedHeader} from './staged-source-facts';
+/** Same dnd5e NPC derivation already allowed by source number validation. */
+export const sourceDerivedProficiencyBonus=(cr:number):number=>Math.floor((Math.max(cr,1)+7)/4);
 const exactEqual=(left:unknown,right:unknown):boolean=>JSON.stringify(left,(_key,value)=>value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b))):value)===JSON.stringify(right,(_key,value)=>value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b))):value);
 
 /** Source-derived header numbers, shared by staged extraction and full-IR validation. */
@@ -30,7 +32,7 @@ export function validateSourceBaseNumbers(source: string, ir: MonsterIntakeIR, c
       // schema-derived: dnd5e proficiency follows the already source-checked CR
       // when PB is omitted. This is the same rule as the existing projector;
       // a printed or conflicting PB still needs its own exact source proof.
-      if(path==='attributes/proficiencyBonus'&&!printed[path]!.test(unmarked)&&actual===Math.floor((Math.max(ir.creature.attributes.cr,1)+7)/4))continue;
+      if(path==='attributes/proficiencyBonus'&&!printed[path]!.test(unmarked)&&actual===sourceDerivedProficiencyBonus(ir.creature.attributes.cr))continue;
       if (complete&&actual !== undefined||printed[path]?.test(unmarked)) throw new StagedExtractionError('UNPROVEN_BASE_NUMBER', `/creature/${path}`);
       continue;
     }

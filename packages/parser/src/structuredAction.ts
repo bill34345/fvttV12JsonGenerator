@@ -1,5 +1,5 @@
 import { splitBilingualName } from '@fvtt-json-generator/models/display-name';
-import { sourceOperationErrors } from '@fvtt-json-generator/models/source-operations';
+import { sourceOperationErrors,isSourceCandidateReview,candidateSourceOperationShapeErrors } from '@fvtt-json-generator/models/source-operations';
 import type {
   StructuredActionData,
   DamagePart,
@@ -65,6 +65,8 @@ export class StructuredActionParser {
     const describe = (entry as Record<string, unknown>)['描述'] ?? (entry as Record<string, unknown>)['describe'] ?? '';
 
     const record = entry as Record<string, unknown>;
+    if(record.candidateReview!==undefined&&!isSourceCandidateReview(record.candidateReview))throw new Error('InvalidSourceCandidateReview');
+    if(record.candidateCounters!==undefined&&(!record.candidateReview||!Array.isArray(record.candidateCounters)||record.candidateCounters.some((counter:any)=>!counter||typeof counter.name!=='string'||!counter.name.trim()||!Number.isSafeInteger(counter.max)||counter.max<1||counter.recovery!==null&&typeof counter.recovery!=='string')))throw Error('InvalidSourceCandidateCounter');
     const executionMode = record['执行模式'] ?? record.executionMode;
     if (executionMode !== undefined && executionMode !== 'gm-manual'&&executionMode!=='native-with-gm') throw new Error('InvalidFeatureExecutionMode');
     if(executionMode==='native-with-gm'&&(!String(record.nativeRuleText??'').trim()||!String(record.manualRemainder??'').trim()))throw new Error('InvalidMixedFeatureBoundary');
@@ -75,7 +77,8 @@ export class StructuredActionParser {
     }
     if(record.gmTriggeredSave!==undefined&&(executionMode!=='native-with-gm'||JSON.stringify(record.gmTriggeredSave)!==JSON.stringify(sourceGmTriggeredSave(String(describe)))))throw new Error('InvalidGmTriggeredSaveSource');
     if(record.nativeFailureStatuses!==undefined&&executionMode!=='native-with-gm')throw new Error('InvalidNativeFailureStatusesSource');
-    if(record.sourceOperations!==undefined&&(executionMode!=='native-with-gm'||sourceOperationErrors(String(describe),record.sourceOperations,Array.isArray(record.sourceContext)?record.sourceContext:[]).length))throw new Error('InvalidSourceOperations');
+    if(record.sourceOperations!==undefined&&(executionMode!=='native-with-gm'||(record.candidateReview
+      ?candidateSourceOperationShapeErrors(record.sourceOperations):sourceOperationErrors(String(describe),record.sourceOperations,Array.isArray(record.sourceContext)?record.sourceContext:[])).length))throw new Error('InvalidSourceOperations');
     if(record.sourceContext!==undefined&&(!Array.isArray(record.sourceContext)||record.sourceContext.some(context=>typeof context!=='string'||!context.trim())))throw new Error('InvalidSourceOperationContext');
     if(record.sourceFeatureId!==undefined&&(typeof record.sourceFeatureId!=='string'||!/^\w{16}$/u.test(record.sourceFeatureId)))throw new Error('InvalidSourceFeatureIdentity');
     if (executionMode === 'gm-manual') {
@@ -99,10 +102,10 @@ export class StructuredActionParser {
     const nativeMastery = this.parseNativeMastery(
       record['native-mastery'] ?? record.nativeMastery ?? record['原生精通'],
     );
-    if (spellcastingFeatureKey && !['特性','动作','附赠动作','反应'].includes(sectionName)) {
+    if (spellcastingFeatureKey && !['特性','动作','附赠动作','反应','传奇动作'].includes(sectionName)) {
       throw new Error('InvalidSpellcastingFeatureLinkSection: expected a trait, action, bonus action or reaction.');
     }
-    if (spellcastingFeatureKey && explicitActivationType && !['action','bonus','reaction'].includes(explicitActivationType)) {
+    if (spellcastingFeatureKey && explicitActivationType && !['action','bonus','reaction','legendary'].includes(explicitActivationType)) {
       throw new Error('InvalidSpellcastingFeatureActivation: unsupported linked spellcasting activation.');
     }
     const subActions = this.parseSubActions((entry as Record<string, unknown>)['子活动']);
@@ -111,6 +114,8 @@ export class StructuredActionParser {
     const embeddedEffects = this.parseEmbeddedEffects((entry as Record<string, unknown>)['内嵌效果']);
 
     const action: StructuredActionData = {
+      ...(record.candidateReview?{candidateReview:structuredClone(record.candidateReview) as StructuredActionData['candidateReview']}:{}),
+      ...(record.candidateCounters?{candidateCounters:structuredClone(record.candidateCounters) as StructuredActionData['candidateCounters']}:{}),
       name: literalName?String(name):this.extractName(String(name)),
       ...(executionMode === 'gm-manual'||executionMode==='native-with-gm' ? { executionMode } : {}),
       ...(executionMode==='native-with-gm'?{nativeRuleText:String(record.nativeRuleText),manualRemainder:String(record.manualRemainder)}:{}),

@@ -6,11 +6,17 @@ import { explicitSourceSaves } from './save-evidence';
 import { mixedFeatureSourceMatches,sourceOperationFeatureErrors,sourceHealingAmountUnproven,stagedFeatureMechanics } from './staged-feature-mechanics';
 import {validateSourceBaseNumbers} from './base-source-numbers';
 import {validateStagedStaticSourceFacts} from './staged-source-facts';
-import {sourceStatHeader,sourceSectionHeading,StagedExtractionError} from './staged-source';
-import {sourceGroupComponentClause} from './staged-spellcasting';
+import {sourceSizeOptions} from './source-size';
+import {headerPresentation} from './header-presentation';
+import {sourceStatHeader,sourceSectionHeading,StagedExtractionError,splitStagedMonsterSource} from './staged-source';
+import {sourceGroupComponentClause,stagedSpellcastingGroups,sourceSpellcastingIntroduction} from './staged-spellcasting';
+import {sourceReferencedSpellAction,normalizedSourceSpellName} from './source-spell-reference';
+import {sourceDailySpellAction} from './daily-spell-action';
+import {sourceManualSpellGrant} from './spell-grant-tokens';
 import {assessSourceSpellcastingAbility} from './spellcasting-ability';
 import {sourceResourcePoolErrors} from '@fvtt-json-generator/models/source-resource-pools';
 import {sourceFeatureBasicOmissions,sourceOperationErrors,sourceFeatureResources} from '@fvtt-json-generator/models/source-operations';
+import {isSourceCandidateReview,isSourceCandidateCounters} from '@fvtt-json-generator/models/source-operations';
 import {sourceSingleSpellAction,sourceHasSpellList,sourceCastingGrantPolarity} from '@fvtt-json-generator/models/source-rule-facts';
 import { completeSourceFeatureEvidence, sourceFeatureLegendaryCost, completeSourceSpellcastingEvidence, sourceCompletenessFindings, sourceSharedTargetBindings, sourceAttackTargetBinding, sourceRuleText } from './source-completeness';
 import { validatePortableSpellManifest } from '@fvtt-json-generator/spell-manifest-contracts/validator';
@@ -18,6 +24,7 @@ import type {
   AbilityKey,
   CanonicalSpellUsageGroup,
   CanonicalSpellcastingGroup,
+  CanonicalSpellRef,
   EvidenceRef,
   IntakeClaim,
   IntakeFinding,
@@ -30,12 +37,12 @@ import type {
 const ABILITIES: AbilityKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 const SIZES = new Set(['tiny', 'small', 'medium', 'large', 'huge', 'gargantuan']);
 const SOURCE_SPELL_REF_KEYS = new Set([
-  'refId', 'identifier', 'originalName', 'englishName', 'chineseName', 'aliases', 'restrictions', 'evidence',
+  'refId', 'identifier', 'originalName', 'englishName', 'chineseName', 'aliases', 'restrictions', 'evidence', 'reuseOf',
 ]);
 const SPELLCASTING_GROUP_KEYS = new Set([
   'groupId', 'featureName', 'featureEnglishName', 'description', 'evidence', 'ability', 'abilityEvidence',
   'casterLevel', 'casterLevelEvidence', 'saveDc', 'saveDcEvidence', 'attackBonus', 'attackBonusEvidence',
-  'componentWaivers', 'usageGroups', 'activationType', 'manualGrants',
+  'componentWaivers', 'usageGroups', 'activationType', 'manualGrants', 'recharge', 'legendaryCost', 'candidateReview', 'candidateCounters',
 ]);
 const SPELL_USAGE_GROUP_KEYS = new Set(['usage', 'evidence', 'spellRefs']);
 const DAILY_USAGE_GROUP_KEYS = new Set([...SPELL_USAGE_GROUP_KEYS, 'count']);
@@ -74,6 +81,13 @@ function validateSourceBaseFacts(source:string,ir:MonsterIntakeIR,range:{start:n
       if(error instanceof StagedExtractionError)
         finding('SOURCE_'+error.code,error.path,'The normalized field conflicts with or is not proven by its independently bounded source header.','semantic',[header]);
     }
+  }
+  const sourceSize=ir.creature.identity.sourceSize;
+  if(typeof sourceSize==='string'&&(sourceSizeOptions(sourceSize)?.length??0)>1){
+    const visible=(value:string)=>headerPresentation(value).replace(/\*{1,3}|_{2,3}/gu,'').replace(/\s+/gu,' ').trim();
+    const claims=Array.isArray(ir.claims)?ir.claims.filter(claim=>claim?.path==='/creature/identity/sourceSize'):[];
+    if(claims.some(claim=>!Array.isArray(claim.evidence)||!claim.evidence.length||claim.evidence.some(ref=>!isRecord(ref)||typeof ref.quote!=='string'||ref.start<header.start||ref.end>header.end||!visible(ref.quote).includes(visible(sourceSize)))))
+      finding('SOURCE_SIZE_OPTIONS_EVIDENCE_CONFLICT','/creature/identity/sourceSize','Size alternatives must be supported by their complete bounded stat-header declaration.','evidence',[header]);
   }
   return header;
 }
@@ -204,10 +218,13 @@ function validateCreature(
     finding('MISSING_CREATURE', '/creature', 'creature must be an object.', 'schema');
     return;
   }
+  if(creature.candidateReview!==undefined&&!isSourceCandidateReview(creature.candidateReview))
+    finding('INVALID_CANDIDATE_REVIEW','/creature/candidateReview','Candidate review metadata must retain its closed inert data shape.','schema');
   if (typeof creature.identity?.name !== 'string' || !creature.identity.name.trim()) {
     finding('MISSING_REQUIRED_FIELD', '/creature/identity/name', 'Monster name is required.', 'schema');
   }
   if (!SIZES.has(String(creature.identity?.size))) finding('INVALID_SIZE', '/creature/identity/size', 'Monster size is missing or unsupported.', 'schema');
+  if(creature.identity?.sourceSize!==undefined&&(typeof creature.identity.sourceSize!=='string'||!creature.identity.sourceSize.trim()))finding('INVALID_SOURCE_SIZE','/creature/identity/sourceSize','Source size must be a nonempty source literal.','schema');
   if(creature.identity?.swarmSize!==undefined&&!SIZES.has(String(creature.identity.swarmSize)))finding('INVALID_SWARM_SIZE','/creature/identity/swarmSize','Swarm individual size is unsupported.','schema');
   if (typeof creature.identity?.creatureType !== 'string' || !creature.identity.creatureType.trim()) {
     finding('MISSING_REQUIRED_FIELD', '/creature/identity/creatureType', 'Creature type is required.', 'schema');
@@ -225,6 +242,8 @@ function validateCreature(
       if (!Number.isInteger(creature.legendary.max) || (creature.legendary.max as number) < 1) {
         finding('INVALID_LEGENDARY_ACTION_COUNT', '/creature/legendary/max', 'legendary.max must be a positive integer.', 'schema');
       }
+      if(creature.legendary.lairMax!==undefined&&creature.legendary.lairMax!==creature.legendary.max+1)finding('INVALID_LEGENDARY_LAIR_CHOICE','/creature/legendary/lairMax','Native lair choices require the exact source base plus one.','schema');
+      if(creature.legendary.recovery!==undefined&&creature.legendary.recovery!=='own-turn-start')finding('INVALID_LEGENDARY_RECOVERY','/creature/legendary/recovery','Unsupported legendary recovery timing.','schema');
       if (typeof creature.legendary.preamble !== 'string' || !creature.legendary.preamble.trim()) {
         finding('INVALID_LEGENDARY_PREAMBLE', '/creature/legendary/preamble', 'legendary.preamble must preserve the exact visible source text.', 'schema');
       }
@@ -277,6 +296,10 @@ function validateCreature(
     const names = new Set<string>();
     features.forEach((feature, index) => {
       const featurePath=`/creature/${section}/${index}`;
+      if(feature?.candidateReview!==undefined&&!isSourceCandidateReview(feature.candidateReview))
+        finding('INVALID_CANDIDATE_REVIEW',featurePath+'/candidateReview','Candidate review metadata must retain its closed inert data shape.','schema');
+      if(feature?.candidateCounters!==undefined&&(!isSourceCandidateReview(feature.candidateReview)||!isSourceCandidateCounters(feature.candidateCounters)))
+        finding('INVALID_CANDIDATE_COUNTERS',featurePath+'/candidateCounters','Manual candidate counters require a valid review record and closed name/count/recovery data.','schema');
       if(feature?.spellUseRecords!==undefined)
         finding('SPELL_USE_RECORDS_NOT_CASTS',featurePath+'/spellUseRecords','Saved Utility spell counters do not restore spell matching or Casts. Re-extract this source into structured spellcasting.','semantic');
       const manualUnsupportedCasting=(section==='legendaryActions'||section==='mythicActions')&&feature?.executionMode==='gm-manual'&&completeSourceFeatureEvidence(source,ir,feature,featurePath,scope);
@@ -306,7 +329,7 @@ function validateCreature(
         }
         else if (feature.executionMode !== 'gm-manual') finding('INVALID_FEATURE_EXECUTION_MODE',featurePath+'/executionMode','Unsupported feature execution mode.','schema');
         else {
-          const allowed = ['executionMode','name','englishName','sourceQualifier','description','evidence','activityType','activationType','activationCondition','uses','recharge','legendaryCost','sourceFeatureId'];
+          const allowed = ['executionMode','name','englishName','sourceQualifier','description','evidence','activityType','activationType','activationCondition','uses','recharge','legendaryCost','sourceFeatureId','candidateReview','candidateCounters'];
           if (Object.keys(feature).some(key=>!allowed.includes(key)) || feature.activityType !== 'utility')
             finding('MANUAL_FEATURE_EXECUTABLE_FIELDS',featurePath,'Manual rules cannot carry native attacks, damage, saves, conditions, or unknown executable fields.','schema');
           if (!completeSourceFeatureEvidence(source,ir,feature,featurePath,scope))
@@ -490,7 +513,7 @@ function validateSourceFeaturePresence(
     const features = creature?.[check.section];
     const hasExplicitSection = sourceSections.has(check.sourceSection);
     const hasInlineTrait = check.section === 'traits' && sourceHasInlineTrait(source);
-    const castingActivation=({actions:'action',bonusActions:'bonus',reactions:'reaction'} as Record<string,string>)[check.section];
+    const castingActivation=({actions:'action',bonusActions:'bonus',reactions:'reaction',legendaryActions:'legendary'} as Record<string,string>)[check.section];
     const hasCastingFeature=Array.isArray(creature.spellcasting)&&creature.spellcasting.some(group=>isRecord(group)&&(check.section==='traits'?group.activationType===undefined:castingActivation!==undefined&&group.activationType===castingActivation));
     if ((hasExplicitSection || hasInlineTrait) && Array.isArray(features) && features.length === 0&&!hasCastingFeature) {
       finding(
@@ -687,6 +710,7 @@ function collectMechanicalClaimPaths(ir: MonsterIntakeIR): string[] {
     '/creature/attributes/movement', '/creature/attributes/cr',
   ];
   if(creature.identity?.swarmSize!==undefined)paths.push('/creature/identity/swarmSize');
+  if(typeof creature.identity?.sourceSize==='string'&&(sourceSizeOptions(creature.identity.sourceSize)?.length??0)>1)paths.push('/creature/identity/sourceSize');
   if (creature.identity?.alignment) paths.push('/creature/identity/alignment');
   if (creature.attributes?.initiative != null) paths.push('/creature/attributes/initiative');
   if (creature.attributes?.xp != null) paths.push('/creature/attributes/xp');
@@ -735,11 +759,29 @@ function validateSpellcasting(
       return;
     }
     const parent=completeSourceSpellcastingEvidence(source,ir,group,path,scope);
-    validateSpellcastingGroupFields(source, group, path, finding, parent);
+    const reference=parent?sourceReferencedSpellAction(parent.quote):undefined;
+    const daily=parent?sourceDailySpellAction(parent.quote):undefined;
+    const inheritance=reference??daily;
+    let referenced:{owner:EvidenceRef;expected:CanonicalSpellcastingGroup}|undefined;
+    if(inheritance&&parent){
+      try{
+        const plan=splitStagedMonsterSource({source,sourceSha256:ir.source.sha256,candidate:{id:'reference-proof',label:ir.creature.identity.name,start:scope.start,end:scope.end,quote:source.slice(scope.start,scope.end)}});
+        const unit=plan.features.find(unit=>unit.start===parent.start&&unit.end===parent.end);
+        const owners=plan.features.filter(unit=>normalizedSourceSpellName(unit.name??'')===normalizedSourceSpellName(inheritance.parent));
+        const expected=unit?stagedSpellcastingGroups(plan).get(unit.id):undefined;
+        if(expected&&owners.length===1)referenced={owner:{start:owners[0]!.start,end:owners[0]!.end,quote:owners[0]!.quote},expected};
+      }catch{/* No guessed inheritance: unresolved source references remain blocking. */}
+      if(!referenced||!sameReferencedSpellMechanics(group,referenced.expected))
+        finding('SPELL_REFERENCE_SOURCE_MISMATCH',path,'The named source parent, exact spell and independent use quota or at-will reuse, profile, components and complete child evidence must agree; unknown or altered references cannot create executable Casts.','evidence',[parent]);
+    }
+    validateSpellcastingGroupFields(source, group, path, finding, referenced?.owner??parent);
     // A wrong visible description remains rejected below. Its unchanged exact
     // complete source evidence must still expose an omitted component fact.
     const carrier=Array.isArray(group.evidence)&&group.evidence.length===1?group.evidence[0]:undefined;
-    const componentParent=parent??(isValidEvidenceShape(carrier)&&source.slice(carrier.start,carrier.end)===carrier.quote
+    // "Same spellcasting ability" proves the shared numeric profile, not a
+    // component waiver. Only an actual use of the parent Spellcasting ability
+    // reuses its complete casting contract.
+    const componentParent=(reference?referenced?.owner:undefined)??parent??(isValidEvidenceShape(carrier)&&source.slice(carrier.start,carrier.end)===carrier.quote
       ?completeSourceSpellcastingEvidence(source,ir,{...group,description:carrier.quote},path,scope):undefined);
     const component=componentParent?sourceGroupComponentClause(componentParent,group):undefined;
     if(Array.isArray(group.usageGroups)&&group.usageGroups.length){
@@ -756,7 +798,12 @@ function validateSpellcasting(
       group.usageGroups.forEach((usageGroup, usageIndex) => {
         const usagePath = `${path}/usageGroups/${usageIndex}`;
         validateUsageEvidenceWithinGroup(source, group, usageGroup, usagePath, finding);
-        validateSpellUsageGroup(source, usageGroup, usagePath, finding, [...(Array.isArray(group.componentWaivers)?group.componentWaivers.flatMap(waiver=>isRecord(waiver)&&Array.isArray(waiver.evidence)?waiver.evidence.filter(isValidEvidenceShape):[]):[]),...(component&&!component.ambiguous?[component.evidence]:[])]);
+        const manualTokens=parent&&Array.isArray(group.manualGrants)?group.manualGrants.flatMap(manual=>{
+          if(!isValidEvidenceShape(manual)||source.slice(manual.start,manual.end)!==manual.quote)return[];
+          const token=sourceManualSpellGrant(parent,manual);return token?[token]:[];
+        }):[];
+        const inheritedRestrictions=reference&&referenced?referenced.expected.usageGroups.flatMap(usage=>usage.spellRefs.flatMap(ref=>ref.restrictions)):[];
+        validateSpellUsageGroup(source, usageGroup, usagePath, finding, [...(Array.isArray(group.componentWaivers)?group.componentWaivers.flatMap(waiver=>isRecord(waiver)&&Array.isArray(waiver.evidence)?waiver.evidence.filter(isValidEvidenceShape):[]):[]),...(component&&!component.ambiguous?[component.evidence]:[])],manualTokens,inheritedRestrictions);
         if (!isRecord(usageGroup) || !Array.isArray(usageGroup.spellRefs)) return;
         usageGroup.spellRefs.forEach((ref, refIndex) => {
           const portableRefIndex = spellRefs.length;
@@ -814,6 +861,21 @@ function validateSpellcasting(
       );
     }
   }
+}
+
+/** IDs are schema identities; all referenced source mechanics and every exact
+ * evidence span are independently regenerated, never trusted from the IR. */
+function sameReferencedSpellMechanics(group:CanonicalSpellcastingGroup,expected:CanonicalSpellcastingGroup):boolean{
+  const snapshot=(g:CanonicalSpellcastingGroup)=>({
+    evidence:g.evidence,ability:g.ability,abilityEvidence:g.abilityEvidence,saveDc:g.saveDc,saveDcEvidence:g.saveDcEvidence,
+    attackBonus:g.attackBonus,attackBonusEvidence:g.attackBonusEvidence,componentWaivers:g.componentWaivers,
+    activationType:g.activationType,legendaryCost:g.legendaryCost,recharge:g.recharge,casterLevel:g.casterLevel,casterLevelEvidence:g.casterLevelEvidence,manualGrants:g.manualGrants,
+    usageGroups:Array.isArray(g.usageGroups)?g.usageGroups.map(u=>({...u,spellRefs:Array.isArray(u.spellRefs)?u.spellRefs.map(ref=>{
+      const {refId,...sourceFacts}=ref;return sourceFacts;
+    }):u.spellRefs})):g.usageGroups});
+  const sorted=(value:unknown):unknown=>Array.isArray(value)?value.map(sorted):value&&typeof value==='object'
+    ?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,sorted(item)])):value;
+  return JSON.stringify(sorted(snapshot(group)))===JSON.stringify(sorted(snapshot(expected)));
 }
 
 function validateSourceGroupComponents(source:string,group:CanonicalSpellcastingGroup,path:string,parent:EvidenceRef|undefined,clause:ReturnType<typeof sourceGroupComponentClause>,finding:(code:string,path:string,message:string,origin:IntakeFinding['origin'],evidence?:EvidenceRef[])=>void):void{
@@ -912,6 +974,10 @@ function validateSpellcastingGroupFields(
   sourceParent?: EvidenceRef,
 ): void {
   validateUnknownSpellcastingProperties(group as unknown as Record<string, unknown>, SPELLCASTING_GROUP_KEYS, path, finding);
+  if(group.candidateReview!==undefined&&!isSourceCandidateReview(group.candidateReview))
+    finding('INVALID_CANDIDATE_REVIEW',path+'/candidateReview','Candidate review metadata must retain its closed inert data shape.','schema');
+  if(group.candidateCounters!==undefined&&(!isSourceCandidateReview(group.candidateReview)||!isSourceCandidateCounters(group.candidateCounters)))
+    finding('INVALID_CANDIDATE_COUNTERS',path+'/candidateCounters','Manual candidate counters require a valid review record and closed name/count/recovery data.','schema');
   if (typeof group.groupId !== 'string' || !group.groupId.trim()) {
     finding('INVALID_GROUP_ID', `${path}/groupId`, 'Spellcasting groupId must be a non-empty stable identifier.', 'schema');
   }
@@ -943,9 +1009,14 @@ function validateSpellcastingGroupFields(
   if(group.activationType!==undefined){
     const prefix=source.slice(0,group.evidence?.[0]?.start??0).replace(/\*{1,3}|_{2,3}/gu,'');
     const headings=[...prefix.matchAll(/^\s*(?:#{1,6}\s*)?(Bonus Actions|Reactions|Actions|Traits|Legendary Actions|Mythic Actions|附赠动作(?:\s*Bonus Actions)?|反应(?:\s*Reactions)?|动作(?:\s*Actions)?|特性(?:\s*Traits)?|传奇动作(?:\s*Legendary Actions)?|神话动作(?:\s*Mythic Actions)?)\s*[:：]?\s*$/gimu)];
-    const heading=headings.at(-1)?.[1]??'',expected=/^(?:bonus|附赠)/iu.test(heading)?'bonus':/^(?:reactions|反应)/iu.test(heading)?'reaction':/^(?:actions|动作)/iu.test(heading)?'action':undefined;
-    if(!['action','bonus','reaction'].includes(group.activationType)||group.activationType!==expected)finding('SPELL_ACTIVATION_SOURCE_MISMATCH',`${path}/activationType`,'Spell feature activation must match its explicit source section.','evidence',group.evidence);
+    const heading=headings.at(-1)?.[1]??'',expected=/^(?:bonus|附赠)/iu.test(heading)?'bonus':/^(?:reactions|反应)/iu.test(heading)?'reaction':/^(?:legendary|传奇)/iu.test(heading)?'legendary':/^(?:actions|动作)/iu.test(heading)?'action':undefined;
+    if(!['action','bonus','reaction','legendary'].includes(group.activationType)||group.activationType!==expected)finding('SPELL_ACTIVATION_SOURCE_MISMATCH',`${path}/activationType`,'Spell feature activation must match its explicit source section.','evidence',group.evidence);
   }
+  const printedRecharge=typeof group.featureName==='string'&&typeof group.description==='string'?sourceFeatureResources(group.featureName,group.description).recharge:undefined;
+  const sourceRecharge=printedRecharge?.[1]===6?printedRecharge:undefined;
+  if(JSON.stringify(group.recharge)!==JSON.stringify(sourceRecharge))finding('SPELL_RECHARGE_SOURCE_MISMATCH',`${path}/recharge`,'The complete source parent must retain exactly its own Recharge pool.','evidence',group.evidence);
+  const sourceCost=group.activationType==='legendary'?Number(/\bCosts?\s+(\d+)\s+Actions?/iu.exec(group.featureName)?.[1]??1):undefined;
+  if(group.legendaryCost!==sourceCost)finding('SPELL_LEGENDARY_COST_SOURCE_MISMATCH',`${path}/legendaryCost`,'Legendary Cast cost must match its source heading, defaulting to one use in the legendary section.','evidence',group.evidence);
   validateSpellEvidenceArray(source, group.abilityEvidence, `${path}/abilityEvidence`, finding);
   const abilityAssessment=ABILITIES.includes(group.ability)?assessSourceSpellcastingAbility(source,group.ability,group.abilityEvidence,sourceParent?[sourceParent]:group.evidence):undefined;
   if (abilityAssessment&&abilityAssessment.status!=='supported') {
@@ -981,10 +1052,19 @@ function validateSpellcastingGroupFields(
       );
     }
   }
+  const profileParent=sourceParent??(Array.isArray(group.evidence)?group.evidence.find(ref=>isValidEvidenceShape(ref)&&ref.quote===group.description&&source.slice(ref.start,ref.end)===ref.quote):undefined);
+  const introduction=profileParent?sourceSpellcastingIntroduction(profileParent.quote,profileParent.start):undefined;
+  // Full-parent evidence may include a shared DC, but a grant's own annotation
+  // cannot establish the profile of every other spell or daily child ability.
+  const profileEvidence=(evidence:EvidenceRef[]|undefined):EvidenceRef[]=>Array.isArray(evidence)&&introduction?evidence.flatMap(ref=>{
+    if(!isValidEvidenceShape(ref)||source.slice(ref.start,ref.end)!==ref.quote)return[];
+    const start=Math.max(ref.start,introduction.start),end=Math.min(ref.end,introduction.end);
+    return end>start?[{start,end,quote:source.slice(start,end)}]:[];
+  }):[];
   if (group.saveDc !== undefined) {
     if (!Number.isFinite(group.saveDc)) finding('INVALID_SAVE_DC', `${path}/saveDc`, 'Spell save DC must be finite.', 'schema');
     validateSpellEvidenceArray(source, group.saveDcEvidence, `${path}/saveDcEvidence`, finding);
-    if (Number.isFinite(group.saveDc) && !evidenceEntailsSaveDc(source, group.saveDcEvidence, group.saveDc)) {
+    if (Number.isFinite(group.saveDc) && !evidenceEntailsSaveDc(source, profileEvidence(group.saveDcEvidence), group.saveDc)) {
       finding(
         'SPELL_SAVE_DC_EVIDENCE_MISMATCH',
         `${path}/saveDc`,
@@ -997,7 +1077,7 @@ function validateSpellcastingGroupFields(
   if (group.attackBonus !== undefined) {
     if (!Number.isFinite(group.attackBonus)) finding('INVALID_ATTACK_BONUS', `${path}/attackBonus`, 'Spell attack bonus must be finite.', 'schema');
     validateSpellEvidenceArray(source, group.attackBonusEvidence, `${path}/attackBonusEvidence`, finding);
-    if (Number.isFinite(group.attackBonus) && !evidenceEntailsAttackBonus(source, group.attackBonusEvidence, group.attackBonus)) {
+    if (Number.isFinite(group.attackBonus) && !evidenceEntailsAttackBonus(source, profileEvidence(group.attackBonusEvidence), group.attackBonus)) {
       finding(
         'SPELL_ATTACK_BONUS_EVIDENCE_MISMATCH',
         `${path}/attackBonus`,
@@ -1032,8 +1112,16 @@ function validateSpellcastingGroupFields(
   if(group.manualGrants!==undefined){
     validateSpellEvidenceArray(source,group.manualGrants,`${path}/manualGrants`,finding);
     if(!allEvidenceWithinGrants(group.manualGrants,group.evidence))finding('MANUAL_SPELL_GRANT_OUTSIDE_FEATURE',`${path}/manualGrants`,'Manual grants must belong to the complete source feature.','evidence',group.manualGrants);
-    for(const manual of group.manualGrants){
-      if(group.usageGroups?.some(usage=>usage.evidence?.some(native=>manual.start<native.end&&native.start<manual.end)))finding('OVERLAPPING_SPELL_GRANT',`${path}/manualGrants`,'A grant cannot be both executable and GM-only.','evidence',[manual]);
+    for(const manual of Array.isArray(group.manualGrants)?group.manualGrants:[]){
+      if(!isValidEvidenceShape(manual))continue;
+      const overlaps=(native:EvidenceRef)=>isValidEvidenceShape(native)&&manual.start<native.end&&native.start<manual.end;
+      const nativeOverlap=group.usageGroups?.some(usage=>usage.spellRefs?.some(spell=>
+        spell.evidence?.some(overlaps)||spell.restrictions?.some(restriction=>restriction.evidence?.some(overlaps))));
+      if(nativeOverlap)finding('OVERLAPPING_SPELL_GRANT',`${path}/manualGrants`,'A spell or restriction cannot be both executable and GM-only.','evidence',[manual]);
+      else if(group.usageGroups?.some(usage=>usage.evidence?.some(overlaps))){
+        const owner=group.evidence?.find(ref=>isValidEvidenceShape(ref)&&ref.quote===group.description&&source.slice(ref.start,ref.end)===ref.quote);
+        if(!owner||!sourceManualSpellGrant(owner,manual))finding('INVALID_MANUAL_SPELL_GRANT_SPAN',`${path}/manualGrants`,'A manual spell inside a shared grant row must retain one complete source token and its exact cadence.','evidence',[manual]);
+      }
     }
   }
   if(group.usageGroups?.filter(usage=>usage.usage==='daily-shared').length>1)finding('MULTIPLE_SHARED_SPELL_POOLS',`${path}/usageGroups`,'Separate shared pools cannot be merged into one feature counter; each additional proven pool requires its own source-bound casting group and feature key.','semantic');
@@ -1048,6 +1136,8 @@ function validateSpellUsageGroup(
   path: string,
   finding: (code: string, path: string, message: string, origin: IntakeFinding['origin'], evidence?: EvidenceRef[]) => void,
   sharedWaiverEvidence: EvidenceRef[] = [],
+  manualTokens: Array<NonNullable<ReturnType<typeof sourceManualSpellGrant>>> = [],
+  inheritedRestrictions: CanonicalSpellRef['restrictions'] = [],
 ): void {
   if (!isRecord(usageGroup)
     || !['at-will', '1/day-each', 'daily-each', 'daily-shared', 'prepared-cantrip', 'prepared-slots'].includes(String(usageGroup.usage))) {
@@ -1170,7 +1260,10 @@ function validateSpellUsageGroup(
             && restriction.evidence.length > 0
             && !allEvidenceWithinGrants(restriction.evidence, usageGroup.evidence)
             && !(restriction.kind==='casting' && /^(?:(?:无需|无须|不需要|不需)\s*(?:任何|所有|全部)?\s*法术成分|(?:without|requires? no|requiring no)\s+(?:any\s+)?spell components?)$/iu.test(String(restriction.text))
-              && restriction.evidence.every(e=>sharedWaiverEvidence.some(shared=>e.start===shared.start&&e.end===shared.end&&e.quote===shared.quote)))) {
+              && restriction.evidence.every(e=>sharedWaiverEvidence.some(shared=>e.start===shared.start&&e.end===shared.end&&e.quote===shared.quote)))
+            && !inheritedRestrictions.some(expected=>restriction.kind===expected.kind&&restriction.text===expected.text&&restriction.value===expected.value
+              &&restriction.evidence.length===expected.evidence.length&&restriction.evidence.every((e,index)=>isValidEvidenceShape(e)
+                &&e.start===expected.evidence[index]!.start&&e.end===expected.evidence[index]!.end&&e.quote===expected.evidence[index]!.quote))) {
             finding(
               'SPELL_RESTRICTION_EVIDENCE_OUTSIDE_GRANT',
               `${restrictionPath}/evidence`,
@@ -1183,7 +1276,7 @@ function validateSpellUsageGroup(
       }
     });
   }
-  validateMinimalGrantSpans(usageGroup, path, finding);
+  validateMinimalGrantSpans(usageGroup, path, finding, manualTokens);
 }
 
 // source-derived: these checks bind structured spell mechanics to exact source slices.
@@ -1444,7 +1537,29 @@ function validateMinimalGrantSpans(
   usageGroup: CanonicalSpellUsageGroup,
   path: string,
   finding: (code: string, path: string, message: string, origin: IntakeFinding['origin'], evidence?: EvidenceRef[]) => void,
+  manualTokens: Array<NonNullable<ReturnType<typeof sourceManualSpellGrant>>> = [],
 ): void {
+  if(usageGroup.evidence?.length===1&&isValidEvidenceShape(usageGroup.evidence[0])){
+    const parent=usageGroup.evidence[0]!,daily=sourceDailySpellAction(parent.quote),reference=sourceReferencedSpellAction(parent.quote);
+    if(reference){
+      const entry=usageGroup.spellRefs?.[0];
+      const exact=usageGroup.usage==='at-will'&&usageGroup.spellRefs?.length===1&&entry?.originalName===reference.name
+        &&entry.evidence?.length===1&&entry.evidence[0]!.start===parent.start+reference.start&&entry.evidence[0]!.end===parent.start+reference.end;
+      if(!exact)finding('SPELL_REFERENCE_GRANT_MISMATCH',path,'The complete referenced ability must keep its exact single spell grant and name evidence.','evidence',[parent]);
+      return;
+    }
+    if(daily){
+      const expected=daily.spells.length>1?'daily-shared':'daily-each';
+      const exact=usageGroup.usage===expected&&'count'in usageGroup&&usageGroup.count===daily.count
+        &&usageGroup.spellRefs?.length===daily.spells.length&&daily.spells.every((entry,index)=>{
+          const ref=usageGroup.spellRefs[index]!;
+          return ref.originalName===entry.name&&ref.evidence.length===1&&ref.evidence[0]!.start===parent.start+entry.start&&ref.evidence[0]!.end===parent.start+entry.end
+            &&ref.restrictions.length===(daily.trigger?1:0)&&(!daily.trigger||ref.restrictions[0]!.kind==='other'&&ref.restrictions[0]!.text===daily.trigger.text);
+        });
+      if(!exact)finding('SPELL_DAILY_ACTION_EVIDENCE_MISMATCH',path,'Daily spell action must preserve every exact choice, one parent quota and its full trigger.','evidence',[parent]);
+      return;
+    }
+  }
   if(usageGroup.usage==='at-will'&&usageGroup.evidence?.length===1&&usageGroup.spellRefs?.length===1){
     const single=sourceSingleSpellAction(usageGroup.evidence[0]!.quote);
     if(single&&single.name===usageGroup.spellRefs[0]!.originalName)return;
@@ -1503,7 +1618,12 @@ function validateMinimalGrantSpans(
       const shared=usageGroup.usage==='daily-shared',count='count' in usageGroup?usageGroup.count:1;
       if(!daily||daily.count!==count||daily.shared!==shared||(!daily.each&&!daily.shared&&usageGroup.spellRefs.length!==1))finding('SPELL_DAILY_GRANT_EVIDENCE_MISMATCH',path,'Daily count and independent/shared ownership must match the exact grant label.','evidence',[grant]);
     }
-    const supported = childEvidence
+    const ownedManualTokens=manualTokens.filter(manual=>manual.row.start===grant.start&&manual.row.end===grant.end
+      &&manual.row.quote===grant.quote&&(manual.usage===usageGroup.usage
+        ||manual.usage==='1/day-each'&&usageGroup.usage==='daily-each'&&'count'in usageGroup&&usageGroup.count===1))
+      .filter(manual=>manual.count===undefined||'count'in usageGroup&&manual.count===usageGroup.count||manual.count===1&&usageGroup.usage==='1/day-each')
+      .map(manual=>({evidence:manual.token,path:path+'/manualGrants'}));
+    const supported = [...childEvidence,...ownedManualTokens]
       .filter((child) => child.evidence.start >= grant.start && child.evidence.end <= grant.end)
       .sort((left, right) => left.evidence.start - right.evidence.start || left.evidence.end - right.evidence.end);
     if (supported.length === 0) {

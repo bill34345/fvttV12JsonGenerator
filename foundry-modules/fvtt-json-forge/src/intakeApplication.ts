@@ -16,6 +16,7 @@ import {
   approveBrowserActorIntakeCandidateForGm,
   repairBrowserActorIntake,
   type BrowserActorGenerationResult,
+  type BrowserActorIntakeInput,
   type BrowserActorIntakeAnalysis,
   type IntakeProviderActivity,
   type IntakeRequestWaitStatus,
@@ -96,6 +97,8 @@ import {
   assertExactRuntime,
   assertGm,
   createAcceptedForgeActor,
+  createReviewedForgeActorCandidate,
+  forgeActorCandidateReviewHash,
   EXPECTED_FOUNDRY_VERSION,
   EXPECTED_SYSTEM_VERSION,
 } from './runtime';
@@ -134,6 +137,7 @@ type ForgeIntakeForm = {
   reviewModel: string;
   apiKey: string;
   persistApiKey: boolean;
+  autoCorrect: boolean;
   providerId: ForgeProviderId;
   protocol: ForgeProviderProtocol;
   authScheme: ForgeClientSettings['authScheme'];
@@ -192,6 +196,7 @@ export interface ForgeIntakeApplicationServices {
   convertFinalActorSource: typeof convertFinalActorSource;
   convertFinalItemSource: typeof convertFinalItemSource;
   createAcceptedForgeActor: typeof createAcceptedForgeActor;
+  createReviewedForgeActorCandidate: typeof createReviewedForgeActorCandidate;
   createAcceptedForgeItem: typeof createAcceptedForgeItem;
   readReviewBundleFile(file: File): Promise<string>;
   downloadReviewBundle(fileName: string, content: string): void;
@@ -221,6 +226,7 @@ const DEFAULT_SERVICES: ForgeIntakeApplicationServices = {
   convertFinalActorSource,
   convertFinalItemSource,
   createAcceptedForgeActor,
+  createReviewedForgeActorCandidate,
   createAcceptedForgeItem,
   readReviewBundleFile,
   downloadReviewBundle,
@@ -508,6 +514,12 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         } catch (error) { this.notify('error', messageOf(error)); }
       });
       this.bind(root, 'repair', () => void this.repair(root));
+      this.bind(root,'download-actor',()=>{
+        const form=readForm(root),candidate=this.generation as BrowserActorGenerationResult|undefined;
+        const response=candidate?.candidateResponse??this.response;
+        if(form.mode==='ai-item'||!this.snapshotCurrent(root)||!response||!('result'in response)||!('artifact'in response.result)||!response.result.artifact)return;
+        this.services.downloadReviewBundle(`forge-actor-${safeName(this.attemptId)}.json`,JSON.stringify(response.result.artifact,null,2));
+      });
       this.bind(root, 'generate', () => void this.generate(root));
       this.bind(root, 'model-review', () => void this.reviewCandidate(root));
       this.bind(root, 'regenerate', () => void this.regenerate(root));
@@ -746,7 +758,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     }
 
     private async generate(root: HTMLElement, fromBatch = false): Promise<void> {
-      if (this.busy() || this.importedReview || (!fromBatch && (this.batchRunning || this.batchApplying)) || this.status !== 'ready_to_generate' || !this.snapshotCurrent(root) || !this.analysis) return;
+      if (this.busy() || this.importedReview || (!fromBatch && (this.batchRunning || this.batchApplying)) || !(this.status==='ready_to_generate'||this.status==='needs_review'&&readForm(root).mode==='ai-monster'&&!!(this.analysis as BrowserActorIntakeAnalysis)?.ir) || !this.snapshotCurrent(root) || !this.analysis) return;
       const form = readForm(root);
       try { assertGm(environment.game); assertExactRuntime(environment.game); } catch (error) { return void this.notify('error', messageOf(error)); }
       if (!this.isDirectoryMode(form.mode)) return void this.notify('error', '当前工作台不支持这个 Intake 类型。');
@@ -1027,7 +1039,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         ...(responseResult ? { candidateResponse: {
           requestId: previewResponse!.requestId,
           status: responseResult.status,
-          ...('artifactHash' in responseResult ? { artifactHash: responseResult.artifactHash } : {}),
+          ...('artifactHash' in responseResult ? { artifactHash: responseResult.artifactHash } : 'artifact'in responseResult&&responseResult.artifact?{artifactHash:hashArtifact(responseResult.artifact)}:{}),
           verificationStatus: responseResult.verification.status,
           diagnostics: responseResult.diagnostics,
           semanticSummary: form.mode === 'ai-item'
@@ -1383,10 +1395,10 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
           const approved = mode === 'ai-item'
             ? this.services.approveBrowserItemIntakeCandidateForGm(itemInput(form, this.requestId, environment.game), this.generation as BrowserItemGenerationResult, environment.game.user.id)
             : this.services.approveBrowserActorIntakeCandidateForGm(actorInput(form, this.requestId, environment.game), this.generation as BrowserActorGenerationResult, environment.game.user.id);
-          if (approved.status !== 'accepted' || !approved.response) throw new Error('当前候选未通过 GM 本地确认门禁。');
+          if (!approved.response || approved.status!=='accepted'&&!approved.gmApproval) throw new Error('当前候选缺少 GM 确认证明。');
           this.generation = approved;
           this.response = approved.response;
-          this.status = transitionForgeIntakeReviewStatus(this.status, 'gm_approve');
+          this.status = transitionForgeIntakeReviewStatus(this.status, approved.status==='accepted'?'gm_approve':'gm_approve_candidate');
         }
         if (!this.response) throw new Error('缺少已确认的正式 response。');
         this.status = transitionForgeIntakeReviewStatus(this.status, 'commit');
@@ -1395,7 +1407,12 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
           this.createdDocument = { objectKind: 'item', uuid: result.uuid, document: result.item, status: result.status };
           this.notify('info', result.status === 'existing' ? `已复用 Item：${result.uuid}` : `Item 创建并回读成功：${result.uuid}`);
         } else {
-          const result = await this.services.createAcceptedForgeActor({
+          const response=this.response as ForgeActorResponse;
+          const reviewed=(this.generation as BrowserActorGenerationResult|undefined)?.gmApproval;
+          const result = reviewed&&'result'in response&&response.result.status!=='accepted'
+          ? await this.services.createReviewedForgeActorCandidate({game:environment.game,response,rawSourceHash:this.snapshot.rawSourceHash,
+            reviewApproval:{gmId:reviewed.gmId,sourceHash:reviewed.finalSourceHash,artifactHash:reviewed.artifactHash,findingsHash:forgeActorCandidateReviewHash(response)}})
+          : await this.services.createAcceptedForgeActor({
             game: environment.game,
             response: this.response as ForgeActorResponse,
             ...(mode === 'ai-monster' ? { rawSourceHash: this.snapshot.rawSourceHash } : {}),
@@ -1410,27 +1427,29 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         this.sessionChangePending = false;
         root = (this.element as HTMLElement | undefined) ?? root;
         (root as any).__forgeSessionSettings = this.settings;
-        if (this.status === 'committing_and_reading_back') this.status = transitionForgeIntakeReviewStatus(this.status, 'commit_finished');
+        if (this.status === 'committing_and_reading_back') this.status = transitionForgeIntakeReviewStatus(this.status,
+          this.generation?.status==='ready_for_gm_review'&&(this.generation as BrowserActorGenerationResult).gmApproval?'commit_candidate_finished':'commit_finished');
         this.renderResult(root);
       }
     }
 
     private isApplyable(root: HTMLElement): boolean {
       if (this.importedReview || this.createdDocument) return false;
-      if (!['ready_for_gm_review', 'accepted', 'committing_and_reading_back'].includes(this.status) || !this.snapshotCurrent(root) || !isCurrentRuntime(environment.game)) return false;
+      if (!['ready_for_gm_review', 'reviewed_candidate','accepted', 'committing_and_reading_back'].includes(this.status) || !this.snapshotCurrent(root) || !isCurrentRuntime(environment.game)) return false;
       if (this.status === 'ready_for_gm_review' && this.generation?.status !== 'ready_for_gm_review') return false;
       const localFindings = [...((this.analysis as any)?.findings ?? []),
         ...(readForm(root).mode === 'plaintext-actor'
           ? (this.generation?.findings ?? [])
           : ((this.generation as BrowserActorGenerationResult | BrowserItemGenerationResult | undefined)?.deterministicFindings ?? [])),
         ...(this.staleFinding ? [this.staleFinding] : [])];
-      if (localFindings.some((entry) => entry.blocking)) return false;
+      if (localFindings.some((entry) => entry.blocking) && !(readForm(root).mode==='ai-monster'&&(this.generation as BrowserActorGenerationResult)?.candidateAvailable)) return false;
       const mode = readForm(root).mode;
       const response = this.response ?? (this.generation as BrowserActorGenerationResult | BrowserItemGenerationResult | undefined)?.candidateResponse;
       if (!response) return false;
       return mode === 'ai-item'
         ? acceptedItemResponse(response as ForgeItemResponse)
-        : acceptedActorResponse(response as ForgeActorResponse);
+        : acceptedActorResponse(response as ForgeActorResponse) || mode==='ai-monster'&&!!(this.generation as BrowserActorGenerationResult)?.candidateAvailable
+          &&'result'in response&&'artifact'in response.result&&!!response.result.artifact;
     }
 
     private connectionReady(form: ReturnType<typeof readForm>): boolean {
@@ -1732,7 +1751,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       setDisabled(root, 'analyze', batchWorkspaceLocked || this.busy() || this.status !== 'empty'
         || !form.source.trim() || !this.connectionReady(form));
       setDisabled(root, 'repair', batchWorkspaceLocked || this.busy() || this.status !== 'needs_review' || form.mode === 'plaintext-actor' || !this.analysis || !this.connectionReady(form) || !this.snapshotCurrent(root) || ((this.analysis as any)?.repairCount ?? 0) >= 1);
-      setDisabled(root, 'generate', batchWorkspaceLocked || this.busy() || this.status !== 'ready_to_generate' || !this.connectionReady(form) || !this.snapshotCurrent(root));
+      setDisabled(root, 'generate', batchWorkspaceLocked || this.busy() || !(this.status==='ready_to_generate'||this.status==='needs_review'&&form.mode==='ai-monster'&&!!(this.analysis as BrowserActorIntakeAnalysis)?.ir) || !this.connectionReady(form) || !this.snapshotCurrent(root));
       setDisabled(root, 'model-review', batchWorkspaceLocked || this.busy() || this.status !== 'ready_for_gm_review' || !this.snapshotCurrent(root)
         || this.modelReviewCredentialRevision !== this.connectionCredentialRevision
         || !this.connectionReady(form) || !this.generation || (this.generation as BrowserActorGenerationResult | BrowserItemGenerationResult).modelReviewStatus !== 'not_requested');
@@ -1740,6 +1759,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       setDisabled(root, 'reject', batchWorkspaceLocked || this.busy() || !['needs_review', 'failed'].includes(this.status));
       setDisabled(root, 'cancel', this.creating || !this.controller);
       setDisabled(root, 'export', batchWorkspaceLocked || !this.analysis || !this.snapshot);
+      setDisabled(root,'download-actor',batchWorkspaceLocked||this.busy()||!this.snapshotCurrent(root)||form.mode==='ai-item'||!previewResponse||!('result'in previewResponse)||!('artifact'in previewResponse.result)||!previewResponse.result.artifact);
       setDisabled(root, 'import', batchWorkspaceLocked || this.busy() || !selectedImportFile(root));
       setDisabled(root, 'start-new-attempt', true);
       for (const action of ['test-connection', 'clear-key', 'clear-all-keys', 'toggle-key', 'toggle-endpoint']) setDisabled(root, action, this.creating);
@@ -1829,7 +1849,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         if (!this.connectionReady(form)) hint = 'AI 分析需要先配置并测试连接。标准资料可直接导入，无需 AI。';
       } else {
         visible.add('edit-source');
-        if (this.status === 'ready_to_generate') { visible.add('generate'); primary = 'generate'; }
+        if (this.status === 'ready_to_generate'||this.status==='needs_review'&&form.mode==='ai-monster'&&!!(this.analysis as BrowserActorIntakeAnalysis)?.ir) { visible.add('generate'); primary = 'generate'; }
         else if (this.status === 'accepted' || this.status === 'ready_for_gm_review') { visible.add('create'); primary = 'create'; }
         else if (repairable) { visible.add('repair'); primary = 'repair'; }
         else if (retry) { visible.add('regenerate'); primary = 'regenerate'; }
@@ -1837,14 +1857,16 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
           && this.modelReviewCredentialRevision === this.connectionCredentialRevision
           && (this.generation as BrowserActorGenerationResult | BrowserItemGenerationResult | undefined)?.modelReviewStatus === 'not_requested') visible.add('model-review');
         if (this.analysis && this.snapshot) visible.add('export');
+        const candidateResponse=(this.generation as BrowserActorGenerationResult|undefined)?.candidateResponse??this.response;
+        if(form.mode!=='ai-item'&&candidateResponse&&'result'in candidateResponse&&'artifact'in candidateResponse.result&&candidateResponse.result.artifact)visible.add('download-actor');
         if (['needs_review', 'failed'].includes(this.status)) visible.add('reject');
         hint = stale ? '资料或设置已变更，需重新分析。'
           : this.status === 'ready_to_generate' ? '核对识别的资料后，继续生成候选；此步不会请求付费模型审核或创建条目。'
-            : this.status === 'ready_for_gm_review' ? '本地校验已通过。AI 审核由独立按钮发起并可能产生额外 API 费用；GM 可直接核对并确认创建。'
+            : this.status === 'ready_for_gm_review' ? '候选已保留；请核对来源和下方问题。AI 审核由独立按钮发起并可能产生额外 API 费用；GM 可确认采用待审候选。'
             : this.status === 'accepted' ? '核对预览后确认创建到当前目录。'
               : '先查看需要处理的问题，可返回编辑资料。';
       }
-      for (const action of ['analyze', 'generate', 'model-review', 'create', 'repair', 'regenerate', 'reject', 'cancel', 'clear', 'export', 'start-new-attempt', 'edit-source', 'resume-review', 'open-created']) {
+      for (const action of ['analyze', 'generate', 'model-review', 'create', 'repair', 'regenerate', 'reject', 'cancel', 'clear', 'export', 'download-actor', 'start-new-attempt', 'edit-source', 'resume-review', 'open-created']) {
         const button = root.querySelector(`[data-action="${action}"]`) as HTMLButtonElement | null;
         if (!button) continue;
         button.hidden = !visible.has(action);
@@ -2913,6 +2935,7 @@ function readForm(root: HTMLElement, sessionSettings?: Partial<ForgeClientSettin
     reviewModel: value('model', 'model').trim(),
     apiKey: value('apiKey', 'apiKey'),
     persistApiKey: checked('persistApiKey', 'persistApiKey'),
+    autoCorrect: checked('autoCorrect','autoCorrect'),
     providerId,
     protocol: (value('protocol', 'protocol') || preset.defaultProtocol) as ForgeProviderProtocol,
     authScheme: (value('authScheme', 'authScheme') || preset.authSchemes[0] || 'bearer') as ForgeClientSettings['authScheme'],
@@ -2964,6 +2987,7 @@ function providerOptions(
   });
   return {
     apiKey: connection.apiKey,
+    autoCorrect: form.autoCorrect,
     baseUrl: connection.baseUrl,
     model: connection.model,
     reviewModel: connection.reviewModel,
@@ -2990,6 +3014,7 @@ function connectionIdentity(form: ReturnType<typeof readForm>): string {
     useSeparateReviewModel: false,
     reasoning: form.reasoning,
     structuredOutput: form.structuredOutput,
+    autoCorrect: form.autoCorrect,
   });
 }
 
@@ -3005,6 +3030,7 @@ function sessionConnectionIdentity(settings: ForgeClientSettings): string {
     useSeparateReviewModel: settings.useSeparateReviewModel,
     reasoning: settings.reasoning,
     structuredOutput: settings.structuredOutput,
+    autoCorrect: settings.autoCorrect,
   });
 }
 
@@ -3048,7 +3074,17 @@ function humanSummary(status: ForgeIntakeReviewStatus, analysis: IntakeAnalysis 
   if (status === 'ready_to_generate') return '分析已通过，可以生成候选；不会自动请求付费模型审核。';
   if (status === 'generating_and_reviewing') return '候选正在生成并进行本地校验；不会自动请求付费模型审核。';
   if (status === 'ready_for_gm_review' && applyable) {
-    const modelStatus = (generation as BrowserActorGenerationResult | BrowserItemGenerationResult | undefined)?.modelReviewStatus;
+    const candidate = generation as BrowserActorGenerationResult | BrowserItemGenerationResult | undefined;
+    const modelStatus = candidate?.modelReviewStatus;
+    const localNeedsReview = candidate?.formalStatus === 'needs_review' || candidate?.formalStatus === 'failed'
+      || candidate && 'intakeVerificationStatus' in candidate && candidate.intakeVerificationStatus === 'needs_review'
+      || candidate?.deterministicFindings?.some(finding => finding.blocking)
+      || analysis?.findings.some(finding => finding.blocking);
+    if (localNeedsReview) {
+      const modelSummary = modelStatus === 'accepted' ? 'AI 审核已通过'
+        : modelStatus === 'needs_review' || modelStatus === 'failed' ? 'AI 审核有提示或失败' : 'AI 尚未审核';
+      return `候选已生成；本地检查仍有待核对问题。${modelSummary}；请阅读具体提示，GM 可明确采用待审候选。`;
+    }
     return modelStatus === 'needs_review' || modelStatus === 'failed'
       ? '本地校验通过；AI 审核有提示或失败。请阅读具体提示，GM 仍可人工确认创建。'
       : modelStatus === 'accepted' ? '本地校验与 AI 审核已通过；仍需 GM 核对并确认创建。'
@@ -3061,8 +3097,8 @@ function humanSummary(status: ForgeIntakeReviewStatus, analysis: IntakeAnalysis 
   if (response || generation) return '结果已生成，请按顺序查看摘要、时间线、需要核对的内容和来源依据。';
   return '当前结果尚未满足创建条件。';
 }
-function actorInput(form: ReturnType<typeof readForm>, requestId: string, game: any, onStage?: (stage: any) => void) {
-  return { source: form.source, sourceName: form.sourceName, displayName: form.displayName, requestId, fvttVersion: game.version, systemVersion: game.system.version, onStage };
+function actorInput(form: ReturnType<typeof readForm>, requestId: string, game: any, onStage?: (stage: any) => void):Omit<BrowserActorIntakeInput,'sourceId'> {
+  return { source: form.source, sourceName: form.sourceName, displayName: form.displayName, requestId, fvttVersion: game.version, systemVersion: game.system.version, autoCorrect:form.autoCorrect, onStage };
 }
 function itemInput(form: ReturnType<typeof readForm>, requestId: string, game: any, onStage?: (stage: any) => void) {
   return { source: form.source, sourceName: form.sourceName, displayName: form.displayName, requestId, fvttVersion: game.version, systemVersion: game.system.version, onStage };
@@ -3259,7 +3295,7 @@ function coerceForgeSessionSettings(raw: unknown, fallback: ForgeClientSettings)
       : root;
   const result = { ...fallback };
   const stringKeys: Array<keyof ForgeClientSettings> = [
-    'providerId', 'protocol', 'authScheme', 'region', 'reasoning', 'structuredOutput',
+    'providerId', 'protocol', 'authScheme', 'region', 'reasoning', 'structuredOutput', 'autoCorrect',
     'endpoint', 'model', 'reviewModel', 'apiKey',
   ];
   for (const key of stringKeys) if (typeof nested[key] === 'string') (result[key] as string) = (nested[key] as string).trim();
@@ -3283,7 +3319,7 @@ function reviewStatusLabel(status: ForgeIntakeReviewStatus): string {
   const labels: Record<ForgeIntakeReviewStatus, string> = {
     empty: '等待输入资料', analyzing: '正在分析资料…', ready_to_generate: '资料已分析，可以生成候选',
     generating_and_reviewing: '正在生成并本地校验…', repairing: '正在修正问题…', regenerating: '正在重新分析…',
-    ready_for_gm_review: '本地校验通过，等待 GM 确认',
+    ready_for_gm_review: '候选可用，请核对问题并决定采用',reviewed_candidate:'GM 已确认采用待审候选；检查问题保留',
     accepted: '本地校验通过，可以确认创建', needs_review: '有问题需要核对', failed: '本次未完成，请检查问题说明',
     rejected: '已不采用本次结果', committing_and_reading_back: '正在创建并核对结果…',
   };

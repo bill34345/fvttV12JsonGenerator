@@ -4,6 +4,7 @@ import { getFoundryTarget, type FvttTargetVersion } from './target';
 import { isFoundryHtmlDescription } from './item-description';
 import { sourceConditionLifecycle, extractExplicitlyInflictedStatuses } from './actor-effects';
 import { readConditionInstance } from '@fvtt-json-generator/contracts/conditions';
+import {RESOLVER_MODULE_ID,validatePortableSpellManifestStructure,hashManifest} from '@fvtt-json-generator/spell-manifest-contracts';
 import {
   WEAPON_PROPERTIES_MODULE_ID,
   parseWeaponConfiguration,
@@ -31,6 +32,10 @@ export function verifyGeneratedDocument(
   options: VerifyGeneratedDocumentOptions,
 ): GenerationVerification {
   const diagnostics: GenerationDiagnostic[] = [];
+  if(options.canonical.kind==='actor'&&(options.canonical.candidateReview||options.output?.flags?.fvttJsonGenerator?.candidateReview)){
+    diagnostics.push({code:'GEN_SOURCE_CANDIDATE_REVIEW_REQUIRED',severity:'warning',stage:'semantic',path:'actor/candidateReview',
+      message:'The complete Actor retains unresolved source findings for user review; candidate delivery does not accept those findings.'});
+  }
   const documents = options.canonical.kind === 'actor'
     ? (Array.isArray(options.output?.items) ? options.output.items : [])
     : [options.output];
@@ -57,6 +62,9 @@ export function verifyGeneratedDocument(
   }
 
   for (const [documentIndex, document] of documents.entries()) {
+    const candidate=document?.flags?.fvttJsonGenerator?.candidateReview;
+    if(candidate)diagnostics.push({code:'GEN_SOURCE_CANDIDATE_REVIEW_REQUIRED',severity:'warning',stage:'semantic',
+      path:`items/${documentIndex}/candidateReview`,message:'This source and model proposal is available for GM review; its retained semantic findings have not been accepted.'});
     verifyIdsAndLinks(document, documentIndex, diagnostics);
     verifyDnd5eDocumentSchema(document, documentIndex, diagnostics, options.target);
   }
@@ -78,7 +86,7 @@ export function verifyGeneratedDocument(
   }
 
   const mechanicsCoverage = options.canonical.mechanics.map((mechanic) =>
-    verifyMechanicCoverage(mechanic, documents, diagnostics, options.target, options.effectProfile));
+    verifyMechanicCoverage(mechanic, documents, diagnostics, options.target, options.effectProfile,options.canonical.kind==='actor'?options.output:undefined));
 
   verifyTargetMetadata(options.output, options.target, diagnostics);
 
@@ -346,6 +354,7 @@ function verifyMechanicCoverage(
   diagnostics: GenerationDiagnostic[],
   target: FvttTargetVersion,
   effectProfile: EffectProfile,
+  actor?:any,
 ): MechanicsCoverageEntry {
   const behavior = mechanic.kind.startsWith('behavior-')
     ? mechanic.value as {
@@ -444,7 +453,7 @@ function verifyMechanicCoverage(
       const primary = activities[0];
       const costs = primary?.consumption?.targets ?? [];
       const expectedPeriod = mapStructuredUsesPeriod(structuredUses.period);
-      const value=mechanic.value as {executionMode?:string;sourceText?:string};
+      const value=mechanic.value as {executionMode?:string;sourceText?:string;spellcastingFeatureKey?:string};
       const marker=document?.flags?.fvttJsonGenerator?.manualRule;
       const manual=value.executionMode==='gm-manual'&&marker?.version===1&&marker.mode==='gm-manual'
         &&typeof marker.logicalPath==='string'&&marker.logicalPath.startsWith(mechanic.path.replace(/^actor\//u,'').replace(/\/uses$/u,'/'))
@@ -454,7 +463,8 @@ function verifyMechanicCoverage(
         && uses?.recovery?.length === 1
         && uses.recovery[0]?.period === expectedPeriod
         && uses.recovery[0]?.type === 'recoverAll'
-        && (manual || primary?.consumption?.spellSlot === false
+        && (manual || pendingSpellParentUses(actor,document,value.spellcastingFeatureKey,structuredUses)
+        || primary?.consumption?.spellSlot === false
         && costs.length === 1 && costs[0]?.type === 'itemUses' && costs[0]?.target === '' && String(costs[0]?.value) === '1')) {
         outputPaths.push(`documents/${documentIndex}/system/uses`);
       }
@@ -1139,6 +1149,23 @@ type StructuredUsesPeriod = 'day' | 'longRest' | 'shortRest' | 'dawn';
 interface StructuredUsesValue {
   max: number;
   period: StructuredUsesPeriod;
+}
+
+/** Pending is a portable source contract, not runtime hydration. A rule reader
+ * must remain inert; only the matched resolver-owned Cast spends this pool. */
+function pendingSpellParentUses(actor:any,item:any,key:string|undefined,uses:StructuredUsesValue):boolean{
+  if(!key||uses.period!=='day'||item?.flags?.fvttJsonGenerator?.spellcastingFeatureKey!==key)return false;
+  const owner=actor?.flags?.[RESOLVER_MODULE_ID],checked=validatePortableSpellManifestStructure(owner?.spellManifest);
+  if(!checked.ok||owner?.spellResolution?.status!=='pending'||owner.spellResolution.manifestHash!==hashManifest(checked.value))return false;
+  const groups=checked.value.spellcastingGroups.filter(g=>g.featureItemKey===key);
+  if(groups.length!==1)return false;
+  const group=groups[0]!,link=item.flags?.[RESOLVER_MODULE_ID];
+  if(link?.featureItemKey!==key||link?.groupId!==group.groupId||!group.spellRefs.length)return false;
+  if(group.spellRefs.some(ref=>ref.method!=='innate'||ref.uses?.value!==uses.max||ref.uses?.recovery!=='day'))return false;
+  if(group.spellRefs.length===1?item.flags.fvttJsonGenerator.spellcastingUsesParent!==true||group.spellRefs[0]!.uses!.shared:group.spellRefs.some(ref=>ref.uses?.shared!==true))return false;
+  const activities=Object.values(item.system?.activities??{}) as any[],reader=activities[0];
+  return activities.length===1&&reader.type==='utility'&&reader.activation?.type===''&&reader.consumption?.spellSlot===false
+    &&reader.consumption.targets?.length===0&&!reader.damage&&!reader.attack&&!reader.save&&!reader.effects?.length&&!item.effects?.length;
 }
 
 function readStructuredUses(value: unknown): StructuredUsesValue | undefined {

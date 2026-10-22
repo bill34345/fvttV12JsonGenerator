@@ -306,8 +306,15 @@ export async function installEncounterAutomation(
     actors.set(key, actor);
   }
   for (const recovery of normalized.config.legendaryRecovery) {
-    const nativeMax = numeric(actors.get(recovery.actorKey)?.system?.resources?.legact?.max, `绑定角色 ${recovery.actorKey} 的原生传奇动作上限`);
-    if (nativeMax !== recovery.max) throw new Error(`绑定角色 ${recovery.actorKey} 的原生传奇动作上限与固定配置不一致。`);
+    const actor=actors.get(recovery.actorKey),nativeMax = numeric(actor?.system?.resources?.legact?.max, `绑定角色 ${recovery.actorKey} 的原生传奇动作上限`);
+    const ledger=actor?.flags?.fvttJsonGenerator?.sourceLegendaryLedger;
+    if(ledger!==undefined){
+      const raw=actor?._source?.system?.resources,lair=actor?.system?.resources?.lair;
+      const expected=ledger.max+Number(lair?.value===true&&lair?.inside===true);
+      if(ledger.version!==1||ledger.max!==recovery.max||ledger.lairMax!==ledger.max+1||ledger.recovery!=='own-turn-start'
+        ||raw?.legact?.max!==ledger.max||raw?.lair?.value!==true||lair?.value!==true||typeof raw?.lair?.inside!=='boolean'||raw.lair.inside!==lair?.inside||nativeMax!==expected)
+        throw new Error(`绑定角色 ${recovery.actorKey} 的来源传奇资源与当前巢穴模式不一致。`);
+    }else if (nativeMax !== recovery.max) throw new Error(`绑定角色 ${recovery.actorKey} 的原生传奇动作上限与固定配置不一致。`);
   }
   for (const rule of normalized.config.rules) {
     if (rule.kind === 'status-lifecycle') {

@@ -11,6 +11,7 @@ export type ForgeIntakeReviewStatus =
   | 'ready_to_generate'
   | 'generating_and_reviewing'
   | 'ready_for_gm_review'
+  | 'reviewed_candidate'
   | 'repairing'
   | 'regenerating'
   | 'accepted'
@@ -30,6 +31,8 @@ export type ForgeIntakeReviewEvent =
   | 'generation_needs_review'
   | 'generation_failed'
   | 'gm_approve'
+  | 'gm_approve_candidate'
+  | 'commit_candidate_finished'
   | 'repair'
   | 'repair_ready'
   | 'repair_needs_review'
@@ -57,7 +60,8 @@ const REVIEW_TRANSITIONS: Readonly<Record<ForgeIntakeReviewStatus, Partial<Recor
     generation_failed: 'failed',
     clear: 'empty',
   },
-  ready_for_gm_review: { gm_approve: 'accepted', regenerate: 'regenerating', reject: 'rejected', clear: 'empty' },
+  ready_for_gm_review: { gm_approve: 'accepted',gm_approve_candidate:'reviewed_candidate', regenerate: 'regenerating', reject: 'rejected', clear: 'empty' },
+  reviewed_candidate:{commit:'committing_and_reading_back',clear:'empty'},
   repairing: {
     repair_ready: 'ready_to_generate',
     repair_needs_review: 'needs_review',
@@ -66,10 +70,10 @@ const REVIEW_TRANSITIONS: Readonly<Record<ForgeIntakeReviewStatus, Partial<Recor
   },
   regenerating: { regeneration_started: 'analyzing', clear: 'empty' },
   accepted: { commit: 'committing_and_reading_back', clear: 'empty' },
-  needs_review: { repair: 'repairing', regenerate: 'regenerating', reject: 'rejected', clear: 'empty' },
+  needs_review: { generate: 'generating_and_reviewing', repair: 'repairing', regenerate: 'regenerating', reject: 'rejected', clear: 'empty' },
   failed: { regenerate: 'regenerating', reject: 'rejected', clear: 'empty' },
   rejected: { regenerate: 'regenerating', clear: 'empty' },
-  committing_and_reading_back: { commit_finished: 'accepted' },
+  committing_and_reading_back: { commit_finished: 'accepted',commit_candidate_finished:'reviewed_candidate' },
 };
 
 export function transitionForgeIntakeReviewStatus(
@@ -367,10 +371,11 @@ function assertBundleIdentity(input: ForgeIntakeReviewBundleInput): void {
 }
 
 function assertCandidateResponseConsistency(input: ForgeIntakeReviewBundleInput): void {
-  const acceptedTopLevel = input.status === 'accepted' || input.status === 'committing_and_reading_back';
+  const reviewed=input.status==='reviewed_candidate'||input.status==='committing_and_reading_back'&&!!input.gmApproval&&input.candidateResponse?.status!=='accepted';
+  const acceptedTopLevel = input.status === 'accepted' || input.status === 'committing_and_reading_back'&&!reviewed;
   const awaitingGm = input.status === 'ready_for_gm_review';
   const response = input.candidateResponse;
-  if (!acceptedTopLevel && !awaitingGm && response) {
+  if (!acceptedTopLevel && !awaitingGm && !reviewed && response) {
     throw new Error('Forge Intake candidate response is forbidden unless the top-level review status is GM-ready or accepted.');
   }
   if (acceptedTopLevel && !response) {
@@ -380,10 +385,11 @@ function assertCandidateResponseConsistency(input: ForgeIntakeReviewBundleInput)
     throw new Error('Forge Intake GM-ready candidate needs a bound formal response without prior GM approval.');
   }
   if (!response) return;
+  if(reviewed&&(!input.gmApproval||input.objectKind!=='actor'||!input.candidateHash||!response.artifactHash))throw new Error('Reviewed Actor candidate requires its current GM decision and artifact identity.');
   if (response.requestId !== input.requestId) {
     throw new Error('Forge Intake candidate response requestId does not match the review bundle.');
   }
-  if (response.status !== 'accepted' || response.verificationStatus !== 'accepted' || !response.artifactHash) {
+  if ((acceptedTopLevel||input.objectKind==='item')&&(response.status !== 'accepted' || response.verificationStatus !== 'accepted' || !response.artifactHash)) {
     throw new Error('Forge Intake accepted review status requires accepted response, verification, and artifactHash.');
   }
 }
@@ -466,9 +472,7 @@ function projectCalls(value: ForgeIntakeReviewBundleInput['calls']) {
 }
 
 function projectCandidateResponse(value: NonNullable<ForgeIntakeReviewBundleInput['candidateResponse']>) {
-  if (value.status !== 'accepted' && value.artifactHash) {
-    throw new Error('Forge Intake non-accepted candidate response must not expose an artifactHash.');
-  }
+  // A hash identifies the retained candidate; it does not certify acceptance.
   return {
     requestId: value.requestId,
     status: value.status,

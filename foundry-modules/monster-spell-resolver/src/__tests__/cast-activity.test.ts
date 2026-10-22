@@ -42,10 +42,10 @@ describe('native dnd5e 5.3.3 Cast Activity source', () => {
     for(const ref of limited)expect(()=>buildCastActivitySource({manifestId:manifest.manifestId,featureId:'RatFeature000001',group,ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'})).toThrow('Unsupported source casting restriction');
     expect(ratCases().length+limited.length).toBe(10);
   });
-  for(const activationType of ['action','bonus','reaction'] as const)test('source casting timing overrides the matched spell defaults: '+activationType,()=>{
+  for(const activationType of ['action','bonus','reaction'] as const)test('ordinary Actions inherit spell timing; explicit bonus/reaction carriers retain timing: '+activationType,()=>{
     const parsed=new YamlParser().parse(renderMonsterIntakeMarkdown(buildRatWarlockIr())),manifest=parsed.spellManifest!,group=manifest.spellcastingGroups[0]!,ref=group.spellRefs.find(ref=>!ref.restrictions.length)!;
     const built=buildCastActivitySource({manifestId:manifest.manifestId,featureId:'RatFeature000001',group,ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop',activationType});
-    expect(built.activity.activation).toEqual({type:activationType,value:1,override:true});
+    expect(built.activity.activation).toEqual(activationType==='action'?undefined:{type:activationType,value:1,override:true});
   });
   for(const [text,value,units] of [['（持续24小时）','24','hour'],['(lasts for 7 minutes)','7','minute'],['持续2天','2','day']] as const)test('source duration restriction becomes a native Cast override: '+text,()=>{
     const base=ratCases()[0]!.ref,ref:PortableSpellRef={...base,method:'at-will',uses:undefined,restrictions:[{kind:'casting',text,evidence:[]}]};

@@ -280,6 +280,8 @@ export interface SpecialEffect {
 }
 
 export interface StructuredActionData {
+  candidateReview?: import('./sourceOperationTypes').SourceCandidateReview;
+  candidateCounters?: import('./sourceOperationTypes').SourceCandidateCounter[];
   sourceFeatureId?:string;
   sourceOperations?: SourceOperation[];
   sourceContext?: string[];

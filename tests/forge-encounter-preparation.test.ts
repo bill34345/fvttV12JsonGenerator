@@ -1,20 +1,34 @@
 import { describe, expect, test } from 'bun:test';
-import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
+import { hashSource,attachForgeSourceId,type ForgeSourceId } from '@fvtt-json-generator/forge-gateway-protocol';
 import { prepareForgeEncounter, assertPreparedForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
 import { encounterFixture, assistedEncounterFixture as assistedFixture } from './helpers/forge-encounter';
 
+function assistedWithSourceIds(){
+  const bundle=assistedFixture();
+  for(const [index,actor]of bundle.actors.entries()){
+    actor.source=attachForgeSourceId(actor.source,`actor:v1:123e4567-e89b-42d3-a456-42661417400${index}` as ForgeSourceId).content;
+    actor.sourceHash=hashSource(actor.source);
+  }
+  return bundle;
+}
+
 describe('encounter formal source preparation',()=>{
-  test('preserves literal assisted review and still requires unique bound macro coverage',async()=>{
-    const bundle=assistedFixture();
+  test('preserves literal assisted review and the complete candidate when companion coverage is missing',async()=>{
+    const bundle=assistedWithSourceIds();
     bundle.actors[0].source=bundle.actors[0].source.replaceAll('表达覆盖: structured','表达覆盖: literal');
     bundle.actors[0].sourceHash=hashSource(bundle.actors[0].source);
     const prepared=await prepareForgeEncounter(JSON.stringify(bundle));
     expect(prepared.actors[0]!.status).toBe('needs_review');expect(prepared.requirements).toHaveLength(5);
     bundle.macros[0].covers=bundle.macros[0].covers.filter((c:any)=>c.actorKey!=='dragon');
-    await expect(prepareForgeEncounter(JSON.stringify(bundle))).rejects.toThrow('唯一');
+    const unbound=await prepareForgeEncounter(JSON.stringify(bundle));
+    expect(unbound.actors.map(actor=>actor.status)).toEqual(prepared.actors.map(actor=>actor.status));
+    expect(unbound.actors.map(actor=>actor.artifactHash)).toEqual(prepared.actors.map(actor=>actor.artifactHash));
+    expect(unbound.requirements).toEqual(prepared.requirements);
+    expect(unbound.bundle.actors[0]!.source).toBe(bundle.actors[0].source);
+    expect(unbound.reviewFindings?.join(' ')).toContain('没有唯一配套控制');
   });
-  test('keeps GM-assisted review explicit and requires complete bound companion coverage',async()=>{
-    const bundle=assistedFixture();const prepared=await prepareForgeEncounter(JSON.stringify(bundle));
+  test('keeps GM-assisted findings and full candidates while rejecting macros bound to the wrong Actor',async()=>{
+    const bundle=assistedWithSourceIds();const prepared=await prepareForgeEncounter(JSON.stringify(bundle));
     expect(prepared.actors.map(a=>a.status)).toEqual(['needs_review','needs_review']);
     expect(prepared.requirements).toHaveLength(5);
     const corruption=prepared.requirements.find(r=>r.actorKey==='crystal'&&r.mechanicId==='salvo-crystal-corruption')!;
@@ -23,7 +37,12 @@ describe('encounter formal source preparation',()=>{
     expect(corruption.gmSteps.join(' ')).toContain('不能把力竭直接应用');
     expect(prepared.requirements.find(r=>r.mechanicId==='crystalbleed-eclipse-ward')!.trigger!.condition).toContain('超过 20');
     expect(prepared.requirements.every(r=>r.gmSteps.join(' ')!==bundle.macros[0].notes)).toBe(true);
-    bundle.macros[0].covers.pop();await expect(prepareForgeEncounter(JSON.stringify(bundle))).rejects.toThrow('唯一');
+    const removed=bundle.macros[0].covers.pop();
+    const withoutControl=await prepareForgeEncounter(JSON.stringify(bundle));
+    expect(withoutControl.actors.map(actor=>actor.artifactHash)).toEqual(prepared.actors.map(actor=>actor.artifactHash));
+    expect(withoutControl.requirements).toEqual(prepared.requirements);
+    expect(withoutControl.reviewFindings?.join(' ')).toContain(removed.mechanicId);
+    expect(withoutControl.actors.map(actor=>actor.status)).toEqual(['needs_review','needs_review']);
     const unbound=assistedFixture();unbound.macros[0].bindings={crystal:'crystal'};
     await expect(prepareForgeEncounter(JSON.stringify(unbound))).rejects.toThrow('未绑定');
   });

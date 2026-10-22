@@ -1,0 +1,1876 @@
+{
+  "schema": "forge-local-baseline-inventory-v1",
+  "scope": "local commits only; no merge/push/deploy/convergence implementation",
+  "initial_head": "f637f77f28c086e34297513e5293f98b3835f2e9",
+  "initial_tracked_modified": 107,
+  "initial_untracked_files": 112,
+  "admitted_existing_paths": 218,
+  "leftover_local_paths": 1,
+  "housekeeping_original_changes": [
+    "docs/plans/2026-10-20-forge-ab-current-state.md"
+  ],
+  "new_baseline_documents": [
+    "docs/plans/2026-10-22-forge-local-baseline.md",
+    "docs/plans/2026-10-22-forge-local-baseline.json"
+  ],
+  "entries": [
+    {
+      "path": ".ruler/AGENTS.md",
+      "bytes": 10559,
+      "sha256": "a1960dbcf840f2b8e571a7562e7b9fa1a172854944c2f0b06c2040452279a723",
+      "initial_kind": "tracked",
+      "current_sha256": "a1960dbcf840f2b8e571a7562e7b9fa1a172854944c2f0b06c2040452279a723",
+      "decision": "commit-existing-2024-rule-pair"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 10624,
+      "sha256": "7dc44aafe743af98822139ea00ee6ab56208d4e4f6f82a1cba87669c31329706",
+      "initial_kind": "tracked",
+      "current_sha256": "7dc44aafe743af98822139ea00ee6ab56208d4e4f6f82a1cba87669c31329706",
+      "decision": "commit-existing-2024-rule-pair"
+    },
+    {
+      "path": "docs/acceptance/current-support-matrix.md",
+      "bytes": 67604,
+      "sha256": "a752253a76eebafe917e5db3fb4a740dc588b028584c23d74b32ca2da066490d",
+      "initial_kind": "tracked",
+      "current_sha256": "a752253a76eebafe917e5db3fb4a740dc588b028584c23d74b32ca2da066490d",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/handbook/catalog.json",
+      "bytes": 129641,
+      "sha256": "3d62caded29f497f7d3db6bce1a40564f8e87cdd101e6f3dde62defaf25fdd74",
+      "initial_kind": "tracked",
+      "current_sha256": "3d62caded29f497f7d3db6bce1a40564f8e87cdd101e6f3dde62defaf25fdd74",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/handbook/modules.json",
+      "bytes": 136128,
+      "sha256": "7a2b111377eac4e43db6cdfff2060fb7b7f9fb2756ace50ebf42b857b9df181f",
+      "initial_kind": "tracked",
+      "current_sha256": "7a2b111377eac4e43db6cdfff2060fb7b7f9fb2756ace50ebf42b857b9df181f",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/handbook/reviewed.json",
+      "bytes": 13290,
+      "sha256": "75b3f9ad8f25f66d9725807a0d0980e3419247b2fa06b1802fe43043adb70909",
+      "initial_kind": "tracked",
+      "current_sha256": "75b3f9ad8f25f66d9725807a0d0980e3419247b2fa06b1802fe43043adb70909",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/README.zh-CN.md",
+      "bytes": 85538,
+      "sha256": "a69a86d6fdeca9e7be13146e168b99689069d2c5691e4d52ff8654853bb1192c",
+      "initial_kind": "tracked",
+      "current_sha256": "a69a86d6fdeca9e7be13146e168b99689069d2c5691e4d52ff8654853bb1192c",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/src/connectionApplication.ts",
+      "bytes": 27521,
+      "sha256": "479e7fdebb5dd5dc8a75b6e535e9d0891d47e8d16f2545852c9df8bf01b08a87",
+      "initial_kind": "tracked",
+      "current_sha256": "479e7fdebb5dd5dc8a75b6e535e9d0891d47e8d16f2545852c9df8bf01b08a87",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/src/encounterApplication.ts",
+      "bytes": 85279,
+      "sha256": "be376331a12f153ac0e12f84792b0bead21d6500374631fa4354282edca62fc4",
+      "initial_kind": "tracked",
+      "current_sha256": "be376331a12f153ac0e12f84792b0bead21d6500374631fa4354282edca62fc4",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/src/encounterAutomationRuntime.ts",
+      "bytes": 125071,
+      "sha256": "e8ce16cb27af8f37facfa36a618a76dc91a42fb5ff37d7e9be11b388a6811c58",
+      "initial_kind": "tracked",
+      "current_sha256": "e8ce16cb27af8f37facfa36a618a76dc91a42fb5ff37d7e9be11b388a6811c58",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/src/encounterRecoveryStore.ts",
+      "bytes": 13024,
+      "sha256": "aa9cab31fe891e65edcc31fc028ebaa16ed461aa46d45a3c97be74be694803d2",
+      "initial_kind": "tracked",
+      "current_sha256": "aa9cab31fe891e65edcc31fc028ebaa16ed461aa46d45a3c97be74be694803d2",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/src/encounterRuntime.ts",
+      "bytes": 17992,
+      "sha256": "7037b2a9dfb22b33dbeb2f4924001d30bd1b44ed621466c0411c1949947bf1d5",
+      "initial_kind": "tracked",
+      "current_sha256": "7037b2a9dfb22b33dbeb2f4924001d30bd1b44ed621466c0411c1949947bf1d5",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/src/intakeApplication.ts",
+      "bytes": 194924,
+      "sha256": "acfc6c25c30531d539a49880a8117df663fee01f75bd9e175bf87e30796890b4",
+      "initial_kind": "tracked",
+      "current_sha256": "acfc6c25c30531d539a49880a8117df663fee01f75bd9e175bf87e30796890b4",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/src/runtime.ts",
+      "bytes": 37620,
+      "sha256": "d9b189584a208956eef0cd73be5958592939d71c6b55dcfe9689a13ff79918b9",
+      "initial_kind": "tracked",
+      "current_sha256": "d9b189584a208956eef0cd73be5958592939d71c6b55dcfe9689a13ff79918b9",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/src/settings.ts",
+      "bytes": 14555,
+      "sha256": "c20bc06402f21bb4269bd5bf6e8d77b6e4fee64c8779b4c5ed267f624369cc96",
+      "initial_kind": "tracked",
+      "current_sha256": "c20bc06402f21bb4269bd5bf6e8d77b6e4fee64c8779b4c5ed267f624369cc96",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/src/templates/forge-connection.hbs",
+      "bytes": 6763,
+      "sha256": "2c8eecb8046ead10e9e2b92589c7dc518894e6e0eada0031acaa2f37b6b3a6ce",
+      "initial_kind": "tracked",
+      "current_sha256": "2c8eecb8046ead10e9e2b92589c7dc518894e6e0eada0031acaa2f37b6b3a6ce",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs",
+      "bytes": 24875,
+      "sha256": "fa7a0a263e5920e223da7187017078aead436efe1caa887e3392804db8711964",
+      "initial_kind": "tracked",
+      "current_sha256": "fa7a0a263e5920e223da7187017078aead436efe1caa887e3392804db8711964",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/src/templates/forge-intake.hbs",
+      "bytes": 14691,
+      "sha256": "004db47e2b0435481711549d0eb708cd0c30bbcd600bf03d655eeee4cda4509d",
+      "initial_kind": "tracked",
+      "current_sha256": "004db47e2b0435481711549d0eb708cd0c30bbcd600bf03d655eeee4cda4509d",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/tests/connection-application.test.ts",
+      "bytes": 11510,
+      "sha256": "1400163e21d11fc6cf0b67ee0a86f60234cabf7b12c619514977cac6899af455",
+      "initial_kind": "tracked",
+      "current_sha256": "1400163e21d11fc6cf0b67ee0a86f60234cabf7b12c619514977cac6899af455",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/tests/encounter-application.test.ts",
+      "bytes": 69012,
+      "sha256": "740a1c06ce6c28e51b4e0b2b4e89cae6660b51c2478ccd6871cc002560d5556c",
+      "initial_kind": "tracked",
+      "current_sha256": "740a1c06ce6c28e51b4e0b2b4e89cae6660b51c2478ccd6871cc002560d5556c",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/tests/encounter-automation-runtime.test.ts",
+      "bytes": 134269,
+      "sha256": "66174efc502e3e711d5c96a8c522fc191edda277c1873996125411ba96564f27",
+      "initial_kind": "tracked",
+      "current_sha256": "66174efc502e3e711d5c96a8c522fc191edda277c1873996125411ba96564f27",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/tests/intake-application.test.ts",
+      "bytes": 140515,
+      "sha256": "718778cf3e19129845ad840cbb54a7322b34251ce8da8d2bb6ed1616fdebeb16",
+      "initial_kind": "tracked",
+      "current_sha256": "718778cf3e19129845ad840cbb54a7322b34251ce8da8d2bb6ed1616fdebeb16",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/tests/midi-source-operations.test.ts",
+      "bytes": 11126,
+      "sha256": "7310233a930bc0db58b592e83ed311f79944ee04f7a5fb1f8da79bc716ab0489",
+      "initial_kind": "tracked",
+      "current_sha256": "7310233a930bc0db58b592e83ed311f79944ee04f7a5fb1f8da79bc716ab0489",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/tests/runtime.test.ts",
+      "bytes": 45490,
+      "sha256": "d1f2e503278edfe83c2b2fec53656c4241d2533fd474555d28620aba71fe7f5a",
+      "initial_kind": "tracked",
+      "current_sha256": "d1f2e503278edfe83c2b2fec53656c4241d2533fd474555d28620aba71fe7f5a",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/fvtt-json-forge/tests/settings.test.ts",
+      "bytes": 9807,
+      "sha256": "e0b854b86783ebace5972a33f3b670a46e6d07bf1ee85fbdaf65e22f9bc6cb0b",
+      "initial_kind": "tracked",
+      "current_sha256": "e0b854b86783ebace5972a33f3b670a46e6d07bf1ee85fbdaf65e22f9bc6cb0b",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/README.zh-CN.md",
+      "bytes": 16500,
+      "sha256": "42fd95b07f5a5d02ed0984a87470ad49451324a985f75ffc61f6445ef48bafcc",
+      "initial_kind": "tracked",
+      "current_sha256": "42fd95b07f5a5d02ed0984a87470ad49451324a985f75ffc61f6445ef48bafcc",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/__tests__/cast-activity.test.ts",
+      "bytes": 13438,
+      "sha256": "63dabc1eae33ba9614e5fc68f92b9b16ca45052274c30bbc0dece5cdf2d868fb",
+      "initial_kind": "tracked",
+      "current_sha256": "63dabc1eae33ba9614e5fc68f92b9b16ca45052274c30bbc0dece5cdf2d868fb",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/__tests__/hooks.test.ts",
+      "bytes": 114320,
+      "sha256": "1ec093aa5c48ca0aa4b6863c46d0df83a8ef54b165f0c7ec4013849eb52569be",
+      "initial_kind": "tracked",
+      "current_sha256": "1ec093aa5c48ca0aa4b6863c46d0df83a8ef54b165f0c7ec4013849eb52569be",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/__tests__/hydrator.test.ts",
+      "bytes": 54496,
+      "sha256": "aefd76bdc49bc0153536f63208aa32ace25e6521942aba2e6e600a522929c71f",
+      "initial_kind": "tracked",
+      "current_sha256": "aefd76bdc49bc0153536f63208aa32ace25e6521942aba2e6e600a522929c71f",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/__tests__/native-cache-lifecycle.test.ts",
+      "bytes": 9487,
+      "sha256": "ba36035d1fb25b7271f8dd78a1c22c9d834950fdbf05f67058b29228ee2cee9c",
+      "initial_kind": "tracked",
+      "current_sha256": "ba36035d1fb25b7271f8dd78a1c22c9d834950fdbf05f67058b29228ee2cee9c",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/__tests__/review-app.test.ts",
+      "bytes": 14656,
+      "sha256": "1e5060dc4b2ce3d17159e2fd5313148483a8b5ac71883c5fc88a169c6ab1e35d",
+      "initial_kind": "tracked",
+      "current_sha256": "1e5060dc4b2ce3d17159e2fd5313148483a8b5ac71883c5fc88a169c6ab1e35d",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/__tests__/spell-effect-duration.test.ts",
+      "bytes": 6038,
+      "sha256": "743363c9ddfe0a6f58b436cbdafbe4b01c2ee7bd5080f3cf636bc8924a027a8b",
+      "initial_kind": "tracked",
+      "current_sha256": "743363c9ddfe0a6f58b436cbdafbe4b01c2ee7bd5080f3cf636bc8924a027a8b",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/__tests__/transaction.test.ts",
+      "bytes": 79106,
+      "sha256": "a490e16c589c3777560887dfcaeafa567fe10f50757c0dcb4dfcafe74b6b5a08",
+      "initial_kind": "tracked",
+      "current_sha256": "a490e16c589c3777560887dfcaeafa567fe10f50757c0dcb4dfcafe74b6b5a08",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/cast-activity.ts",
+      "bytes": 15045,
+      "sha256": "33b1a2b9bc44458d9d396278fd0bf2da48d717fcd418eeb2a0dcaf690e6ba883",
+      "initial_kind": "tracked",
+      "current_sha256": "33b1a2b9bc44458d9d396278fd0bf2da48d717fcd418eeb2a0dcaf690e6ba883",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/hooks.ts",
+      "bytes": 91610,
+      "sha256": "c17e588a87909903718564dac7d2af41f86c2705bfaba3597ae6b43414710b35",
+      "initial_kind": "tracked",
+      "current_sha256": "c17e588a87909903718564dac7d2af41f86c2705bfaba3597ae6b43414710b35",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/hydrator.ts",
+      "bytes": 45784,
+      "sha256": "b7087c4b60183e30b3416a942739dcf76b43b1e95b1cfc98330cef1f68e83cb7",
+      "initial_kind": "tracked",
+      "current_sha256": "b7087c4b60183e30b3416a942739dcf76b43b1e95b1cfc98330cef1f68e83cb7",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/lang/en.json",
+      "bytes": 9584,
+      "sha256": "b938f703579e540a495fb705da039f0c7dd838d9d77b3c568b0031b1098d5c18",
+      "initial_kind": "tracked",
+      "current_sha256": "b938f703579e540a495fb705da039f0c7dd838d9d77b3c568b0031b1098d5c18",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/lang/zh-CN.json",
+      "bytes": 9071,
+      "sha256": "f263d8bd4c28031e0de4e3b9348755bfae1c53f36ce6eb6eab59718fdd433912",
+      "initial_kind": "tracked",
+      "current_sha256": "f263d8bd4c28031e0de4e3b9348755bfae1c53f36ce6eb6eab59718fdd433912",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/native-cache-lifecycle.ts",
+      "bytes": 12872,
+      "sha256": "eddc33ddfa4f20e7834425fe94161cf7a20c7a1f20f640098a5ce513e11c1c23",
+      "initial_kind": "tracked",
+      "current_sha256": "eddc33ddfa4f20e7834425fe94161cf7a20c7a1f20f640098a5ce513e11c1c23",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/review-app.ts",
+      "bytes": 14767,
+      "sha256": "00fe84cbb0ae3781de43498e14a9222c65a9b4a4bd033f117713b29482554382",
+      "initial_kind": "tracked",
+      "current_sha256": "00fe84cbb0ae3781de43498e14a9222c65a9b4a4bd033f117713b29482554382",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/spell-effect-duration.ts",
+      "bytes": 4648,
+      "sha256": "5b9d8060498e5433a8b1e377da01515732f8ced2a4b9d066c930cc82b7dbf55e",
+      "initial_kind": "tracked",
+      "current_sha256": "5b9d8060498e5433a8b1e377da01515732f8ced2a4b9d066c930cc82b7dbf55e",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/transaction.ts",
+      "bytes": 46024,
+      "sha256": "e441875180ef0e803db2f2cf4ace1c5a7f06c9f34bd2cd5711c778114f9746e3",
+      "initial_kind": "tracked",
+      "current_sha256": "e441875180ef0e803db2f2cf4ace1c5a7f06c9f34bd2cd5711c778114f9746e3",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "package.json",
+      "bytes": 40548,
+      "sha256": "7c65430ac44195d6ec8af686008502c4944b6e87208009202fc2d72773c0a798",
+      "initial_kind": "tracked",
+      "current_sha256": "7c65430ac44195d6ec8af686008502c4944b6e87208009202fc2d72773c0a798",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/forge-browser-runtime/src/ai.ts",
+      "bytes": 58599,
+      "sha256": "3b8d39b6af542fbffeae6bd5405c8f2d1028101dec21a46b6c17d5eea3f70fc5",
+      "initial_kind": "tracked",
+      "current_sha256": "3b8d39b6af542fbffeae6bd5405c8f2d1028101dec21a46b6c17d5eea3f70fc5",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/forge-browser-runtime/src/encounterIntake.ts",
+      "bytes": 53141,
+      "sha256": "fcf6d0ff8279d62fb70f5bb6249067e8f236da2f21a155abe96f86a3de27712f",
+      "initial_kind": "tracked",
+      "current_sha256": "fcf6d0ff8279d62fb70f5bb6249067e8f236da2f21a155abe96f86a3de27712f",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/forge-browser-runtime/src/encounterPreparation.ts",
+      "bytes": 9002,
+      "sha256": "4be5c8bd275aaab2f95aad2f50a214e91a060a7e338238fbf016025394a3a962",
+      "initial_kind": "tracked",
+      "current_sha256": "4be5c8bd275aaab2f95aad2f50a214e91a060a7e338238fbf016025394a3a962",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/forge-browser-runtime/src/index.ts",
+      "bytes": 16879,
+      "sha256": "ddd9e937772d4a50a48fa130009f1747e361767cfde0dccb1d63e8f9deb0b8e7",
+      "initial_kind": "tracked",
+      "current_sha256": "ddd9e937772d4a50a48fa130009f1747e361767cfde0dccb1d63e8f9deb0b8e7",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/forge-browser-runtime/src/intakeReview.ts",
+      "bytes": 20501,
+      "sha256": "a723f3fc24ec724f142f186b85339c0c5d16ba19da7b03c64554663aedf2f367",
+      "initial_kind": "tracked",
+      "current_sha256": "a723f3fc24ec724f142f186b85339c0c5d16ba19da7b03c64554663aedf2f367",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/forge-browser-runtime/src/intakeReviewImport.ts",
+      "bytes": 34966,
+      "sha256": "53272e1899df1cb648ffda6a4766f3270f1ddd770836a472f8f00fc09f95f881",
+      "initial_kind": "tracked",
+      "current_sha256": "53272e1899df1cb648ffda6a4766f3270f1ddd770836a472f8f00fc09f95f881",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/forge-browser-runtime/src/sourceLibrary.ts",
+      "bytes": 28154,
+      "sha256": "f7cb293542c4c6e97ec1793b8838c9d3c99121bc799c6373a0a40b16c5ef3097",
+      "initial_kind": "tracked",
+      "current_sha256": "f7cb293542c4c6e97ec1793b8838c9d3c99121bc799c6373a0a40b16c5ef3097",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/forge-gateway-protocol/src/__tests__/schema.test.ts",
+      "bytes": 19783,
+      "sha256": "1b3a1a86c25249ea65ec9d3e33b2964bffd02bf9e26659ed0396fdd8d9b02372",
+      "initial_kind": "tracked",
+      "current_sha256": "1b3a1a86c25249ea65ec9d3e33b2964bffd02bf9e26659ed0396fdd8d9b02372",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/forge-gateway-protocol/src/index.ts",
+      "bytes": 1888,
+      "sha256": "7cba164f9b8d141603da5bf06d1e8cba22bad5fe7889ea620f817bb057b72a38",
+      "initial_kind": "tracked",
+      "current_sha256": "7cba164f9b8d141603da5bf06d1e8cba22bad5fe7889ea620f817bb057b72a38",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/forge-gateway-protocol/src/schema.ts",
+      "bytes": 78741,
+      "sha256": "949fe1c2e9f2e3dc38d49d7de9929406fd15a7816f11fe93da7e247b0f8972d9",
+      "initial_kind": "tracked",
+      "current_sha256": "949fe1c2e9f2e3dc38d49d7de9929406fd15a7816f11fe93da7e247b0f8972d9",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/forge-gateway-protocol/src/types.ts",
+      "bytes": 14920,
+      "sha256": "7610c140f6291b1aeacbf7f1e69c135bff48c35ee6b145e66cfd28045c65e172",
+      "initial_kind": "tracked",
+      "current_sha256": "7610c140f6291b1aeacbf7f1e69c135bff48c35ee6b145e66cfd28045c65e172",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/generation/src/actor-spell-manifest.ts",
+      "bytes": 7590,
+      "sha256": "386e47894fdd08f92edda4766bf93de4d09d0fd349b77e97016fcd6df829152e",
+      "initial_kind": "tracked",
+      "current_sha256": "386e47894fdd08f92edda4766bf93de4d09d0fd349b77e97016fcd6df829152e",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/generation/src/actor.ts",
+      "bytes": 152155,
+      "sha256": "44087fdcd1a264721b7b3cba6efa84ff52e036a2d1c40b68417705bafa591029",
+      "initial_kind": "tracked",
+      "current_sha256": "44087fdcd1a264721b7b3cba6efa84ff52e036a2d1c40b68417705bafa591029",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/generation/src/adapters.ts",
+      "bytes": 11213,
+      "sha256": "db53aa8e55295b0f2425edd1efd39b9975f374208b9d11cc65c1e1b2dcee82f8",
+      "initial_kind": "tracked",
+      "current_sha256": "db53aa8e55295b0f2425edd1efd39b9975f374208b9d11cc65c1e1b2dcee82f8",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/generation/src/structured-rule-summary.ts",
+      "bytes": 20852,
+      "sha256": "7af944611ee7b387df91064e20ec9434fc8ab5309d48908cdf23b722e253fd2a",
+      "initial_kind": "tracked",
+      "current_sha256": "7af944611ee7b387df91064e20ec9434fc8ab5309d48908cdf23b722e253fd2a",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/generation/src/types.ts",
+      "bytes": 4122,
+      "sha256": "03887770d82b44db8394a842aef254fcffed7b4f61ea3d5c767997b66b25d5d2",
+      "initial_kind": "tracked",
+      "current_sha256": "03887770d82b44db8394a842aef254fcffed7b4f61ea3d5c767997b66b25d5d2",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/generation/src/verification.ts",
+      "bytes": 56682,
+      "sha256": "4cc3fc979139b9b994624562ad934a01ad6b709ab7d97c9bdc7689a60f630922",
+      "initial_kind": "tracked",
+      "current_sha256": "4cc3fc979139b9b994624562ad934a01ad6b709ab7d97c9bdc7689a60f630922",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/package.json",
+      "bytes": 2240,
+      "sha256": "98db22b7fb968cc2b8cc9759b73af7fbc5d188586b85c02b48cc62cbd7e2a397",
+      "initial_kind": "tracked",
+      "current_sha256": "98db22b7fb968cc2b8cc9759b73af7fbc5d188586b85c02b48cc62cbd7e2a397",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/base-source-numbers.ts",
+      "bytes": 10789,
+      "sha256": "abac27ddf3f4adb9b7cb6e206937dcd348c83c8f43fa368dbf71b78e09c6e81b",
+      "initial_kind": "tracked",
+      "current_sha256": "abac27ddf3f4adb9b7cb6e206937dcd348c83c8f43fa368dbf71b78e09c6e81b",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/encounter-automation.ts",
+      "bytes": 87969,
+      "sha256": "1caef7d7af738e504f9d0988076d5953296aced41131e2763f7809fd7e75091d",
+      "initial_kind": "tracked",
+      "current_sha256": "1caef7d7af738e504f9d0988076d5953296aced41131e2763f7809fd7e75091d",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/provider-response-evidence.ts",
+      "bytes": 4352,
+      "sha256": "8dca3902c72880434775ba7921853cae9c84970670488b5e443636e156714e3e",
+      "initial_kind": "tracked",
+      "current_sha256": "8dca3902c72880434775ba7921853cae9c84970670488b5e443636e156714e3e",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/provider.ts",
+      "bytes": 88667,
+      "sha256": "7f1a9ff709ee6353a17871637dc47acad75868b4b5fae5a29ce95b44fafd8c26",
+      "initial_kind": "tracked",
+      "current_sha256": "7f1a9ff709ee6353a17871637dc47acad75868b4b5fae5a29ce95b44fafd8c26",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/renderer.ts",
+      "bytes": 25020,
+      "sha256": "a4eeaccc83bc6d1945bfcbee1c3ef116efe6d789f091112948f0c57ea36cd076",
+      "initial_kind": "tracked",
+      "current_sha256": "a4eeaccc83bc6d1945bfcbee1c3ef116efe6d789f091112948f0c57ea36cd076",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/source-completeness.ts",
+      "bytes": 32756,
+      "sha256": "0be5a047373ee264bdbf662704805dbf734e561c630d633261f5153d186b654d",
+      "initial_kind": "tracked",
+      "current_sha256": "0be5a047373ee264bdbf662704805dbf734e561c630d633261f5153d186b654d",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/spellcasting-ability.ts",
+      "bytes": 11789,
+      "sha256": "5f128ed34a326d3abfa8357e153d20a30be7243cfff7df2ddb1462c6af8c8977",
+      "initial_kind": "tracked",
+      "current_sha256": "5f128ed34a326d3abfa8357e153d20a30be7243cfff7df2ddb1462c6af8c8977",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/staged-extraction.ts",
+      "bytes": 72753,
+      "sha256": "77e73664f7c144ec46a5fc58d01446c864fd953f085a58989364b9ae08708676",
+      "initial_kind": "tracked",
+      "current_sha256": "77e73664f7c144ec46a5fc58d01446c864fd953f085a58989364b9ae08708676",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/staged-feature-mechanics.ts",
+      "bytes": 37441,
+      "sha256": "288d91d19815acef65eadd368a04a45c6667ed67fea5eb99a25437865938d594",
+      "initial_kind": "tracked",
+      "current_sha256": "288d91d19815acef65eadd368a04a45c6667ed67fea5eb99a25437865938d594",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/staged-source-facts.ts",
+      "bytes": 39049,
+      "sha256": "75383695fcbcbcb9ccff497ad205485e2e51c965ab15720cbbaa0b44cf18cc56",
+      "initial_kind": "tracked",
+      "current_sha256": "75383695fcbcbcb9ccff497ad205485e2e51c965ab15720cbbaa0b44cf18cc56",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/staged-source.ts",
+      "bytes": 29750,
+      "sha256": "e232b0f3371d10686a2200ae094293ea0a1948b45b29164cae45855b94683b99",
+      "initial_kind": "tracked",
+      "current_sha256": "e232b0f3371d10686a2200ae094293ea0a1948b45b29164cae45855b94683b99",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/staged-spellcasting.ts",
+      "bytes": 23348,
+      "sha256": "b52712d998d9ae86622aadf3920b2643d52840e7af284f6f7ea7e80637ac2eda",
+      "initial_kind": "tracked",
+      "current_sha256": "b52712d998d9ae86622aadf3920b2643d52840e7af284f6f7ea7e80637ac2eda",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/types.ts",
+      "bytes": 5619,
+      "sha256": "061ae6593f57e5cd9b01b7264e8baa0a8a402961dcc84da2541ac8ab344760b3",
+      "initial_kind": "tracked",
+      "current_sha256": "061ae6593f57e5cd9b01b7264e8baa0a8a402961dcc84da2541ac8ab344760b3",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/validator.ts",
+      "bytes": 110328,
+      "sha256": "e2250f5b7a9fcfb00e39763d58733e8c9ae282bbd655f45f218548245d2e22be",
+      "initial_kind": "tracked",
+      "current_sha256": "e2250f5b7a9fcfb00e39763d58733e8c9ae282bbd655f45f218548245d2e22be",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/verifier.ts",
+      "bytes": 101058,
+      "sha256": "9458f2f86ad8d8f296f7fea679e89eaea4e2b530166559f74a47de732304804d",
+      "initial_kind": "tracked",
+      "current_sha256": "9458f2f86ad8d8f296f7fea679e89eaea4e2b530166559f74a47de732304804d",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/models/package.json",
+      "bytes": 964,
+      "sha256": "0cc097e2f163d767e25584a84e2ec8fa11fd846e64c2efab41a4d504f8da85bd",
+      "initial_kind": "tracked",
+      "current_sha256": "0cc097e2f163d767e25584a84e2ec8fa11fd846e64c2efab41a4d504f8da85bd",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/models/src/action.ts",
+      "bytes": 11578,
+      "sha256": "15aa74ee0a8a7353a422943fce1be9f9e11d0ccfb3340eaf2d345bdb0e12ecbb",
+      "initial_kind": "tracked",
+      "current_sha256": "15aa74ee0a8a7353a422943fce1be9f9e11d0ccfb3340eaf2d345bdb0e12ecbb",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/models/src/canonicalMonster.ts",
+      "bytes": 7696,
+      "sha256": "b895a79b662079ed307533c7b349e12fcc38865aba94d6cc65e53398eb14b8cf",
+      "initial_kind": "tracked",
+      "current_sha256": "b895a79b662079ed307533c7b349e12fcc38865aba94d6cc65e53398eb14b8cf",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/models/src/sourceOperationTypes.ts",
+      "bytes": 3088,
+      "sha256": "fc90606d506ef68b5d0b7fdad2fbddc29cd9ba15e7672ab2fe7b4d06bc3338b0",
+      "initial_kind": "tracked",
+      "current_sha256": "fc90606d506ef68b5d0b7fdad2fbddc29cd9ba15e7672ab2fe7b4d06bc3338b0",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/models/src/sourceOperations.ts",
+      "bytes": 148950,
+      "sha256": "95131831acbac71e5444ec2f7a6cc21b162ddc3e9fec6e89fab8a6820fc219fb",
+      "initial_kind": "tracked",
+      "current_sha256": "95131831acbac71e5444ec2f7a6cc21b162ddc3e9fec6e89fab8a6820fc219fb",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/models/src/sourceRuleFacts.ts",
+      "bytes": 26428,
+      "sha256": "12b6a9346e6efdfd5d275c2879a8e5c561ce5ce97adcf71139ad1610aa962404",
+      "initial_kind": "tracked",
+      "current_sha256": "12b6a9346e6efdfd5d275c2879a8e5c561ce5ce97adcf71139ad1610aa962404",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/parser/src/mapping.ts",
+      "bytes": 8158,
+      "sha256": "2a5a02c1699487169afacc1c87c5fa00bd6edee41075b9a01c6e09d7078a72d4",
+      "initial_kind": "tracked",
+      "current_sha256": "2a5a02c1699487169afacc1c87c5fa00bd6edee41075b9a01c6e09d7078a72d4",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/parser/src/structuredAction.ts",
+      "bytes": 26399,
+      "sha256": "90eef29186a74eceee9fdef88aaea6af7888dc5fbad9ed34a023c4fc7a0c72dd",
+      "initial_kind": "tracked",
+      "current_sha256": "90eef29186a74eceee9fdef88aaea6af7888dc5fbad9ed34a023c4fc7a0c72dd",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/parser/src/yaml.ts",
+      "bytes": 39522,
+      "sha256": "66182a72679c5608a7188638f8dd6bd1ab4aa08b1bad9abc62371d2a5d4ed9ab",
+      "initial_kind": "tracked",
+      "current_sha256": "66182a72679c5608a7188638f8dd6bd1ab4aa08b1bad9abc62371d2a5d4ed9ab",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/spell-manifest-contracts/src/__tests__/contract.test.ts",
+      "bytes": 4893,
+      "sha256": "5472327ccc2c1d3d8847645b4b836177acbcbf18e52a294a155745e045d43cd0",
+      "initial_kind": "tracked",
+      "current_sha256": "5472327ccc2c1d3d8847645b4b836177acbcbf18e52a294a155745e045d43cd0",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/spell-manifest-contracts/src/hashManifest.ts",
+      "bytes": 3508,
+      "sha256": "b4d3f4ab70d6a787ae651bca3362da8cfaa76cd364a010b1963ccd5186ca2cdc",
+      "initial_kind": "tracked",
+      "current_sha256": "b4d3f4ab70d6a787ae651bca3362da8cfaa76cd364a010b1963ccd5186ca2cdc",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/spell-manifest-contracts/src/index.ts",
+      "bytes": 516,
+      "sha256": "9839851d43144e7a9898f94eac793e6d97804cd724950d3cbd9f3b083651e039",
+      "initial_kind": "tracked",
+      "current_sha256": "9839851d43144e7a9898f94eac793e6d97804cd724950d3cbd9f3b083651e039",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/spell-manifest-contracts/src/schema.ts",
+      "bytes": 3431,
+      "sha256": "046201245d364e94cf91b8750dbda13875d92243e0c72976e86fad4b5644ca30",
+      "initial_kind": "tracked",
+      "current_sha256": "046201245d364e94cf91b8750dbda13875d92243e0c72976e86fad4b5644ca30",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/spell-manifest-contracts/src/types.ts",
+      "bytes": 2433,
+      "sha256": "e6cce23800776b67e30404aefb576743f4e09f9a069ebc1df761558b5db2c206",
+      "initial_kind": "tracked",
+      "current_sha256": "e6cce23800776b67e30404aefb576743f4e09f9a069ebc1df761558b5db2c206",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/spell-manifest-contracts/src/validator.ts",
+      "bytes": 19702,
+      "sha256": "db22e413992d22de43e037e0b4c93b2459f7bfe2fa1cb3463c7110de348ce048",
+      "initial_kind": "tracked",
+      "current_sha256": "db22e413992d22de43e037e0b4c93b2459f7bfe2fa1cb3463c7110de348ce048",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "src/core/intake/__tests__/renderer-verifier.test.ts",
+      "bytes": 49700,
+      "sha256": "ac6999fbdc198ceee3d7af2e3d446654208012ec52c02001896be01a85302059",
+      "initial_kind": "tracked",
+      "current_sha256": "ac6999fbdc198ceee3d7af2e3d446654208012ec52c02001896be01a85302059",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "src/core/parser/__tests__/yaml.test.ts",
+      "bytes": 12829,
+      "sha256": "2ac18ed9e8b614844b265f7a6a03cc5f788fd9c16ceef961f9e7f31c7cb9b1ff",
+      "initial_kind": "tracked",
+      "current_sha256": "2ac18ed9e8b614844b265f7a6a03cc5f788fd9c16ceef961f9e7f31c7cb9b1ff",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "src/core/spell-resolution/__tests__/planner.test.ts",
+      "bytes": 24394,
+      "sha256": "f068dee23bd99e704bd2f952164145098583242ed6f297938bccdb2dbd6b390a",
+      "initial_kind": "tracked",
+      "current_sha256": "f068dee23bd99e704bd2f952164145098583242ed6f297938bccdb2dbd6b390a",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "src/core/spell-resolution/planner.ts",
+      "bytes": 18052,
+      "sha256": "06531f079528524b79f271c7b875996af84edee63a41992a1dea093a3e9e50a8",
+      "initial_kind": "tracked",
+      "current_sha256": "06531f079528524b79f271c7b875996af84edee63a41992a1dea093a3e9e50a8",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/encounter-local-retry.test.ts",
+      "bytes": 11278,
+      "sha256": "8cce80a75bfb87f81dfb9723cc3944493d2c5e9ada69b9f3d6be6965f511ef9d",
+      "initial_kind": "tracked",
+      "current_sha256": "8cce80a75bfb87f81dfb9723cc3944493d2c5e9ada69b9f3d6be6965f511ef9d",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-broad-rule-regression.test.ts",
+      "bytes": 112912,
+      "sha256": "ba52cad8726260b66ddd98bd190af54e97ce761113853f375615837d8727b80c",
+      "initial_kind": "tracked",
+      "current_sha256": "ba52cad8726260b66ddd98bd190af54e97ce761113853f375615837d8727b80c",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-browser-runtime.test.ts",
+      "bytes": 68924,
+      "sha256": "6dca8c8565e8a28772f6e3ea974601cd3dc2114418128608eeb6cbb1ee435b55",
+      "initial_kind": "tracked",
+      "current_sha256": "6dca8c8565e8a28772f6e3ea974601cd3dc2114418128608eeb6cbb1ee435b55",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-common-source-operations.test.ts",
+      "bytes": 201608,
+      "sha256": "12631aca0ae404545181a65c30f087992c5525a1a175d357cb0bdef957b53285",
+      "initial_kind": "tracked",
+      "current_sha256": "12631aca0ae404545181a65c30f087992c5525a1a175d357cb0bdef957b53285",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-encounter-intake.test.ts",
+      "bytes": 16048,
+      "sha256": "f60b6e29450297a29cd74d6415f1f857b11876405b37f22d6e72ad18e742af6e",
+      "initial_kind": "tracked",
+      "current_sha256": "f60b6e29450297a29cd74d6415f1f857b11876405b37f22d6e72ad18e742af6e",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-encounter-preparation.test.ts",
+      "bytes": 5844,
+      "sha256": "1a172c04b5fd2af213c618b3c8e8c6d2c460604c39df45e33b504cb3dabf5fc1",
+      "initial_kind": "tracked",
+      "current_sha256": "1a172c04b5fd2af213c618b3c8e8c6d2c460604c39df45e33b504cb3dabf5fc1",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-native-basics-recovery.test.ts",
+      "bytes": 44478,
+      "sha256": "ca9ee7e96e78a208cfbecb61afec281d57e42edff8841d2d1e5d37dc6a115095",
+      "initial_kind": "tracked",
+      "current_sha256": "ca9ee7e96e78a208cfbecb61afec281d57e42edff8841d2d1e5d37dc6a115095",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-ordinary-source-contract.test.ts",
+      "bytes": 66389,
+      "sha256": "b5442723e7b25129503144822a8918194574a2a29855c577d36f7f6dc1b7005d",
+      "initial_kind": "tracked",
+      "current_sha256": "b5442723e7b25129503144822a8918194574a2a29855c577d36f7f6dc1b7005d",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-staged-manual.test.ts",
+      "bytes": 21606,
+      "sha256": "5b4761b8ef0ac1d2b79cd0fea20c75710bb8d2573777305870e81fc54ea4d548",
+      "initial_kind": "tracked",
+      "current_sha256": "5b4761b8ef0ac1d2b79cd0fea20c75710bb8d2573777305870e81fc54ea4d548",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/provider-response-evidence.test.ts",
+      "bytes": 11655,
+      "sha256": "3ae5c5957a9a8e3229b6b1153ccf2d1980cef8dfb432ca204211bd90937d1927",
+      "initial_kind": "tracked",
+      "current_sha256": "3ae5c5957a9a8e3229b6b1153ccf2d1980cef8dfb432ca204211bd90937d1927",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tools/forge-encounter/README.md",
+      "bytes": 44099,
+      "sha256": "ada59430c50e54af13ec0b80896ef5fde35b1ae2d74e93a4edf291826b794be3",
+      "initial_kind": "tracked",
+      "current_sha256": "ada59430c50e54af13ec0b80896ef5fde35b1ae2d74e93a4edf291826b794be3",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "工具手册.html",
+      "bytes": 1443794,
+      "sha256": "658ac25449429a03a3365c5c02cd52e2c82617145f0ed491f6b79e4f2ffcffb3",
+      "initial_kind": "tracked",
+      "current_sha256": "658ac25449429a03a3365c5c02cd52e2c82617145f0ed491f6b79e4f2ffcffb3",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": ".worktreeinclude",
+      "bytes": 19,
+      "sha256": "d9ac0c7bc6c3441638c2240ffc057dc34776cb22407856276e1a4346dd747a2d",
+      "initial_kind": "untracked",
+      "current_sha256": "d9ac0c7bc6c3441638c2240ffc057dc34776cb22407856276e1a4346dd747a2d",
+      "decision": "retain-local-untracked"
+    },
+    {
+      "path": "docs/acceptance/2026-10-19-forge-ab-fixed-replies.md",
+      "bytes": 7323,
+      "sha256": "b103dc9035822f76abc03d35c753ae1acf87ba5660686dd2a9fc6e0e65d75079",
+      "initial_kind": "untracked",
+      "current_sha256": "b103dc9035822f76abc03d35c753ae1acf87ba5660686dd2a9fc6e0e65d75079",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-19-forge-real-ab-first-pass.json",
+      "bytes": 5868,
+      "sha256": "16035203c4038df53fbd3541b5373de3374569394b93a304f1bf908fab55532d",
+      "initial_kind": "untracked",
+      "current_sha256": "16035203c4038df53fbd3541b5373de3374569394b93a304f1bf908fab55532d",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-19-forge-real-ab-first-pass.md",
+      "bytes": 10318,
+      "sha256": "7d7d448f5dff50115b31cf2bb685b54de4fb3f73f9ca0cc82bab68840c9ea193",
+      "initial_kind": "untracked",
+      "current_sha256": "7d7d448f5dff50115b31cf2bb685b54de4fb3f73f9ca0cc82bab68840c9ea193",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-20-forge-company-vampire-compatibility.md",
+      "bytes": 9083,
+      "sha256": "e828b5a2f2610faf1b63a2a2ba0be6e41b3e442c324bb7a92338e508b317d8a5",
+      "initial_kind": "untracked",
+      "current_sha256": "e828b5a2f2610faf1b63a2a2ba0be6e41b3e442c324bb7a92338e508b317d8a5",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-20-forge-neutral-attack-and-identity.md",
+      "bytes": 10190,
+      "sha256": "bc7696049f26114330bf0910f5b0745d122598da767bd24b4db6e48315db5399",
+      "initial_kind": "untracked",
+      "current_sha256": "bc7696049f26114330bf0910f5b0745d122598da767bd24b4db6e48315db5399",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-20-forge-real-ab-high-first-pass.json",
+      "bytes": 6081,
+      "sha256": "1edb9a3e44a644cc34b081927ca2423627d942bd9b217f83534b699839a116d2",
+      "initial_kind": "untracked",
+      "current_sha256": "1edb9a3e44a644cc34b081927ca2423627d942bd9b217f83534b699839a116d2",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-20-forge-real-ab-high-first-pass.md",
+      "bytes": 8658,
+      "sha256": "bbf713ed5e44c3e80e3d59bd10c36b77ccafd7a8a082ff2683d2fe501ad4451a",
+      "initial_kind": "untracked",
+      "current_sha256": "bbf713ed5e44c3e80e3d59bd10c36b77ccafd7a8a082ff2683d2fe501ad4451a",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-20-forge-repeated-complex-comparison.json",
+      "bytes": 30414,
+      "sha256": "e36afba5f6cf85e817d41506617995c85f09c2b5406522485fa6326f0c491cc4",
+      "initial_kind": "untracked",
+      "current_sha256": "e36afba5f6cf85e817d41506617995c85f09c2b5406522485fa6326f0c491cc4",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-20-forge-repeated-complex-comparison.md",
+      "bytes": 11194,
+      "sha256": "39e2026e32d46d0350180eb19c3311a1103652eb7770bd40cb3e8249cd23c584",
+      "initial_kind": "untracked",
+      "current_sha256": "39e2026e32d46d0350180eb19c3311a1103652eb7770bd40cb3e8249cd23c584",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-20-forge-size-options-and-vampire-2024.md",
+      "bytes": 6910,
+      "sha256": "a0f5ab5356279528aa9a7acf07f055bdef0d127f79ac628e96187066c7cd9589",
+      "initial_kind": "untracked",
+      "current_sha256": "a0f5ab5356279528aa9a7acf07f055bdef0d127f79ac628e96187066c7cd9589",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-20-forge-template-batch-comparison.json",
+      "bytes": 2291,
+      "sha256": "f151d245e2a663d46c53a8a5d0249d0c799b00faef381d81203fbe8862e6b289",
+      "initial_kind": "untracked",
+      "current_sha256": "f151d245e2a663d46c53a8a5d0249d0c799b00faef381d81203fbe8862e6b289",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-20-forge-template-batch-comparison.md",
+      "bytes": 8040,
+      "sha256": "d9c29843b3596cd775b6ba8034bdb5d3d052cd52473158c5f11e8d71031db5b2",
+      "initial_kind": "untracked",
+      "current_sha256": "d9c29843b3596cd775b6ba8034bdb5d3d052cd52473158c5f11e8d71031db5b2",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-20-forge-unified-boundaries-and-vampire-2024.md",
+      "bytes": 11980,
+      "sha256": "783ccfcbeef5cc86db9f18d6e428af90035a3fcc96e896b9ce53559304860a5b",
+      "initial_kind": "untracked",
+      "current_sha256": "783ccfcbeef5cc86db9f18d6e428af90035a3fcc96e896b9ce53559304860a5b",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-20-forge-v2-bw-mod-integration.md",
+      "bytes": 7666,
+      "sha256": "83cc3d5883b262d1a9d0e4dda379b3fe422331c14cfc20235302faebac8ba291",
+      "initial_kind": "untracked",
+      "current_sha256": "83cc3d5883b262d1a9d0e4dda379b3fe422331c14cfc20235302faebac8ba291",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-20-forge-vampire-2024-retest.md",
+      "bytes": 8119,
+      "sha256": "ff16dbec01e18d93b23b5b4629205e0f37b7154475c4cbdfa452194ca6969d1a",
+      "initial_kind": "untracked",
+      "current_sha256": "ff16dbec01e18d93b23b5b4629205e0f37b7154475c4cbdfa452194ca6969d1a",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-20-forge-whole-vampire-and-runtime.md",
+      "bytes": 13997,
+      "sha256": "c0efe9fe0056ddfe26b089a814c55e9decc9013c9acfbf88a1e3c47215963249",
+      "initial_kind": "untracked",
+      "current_sha256": "c0efe9fe0056ddfe26b089a814c55e9decc9013c9acfbf88a1e3c47215963249",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-21-forge-cli-same-three-comparison.md",
+      "bytes": 9346,
+      "sha256": "f4ef656d027c2a7c2bd89705afcc11a1ee3c8757f574e72a3ebed3f0cf97692d",
+      "initial_kind": "untracked",
+      "current_sha256": "f4ef656d027c2a7c2bd89705afcc11a1ee3c8757f574e72a3ebed3f0cf97692d",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-21-forge-common-boundaries-after-cli.md",
+      "bytes": 8035,
+      "sha256": "31e37529585ecf23a9c624f914bc53afbd5e051b40c644d5f3a6137314a25012",
+      "initial_kind": "untracked",
+      "current_sha256": "31e37529585ecf23a9c624f914bc53afbd5e051b40c644d5f3a6137314a25012",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-21-forge-fresh-2024-three-source-pilot.md",
+      "bytes": 11210,
+      "sha256": "f01ab541bb1737ac7e60941232855273b04799d12c3f41349c1154b899ddc7f3",
+      "initial_kind": "untracked",
+      "current_sha256": "f01ab541bb1737ac7e60941232855273b04799d12c3f41349c1154b899ddc7f3",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-21-forge-three-runtime-fixes.md",
+      "bytes": 8767,
+      "sha256": "9cc113f977fe72cf026324292f6ac9cc676494a3a962ce5334e6b4d5e8fc9186",
+      "initial_kind": "untracked",
+      "current_sha256": "9cc113f977fe72cf026324292f6ac9cc676494a3a962ce5334e6b4d5e8fc9186",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-22-forge-brass-and-spiritual-cast.md",
+      "bytes": 7340,
+      "sha256": "f0c81e313ffa3443e4f05e2513becff74b02ffc04ac3c8d6daac352decc8e451",
+      "initial_kind": "untracked",
+      "current_sha256": "f0c81e313ffa3443e4f05e2513becff74b02ffc04ac3c8d6daac352decc8e451",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-22-forge-candidate-delivery.md",
+      "bytes": 14458,
+      "sha256": "e20869b152efcf5a9feb3bb09bb5f42f3d20ed21b7d02bb3de2f16de88b4e38b",
+      "initial_kind": "untracked",
+      "current_sha256": "e20869b152efcf5a9feb3bb09bb5f42f3d20ed21b7d02bb3de2f16de88b4e38b",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-22-forge-new-three-paired.md",
+      "bytes": 14806,
+      "sha256": "e8f563ee5e12c4fe68298ac3ef83fba2c68f20c5b136dadb70f8cc2f7cb89d20",
+      "initial_kind": "untracked",
+      "current_sha256": "e8f563ee5e12c4fe68298ac3ef83fba2c68f20c5b136dadb70f8cc2f7cb89d20",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-22-forge-offline-candidate-followup.md",
+      "bytes": 6513,
+      "sha256": "c38e3228d757017d70ef02fcba38b96b5f470cbba756bb68e7b9eb62ec874227",
+      "initial_kind": "untracked",
+      "current_sha256": "c38e3228d757017d70ef02fcba38b96b5f470cbba756bb68e7b9eb62ec874227",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-22-forge-runtime-candidate-audit-cast.md",
+      "bytes": 9747,
+      "sha256": "c2d0d10ca2eab2e693406d5e22f4186d18e9147e30660fa11226ef28e3bedc6c",
+      "initial_kind": "untracked",
+      "current_sha256": "c2d0d10ca2eab2e693406d5e22f4186d18e9147e30660fa11226ef28e3bedc6c",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/acceptance/2026-10-22-forge-spiritual-summon-runtime.md",
+      "bytes": 9966,
+      "sha256": "fd65a24759951ef61cf5f6e894a05c3d30ea26ef3abcb2a44632c36edac10485",
+      "initial_kind": "untracked",
+      "current_sha256": "fd65a24759951ef61cf5f6e894a05c3d30ea26ef3abcb2a44632c36edac10485",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/plans/2026-10-19-forge-category-md-adapter.md",
+      "bytes": 3923,
+      "sha256": "f9d36f3d4a718bbdb7debde570bab1bc7e59ad27eb657fe3d71445a922fe4c49",
+      "initial_kind": "untracked",
+      "current_sha256": "f9d36f3d4a718bbdb7debde570bab1bc7e59ad27eb657fe3d71445a922fe4c49",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/plans/2026-10-19-forge-real-ab-first-pass.md",
+      "bytes": 3466,
+      "sha256": "dfed50093f4254928be6dab82f82d2a466835f2037cd2b8db4fc1a8830050c55",
+      "initial_kind": "untracked",
+      "current_sha256": "dfed50093f4254928be6dab82f82d2a466835f2037cd2b8db4fc1a8830050c55",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/plans/2026-10-19-forge-real-ab-high-first-pass.md",
+      "bytes": 2483,
+      "sha256": "3ab5cd0c58027e305e62276c4aa7ac6f150873620bfa3fe2869ef113ee871537",
+      "initial_kind": "untracked",
+      "current_sha256": "3ab5cd0c58027e305e62276c4aa7ac6f150873620bfa3fe2869ef113ee871537",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/plans/2026-10-20-forge-ab-current-state.md",
+      "bytes": 28414,
+      "sha256": "af195b615edc997049ae74724fd8d0c44d386e231a96f2a8927590e5ed875a85",
+      "initial_kind": "untracked",
+      "current_sha256": "bae37d24ae7228e869f257d01dfa444184b6d05493c3cbbd3cf9c550c2978710",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/plans/2026-10-20-forge-repeated-complex-comparison.md",
+      "bytes": 4121,
+      "sha256": "b2020be0181fb5c01352df7a1f6d93a37fe52e313471c37fa983b63193f6d54e",
+      "initial_kind": "untracked",
+      "current_sha256": "b2020be0181fb5c01352df7a1f6d93a37fe52e313471c37fa983b63193f6d54e",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/plans/2026-10-20-forge-template-batch-comparison.md",
+      "bytes": 2692,
+      "sha256": "22c70f8ff83b8dd4519a3cb420964409989e108544197d15a9c31a3eefaeda43",
+      "initial_kind": "untracked",
+      "current_sha256": "22c70f8ff83b8dd4519a3cb420964409989e108544197d15a9c31a3eefaeda43",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/reviews/2026-10-20-forge-cli-boundary-inheritance-audit.md",
+      "bytes": 7634,
+      "sha256": "fdbaa8c9461de163d464a1d322e80a1af74cc13cc793995981fdec6b73b83201",
+      "initial_kind": "untracked",
+      "current_sha256": "fdbaa8c9461de163d464a1d322e80a1af74cc13cc793995981fdec6b73b83201",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/reviews/2026-10-20-forge-midi-hidden-target-precondition.md",
+      "bytes": 5300,
+      "sha256": "91979d34d94efe1eae361491801585f793dac3d8def1a58f4d4fa7345df2effd",
+      "initial_kind": "untracked",
+      "current_sha256": "91979d34d94efe1eae361491801585f793dac3d8def1a58f4d4fa7345df2effd",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/reviews/2026-10-20-forge-misty-escape-legacy-manual-boundary.md",
+      "bytes": 4054,
+      "sha256": "ab13a58d6e9daa8bf1aec04e7b823cc741939ff49e239ad5157d48c8d44a268b",
+      "initial_kind": "untracked",
+      "current_sha256": "ab13a58d6e9daa8bf1aec04e7b823cc741939ff49e239ad5157d48c8d44a268b",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/reviews/2026-10-20-forge-vampire-2024-four-blocker-plan.md",
+      "bytes": 11486,
+      "sha256": "ea3cf562945eeec6a93d1cdb034ea41c157fe8bdcdafb83aa0a2f9f9402071ad",
+      "initial_kind": "untracked",
+      "current_sha256": "ea3cf562945eeec6a93d1cdb034ea41c157fe8bdcdafb83aa0a2f9f9402071ad",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/reviews/2026-10-20-forge-vampire-official-actor-comparison.md",
+      "bytes": 8956,
+      "sha256": "37bc66259955078ef2752d52f567c9fb98e6edc466df08de5bfa8fcab5041070",
+      "initial_kind": "untracked",
+      "current_sha256": "37bc66259955078ef2752d52f567c9fb98e6edc466df08de5bfa8fcab5041070",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/reviews/2026-10-21-forge-official-2024-mage-dragon-comparison.md",
+      "bytes": 17009,
+      "sha256": "ec7eb8c852078d6150cd91c8619735b75eaf6d1171ede169fe1ea26f4ed5bc9c",
+      "initial_kind": "untracked",
+      "current_sha256": "ec7eb8c852078d6150cd91c8619735b75eaf6d1171ede169fe1ea26f4ed5bc9c",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/reviews/2026-10-21-forge-three-runtime-boundaries.md",
+      "bytes": 4620,
+      "sha256": "03f76acd3b84bb8a71ca66c3d9f79eec3493507944669971d43698f4e2f41a1f",
+      "initial_kind": "untracked",
+      "current_sha256": "03f76acd3b84bb8a71ca66c3d9f79eec3493507944669971d43698f4e2f41a1f",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/reviews/2026-10-22-forge-brass-casting-source-proof.md",
+      "bytes": 4863,
+      "sha256": "bbb35152be704344a7edcb8d978ad93a1902ec4d4aecca9ef94e2ad74e966416",
+      "initial_kind": "untracked",
+      "current_sha256": "bbb35152be704344a7edcb8d978ad93a1902ec4d4aecca9ef94e2ad74e966416",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/reviews/2026-10-22-forge-candidate-followup-interfaces.md",
+      "bytes": 4169,
+      "sha256": "21cfa20ea36001d4258964cbc1e2f2011cc33e31224b5ddf7224eaa9f936443e",
+      "initial_kind": "untracked",
+      "current_sha256": "21cfa20ea36001d4258964cbc1e2f2011cc33e31224b5ddf7224eaa9f936443e",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/reviews/2026-10-22-forge-chat-popout-image-review.md",
+      "bytes": 2333,
+      "sha256": "2fda42a7d9b26b26a1b3103758f08e1eefa1fb41f5648f9b37db861576d219e5",
+      "initial_kind": "untracked",
+      "current_sha256": "2fda42a7d9b26b26a1b3103758f08e1eefa1fb41f5648f9b37db861576d219e5",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "docs/reviews/2026-10-22-foundry14-token-movement-controls.md",
+      "bytes": 4026,
+      "sha256": "e98f767f756139871cd390d7337f2682adf99a16a74b666564f1e1f715260e1c",
+      "initial_kind": "untracked",
+      "current_sha256": "e98f767f756139871cd390d7337f2682adf99a16a74b666564f1e1f715260e1c",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/__tests__/conditional-spell-fixture.ts",
+      "bytes": 1686,
+      "sha256": "2006c00e805705d331390e7d8529cce9160a6f08c187e2224a98e633051d58cd",
+      "initial_kind": "untracked",
+      "current_sha256": "2006c00e805705d331390e7d8529cce9160a6f08c187e2224a98e633051d58cd",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/__tests__/spell-conditional-damage.test.ts",
+      "bytes": 12696,
+      "sha256": "bd72120e0f90a3ac3ce26ac80215671768e2d3021f64c991b408037b82f03de2",
+      "initial_kind": "untracked",
+      "current_sha256": "bd72120e0f90a3ac3ce26ac80215671768e2d3021f64c991b408037b82f03de2",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "foundry-modules/monster-spell-resolver/src/spell-conditional-damage.ts",
+      "bytes": 12363,
+      "sha256": "9e31383b78a9b145d8e778eca1e870bf69e45f4928761708f087c7f5d51163a0",
+      "initial_kind": "untracked",
+      "current_sha256": "9e31383b78a9b145d8e778eca1e870bf69e45f4928761708f087c7f5d51163a0",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/generation/src/gm-attack-activities.ts",
+      "bytes": 1223,
+      "sha256": "3e2540a9fd75844a86b7de12b27f61c328795452aedc223681c4507bd08a9e10",
+      "initial_kind": "untracked",
+      "current_sha256": "3e2540a9fd75844a86b7de12b27f61c328795452aedc223681c4507bd08a9e10",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/category-form-v2-adapter.ts",
+      "bytes": 60450,
+      "sha256": "b6c9840378eebf08388a6d95aceb6c3f3fde8fda2f37be4439df9bb15d70049d",
+      "initial_kind": "untracked",
+      "current_sha256": "b6c9840378eebf08388a6d95aceb6c3f3fde8fda2f37be4439df9bb15d70049d",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/category-form-v2-damage-adjustment.ts",
+      "bytes": 3188,
+      "sha256": "2f3172cf050637d7349e10e25926d92d54d42d268a338194a4eff5d16d31bc18",
+      "initial_kind": "untracked",
+      "current_sha256": "2f3172cf050637d7349e10e25926d92d54d42d268a338194a4eff5d16d31bc18",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/category-form-v2-healing.ts",
+      "bytes": 10720,
+      "sha256": "371181e62dd0948b7c9998e4b77f50f7c45af8cbac8ea100606b600fda48efc8",
+      "initial_kind": "untracked",
+      "current_sha256": "371181e62dd0948b7c9998e4b77f50f7c45af8cbac8ea100606b600fda48efc8",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/category-form-v2-identity.ts",
+      "bytes": 3402,
+      "sha256": "0836c20d90546802a5bbdd3b801a691cae9af4bc6eaf777a677e99895f47dfe8",
+      "initial_kind": "untracked",
+      "current_sha256": "0836c20d90546802a5bbdd3b801a691cae9af4bc6eaf777a677e99895f47dfe8",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/category-form-v2.ts",
+      "bytes": 20557,
+      "sha256": "ca7c1bbec70ef081d670c5938c34e5640730678c4a4336bff4889011a2891ba3",
+      "initial_kind": "untracked",
+      "current_sha256": "ca7c1bbec70ef081d670c5938c34e5640730678c4a4336bff4889011a2891ba3",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/category-md-extraction.ts",
+      "bytes": 5548,
+      "sha256": "850264b5c65038dc57a64f2d89ef7fafc492105cfc17b9cd22f8ff82e593a7e7",
+      "initial_kind": "untracked",
+      "current_sha256": "850264b5c65038dc57a64f2d89ef7fafc492105cfc17b9cd22f8ff82e593a7e7",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/category-md.ts",
+      "bytes": 14827,
+      "sha256": "ff073cbb356f140b2a2ecd9bfa87666a756268be8c03d6c2b191f8fea87f1a7b",
+      "initial_kind": "untracked",
+      "current_sha256": "ff073cbb356f140b2a2ecd9bfa87666a756268be8c03d6c2b191f8fea87f1a7b",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/daily-spell-action.ts",
+      "bytes": 4140,
+      "sha256": "a0a2eae7042127d4ee1c64b538fbfc8b5ec6c49de4b61edd888baea8e10a606a",
+      "initial_kind": "untracked",
+      "current_sha256": "a0a2eae7042127d4ee1c64b538fbfc8b5ec6c49de4b61edd888baea8e10a606a",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/source-size.ts",
+      "bytes": 1739,
+      "sha256": "788ae4ebc2ca3664b54f938b8ff73decb9c5f78820de8bdd13ebbb70b72ed139",
+      "initial_kind": "untracked",
+      "current_sha256": "788ae4ebc2ca3664b54f938b8ff73decb9c5f78820de8bdd13ebbb70b72ed139",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/source-spell-reference.ts",
+      "bytes": 2875,
+      "sha256": "502f180c0318d1abe20ca25dc19e0c6b9b3f64be8612119f0c92afef95d95fae",
+      "initial_kind": "untracked",
+      "current_sha256": "502f180c0318d1abe20ca25dc19e0c6b9b3f64be8612119f0c92afef95d95fae",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/spell-grant-tokens.ts",
+      "bytes": 4577,
+      "sha256": "8e1a2e814f300cb9949271eb0b5d90a83dee4f030e12ecb14bff6ce0da2632d6",
+      "initial_kind": "untracked",
+      "current_sha256": "8e1a2e814f300cb9949271eb0b5d90a83dee4f030e12ecb14bff6ce0da2632d6",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/staged-candidate.ts",
+      "bytes": 15756,
+      "sha256": "9f6784f64e862672b331d8c121f50a8f69915a8f4b234154d83ca5f7b3827305",
+      "initial_kind": "untracked",
+      "current_sha256": "9f6784f64e862672b331d8c121f50a8f69915a8f4b234154d83ca5f7b3827305",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/intake-ai/src/staged-feature-contract.ts",
+      "bytes": 703,
+      "sha256": "479fe7bd0a66ada95a00d8316105a28f41dd06530528e829cd22902cfabe8e83",
+      "initial_kind": "untracked",
+      "current_sha256": "479fe7bd0a66ada95a00d8316105a28f41dd06530528e829cd22902cfabe8e83",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/models/src/sourceAttackAdjustment.ts",
+      "bytes": 2930,
+      "sha256": "48b394d00060617e8db62f3cb4b91b8e02e02ab5586e9743df2f800c13aaa92f",
+      "initial_kind": "untracked",
+      "current_sha256": "48b394d00060617e8db62f3cb4b91b8e02e02ab5586e9743df2f800c13aaa92f",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/models/src/sourceCandidate.ts",
+      "bytes": 5239,
+      "sha256": "a7174d1ebefd7c7affcd979f737c9c6c5872a85592e5ec78e67a833ec1dac039",
+      "initial_kind": "untracked",
+      "current_sha256": "a7174d1ebefd7c7affcd979f737c9c6c5872a85592e5ec78e67a833ec1dac039",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "packages/spell-manifest-contracts/src/spellReuse.ts",
+      "bytes": 970,
+      "sha256": "67d29d8f3d4cd41ce016ba639b6b6c99f781093a6e8c3e948333dfea252a209f",
+      "initial_kind": "untracked",
+      "current_sha256": "67d29d8f3d4cd41ce016ba639b6b6c99f781093a6e8c3e948333dfea252a209f",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/diagnostics/forge-brass-cast-replay.ts",
+      "bytes": 7018,
+      "sha256": "526b325c7d2ab98d174d76802c039f141e69c47a5ea6d8ddadf700c9758dbc27",
+      "initial_kind": "untracked",
+      "current_sha256": "526b325c7d2ab98d174d76802c039f141e69c47a5ea6d8ddadf700c9758dbc27",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/diagnostics/forge-candidate-delivery-replay.ts",
+      "bytes": 5550,
+      "sha256": "5db8fd1a5fd2a7e9be3dcb4c7aab1926c8d88933f61e75dea968effdd127c71e",
+      "initial_kind": "untracked",
+      "current_sha256": "5db8fd1a5fd2a7e9be3dcb4c7aab1926c8d88933f61e75dea968effdd127c71e",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/diagnostics/forge-candidate-followup-browser.ts",
+      "bytes": 5101,
+      "sha256": "31dd4e614786ace18ad2d09eb8c04e676aebe88d4c9b74024123208fe2d96e43",
+      "initial_kind": "untracked",
+      "current_sha256": "31dd4e614786ace18ad2d09eb8c04e676aebe88d4c9b74024123208fe2d96e43",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/diagnostics/forge-category-md-real-ab-high.ts",
+      "bytes": 25329,
+      "sha256": "5cfd8c2fb6270cd64c782168d07f12c9ede384d308dd259a95cb64d23c92c847",
+      "initial_kind": "untracked",
+      "current_sha256": "5cfd8c2fb6270cd64c782168d07f12c9ede384d308dd259a95cb64d23c92c847",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/diagnostics/forge-category-md-real-ab.ts",
+      "bytes": 23742,
+      "sha256": "67390c3cb069ed57dbf43d128ca5201332355068482d62cc8bf51ab29853952a",
+      "initial_kind": "untracked",
+      "current_sha256": "67390c3cb069ed57dbf43d128ca5201332355068482d62cc8bf51ab29853952a",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/diagnostics/forge-offline-followup-replay.ts",
+      "bytes": 6476,
+      "sha256": "c6bdfca8492d7370b98a27a4e74b9da59cdcdb2a995a693c4b16e99b125fa52d",
+      "initial_kind": "untracked",
+      "current_sha256": "c6bdfca8492d7370b98a27a4e74b9da59cdcdb2a995a693c4b16e99b125fa52d",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/diagnostics/forge-repeat-v2-checks.ts",
+      "bytes": 2540,
+      "sha256": "277b8080db2a9dde5f4ef421c81ba44cb9f77e76c44e70e7205f6d72b986db75",
+      "initial_kind": "untracked",
+      "current_sha256": "277b8080db2a9dde5f4ef421c81ba44cb9f77e76c44e70e7205f6d72b986db75",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/diagnostics/forge-repeat-v2-trial.ts",
+      "bytes": 9754,
+      "sha256": "19aec12249538864732989d664dd558443a79f8cb6ce45dff58fb8423aab230e",
+      "initial_kind": "untracked",
+      "current_sha256": "19aec12249538864732989d664dd558443a79f8cb6ce45dff58fb8423aab230e",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/diagnostics/forge-runtime-followup-browser.ts",
+      "bytes": 8414,
+      "sha256": "192568c034087fbf19edae6da28e65545a711043f0d580d6046df83b00886a94",
+      "initial_kind": "untracked",
+      "current_sha256": "192568c034087fbf19edae6da28e65545a711043f0d580d6046df83b00886a94",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/diagnostics/forge-template-batch-trial.ts",
+      "bytes": 9010,
+      "sha256": "ab6d1e00329ef51482afd9320b56816b9c34123471d844a0754d5c7f5532c398",
+      "initial_kind": "untracked",
+      "current_sha256": "ab6d1e00329ef51482afd9320b56816b9c34123471d844a0754d5c7f5532c398",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/diagnostics/forge-template-batches-v2.ts",
+      "bytes": 7328,
+      "sha256": "2b5a0911c24622b33e7c54421d5f02e6df77f9049b3518ef1ad725c46becc038",
+      "initial_kind": "untracked",
+      "current_sha256": "2b5a0911c24622b33e7c54421d5f02e6df77f9049b3518ef1ad725c46becc038",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/diagnostics/forge-template-batches.ts",
+      "bytes": 10178,
+      "sha256": "79f881d268e0985e792fe25c5029e17d128a1e7974a04c03bb8178d047560865",
+      "initial_kind": "untracked",
+      "current_sha256": "79f881d268e0985e792fe25c5029e17d128a1e7974a04c03bb8178d047560865",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/diagnostics/forge-v2-bw-head-model-preload.ts",
+      "bytes": 874,
+      "sha256": "f9be85835f2b629cedf70318e51684958bcf8c18481c20637829c4fd40fb8ef2",
+      "initial_kind": "untracked",
+      "current_sha256": "f9be85835f2b629cedf70318e51684958bcf8c18481c20637829c4fd40fb8ef2",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/diagnostics/forge-v2-bw-replay.ts",
+      "bytes": 21808,
+      "sha256": "1916281021c56b317612055b719a2adeebcaaa7dce080165aed3553361dd68c6",
+      "initial_kind": "untracked",
+      "current_sha256": "1916281021c56b317612055b719a2adeebcaaa7dce080165aed3553361dd68c6",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/fixtures/forge-2024-pilot-frozen-boundaries.json",
+      "bytes": 21071,
+      "sha256": "3a9552212846f0cfd055d20795ea653d7633c590d97b2d56efd304d5cc8c6bc0",
+      "initial_kind": "untracked",
+      "current_sha256": "3a9552212846f0cfd055d20795ea653d7633c590d97b2d56efd304d5cc8c6bc0",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/fixtures/forge-category-md-angel-partition.json",
+      "bytes": 2308,
+      "sha256": "c2e68b4904d327812cb44af0d7aa7b186e894c53dcffec84a931dcd9ed00ee5e",
+      "initial_kind": "untracked",
+      "current_sha256": "c2e68b4904d327812cb44af0d7aa7b186e894c53dcffec84a931dcd9ed00ee5e",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/fixtures/forge-template-repeat-v2-rubric.json",
+      "bytes": 17035,
+      "sha256": "8ac5eff8cee17b6965497f49d786c6801dd82cedd8b8ac98ab189ec6702387b9",
+      "initial_kind": "untracked",
+      "current_sha256": "8ac5eff8cee17b6965497f49d786c6801dd82cedd8b8ac98ab189ec6702387b9",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/fixtures/forge-template-repeat-v2-srd.json",
+      "bytes": 23336,
+      "sha256": "723a915b6c7e75f52b23db3f5431ccf0ae3167f97a75545e89d88e0b120f2e1c",
+      "initial_kind": "untracked",
+      "current_sha256": "723a915b6c7e75f52b23db3f5431ccf0ae3167f97a75545e89d88e0b120f2e1c",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/fixtures/forge-v2-bw-base-facts.json",
+      "bytes": 1846,
+      "sha256": "f87c044922f292941b15b5b6d0ab4467c2f23587efa1347ea3be69733a79c0b6",
+      "initial_kind": "untracked",
+      "current_sha256": "f87c044922f292941b15b5b6d0ab4467c2f23587efa1347ea3be69733a79c0b6",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/fixtures/forge-vampire-2024-srd521.json",
+      "bytes": 8182,
+      "sha256": "6242db718f8df5efa98190ff93453787881151b8f1485ef15eae76fa20e7331d",
+      "initial_kind": "untracked",
+      "current_sha256": "6242db718f8df5efa98190ff93453787881151b8f1485ef15eae76fa20e7331d",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-brass-casting-followup.test.ts",
+      "bytes": 23539,
+      "sha256": "a97280487cc69d707342b35586fde4648bb2b8af5a4ccd9ec606737f03db0b87",
+      "initial_kind": "untracked",
+      "current_sha256": "a97280487cc69d707342b35586fde4648bb2b8af5a4ccd9ec606737f03db0b87",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-candidate-output.test.ts",
+      "bytes": 12338,
+      "sha256": "2cac1f8d34046e3efe80160499bdf227e06fe7a79ce881665ac117feed5560cb",
+      "initial_kind": "untracked",
+      "current_sha256": "2cac1f8d34046e3efe80160499bdf227e06fe7a79ce881665ac117feed5560cb",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-cast-followup.test.ts",
+      "bytes": 9920,
+      "sha256": "d5eb654312739a10629341b04ec4cab2b8558fe12bca6d161b1c6c90595d2f37",
+      "initial_kind": "untracked",
+      "current_sha256": "d5eb654312739a10629341b04ec4cab2b8558fe12bca6d161b1c6c90595d2f37",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-category-form-v2.test.ts",
+      "bytes": 41647,
+      "sha256": "f565165b85c58572bff0f1baf99f0f8463855b39636b5d55d026d4ddaaf43308",
+      "initial_kind": "untracked",
+      "current_sha256": "f565165b85c58572bff0f1baf99f0f8463855b39636b5d55d026d4ddaaf43308",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-category-md-high-harness.test.ts",
+      "bytes": 5084,
+      "sha256": "a093ba548181b81eeec559a63d548940fe1c6798c14da21a19ae39bb846ce524",
+      "initial_kind": "untracked",
+      "current_sha256": "a093ba548181b81eeec559a63d548940fe1c6798c14da21a19ae39bb846ce524",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-category-md-integration.test.ts",
+      "bytes": 18348,
+      "sha256": "35aa852886963254daa6d7baf62099726104ffe5b1e0c58359eac3892cef459b",
+      "initial_kind": "untracked",
+      "current_sha256": "35aa852886963254daa6d7baf62099726104ffe5b1e0c58359eac3892cef459b",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-category-md-live-harness.test.ts",
+      "bytes": 3893,
+      "sha256": "c359ad60fd831262cc082a656b3343458c8bda9680322a413c59d67027a83e38",
+      "initial_kind": "untracked",
+      "current_sha256": "c359ad60fd831262cc082a656b3343458c8bda9680322a413c59d67027a83e38",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-category-md-pilot-inputs.test.ts",
+      "bytes": 4599,
+      "sha256": "9e67d1407539718d21e0be2680a242cf592390b8313452ebbf81155912bfc495",
+      "initial_kind": "untracked",
+      "current_sha256": "9e67d1407539718d21e0be2680a242cf592390b8313452ebbf81155912bfc495",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-category-md.test.ts",
+      "bytes": 7886,
+      "sha256": "c5022029826d1e567a376a8968de6fd99d9914075dc4b06267f30fe74c5dcf98",
+      "initial_kind": "untracked",
+      "current_sha256": "c5022029826d1e567a376a8968de6fd99d9914075dc4b06267f30fe74c5dcf98",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-company-neutral-runtime.test.ts",
+      "bytes": 16074,
+      "sha256": "b4bb6d8c262ff071f1a7d0d9fcfdba59db2df0c4e785d589aec1b9dcc271b48e",
+      "initial_kind": "untracked",
+      "current_sha256": "b4bb6d8c262ff071f1a7d0d9fcfdba59db2df0c4e785d589aec1b9dcc271b48e",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-format-recovery.test.ts",
+      "bytes": 7170,
+      "sha256": "d40f58746f44f2c070105b2c8738aa2a3361551eadd502549d9932227449e3ef",
+      "initial_kind": "untracked",
+      "current_sha256": "d40f58746f44f2c070105b2c8738aa2a3361551eadd502549d9932227449e3ef",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-mind-invasion.test.ts",
+      "bytes": 11016,
+      "sha256": "d57761ebf446243c31146bac1c9f71ab25eba547d2cb798172af375fde449129",
+      "initial_kind": "untracked",
+      "current_sha256": "d57761ebf446243c31146bac1c9f71ab25eba547d2cb798172af375fde449129",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-partial-candidates.test.ts",
+      "bytes": 23137,
+      "sha256": "5e67c8150151a9c55fe230483e2b7c039a92c418f70b30c1ebdb6ba9b5efb59b",
+      "initial_kind": "untracked",
+      "current_sha256": "5e67c8150151a9c55fe230483e2b7c039a92c418f70b30c1ebdb6ba9b5efb59b",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-repeat-v2.test.ts",
+      "bytes": 4290,
+      "sha256": "0fb130d2ed9f369e194a97519b3a726e3ada08408952885f5197c1a1fd8a7549",
+      "initial_kind": "untracked",
+      "current_sha256": "0fb130d2ed9f369e194a97519b3a726e3ada08408952885f5197c1a1fd8a7549",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-resolver-final-artifacts.test.ts",
+      "bytes": 10215,
+      "sha256": "105dc99111206d0e8fe4689db5fd76f8107fe71e30d64428a0b4ac7c3760f383",
+      "initial_kind": "untracked",
+      "current_sha256": "105dc99111206d0e8fe4689db5fd76f8107fe71e30d64428a0b4ac7c3760f383",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-size-options.test.ts",
+      "bytes": 11801,
+      "sha256": "14c571e110e62b6b9df0cc3d35ce0bd92348c68634877576bc24ef7d37d8b3c1",
+      "initial_kind": "untracked",
+      "current_sha256": "14c571e110e62b6b9df0cc3d35ce0bd92348c68634877576bc24ef7d37d8b3c1",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-source-validation-followup.test.ts",
+      "bytes": 6290,
+      "sha256": "9ac0296bad32f5f0b09966774b7466bb2b33ecfdbb30c4386a392a4ba6450b90",
+      "initial_kind": "untracked",
+      "current_sha256": "9ac0296bad32f5f0b09966774b7466bb2b33ecfdbb30c4386a392a4ba6450b90",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-staged-candidate.test.ts",
+      "bytes": 15934,
+      "sha256": "08e27ad01cdb0e86a94e1e64ad4b7051f0dd7a4ced5e0efb01a750d1206a68a0",
+      "initial_kind": "untracked",
+      "current_sha256": "08e27ad01cdb0e86a94e1e64ad4b7051f0dd7a4ced5e0efb01a750d1206a68a0",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-template-batches.test.ts",
+      "bytes": 3323,
+      "sha256": "0c830cd015517297a96e7c03845f3972e11405951ce06d1dc18e19ad5284f3d2",
+      "initial_kind": "untracked",
+      "current_sha256": "0c830cd015517297a96e7c03845f3972e11405951ce06d1dc18e19ad5284f3d2",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-unified-boundaries.test.ts",
+      "bytes": 15932,
+      "sha256": "1751dc2615d19f2d5d34bece8f414ee2f22ca9800ec381b1dc19dca32e948c4e",
+      "initial_kind": "untracked",
+      "current_sha256": "1751dc2615d19f2d5d34bece8f414ee2f22ca9800ec381b1dc19dca32e948c4e",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-v2-bw-runtime.test.ts",
+      "bytes": 31463,
+      "sha256": "d406fceb97eb78149beaf34f54eb2f75704e6b41153f7461ad360340aab6d6a2",
+      "initial_kind": "untracked",
+      "current_sha256": "d406fceb97eb78149beaf34f54eb2f75704e6b41153f7461ad360340aab6d6a2",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-v2-literal-healing.test.ts",
+      "bytes": 13465,
+      "sha256": "275fa21eb031cbc800ccf02c6efe2359605a99a37105bbe48632d18b2d0e578f",
+      "initial_kind": "untracked",
+      "current_sha256": "275fa21eb031cbc800ccf02c6efe2359605a99a37105bbe48632d18b2d0e578f",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-vampire-2024-retest.test.ts",
+      "bytes": 6814,
+      "sha256": "71cbdeefb1c8774b08b89e47d6bd0188e791a59d506d64a8bf8e3e7967e5865d",
+      "initial_kind": "untracked",
+      "current_sha256": "71cbdeefb1c8774b08b89e47d6bd0188e791a59d506d64a8bf8e3e7967e5865d",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/forge-whole-vampire-contract.test.ts",
+      "bytes": 16848,
+      "sha256": "c629f9fcdb3ad851db4548f5cb3942a570c6d8d645f50ffc67c07fba3f98a931",
+      "initial_kind": "untracked",
+      "current_sha256": "c629f9fcdb3ad851db4548f5cb3942a570c6d8d645f50ffc67c07fba3f98a931",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/helpers/final-artifact-resolver-port.ts",
+      "bytes": 8479,
+      "sha256": "238dac171e3020cd9d817b543dc7c5653bf5d4dbf3813631621568b760711ca1",
+      "initial_kind": "untracked",
+      "current_sha256": "238dac171e3020cd9d817b543dc7c5653bf5d4dbf3813631621568b760711ca1",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/helpers/neutral-source-contract.ts",
+      "bytes": 1121,
+      "sha256": "8de78b67d9dd40769f56811b949a254b322ecd9a87b4d24ca4e03e6b65157593",
+      "initial_kind": "untracked",
+      "current_sha256": "8de78b67d9dd40769f56811b949a254b322ecd9a87b4d24ca4e03e6b65157593",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/helpers/vampire-2024-contract.ts",
+      "bytes": 11716,
+      "sha256": "9c4af9d8de72f3470d4a46bd380ec8bd3c8bbab1487b81ca277729a1bab41a52",
+      "initial_kind": "untracked",
+      "current_sha256": "9c4af9d8de72f3470d4a46bd380ec8bd3c8bbab1487b81ca277729a1bab41a52",
+      "decision": "commit-coupled-forge-baseline"
+    },
+    {
+      "path": "tests/helpers/whole-vampire-contract.ts",
+      "bytes": 8292,
+      "sha256": "74d9a6d95e6ba0983c9428d57dcffa2f6c8c56c02222e8555652a322d45ba12b",
+      "initial_kind": "untracked",
+      "current_sha256": "74d9a6d95e6ba0983c9428d57dcffa2f6c8c56c02222e8555652a322d45ba12b",
+      "decision": "commit-coupled-forge-baseline"
+    }
+  ],
+  "protected_ignored_forge": {
+    "count": 3198,
+    "bytes": 604856629,
+    "ordered_path_sha256_manifest_digest": "31ef5af62c009239e5a65a284ce52b127bbebbae5e606c740fce1fcb525cae77",
+    "policy": "Originals stay in place and outside Git; no source-content backup was created."
+  },
+  "fresh_checks": [
+    {
+      "name": "agents-generate",
+      "exit_code": 0,
+      "command": [
+        "run",
+        "agents:generate"
+      ]
+    },
+    {
+      "name": "agents-check",
+      "exit_code": 0,
+      "command": [
+        "run",
+        "agents:check"
+      ]
+    },
+    {
+      "name": "handbook-check",
+      "exit_code": 0,
+      "command": [
+        "run",
+        "handbook:check"
+      ]
+    },
+    {
+      "name": "packages-typecheck",
+      "exit_code": 0,
+      "command": [
+        "run",
+        "typecheck:packages"
+      ]
+    },
+    {
+      "name": "modules-typecheck",
+      "exit_code": 0,
+      "command": [
+        "run",
+        "typecheck:foundry-modules"
+      ]
+    },
+    {
+      "name": "architecture",
+      "exit_code": 0,
+      "command": [
+        "run",
+        "architecture:verify"
+      ]
+    },
+    {
+      "name": "build-forge",
+      "exit_code": 0,
+      "command": [
+        "run",
+        "build:fvtt-json-forge"
+      ]
+    },
+    {
+      "name": "build-resolver",
+      "exit_code": 0,
+      "command": [
+        "run",
+        "build:spell-resolver"
+      ]
+    },
+    {
+      "name": "package-forge",
+      "exit_code": 0,
+      "command": [
+        "run",
+        "release:fvtt-json-forge"
+      ]
+    }
+  ],
+  "artifact_readback": {
+    "all_artifact_files": 29,
+    "before_after_changes": [],
+    "scripts": [
+      {
+        "module": "fvtt-json-forge",
+        "sha256": "885d42d5e0da51a13a0d038119185a57ef1eb6ae2c362b57d6745d6386f84a73",
+        "runtime_sha256": "885d42d5e0da51a13a0d038119185a57ef1eb6ae2c362b57d6745d6386f84a73",
+        "same": true
+      },
+      {
+        "module": "monster-spell-resolver",
+        "sha256": "68f6cd75d39f6eb56e95dd57f45e46e7b4ec3b97cc9114f57d25f7fb1387d390",
+        "runtime_sha256": "68f6cd75d39f6eb56e95dd57f45e46e7b4ec3b97cc9114f57d25f7fb1387d390",
+        "same": true
+      }
+    ],
+    "note": "Same Bun1.3.14; rebuild only. Reused bounded runtime evidence is not a fresh runtime execution."
+  },
+  "evidence_limits": [
+    "No fresh Foundry/browser/paid generation/replay",
+    "Historical receipts retain their original HEAD/artifact/runtime boundaries",
+    "Some diagnostic tests require ignored local inputs and may skip in another checkout",
+    "Historical area preload reads HEAD and is not an equivalent f637f77 comparison after this commit"
+  ],
+  "review_scope": "Independent code dependency/sensitive-pattern review plus independent evidence/source/artifact mapping; not a complete product audit"
+}

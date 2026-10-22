@@ -73,6 +73,7 @@ interface CanonicalGenerationBase {
 
 export interface CanonicalActorDocument extends CanonicalGenerationBase {
   kind: 'actor';
+  candidateReview?: import('@fvtt-json-generator/models/source-operations').SourceCandidateReview;
   actor?: CanonicalMonster;
   compatibilitySource: ParsedNPC;
 }

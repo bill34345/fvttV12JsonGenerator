@@ -127,7 +127,11 @@ export function sourceSingleSpellAction(source:string):{name:string;start:number
     // active predicate is required before treating that form as a grant.
     const passive=/^cast\s/iu.test(match[0])&&clause.trim()!==''&&!activeCastingSuffix.test(clause);
     const externalSubject=externalCastingSubject.test(clause)||introducedCastingSubject(visible.slice(0,match.index),clause);
-    if(generic||passive||externalSubject||/以下|法术|following|\bspells\b/iu.test(name)||castingPredicateNegated(visible,match.index!)
+    // A choice to spend an attack on the existing named Spellcasting ability
+    // is not a second independent grant of the referenced spell. The complete
+    // choice stays on its parent rule; independent direct casts still count.
+    const existingAbilityChoice=/\bcan\s+replace\s+(?:one|a|an|\d+)\s+attack\s+with\s+a\s+use\s+of\s+[^.。]*\bspellcasting\s+to\s*$/iu.test(clause);
+    if(generic||passive||externalSubject||existingAbilityChoice||/以下|法术|following|\bspells\b/iu.test(name)||castingPredicateNegated(visible,match.index!)
       ||/\b(?:if|when|whenever|unless|until|before|after|while)\b|如果|仅当|除非|直到|之前|之后|每当/iu.test(clause)
       ||/\d+\s*\/\s*(?:日|day)/iu.test(source))continue;
     const start=match.index!+match[0].indexOf(name);return{name,start,end:start+name.length};

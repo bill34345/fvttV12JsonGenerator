@@ -208,3 +208,16 @@ describe('local Encounter bridge stage retry', () => {
     expect(reviewCalls).toBe(1);
   });
 });
+
+
+test('a transport failure after the one model correction cannot recreate its budget in a fresh provider',async()=>{
+  let attempts=0;
+  const factory=():MonsterIntakeAiProvider=>({providerName:'fixture',extractionModel:'fixture',reviewModel:'fixture',
+    getExtractionCorrectionCount:()=>1,discover:async()=>({schemaVersion:1,candidates:[]}),
+    extract:async()=>{attempts++;throw retryableNetwork();},review:async()=>({schemaVersion:1,verdict:'accepted',findings:[]}),repair:async()=>({} as any)});
+  const provider=retryingMonsterProvider(factory(),factory,{budgetMs:100});
+  const request={} as any;
+  await expect(provider.extract(request)).rejects.toMatchObject({code:'network',retryable:false});
+  expect(attempts).toBe(1);expect(provider.getExtractionCorrectionCount?.(request)).toBe(1);
+  expect(provider.getExtractionCorrectionCount?.({} as any)).toBe(0);
+});

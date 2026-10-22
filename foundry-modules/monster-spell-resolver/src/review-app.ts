@@ -24,6 +24,7 @@ export interface ResolverReviewSpell {
   lastGeneratedProof?: unknown;
   proposed?: unknown;
   manualConflict?: { keepable: boolean; explanation?: string };
+  sourceMaintenance?: { kind: 'conditional-damage'; explanation: string };
   candidateDecisionRequired?: boolean;
   warnings: string[];
   literalRestrictions: Array<{ kind: string; text: string }>;
@@ -45,7 +46,7 @@ export interface ResolverCandidateSelection {
 
 export type ResolverReviewOutcome =
   | { action: 'cancel' }
-  | { action: 'apply'; manualDecisions: SpellManualDecision[]; candidateSelections: ResolverCandidateSelection[] };
+  | { action: 'apply'; manualDecisions: SpellManualDecision[]; candidateSelections: ResolverCandidateSelection[]; sourceMaintenanceDecisions?: SpellManualDecision[] };
 
 export interface ResolverReviewSession {
   readonly manualChoices: readonly ['keep', 'overwrite', 'cancel'];
@@ -67,13 +68,13 @@ export function createResolverReviewSession(model: ResolverReviewModel): Resolve
     manualChoices: ['keep', 'overwrite', 'cancel'],
     decideManual(logicalRefKey, decision) {
       const spell = byKey.get(logicalRefKey);
-      if (!spell?.manualConflict) throw new TypeError(`No manual conflict exists for ${logicalRefKey}.`);
+      if (!spell?.manualConflict&&!spell?.sourceMaintenance) throw new TypeError(`No manual conflict or source maintenance exists for ${logicalRefKey}.`);
       if (decision === 'cancel') {
         manualDecisions.clear();
         candidateSelections.clear();
         return;
       }
-      if (decision === 'keep' && !spell.manualConflict.keepable) {
+      if (decision === 'keep' && (spell.sourceMaintenance||!spell.manualConflict?.keepable)) {
         throw new Error(`Current managed structure for ${logicalRefKey} cannot be kept.`);
       }
       manualDecisions.set(logicalRefKey, decision);
@@ -100,21 +101,22 @@ export function createResolverReviewSession(model: ResolverReviewModel): Resolve
     canApply() {
       return model.spells.every((spell) => {
         if (!spell.blocking) return true;
-        if (spell.manualConflict && !manualDecisions.has(spell.logicalRefKey)) return false;
+        if ((spell.manualConflict||spell.sourceMaintenance) && !manualDecisions.has(spell.logicalRefKey)) return false;
         if (requiresCandidateDecision(spell)) {
           const selectedUuid = candidateSelections.get(spell.logicalRefKey);
           const selected = spell.candidates.find((candidate) => candidate.uuid === selectedUuid);
           if (!selected || candidateRulesIssue(selected)) return false;
         }
-        return Boolean(spell.manualConflict || requiresCandidateDecision(spell));
+        return Boolean(spell.manualConflict || spell.sourceMaintenance || requiresCandidateDecision(spell));
       });
     },
     apply() {
       if (!this.canApply()) throw new Error('Every blocking review issue requires a decision before Apply.');
       return {
         action: 'apply',
-        manualDecisions: [...manualDecisions].map(([logicalRefKey, decision]) => ({ logicalRefKey, decision }))
+        manualDecisions: [...manualDecisions].filter(([key])=>byKey.get(key)?.manualConflict).map(([logicalRefKey, decision]) => ({ logicalRefKey, decision }))
           .sort(compareLogicalKey),
+        ...(model.spells.some(spell=>spell.sourceMaintenance)?{sourceMaintenanceDecisions:[...manualDecisions].filter(([key])=>byKey.get(key)?.sourceMaintenance).map(([logicalRefKey,decision])=>({logicalRefKey,decision})).sort(compareLogicalKey)}:{}),
         candidateSelections: [...candidateSelections].map(([logicalRefKey, selectedUuid]) => ({ logicalRefKey, selectedUuid }))
           .sort(compareLogicalKey),
       };
@@ -154,9 +156,10 @@ export function renderResolverReviewHtml(model: ResolverReviewModel, localize: R
     const select = requiresCandidateDecision(spell) ? `<label>${escape(localize('FVTTJSONSPELL.Review.Source'))}
       <select data-logical-ref-key="${escapeAttribute(spell.logicalRefKey)}"><option value="">${escape(localize('FVTTJSONSPELL.Review.SelectSource'))}</option>
       ${spell.candidates.map((candidate) => `<option value="${escapeAttribute(candidate.uuid)}"${candidateRulesIssue(candidate) ? ' disabled' : ''}>${escape(candidate.packageId)} / ${escape(candidate.packId)} / ${escape(display(candidate.rules))} / ${escape(candidate.uuid)}${candidateRulesIssue(candidate) ? ` / ${candidateRulesExplanation(candidate, localize)}` : ''}</option>`).join('')}</select></label>` : '';
-    const manual = spell.manualConflict ? `<fieldset data-review-key="${escapeAttribute(spell.logicalRefKey)}">
-      <legend>${escape(localize(spell.manualConflict.keepable ? 'FVTTJSONSPELL.Review.ManualConflict' : 'FVTTJSONSPELL.Review.ManualConflictInvalid'))}</legend>
-      <label><input type="radio" name="manual:${escapeAttribute(spell.logicalRefKey)}" value="keep" ${spell.manualConflict.keepable ? '' : 'disabled'}> ${escape(localize('FVTTJSONSPELL.Review.KeepManual'))}</label>
+    const manual = spell.manualConflict||spell.sourceMaintenance ? `<fieldset data-review-key="${escapeAttribute(spell.logicalRefKey)}">
+      <legend>${escape(localize(spell.sourceMaintenance?'FVTTJSONSPELL.Review.SourceMaintenance':spell.manualConflict?.keepable ? 'FVTTJSONSPELL.Review.ManualConflict' : 'FVTTJSONSPELL.Review.ManualConflictInvalid'))}</legend>
+      ${spell.sourceMaintenance?`<p>${escape(localize(spell.sourceMaintenance.explanation))}</p>`:''}
+      <label><input type="radio" name="manual:${escapeAttribute(spell.logicalRefKey)}" value="keep" ${!spell.sourceMaintenance&&spell.manualConflict?.keepable ? '' : 'disabled'}> ${escape(localize('FVTTJSONSPELL.Review.KeepManual'))}</label>
       <label><input type="radio" name="manual:${escapeAttribute(spell.logicalRefKey)}" value="overwrite"> ${escape(localize('FVTTJSONSPELL.Review.Overwrite'))}</label></fieldset>` : '';
     return `<article class="fvtt-json-generator-spell-resolver-spell"><h3>${escape(spell.originalName)} <code>${escape(spell.refId)}</code></h3>
       <h4>${escape(localize('FVTTJSONSPELL.Review.Evidence'))}</h4><p class="fvtt-json-generator-spell-resolver-break">${escape(evidence)}</p>

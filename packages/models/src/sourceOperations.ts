@@ -2,6 +2,8 @@ import type {NativeFailureStatus,SourceOperation,SourceOperationAbility} from '.
 import {sourceHealingOperations,sourceHealingOperationErrors} from './sourceHealingOperations';
 export {sourceHealingOperations} from './sourceHealingOperations';
 export type {SourceOperation,SourceOperationAbility} from './sourceOperationTypes';
+export {isSourceCandidateReview,isSourceCandidateCounters,candidateSourceOperationShapeErrors} from './sourceCandidate';
+export type {SourceCandidateReview,SourceCandidateCounter} from './sourceOperationTypes';
 import {sourceFailedSaveStatuses,sourceGmTriggeredSave} from './sourceRuleFacts';
 import type {CanonicalFeature} from './canonicalMonster';
 import {sourceOperationClauses,sourceResultScopes,SOURCE_NEGATION_TOKEN,SOURCE_SAVE_LABEL} from './sourceOperationScopes';
@@ -9,6 +11,8 @@ export {sourceOperationClauses} from './sourceOperationScopes';
 import {deriveSourceAttackDamageModes} from './sourceAttackModes';
 import {displayNameIdentityCandidates} from './displayName';
 import {fixedDamageUpgrade,fixedDamageUpgradeErrors} from './sourceDamageUpgrade';
+import {isNeutralSourceAttack,sourceNeutralAttackKind,sourceBloodiedHalfDamage,sourceDamageAdjustmentMatches} from './sourceAttackAdjustment';
+export {isNeutralSourceAttack,sourceNeutralAttackKind,sourceBloodiedHalfDamage,sourceDamageAdjustmentMatches} from './sourceAttackAdjustment';
 
 export function sourceDamageUpgradeOperations(source:string,contexts:readonly string[]):SourceOperation[]|undefined{
   return fixedDamageUpgrade(source,contexts,(base,ops)=>sourceOperationErrors(base,ops).length===0);
@@ -77,6 +81,7 @@ export function sourceSpellHeaderRange(source:string,quote:string):number|undefi
 }
 
 export function sourceAttackDamageModes(source:string,ops:readonly SourceOperation[],name=''){
+  if(ops.some(isNeutralSourceAttack))return;
   return deriveSourceAttackDamageModes(source,ops,name,(quote,part)=>sourceDamageAtomSpan(quote,part,source)?.start);
 }
 function sourceDamageAtomSpan(quote:string,part:{formula:string;type:string;types?:string[]},source=quote){
@@ -250,7 +255,11 @@ function sourceSameClauseAttackChoice(op:Record<string,any>,previous:unknown,q:s
   if(text(String(previous.proof.attack??''))!==q||text(String(op.proof.attack??''))!==q||previous.condition!==source.trim()||op.condition!==source.trim()||previous.targetSpecial!==op.targetSpecial)return;
   const sameDamage=Array.isArray(previous.damage)&&Array.isArray(op.damage)&&previous.damage.length===op.damage.length&&previous.damage.every((part:any,index:number)=>object(part)&&object(op.damage[index])&&['formula','type','relationship','condition'].every(field=>part[field]===op.damage[index][field])&&JSON.stringify(part.types??[part.type])===JSON.stringify(op.damage[index].types??[op.damage[index].type]))&&JSON.stringify(previous.proof.damage)===JSON.stringify(op.proof.damage);
   const combined=/\bmelee\s+or\s+ranged\s+(?:(weapon|spell)\s+)?attack(?:\s+roll)?\b/iu.exec(q),kind=combined?.[1]?.toLowerCase()==='spell'?'sak':'wak';
-  if(combined&&previous.attack.type==='m'+kind&&op.attack.type==='r'+kind&&previous.attack.toHit===op.attack.toHit&&previous.attack.reach!==undefined&&previous.attack.range===undefined&&op.attack.range!==undefined&&op.attack.reach===undefined&&sameDamage)return'range';
+  // Preserve the existing archived typed-mode contract; new neutral forms
+  // additionally prove both modes without inventing a weapon/spell category.
+  const typed=previous.attack.type==='m'+kind&&op.attack.type==='r'+kind;
+  const neutral=!combined?.[1]&&previous.attack.type==='melee'&&op.attack.type==='ranged';
+  if(combined&&(typed||neutral)&&previous.attack.toHit===op.attack.toHit&&previous.attack.reach!==undefined&&previous.attack.range===undefined&&op.attack.range!==undefined&&op.attack.reach===undefined&&sameDamage)return'range';
   if(!['type','toHit','reach','range','longRange'].every(field=>previous.attack[field]===op.attack[field]))return;
   const choice=sourceClosedDamageChoice(q);if(!choice||previous.damage?.length!==choice.common.length+1||op.damage?.length!==choice.common.length+1)return;
   if(![previous,op].every(item=>Array.isArray(item.proof.damage)&&item.proof.damage.length===item.damage.length&&item.proof.damage.every((proof:unknown)=>typeof proof==='string'&&text(proof)===q)))return;
@@ -613,9 +622,19 @@ export function sourceOperationFailureStatuses(source:string,op:SourceOperation)
 /** A demonstrative recipient can inherit the immediately preceding hit event.
  * Keep the original two sentences; unrelated visibility/AC and intervening
  * headings cannot supply an anaphoric trigger. */
+function sourceVisibilitySelection(source:string,q:string):{quote:string;target:string}|undefined{
+  const all=sourceOperationClauses(source).map(text),at=all.indexOf(q);
+  const visibility=/^If the target can see (.+?), the target must\b/iu.exec(q);
+  const selection=at>0?/^(.+?) targets ((?:one|a|an) (?:humanoid|creature|target)\b[^.;。]*)[.。]?$/iu.exec(all[at-1]!):undefined;
+  if(visibility&&selection&&all.lastIndexOf(q)===at&&text(visibility[1]!).toLowerCase()===text(selection[1]!).toLowerCase())return{quote:all[at-1]!,target:selection[2]!};
+}
 function sourceIndependentSaveCondition(source:string,q:string,prefix:string):boolean{
   if(sourceEventQualifier(prefix))return true;
   const all=sourceOperationClauses(source).map(text),at=all.indexOf(q);
+  // An immediately introduced target may have a reciprocal visibility gate.
+  // Bind the same printed owner in both sentences; modal "can see" alone is
+  // not an event and cannot grant an unrelated standalone Save.
+  if(sourceVisibilitySelection(source,q))return true;
   if(/^The target(?:\s+and\b|\s+must\b)/iu.test(q)&&at>0&&all.lastIndexOf(q)===at&&/^If the attack hits,\s+/iu.test(all[at-1]!)&&!new RegExp(`\\b${SOURCE_NEGATION_TOKEN}\\b`,'iu').test(all[at-1]!))return true;
   if(!/^that\s+(?:creature|target)\b/iu.test(q))return false;
   if(at<1||all.lastIndexOf(q)!==at)return false;
@@ -665,12 +684,12 @@ function sourceLegacyCombinedAttack(q:string,attack:unknown):boolean{
     &&(range[0]![2]===undefined?attack.longRange===undefined:attack.longRange===Number(range[0]![2]));
 }
 
-function sourceAttackFactErrors(q:string,attack:NonNullable<SourceOperation['attack']>,alternative=false):string[]{
+function sourceAttackFactErrors(q:string,attack:NonNullable<SourceOperation['attack']>,alternative=false,neutralChoice?:'melee'|'ranged'):string[]{
   const choice=sourceAttackBonusChoice(q),header=choice?/\b(melee|ranged)\s+(weapon|spell)\s+attack\b/iu.exec(q):undefined;
   const errors:string[]=[],melee=header?header[1]!.toLowerCase()==='melee':/\bmelee\b|近战/iu.test(q),ranged=header?header[1]!.toLowerCase()==='ranged':/\branged\b|远程/iu.test(q),spell=header?header[2]!.toLowerCase()==='spell':/\bspell\b|法术/iu.test(q);
   const combined=/\bmelee\s+or\s+ranged\s+(?:(?:weapon|spell)\s+)?attack(?:\s+roll)?\b/iu.test(q);
   const rangedMode=typeof attack.type==='string'&&attack.type.startsWith('r');
-  const expected=(combined&&rangedMode?'r':melee?'m':ranged?'r':'')+(spell?'s':'w')+'ak';
+  const neutral=isNeutralSourceAttack({attack}),sourceNeutral=sourceNeutralAttackKind(q),expected=neutralChoice??sourceNeutral??(neutral?undefined:(combined&&rangedMode?'r':melee?'m':ranged?'r':'')+(spell?'s':'w')+'ak');
   const bonus=sourceAttackBonuses(q),toHit=choice?(alternative?choice.conditionalBonus:choice.defaultBonus):bonus.length===1?bonus[0]:undefined;
   // The final target slot can restrict eligibility ("one target not grappled
   // by ..."). Negating that target does not negate the Attack declaration.
@@ -687,6 +706,11 @@ function sourceAttackFactErrors(q:string,attack:NonNullable<SourceOperation['att
     if(field==='range'&&attack.longRange!==undefined&&Number(match?.[2])!==attack.longRange)errors.push('attack/longRange');
   }
   if(attack.longRange!==undefined&&attack.range===undefined)errors.push('attack/longRange');
+  if(neutral){
+    const reach=/\breach\s+(\d+)\s*(?:ft\.?|feet)/iu.exec(q),range=/\brange\s+(\d+)(?:\s*\/\s*(\d+))?\s*(?:ft\.?|feet)/iu.exec(q);
+    const wantReach=neutralChoice==='ranged'?undefined:reach?Number(reach[1]):undefined,wantRange=neutralChoice==='melee'?undefined:range?Number(range[1]):undefined,wantLong=neutralChoice==='melee'?undefined:range?.[2]?Number(range[2]):undefined;
+    if(attack.reach!==wantReach||attack.range!==wantRange||attack.longRange!==wantLong||combined&&!neutralChoice||attack.reach!==undefined&&attack.range!==undefined)errors.push('attack/neutral-geometry');
+  }
   return errors;
 }
 
@@ -896,6 +920,8 @@ function sourceTargetRecipientBound(source:string,op:Record<string,any>,q:string
   const markers=[...new Map([...saves,...damage].map(atom=>[atom.start+':'+atom.end,atom])).values()].sort((a,b)=>a.start-b.start);
   const own=op.type==='save'?saves.filter(atom=>atom.dc===op.save?.dc&&JSON.stringify(atom.abilities)===JSON.stringify(op.save?.abilities)&&atom.choice===op.save?.choice):damageSpans.filter(span=>span.quote===q);
   if(!own.length){
+    const selected=op.type==='save'?sourceVisibilitySelection(source,text(String(op.proof.save??''))):undefined;
+    if(selected&&selected.quote===q&&selected.target===target)return true;
     if(sourceExistingAreaEvent(source,op))return true;
     if(sourceNewTargetDamageReplay(source,op,q,target))return true;
     if(sourceDeclaredRecipientBound(source,op,q,target))return true;
@@ -1004,7 +1030,13 @@ export function sourceOperationSelfArea(source:string,op:SourceOperation,actorNa
   const all=sourceOperationClauses(source).map(text),q=text(op.proof.aoe),at=all.indexOf(q);if(at<0)return false;
   const origin=/\b(?:originating|extend(?:ing|s)?) from\s+(.+?)(?=\s+(?:at|when|while|that|who|which|to|must|makes?|takes?|has|unless|and)\b|[(),.;。]|$)/iu.exec(q)?.[1]
     ??/\bwithin\s+\d+\s+(?:feet|ft\.?)\s+of\s+(.+?)(?=\s+(?:at|when|while|that|who|which|to|must|makes?|takes?|has|unless|and)\b|[(),.;。]|$)/iu.exec(q)?.[1];
-  if(origin)return /^(?:you|yourself)$/iu.test(origin.trim())||sourceActorNameMatches(origin,actorName);
+  if(origin){
+    if(/^(?:you|yourself)$/iu.test(origin.trim())||sourceActorNameMatches(origin,actorName))return true;
+    // "it" inherits only the explicit emitter in this very sentence. A
+    // nearby Actor name, foreign emitter or preceding sentence is not proof.
+    const emitter=/^Clouds? of [^,.;。]+?\s+(?:hiss|hisses|emanate|emanates|pour|pours)\s+from\s+(.+?),\s+forcing (?:each|every|any) creature within \d+ (?:feet|ft\.?) of it to make\b/iu.exec(q)?.[1];
+    return /^it$/iu.test(origin.trim())&&!!emitter&&sourceActorNameMatches(emitter,actorName);
+  }
   const emitted=/^(?:the\s+)?(.+?)\s+(?:emits?|exhales?|breathes?|releases?)\s+[^.;。]*\b(?:Cone|Line|Emanation)\b/iu.exec(q)?.[1];
   if(emitted&&(/^(?:you|yourself)$/iu.test(emitted)||sourceActorNameMatches(emitted,actorName)))return true;
   // An explicitly controlled instrument and a directly created energy Cone
@@ -1042,6 +1074,27 @@ export function sourceOperationTargetType(source:string,op:SourceOperation):'cre
   const kind=(noun:string)=>/^creatures?$/iu.test(noun)?'creature':'object',one=kind(first[2]!);
   const second=/^\s+(?:and|or)\s+(?:(?:a|an|one|the|each|every|any|all)\s+)?(creatures?|objects?|structures?)\b/iu.exec(rest);
   return second&&kind(second[1]!)!==one?'creatureOrObject':one;
+}
+
+/** Source-bound singular recipient count. Qualifiers remain the complete
+ * special rule; a capacity elsewhere or an area set is not a target count. */
+export function sourceOperationTargetCount(source:string,op:SourceOperation):'1'|undefined{
+  if(op.aoe||typeof op.targetSpecial!=='string'||typeof op.proof?.target!=='string')return;
+  const target=text(op.targetSpecial),quote=text(op.proof.target);
+  if(!sourceOperationClauses(source).some(clause=>text(clause)===quote)||!sourceTargetRecipientBound(source,op,quote,[]))return;
+  if(/^(?:one|a|an|1) (?:creature|target|humanoid|object|structure)\b/iu.test(target)
+    &&!/^.+?\b(?:and|or)\s+(?:two|three|four|five|\d+)\s+(?:creatures|targets|humanoids|objects|structures)\b/iu.test(target))return '1';
+}
+
+/** A source-explicit fail-to-succeed rule and its conditional daily quota.
+ * This is a native counter only; it does not automatically choose a success. */
+export function sourceLegendaryLairResistance(name:string,description:string,actorNames:readonly string[]):{max:number;lairMax:number}|undefined{
+  const quota=/\((\d+)\/Day, or (\d+)\/Day in Lair\)/iu.exec(name);
+  const body=sourceOperationClauses(description).map(text).find(clause=>/^If .+ fails a saving throw, it can choose to succeed instead[.]?$/iu.test(clause));
+  const owner=body&&/^If (.+) fails a saving throw,/iu.exec(body)?.[1];
+  if(!quota||!owner||!sourceActorNameMatches(owner,actorNames))return;
+  const max=Number(quota[1]),lairMax=Number(quota[2]);
+  return Number.isSafeInteger(max)&&max>0&&lairMax===max+1?{max,lairMax}:undefined;
 }
 
 /** Atom-level source entailment, intentionally independent of whole-sentence
@@ -1082,7 +1135,10 @@ export function sourceOperationErrors(source: string, value: unknown,contexts:re
     const fail = (field: string) => errors.push(`${index}/${field}`);
     const targetDamageSpans:Array<{quote:string;start:number;end:number}>=[];
     const scaling=object(op)?sourceScalingOperation(source,op):undefined;
-    if (!keys(op,['id','name','type','relationship','condition','sourceText','evidence','attack','save','damage','range','aoe','targetSpecial','failureStatuses','proof'])) { fail('shape'); continue; }
+    if (!keys(op,['id','name','type','relationship','condition','sourceText','evidence','attack','save','damage','damageAdjustment','range','aoe','targetSpecial','failureStatuses','proof'])) { fail('shape'); continue; }
+    if(op.damageAdjustment!==undefined&&!sourceDamageAdjustmentMatches(op))fail('damage-adjustment');
+    if(op.type==='attack'&&Array.isArray(op.proof?.damage)&&op.proof.damage.some((quote:unknown)=>typeof quote==='string'&&sourceBloodiedHalfDamage(quote))&&!sourceDamageAdjustmentMatches(op))fail('damage-adjustment/omitted');
+    if(isNeutralSourceAttack(op)&&(op.type!=='attack'||op.aoe!==undefined||op.range!==undefined||op.healing!==undefined||op.save!==undefined||op.failureStatuses?.length))fail('attack/neutral-combination');
     if (typeof op.id!=='string'||!/^[-a-zA-Z0-9]{1,64}$/u.test(op.id)||ids.has(op.id)) fail('id');
     ids.add(op.id);
     if (typeof op.name!=='string'||!op.name.trim()||op.name.length>160) fail('name');
@@ -1115,7 +1171,10 @@ export function sourceOperationErrors(source: string, value: unknown,contexts:re
       const choice=sourceAttackBonusChoice(q),provenAlternative=op.relationship==='alternative'&&sourceAlternativeChoice(op,value[index-1],q,source);
       const signature='attack:'+q+(provenAlternative?':alternative:'+JSON.stringify([attack,op.damage]):'');if(operationProofs.has(signature))fail('duplicate-operation');operationProofs.add(signature);
       if(choice&&!provenAlternative&&(op.relationship!=='primary'||op.condition!==undefined))fail('attack/conditional-choice');
-      for(const error of sourceAttackFactErrors(q,attack,!!choice&&provenAlternative))fail(error);
+      const closedRangeChoice=sourceSameClauseAttackChoice(op,value[index-1],q,source)==='range'
+        ||object(value[index+1])&&sourceSameClauseAttackChoice(value[index+1],op,q,source)==='range';
+      const neutralChoice=isNeutralSourceAttack(op)&&closedRangeChoice?attack.type as 'melee'|'ranged':undefined;
+      for(const error of sourceAttackFactErrors(q,attack,!!choice&&provenAlternative,neutralChoice))fail(error);
       if(op.save!==undefined)fail('save');
     } else if(op.type==='save') {
       if(!keys(op.save,['dc','abilities','choice','outcome'])) { fail('save'); continue; }
@@ -1184,7 +1243,7 @@ export function sourceOperationErrors(source: string, value: unknown,contexts:re
         const saveTrigger=op.type==='save'&&op.condition===source.trim()&&text(String(op.proof.save??''))===q?op.save:undefined;
         const attackHit=op.type==='attack'&&/^(?:On a hit|Hit)\b/iu.test(q)&&damageIndex>startIndex&&!previousOwner;
         const attackDamageChoice=op.type==='attack'&&(sourceSameClauseAttackChoice(op,value[index-1],text(String(op.proof.attack??'')),source)==='damage'||object(value[index+1])&&sourceSameClauseAttackChoice(value[index+1],op,text(String(op.proof.attack??'')),source)==='damage');
-        if(qualifiedDamageAtom(q,{formula:formula(part.formula),types:part.types??[part.type]},saveTrigger,attackHit,source)&&part.relationship!=='conditional'&&part.relationship!=='replacement')fail(`damage/${partIndex}/condition`);
+        if(!sourceDamageAdjustmentMatches(op)&&qualifiedDamageAtom(q,{formula:formula(part.formula),types:part.types??[part.type]},saveTrigger,attackHit,source)&&part.relationship!=='conditional'&&part.relationship!=='replacement')fail(`damage/${partIndex}/condition`);
         if(!attackDamageChoice&&sourceHasDamageAlternatives(q)&&part.relationship!=='conditional'&&part.relationship!=='replacement')fail(`damage/${partIndex}/alternative`);
         if(part.relationship==='conditional'||part.relationship==='replacement') {
           if(part.condition!==source.trim()||op.condition!==source.trim())fail(`damage/${partIndex}/condition`);
@@ -1234,7 +1293,7 @@ export function sourceOperationErrors(source: string, value: unknown,contexts:re
         if(sourceSpellHeader(source,q)&&!sourceSpellHeaderOperationOwner(source,op)&&!existingArea)fail('aoe/operation-owner');
         const labels:Record<string,string>={sphere:'sphere|球形',radius:'radius|emanation|半径',cone:'cone|锥形',line:'line|线形',cube:'cube|立方体',cylinder:'cylinder|圆柱形',rectangle:'rectangle|矩形'};
         const shape=labels[op.aoe.shape],value=op.aoe.radius;
-        const eachWithin=op.aoe.shape==='radius'&&new RegExp(`^(?:Each|Every|Any) creature within ${value} (?:feet|ft\\.?) of\\s`,'iu').test(q);
+        const eachWithin=op.aoe.shape==='radius'&&new RegExp(`(?:^(?:Each|Every|Any) creature within ${value} (?:feet|ft\\.?) of\\s|\\bforcing (?:each|every|any) creature within ${value} (?:feet|ft\\.?) of [^,.;。]+? to make\\b)`,'iu').test(q);
         const square=op.aoe.shape==='rectangle'&&(new RegExp(`(?<![\\d.])${value}[-\\s]*(?:foot|feet|ft\\.?)[-\\s]*square(?:\\s+area)?\\b`,'iu').test(q)||new RegExp(`(?<![\\d.])${value}\\s*尺(?:见方|的?正方形)`,'u').test(q));
         const line=op.aoe.shape==='line'?sourceLineDimensions(q):undefined,height=op.aoe.shape==='cylinder'?sourceCylinderHeight(q):undefined;
         if(op.aoe.width!==undefined&&(op.aoe.shape!=='line'||!Number.isSafeInteger(op.aoe.width)||op.aoe.width<1||op.aoe.width!==line?.width)||op.aoe.shape==='line'&&line?.width!==undefined&&op.aoe.width!==line.width)fail('aoe/width');
@@ -1504,6 +1563,8 @@ export function sourceFeatureResources(name: string,source?:string,ownerName?:st
     }
   }
   if(source&&!result.uses&&!result.recharge&&!conditionalDaily){const simple=sourceSimpleCooldownUse(name,source);if(simple)result.uses=simple;}
+  // A conditional daily allowance has no unconditional Item pool. A proven
+  // source ledger owns its base/lair counters at the Actor boundary instead.
   if(conditionalDaily)delete result.uses;
   return result;
 }

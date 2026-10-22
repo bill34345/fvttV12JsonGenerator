@@ -30,6 +30,32 @@ function preparedCache(reference: string): Record<string, any> {
 }
 
 describe('native cache projection normalization', () => {
+  test('reports only changed business JSON paths and the write phase without exposing field values', () => {
+    const expected = preparedCache('private source text'), actual = structuredClone(expected);
+    expected.effects[0].origin = 'Compendium.example.spells.Item.SourceSpell00001';
+    actual.effects[0].origin = 'Actor.OtherActor000001.Item.PrivateCache0001';
+    expected.system.uses = {spent: 0}; actual.system.uses = {spent: 3};
+    expected.effects[0]._stats = {createdTime: 1}; actual.effects[0]._stats = {createdTime: 2};
+    try {
+      assertNativeCacheProjectionMatches(expected, actual, 'source-conditional-cache-write');
+      throw Error('Expected complete projection mismatch');
+    } catch (error) {
+      const message = String(error);
+      expect(message).toContain('Phase: source-conditional-cache-write');
+      expect(message).toContain('/effects/0/origin');
+      expect(message).not.toContain('/system/uses/spent');
+      expect(message).not.toContain('/createdTime');
+      expect(message).not.toContain('private source text');
+      expect(message).not.toContain('PrivateCache0001');
+    }
+  });
+  test('diagnostics retain exact activity paths, including escaped JSON pointer segments', () => {
+    const expected = preparedCache('same'), actual = structuredClone(expected);
+    expected.system.activities = {'manual/one~two': {damage: {critical: {allow: false}}}};
+    actual.system.activities = {'manual/one~two': {damage: {critical: {allow: true}}}};
+    expect(() => assertNativeCacheProjectionMatches(expected, actual))
+      .toThrow('/system/activities/manual~1one~0two/damage/critical/allow');
+  });
   for(const [raw,stored] of [
     ['<p><一名生物进行[[/check ability=int skill=inv]]检定。</p>','<p>&lt;一名生物进行[[/check ability=int skill=inv]]检定。</p>'],
     ['<p>Range < 30 feet & damage 4.</p>','<p>Range &lt; 30 feet &amp; damage 4.</p>'],

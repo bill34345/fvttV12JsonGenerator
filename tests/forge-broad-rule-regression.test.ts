@@ -15,6 +15,7 @@ import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator'
 import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
 import {sourceSectionHeading,splitStagedMonsterSource,stagedLegendaryLedger,assembleStagedLinePartition} from '../packages/intake-ai/src/staged-source';
 import {modelReply,ordinary,staged,chain,collections,requireAcceptedChain,request} from './helpers/forge-semantic-chain';
+import {newNeutralAttackContractVariant} from './helpers/neutral-source-contract';
 import corpus from './fixtures/forge-broad-rule-research-cases.json';
 import thirdCorpus from './fixtures/forge-fresh-third-rule-cases.json';
 import fourthCorpus from './fixtures/forge-fresh-fourth-rule-cases.json';
@@ -465,8 +466,8 @@ for(const id of ['r12m-srd52-aboleth-legendary-resistance','r12m-srd52-kraken-to
  if(id.endsWith('legendary-resistance')){expect(r.ir.creature.traits[0].uses).toBeUndefined();expect(Number(r.actor.items[0].system.uses?.max??0)).toBe(0);}
  if(c.features[0].section==='legendary'){
   expect(r.ir.creature.legendaryActions[0].legendaryCost).toBe(1);
-  const fixed=id.includes('world-shaking');expect(r.ir.creature.legendary?.max).toBe(fixed?3:undefined);expect(r.actor.system.resources.legact.max).toBe(fixed?3:0);
-  if(!fixed)expect(normalize(r.actor.items[0].system.description.value)).toContain('Legendary Action Uses: 3 (4 in Lair)');
+  const fixed=id.includes('world-shaking');expect(r.ir.creature.legendary?.max).toBe(3);expect(r.actor.system.resources.legact.max).toBe(3);
+  if(!fixed){expect(r.ir.creature.legendary?.lairMax).toBe(4);expect(r.actor.system.resources.lair).toMatchObject({value:true,inside:false});expect(normalize(r.actor.items[0].system.description.value)).toContain('Legendary Action Uses: 3 (4 in Lair)');}
  }
  if(id.endsWith('sphinx-valor-roar'))expect((Object.values(r.actor.items[0].system.activities)as any[]).map(a=>a.save.ability)).toEqual([['wis'],['wis'],['con']]);
  if(id.endsWith('elemental-fury')){const a=(Object.values(r.actor.items[0].system.activities)as any[])[0];expect(a.damage.parts).toHaveLength(1);expect(a.damage.parts[0].types).toEqual(['cold','fire','lightning','thunder']);}
@@ -510,19 +511,40 @@ test('ledger shortened owners must retain the Actor noun-phrase head',()=>{
 // The three new product failures and one corrected provider lookup retain full
 // parents. Previously passing round-four parents are not replayed here.
 const round4Case=(id:string):any=>structuredClone(iterate50Round4.cases.find(c=>c.id===id));
-for(const id of ['r13m-srd52-erinyes-entangling-rope','r13m-srd52-storm-giant-lightning-storm','r13r-lands-aid','r13r-apparatus-of-the-crab'])for(const path of ['ordinary','staged'])test('fourth iterative repair '+id+' '+path,async()=>{
+for(const id of ['r13m-srd52-erinyes-entangling-rope','r13m-srd52-storm-giant-lightning-storm','r13r-lands-aid'])for(const path of ['ordinary','staged'])test('fourth iterative repair '+id+' '+path,async()=>{
  const c=round4Case(id),r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
  const item=r.actor.items.find((item:any)=>normalize(item.system.description.value).includes(normalize(c.features[0].text)));expect(item).toBeDefined();
  const acts=Object.values(item.system.activities)as any[];
  if(id.endsWith('entangling-rope')){expect(r.actor.items).toHaveLength(2);expect(acts[0].save.ability).toEqual(['str']);expect(acts[0].save.dc.formula).toBe('16');}
  if(id.endsWith('lightning-storm')){expect(acts[0].target.template.type).toBe('cylinder');expect(Number(acts[0].target.template.size)).toBe(10);expect(Number(acts[0].range.value)).toBe(500);expect(acts[0].damage.onSave).toBe('half');}
  if(id.endsWith('lands-aid')){expect(acts.map(a=>a.type)).toEqual(['damage']);expect(acts[0].damage.parts[0].number).toBe(2);expect(acts[0].damage.parts[0].types).toEqual(['necrotic']);expect(acts[0].consumption.targets).toEqual([]);}
- if(id.endsWith('apparatus-of-the-crab')){
-  const parts=(ac:any)=>[...(ac.damage?.parts??[]),...(ac.damage?.includeBase&&item.system.damage?.base?[item.system.damage.base]:[])];
-  expect(acts.map(a=>a.type)).toEqual(['damage','attack','attack']);expect(parts(acts[0])[0].number).toBe(2);expect(parts(acts[1])[0].number).toBe(2);expect(parts(acts[2])).toEqual([]);
-  expect(r.actor.system.attributes.ac.flat).toBe(c.creature.attributes.ac);expect(r.actor.system.attributes.hp.max).toBe(c.creature.attributes.hp.value);
- }
 });
+
+for(const path of ['ordinary','staged']){
+ test('the complete frozen Apparatus guessed weapon classification stays rejected '+path,async()=>{
+  const c=round4Case('r13r-apparatus-of-the-crab'),before=JSON.stringify(c),r:any=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));
+  expect(r.status).toBe('blocked');
+  if(path==='ordinary'){
+   expect(r.stage).toBe('validator');expect(r.findings.some((f:any)=>f.code==='SOURCE_OPERATION_FACT_CONFLICT'&&f.path.endsWith('/attack/type-or-bonus'))).toBe(true);
+  }else{
+   expect(r.stage).toBe('extraction');expect(r.error).toContain('FEATURE_FACT_CONFLICT');expect(r.error).toContain('/attack/type-or-bonus');
+  }
+  expect(JSON.stringify(c)).toBe(before);
+ });
+ test('new neutral-contract variant preserves the complete Apparatus formal chain '+path,async()=>{
+  const frozen=round4Case('r13r-apparatus-of-the-crab'),before=JSON.stringify(frozen),c=structuredClone(frozen);
+  c.features[0].operations=newNeutralAttackContractVariant(frozen.features[0].operations,'melee');
+  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+  const item=r.actor.items.find((item:any)=>normalize(item.system.description.value).includes(normalize(c.features[0].text)));expect(item).toBeDefined();
+  const acts=Object.values(item.system.activities)as any[];
+  expect(acts.map(a=>a.type)).toEqual(['damage','utility','damage','utility']);
+  expect(acts[0].damage.parts[0].number).toBe(2);expect(acts[2].damage.parts[0].number).toBe(2);
+  for(const roll of [acts[1],acts[3]]){expect(roll.roll.formula).toBe('1d20+8');expect(roll.attack).toBeUndefined();expect(roll.damage).toBeUndefined();}
+  expect(item.type).not.toBe('weapon');expect(item.effects).toEqual([]);
+  expect(r.actor.system.attributes.ac.flat).toBe(c.creature.attributes.ac);expect(r.actor.system.attributes.hp.max).toBe(c.creature.attributes.hp.value);
+  expect(c.source).toBe(frozen.source);expect(c.features[0].text).toBe(frozen.features[0].text);expect(JSON.stringify(frozen)).toBe(before);
+ });
+}
 
 // Round 5 intake repair: narrow source boundaries, recipients and origins.
 const r5Source=(body:string)=>'Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Medium\nSpeed 30 ft. Type Construct\nSTR 14 DEX 10 CON 16 INT 3 WIS 10 CHA 1\nTraits\n'+body+'\n';

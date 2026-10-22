@@ -27,7 +27,8 @@ describe('first actual CHM reply preserves mixed operations through the formal w
     const forbidden=async():Promise<never>=>{throw Error('Saved regression cannot call a real provider');};
     const result=await generateEncounterFromHumanMarkdown({source:input,label:'Saved first failure',reviewPolicy:'deferred',outputLanguage:'source',drafts:[{key:'actor-1',source:input,ir}],draftParentHash:hashSource(JSON.stringify(ir)),
       provider:{providerName:'recorded',extractionModel:'recorded',reviewModel:'recorded',discover:forbidden,extract:forbidden,repair:forbidden,review:forbidden},automationProvider:{generate:forbidden,review:forbidden}});
-    expect(result.prepared).toBeUndefined();
+    expect(result.prepared?.actors).toHaveLength(1);
+    expect(result.prepared!.actors[0]!.status).not.toBe('accepted');
     expect(JSON.stringify(result.report.findings)).toContain('SOURCE_BASIC_OPERATION_OMITTED');
     // Inspect the retained parser/generator behavior without promoting this
     // incomplete historical IR or editing the saved provider reply.
@@ -88,7 +89,7 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
   });
   test('a target-choice legacy save never becomes a single guessed ability',async()=>{
     const {ir,result}=await formal(single('**寒刃Cold Blade。**近战武器攻击：命中+5，触及5尺，单一目标。命中：5（1d6+2）的挥砍伤害。目标进行DC16的智力豁免或感知豁免。失败则目标倒地。'));
-    expect(result.prepared).toBeUndefined();expect(JSON.stringify(result.report.findings)).toContain('SOURCE_BASIC_OPERATION_OMITTED');expect(ir.creature.actions[0]!.attack?.toHit).toBe(5);expect(ir.creature.actions[0]!.gmTriggeredSave).toBeUndefined();
+    expect(result.prepared?.actors).toHaveLength(1);expect(result.prepared!.actors[0]!.status).not.toBe('accepted');expect(JSON.stringify(result.report.findings)).toContain('SOURCE_BASIC_OPERATION_OMITTED');expect(ir.creature.actions[0]!.attack?.toHit).toBe(5);expect(ir.creature.actions[0]!.gmTriggeredSave).toBeUndefined();
   });
   for(const [rule,ability,dc,status] of [
     ['Grave Edge. Melee Weapon Attack: +6 to hit, reach 5 ft., one creature. Hit: 7 (1d8+3) slashing damage. A target reduced to 0 Hit Points by this damage must make a Constitution Saving Throw: DC 14. Failure: The target immediately dies. Its soul is bound until the weapon is broken.','con',14,'dead'],
@@ -176,10 +177,14 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
     const {result,actor}=await formal(input);expect(result.prepared,JSON.stringify(result.report.findings)).toBeDefined();
     expect(actor.items[0].flags.fvttJsonGenerator.spellcastingActivationType).toBe(activation);
   });
-  test('legendary casting keeps the complete GM rule and action cost instead of inventing an ordinary Cast',async()=>{
+  test('legendary casting keeps the complete source and cost2 on each real Cast contract',async()=>{
     const input=source.slice(0,source.indexOf('Damage Transfer.'))+'Legendary Actions\nThe creature can take 3 legendary actions.\nInnate Magic (Costs 2 Actions). The creature casts the following spells; its spellcasting ability is Wisdom.\nAt will: Alarm, Blur\n';
-    const {result,actor}=await formal(input);expect(result.prepared,JSON.stringify(result.report.findings)).toBeDefined();expect(actor.flags?.['fvtt-json-generator-spell-resolver']?.spellManifest).toBeUndefined();
-    expect(actor.items[0].system.description.value).toContain('At will: Alarm, Blur');expect((Object.values(actor.items[0].system.activities)[0] as any).activation).toMatchObject({type:'legendary',value:2});
+    const {result,actor}=await formal(input);expect(result.prepared,JSON.stringify(result.report.findings)).toBeDefined();
+    const manifest=actor.flags['fvtt-json-generator-spell-resolver'].spellManifest,group=manifest.spellcastingGroups[0];
+    expect(group.spellRefs.map((ref:any)=>ref.originalName)).toEqual(['Alarm','Blur']);expect(actor.items[0].system.description.value).toContain('At will: Alarm, Blur');
+    expect(actor.items[0].flags.fvttJsonGenerator).toMatchObject({spellcastingActivationType:'legendary',spellcastingActivationCost:2});
+    expect((Object.values(actor.items[0].system.activities)[0] as any).activation.type).toBe('');
+    for(const ref of group.spellRefs){const {activity}=buildCastActivitySource({manifestId:manifest.manifestId,featureId:'abcdefghijklmnop',group,ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop',activationType:'legendary',activationCost:2});expect(activity.activation).toEqual({type:'legendary',value:2,override:true});expect(activity.consumption.targets).toEqual([]);}
   });
   for(const list of ['0/Day Each: Alarm, Blur','-2/Day Each: Alarm, Blur'])test('invalid daily counts remain blocking rather than become valid native grants: '+list,async()=>{
     await expect(extract(single('**Innate Magic.** The creature casts the following spells; its spellcasting ability is Wisdom.\n'+list))).rejects.toThrow();
@@ -255,7 +260,7 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
       const {ir,result,actor}=await formal(single(`Scalding Pulse. Each creature within 15 feet must succeed on a DC 10 Dexterity saving throw or take 4 (1d8) fire damage, or half as much damage on a successful one${qualifier}.`));
       const feature=ir.creature.actions[0]!;
       expect(feature.save?.dc).toBe(10);
-      if(qualifier){expect(result.prepared).toBeUndefined();expect(JSON.stringify(result.report.findings)).toContain('SOURCE_BASIC_OPERATION_OMITTED');expect(feature.damage).toBeUndefined();expect(feature.manualRemainder).toContain('if the target is prone');}
+      if(qualifier){expect(result.prepared?.actors).toHaveLength(1);expect(result.prepared!.actors[0]!.status).not.toBe('accepted');expect(JSON.stringify(result.report.findings)).toContain('SOURCE_BASIC_OPERATION_OMITTED');expect(feature.damage).toBeUndefined();expect(feature.manualRemainder).toContain('if the target is prone');}
       else{expect(result.prepared,JSON.stringify(result.report.findings)).toBeDefined();expect(feature.damage?.[0]?.formula).toBe('1d8');expect((Object.values(actor.items.find((x:any)=>x.name==='Scalding Pulse').system.activities)[0] as any).damage.onSave).toBe('half');}
     }
   });

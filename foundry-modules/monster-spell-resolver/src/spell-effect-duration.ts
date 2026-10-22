@@ -7,6 +7,14 @@ import { assertNativeCacheProjectionMatches } from './native-cache-lifecycle';
 const REVIEWED_LIFETIME_EFFECTS = [{
   sourceUuid: 'Compendium.dnd-players-handbook.spells.Item.phbsplDisguiseSe',
   identifier: 'disguise-self', effectId: 'SrIb7dbaZs5F4zi9',
+},{
+  // PHB2024 official Charm Person Save links this non-transfer charmed
+  // effect. Its complete source rule says "until the spell ends"; 5.3.3
+  // applies effect.toObject() directly, so the source 3600s must inherit the
+  // source-bound Cast variant duration. Never infer this from equal timers.
+  sourceUuid:'Compendium.dnd-players-handbook.spells.Item.phbsplCharmPerso',
+  identifier:'charm-person',effectId:'78JcD7wFiSCOfmns',
+  activityType:'save',status:'charmed',
 }];
 
 /**
@@ -39,7 +47,9 @@ export function planSpellEffectDuration(
     // round length; null durations do not become new indefinite/timed effects.
     if (duration?.units !== 'seconds' || duration?.value !== baseSeconds) continue;
     if (!REVIEWED_LIFETIME_EFFECTS.some(binding => binding.sourceUuid === nativeSource._stats?.compendiumSource
-      && binding.identifier === nativeSource.system?.identifier && binding.effectId === original._id)) {
+      && binding.identifier === nativeSource.system?.identifier && binding.effectId === original._id
+      &&(!('activityType'in binding)||activities.some(activity=>activity.type===binding.activityType&&activity.effects?.some((ref:any)=>ref._id===original._id)))
+      &&(!('status'in binding)||Array.isArray(original.statuses)&&original.statuses.includes(binding.status)))) {
       unresolvedEffectIds.push(original._id);
       continue;
     }

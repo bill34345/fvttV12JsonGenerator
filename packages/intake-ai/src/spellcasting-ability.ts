@@ -71,9 +71,14 @@ function sourceAbilityFacts(source:string):AbilityFact[]{
         // A trailing condition still qualifies this fact unless a new subject
         // explicitly starts a separate named-spell casting predicate. That spell's
         // own restrictions remain the responsibility of the spell-grant validator.
-        let conditionScope=sentence[0];
+        // A later named-spell grant owns its own form/target restrictions.
+        // Printed grant labels end this profile's introductory scope even
+        // when a PDF puts every grant in the same punctuation sentence.
+        const firstGrant=/\b(?:at[ -]*will|\d+\s*\/\s*day(?:\s+each)?|[1-9](?:st|nd|rd|th)?\s*level\s*\(\s*\d+\s*slots?\s*\))\s*:|(?:随意|\d+\s*次?\s*\/\s*每日)\s*[:：]/iu.exec(sentence[0]);
+        let conditionScope=firstGrant&&firstGrant.index>clause.index!+right?sentence[0].slice(0,firstGrant.index):sentence[0];
         for(const next of sentence[0].matchAll(/[^,，]+/gu)){
           if(next.index!<=clause.index!)continue;
+          if(next.index!>=conditionScope.length)break;
           if(/spellcasting\s+ability|施法[^,，]{0,16}属性/iu.test(next[0]))continue;
           if(/^\s*(?:(?:and|but)\s+)?(?:it|this creature|the creature|the monster)\s+(?:can\s+)?casts?\s+(?!the\b|spells?\b|using\b|with\b|when\b|if\b)[\p{L}]|^\s*(?:并且?|且|而)?(?:它|该生物)(?:可以|能够|能)?(?:施展|施放)(?!法术|以下|下列|使用)[\p{L}]/iu.test(next[0])){
             conditionScope=sentence[0].slice(0,next.index);break;

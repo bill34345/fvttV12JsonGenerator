@@ -1,0 +1,181 @@
+{
+  "runStatus": "COMPLETE_FIRST_PASS_ALL_CASES_FAILED_COMMON_ACCEPTANCE",
+  "cases": [
+    {
+      "case": "S1",
+      "arm": "A",
+      "wholeSourceAccepted": false,
+      "stage": "verification",
+      "http": 2,
+      "extractionSeconds": 10.5412684,
+      "httpWaitSeconds": 10.298851700000002,
+      "formalSeconds": 0.07625980000000163,
+      "estimatedListUSD": 0.001264224,
+      "error": {
+        "name": "Error",
+        "message": "COMMON_FORMAL_VERIFICATION_BLOCKED"
+      },
+      "actorErrors": [
+        "SOURCE_REST_RECOVERY_MISMATCH: 名称: Relentless must consume one use and recover on sr.",
+        "SOURCE_REST_TEXT_MISSING: 名称: Relentless lost its source recovery qualifier.",
+        "SOURCE_REST_RECOVERY_MISMATCH: nativeRuleText: Relentless must consume one use and recover on sr.",
+        "SOURCE_REST_TEXT_MISSING: nativeRuleText: Relentless lost its source recovery qualifier."
+      ]
+    },
+    {
+      "case": "S1",
+      "arm": "B",
+      "wholeSourceAccepted": false,
+      "stage": "verification",
+      "http": 2,
+      "extractionSeconds": 24.4204331,
+      "httpWaitSeconds": 24.2081972,
+      "formalSeconds": 0.050536500000001976,
+      "estimatedListUSD": 0.0041469,
+      "error": {
+        "name": "Error",
+        "message": "COMMON_FORMAL_VERIFICATION_BLOCKED"
+      },
+      "actorErrors": [
+        "SOURCE_REST_RECOVERY_MISMATCH: 名称: Relentless must consume one use and recover on sr.",
+        "SOURCE_REST_TEXT_MISSING: 名称: Relentless lost its source recovery qualifier.",
+        "SOURCE_REST_RECOVERY_MISMATCH: Relentless must consume one use and recover on sr."
+      ]
+    },
+    {
+      "case": "S2",
+      "arm": "B",
+      "wholeSourceAccepted": false,
+      "stage": "extraction",
+      "http": 1,
+      "extractionSeconds": 42.1629101,
+      "httpWaitSeconds": 42.016442899999994,
+      "formalSeconds": 0.0,
+      "estimatedListUSD": 0.006012846,
+      "error": {
+        "name": "CategoryMdError",
+        "code": "UNSUPPORTED_FIELD",
+        "message": "UNSUPPORTED_FIELD: /features/unit-6"
+      },
+      "actorErrors": []
+    },
+    {
+      "case": "S2",
+      "arm": "A",
+      "wholeSourceAccepted": false,
+      "stage": "extraction",
+      "http": 3,
+      "extractionSeconds": 20.246951199999994,
+      "httpWaitSeconds": 19.951997499999983,
+      "formalSeconds": 0.0,
+      "estimatedListUSD": 0.0027931859999999996,
+      "error": {
+        "name": "MonsterIntakeProviderError",
+        "code": "invalid_response",
+        "message": "Staged extraction rejected FEATURE_FACT_CONFLICT at /features/unit-6/facts/sourceOperations/0/proof/attack/clause-boundary.",
+        "stagedDiagnostic": {
+          "stage": "response",
+          "code": "FEATURE_FACT_CONFLICT",
+          "path": "/features/unit-6/facts/sourceOperations/0/proof/attack/clause-boundary"
+        }
+      },
+      "actorErrors": []
+    },
+    {
+      "case": "S3",
+      "arm": "A",
+      "wholeSourceAccepted": false,
+      "stage": "extraction",
+      "http": 4,
+      "extractionSeconds": 10.140433300000005,
+      "httpWaitSeconds": 9.742563800000003,
+      "formalSeconds": 0.0,
+      "estimatedListUSD": 0.0015622980000000002,
+      "error": {
+        "name": "MonsterIntakeProviderError",
+        "code": "invalid_response",
+        "message": "Staged extraction rejected FEATURE_FACT_CONFLICT at /features/unit-6/facts/sourceOperations/0/proof/attack/clause-boundary.",
+        "stagedDiagnostic": {
+          "stage": "response",
+          "code": "FEATURE_FACT_CONFLICT",
+          "path": "/features/unit-6/facts/sourceOperations/0/proof/attack/clause-boundary"
+        }
+      },
+      "actorErrors": []
+    },
+    {
+      "case": "S3",
+      "arm": "B",
+      "wholeSourceAccepted": false,
+      "stage": "extraction",
+      "http": 1,
+      "extractionSeconds": 17.492001300000002,
+      "httpWaitSeconds": 17.385430300000007,
+      "formalSeconds": 0.0,
+      "estimatedListUSD": 0.002749896,
+      "error": {
+        "name": "StagedExtractionError",
+        "code": "FEATURE_FACT_CONFLICT",
+        "message": "Staged extraction rejected FEATURE_FACT_CONFLICT at /features/unit-7/facts/sourceOperations/0/attack/type-or-bonus."
+      },
+      "actorErrors": []
+    }
+  ],
+  "arms": {
+    "A": {
+      "sourcePass": 0,
+      "sourceCount": 3,
+      "actualHttp": 9,
+      "extractionSeconds": 40.9286529,
+      "httpWaitSeconds": 39.99341299999998,
+      "estimatedListUSD": 0.005619708,
+      "usage": {
+        "prompt_tokens": 28298,
+        "completion_tokens": 7372,
+        "total_tokens": 35670,
+        "prompt_cache_hit_tokens": 20736,
+        "prompt_cache_miss_tokens": 7562
+      },
+      "reasoningTokens": 6454
+    },
+    "B": {
+      "sourcePass": 0,
+      "sourceCount": 3,
+      "actualHttp": 4,
+      "extractionSeconds": 84.0753445,
+      "httpWaitSeconds": 83.61007040000001,
+      "estimatedListUSD": 0.012909641999999999,
+      "usage": {
+        "prompt_tokens": 15331,
+        "completion_tokens": 18875,
+        "total_tokens": 34206,
+        "prompt_cache_hit_tokens": 4864,
+        "prompt_cache_miss_tokens": 10467
+      },
+      "reasoningTokens": 16455
+    }
+  },
+  "perAbilityGateCounts": {
+    "A": {
+      "SOURCE_GATE_VALIDATED": 9,
+      "FIRST_REJECTED_UNIT": 2,
+      "RECEIVED_NOT_VALIDATED": 0,
+      "NOT_REACHED": 7
+    },
+    "B": {
+      "SOURCE_GATE_VALIDATED": 7,
+      "FIRST_REJECTED_UNIT": 2,
+      "RECEIVED_NOT_VALIDATED": 2,
+      "NOT_REACHED": 7
+    }
+  },
+  "actualHttp": 13,
+  "retries": 0,
+  "repairCalls": 0,
+  "estimatedListUSD": 0.01852935,
+  "actualBilledUSD": "UNKNOWN",
+  "allFinishReasonStop": true,
+  "actualResponseModels": [
+    "deepseek-flash"
+  ]
+}

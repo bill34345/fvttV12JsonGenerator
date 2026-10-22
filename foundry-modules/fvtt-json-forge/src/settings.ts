@@ -18,6 +18,7 @@ export interface ForgeClientSettings {
   region: string;
   reasoning: ForgeProviderReasoning;
   structuredOutput: ForgeStructuredOutputMode;
+  autoCorrect: boolean;
   useSeparateReviewModel: boolean;
   endpoint: string;
   model: string;
@@ -34,6 +35,7 @@ export const DEFAULT_CLIENT_SETTINGS: Readonly<ForgeClientSettings> = Object.fre
   region: '',
   reasoning: 'auto',
   structuredOutput: 'json_schema',
+  autoCorrect: false,
   useSeparateReviewModel: false,
   endpoint: '',
   model: '',
@@ -233,6 +235,7 @@ function forgeConnectionIdentity(value: ForgeClientSettings): string {
     region: value.region,
     reasoning: value.reasoning,
     structuredOutput: value.structuredOutput,
+    autoCorrect: value.autoCorrect,
     useSeparateReviewModel: false,
     endpoint: normalizeBaseUrlIdentity(value.endpoint),
     model: value.model,
@@ -276,6 +279,7 @@ export function normalizeSettings(value: unknown): ForgeClientSettings {
     region: typeof record.region === 'string' ? record.region.trim() : DEFAULT_CLIENT_SETTINGS.region,
     reasoning: isReasoning(record.reasoning) ? record.reasoning : DEFAULT_CLIENT_SETTINGS.reasoning,
     structuredOutput: isStructuredOutput(record.structuredOutput) ? record.structuredOutput : DEFAULT_CLIENT_SETTINGS.structuredOutput,
+    autoCorrect: record.autoCorrect === true,
     // Older browser settings may contain a separate reviewer. Forge now uses
     // the selected generation model for every review stage.
     useSeparateReviewModel: false,

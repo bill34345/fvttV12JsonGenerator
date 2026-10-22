@@ -2,7 +2,8 @@ import type { CanonicalFeature } from './types';
 import {sourceActorNameMatches} from './source-subject';
 import {stagedDamageLabels,stagedDamageType} from './staged-source-facts';
 import {sourceManualSpellUses,sourceGmTriggeredSave,sourceFailedSaveStatuses} from '@fvtt-json-generator/models/source-rule-facts';
-import {sourceOperationErrors,sourceFeatureResources,sourceOperationClauses,sourceSpellHeaderRange,sourceSpellHeaderBody,sourceOperationExistingArea,sourceHealingOperations} from '@fvtt-json-generator/models/source-operations';
+import {sourceOperationErrors,sourceFeatureResources,sourceOperationClauses,sourceSpellHeaderRange,sourceSpellHeaderBody,sourceOperationExistingArea,sourceOperationSelfArea,sourceHealingOperations} from '@fvtt-json-generator/models/source-operations';
+import {isSourceCandidateReview,isSourceCandidateCounters} from '@fvtt-json-generator/models/source-operations';
 
 type Facts = Partial<Pick<CanonicalFeature,'activityType'|'activationType'|'attack'|'damage'|'save'|'range'|'aoe'|'spellUseRecords'|'gmTriggeredSave'|'nativeFailureStatuses'|'healing'|'sourceOperations'>>;
 const damageTypes='acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder';
@@ -14,7 +15,7 @@ function sourceActorRangeDistance(quote:string,actorName?:string):number|undefin
   const distance=/\b(within|range)\s+(\d+)\s*(?:feet|ft\.)/iu.exec(quote);if(!distance)return;
   if(/\b(?:not|never)\s*\(?\s*$/iu.test(quote.slice(0,distance.index)))return;
   const tail=quote.slice(distance.index+distance[0].length);
-  const relative=/^\s+(?:of|from)\s+(.+?)(?=\s+(?:(?:and|but)\s+)?(?:that|who|which|while|when|if|to|must|can(?:not)?|can't|can’t|makes?|takes?|hits?|has|is|are)\b|[,.;]|$)/iu.exec(tail);
+  const relative=/^\s+(?:of|from)\s+(.+?)(?=\s+(?:(?:and|but)\s+)?(?:that|who|which|while|when|if|aware|unaware|to|must|can(?:not)?|can't|can’t|makes?|takes?|hits?|has|is|are)\b|[,.;]|$)/iu.exec(tail);
   const origin=relative?.[1]?.replace(/^(?:the|an?|this|that)\s+/iu,'').trim().toLowerCase();
   const sourceOrigins=['you','yourself','it','itself'];
   if(relative){
@@ -164,7 +165,9 @@ function independentChineseNonDamageRider(tail:string):boolean{
  * A valid OP does not authorize an additional legacy executable projection. */
 export function sourceOperationFeatureErrors(feature:CanonicalFeature,actorName?:string,sharedLegendaryCost?:number):Array<{field:string;message:string}>{
   const errors:Array<{field:string;message:string}>=[];
-  const allowed=['executionMode','nativeRuleText','manualRemainder','name','englishName','sourceQualifier','description','evidence','activityType','activationType','activationCondition','uses','recharge','legendaryCost','sourceOperations','sourceContext','sourceFeatureId'];
+  const allowed=['executionMode','nativeRuleText','manualRemainder','name','englishName','sourceQualifier','description','evidence','activityType','activationType','activationCondition','uses','recharge','legendaryCost','sourceOperations','sourceContext','sourceFeatureId','candidateReview','candidateCounters'];
+  if(feature.candidateReview!==undefined&&!isSourceCandidateReview(feature.candidateReview))errors.push({field:'candidateReview',message:'Candidate review metadata must have its closed inert data shape; it cannot add executable carrier fields.'});
+  if(feature.candidateCounters!==undefined&&(!isSourceCandidateReview(feature.candidateReview)||!isSourceCandidateCounters(feature.candidateCounters)))errors.push({field:'candidateCounters',message:'Manual candidate counters require a valid review record and closed name/count/recovery data.'});
   for(const field of Object.keys(feature).filter(key=>!allowed.includes(key)))errors.push({field,message:field==='appliedConditions'
     ?'This legacy automatic condition field is not supported with sourceOperations. Remove only appliedConditions; retain the complete consequence, duration and timing in description/manualRemainder for the GM.'
     :'This legacy or unknown feature field cannot execute alongside sourceOperations. Keep supported mechanics on their source-proven OP; do not remove the complete source consequence.'});
@@ -177,6 +180,7 @@ export function sourceOperationFeatureErrors(feature:CanonicalFeature,actorName?
   let rangeProofErrors:string[]|undefined;
   for(const [index,op]of (Array.isArray(feature.sourceOperations)?feature.sourceOperations:[]).entries()){
     if(!actorName||!op||typeof op!=='object')continue;
+    if(op.damageAdjustment&&(typeof op.damageAdjustment.actor!=='string'||!sourceActorNameMatches(op.damageAdjustment.actor,actorName)))errors.push({field:`sourceOperations/${index}/damageAdjustment/actor`,message:'Conditional outgoing damage must bind the source Actor, not a target or another creature.'});
     let ownedHeaderRange:number|undefined;
     if(op.range!==undefined&&typeof op.proof?.range==='string'){
       const actorRange=sourceActorRangeDistance(op.proof.range,actorName),headerRange=sourceSpellHeaderRange(feature.description,op.proof.range);
@@ -198,7 +202,8 @@ export function sourceOperationFeatureErrors(feature:CanonicalFeature,actorName?
       const existingArea=op.range===undefined&&modelProven?sourceOperationExistingArea(feature.description,feature.sourceOperations!,index):undefined;
       const placement=sourceActorRangeDistance(areaQuote,actorName)??sourceAdjacentPointPlacement(feature.description,op.proof?.range,areaQuote,actorName)
         ??(modelProven?ownedHeaderRange:undefined);
-      const ownEmanation=op.aoe.shape==='radius'&&/^(?:Each|Every|Any) creature within \d+ (?:feet|ft\.) of /iu.test(areaQuote.trim())&&placement===op.aoe.radius;
+      const ownEmanation=op.aoe.shape==='radius'&&(/^(?:Each|Every|Any) creature within \d+ (?:feet|ft\.) of /iu.test(areaQuote.trim())&&placement===op.aoe.radius
+        ||modelProven&&sourceOperationSelfArea(feature.description,op,actorName));
       if(ownEmanation&&op.range!==undefined)errors.push({field:`sourceOperations/${index}/range`,message:'The source Actor is this emanation centre; its radius is not a remote placement range.'});
       if(!existingArea&&!ownEmanation&&(placement===undefined||op.range!==placement))errors.push({field:`sourceOperations/${index}/range`,message:'A remote area needs its source-proven placement range; it cannot become a self-centred template.'});
     }

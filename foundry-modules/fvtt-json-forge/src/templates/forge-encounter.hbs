@@ -19,7 +19,7 @@
   <button type="button" data-action="encounter-open-ai-connection" {{#if busy}}disabled{{/if}}>检查当前 AI 连接</button>
   <div data-encounter-recovery-controls class="forge-encounter-volatile">
   {{#if recoveryPackageAvailable}}<button type="button" data-action="encounter-recover-preview" {{#if busy}}disabled{{/if}}>重新预览保存的候选</button><p>重新走正式校验；保存的通过记录不会替你勾选 GM 确认。</p>{{/if}}
-  {{#if recoveryAvailable}}<button type="button" data-action="encounter-resume" {{#if busy}}disabled{{/if}}>继续任务（{{recoveryDraftCount}} 个已有草稿，重新验证）</button><p>继续任务会使用同一来源的 IR 草稿，重新核对当前状态目录与正式生成结果；不会自动请求付费模型审核，GM 仍须最终确认。</p>{{/if}}
+  {{#if recoveryAvailable}}<button type="button" data-action="encounter-resume" {{#if busy}}disabled{{/if}}>继续任务（保留 {{recoveryDraftCount}} 个已有草稿）</button><p>继续任务核对同一来源、目录、模型和候选身份；已有候选直接保留，只处理尚未完成的成员。已有 IR 不重新提取；不会自动请求付费模型审核，GM 仍须最终确认。</p>{{/if}}
   </div>
   <div data-encounter-clear-control {{#unless hasLocalRecovery}}hidden{{/unless}}><button type="button" data-action="encounter-clear-recovery" {{#if busy}}disabled{{/if}}>清除本地战斗包任务</button><p>仅清除当前世界与 GM 的战斗包记录和当前窗口候选；不会删除资料库或连接设置。</p></div>
   <p role="status" data-encounter-status aria-live="polite">{{status}}</p>
@@ -39,6 +39,23 @@
   <p role="status" data-encounter-secondary-status aria-live="polite">{{status}}</p>
   {{#if error}}<p class="forge-error" role="alert">{{error}}</p>{{/if}}
   <div data-encounter-current-result class="forge-encounter-volatile">
+  {{#if actorDeliveries}}<section data-actor-deliveries aria-label="逐个生物结果">
+    <h3>逐个生物结果</h3>
+    {{#if partialCandidates}}<p role="status">部分生物已有可用候选，可独立查看和下载。完整战斗包尚未完成；失败和未处理成员仍属于本任务，不能将部分结果作为完整包导入。</p>{{/if}}
+    {{#each actorDeliveries}}<article data-actor-delivery="{{key}}"><h4>{{label}} · {{status}}</h4>
+      {{#if reusedCandidate}}<p>已保留原候选；本次未重新请求、生成或纠错。</p>{{/if}}
+      {{#if available}}<p>严格检查状态：{{strictStatus}}。候选可获取不表示检查问题已通过。</p>
+        <button type="button" data-actor-candidate-view="{{key}}" {{#if ../busy}}disabled{{/if}}>查看此生物 JSON</button>
+        <button type="button" data-actor-candidate-download="{{key}}" {{#if ../busy}}disabled{{/if}}>下载此生物 JSON</button>
+        <details><summary>本生物完整原始来源</summary><pre>{{source}}</pre></details>
+      {{/if}}
+      {{#if findings}}<ul>{{#each findings}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+    </article>{{/each}}
+  </section>{{/if}}
+  {{#if aiFindings}}<section data-candidate-findings role="alert"><h3>候选中仍需核对的问题</h3>
+    <p>以下检查结论随候选保留。请对照完整来源和能力正文，再决定导出或明确确认导入；获取候选不表示这些问题已通过。</p>
+    <ul>{{#each aiFindings}}<li>{{this}}</li>{{/each}}</ul>
+  </section>{{/if}}
   {{#if showReviewNavigation}}<section class="forge-encounter-navigation" aria-label="审核导航">
     <h3>审核导航</h3>
     <div class="forge-encounter-metrics"><span>生物 <strong>{{reviewNavigation.actorCount}}</strong></span><span>固定规则 {{#if reviewNavigation.hasRuleCounts}}<strong>{{reviewNavigation.automatic}}</strong>{{else}}未提供统计{{/if}}</span><span>GM 裁定规则 <strong>{{reviewNavigation.manual}}</strong></span><span>GM 机制 <strong>{{reviewNavigation.gmMechanisms}}</strong></span><span>待处理阻塞 <strong>{{reviewNavigation.blocked}}</strong></span></div>
@@ -134,7 +151,8 @@
       <p class="forge-localized-prose">{{biography}}</p>
       {{#each abilities}}<article><h4>{{name}}</h4><p class="forge-localized-prose">{{description}}</p></article>{{/each}}
       <details><summary>保留的原始来源（用于核对）</summary><pre><code>{{source}}</code></pre></details>
-      <details><summary>生成 Actor JSON（只读）</summary><pre><code>{{artifact}}</code></pre></details>
+      <button type="button" data-export-actor="{{key}}">下载此 Actor JSON 候选</button>
+      <details><summary>生成 Actor JSON 候选（只读，检查结论见问题提示）</summary><pre><code>{{artifact}}</code></pre></details>
     </details>{{/each}}
     <p>配套图片：{{assetCount}} 个</p>
     <ul>{{#each assets}}<li>{{fileName}} → {{targetsText}}<details><summary>图片校验值</summary><code>{{sha256}}</code></details></li>{{/each}}</ul>

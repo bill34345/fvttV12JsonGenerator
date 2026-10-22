@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { logicalSpellRefKey, RESOLVER_MODULE_ID, type PortableSpellManifest, type SpellHydrationSelection } from '../../../../src/core/spell-resolution';
 import { buildCastActivitySource, computeManagedSourceHash, generatedResolverDocumentId } from '../cast-activity';
-import { createHydrationJournal, hydrateManagedSelection } from '../hydrator';
-import { resolverDocumentHooks } from '../native-cache-lifecycle';
+import { createHydrationJournal, hydrateManagedSelection,completeManagedSourceCache } from '../hydrator';
+import { resolverDocumentHooks,assertOwnedJournalCacheProjection } from '../native-cache-lifecycle';
+import { conditionalRule, conditionalSpellFixture } from './conditional-spell-fixture';
 
 // dnd5e.mjs 17937-17940 resolves cachedSpell through actor.sourcedItems and
 // cachedFor===relativeUUID. Lines 18004-18026 define the public native cache
@@ -36,6 +37,115 @@ function selection(): SpellHydrationSelection {
 }
 
 describe('prepared Activity eager cache hydration', () => {
+  test('one source daily spell uses the existing parent pool without resetting spent',async()=>{
+    const actor=new FakeActor(true),manifest=oneSpellManifest(),ref=manifest.spellcastingGroups[0]!.spellRefs[0]!;
+    ref.method='innate';ref.uses={value:3,recovery:'day',shared:false};actor.flags[RESOLVER_MODULE_ID].spellManifest=manifest;
+    const feature=actor.items[0]!;feature.flags.fvttJsonGenerator={...feature.flags.fvttJsonGenerator,spellcastingUsesParent:true};
+    feature.system.uses={max:'3',spent:1,recovery:[{period:'day',type:'recoverAll'}]};
+    const result=await hydrateManagedSelection({actor,manifest,selection:selection(),transactionId:'DailyParent00001',journal:createHydrationJournal(actor)});
+    expect(result.activity.consumption).toEqual({spellSlot:false,targets:[{type:'itemUses',value:'1'}]});
+    expect(result.activity.uses).toBeUndefined();expect(feature.system.uses.spent).toBe(1);
+  });
+  test('a single daily parent flag with a conflicting actual counter rejects before writes',async()=>{
+    const actor=new FakeActor(false),manifest=oneSpellManifest(),ref=manifest.spellcastingGroups[0]!.spellRefs[0]!;
+    ref.method='innate';ref.uses={value:3,recovery:'day',shared:false};actor.flags[RESOLVER_MODULE_ID].spellManifest=manifest;
+    actor.items[0]!.flags.fvttJsonGenerator={...actor.items[0]!.flags.fvttJsonGenerator,spellcastingUsesParent:true};actor.items[0]!.system.uses={max:'4',spent:0,recovery:[{period:'day',type:'recoverAll'}]};
+    await expect(hydrateManagedSelection({actor,manifest,selection:selection(),transactionId:'DailyParent00002',journal:createHydrationJournal(actor)})).rejects.toThrow('source-generated feature pool');
+    expect(actor.calls).toEqual([]);
+  });
+  test('source-conditional damage is isolated only after native cache ownership and survives Keep',async()=>{
+    const actor=new FakeActor(true);actor.withConditionalDamage=true;
+    await with533Runtime(actor,async()=>{
+    const manifest=oneSpellManifest();
+    const journal=createHydrationJournal(actor),input={actor,manifest,selection:selection(),transactionId:'Conditional00001',journal};
+    const result=await hydrateManagedSelection(input);
+    const activities=Object.values(result.cache.system.activities) as any[],save=activities.find(a=>a.type==='save'),damage=activities.find(a=>a.type==='damage');
+    expect(activities).toHaveLength(2);expect(save.damage.parts).toEqual([]);expect(save.save.ability).toEqual(['wis']);
+    expect(damage.damage.parts[0]).toMatchObject({number:5,denomination:10,types:['psychic']});
+    expect(damage.consumption).toMatchObject({spellSlot:false,targets:[]});expect(damage.description.chatFlavor).toContain(conditionalRule);
+    expect(result.activity.spell.uuid).toBe(selection().uuid);expect(result.activity.consumption).toEqual({spellSlot:false,targets:[]});
+    expect(result.cache.flags[RESOLVER_MODULE_ID].generatedContentHash).toBe(computeManagedSourceHash(preparedDocumentSource(result.cache)));
+    expect(journal.nativeCaches[0]!.ownedProjections?.some(p=>Object.values(p.system.activities).length===2)).toBe(true);
+    expect(()=>assertOwnedJournalCacheProjection(journal.nativeCaches[0]!,result.cache)).not.toThrow();
+    const corrupt=preparedDocumentSource(result.cache),manual=Object.values(corrupt.system.activities).find((a:any)=>a.type==='damage') as any;manual.effects=[{_id:'SourceEffect0001'}];
+    expect(()=>assertOwnedJournalCacheProjection(journal.nativeCaches[0]!,corrupt)).toThrow('transaction-planned');
+    result.cache.system.description.value+='<p>Manual note survives Keep</p>';
+    const kept=await hydrateManagedSelection({...input,transactionId:'Conditional00002',journal:createHydrationJournal(actor),preserveExisting:true});
+    expect(kept.cache.system.description.value).toContain('Manual note survives Keep');
+    expect(Object.values(kept.cache.system.activities)).toHaveLength(2);
+    const overwrite=await hydrateManagedSelection({...input,transactionId:'Conditional00003',journal:createHydrationJournal(actor)});
+    expect(overwrite.cache.system.description.value).not.toContain('Manual note survives Keep');
+    expect(Object.values(overwrite.cache.system.activities)).toHaveLength(2);
+    });
+  });
+  test('no-op cache source completion preserves Cast uses and detectable manual annotations',async()=>{
+    const actor=new FakeActor(true);actor.withConditionalDamage=true;
+    await with533Runtime(actor,async()=>{
+    const manifest=oneSpellManifest(),ref=manifest.spellcastingGroups[0]!.spellRefs[0]!;ref.method='innate';ref.uses={value:1,recovery:'day',shared:false};actor.flags[RESOLVER_MODULE_ID].spellManifest=manifest;
+    const input={actor,manifest,selection:selection(),transactionId:'Conditional00004',journal:createHydrationJournal(actor)};
+    const result=await hydrateManagedSelection(input);result.activity.uses.spent=1;
+    result.cache.system.description.value+='<p>GM note</p>';
+    const done=await completeManagedSourceCache({...input,transactionId:'Conditional00005',journal:createHydrationJournal(actor)});
+    expect(done.activity.uses.spent).toBe(1);expect(done.cache.system.description.value).toContain('GM note');
+    expect(Object.values(done.cache.system.activities)).toHaveLength(2);
+    // No source completion change is needed: preserve the edit and its old
+    // generated hash so the existing manual-review gate can still detect it.
+    expect(done.cache.flags[RESOLVER_MODULE_ID].generatedContentHash).not.toBe(computeManagedSourceHash(preparedDocumentSource(done.cache)));
+    });
+  });
+  test.each([false,true])('legacy mixed cache completion respects manual review, edited=%s',async edited=>{
+    const actor=new FakeActor(true);actor.withConditionalDamage=true;
+    await with533Runtime(actor,async()=>{
+      const manifest=oneSpellManifest(),ref=manifest.spellcastingGroups[0]!.spellRefs[0]!;ref.method='innate';ref.uses={value:1,recovery:'day',shared:false};actor.flags[RESOLVER_MODULE_ID].spellManifest=manifest;
+      const input={actor,manifest,selection:selection(),transactionId:'Conditional00006',journal:createHydrationJournal(actor)};
+      const result=await hydrateManagedSelection(input);result.activity.uses.spent=1;
+      result.cache.system.activities=structuredClone(conditionalSpellFixture().system.activities);
+      result.cache.flags[RESOLVER_MODULE_ID].generatedContentHash=computeManagedSourceHash(preparedDocumentSource(result.cache));
+      if(edited)result.cache.system.description.value+='<p>Manual legacy edit</p>';
+      const before=actor.calls.length,completion={...input,transactionId:'Conditional00007',journal:createHydrationJournal(actor)};
+      if(edited){
+        await expect(completeManagedSourceCache(completion)).rejects.toThrow('explicit Overwrite');expect(actor.calls).toHaveLength(before);
+        const approved=await completeManagedSourceCache({...completion,selection:{...selection(),manualDecision:'overwrite'}});
+        expect(approved.activity.uses.spent).toBe(1);expect(approved.cache.system.description.value).toContain('Manual legacy edit');expect(Object.values(approved.cache.system.activities)).toHaveLength(2);
+      }
+      else{const done=await completeManagedSourceCache(completion);expect(Object.values(done.cache.system.activities)).toHaveLength(2);expect(done.activity.uses.spent).toBe(1);expect(done.cache.flags[RESOLVER_MODULE_ID].generatedContentHash).toBe(computeManagedSourceHash(preparedDocumentSource(done.cache)));}
+    });
+  });
+  test.each([false,true])('source GM restrictions reach the cached usage Activity without replacing native rules, auto-cache=%s',async autoCache=>{
+    const actor=new FakeActor(autoCache);actor.withUsageChat=true;
+    const manifest=oneSpellManifest(),text='The target is willing. This damage does not end the spell; the target is unaware afterward. <source text>';
+    manifest.spellcastingGroups[0]!.spellRefs[0]!.restrictions=[{kind:'other',text,evidence:[{start:0,end:text.length,quote:text}]}];actor.flags[RESOLVER_MODULE_ID].spellManifest=manifest;
+    const journal=createHydrationJournal(actor),result=await hydrateManagedSelection({actor,manifest,selection:selection(),transactionId:'GmUsageChat00001',journal});
+    expect(result.activity.description.chatFlavor).toContain('target is unaware');
+    expect(result.cache.system.description).toEqual({value:'Official spell rules',chat:'Official chat rules'});
+    for(const [id,prefix]of [['SaveActivity0001','Native save subtitle'],['DamageActivity01','Native damage subtitle']]){
+      const child=result.cache.system.activities[id!];expect(child.description.chatFlavor).toStartWith(prefix!);
+      expect(child.description.chatFlavor).toContain('GM adjudication');expect(child.description.chatFlavor).toContain('target is unaware');expect(child.description.chatFlavor).toContain('&lt;source text&gt;');
+      expect(child.type).toBe(id==='SaveActivity0001'?'save':'damage');
+    }
+    expect(result.cache.flags[RESOLVER_MODULE_ID].generatedContentHash).toBe(computeManagedSourceHash(preparedDocumentSource(result.cache)));
+    if(autoCache)expect(journal.nativeCaches[0]!.ownedProjections?.length).toBeGreaterThan(0);else expect(journal.createdSpellIds).toContain(result.cache.id);
+    const before=computeManagedSourceHash(preparedDocumentSource(result.cache));result.cache.system.activities.SaveActivity0001.description.chatFlavor='Missing source note';expect(computeManagedSourceHash(preparedDocumentSource(result.cache))).not.toBe(before);
+  });
+  test('Keep retains manual cached rules and usage text while adding complete source GM notes exactly once',async()=>{
+    const actor=new FakeActor(true);actor.withUsageChat=true;const manifest=oneSpellManifest();
+    actor.flags[RESOLVER_MODULE_ID].spellManifest=manifest;
+    const original=await hydrateManagedSelection({actor,manifest,selection:selection(),transactionId:'GmKeepChat000001',journal:createHydrationJournal(actor)});
+    original.cache.system.description.value='Manual rule annotation';original.cache.system.activities.SaveActivity0001.description.chatFlavor='GM hand note';
+    const text='Cannot repeat this action until the start of its next turn.';manifest.spellcastingGroups[0]!.spellRefs[0]!.restrictions=[{kind:'other',text,evidence:[{start:0,end:text.length,quote:text}]}];
+    const input={actor,manifest,selection:selection(),transactionId:'GmKeepChat000002',journal:createHydrationJournal(actor),preserveExisting:true};
+    const kept=await hydrateManagedSelection(input);expect(kept.cache.system.description.value).toBe('Manual rule annotation');expect(kept.cache.system.activities.SaveActivity0001.description.chatFlavor).toStartWith('GM hand note\n');
+    expect(kept.cache.system.activities.SaveActivity0001.description.chatFlavor).toContain(text);expect(kept.cache.flags[RESOLVER_MODULE_ID].protected).toBe(true);
+    const second=await hydrateManagedSelection({...input,transactionId:'GmKeepChat000003',journal:createHydrationJournal(actor)});expect(second.cache.system.activities.SaveActivity0001.description.chatFlavor.split(text)).toHaveLength(2);
+  });
+  test('source cache completion rejects another Actor journal or stale logical ref before any writes',async()=>{
+    const actor=new FakeActor(true);actor.withUsageChat=true;const manifest=oneSpellManifest();
+    await hydrateManagedSelection({actor,manifest,selection:selection(),transactionId:'GmGuardChat00001',journal:createHydrationJournal(actor)});
+    const before=actor.calls.length;
+    await expect(completeManagedSourceCache({actor,manifest,selection:selection(),transactionId:'GmGuardChat00002',journal:createHydrationJournal(new FakeActor(true))})).rejects.toThrow('another Actor');
+    await expect(completeManagedSourceCache({actor,manifest,selection:{...selection(),logicalRefKey:'stale'},transactionId:'GmGuardChat00003',journal:createHydrationJournal(actor)})).rejects.toThrow('logical ref');
+    expect(actor.calls).toHaveLength(before);
+  });
   test('a shared daily manifest cannot hydrate against an absent source pool, without any writes',async()=>{
     const actor=new FakeActor(false),manifest=oneSpellManifest(),group=manifest.spellcastingGroups[0]!;
     const first=group.spellRefs[0]!;first.method='innate';first.uses={value:2,recovery:'day',shared:true};
@@ -464,6 +574,17 @@ describe('prepared Activity eager cache hydration', () => {
   });
 });
 
+async function with533Runtime(actor:FakeActor,run:()=>Promise<void>):Promise<void>{
+  const gameDescriptor=Object.getOwnPropertyDescriptor(globalThis,'game'),hooksDescriptor=Object.getOwnPropertyDescriptor(globalThis,'Hooks');
+  const hooks=new FakeHookBus();actor.lifecycleHooks=hooks;
+  Object.defineProperty(globalThis,'game',{configurable:true,value:{system:{version:'5.3.3'},modules:new Map()}});
+  Object.defineProperty(globalThis,'Hooks',{configurable:true,value:hooks});
+  try{await run();}finally{
+    if(gameDescriptor)Object.defineProperty(globalThis,'game',gameDescriptor);else delete(globalThis as any).game;
+    if(hooksDescriptor)Object.defineProperty(globalThis,'Hooks',hooksDescriptor);else delete(globalThis as any).Hooks;
+  }
+}
+
 class FakeHookBus {
   private nextId = 1;
   private readonly callbacks = new Map<string, Map<number, (...args: any[]) => void>>();
@@ -491,6 +612,8 @@ class FakeActor {
   readonly calls: unknown[][] = [];
   getterCalls = 0;
   withDurationEffect = false;
+  withUsageChat = false;
+  withConditionalDamage = false;
   concurrentEffectEdit = false;
   replaceCacheBeforeFullUpdate = false;
   delayReplacementBeforeFullUpdate = false;
@@ -530,6 +653,16 @@ class FakeActor {
     for (const update of updates) {
       let item = this.items.find((entry) => entry.id === update._id)!;
       const activityEntry = Object.entries(update).find(([key]) => key.startsWith('system.activities.'));
+      if(item?.type==='spell'&&activityEntry){
+        for(const[path,value]of Object.entries(update))if(path.startsWith('system.activities.')){
+          const keys=path.slice('system.activities.'.length).split('.'),id=keys.shift()!;
+          if(!keys.length){item.system.activities[id]=structuredClone(value);continue;}
+          let current=item.system.activities[id];
+          for(const key of keys.slice(0,-1)){current[key]??={};current=current[key];}
+          current[keys.at(-1)!]=structuredClone(value);
+        }
+        continue;
+      }
       if (!activityEntry) {
         if (this.delayReplacementBeforeFullUpdate && item?.type === 'spell' && update.type === 'spell') {
           this.delayReplacementBeforeFullUpdate = false;
@@ -622,6 +755,7 @@ class FakeActor {
         cache.actor = this;
         this.items.push(cache);
         this.refreshSourcedItems();
+        this.lifecycleHooks?.emit('createItem',cache,{},'CurrentUser00001');
       }
     }
     return updates;
@@ -701,11 +835,11 @@ class FakeActor {
   private cacheSource(activity: any, id: string): any {
     return {
       _id: id, id, name: 'Light', type: 'spell',
-      system: { sourceItem: 'feat:innate-feature', properties: ['vocal', 'somatic', 'material'], ...(this.withDurationEffect ? {
+      system: { sourceItem: 'feat:innate-feature', properties: ['vocal', 'somatic', 'material'], ...(this.withConditionalDamage?conditionalSpellFixture().system:{}), ...(this.withUsageChat?{description:{value:'Official spell rules',chat:'Official chat rules'},activities:{SaveActivity0001:{type:'save',description:{chatFlavor:'Native save subtitle'},save:{ability:['wis'],dc:{formula:'12'}}},DamageActivity01:{type:'damage',description:{chatFlavor:'Native damage subtitle'}}}}:{}), ...(this.withDurationEffect ? {
         identifier: 'disguise-self', duration: { value: '1', units: 'hour' }, activities: { utility: { type: 'utility', effects: [{ _id: 'SrIb7dbaZs5F4zi9' }] } },
       } : {}) },
       effects: [
-        { _id: this.withDurationEffect ? 'SrIb7dbaZs5F4zi9' : 'SourceEffect0001', name: 'Source effect', ...(this.withDurationEffect ? {
+        { _id: this.withDurationEffect ? 'SrIb7dbaZs5F4zi9' : 'SourceEffect0001', name: 'Source effect', ...(this.withConditionalDamage?conditionalSpellFixture().effects[0]:{}), ...(this.withDurationEffect ? {
           type: 'base', transfer: false, duration: { value: 3600, units: 'seconds', expiry: 'turnStart', expired: false },
         } : {}) },
         ...(this.withDurationEffect ? [{ _id: 'IndependentAE001', name: 'Independent effect', type: 'base', transfer: false, duration: { value: 60, units: 'seconds' } }] : []),

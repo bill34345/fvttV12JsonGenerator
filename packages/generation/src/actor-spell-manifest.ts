@@ -8,7 +8,8 @@ import {
 } from '@fvtt-json-generator/spell-manifest-contracts';
 
 const featureKeys = new WeakMap<object, string>();
-const featureActivations=new WeakMap<object,'action'|'bonus'|'reaction'>();
+const featureActivations=new WeakMap<object,'action'|'bonus'|'reaction'|'legendary'>();
+const featureCosts=new WeakMap<object,number>();
 
 export const SPELL_MANIFEST_UNSUPPORTED_TARGET = 'SPELL_MANIFEST_UNSUPPORTED_TARGET' as const;
 
@@ -19,9 +20,10 @@ export class ActorSpellManifestError extends Error {
   }
 }
 
-export function markSpellcastingFeatureItem(item: object, featureItemKey: string, activationType?:string): void {
+export function markSpellcastingFeatureItem(item: object, featureItemKey: string, activationType?:string,activationCost?:number): void {
   featureKeys.set(item, featureItemKey);
-  if(activationType==='action'||activationType==='bonus'||activationType==='reaction')featureActivations.set(item,activationType);
+  if(activationType==='action'||activationType==='bonus'||activationType==='reaction'||activationType==='legendary')featureActivations.set(item,activationType);
+  if(activationType==='legendary'&&Number.isSafeInteger(activationCost)&&activationCost!>0)featureCosts.set(item,activationCost!);
 }
 
 export function assertNoOrphanedSpellcastingFeatureLinks(actor: Record<string, any>): void {
@@ -115,7 +117,17 @@ export function buildActorSpellManifest(
       throw new ActorSpellManifestError('SPELL_FEATURE_LINK_DUPLICATE', `Feature key ${group.featureItemKey} matched ${linked.length} generated items.`);
     }
     const item = linked[0]!;
+    if(group.recharge){
+      const uses=item.system?.uses;
+      if(String(uses?.max)!=='1'||!uses?.recovery?.some((recovery:any)=>recovery.period==='recharge'&&recovery.type==='recoverAll'&&String(recovery.formula)===String(group.recharge![0])))
+        throw new ActorSpellManifestError('SPELL_FEATURE_RECHARGE_CONFLICT','Manifest Recharge must match the same generated feature Item pool.');
+    }
     const shared=group.spellRefs.filter(ref=>ref.uses?.shared);
+    const single=group.spellRefs.length===1?group.spellRefs[0]:undefined;
+    const parentUses=!!single?.uses&&!single.uses.shared&&!!item.system?.uses?.max;
+    if(parentUses&&(single!.method!=='innate'||String(item.system.uses.max)!==String(single!.uses!.value)
+      ||single!.uses!.recovery!=='day'||!item.system.uses.recovery?.some((r:any)=>r.period==='day'&&r.type==='recoverAll')))
+      throw new ActorSpellManifestError('SPELL_PARENT_POOL_CONFLICT','A single daily Cast must match its exact generated parent pool.');
     if(shared.length){
       const value=shared[0]!.uses!.value;
       if(shared.some(ref=>ref.uses!.value!==value||ref.uses!.recovery!=='day'))throw new ActorSpellManifestError('SPELL_SHARED_POOL_CONFLICT','Shared spell pools must agree on count and daily recovery.');
@@ -132,7 +144,9 @@ export function buildActorSpellManifest(
     item.flags.fvttJsonGenerator = {
       ...(item.flags.fvttJsonGenerator ?? {}),
       spellcastingFeatureKey: group.featureItemKey,
+      ...(parentUses?{spellcastingUsesParent:true}:{}),
       ...(featureActivations.has(item)?{spellcastingActivationType:featureActivations.get(item)}:{}),
+      ...(featureCosts.has(item)?{spellcastingActivationCost:featureCosts.get(item)}:{}),
     };
     item.flags[RESOLVER_MODULE_ID] = {
       featureItemKey: group.featureItemKey,

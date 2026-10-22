@@ -56,6 +56,7 @@ const STATUSES = [
   'ready_to_generate',
   'generating_and_reviewing',
   'ready_for_gm_review',
+  'reviewed_candidate',
   'repairing',
   'regenerating',
   'accepted',
@@ -461,10 +462,12 @@ function assertAcceptedImportConsistency(input: ForgeIntakeReviewBundleInput): v
       throw new TypeError('Forge Intake GM候选需要真实未批准的来源、产物与模型审核状态。');
     }
   }
-  if (input.gmApproval && input.status !== 'accepted' && input.status !== 'committing_and_reading_back')
+  if (input.gmApproval && input.status !== 'accepted' && input.status !== 'committing_and_reading_back'&&input.status!=='reviewed_candidate')
     throw new TypeError('GM确认只允许绑定当前 accepted 候选。');
-  const accepted = input.status === 'accepted' || input.status === 'committing_and_reading_back';
-  if (!accepted) return;
+  const reviewed=input.status==='reviewed_candidate'||input.status==='committing_and_reading_back'&&!!input.gmApproval&&input.candidateResponse?.status!=='accepted';
+  const accepted = input.status === 'accepted' || input.status === 'committing_and_reading_back'&&!reviewed;
+  if (!accepted&&!reviewed) return;
+  if(reviewed&&(input.objectKind!=='actor'||!input.gmApproval||!input.candidateHash||!input.candidateResponse?.artifactHash))throw new TypeError('待审候选的采用记录必须绑定当前 Actor、GM 和产物。');
   if (!input.canonicalSource || !input.sourceIdentity || !input.target) {
     throw new TypeError('Forge Intake accepted history requires canonical source identity and target metadata.');
   }
@@ -486,6 +489,7 @@ function assertAcceptedImportConsistency(input: ForgeIntakeReviewBundleInput): v
   if (input.modelReviewStatus === 'accepted' && input.reviewVerdict !== 'accepted') {
     throw new TypeError('模型审核状态与实际结果不一致。');
   }
+  if(reviewed)return; // GM adoption is a recorded decision, never strict acceptance.
   if ((input.deterministicFindings ?? []).some((finding) => finding.blocking)
     || (!input.gmApproval && (input.aiReviewFindings ?? []).some((finding) => finding.blocking))) {
     throw new TypeError('Forge Intake accepted history must not contain a blocking finding.');

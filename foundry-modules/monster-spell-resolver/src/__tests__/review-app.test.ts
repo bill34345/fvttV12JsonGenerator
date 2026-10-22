@@ -34,6 +34,17 @@ function model(keepable = true): ResolverReviewModel {
 }
 
 describe('resolver review model and dialog semantics', () => {
+  test('source maintenance is an explicit repair reason, not a fabricated manual edit conflict',()=>{
+    const source=model();source.findings=[];source.spells[0]!.manualConflict=undefined;
+    source.spells[0]!.sourceMaintenance={kind:'conditional-damage',explanation:'Conditional source damage needs a separate GM entry'};
+    const session=createResolverReviewSession(source),key=source.spells[0]!.logicalRefKey;
+    expect(session.canApply()).toBe(false);expect(()=>session.decideManual(key,'keep')).toThrow('cannot be kept');
+    session.decideManual(key,'overwrite');expect(session.canApply()).toBe(true);
+    expect(session.apply()).toMatchObject({manualDecisions:[],sourceMaintenanceDecisions:[{logicalRefKey:key,decision:'overwrite'}]});
+    const html=renderResolverReviewHtml(source,key=>key==='FVTTJSONSPELL.Review.SourceMaintenance'?'Source maintenance':key);
+    expect(html).toContain('Source maintenance');expect(html).toContain('Conditional source damage needs a separate GM entry');
+    expect(html).not.toContain('Review.ManualConflict');expect(html).toContain('value="keep" disabled');
+  });
   const zh: Record<string, string> = {
     'FVTTJSONSPELL.Review.Unknown': '未知', 'FVTTJSONSPELL.Review.Source': '目标来源',
     'FVTTJSONSPELL.Review.SelectSource': '选择一个具体来源', 'FVTTJSONSPELL.Review.ManualConflict': '人工修改冲突',

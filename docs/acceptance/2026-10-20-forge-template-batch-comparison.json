@@ -1,0 +1,83 @@
+{
+  "status": "COMPLETED_SEMANTIC_FORM_COMPARISON_NOT_PRODUCTION_ACCEPTANCE",
+  "arms": {
+    "BC": {
+      "http": 9,
+      "wallSeconds": 98.62066440000001,
+      "httpSeconds": 98.08986160000005,
+      "estimatedUSD": 0.015017111999999999,
+      "inputTokens": 18800,
+      "outputTokens": 22461,
+      "reasoningTokens": 19371,
+      "parsedParentFeatures": 18,
+      "formatFailures": 0
+    },
+    "BW": {
+      "http": 3,
+      "wallSeconds": 105.796972,
+      "httpSeconds": 105.62505549999999,
+      "estimatedUSD": 0.016176066,
+      "inputTokens": 7819,
+      "outputTokens": 25758,
+      "reasoningTokens": 22750,
+      "parsedParentFeatures": 18,
+      "formatFailures": 0
+    }
+  },
+  "cases": [
+    {
+      "case": "S1",
+      "arm": "BC",
+      "http": 2,
+      "seconds": 16.1963114,
+      "estimatedUSD": 0.002507538
+    },
+    {
+      "case": "S1",
+      "arm": "BW",
+      "http": 1,
+      "seconds": 25.0516475,
+      "estimatedUSD": 0.0038607719999999997
+    },
+    {
+      "case": "S2",
+      "arm": "BW",
+      "http": 1,
+      "seconds": 42.19406239999999,
+      "estimatedUSD": 0.006169404
+    },
+    {
+      "case": "S2",
+      "arm": "BC",
+      "http": 3,
+      "seconds": 30.893371899999998,
+      "estimatedUSD": 0.004704
+    },
+    {
+      "case": "S3",
+      "arm": "BC",
+      "http": 4,
+      "seconds": 51.530981100000005,
+      "estimatedUSD": 0.007805573999999999
+    },
+    {
+      "case": "S3",
+      "arm": "BW",
+      "http": 1,
+      "seconds": 38.551262099999995,
+      "estimatedUSD": 0.00614589
+    }
+  ],
+  "relativeWholeVsCategory": {
+    "timeChangePercent": 7.276677401901566,
+    "estimatedCostChangePercent": 7.717555812329291
+  },
+  "recommendation": "BW_WHOLE_FEATURES_AS_DEFAULT_CANDIDATE",
+  "reason": "Correctness first: one fewer observed critical computable-field omission; fewer request boundaries. Measured 7 percent slower and 8 percent more expensive in this single trial; not a speed win. Common distance-template gap must be resolved before production integration.",
+  "retries": 0,
+  "repairs": 0,
+  "actualBilledUSD": "UNKNOWN",
+  "publicPricingSnapshotDate": "2026-10-19",
+  "formalGeneration": "NOT_EXECUTED",
+  "runtime": "NOT_EXECUTED"
+}

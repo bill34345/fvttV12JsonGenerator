@@ -114,7 +114,9 @@ function createDocumentPlans(prepared: PreparedForgeEncounter,game:EncounterGame
     // Legacy empty collection metadata is not a dnd5e skill and is discarded by its schema.
     if (Array.isArray(data.system?.skills?.value) && data.system.skills.value.length === 0) delete data.system.skills.value;
     data._id = encounterDocumentId(bundle.id, 'Actor', actor.key);
-    data.flags ??= {}; data.flags[MODULE_ID] = { encounter: identity('Actor', actor.key) };
+    data.flags ??= {}; data.flags[MODULE_ID] = { encounter: identity('Actor', actor.key),
+      ...(actor.status!=='accepted'||actor.reviewFindings?.length?{candidateReview:{version:1,status:actor.status,
+        gmId:game.user.id,sourceHash:actor.sourceHash,artifactHash:actor.artifactHash,findings:actor.reviewFindings??[]}}:{}) };
     markForgeSpellImportPending(data);
     for (const asset of bundle.assets) for (const target of asset.targets.filter(t => t.actorKey === actor.key)) {
       for (const path of target.fields) {

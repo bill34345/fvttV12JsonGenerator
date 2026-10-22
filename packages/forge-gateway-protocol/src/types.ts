@@ -471,6 +471,9 @@ export type ForgeActorResult =
     })
   | (ForgeActorResultBase & {
       status: 'failed';
+      /** A structurally usable Actor candidate may accompany a failed semantic
+       * verdict. Its presence never grants accepted/create authority. */
+      artifact?: JsonObject;
     });
 
 export interface ForgeItemResultBase {

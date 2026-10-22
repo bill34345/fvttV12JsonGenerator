@@ -406,6 +406,29 @@ describe('Forge protocol schemas', () => {
     }).ok).toBe(false);
   });
 
+  test('retains a usable failed Actor candidate without promoting its strict verdict', () => {
+    const artifact = { name: 'Review candidate', type: 'npc', system: { attributes: { hp: { value: 12 } } },
+      items: [{ name: 'Attack', type: 'feat', system: { activities: {} } }], effects: [] };
+    const result = { sourceIdentity: { sourceId: SOURCE_ID, sourceHash: sha256(CONTENT) },
+      target: { fvttRuntimeVersion: '14.364', generatorProfile: 'v14', generatorVersion: '0.1.0',
+        systemId: 'dnd5e', systemVersionObserved: '5.3.3', effectProfile: 'core', iconMode: 'off' },
+      status: 'failed', verification: { status: 'failed', mechanicsCoverage: [] },
+      diagnostics: [ERROR_DIAGNOSTIC], actorVerification: SAFE_ACTOR_VERIFICATION, artifact };
+    const response = { protocolVersion: 1, requestId: 'failed-candidate', result };
+    const decoded = decodeForgeActorResponse(response);
+    expect(decoded.ok).toBe(true);
+    if (!decoded.ok || !('result' in decoded.value)) throw new Error('Expected candidate result.');
+    expect(decoded.value.result).toMatchObject({ status: 'failed', artifact, diagnostics: [ERROR_DIAGNOSTIC], verification: { status: 'failed' } });
+    expect(decoded.value.result).not.toHaveProperty('artifactHash');
+    for (const invalid of [
+      { ...artifact, system: null }, { ...artifact, items: ['unreadable'] }, { ...artifact, type: 'Item' },
+      { ...artifact, system: { hp: Infinity } }, { ...artifact, effects: [undefined] },
+      { ...artifact, system: JSON.parse('{"__proto__":{"polluted":true}}') },
+      { ...artifact, system: Object.create({ inherited: true }) },
+    ]) expect(decodeForgeActorResponse({ ...response, result: { ...result, artifact: invalid } }).ok).toBe(false);
+    expect(decodeForgeActorResponse({ ...response, result: { ...result, status: 'accepted' } }).ok).toBe(false);
+  });
+
   test('decodes the closed capability descriptors and rejects unknown capability fields', () => {
     expect(decodeForgeCapability({
       id: 'actor.standard.generate.v1',

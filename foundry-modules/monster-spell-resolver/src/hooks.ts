@@ -19,7 +19,9 @@ import {
   type SpellManualDecision,
   type SpellResolutionConfiguration,
 } from '../../../src/core/spell-resolution';
-import { buildCastActivitySource, computeManagedSourceHash } from './cast-activity';
+import { buildCastActivitySource, computeManagedSourceHash, literalRestrictionChatFlavor } from './cast-activity';
+import {planSpellEffectDuration} from './spell-effect-duration';
+import {planSpellConditionalDamage} from './spell-conditional-damage';
 import { isForgeSpellImportPending } from '@fvtt-json-generator/contracts/forge-import-lifecycle';
 import type { ResolverRuntimeApi } from './runtime-api';
 import {
@@ -270,7 +272,7 @@ export interface ResolverActorServiceDependencies {
   getSetting(key: 'sourcePriority' | 'savedMappings'): unknown;
   setSetting(key: 'savedMappings', value: unknown): Promise<void>;
   fetchSelectedDocument(uuid: string): Promise<any>;
-  execute(actor: any, manifest: PortableSpellManifest, plan: SpellHydrationPlan): Promise<unknown>;
+  execute(actor: any, manifest: PortableSpellManifest, plan: SpellHydrationPlan,options?:{completeSourceCache?:boolean}): Promise<unknown>;
   openReview(model: ResolverReviewModel): Promise<ResolverReviewOutcome>;
   renderTemplate(templatePath: string, context: Record<string, unknown>): Promise<string>;
   showDocument(title: string, html: string): Promise<void>;
@@ -315,6 +317,7 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
           actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution,
         )) return 'needs_review';
       }
+      if(current==='hydrated'&&needsSourceCacheCompletion(actor))return 'stale';
       if (current === 'hydrated' && isEligibleActor(actor) && runtime?.compatibility.supported === true
         && runtime.canMutate && runtime.sourceIndex
         && hasStaleHydratedResolutionInputs(actor, runtime as ResolverRuntimeApi & {
@@ -338,6 +341,7 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
           || resolution.report?.candidateMetadataHash !== current.report.candidateMetadataHash) return false;
         if (!sameResolvedSelections(current.report.results, resolution.report?.selections)) return false;
         if (!hasStrictHydratedStructure(actor, validated.value, resolution)) return false;
+        if(needsSourceCacheCompletion(actor))return false;
         return true;
       } catch { return false; }
     },
@@ -366,6 +370,10 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
         return;
       }
       const readyRuntime = runtime as ResolverRuntimeApi & { sourceIndex: NonNullable<ResolverRuntimeApi['sourceIndex']> };
+      // Existing generated hashes remain valid. Complete the new source-owned
+      // cache presentation only through an explicit Resolve/Apply, never an
+      // event-driven world migration after installing a newer module.
+      if(!options.explicit&&needsSourceCacheCompletion(actor))return;
       // Explicit Resolve must obey the same exact already-applied boundary as
       // event-driven coordination, except that a previously protected Keep is
       // intentionally surfaced again for an explicit human decision.
@@ -384,7 +392,7 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
           ephemeral.set(actor, 'incompatible');
           return;
         }
-        if (initial.status === 'needs_review') {
+        if (initial.status === 'needs_review'||conditionalSourceMaintenanceKeys(actor).size>0) {
           ephemeral.set(actor, 'needs_review');
           const model = buildResolverReviewModel(actor, validation.value, initial);
           const seen = openedFindingHashes.get(actor) ?? new Set<string>();
@@ -393,6 +401,7 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
           seen.add(model.findingHash);
           const outcome = await dependencies.openReview(model);
           if (outcome.action === 'cancel') return;
+          if(!sourceMaintenanceApproved(actor,model,outcome)){ephemeral.set(actor,'needs_review');return;}
           const mappings = mappingsFromCandidateSelections(initial, outcome, readyRuntime, dependencies);
           const replanned = createPreflight(actor, validation.value, readyRuntime, dependencies, true, outcome.manualDecisions, mappings);
           reports.set(actor, replanned.report);
@@ -715,7 +724,7 @@ async function applyReadyPlan(
     validateSelectedSpellFacts(document, selection, manifest, dependencies);
   }
   if (mappings.length === 0) {
-    await dependencies.execute(actor, manifest, plan);
+    await dependencies.execute(actor, manifest, plan,needsSourceCacheCompletion(actor)?{completeSourceCache:true}:undefined);
     notifyHydrationComplete(dependencies, plan.selections.length);
     return true;
   }
@@ -736,7 +745,7 @@ async function applyReadyPlan(
       throw new MappingStateError(`Saved mapping persistence failed before hydration: ${errorMessage(cause)}. No Actor mutation was attempted.`, false, false, { cause });
     }
     try {
-      await dependencies.execute(actor, manifest, plan);
+      await dependencies.execute(actor, manifest, plan,needsSourceCacheCompletion(actor)?{completeSourceCache:true}:undefined);
       notifyHydrationComplete(dependencies, plan.selections.length);
     } catch (cause) {
       try {
@@ -868,6 +877,7 @@ class MappingStateError extends Error {
 }
 
 export function buildResolverReviewModel(actor: any, manifest: PortableSpellManifest, preflight: HydrationPreflight): ResolverReviewModel {
+  const sourceMaintenance=conditionalSourceMaintenanceKeys(actor);
   const projection = new Map(projectManagedContentWithConflicts(actor, manifest).map((entry) => [entry.logicalRefKey, entry]));
   const currentGenerated = new Map(projectResolverManagedDocuments(actor, manifest.manifestId)
     .map((entry) => [entry.logicalRefKey, entry]));
@@ -912,6 +922,7 @@ export function buildResolverReviewModel(actor: any, manifest: PortableSpellMani
       lastGeneratedProof: lastGenerated.get(result.logicalRefKey) ?? null,
       proposed,
       ...(current?.manualConflict ? { manualConflict: keepability } : {}),
+      ...(sourceMaintenance.has(result.logicalRefKey)?{sourceMaintenance:{kind:'conditional-damage' as const,explanation:'FVTTJSONSPELL.Review.ConditionalDamageIsolation'}}:{}),
       warnings: [
         ...(result.status === 'resolved' && result.origin === 'fallback-2014' ? ['FVTTJSONSPELL.Review.Fallback2014'] : []),
         ...(invalidSelectedDocument && offeredCandidates.length === 0 ? ['FVTTJSONSPELL.Review.RebuildIndex'] : []),
@@ -919,7 +930,7 @@ export function buildResolverReviewModel(actor: any, manifest: PortableSpellMani
       literalRestrictions: (ref?.restrictions ?? []).map((restriction) => ({ kind: restriction.kind, text: restriction.text })),
       candidateDecisionRequired: (invalidSelectedDocument && offeredCandidates.length > 0)
         || (result.status !== 'resolved' && offeredCandidates.length > 0),
-      blocking: result.status !== 'resolved' || current?.manualConflict === true
+      blocking: result.status !== 'resolved' || current?.manualConflict === true||sourceMaintenance.has(result.logicalRefKey)
         || preflight.report.findings.some((finding) => finding.blocking && (finding.path === result.logicalRefKey || finding.path.includes(result.refId))),
     };
   });
@@ -1064,6 +1075,59 @@ function hasStrictHydratedStructure(actor: any, manifest: PortableSpellManifest,
     const inspected = inspectPersistedManagedPair(actor, manifest, entry);
     return inspected.keepable && inspected.hashesMatch;
   });
+}
+
+function needsSourceCacheCompletion(actor:any):boolean{
+  if(conditionalSourceMaintenanceKeys(actor).size)return true;
+  const validated=validatePortableSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
+  if(!validated.ok)return false;
+  for(const expected of expectedPersistedManagedRefs(actor,validated.value).values()){
+    const inspected=inspectPersistedManagedPair(actor,validated.value,expected);
+    if(!inspected.keepable)continue;
+    const docs=managedDocuments(actor,validated.value.manifestId,expected.logicalRefKey),parent=docs.find(entry=>entry.kind==='activity'),cache=docs.find(entry=>entry.kind==='spell');
+    const group=validated.value.spellcastingGroups.find(group=>group.groupId===expected.groupId),ref=group?.spellRefs.find(ref=>ref.refId===expected.refId);
+    if(!parent||!cache||!group||!ref||!expected.selectedUuid)continue;
+    try{
+      const built=buildCastActivitySource({manifestId:validated.value.manifestId,featureId:documentId(parent.feature),group,ref,selectedUuid:expected.selectedUuid});
+      const note=literalRestrictionChatFlavor(built.literalRestrictions),source=documentSource(cache.value),children=Object.values(source.system?.activities??{}) as any[];
+      if(note&&(!children.length||children.some(child=>typeof child?.description?.chatFlavor!=='string'||!child.description.chatFlavor.includes(note))))return true;
+      if(built.activity.duration&&planSpellEffectDuration(source,source,built.activity.duration).changedEffectIds.length)return true;
+    }catch{/* Existing ownership/source diagnostics retain responsibility. */}
+  }
+  return false;
+}
+
+/** A read-only, Actor-scoped maintenance reason, distinct from a user edit.
+ * Ordinary events remain quiet; only explicit Resolve opens the review. */
+function conditionalSourceMaintenanceKeys(actor:any):Set<string>{
+  const keys=new Set<string>(),runtime=(globalThis as any).game;
+  if(runtime?.system?.version!=='5.3.3')return keys;
+  const validated=validatePortableSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
+  if(!validated.ok)return keys;
+  const midi=runtime.modules?.get?.('midi-qol');
+  for(const expected of expectedPersistedManagedRefs(actor,validated.value).values()){
+    if(!inspectPersistedManagedPair(actor,validated.value,expected).keepable)continue;
+    const cache=managedDocuments(actor,validated.value.manifestId,expected.logicalRefKey).find(entry=>entry.kind==='spell');
+    if(!cache)continue;
+    const source=documentSource(cache.value);
+    // A previously isolated cache has no mixed Save damage and is not a new
+    // maintenance candidate. Its ordinary strict ownership/hash gates remain.
+    if(!Object.values(source.system?.activities??{}).some((activity:any)=>activity?.type==='save'&&activity.damage?.parts?.length))continue;
+    try{
+      const plan=planSpellConditionalDamage(source,source,{systemVersion:runtime.system.version,...(midi?.active?{midiVersion:String(midi.version??'')}:{} )});
+      if(Object.keys(plan.updates).length)keys.add(expected.logicalRefKey);
+    }catch{/* Unknown source structure is not promoted to a maintenance plan. */}
+  }
+  return keys;
+}
+
+function sourceMaintenanceApproved(actor:any,model:ResolverReviewModel,outcome:Extract<ResolverReviewOutcome,{action:'apply'}>):boolean{
+  const required=new Set(model.spells.filter(spell=>spell.sourceMaintenance).map(spell=>spell.logicalRefKey));
+  const current=conditionalSourceMaintenanceKeys(actor);
+  if(current.size!==required.size||[...current].some(key=>!required.has(key)))return false;
+  if(!required.size)return true;
+  const decisions=outcome.sourceMaintenanceDecisions;
+  return Array.isArray(decisions)&&decisions.length===required.size&&decisions.every(decision=>isRecord(decision)&&decision.decision==='overwrite'&&required.delete(decision.logicalRefKey))&&required.size===0;
 }
 
 function sameResolvedSelections(results: HydrationPreflight['report']['results'], selections: unknown): boolean {
@@ -1499,7 +1563,7 @@ export function createFoundryResolverHookController(): ResolverHookController {
     getSetting: (key) => game?.settings?.get(RESOLVER_MODULE_ID, key),
     setSetting: async (key, value) => { await game?.settings?.set(RESOLVER_MODULE_ID, key, value); },
     fetchSelectedDocument: (uuid) => fetchSelectedSpellDocument(adapter, uuid),
-    execute: (actor, manifest, plan) => executeHydrationTransaction({ actor, manifest, plan }),
+    execute: (actor, manifest, plan,options) => executeHydrationTransaction({ actor, manifest, plan,...options }),
     openReview: (model) => openResolverReviewDialog(model),
     renderTemplate: async (templatePath, context) => {
       const renderTemplate = (globalThis as any).foundry?.applications?.handlebars?.renderTemplate;

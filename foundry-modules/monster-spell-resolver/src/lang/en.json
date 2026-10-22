@@ -100,5 +100,7 @@
   "FVTTJSONSPELL.Finding.INVALID_MANUAL_DECISION_TARGET": "A manual decision targets an undeclared conflict.",
   "FVTTJSONSPELL.Finding.DUPLICATE_PREFLIGHT_KEY": "Preflight contains a duplicate spell reference.",
   "FVTTJSONSPELL.Finding.UNKNOWN_PREFLIGHT_KEY": "Preflight contains an unknown spell reference.",
-  "FVTTJSONSPELL.Notification.RecoveryRequired": "Spell hydration has unresolved recovery data. Preserve and inspect the report before any controlled recovery; ordinary Resolve and automatic retries are blocked."
+  "FVTTJSONSPELL.Notification.RecoveryRequired": "Spell hydration has unresolved recovery data. Preserve and inspect the report before any controlled recovery; ordinary Resolve and automatic retries are blocked.",
+  "FVTTJSONSPELL.Review.SourceMaintenance": "Source-owned cache maintenance",
+  "FVTTJSONSPELL.Review.ConditionalDamageIsolation": "This cached Spell still combines its casting Save with damage that the source permits only after a Charmed creature disobeys the command. Overwrite separates that damage into an independent GM action while preserving Cast settings, spent uses, complete text and other references. Keep does not repair the combined activity. The GM still decides whether the condition and per-creature daily limit allow damage."
 }

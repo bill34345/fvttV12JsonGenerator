@@ -359,7 +359,7 @@ describe('browser Forge Actor runtime', () => {
     });
   });
 
-  test('legacy AI conversion keeps formal output for review without automatically paying for model audit', async () => {
+  test('legacy AI conversion repairs only on explicit opt-in and keeps formal output without a paid model audit', async () => {
     const valid = buildRatWarlockIr();
     const invalid = {
       ...valid,
@@ -400,6 +400,7 @@ describe('browser Forge Actor runtime', () => {
       fvttVersion: '14.364',
       systemVersion: '5.3.3',
       sourceId: SOURCE_ID,
+      autoCorrect: true,
       onStage: (stage) => stageEvents.push(`${stage.stage}:${stage.status}`),
     }, provider);
 
@@ -423,6 +424,19 @@ describe('browser Forge Actor runtime', () => {
       coverage: expect.any(Array),
     });
     expect(JSON.stringify(result)).not.toContain('fake-api-key');
+  });
+
+  test('legacy AI conversion makes zero implicit corrections and keeps the source-identity failure visible', async () => {
+    const invalid=buildRatWarlockIr();invalid.source.sha256='0'.repeat(64);
+    let repairs=0,reviews=0;
+    const provider=ratWarlockProvider({extract:async()=>invalid,
+      repair:async()=>{repairs++;return buildRatWarlockIr();},
+      review:async()=>{reviews++;return{schemaVersion:1,verdict:'accepted',findings:[]};}});
+    const result=await convertRawActorSourceWithAi(actorAiInput('legacy-default-no-correction'),provider);
+    expect(repairs).toBe(0);expect(reviews).toBe(0);
+    expect(result.status).toBe('needs_review');expect(result.response).toBeUndefined();
+    expect(result.findings).toContainEqual(expect.objectContaining({code:'STALE_SOURCE',blocking:true}));
+    expect(result.stages.find(stage=>stage.stage==='repair')?.status).toBe('skipped');
   });
 
   test('pauses AI Monster Intake after evidence-first analysis with provider and prompt identity', async () => {
@@ -734,7 +748,7 @@ describe('browser Forge Actor runtime', () => {
     expect(analysis.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
   });
 
-  test('keeps revise non-creatable, permits one semantic repair, and preserves attempt identity on regenerate', async () => {
+  test('retains a revised candidate without marking it accepted, permits one explicit repair and preserves attempt identity', async () => {
     let reviewCalls = 0;
     const provider = ratWarlockProvider({
       review: async () => {
@@ -756,7 +770,11 @@ describe('browser Forge Actor runtime', () => {
     const first = await generateAndReviewBrowserActorIntake(input, analysis, provider);
     expect(first.status).toBe('needs_review');
     expect(first.response).toBeUndefined();
-    expect(JSON.stringify(first)).not.toContain('artifactHash');
+    expect(first.candidateAvailable).toBe(true);
+    expect(first.candidateResponse&&'result'in first.candidateResponse?first.candidateResponse.result.status:undefined).toBe('accepted');
+    expect(first.candidateHash).toMatch(/^[a-f0-9]{64}$/u);
+    expect(first.findings).toContainEqual(expect.objectContaining({code:'SEMANTIC_REVISE',blocking:true}));
+    expect(first.calls).toEqual({discovery:1,extraction:1,repair:0,review:1});
 
     const repaired = await repairBrowserActorIntake(input, first, provider);
     expect(repaired.status).toBe('ready_to_generate');
@@ -950,10 +968,15 @@ describe('browser Forge Actor runtime', () => {
       : undefined;
     expect(actor?.system.details.type.value).toBe('fey');
     const claw = actor?.items.find((item: any) => String(item.name).includes('爪击'));
-    expect(claw?.system.damage.base).toMatchObject({ number: 1, denomination: 10, bonus: '' });
-    expect(Object.values(claw?.system.activities ?? {})[0]).toMatchObject({
-      attack: { ability: 'str' }, damage: { includeBase: true },
+    expect(claw?.type).toBe('weapon');
+    expect(Object.values(claw?.system.activities ?? {})).toHaveLength(1);
+    expect(Object.values(claw.system.activities)[0]).toMatchObject({
+      type:'attack',attack: { ability: '',bonus:'6',flat:true,type:{value:'melee',classification:'weapon'} },
+      damage: { includeBase: true,parts:[{number:1,denomination:10,bonus:'4',types:['slashing']}] },
+      range:{reach:10,units:'ft'},
     });
+    expect(claw.flags.fvttJsonGenerator.conditionLifecycle).toMatchObject({mode:'gm',statuses:expect.arrayContaining(['grappled','restrained'])});
+    expect(claw.flags.fvttJsonGenerator.conditionLifecycle.sourceText).toContain('逃脱DC 14');
   });
 
   test('keeps a real empty legendary field blocked before AI review', async () => {
@@ -971,7 +994,7 @@ describe('browser Forge Actor runtime', () => {
 
     const result = await generateAndReviewBrowserActorIntake(input, analysis, provider);
 
-    expect(result.status).toBe('needs_review');
+    expect(result.status).toBe('failed');
     expect(result.findings).toContainEqual(expect.objectContaining({
       code: 'INVALID_LEGENDARY_METADATA',
       path: '/creature/legendary',

@@ -94,6 +94,8 @@ function validateManifest(manifest: unknown, source?: string): ManifestValidatio
     });
   }
 
+  validateExplicitSpellReuse(manifest, addFinding);
+
   if (findings.length > 0) return { ok: false, findings };
   return { ok: true, value: manifest as unknown as PortableSpellManifest };
 }
@@ -126,6 +128,8 @@ function validateGroup(
   if (group.attackBonus !== undefined && !isFiniteNumber(group.attackBonus)) {
     addFinding('INVALID_ATTACK_BONUS', `${path}/attackBonus`, '法术攻击加值必须是有限数字。');
   }
+  if(group.recharge!==undefined&&(!Array.isArray(group.recharge)||group.recharge.length!==2||group.recharge.some(value=>!Number.isInteger(value)||value<1||value>6)||group.recharge[1]!==6||group.recharge[0]>group.recharge[1]))
+    addFinding('INVALID_FEATURE_RECHARGE',`${path}/recharge`,'Parent Recharge must be an ordered pair of d6 thresholds.');
   if (!Array.isArray(group.spellRefs) || group.spellRefs.length === 0) {
     addFinding('INVALID_SPELL_REFS', `${path}/spellRefs`, 'spellRefs 必须是非空数组。');
     return;
@@ -134,6 +138,8 @@ function validateGroup(
   group.spellRefs.forEach((ref, refIndex) => {
     validateRef(ref, `${path}/spellRefs/${refIndex}`, source, usedIds, logicalSpells, addFinding);
   });
+  if(group.recharge!==undefined&&group.spellRefs.some(ref=>isRecord(ref)&&(ref.uses!==undefined||ref.method!=='at-will')))
+    addFinding('CONFLICTING_FEATURE_RECHARGE',`${path}/recharge`,'A parent Recharge Cast cannot also consume spell slots or an independent spell-use pool.');
   validateSharedUses(group.spellRefs, path, addFinding);
 }
 
@@ -193,7 +199,36 @@ function validateRef(
 
   validateRestrictions(ref.restrictions, `${path}/restrictions`, source, addFinding);
   validateEvidenceArray(ref.evidence, `${path}/evidence`, source, addFinding);
-  validateLogicalSpell(ref, path, logicalSpells, addFinding);
+  // A reuse is independently checked against exactly one existing definition.
+  // All ordinary logical-definition duplicate checks remain unchanged.
+  if(ref.reuseOf===undefined)validateLogicalSpell(ref, path, logicalSpells, addFinding);
+}
+
+/** Explicit relationships cannot hide duplicate definitions or introduce a
+ * second quota/profile. Exact source-clause ownership remains the producer's
+ * stronger check; this pure boundary also rejects dangling, cyclic or changed
+ * identities, mechanics and copied evidence before any world hydration. */
+function validateExplicitSpellReuse(manifest:RecordValue,addFinding:FindingWriter):void{
+  if(!Array.isArray(manifest.spellcastingGroups))return;
+  const entries=manifest.spellcastingGroups.flatMap((g,gi)=>isRecord(g)&&Array.isArray(g.spellRefs)
+    ?g.spellRefs.flatMap((r,ri)=>isRecord(r)?[{group:g,ref:r,path:`/spellcastingGroups/${gi}/spellRefs/${ri}`}]:[]):[]);
+  const text=(value:unknown)=>typeof value==='string'?value.normalize('NFKC').replace(/\s+/gu,' ').trim().toLowerCase():value;
+  const profile=(g:RecordValue)=>JSON.stringify([g.ability,g.saveDc,g.attackBonus,g.recharge]);
+  const identity=(r:RecordValue)=>JSON.stringify([text(r.identifier),text(r.originalName),text(r.englishName),text(r.chineseName),
+    Array.isArray(r.aliases)?r.aliases.map(text):r.aliases,r.expectedLevel,r.expectedSchool,r.sourceBookHint,r.method,r.uses,r.castingLevel,!!r.ignoresMaterialComponents,
+    Array.isArray(r.restrictions)?r.restrictions.map(x=>isRecord(x)?[x.kind,text(x.text),x.value]:x):r.restrictions]);
+  for(const entry of entries){
+    const link=entry.ref.reuseOf;if(link===undefined)continue;
+    const targets=isRecord(link)?entries.filter(x=>x.group.groupId===link.groupId&&x.ref.refId===link.refId):[];
+    const target=targets[0];
+    if(!isRecord(link)||!isNonEmptyString(link.groupId)||!isNonEmptyString(link.refId)||targets.length!==1||!target
+      ||target.group.groupId===entry.group.groupId||target.ref.reuseOf!==undefined
+      ||entry.ref.method!=='at-will'||target.ref.method!=='at-will'||entry.ref.uses!==undefined||target.ref.uses!==undefined
+      ||entry.group.recharge!==undefined||target.group.recharge!==undefined
+      ||profile(entry.group)!==profile(target.group)||identity(entry.ref)!==identity(target.ref)
+      ||JSON.stringify(entry.ref.evidence)===JSON.stringify(target.ref.evidence))
+      addFinding('INVALID_SPELL_REUSE',entry.path+'/reuseOf','A source Cast reuse must identify one distinct existing at-will definition with identical identity/profile/restrictions, no extra pool, and its own source evidence.');
+  }
 }
 
 function validateUses(value: unknown, path: string, addFinding: FindingWriter): void {

@@ -5,6 +5,7 @@ import {
   isForgeSessionConnectionReady,
   markForgeSessionConnectionTested,
   readForgeSessionSettings,
+  normalizeSettings,
   saveForgeSessionSettings,
   subscribeForgeSessionSettings,
 } from '../src/settings';
@@ -12,6 +13,42 @@ import {
 describe('Forge page connection session', () => {
   afterEach(() => {
     Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: undefined });
+  });
+
+  test('defaults automatic correction off for new and legacy settings and requires an explicit boolean opt-in', () => {
+    installStorage(makeStorage());
+    expect(readForgeSessionSettings().autoCorrect).toBe(false);
+    for (const autoCorrect of [undefined, null, false, 'true', 1]) {
+      expect(normalizeSettings({ autoCorrect }).autoCorrect).toBe(false);
+    }
+    expect(normalizeSettings({ autoCorrect: true }).autoCorrect).toBe(true);
+  });
+
+  test('persists the correction opt-in independently of the key and invalidates the previous session identity', () => {
+    const storage = makeStorage();
+    installStorage(storage);
+    saveForgeSessionSettings({ providerId: 'custom', endpoint: 'https://provider.example/v1', protocol: 'openai-chat',
+      model: 'extractor', apiKey: 'page-only-key', persistApiKey: false });
+    markForgeSessionConnectionTested();
+    const events: boolean[] = [];
+    const unsubscribe = subscribeForgeSessionSettings(() => events.push(readForgeSessionSettings().autoCorrect));
+    try {
+      const saved = saveForgeSessionSettings({ autoCorrect: true });
+      expect(saved.autoCorrect).toBe(true);
+      expect(saved.apiKey).toBe('page-only-key');
+      expect(isForgeSessionConnectionReady()).toBe(false);
+      expect(JSON.parse(storage.getItem('fvtt-json-forge.client-settings')!)).toMatchObject({ autoCorrect: true, apiKey: '' });
+      expect(events).toEqual([true]);
+
+      // A refreshed page retains the explicit preference, without recovering its transient credential.
+      installStorage(makeStorage());
+      readForgeSessionSettings();
+      installStorage(storage);
+      expect(readForgeSessionSettings()).toMatchObject({ autoCorrect: true, apiKey: '' });
+      saveForgeSessionSettings({ autoCorrect: false });
+      expect(readForgeSessionSettings().autoCorrect).toBe(false);
+      expect(JSON.parse(storage.getItem('fvtt-json-forge.client-settings')!).autoCorrect).toBe(false);
+    } finally { unsubscribe(); }
   });
 
   test('keeps an unpersisted key available to the page while omitting it from storage and refresh state', () => {

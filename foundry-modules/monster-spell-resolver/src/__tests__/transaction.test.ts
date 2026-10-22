@@ -9,8 +9,9 @@ import {
   type SpellCandidateMetadata,
   type SpellHydrationPlan,
 } from '../../../../src/core/spell-resolution';
-import { generatedResolverDocumentId } from '../cast-activity';
+import { generatedResolverDocumentId,computeManagedSourceHash } from '../cast-activity';
 import { createResolverActorService } from '../hooks';
+import {conditionalSpellFixture} from './conditional-spell-fixture';
 import {
   executeHydrationTransaction,
   projectCurrentManagedContent,
@@ -47,15 +48,18 @@ function readyPlan(
   decision?: 'keep' | 'overwrite',
   lightId = 'aaaaaaaaaaaaaaaa',
   inputManifest = manifest(),
+  decisionRef='light-ref',
 ): SpellHydrationPlan {
   const candidates: SpellCandidateMetadata[] = [
-    inputManifest.spellcastingGroups[0]!.spellRefs[0]!.identifier === 'disguise-self'
+    inputManifest.spellcastingGroups[0]!.spellRefs[0]!.identifier === 'geas'
+      ? { id:'phbsplGeas000000',uuid:'Compendium.dnd-players-handbook.spells.Item.phbsplGeas000000',packageId:'dnd-players-handbook',packId:'spells',name:'Geas',identifier:'geas',rules:'2024' }
+      :inputManifest.spellcastingGroups[0]!.spellRefs[0]!.identifier === 'disguise-self'
       ? { id: 'phbsplDisguiseSe', uuid: 'Compendium.dnd-players-handbook.spells.Item.phbsplDisguiseSe', packageId: 'dnd-players-handbook', packId: 'spells', name: 'Disguise Self', identifier: 'disguise-self', rules: '2024' }
       : { id: lightId, uuid: `Compendium.dnd5e.spells24.Item.${lightId}`, packageId: 'dnd5e', packId: 'spells24', name: 'Light', identifier: 'light', rules: '2024' },
     { id: 'bbbbbbbbbbbbbbbb', uuid: 'Compendium.dnd5e.spells24.Item.bbbbbbbbbbbbbbbb', packageId: 'dnd5e', packId: 'spells24', name: 'Darkness', identifier: 'darkness', rules: '2024' },
   ];
   const currentManagedProjection = actor ? projectCurrentManagedContent(actor, manifest().manifestId) : [];
-  const lightKey = logicalSpellRefKey('transaction-manifest', 'innate-cha', 'light-ref');
+  const lightKey = logicalSpellRefKey('transaction-manifest', 'innate-cha', decisionRef);
   const result = planSpellHydration({
     manifest: inputManifest, candidates, sourceInventoryHash: (lightId === 'aaaaaaaaaaaaaaaa' ? 'd' : 'e').repeat(64),
     currentManagedProjection: currentManagedProjection.map((entry) => entry.logicalRefKey === lightKey && decision
@@ -68,6 +72,134 @@ function readyPlan(
 }
 
 describe('Actor-local atomic hydration transaction', () => {
+  test.each(['owned','timestamps-only','unknown-item-field','outside-stats-time','changed-stats-version','other-actor','other-source','saved-other-source','changed-effect','added-effect','changed-id','write-rejected'] as const)(
+    'failed conditional maintenance compensates only the proven snapshot source-to-owned Effect origin remapping: %s', async variant => {
+      const actor = new TransactionActor(true), inputManifest = manifest(), hooks = new TransactionHookBus();
+      actor.lifecycleHooks = hooks;
+      Object.assign(inputManifest.spellcastingGroups[0]!.spellRefs[0]!, {identifier:'geas',originalName:'Geas',englishName:'Geas',method:'innate',uses:{value:1,recovery:'day',shared:false}});
+      actor.flags[RESOLVER_MODULE_ID].spellManifest = inputManifest; actor.withConditionalDamage = true;
+      const gameDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'game');
+      Object.defineProperty(globalThis, 'game', {configurable:true,value:{system:{version:'6.0.2'},modules:new Map()}});
+      try {
+        await executeHydrationTransaction({actor,manifest:inputManifest,plan:readyPlan(actor,undefined,undefined,inputManifest),lifecycleHooks:hooks});
+        const cache = actor.items.find(item => item.type === 'spell' && item.flags[RESOLVER_MODULE_ID].refId === 'light-ref');
+        cache.effects[0].origin = variant === 'saved-other-source' ? 'Compendium.other.spells.Item.OtherSource00001' : cache._stats.compendiumSource;
+        cache._stats = {...cache._stats,createdTime:1,modifiedTime:2,lastModifiedBy:'OriginalUser0001'};
+        for (const effect of cache.effects) effect._stats = {coreVersion:'14.368',createdTime:1,modifiedTime:2,lastModifiedBy:'OriginalUser0001'};
+        cache.flags[RESOLVER_MODULE_ID].generatedContentHash = computeManagedSourceHash(activitySource(cache));
+        actor.managedActivities()[0]!.uses.spent = 1; cache.system.uses.spent = 2;
+        actor.items[0]!.system.uses = {spent:3,max:'4',recovery:[]};
+        const before = actor.fullProjection(), otherBefore = actor.foreignProjection();
+        actor.snapshotEffectMutation = item => {
+          if (item.flags[RESOLVER_MODULE_ID].refId !== 'light-ref') return;
+          Object.defineProperty(item, 'uuid', {value:`${actor.uuid}.Item.${item.id}`});
+          if (variant === 'timestamps-only') {
+            Object.assign(item._stats,{createdTime:7,modifiedTime:8,lastModifiedBy:'RecreateUser0001'});
+            for (const effect of item.effects) Object.assign(effect._stats,{createdTime:7,modifiedTime:8,lastModifiedBy:'RecreateUser0001'});
+            return;
+          }
+          if (variant === 'unknown-item-field') {item.unlistedBusinessField={condition:'must remain blocked'};return;}
+          if (variant === 'outside-stats-time') {item.createdTime='a real unlisted business value';return;}
+          if (variant === 'changed-stats-version') {item._stats.systemVersion='different pinned source';return;}
+          item.effects[0].origin = variant === 'other-actor' ? `Actor.OtherActor000001.Item.${item.id}`
+            : variant === 'other-source' ? 'Compendium.other.spells.Item.OtherSource00001' : item.uuid;
+          if (variant === 'changed-effect') item.effects[0].statuses = ['frightened'];
+          if (variant === 'added-effect') item.effects.push({_id:'AddedEffect00001',type:'base',statuses:['charmed']});
+          if (variant === 'changed-id') item.effects[0]._id = 'ChangedEffect001';
+        };
+        actor.snapshotOriginWriteRejected = variant === 'write-rejected';
+        Object.defineProperty(globalThis, 'game', {configurable:true,value:{system:{version:'5.3.3'},modules:new Map()}});
+        try {
+          await executeHydrationTransaction({actor,manifest:inputManifest,plan:readyPlan(actor,undefined,undefined,inputManifest),completeSourceCache:true,lifecycleHooks:hooks,
+            failureInjector(stage) {if(stage === 'after-partial-cache-creation') throw Error('Observed conditional maintenance failure');}});
+          throw Error('Expected maintenance failure');
+        } catch (error) {
+          expect(error).toBeInstanceOf(HydrationTransactionError);
+          const failure = error as HydrationTransactionError;
+          if (variant === 'owned' || variant === 'timestamps-only') expect({restored:failure.rollbackSucceeded,residual:failure.residualDifferences}).toEqual({restored:true,residual:[]});
+          else expect(failure.rollbackSucceeded).toBe(false);
+          if (variant === 'owned') {expect(failure.residualDifferences).toEqual([]);expect(actor.fullProjection()).toEqual(before);}
+          else if (variant === 'timestamps-only') {
+            const expected = structuredClone(before), spell = expected.spells.find((item:any) => item._id === cache.id);
+            Object.assign(spell._stats,{createdTime:7,modifiedTime:8,lastModifiedBy:'RecreateUser0001'});
+            for (const effect of spell.effects) Object.assign(effect._stats,{createdTime:7,modifiedTime:8,lastModifiedBy:'RecreateUser0001'});
+            expect(actor.fullProjection()).toEqual(expected);
+            expect(before.spells.find((item:any) => item._id === cache.id)._stats.createdTime).toBe(1);
+          } else if (['unknown-item-field','outside-stats-time','changed-stats-version'].includes(variant)) {
+            expect(failure.residualDifferences.some(diff => diff.path === `/managed/spells/${cache.id}`)).toBe(true);
+          } else expect(failure.residualDifferences.some(diff => diff.path === '/rollback/errors')).toBe(true);
+        }
+        expect(actor.foreignProjection()).toEqual(otherBefore);
+        const writes = actor.calls.filter(call => call[0] === 'snapshotOriginUpdate');
+        expect(writes).toHaveLength(variant === 'owned' || variant === 'write-rejected' ? 1 : 0);
+      } finally {
+        if(gameDescriptor)Object.defineProperty(globalThis,'game',gameDescriptor);else delete(globalThis as any).game;
+      }
+    });
+  test.each(['overwrite','none','keep','other-ref'] as const)('real source-cache maintenance transaction authorizes the exact edited conditional ref: %s',async decision=>{
+    const actor=new TransactionActor(true),inputManifest=manifest(),ref=inputManifest.spellcastingGroups[0]!.spellRefs[0]!;
+    Object.assign(ref,{identifier:'geas',originalName:'Geas',englishName:'Geas',method:'innate',uses:{value:1,recovery:'day',shared:false}});actor.flags[RESOLVER_MODULE_ID].spellManifest=inputManifest;
+    const gameDescriptor=Object.getOwnPropertyDescriptor(globalThis,'game'),hooksDescriptor=Object.getOwnPropertyDescriptor(globalThis,'Hooks'),hooks=new TransactionHookBus();actor.lifecycleHooks=hooks;
+    Object.defineProperty(globalThis,'game',{configurable:true,value:{system:{version:'5.3.3'},modules:new Map()}});Object.defineProperty(globalThis,'Hooks',{configurable:true,value:hooks});
+    try{
+      await executeHydrationTransaction({actor,manifest:inputManifest,plan:readyPlan(actor,undefined,undefined,inputManifest)});
+      actor.withConditionalDamage=true;
+      const cache=actor.items.find(item=>item.type==='spell'&&item.flags[RESOLVER_MODULE_ID].refId==='light-ref'),cast=actor.managedActivities().find(a=>a.flags[RESOLVER_MODULE_ID].refId==='light-ref')!;
+      cache.system={...cache.system,...conditionalSpellFixture().system};cache.effects.unshift(...conditionalSpellFixture().effects);
+      cache.flags[RESOLVER_MODULE_ID].generatedContentHash=computeManagedSourceHash(activitySource(cache));cache.system.description.value+='<p>Existing GM annotation</p>';
+      cast.uses.spent=1;cache.system.uses.spent=2;actor.items[0]!.system.uses={spent:3,max:'4',recovery:[]};
+      const other=actor.managedActivities().find(a=>a.flags[RESOLVER_MODULE_ID].refId==='darkness-ref')!,otherCache=actor.items.find(item=>item.type==='spell'&&item.flags[RESOLVER_MODULE_ID].refId==='darkness-ref');other.uses.spent=1;otherCache.system.uses.spent=4;
+      const castBefore=activitySource(cast),otherBefore=activitySource(other),otherCacheBefore=activitySource(otherCache),before=actor.fullProjection(),raw=actor.rawItemProjection();
+      const plan=readyPlan(actor,decision==='none'?undefined:decision==='keep'?'keep':'overwrite',undefined,inputManifest,decision==='other-ref'?'darkness-ref':'light-ref');
+      const run=executeHydrationTransaction({actor,manifest:inputManifest,plan,completeSourceCache:true});
+      if(decision!=='overwrite'){
+        await expect(run).rejects.toThrow(decision==='keep'?'Keep cannot silently separate':'explicit Keep or Overwrite');expect(actor.fullProjection()).toEqual(before);expect(actor.rawItemProjection()).toEqual(raw);
+      }else{
+        expect((await run).status).toBe('committed');const done=actor.items.find(item=>item.id===cache.id);
+        expect(done.system.description.value).toContain('Existing GM annotation');expect(Object.values(done.system.activities)).toHaveLength(2);expect(done.system.activities.dnd5eactivity000.damage.parts).toEqual([]);
+        expect(activitySource(cast)).toEqual(castBefore);expect(activitySource(other)).toEqual(otherBefore);expect(activitySource(otherCache)).toEqual(otherCacheBefore);expect(done.system.uses.spent).toBe(2);expect(actor.items[0]!.system.uses.spent).toBe(3);
+      }
+    }finally{
+      if(gameDescriptor)Object.defineProperty(globalThis,'game',gameDescriptor);else delete(globalThis as any).game;if(hooksDescriptor)Object.defineProperty(globalThis,'Hooks',hooksDescriptor);else delete(globalThis as any).Hooks;
+    }
+  });
+  test.each([false,true])('owned usage chat projection remains atomic on a later failure, auto-cache=%s',async autoCache=>{
+    const actor=new TransactionActor(autoCache);actor.withUsageChat=true;const inputManifest=manifest(),text='The recipient remains unaware; resolve this exception manually.';
+    inputManifest.spellcastingGroups[0]!.spellRefs[0]!.restrictions=[{kind:'other',text,evidence:[{start:0,end:text.length,quote:text}]}];actor.flags[RESOLVER_MODULE_ID].spellManifest=inputManifest;
+    const before=actor.fullProjection(),rawBefore=actor.rawItemProjection();let observed=false;
+    await expect(executeHydrationTransaction({actor,manifest:inputManifest,plan:readyPlan(actor,undefined,undefined,inputManifest),failureInjector(stage){if(stage!=='after-partial-cache-creation')return;const cache=actor.items.find(item=>item.type==='spell');expect(cache.system.activities.SaveActivity0001.description.chatFlavor).toContain(text);observed=true;throw Error('after source chat projection');}})).rejects.toMatchObject({rollbackSucceeded:true,residualDifferences:[]});
+    expect(observed).toBe(true);expect(actor.fullProjection()).toEqual(before);expect(actor.rawItemProjection()).toEqual(rawBefore);
+  });
+  test('explicit same-plan cache completion updates missing GM notes while old managed hashes remain valid',async()=>{
+    const actor=new TransactionActor(true);actor.withUsageChat=true;const inputManifest=manifest(),text='Cannot repeat this action until its next turn.';
+    inputManifest.spellcastingGroups[0]!.spellRefs[0]!.restrictions=[{kind:'other',text,evidence:[{start:0,end:text.length,quote:text}]}];actor.flags[RESOLVER_MODULE_ID].spellManifest=inputManifest;
+    await executeHydrationTransaction({actor,manifest:inputManifest,plan:readyPlan(actor,undefined,undefined,inputManifest)});
+    const oldCache=actor.items.find(item=>item.type==='spell'&&item.flags[RESOLVER_MODULE_ID].refId==='light-ref');oldCache.system.activities.SaveActivity0001.description.chatFlavor='Original native subtitle';
+    oldCache.flags[RESOLVER_MODULE_ID].generatedContentHash=computeManagedSourceHash(activitySource(oldCache));
+    actor.items[0]!.system.uses={spent:1,max:'1',recovery:[{period:'recharge',formula:'5'}]};
+    const daily=actor.managedActivities().find(activity=>activity.flags[RESOLVER_MODULE_ID].refId==='darkness-ref')!;daily.uses.spent=1;oldCache.system.uses.spent=2;
+    const dailyCache=actor.items.find(item=>item.type==='spell'&&item.flags[RESOLVER_MODULE_ID].refId==='darkness-ref');dailyCache.system.uses.spent=3;
+    const dailyBefore=activitySource(daily),dailyCacheBefore=activitySource(dailyCache),callStart=actor.calls.length;
+    const canonical=(value:any):any=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;
+    const plan=readyPlan(actor,undefined,undefined,inputManifest);actor.flags[RESOLVER_MODULE_ID].spellResolution.planHash=plan.planHash;actor.flags[RESOLVER_MODULE_ID].spellResolution.managedProjectionHash=sha256(JSON.stringify(canonical(projectCurrentManagedContent(actor,inputManifest.manifestId).sort((a,b)=>a.logicalRefKey.localeCompare(b.logicalRefKey,'en')))));
+    const result=await executeHydrationTransaction({actor,manifest:inputManifest,plan,completeSourceCache:true});expect(result.status).toBe('committed');
+    const cache=actor.items.find(item=>item.type==='spell'&&item.flags[RESOLVER_MODULE_ID].refId==='light-ref');expect(cache.system.activities.SaveActivity0001.description.chatFlavor).toContain(text);
+    expect(cache.system.description.value).toBe('Official spell body');expect(cache.flags[RESOLVER_MODULE_ID].generatedContentHash).toBe(computeManagedSourceHash(activitySource(cache)));
+    expect(actor.items[0]!.system.uses.spent).toBe(1);expect(cache.system.uses.spent).toBe(2);expect(activitySource(daily)).toEqual(dailyBefore);expect(activitySource(dailyCache)).toEqual(dailyCacheBefore);
+    expect(actor.calls.slice(callStart).some(call=>call[0]==='createEmbeddedDocuments'||call[0]==='deleteEmbeddedDocuments')).toBe(false);
+    const changedIds=actor.calls.slice(callStart).filter(call=>call[0]==='updateEmbeddedDocuments').flatMap(call=>(call[2] as any[]).map(update=>update._id));expect(changedIds.every(id=>id===cache.id)).toBe(true);
+    cache.system.description.value='Manual kept body';cache.system.activities.SaveActivity0001.description.chatFlavor='Manual kept subtitle';
+    await executeHydrationTransaction({actor,manifest:inputManifest,plan:readyPlan(actor,'keep',undefined,inputManifest),completeSourceCache:true});
+    const kept=actor.items.find(item=>item.id===cache.id);expect(kept.system.description.value).toBe('Manual kept body');expect(kept.system.activities.SaveActivity0001.description.chatFlavor).toStartWith('Manual kept subtitle\n');expect(kept.flags[RESOLVER_MODULE_ID].protected).toBe(true);expect(kept.system.uses.spent).toBe(2);
+  });
+  test.each(['before','after'] as const)('source cache completion public write rejection %s commit restores all prior documents and counters',async phase=>{
+    const actor=new TransactionActor(true);actor.withUsageChat=true;const inputManifest=manifest();actor.flags[RESOLVER_MODULE_ID].spellManifest=inputManifest;
+    await executeHydrationTransaction({actor,manifest:inputManifest,plan:readyPlan(actor,undefined,undefined,inputManifest)});
+    const text='This action cannot be repeated until the next turn.';inputManifest.spellcastingGroups[0]!.spellRefs[0]!.restrictions=[{kind:'other',text,evidence:[{start:0,end:text.length,quote:text}]}];
+    actor.chatWriteFailure=phase;const before=actor.fullProjection(),raw=actor.rawItemProjection();
+    await expect(executeHydrationTransaction({actor,manifest:inputManifest,plan:readyPlan(actor,undefined,undefined,inputManifest),completeSourceCache:true})).rejects.toMatchObject({rollbackSucceeded:true,residualDifferences:[]});
+    expect(actor.fullProjection()).toEqual(before);expect(actor.rawItemProjection()).toEqual(raw);
+  });
   test.each([[false], [true]] as const)('commits atomically with native auto-cache=%s, serializes, and use spending is a no-op', async (autoCache) => {
     const actor = new TransactionActor(autoCache);
     const foreignBefore = actor.foreignProjection();
@@ -753,6 +885,7 @@ class TransactionHookBus {
 
 class TransactionActor {
   readonly id = 'ActorTransact001';
+  get uuid() { return `Actor.${this.id}`; }
   readonly documentName = 'Actor';
   readonly type = 'npc';
   readonly calls: unknown[][] = [];
@@ -765,7 +898,12 @@ class TransactionActor {
   lifecycleHooks?: TransactionHookBus;
   nativeCreateDelayMs = 0;
   withDurationEffect = false;
+  withUsageChat = false;
+  withConditionalDamage = false;
+  chatWriteFailure?:'before'|'after';
   durationWriteFailure?: 'before' | 'after';
+  snapshotEffectMutation?: (item:any) => void;
+  snapshotOriginWriteRejected = false;
   private activeMutations = 0;
   private nativeCacheSequence = 0;
   constructor(private readonly autoCache = false, private readonly nativeEffectLayout: 'legacy' | 'system' = 'legacy') {
@@ -805,6 +943,16 @@ class TransactionActor {
         const item = this.items.find((entry) => entry.id === update._id);
         if (!item) throw new Error(`Missing item ${update._id}`);
         const activityEntry = Object.entries(update).find(([key]) => key.startsWith('system.activities.'));
+        if(item?.type==='spell'&&activityEntry){
+          if(this.chatWriteFailure==='before'){this.chatWriteFailure=undefined;throw Error('Source chat write rejected before commit');}
+          for(const[path,value]of Object.entries(update))if(path.startsWith('system.activities.')){
+            const keys=path.slice('system.activities.'.length).split('.'),id=keys.shift()!;
+            if(!keys.length){item.system.activities[id]=structuredClone(value);continue;}
+            let child=item.system.activities[id];for(const key of keys.slice(0,-1)){child[key]??={};child=child[key];}child[keys.at(-1)!]=structuredClone(value);
+          }
+          if(this.chatWriteFailure==='after'){this.chatWriteFailure=undefined;throw Error('Source chat write rejected after commit');}
+          continue;
+        }
         if (activityEntry) {
           const [path, source] = activityEntry;
           const activityPath = path.slice('system.activities.'.length).split('.');
@@ -814,6 +962,7 @@ class TransactionActor {
             this.mutateCachedEnchantment(item.system.activities.get(id));
             continue;
           }
+          if(activityPath.join('.')===`flags.${RESOLVER_MODULE_ID}.protected`){item.system.activities.get(id).flags[RESOLVER_MODULE_ID].protected=source;continue;}
           if (activityPath.length) throw new Error(`Unsupported fake Activity update path: ${path}`);
           const previousActivity = item.system.activities.get(id);
           const previousCache = previousActivity
@@ -849,6 +998,7 @@ class TransactionActor {
         }
         const preparedHash = update[`flags.${RESOLVER_MODULE_ID}.generatedContentHash`];
         if (preparedHash) item.flags[RESOLVER_MODULE_ID].generatedContentHash = preparedHash;
+        if(update[`flags.${RESOLVER_MODULE_ID}.protected`]===true)item.flags[RESOLVER_MODULE_ID].protected=true;
         const fullItemKeys = Object.keys(update).filter((key) => key !== '_id'
           && !key.startsWith('system.activities.') && !key.startsWith('flags.'));
         if (fullItemKeys.length) {
@@ -868,7 +1018,8 @@ class TransactionActor {
     await this.withMutation(async () => {
       this.calls.push(['createEmbeddedDocuments', name, sources.map((source) => source._stats?.compendiumSource), operation]);
       if (this.failSnapshotRecreate && operation.keepId === true) throw new Error('snapshot recreate failed');
-      for (const source of sources) this.items.push({
+      for (const source of sources) {
+        const item = {
         ...structuredClone(source),
         id: source._id,
         parent: this,
@@ -876,7 +1027,10 @@ class TransactionActor {
         ...(source.type === 'spell' ? {
           system: { ...structuredClone(source.system), preparedSpellDefault: 'dnd5e-normalized' },
         } : {}),
-      });
+        };
+        this.snapshotEffectMutation?.(item);
+        this.items.push(item);
+      }
       this.refreshSourcedItems();
     });
     return sources.map((source) => this.items.find((item) => item.id === source._id));
@@ -968,10 +1122,10 @@ class TransactionActor {
             refId: source.flags[RESOLVER_MODULE_ID].refId,
             featureId: feature.id,
           }, 'spell'),
-          name: source.name, type: 'spell', system: { sourceItem: 'feat:innate-feature', uses: { spent: 0 }, ...(actor.withDurationEffect ? {
+          name: source.name, type: 'spell', system: { sourceItem: 'feat:innate-feature', uses: { spent: 0 }, ...(actor.withConditionalDamage&&source.flags[RESOLVER_MODULE_ID].refId==='light-ref'?conditionalSpellFixture().system:{}), ...(actor.withUsageChat?{description:{value:'Official spell body',chat:''},activities:{SaveActivity0001:{type:'save',description:{chatFlavor:'Original native subtitle'}}}}:{}), ...(actor.withDurationEffect ? {
             identifier: 'disguise-self', duration: { value: '1', units: 'hour' }, activities: { utility: { type: 'utility', effects: [{ _id: 'SrIb7dbaZs5F4zi9' }] } },
           } : {}) },
-          effects: [...(actor.withDurationEffect ? [{ _id: 'SrIb7dbaZs5F4zi9', type: 'base', transfer: false, duration: { value: 3600, units: 'seconds' } }] : []), actor.nativeEffectLayout === 'system'
+          effects: [...(actor.withConditionalDamage&&source.flags[RESOLVER_MODULE_ID].refId==='light-ref'?conditionalSpellFixture().effects:[]),...(actor.withDurationEffect ? [{ _id: 'SrIb7dbaZs5F4zi9', type: 'base', transfer: false, duration: { value: 3600, units: 'seconds' } }] : []), actor.nativeEffectLayout === 'system'
             ? { _id: 'dnd5espellchang', type: 'enchantment', system: { origin: { activity: activity.relativeUUID }, changes: [] }, transfer: true }
             : { _id: 'dnd5espellchang', type: 'enchantment', origin: activity.relativeUUID, changes: [] }],
           flags: { dnd5e: { cachedFor: activity.relativeUUID } }, _stats: { compendiumSource: source.spell.uuid },
@@ -1075,6 +1229,12 @@ expect(hashManagedProjection({ uses: { spent: 0, max: '1' } }))
 function exposeFakeEffectApi(actor: any, item: any) {
   Object.defineProperty(item, 'updateEmbeddedDocuments', { configurable: true, value: async (type: string, updates: any[]) => {
     if (type !== 'ActiveEffect') throw Error('Expected targeted ActiveEffect update');
+    if (updates.every(update => Object.keys(update).sort().join(',') === '_id,origin')) {
+      actor.calls.push(['snapshotOriginUpdate',item.id,structuredClone(updates)]);
+      if (actor.snapshotOriginWriteRejected) throw Error('Snapshot origin public write rejected');
+      for (const update of updates) item.effects.find((effect:any) => effect._id === update._id).origin = update.origin;
+      return updates;
+    }
     actor.calls.push(['targetedEffectUpdate', item.id, structuredClone(updates)]);
     if (actor.durationWriteFailure === 'before') { actor.durationWriteFailure = undefined; throw Error('duration write rejected before commit'); }
     for (const update of updates) {
@@ -1086,3 +1246,16 @@ function exposeFakeEffectApi(actor: any, item: any) {
     return updates;
   } });
 }
+
+test('source reuse bound to another document is rejected before any Actor write',async()=>{
+ const value=manifest(),parent=value.spellcastingGroups[0]!,ref=structuredClone(parent.spellRefs[0]!);
+ ref.refId='legendary-light-ref';ref.reuseOf={groupId:parent.groupId,refId:parent.spellRefs[0]!.refId};
+ ref.evidence=[{start:50,end:55,quote:'Light'}];
+ value.spellcastingGroups.push({...structuredClone(parent),groupId:'legendary-reuse',featureItemKey:'legendary-feature',spellRefs:[ref]});
+ const actor=new TransactionActor();actor.flags[RESOLVER_MODULE_ID].spellManifest=structuredClone(value);
+ const plan=readyPlan(actor,undefined,undefined,value);
+ plan.selections.find(s=>s.refId==='legendary-light-ref')!.uuid='Compendium.dnd5e.spells24.Item.cccccccccccccccc';
+ plan.planHash=sha256(canonicalPlan(plan));
+ await expect(executeHydrationTransaction({actor,manifest:value,plan})).rejects.toThrow('Referenced spell bindings disagree');
+ expect(actor.calls).toHaveLength(0);
+});

@@ -26,7 +26,7 @@ describe('locked Midi independent source-operation import adapter',()=>{
     expect(()=>assertActorSemantics(artifact,unsafe)).toThrow('Midi safety');
     const before=JSON.stringify(artifact),hash=hashArtifact(artifact),adapted=prepareFoundryImportArtifact(artifact,{modules:moduleState()}) as any;
     expect(JSON.stringify(artifact)).toBe(before);expect(hashArtifact(artifact)).toBe(hash);
-    for(const activity of activities(adapted)){expect(activity.midiProperties).toEqual({otherActivityCompatible:false,triggeredActivityId:'none'});if(activity.type==='attack')expect(activity.otherActivityId).toBe('none');else expect(activity.otherActivityId).toBeUndefined();}
+    for(const activity of activities(adapted)){expect(activity.midiProperties).toEqual({otherActivityCompatible:false,triggeredActivityId:'none',...(activity.type==='save'&&activity.damage?.parts?.length?{removeChatButtons:'none'}:{})});if(activity.type==='attack')expect(activity.otherActivityId).toBe('none');else expect(activity.otherActivityId).toBeUndefined();}
     expect(()=>assertActorSemantics(adapted,structuredClone(adapted))).not.toThrow();
     expect(activities(adapted).map(activity=>activity.consumption)).toEqual(activities(artifact).map(activity=>activity.consumption));expect(adapted.flags['fvtt-json-generator-spell-resolver']).toEqual(artifact.flags['fvtt-json-generator-spell-resolver']);
   });
@@ -39,6 +39,24 @@ describe('locked Midi independent source-operation import adapter',()=>{
     expect(activities(plain).every(activity=>activity.midiProperties===undefined&&activity.otherActivityId===undefined)).toBe(true);expect(inactive).toEqual(plain);
     const absent=runtime('');await createAcceptedForgeActor({game:absent.game,response});expect(activities(absent.game.actors.contents[0].data).every(activity=>activity.midiProperties===undefined&&activity.otherActivityId===undefined)).toBe(true);
     const env=runtime('14.0.12');await expect(createAcceptedForgeActor({game:env.game,response})).rejects.toThrow('unverified Midi version');expect(env.game.actors.createCount).toBe(0);
+  });
+  test('mixed source Save keeps its damage button and rejects missing or restored hidden-button defaults',()=>{
+    const before=JSON.stringify(artifact),adapted=prepareFoundryImportArtifact(artifact,{modules:moduleState()}) as any;
+    const save=activities(adapted).find(activity=>activity.type==='save'&&activity.damage?.parts?.length);
+    expect(save).toBeDefined();expect(save.midiProperties.removeChatButtons).toBe('none');
+    expect(JSON.stringify(artifact)).toBe(before);
+    // Import changes neither the configured native dice nor consumption; the
+    // ordinary GM action rolls them. It cannot silently become automatic HP.
+    const original=activities(artifact).find(activity=>activity._id===save._id);
+    expect(save.damage).toEqual(original.damage);expect(save.consumption).toEqual(original.consumption);
+    for(const value of [undefined,'default','all','damage','everything']){
+      const wrong=structuredClone(adapted),activity=activities(wrong).find(activity=>activity._id===save._id);
+      if(value===undefined)delete activity.midiProperties.removeChatButtons;else activity.midiProperties.removeChatButtons=value;
+      expect(()=>assertActorSemantics(adapted,wrong)).toThrow('Midi safety');
+    }
+    const unrelated=structuredClone(artifact);for(const item of unrelated.items){delete item.flags?.fvttJsonGenerator?.manualRule;for(const activity of Object.values<any>(item.system?.activities??{})){delete activity.flags?.fvttJsonGenerator?.sourceOperation;}}
+    const plain=prepareFoundryImportArtifact(unrelated,{modules:moduleState()}) as any;
+    expect(plain).toEqual(unrelated);
   });
   test('an unbound Activity marker cannot receive a guessed compatibility adapter',()=>{const changed=structuredClone(artifact);activities(changed)[0].flags.fvttJsonGenerator.sourceOperation.relationship='follow-up';expect(()=>prepareFoundryImportArtifact(changed,{modules:moduleState()})).toThrow('Unbound source-operation');});
   test('normal single-Actor creation and reuse keep safety and reject an unsafe existing card without migration',async()=>{

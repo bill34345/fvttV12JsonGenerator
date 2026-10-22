@@ -1,0 +1,131 @@
+{
+  "id": "vampire-2024-srd521-mm-control",
+  "edition": "2024",
+  "name": "Vampire",
+  "sourceUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+  "pdfPages": [
+    335,
+    336
+  ],
+  "pdfSha256": "8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+  "sourceSha256": "fa4306f92887058775d167f201e7c96e19de45f4dd545482e1917bad9a40c2b5",
+  "license": "CC-BY-4.0",
+  "attribution": "This work includes material from the System Reference Document 5.2.1 (SRD 5.2.1) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.",
+  "officialActorControl": {
+    "module": "dnd-monster-manual",
+    "version": "1.3.0",
+    "packId": "dnd-monster-manual.actors",
+    "entryId": "mmVampire0000000",
+    "rules": "2024",
+    "meaning": "native implementation reference; local translation differences must be reported, not used to rewrite original source"
+  },
+  "normalizations": [
+    {
+      "from": "335 System Reference Document 5.2.1",
+      "to": "",
+      "count": 1,
+      "reason": "page furniture; verified PDF p335"
+    },
+    {
+      "from": "\f",
+      "to": "",
+      "count": 1,
+      "reason": "page break only"
+    },
+    {
+      "from": "use ShapeShift",
+      "to": "use Shape-Shift",
+      "count": 1,
+      "reason": "verified PDF line-break hyphen in feature reference"
+    },
+    {
+      "from": " Initiative +14 (24)",
+      "to": "\nInitiative +14 (24)",
+      "count": 1,
+      "reason": "restore original header field line break, no word/value change"
+    },
+    {
+      "from": " HP 195",
+      "to": "\nHP 195",
+      "count": 1,
+      "reason": "restore original header field line break, no word/value change"
+    },
+    {
+      "from": " Speed 40 ft.",
+      "to": "\nSpeed 40 ft.",
+      "count": 1,
+      "reason": "restore original header field line break, no word/value change"
+    },
+    {
+      "from": " Resistances Necrotic",
+      "to": "\nResistances Necrotic",
+      "count": 1,
+      "reason": "restore original header field line break, no word/value change"
+    },
+    {
+      "from": " Senses Darkvision 120 ft.",
+      "to": "\nSenses Darkvision 120 ft.",
+      "count": 1,
+      "reason": "restore original header field line break, no word/value change"
+    },
+    {
+      "from": " Languages Common",
+      "to": "\nLanguages Common",
+      "count": 1,
+      "reason": "restore original header field line break, no word/value change"
+    },
+    {
+      "from": " CR 13",
+      "to": "\nCR 13",
+      "count": 1,
+      "reason": "restore original header field line break, no word/value change"
+    }
+  ],
+  "expectedUnits": [
+    {
+      "name": "Legendary Resistance (3/Day, or 4/Day in Lair)",
+      "section": "trait"
+    },
+    {
+      "name": "Misty Escape",
+      "section": "trait"
+    },
+    {
+      "name": "Spider Climb",
+      "section": "trait"
+    },
+    {
+      "name": "Vampire Weakness",
+      "section": "trait"
+    },
+    {
+      "name": "Multiattack (Vampire Form Only)",
+      "section": "action"
+    },
+    {
+      "name": "Grave Strike (Vampire Form Only)",
+      "section": "action"
+    },
+    {
+      "name": "Bite (Bat or Vampire Form Only)",
+      "section": "action"
+    },
+    {
+      "name": "Charm (Recharge 5–6)",
+      "section": "bonus"
+    },
+    {
+      "name": "Shape-Shift",
+      "section": "bonus"
+    },
+    {
+      "name": "Beguile",
+      "section": "legendary"
+    },
+    {
+      "name": "Deathless Strike",
+      "section": "legendary"
+    }
+  ],
+  "source": "Vampire\nMedium or Small Undead, Lawful Evil\nAC 16\t\t\nInitiative +14 (24)\nHP 195 (23d8 + 92)\nSpeed 40 ft., Climb 40 ft.\n\nMOD SAVE\nStr 18 +4 +4 Int 17 +3 +3\n\nMOD SAVE\nDex 18 +4 +9 Wis 15 +2 +7\n\nMOD SAVE\nCon 18 +4 +9 Cha 18 +4 +9\n\nSkills Perception +7, Stealth +9\nResistances Necrotic\nSenses Darkvision 120 ft.; Passive Perception 17\nLanguages Common plus two other languages\nCR 13 (XP 10,000, or 11,500 in lair; PB +5)\n\nTraits\nLegendary Resistance (3/Day, or 4/Day in Lair). If the vampire fails a saving throw, it can choose to succeed instead.\nMisty Escape. If the vampire drops to 0 Hit Points outside its resting place, the vampire uses Shape-Shift to become mist (no action required). If it can’t use Shape-Shift, it is destroyed.\nWhile it has 0 Hit Points in mist form, it can’t return to its vampire form, and it must reach its resting place within 2 hours or be destroyed. Once in its resting place, it returns to its vampire form and has the Paralyzed condition until it regains any Hit Points, and it regains 1 Hit Point after spending 1 hour there.\nSpider Climb. The vampire can climb difficult surfaces, including along ceilings, without needing to make an ability check.\nVampire Weakness. The vampire has these weaknesses:\nForbiddance. The vampire can’t enter a residence without an invitation from an occupant.\nRunning Water. The vampire takes 20 Acid damage if it ends its turn in running water.\nStake to the Heart. If a weapon that deals Piercing damage is driven into the vampire’s heart while the vampire has the Incapacitated condition in its resting place, the vampire has the Paralyzed condition until the weapon is removed.\nSunlight. The vampire takes 20 Radiant damage if it starts its turn in sunlight. While in sunlight, it has Disadvantage on attack rolls and ability checks.\n\nActions\nMultiattack (Vampire Form Only). The vampire makes two Grave Strike attacks and uses Bite.\nGrave Strike (Vampire Form Only). Melee Attack Roll: +9, reach 5 ft. Hit: 8 (1d8 + 4) Bludgeoning damage plus 7 (2d6) Necrotic damage. If the target is a Large or smaller creature, it has the Grappled condition (escape DC 14) from one of two hands.\nBite (Bat or Vampire Form Only). Constitution Saving Throw: DC 17, one creature within 5 feet that is willing or that has the Grappled, Incapacitated, or Restrained condition. Failure: 6 (1d4 + 4) Piercing damage plus 13 (3d8) Necrotic damage. The target’s Hit Point maximum\n\ndecreases by an amount equal to the Necrotic damage taken, and the vampire regains Hit Points equal to that amount. A Humanoid reduced to 0 Hit Points by this damage and then buried rises the following sunset as a Vampire Spawn under the vampire’s control.\n\nBonus Actions\nCharm (Recharge 5–6). The vampire casts Charm Person, requiring no spell components and using Charisma as the spellcasting ability (spell save DC 17), and the duration is 24 hours. The Charmed target is a willing recipient of the vampire’s Bite, the damage of which doesn’t end the spell. When the spell ends, the target is unaware it was Charmed by the vampire.\n\nShape-Shift. If the vampire isn’t in sunlight or running water, it shape-shifts into a Tiny bat (Speed 5 ft., Fly Speed 30 ft.) or a Medium cloud of mist (Speed 5 ft., Fly Speed 20 ft. [hover]), or it returns to its vampire form. Anything it is wearing transforms with it.\nWhile in bat form, the vampire can’t speak. Its game statistics, other than its size and Speed, are unchanged.\nWhile in mist form, the vampire can’t take any actions, speak, or manipulate objects. It is weightless and can enter an enemy’s space and stop there. If air can pass through a space, the mist can do so, but it can’t pass through liquid. It has Resistance to all damage, except the damage it takes from sunlight.\n\nLegendary Actions\nLegendary Action Uses: 3 (4 in Lair). Immediately after another creature’s turn, the vampire can expend a use to take one of the following actions. The vampire regains all expended uses at the start of each of its turns.\nBeguile. The vampire casts Command, requiring no spell components and using Charisma as the spellcasting ability (spell save DC 17). The vampire can’t take this action again until the start of its next turn.\n\nDeathless Strike. The vampire moves up to half its Speed, and it makes one Grave Strike attack.\n"
+}

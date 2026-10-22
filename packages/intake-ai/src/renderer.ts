@@ -1,6 +1,11 @@
 import { displayName } from '@fvtt-json-generator/models/display-name';
 import yaml from 'js-yaml';
+import {sizeChoiceProgramNote} from './source-size';
+import {sourceLegendaryLairResistance} from '@fvtt-json-generator/models/source-operations';
 import { composeSourceTextPresentation, sourceTextPresentationBoundary, type SourceTextPresentation } from '@fvtt-json-generator/models/source-text-presentation';
+import {sourceDailySpellAction} from './daily-spell-action';
+import {validateMonsterIntakeIR} from './validator';
+import type {SourceCandidateReview} from '@fvtt-json-generator/models/source-operations';
 import type {
   AbilityKey,
   CanonicalFeature,
@@ -40,8 +45,17 @@ const AOE_ZH: Record<NonNullable<CanonicalFeature['aoe']>['shape'], string> = {
   sphere: '球形', radius: '半径', cone: '锥形', line: '线形', cube: '立方体', cylinder: '圆柱形', rectangle: '矩形',
 };
 
-export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR): string {
+export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR, source?:string): string {
   const creature = ir.creature;
+  const refs=[...ir.coverage].sort((a,b)=>a.start-b.start);
+  let cursor=0;
+  const complete=refs.every(ref=>ref.start===cursor&&(cursor=ref.end)>=ref.start)&&cursor===ir.source.length;
+  const rawSource=source??(complete?refs.map(ref=>ref.quote).join(''):undefined);
+  const local=rawSource===undefined?[]:validateMonsterIntakeIR(rawSource,ir).blocking;
+  const unresolved=[...local,...ir.uncertainties.filter(f=>f.blocking)];
+  const reviewFindings=[...new Map(unresolved.map(f=>[f.code+'\0'+f.path,{code:f.code,path:f.path,message:f.message}])).values()];
+  const candidateReview:SourceCandidateReview|undefined=reviewFindings.length?{version:1,findings:reviewFindings,
+    proposal:{sourceSha256:ir.source.sha256,source:rawSource??null,uncertainties:structuredClone(ir.uncertainties),prior:creature.candidateReview??null}}:creature.candidateReview;
   const prepared = renderPreparedSpellcastingProfile(creature);
   const castingAbilities=[...new Set((creature.spellcasting??[]).map(g=>g.ability))];
   const castingFeatures=(activation?:CanonicalSpellcastingGroup['activationType'])=>(creature.spellcasting??[]).filter(g=>g.activationType===activation).map(renderSpellcastingFeature);
@@ -52,6 +66,7 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR): string {
     // Source-derived boundary: the complete canonical ability inventory is
     // rendered below; biography is literal narrative, not another rule input.
     'intake-biography-mode': 'literal-v1',
+    ...(candidateReview?{'intake-candidate-review':candidateReview}:{}),
     ...(biography ? {'intake-biography-presentation':sourceTextPresentationBoundary(biography)} : {}),
     名称: displayName(creature.identity.name, creature.identity.englishName),
     类型: 'npc',
@@ -81,6 +96,10 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR): string {
     语言备注: creature.languages.custom,
     传记: biography ? composeSourceTextPresentation(biography) : undefined,
     传奇动作次数: creature.legendary?.max,
+    ...(creature.legendary?.lairMax?{'intake-legendary-ledger':{
+      max:creature.legendary.max,lairMax:creature.legendary.lairMax,recovery:creature.legendary.recovery,
+      ...(()=>{const counters=creature.traits.flatMap(feature=>{const counter=sourceLegendaryLairResistance(feature.name,feature.description,[creature.identity.name,creature.identity.englishName].filter((value):value is string=>!!value));return counter?[counter]:[];});if(counters.length>1)throw Error('Conflicting source legendary resistance counters');return counters[0]?{resistanceMax:counters[0].max,resistanceLairMax:counters[0].lairMax}:{};})(),
+    }}:{}),
     施法属性: prepared?.ability??(castingAbilities.length===1?castingAbilities[0]:undefined),
     施法者等级: prepared?.casterLevel,
     法术位: prepared?.slots,
@@ -93,7 +112,7 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR): string {
     动作: [...castingFeatures('action'),...creature.actions.map((feature) => featureEntry(feature, 'action'))],
     附赠动作: [...castingFeatures('bonus'),...creature.bonusActions.map((feature) => featureEntry(feature, 'bonus'))],
     反应: [...castingFeatures('reaction'),...creature.reactions.map((feature) => featureEntry(feature, 'reaction'))],
-    传奇动作: creature.legendaryActions.map((feature) => featureEntry(feature, 'legendary')),
+    传奇动作: [...castingFeatures('legendary'),...creature.legendaryActions.map((feature) => featureEntry(feature, 'legendary'))],
     神话动作: (creature.mythicActions ?? []).map((feature) => featureEntry(feature, 'mythic')),
   };
   for (const [key, value] of Object.entries(data)) {
@@ -119,8 +138,10 @@ function renderSpellManifest(ir: MonsterIntakeIR): Record<string, unknown> | und
       ability: group.ability,
       ...(group.saveDc === undefined ? {} : { saveDc: group.saveDc }),
       ...(group.attackBonus === undefined ? {} : { attackBonus: group.attackBonus }),
+      ...(group.recharge?{recharge:group.recharge}:{}),
       spellRefs: group.usageGroups.flatMap((usageGroup) => usageGroup.spellRefs.map((ref) => ({
         refId: ref.refId,
+        ...(ref.reuseOf?{reuseOf:{...ref.reuseOf}}:{}),
         identifier: ref.identifier,
         originalName: ref.originalName,
         ...(ref.englishName === undefined ? {} : { englishName: ref.englishName }),
@@ -202,11 +223,16 @@ function renderSpellcastingFeature(group: CanonicalSpellcastingGroup): Record<st
   return {
     ...renderFeature({
       name: group.featureName,
+      ...(group.candidateReview?{candidateReview:group.candidateReview}:{}),
+      ...(group.candidateCounters?{candidateCounters:group.candidateCounters}:{}),
       englishName: group.featureEnglishName,
       description: group.description,
       activityType: 'utility',
       ...(manual?{executionMode:native?'native-with-gm' as const:'gm-manual' as const,...(native?{nativeRuleText:group.usageGroups.flatMap(g=>g.evidence.map(ref=>ref.quote)).join('\n'),manualRemainder:manual}:{})}:{}),
       ...(group.activationType?{activationType:group.activationType}:{}),
+      ...(group.recharge?{recharge:group.recharge}:{}),
+      ...(group.legendaryCost!==undefined?{legendaryCost:group.legendaryCost}:{}),
+      ...(sourceDailySpellAction(group.description)?{uses:{max:sourceDailySpellAction(group.description)!.count,period:'day' as const}}:{}),
     }, 'trait'),
     // Source-derived machine linkage; it does not alter the visible description.
     ...(native?{spellcastingFeatureKey: group.groupId}:{}),
@@ -235,6 +261,8 @@ function renderFeature(feature: CanonicalFeature, section: string,sharedPool=fal
     描述: feature.description,
   };
   if(feature.sourceFeatureId)result.sourceFeatureId=feature.sourceFeatureId;
+  if(feature.candidateReview)result.candidateReview=feature.candidateReview;
+  if(feature.candidateCounters)result.candidateCounters=feature.candidateCounters;
   if (feature.executionMode === 'gm-manual') {
     result['执行模式'] = 'gm-manual';
     result['类型'] = 'utility';
@@ -319,7 +347,11 @@ function renderBiography(creature: CanonicalMonster): SourceTextPresentation | u
     programNotes.push(`护甲等级：${creature.attributes.ac}${literalNote}`);
   }
   if (creature.identity.sourceSize) {
-    programNotes.push(`原文尺寸：${creature.identity.sourceSize}。角色卡使用最大原生尺寸 gargantuan（超巨型）；尺寸相关规则由 GM 手动判断。`);
+    const choice=sizeChoiceProgramNote(creature.identity);
+    if(choice)programNotes.push(choice);
+    else if(/^Colossal(?:\s*\([^)]*\))?$/iu.test(creature.identity.sourceSize)&&creature.identity.size==='gargantuan'){
+      programNotes.push(`原文尺寸：${creature.identity.sourceSize}。角色卡使用最大原生尺寸 gargantuan（超巨型）；尺寸相关规则由 GM 手动判断。`);
+    }else throw new TypeError('InvalidSourceSizePresentation');
   }
   return parts.length || programNotes.length ? {version:1, sourceText:parts.join('\n\n'), programNotes} : undefined;
 }

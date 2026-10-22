@@ -133,7 +133,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
 
     private bindInputEvents(root: HTMLElement): void {
       const provider = root.querySelector('[name="provider"]') as HTMLSelectElement | null;
-      const fields = ['provider', 'model', 'apiKey', 'endpoint', 'protocol', 'authScheme', 'region', 'reasoning', 'structuredOutput'];
+      const fields = ['provider', 'model', 'apiKey', 'endpoint', 'protocol', 'authScheme', 'region', 'reasoning', 'structuredOutput', 'autoCorrect'];
       for (const name of fields) {
         const input = root.querySelector(`[name="${name}"]`) as HTMLInputElement | HTMLSelectElement | null;
         if (!input) continue;
@@ -338,6 +338,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       setValue(root, 'model', settings.model);
       setValue(root, 'apiKey', settings.apiKey);
       setChecked(root, 'persistApiKey', settings.persistApiKey);
+      setChecked(root, 'autoCorrect', settings.autoCorrect);
       setValue(root, 'endpoint', settings.endpoint);
       setValue(root, 'protocol', settings.protocol);
       setValue(root, 'authScheme', settings.authScheme);
@@ -398,7 +399,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       }
       if (save) save.disabled = this.testing;
       if (test) test.disabled = this.testing;
-      for (const name of ['provider', 'model', 'apiKey', 'endpoint', 'protocol', 'authScheme', 'region', 'reasoning', 'structuredOutput', 'persistApiKey']) {
+      for (const name of ['provider', 'model', 'apiKey', 'endpoint', 'protocol', 'authScheme', 'region', 'reasoning', 'structuredOutput', 'persistApiKey', 'autoCorrect']) {
         const input = root.querySelector(`[name="${name}"]`) as HTMLInputElement | HTMLSelectElement | null;
         if (input) input.disabled = this.testing;
       }
@@ -435,6 +436,7 @@ function readConnectionForm(root: HTMLElement): ForgeClientSettings {
     region: inputValue(root, 'region'),
     reasoning: (inputValue(root, 'reasoning') || 'auto') as ForgeProviderReasoning,
     structuredOutput: (inputValue(root, 'structuredOutput') || 'prompt_fallback') as ForgeStructuredOutputMode,
+    autoCorrect: checkedValue(root, 'autoCorrect'),
     useSeparateReviewModel: false,
     model: inputValue(root, 'model'),
     reviewModel: inputValue(root, 'model'),
@@ -443,7 +445,7 @@ function readConnectionForm(root: HTMLElement): ForgeClientSettings {
   };
 }
 
-function connectionIdentity(value: Pick<ForgeClientSettings, 'providerId' | 'endpoint' | 'protocol' | 'authScheme' | 'region' | 'reasoning' | 'structuredOutput' | 'useSeparateReviewModel' | 'model' | 'reviewModel' | 'apiKey'>): string {
+function connectionIdentity(value: Pick<ForgeClientSettings, 'providerId' | 'endpoint' | 'protocol' | 'authScheme' | 'region' | 'reasoning' | 'structuredOutput' | 'autoCorrect' | 'useSeparateReviewModel' | 'model' | 'reviewModel' | 'apiKey'>): string {
   try {
     const normalized = normalizeForgeProviderConnection({
       providerId: value.providerId,
@@ -466,6 +468,7 @@ function connectionIdentity(value: Pick<ForgeClientSettings, 'providerId' | 'end
       region: normalized.region,
       reasoning: normalized.reasoning,
       structuredOutput: normalized.structuredOutput,
+      autoCorrect: value.autoCorrect,
       useSeparateReviewModel: normalized.useSeparateReviewModel,
       model: normalized.model,
       reviewModel: normalized.reviewModel,
@@ -480,6 +483,7 @@ function connectionIdentity(value: Pick<ForgeClientSettings, 'providerId' | 'end
       region: value.region.trim(),
       reasoning: value.reasoning,
       structuredOutput: value.structuredOutput,
+      autoCorrect: value.autoCorrect,
       useSeparateReviewModel: value.useSeparateReviewModel,
       model: value.model.trim(),
       reviewModel: value.reviewModel.trim(),
