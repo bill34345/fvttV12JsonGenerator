@@ -28,13 +28,14 @@ describe('reviewed encounter import and explicit macro startup',()=>{
     }
     expect(JSON.stringify(prepared)).toBe(before);
   });
-  test('still rejects unexpected artwork replacement after native default materialization',async()=>{
+  test('reports unexpected artwork replacement and retains the created Actor',async()=>{
     const env=runtime(),prepared=await ready(),create=env.game.actors.documentClass.create;
     env.game.actors.documentClass.create=async(data:any)=>{const doc=await create(data);(doc as any).data.img='unrelated.png';return doc;};
-    await expect(importForgeEncounter({...env,prepared,reviewed:true})).rejects.toThrow('图片回读');
-    expect(env.game.actors.contents).toHaveLength(0);
+    const result=await importForgeEncounter({...env,prepared,reviewed:true});
+    expect(result.documents.flatMap(d=>d.readbackWarnings??[]).join(' ')).toContain('图片');
+    expect(env.game.actors.contents).toHaveLength(prepared.actors.length);
   });
-  test('accepts native numeric FormulaField strings but rejects changed movement',async()=>{
+  test('accepts native numeric FormulaField strings and reports changed movement',async()=>{
     for(const drift of [false,true]){
       const env=runtime(),prepared=await prepareForgeEncounter(JSON.stringify(assistedEncounterFixture()));
       const create=env.game.actors.documentClass.create;
@@ -49,7 +50,7 @@ describe('reviewed encounter import and explicit macro startup',()=>{
         if(drift)data.system.attributes.movement.walk='999';
         return create(data);
       };
-      if(drift){await expect(importForgeEncounter({...env,prepared,reviewed:true})).rejects.toThrow('movement.walk');expect(env.game.actors.contents).toHaveLength(0);}
+      if(drift){const result=await importForgeEncounter({...env,prepared,reviewed:true});expect(result.documents.flatMap(d=>d.readbackWarnings??[]).join(' ')).toContain('movement.walk');expect(env.game.actors.contents?.length).toBeGreaterThan(0);}
       else expect((await importForgeEncounter({...env,prepared,reviewed:true})).documents).toHaveLength(3);
     }
   });

@@ -183,7 +183,9 @@
     <p>只创建或复用相同且未改变的文档，不覆盖已有内容。导入宏不会启动宏。多文档操作不是跨浏览器事务，页面意外关闭后请重新预览检查。</p>
     <details><summary>包身份</summary><code>{{packageHash}}</code></details>
   {{/if}}
-  {{#if documents}}<h3>导入结果</h3><ul>{{#each documents}}<li>{{name}} — {{status}} — {{uuid}} {{#if isActor}}<button type="button" data-open-actor="{{id}}">打开角色</button>{{/if}}</li>{{/each}}</ul>{{/if}}
+  {{#if documents}}<h3>导入结果</h3><ul>{{#each documents}}<li>{{name}} — {{status}} — {{uuid}} {{#if isActor}}<button type="button" data-open-actor="{{id}}">打开角色</button>{{/if}}
+    {{#if readbackWarnings}}<section class="forge-findings"><strong>已创建，录入值需要核对</strong><ul>{{#each readbackWarnings}}<li>{{this}}</li>{{/each}}</ul></section>{{/if}}
+  </li>{{/each}}</ul>{{/if}}
   </div>
   <h3>已导入的战斗控制</h3>
   <p>固定自动化首次明确启动后，会在刷新世界时恢复；可在控制面板停用。旧式专用宏仍需手动重新启动。运行时只使用已导入角色的绑定。</p>

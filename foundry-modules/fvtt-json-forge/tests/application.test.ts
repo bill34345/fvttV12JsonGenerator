@@ -223,6 +223,18 @@ describe('Forge Actor Application lifecycle', () => {
     expect(opened).toBe(1);
   });
 
+  test('standard Actor creation displays returned content differences without losing the created result',async()=>{
+    const accepted=await makeAcceptedResponse();
+    const {application,root}=makeApplication({createAcceptedForgeActor:async()=>({status:'created',actor:{} as any,
+      uuid:'Actor.warning-example',sourceId:'actor:v1:123e4567-e89b-42d3-a456-426614174000' as any,artifactHash:'a'.repeat(64) as any,
+      readbackWarnings:['Spear：远射程生成值60，Foundry未保留。']})});
+    (application as any).response=accepted;await (application as any).create();
+    expect(root.status.textContent).toContain('已保留');
+    expect(root.diagnosticList.innerHTML).toContain('远射程生成值60');
+    expect(root.createdSummary.textContent).toContain('Foundry未保留');
+    expect(root.createdDocument.hidden).toBe(false);
+  });
+
   test('guards browser page teardown while a world creation is active', async () => {
     const accepted = await makeAcceptedResponse();
     const createStarted = deferred<void>();
@@ -500,6 +512,7 @@ class FakeRoot {
   readonly finalSource = control('');
   readonly error = control('');
   readonly createdDocument = control('');
+  readonly createdSummary = control('');
   readonly openCreated = control('');
 
   querySelector(selector: string): any {
@@ -530,6 +543,7 @@ class FakeRoot {
       '[data-final-source]': this.finalSource,
       '[data-error]': this.error,
       '[data-created-document]': this.createdDocument,
+      '[data-created-summary]': this.createdSummary,
       '[data-action="open-created"]': this.openCreated,
     } as Record<string, any>)[selector] ?? null;
   }

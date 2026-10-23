@@ -113,6 +113,7 @@ export interface GenerationProjectionOptions {
   /** Internal capture of the exact normalized facts consumed by this projection. */
   onRulePresentationPlan?: ActorGeneratorOptions['onRulePresentationPlan'];
   rulePresentationActorNormalizer?: ActorGeneratorOptions['rulePresentationActorNormalizer'];
+  reviewDelivery?: ActorGeneratorOptions['reviewDelivery'];
 }
 
 export interface GenerationProjector {

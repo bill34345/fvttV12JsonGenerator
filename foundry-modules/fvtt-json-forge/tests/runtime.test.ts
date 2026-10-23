@@ -73,16 +73,14 @@ describe('Foundry Forge Actor creation boundary', () => {
       expect(created.status).toBe('created');
       expect(collection.createInputs).toHaveLength(1);
       const sourceResult = 'result' in response ? response.result : undefined;
-      expect(collection.contents[0]!.data.flags[MODULE_ID].candidateReview).toMatchObject({
-        version: 1, gmId: 'candidate-gm', strictStatus,
-        sourceHash: approval.sourceHash, artifactHash: approval.artifactHash,
-        diagnostics: sourceResult!.diagnostics, verification: sourceResult!.verification,
-      });
+      expect(collection.contents[0]!.data.flags[MODULE_ID].candidateReview).toBeUndefined();
+      expect(sourceResult!.status).toBe(strictStatus);
+      expect(sourceResult!.diagnostics.length).toBeGreaterThan(0);
       expect(collection.contents[0]!.data.items).toHaveLength((sourceResult!.artifact!.items as unknown[]).length);
       expect((await createReviewedForgeActorCandidate({ game, response, reviewApproval: approval })).status).toBe('existing');
       expect(collection.createCount).toBe(1);
-      collection.contents[0]!.data.flags[MODULE_ID].candidateReview.strictStatus = 'accepted';
-      await expect(createReviewedForgeActorCandidate({ game, response, reviewApproval: approval })).rejects.toThrow(/failed readback verification/u);
+      collection.contents[0]!.data.name = 'changed after import';
+      await expect(createReviewedForgeActorCandidate({ game, response, reviewApproval: approval })).resolves.toMatchObject({status:'existing',readbackWarnings:expect.arrayContaining([expect.any(String)])});
       expect(collection.createCount).toBe(1);
     }
   });
@@ -109,21 +107,23 @@ describe('Foundry Forge Actor creation boundary', () => {
     const parseFailure = structuredClone(response);
     if (!('result' in parseFailure)) throw new Error('Candidate fixture result required.');
     parseFailure.result.diagnostics[0]!.stage = 'parse';
-    await expect(createReviewedForgeActorCandidate({ game, response: parseFailure, reviewApproval: candidateApproval(parseFailure) })).rejects.toThrow(/structural or parsing/u);
     expect(collection.createCount).toBe(0);
+    expect((await createReviewedForgeActorCandidate({ game, response: parseFailure, reviewApproval: candidateApproval(parseFailure) })).status).toBe('created');
+    expect(collection.createCount).toBe(1);
   });
 
-  test('cleans only its new candidate when semantic or approval readback changes', async () => {
+  test('retains its new candidate and reports content differences without changing baseline actors', async () => {
     const response = reviewedCandidateResponse('failed');
-    for (const failure of ['readback', 'candidate-review-readback'] as const) {
+    for (const failure of ['readback'] as const) {
       const collection = new FakeActorCollection({ failure });
       const game = { ...supportedGame(collection), user: { isGM: true, id: 'candidate-gm' } };
       const baseline = collection.seed({ _id: 'baseline', name: 'Protected Actor' });
-      await expect(createReviewedForgeActorCandidate({ game, response, reviewApproval: candidateApproval(response) })).rejects.toThrow();
+      const result=await createReviewedForgeActorCandidate({ game, response, reviewApproval: candidateApproval(response) });
+      expect(result.readbackWarnings?.join(' ')).toContain('readback drift');
       expect(collection.createCount).toBe(1);
-      expect(collection.contents).toEqual([baseline]);
+      expect(collection.contents).toEqual([baseline,collection.created[0]!]);
       expect(baseline.deleted).toBe(false);
-      expect(collection.created[0]!.deleted).toBe(true);
+      expect(collection.created[0]!.deleted).toBe(false);
     }
   });
 
@@ -235,7 +235,7 @@ describe('Foundry Forge Actor creation boundary', () => {
     expect(collection.contents).toHaveLength(1);
   });
 
-  test('accepts Foundry v14 migration of legacy ActiveEffect changes and rejects readback drift', async () => {
+  test('accepts Foundry v14 migration of legacy ActiveEffect changes and reports readback drift', async () => {
     const source = await Bun.file('obsidian/dnd数据转fvttjson/input/scuttling-serpentmaw__蛇口蛮蟹.md').text();
     const response = await convertFinalActorSource(buildForgeActorRequest({
       content: source,
@@ -272,16 +272,16 @@ describe('Foundry Forge Actor creation boundary', () => {
     delete persistedEffect.system.changes;
     persistedEffect.changes = canonicalChanges.map((change: Record<string, any>) => ({ ...change, value: '14' }));
     await expect(createAcceptedForgeActor({ game: supportedGame(collection), response }))
-      .rejects.toThrow(/failed readback verification/u);
+      .resolves.toMatchObject({status:'existing',readbackWarnings:expect.arrayContaining([expect.any(String)])});
 
     delete persistedEffect.changes;
     persistedEffect.system.changes = canonicalChanges.map((change: Record<string, any>) => ({ ...change, value: 15 }));
     await expect(createAcceptedForgeActor({ game: supportedGame(collection), response }))
-      .rejects.toThrow(/failed readback verification/u);
+      .resolves.toMatchObject({status:'existing',readbackWarnings:expect.arrayContaining([expect.any(String)])});
 
     persistedEffect.system.changes = canonicalChanges.map((change: Record<string, any>) => ({ ...change, type: 'add' }));
     await expect(createAcceptedForgeActor({ game: supportedGame(collection), response }))
-      .rejects.toThrow(/failed readback verification/u);
+      .resolves.toMatchObject({status:'existing',readbackWarnings:expect.arrayContaining([expect.any(String)])});
     expect(collection.createCount).toBe(1);
     expect(collection.contents).toHaveLength(1);
 
@@ -365,17 +365,17 @@ describe('Foundry Forge Actor creation boundary', () => {
     const activeImported = findActivity(activeCollection.contents[0]!.data, '毒液咬击 Venomous Bite', utilityActivity!._id);
     activeImported.target.template.units = 'm';
     await expect(createAcceptedForgeActor({ game: supportedGame(activeCollection), response: activeResponse }))
-      .rejects.toThrow(/failed readback verification/u);
+      .resolves.toMatchObject({status:'existing',readbackWarnings:expect.arrayContaining([expect.any(String)])});
     expect(activeCollection.createCount).toBe(1);
   });
 
-  test('rejects a matching-flags existing Actor when its readback semantics are corrupt', async () => {
+  test('reports content differences when reusing an Actor with matching source identity', async () => {
     const collection = new FakeActorCollection();
     const game = supportedGame(collection);
     await createAcceptedForgeActor({ game, response: acceptedResponse });
     collection.contents[0]!.data.name = 'CORRUPT';
 
-    await expect(createAcceptedForgeActor({ game, response: acceptedResponse })).rejects.toThrow(/failed readback verification/u);
+    await expect(createAcceptedForgeActor({ game, response: acceptedResponse })).resolves.toMatchObject({status:'existing',readbackWarnings:expect.arrayContaining([expect.any(String)])});
     expect(collection.createCount).toBe(1);
     expect(collection.contents).toHaveLength(1);
     expect(collection.contents[0]!.deleted).toBe(false);
@@ -384,13 +384,13 @@ describe('Foundry Forge Actor creation boundary', () => {
   test.each([
     ['creature type', (actor: FakeActor) => { actor.data.system.details.type = { value: 'construct' }; }],
     ['ability score', (actor: FakeActor) => { actor.data.system.abilities.str.value += 1; }],
-  ] as const)('rejects reusable Actor readback with corrupt %s', async (_name, corrupt) => {
+  ] as const)('reports reusable Actor readback with changed %s', async (_name, corrupt) => {
     const collection = new FakeActorCollection();
     const game = supportedGame(collection);
     await createAcceptedForgeActor({ game, response: acceptedResponse });
     corrupt(collection.contents[0]!);
 
-    await expect(createAcceptedForgeActor({ game, response: acceptedResponse })).rejects.toThrow(/failed readback verification/u);
+    await expect(createAcceptedForgeActor({ game, response: acceptedResponse })).resolves.toMatchObject({status:'existing',readbackWarnings:expect.arrayContaining([expect.any(String)])});
     expect(collection.createCount).toBe(1);
     expect(collection.contents[0]!.deleted).toBe(false);
   });
@@ -514,13 +514,14 @@ describe('Foundry Forge Actor creation boundary', () => {
     expect(hashArtifact(sourceArtifact)).toBe(response.result.artifactHash);
   });
 
-  test('deletes only the newly created Actor when readback fails', async () => {
+  test('retains the newly created Actor and reports a changed name', async () => {
     const failure = 'readback' as const;
     const collection = new FakeActorCollection({ failure });
     const game = supportedGame(collection);
-    await expect(createAcceptedForgeActor({ game, response: acceptedResponse })).rejects.toThrow();
-    expect(collection.contents).toHaveLength(0);
-    expect(collection.created[0]?.deleted).toBe(true);
+    const result=await createAcceptedForgeActor({ game, response: acceptedResponse });
+    expect(result.readbackWarnings?.join(' ')).toContain('readback drift');
+    expect(collection.contents).toHaveLength(1);
+    expect(collection.created[0]?.deleted).toBe(false);
   });
 
   test('fails closed for non-GM and exact runtime mismatch before world creation', async () => {
@@ -611,7 +612,7 @@ describe('Foundry Forge Actor creation boundary', () => {
     expect(collection.created[0]?.deleted).toBe(false);
   });
 
-  test('reports a cleanup failure after readback failure instead of hiding a possible complete Actor', async () => {
+  test('reports a cleanup failure after source identity loss instead of hiding a possible complete Actor', async () => {
     const collection = new FakeActorCollection({ failure: 'readback-delete' });
     const pending = createAcceptedForgeActor({ game: supportedGame(collection), response: acceptedResponse });
     await expect(pending).rejects.toBeInstanceOf(ForgeTemporaryActorCleanupError);
@@ -646,18 +647,14 @@ class FakeActor implements ForgeActorLike {
   }
 
   public toObject(): unknown {
-    if (this.failure === 'readback' || this.failure === 'readback-delete') return { ...structuredClone(this.data), name: 'readback drift' };
-    if (this.failure === 'candidate-review-readback') {
-      const changed = structuredClone(this.data);
-      delete changed.flags[MODULE_ID].candidateReview;
-      return changed;
-    }
+    if (this.failure === 'readback') return { ...structuredClone(this.data), name: 'readback drift' };
+    if (this.failure === 'readback-delete') { const value=structuredClone(this.data);delete value.flags[MODULE_ID];return value; }
     return structuredClone(this.data);
   }
 }
 
 interface FakeActorCollectionOptions {
-  failure?: 'readback' | 'delete' | 'readback-delete' | 'candidate-review-readback';
+  failure?: 'readback' | 'delete' | 'readback-delete';
   createGate?: Promise<void>;
   onCreateStarted?: () => void;
 }

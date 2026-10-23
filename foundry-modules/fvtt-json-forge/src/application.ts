@@ -868,10 +868,10 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
         });
         this.created = result;
         this.errorMessage = '';
-        this.statusMessage = result.status === 'existing'
+        this.statusMessage = result.readbackWarnings?.length?'Actor 已保留，部分录入值需要核对，请查看下方提示。':result.status === 'existing'
           ? '已找到相同来源和 artifact，可打开已有角色卡。'
           : 'Actor 已创建并完成回读核对，可打开角色卡。';
-        this.notify('info', result.status === 'existing'
+        this.notify('info', result.readbackWarnings?.length?`Actor 已保留，录入值存在差异：${result.uuid}`:result.status === 'existing'
           ? `已找到相同来源和 artifact 的 Actor：${result.uuid}`
           : `Actor 创建并重新读取核对成功：${result.uuid}`);
       } catch (error) {
@@ -1138,6 +1138,7 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
         stages.innerHTML = (this.intake?.stages ?? this.stageProgress).map((stage) => `<li>${escapeHtml(stage.stage)}：${escapeHtml(stage.status)}${stage.message ? ` — ${escapeHtml(stage.message)}` : ''}</li>`).join('');
       }
       const messages = [
+        ...(this.created?.readbackWarnings??[]),
         ...(result?.diagnostics ?? []).map((entry) => `[${entry.severity}] ${entry.code}: ${entry.message}`),
         ...(this.intake?.findings ?? []).map((entry) => `[${entry.origin}] ${entry.code}: ${entry.message}`),
       ];
@@ -1198,7 +1199,8 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
         || (mode?.value === 'blueprint' && !currentBlueprintCandidate)
         || !isCurrentGmRuntime(environment.game);
       if (createdDocument) createdDocument.hidden = !this.created;
-      if (createdSummary && this.created) createdSummary.textContent = this.created.status === 'existing'
+      if (createdSummary && this.created) createdSummary.textContent = this.created.readbackWarnings?.length
+        ? `角色已保留，以下录入值需要核对：${this.created.readbackWarnings.join('；')}`:this.created.status === 'existing'
         ? '已找到相同来源的现有生物，可以打开角色卡继续检查。'
         : '已通过回读核对，可以打开角色卡继续检查。';
       if (openCreated) openCreated.disabled = !this.created || this.creating || !isCurrentGmRuntime(environment.game);

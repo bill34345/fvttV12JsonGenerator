@@ -28,7 +28,7 @@ import {
   partitionDiscoveryCandidates,
   singleCreatureSourceCandidate,
 } from '@fvtt-json-generator/intake-ai/discovery';
-import { renderMonsterIntakeMarkdown } from '@fvtt-json-generator/intake-ai/renderer';
+import { renderMonsterIntakeMarkdown, prepareMonsterCandidateDelivery } from '@fvtt-json-generator/intake-ai/renderer';
 import { validateMonsterIntakeIR } from '@fvtt-json-generator/intake-ai/validator';
 import { verifyMonsterIntake } from '@fvtt-json-generator/intake-ai/verifier';
 import { normalizeMonsterSourceFacts } from '@fvtt-json-generator/intake-ai/source-facts';
@@ -584,10 +584,25 @@ async function generateBrowserActorIntake(
   let deliverable: BrowserActorGenerationResult | undefined;
   try {
     report('generate', 'running');
-    const sourceFindings=dedupeFindings([...analysis.findings,...validation.findings]);
-    let annotatedIr=withCandidateFindings(analysis.ir,sourceFindings);
-    let rendered = await renderAndAttach(annotatedIr, input.sourceId, input.renderMarkdown,input.source);
-    let response = await convertRenderedActor(input, rendered.content, rendered.sourceId);
+    const prepared=prepareMonsterCandidateDelivery(analysis.ir,input.source);
+    const sourceFindings=dedupeFindings([...analysis.findings,...validation.findings,...prepared.findings]);
+    let annotatedIr=withCandidateFindings(prepared.ir,sourceFindings);
+    let rendered: Awaited<ReturnType<typeof renderAndAttach>>;
+    let response: ForgeActorResponse;
+    let renderMarkdown=input.renderMarkdown;
+    try{
+      rendered=await renderAndAttach(annotatedIr,input.sourceId,input.renderMarkdown,input.source);
+      response=await convertRenderedActor(input,rendered.content,rendered.sourceId);
+      if(!('result'in response)||!response.result.artifact)throw Error('result'in response?response.result.diagnostics.map(d=>d.message).join('；'):response.error.message);
+    }catch(error){
+      throwIfAborted(signal);
+      const fallback=prepareMonsterCandidateDelivery(analysis.ir,input.source,true);
+      sourceFindings.push(...fallback.findings,boundedFinding('ACTOR_PROJECTION_INCOMPLETE',`活动转换错误：${safeProviderMessage(error)}`));
+      annotatedIr=withCandidateFindings(fallback.ir,sourceFindings);
+      renderMarkdown=undefined;
+      rendered=await renderAndAttach(annotatedIr,input.sourceId,undefined,input.source);
+      response=await convertRenderedActor(input,rendered.content,rendered.sourceId);
+    }
     throwIfAborted(signal);
     if(!('result' in response) || !response.result.artifact){
       const diagnostics='result' in response?response.result.diagnostics:[];
@@ -603,7 +618,7 @@ async function generateBrowserActorIntake(
       // Persist post-generation source checks through the same renderer and
       // formal workflow. This is metadata, never a model retry or JSON repair.
       annotatedIr=withCandidateFindings(annotatedIr,additional);
-      rendered=await renderAndAttach(annotatedIr,rendered.sourceId,input.renderMarkdown,input.source);
+      rendered=await renderAndAttach(annotatedIr,rendered.sourceId,renderMarkdown,input.source);
       response=await convertRenderedActor(input,rendered.content,rendered.sourceId);
       intakeVerification=verifyRenderedActor(input.source,analysis.ir,rendered.content,response,analysis.candidate);
     }

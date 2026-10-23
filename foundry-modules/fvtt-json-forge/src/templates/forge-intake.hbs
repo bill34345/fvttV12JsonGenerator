@@ -97,7 +97,8 @@
 
         <p class="forge-status" data-status tabindex="-1" role="status" aria-live="polite">等待输入资料</p>
         <section class="forge-findings forge-diagnostics" data-diagnostics hidden tabindex="-1">
-          <h4>需要你核对</h4>
+          <h4>内容疑点与未匹配项</h4>
+          <p>以下问题供你核对，不阻止 AI 角色生成或创建。审核提示仅保留在 Forge 中，不写入角色或角色 JSON。</p>
           <ul data-diagnostic-list></ul>
         </section>
         <div data-human-preview class="forge-human-preview"></div>
@@ -143,9 +144,15 @@
       <section class="forge-step forge-created-step" data-step="created" aria-labelledby="forge-created-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}" hidden>
         <header class="forge-step-heading">
           <h3 id="forge-created-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}">已创建</h3>
-          <p>条目已经完成创建与回读核对。你可以打开卡片继续检查，或继续导入下一份资料。</p>
+          <p>条目已创建。请查看下方录入差异和内容疑点；创建完成不代表内容全部正确。</p>
         </header>
         <section data-created-document class="forge-created-document" role="status" tabindex="-1" hidden></section>
+        <button type="button" data-action="refresh-result">刷新录入与施法提示</button>
+        <section class="forge-findings forge-diagnostics" data-completion-diagnostics hidden role="status">
+          <h4>已创建，以下内容仍需核对</h4>
+          <p>创建完成不代表这些内容已经匹配正确。提示保留在 Forge 中，不写入角色或角色 JSON。</p>
+          <ul data-completion-issues></ul>
+        </section>
       </section>
     </div>
 

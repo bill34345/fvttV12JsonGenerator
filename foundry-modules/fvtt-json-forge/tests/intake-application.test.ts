@@ -808,7 +808,7 @@ describe('Forge Intake Application review workspace', () => {
     expect(root.canonical.textContent).toBe(ACTOR_SOURCE);
     expect(root.diagnostics.hidden).toBe(false);
     expect(root.diagnosticList.innerHTML).toContain('SOURCE_REVIEW_REQUIRED');
-    expect(root.humanSummary.textContent).toContain('本地检查仍有待核对问题');
+    expect(root.humanSummary.textContent).toContain('这些问题不会阻止生成或创建');
     expect(root.humanSummary.textContent).toContain('AI 尚未审核');
     expect(root.humanSummary.textContent).not.toContain('本地校验通过');
     expect(download.disabled).toBe(false);download.onclick?.();
@@ -819,6 +819,8 @@ describe('Forge Intake Application review workspace', () => {
     expect({repairs,reviews,approvals,strictCreates,reviewedCreates}).toEqual({repairs:0,reviews:0,approvals:1,strictCreates:0,reviewedCreates:1});
     expect((application as any).generation.formalStatus).toBe('failed');
     expect((application as any).response.result.status).toBe('failed');
+    expect(root.completionDiagnostics.hidden).toBe(false);
+    expect(root.completionIssues.innerHTML).toContain('SOURCE_REVIEW_REQUIRED');
     expect(notifications.errors).toEqual([]);
     await application.close();
   });
@@ -1835,7 +1837,7 @@ describe('Forge Intake Application review workspace', () => {
     expect(notifications.errors).toEqual([]);
   });
 
-  test.each(['needs_review', 'failed'] as const)('batch adopts a usable Actor with strict %s without claiming acceptance', async (strictStatus) => {
+  test.each(['needs_review', 'failed'] as const)('batch keeps original CRLF source and adopts an Actor with strict %s without claiming acceptance', async (strictStatus) => {
     const fixture = batchCandidateFixture('ai-monster', strictStatus);
     const queue = new ManagedForgeBatchQueue(new MemoryForgeBatchQueueStore());
     const { application, root, notifications } = makeApplication(fixture.services, undefined, undefined, async (dialog) => {
@@ -1846,13 +1848,17 @@ describe('Forge Intake Application review workspace', () => {
     }, queue);
     await settleBatch(application, root);
     setAiForm(application, root, 'ai-monster', '');
+    let displayed='';
+    Object.defineProperty(root.source,'value',{get:()=>displayed,set:(value:string)=>{displayed=value.replace(/\r\n?/g,'\n');},configurable:true});
+    const originalSource='complete source\r\nneeding GM review\r\n';
     await queue.importCollection(createForgeBatchCollection({ label: 'Reviewed Actor batch', entries: [
-      { objectKind: 'actor', mode: 'ai-monster', sourceLabel: 'Actor', rawSource: 'complete source needing GM review' },
+      { objectKind: 'actor', mode: 'ai-monster', sourceLabel: 'Actor', rawSource: originalSource },
     ] }));
     await application.refreshBatch(root, false);
     await application.runBatch(root);
     const pending = (await queue.load()).jobs[0]!;
     expect(pending.status).toBe('ready_for_gm_review');
+    expect(pending.latestReview?.rawSource).toBe(originalSource);
     expect(pending.latestReview?.candidateResponse?.status).toBe(strictStatus);
     expect(root.batchApply.disabled).toBe(false);
     expect(root.batchRun.disabled).toBe(true);
@@ -1860,6 +1866,9 @@ describe('Forge Intake Application review workspace', () => {
     await application.applyBatch(root);
     const applied = (await queue.load()).jobs[0]!;
     expect(applied.status).toBe('applied');
+    expect(applied.applyResult?.readbackWarnings).toEqual(['Spear：远射程生成值 60，Foundry 未保留。']);
+    expect(root.batchList.innerHTML).toContain('已创建，录入值需要核对');
+    expect(root.batchList.innerHTML).toContain('远射程生成值 60');
     expect(applied.latestReview?.status).toBe('reviewed_candidate');
     expect(applied.latestReview?.candidateResponse?.status).toBe(strictStatus);
     expect(applied.latestReview?.deterministicFindings.some((finding) => finding.blocking)).toBe(true);
@@ -2582,7 +2591,7 @@ function batchCandidateFixture(mode: 'ai-monster' | 'ai-item', strictStatus: 'ac
       expect(input.reviewApproval.gmId).toBe('test-user');
       expect(input.reviewApproval.artifactHash).toBe(hashArtifact(input.response.result.artifact));
       expect(input.reviewApproval.findingsHash).toMatch(/^[a-f0-9]{64}$/u);
-      return { ...actorCreateResult(), uuid: `Actor.${hashArtifact({ sourceId: input.response.result.sourceIdentity.sourceId }).slice(0, 16)}` };
+      return { ...actorCreateResult(), uuid: `Actor.${hashArtifact({ sourceId: input.response.result.sourceIdentity.sourceId }).slice(0, 16)}`,readbackWarnings:['Spear：远射程生成值 60，Foundry 未保留。'] };
     }) as any,
   };
   return { counts, services };
@@ -2649,6 +2658,7 @@ function primaryWorkspaceActions(root: FakeRoot): string[] {
 }
 
 class FakeRoot {
+  completionDiagnostics = control(''); completionIssues = control('');
   constructor(private readonly includeConnectionFields = true) {}
   dataset: Record<string, string> = {};
   mode = control('plaintext-actor', 'select'); source = control('', 'textarea'); displayName = control('');
@@ -2686,6 +2696,7 @@ class FakeRoot {
       '[data-action="library-refresh"]': this.libraryRefresh, '[data-action="library-save"]': this.librarySave, '[data-action="library-export"]': this.libraryExport, '[data-action="library-import"]': this.libraryImport,
       '[data-action="batch-refresh"]': this.batchRefresh, '[data-action="batch-import"]': this.batchImport, '[data-action="batch-export"]': this.batchExport, '[data-action="batch-run"]': this.batchRun, '[data-action="batch-stop"]': this.batchStop, '[data-action="batch-apply"]': this.batchApply,
       '[data-status]': this.status, '[data-stages]': this.stages, '[data-diagnostics]': this.diagnostics, '[data-diagnostic-list]': this.diagnosticList,
+      '[data-completion-diagnostics]': this.completionDiagnostics, '[data-completion-issues]': this.completionIssues,
       '[data-human-summary]': this.humanSummary, '[data-activity-card]': this.activityCard,
       '[data-activity-summary]': this.activitySummary, '[data-activity-detail]': this.activityDetail,
       '[data-preview-section]': this.previewSection, '[data-candidate]': this.candidate, '[data-evidence]': this.evidence, '[data-metadata]': this.metadata,

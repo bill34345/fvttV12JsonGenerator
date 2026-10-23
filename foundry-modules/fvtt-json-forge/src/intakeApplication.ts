@@ -307,7 +307,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     private activeRequestForm?: ReturnType<typeof readForm>;
     private sourceFileRevision = 0;
     private modeInitialized = false;
-    private createdDocument?: { objectKind: 'actor' | 'item'; uuid: string; document: any; status: 'created' | 'existing' };
+    private createdDocument?: { objectKind: 'actor' | 'item'; uuid: string; document: any; status: 'created' | 'existing'; readbackWarnings?:string[] };
     private connectionProbe?: Awaited<ReturnType<typeof testForgeProviderConnection>>;
     private connectionProbeRevision = -1;
     private connectionProbeIdentity = '';
@@ -538,6 +538,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       this.bind(root, 'edit-source', () => this.editSource(root));
       this.bind(root, 'resume-review', () => this.resumeReview(root));
       this.bind(root, 'open-created', () => this.openCreatedDocument());
+      this.bind(root, 'refresh-result', () => this.renderResult(root));
       this.bind(root, 'export', () => this.exportBundle(root));
       this.bind(root, 'import', () => void this.importBundle(root));
       this.bind(root, 'start-new-attempt', () => this.startNewAttempt(root));
@@ -943,7 +944,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       const source = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
       const displayName = root.querySelector('[name="displayName"]') as HTMLInputElement | null;
       const sourceFile = root.querySelector('[name="sourceFile"]') as HTMLInputElement | null;
-      if (source) source.value = '';
+      if (source) setSourceValue(source, '');
       if (displayName) displayName.value = '';
       if (sourceFile) sourceFile.value = '';
       this.renderResult(root);
@@ -1130,7 +1131,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       const source = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
       const displayName = root.querySelector('[name="displayName"]') as HTMLInputElement | null;
       const mode = root.querySelector('[name="mode"]') as HTMLSelectElement | null;
-      if (source) source.value = imported.bundle.rawSource;
+      if (source) setSourceValue(source, imported.bundle.rawSource);
       if (displayName) displayName.value = imported.bundle.sourceLabel ?? imported.bundle.candidate?.label ?? '';
       if (mode) mode.value = imported.bundle.mode;
       const importFile = root.querySelector('[name="reviewBundleFile"]') as HTMLInputElement | null;
@@ -1265,7 +1266,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       const source = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
       const displayName = root.querySelector('[name="displayName"]') as HTMLInputElement | null;
       const mode = root.querySelector('[name="mode"]') as HTMLSelectElement | null;
-      if (source) source.value = sourceRecord.rawSource;
+      if (source) setSourceValue(source, sourceRecord.rawSource);
       if (displayName) displayName.value = sourceRecord.sourceLabel;
       if (mode) mode.value = sourceRecord.mode;
       this.refreshAiVisibility(root);
@@ -1431,8 +1432,8 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
             response: this.response as ForgeActorResponse,
             ...(mode === 'ai-monster' ? { rawSourceHash: this.snapshot.rawSourceHash } : {}),
           });
-          this.createdDocument = { objectKind: 'actor', uuid: result.uuid, document: result.actor, status: result.status };
-          this.notify('info', result.status === 'existing' ? `已复用 Actor：${result.uuid}` : `Actor 创建并回读成功：${result.uuid}`);
+          this.createdDocument = { objectKind: 'actor', uuid: result.uuid, document: result.actor, status: result.status, readbackWarnings:result.readbackWarnings };
+          this.notify('info', `${result.status==='existing'?'已复用':'已创建'} Actor：${result.uuid}${result.readbackWarnings?.length?'；部分录入值需要核对，请查看 Forge 完成页。':''}`);
         }
         await this.forgetCandidate('single');
       } catch (error) {
@@ -1523,7 +1524,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         if (revision !== this.sourceFileRevision || input.files?.[0] !== file || this.busy() || this.creating || root.isConnected === false) return;
         const textarea = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
         if (!textarea) return;
-        textarea.value = source;
+        setSourceValue(textarea, source);
         const displayName = root.querySelector('[name="displayName"]') as HTMLInputElement | null;
         if (displayName && !displayName.value.trim() && name) displayName.value = name.replace(/\.(?:md|txt)$/iu, '');
         (textarea.oninput as any)?.();
@@ -1721,11 +1722,14 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       const diagnostics = root.querySelector('[data-diagnostics]') as HTMLElement | null;
       const modelReviewError = (this.generation as BrowserActorGenerationResult | BrowserItemGenerationResult | undefined)?.modelReviewError;
       if (diagnostics) diagnostics.hidden = findings.length === 0 && !(responseResult?.diagnostics?.length) && !modelReviewError;
-      html(root, 'diagnostic-list', [
-        ...(responseResult?.diagnostics ?? []).map((entry: any) => `[${entry.severity}] ${entry.code}: ${entry.message}`),
-        ...findings.map((entry) => `[${entry.origin}] ${entry.code}: ${entry.message}`),
-        ...(modelReviewError ? [`[AI审核失败] ${modelReviewError}`] : []),
-      ].map((entry) => `<li>${escapeHtml(entry)}</li>`).join(''));
+      const issueMarkup=renderIssueList([...findings,...(responseResult?.diagnostics??[]),
+        ...spellResolutionIssues(this.createdDocument?.document),
+        ...(this.createdDocument?.readbackWarnings??[]).map((message,index)=>({code:'FOUNDRY_READBACK_DIFFERENCE',path:`/readback/${index}`,message})),
+        ...(modelReviewError?[{code:'AI_REVIEW_FAILED',message:`AI 审核未完成：${modelReviewError}`}]:[])],(this.analysis as any)?.ir);
+      html(root, 'diagnostic-list', issueMarkup);
+      html(root, 'completion-issues', issueMarkup);
+      const completion=root.querySelector('[data-completion-diagnostics]') as HTMLElement|null;
+      if(completion)completion.hidden=!issueMarkup;
       const candidate = (this.analysis as any)?.candidate ?? (this.analysis as any)?.candidates ?? [];
       const ir = (this.analysis as any)?.ir ?? (this.analysis as any)?.creature;
       text(root, 'candidate', candidate ? JSON.stringify(candidate, null, 2) : '');
@@ -1949,10 +1953,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       const responseDiagnostics = bundle.candidateResponse?.diagnostics ?? [];
       const diagnostics = root.querySelector('[data-diagnostics]') as HTMLElement | null;
       if (diagnostics) diagnostics.hidden = importedFindings.length === 0 && responseDiagnostics.length === 0;
-      html(root, 'diagnostic-list', [
-        ...responseDiagnostics.map((entry) => `[history:${entry.severity}] ${entry.code}: ${entry.message}`),
-        ...importedFindings.map((entry) => `[history:${entry.origin}] ${entry.code}: ${entry.message}`),
-      ].map((entry) => `<li>${escapeHtml(entry)}</li>`).join(''));
+      html(root, 'diagnostic-list',renderIssueList([...importedFindings,...responseDiagnostics]));
       text(root, 'candidate', JSON.stringify(bundle.candidate ?? {}, null, 2));
       text(root, 'evidence', JSON.stringify(bundle.evidence ?? {}, null, 2));
       text(root, 'metadata', JSON.stringify({
@@ -2123,7 +2124,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         if (this.revision !== revision || !this.libraryWorkspaceEmpty(root)) throw Error('工作区已改变，未覆盖当前草稿。');
         for (const [name, value] of Object.entries({ mode: record.mode, source: record.input.source, displayName: record.input.displayName ?? '' })) {
           const field = root.querySelector(`[name="${name}"]`) as HTMLInputElement | null;
-          if (field) field.value = value;
+          if (field) { if(name==='source')setSourceValue(field,value);else field.value=value; }
         }
         this.analysis = record.candidate.analysis; this.generation = record.candidate; this.response = undefined;
         this.requestId = record.input.requestId; this.attemptId = record.bundle.attemptId;
@@ -2384,7 +2385,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       const source = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
       const displayName = root.querySelector('[name="displayName"]') as HTMLInputElement | null;
       const mode = root.querySelector('[name="mode"]') as HTMLSelectElement | null;
-      if (source) source.value = entry.rawSource;
+      if (source) setSourceValue(source, entry.rawSource);
       if (displayName) displayName.value = entry.sourceLabel;
       if (mode) mode.value = entry.mode;
       const review = latestReview ?? entry.review;
@@ -2522,6 +2523,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
               sourceId: candidate.sourceId,
               sourceHash: candidate.sourceHash,
               artifactHash: candidate.artifactHash,
+              ...('readbackWarnings'in result&&result.readbackWarnings?.length?{readbackWarnings:result.readbackWarnings}:{}),
             }, () => this.assertLibraryAuthority());
             completed += 1;
             await this.forgetCandidate(candidate.jobId);
@@ -2570,8 +2572,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
           if (result.artifactHash !== artifactHash) continue;
         } else {
           if (volatile.mode !== 'ai-monster' || !volatile.candidate || !volatile.input
-            || !isUsableActorCandidateArtifact(artifact)
-            || result.diagnostics.some((diagnostic) => diagnostic.severity === 'error' && diagnostic.stage !== 'semantic')) continue;
+            || !isUsableActorCandidateArtifact(artifact)) continue;
           try { assertCurrentBrowserActorIntakeCandidate(volatile.input, volatile.candidate as BrowserActorGenerationResult); }
           catch { continue; }
         }
@@ -2602,18 +2603,21 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     private async confirmBatchApply(manifest: Readonly<{ id: string; items: readonly ForgeBatchApplyCandidate[] }>): Promise<boolean> {
       const dialog = foundryGlobal?.applications?.api?.DialogV2;
       const summary = manifest.items.map((item) => {
-        const review = this.batchState?.jobs.find((job) => job.id === item.jobId)?.latestReview;
+        const job = this.batchState?.jobs.find((job) => job.id === item.jobId);
+        const review=job?.latestReview;
+        const label=job&&this.batchState?batchQueueEntry(this.batchState,job).sourceLabel:item.objectKind;
+        const ir=(this.batchResponses.get(item.jobId)?.candidate as BrowserActorGenerationResult|undefined)?.analysis?.ir;
         const findings = [...(review?.deterministicFindings ?? []), ...(review?.aiReviewFindings ?? []),
           ...(review?.candidateResponse?.diagnostics ?? [])];
-        return `<li>${escapeHtml(item.objectKind)} · ${escapeHtml(item.sourceId)} → ${escapeHtml(item.documentId)} · ${escapeHtml(item.artifactHash)}
+        return `<li><strong>${escapeHtml(ir?.creature?.identity?.name??label)}</strong>
           <strong>正式检查：${escapeHtml(review?.candidateResponse?.status ?? 'unknown')}</strong>
-          ${findings.length ? `<ul>${findings.map((finding) => `<li>${escapeHtml(finding.code)}：${escapeHtml(finding.message)}</li>`).join('')}</ul>` : ''}</li>`;
+          ${findings.length ? `<ul>${renderIssueList(findings,ir)}</ul>` : '<p>当前检查没有发现疑点。</p>'}</li>`;
       }).join('');
       if (!dialog?.confirm) return false;
       try {
         return await dialog.confirm({
           window: { title: 'GM 确认批量创建' },
-          content: `<p>候选清单 <code>${escapeHtml(manifest.id)}</code> 包含 ${manifest.items.length} 项。请核对下列正式结论和问题；确认采用待审 Actor 会保留原检查结论，不会标为 accepted。Item 仍须正式 accepted。GM 将逐项进行本地来源、目标与候选哈希复核，再调用 Actor/Item 创建接口；这不是跨 Document 原子事务，也不会请求付费模型审核。</p><ol>${summary}</ol>`,
+          content: `<p>将创建 ${manifest.items.length} 个条目。下列内容疑点不会阻止 AI 角色创建；创建完成后仍可在 Forge 批量记录中查看。采用不会标为 accepted，不会请求额外 AI 审核。</p><ol>${summary}</ol>`,
           modal: true,
         }) === true;
       } catch { return false; }
@@ -2651,6 +2655,9 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
             </div>
             <ol>${jobs.map((job) => {
               const entry = batchQueueEntry(state, job);
+              const actorId=job.applyResult?.objectKind==='actor'?job.applyResult.uuid?.replace(/^Actor\./u,''):undefined;
+              const actor=actorId?environment.game.actors?.get?.(actorId):undefined;
+              const spellIssues=actor?.flags?.['fvtt-json-forge']?.sourceId===job.latestReview?.sourceIdentity?.sourceId?spellResolutionIssues(actor):[];
               const lifecycleAction = job.status === 'cancelled'
                 ? `<button type="button" data-batch-requeue-job="${escapeHtml(job.id)}">恢复为 pending</button>`
                 : this.batchJobCancellable(job)
@@ -2658,6 +2665,9 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
                   : '';
               return `<li><span><strong>${escapeHtml(entry.sourceLabel || '(未命名)')}</strong> · ${escapeHtml(entry.objectKind)} · ${escapeHtml(entry.mode)} · ${escapeHtml(job.status)} · attempt ${job.attemptCount}${job.applyResult?.uuid ? ` · ${escapeHtml(job.applyResult.uuid)}` : ''}</span>
                 ${job.lastError ? `<small>${escapeHtml(job.lastError)}</small>` : ''}
+                ${job.latestReview?renderBatchIssues(job.latestReview):''}
+                ${spellIssues.length?`<section class="forge-findings forge-diagnostics"><strong>角色已创建，施法解析尚未完成</strong><ul>${renderIssueList(spellIssues)}</ul></section>`:''}
+                ${job.applyResult?.readbackWarnings?.length?`<section class="forge-findings forge-diagnostics"><strong>已创建，录入值需要核对</strong><ul>${renderIssueList(job.applyResult.readbackWarnings.map((message,index)=>({code:'FOUNDRY_READBACK_DIFFERENCE',path:`/readback/${index}`,message})))}</ul></section>`:''}
                 <span class="forge-library-entry-actions"><button type="button" data-batch-open-job="${escapeHtml(job.id)}">${job.latestReview ? '打开只读 review' : '打开来源草稿'}</button>${lifecycleAction}</span></li>`;
             }).join('')}</ol>
           </article>`;
@@ -3046,6 +3056,17 @@ function richTextToPlainText(value: unknown): string {
   return value.replace(/<[^>]*>/gu, ' ').replace(/\s+/gu, ' ').trim().slice(0, 600);
 }
 
+const loadedSourceValues=new WeakMap<object,{raw:string;display:string}>();
+function setSourceValue(field:{value:string},raw:string):void{
+  field.value=raw;
+  loadedSourceValues.set(field,{raw,display:field.value});
+}
+function readSourceValue(field:{value:string}|null):string{
+  if(!field)return'';
+  const loaded=loadedSourceValues.get(field);
+  return loaded&&loaded.display===field.value?loaded.raw:field.value;
+}
+
 function readForm(root: HTMLElement, sessionSettings?: Partial<ForgeClientSettings>): ForgeIntakeForm {
   const requestSettings = (root as any).__forgeIntakeRequestForm as Partial<ForgeIntakeForm> | undefined;
   const session = sessionSettings ?? (root as any).__forgeSessionSettings as Partial<ForgeClientSettings> | undefined ?? {};
@@ -3073,7 +3094,7 @@ function readForm(root: HTMLElement, sessionSettings?: Partial<ForgeClientSettin
   };
   return {
     mode,
-    source: value('source'),
+    source: readSourceValue(input('source')),
     sourceName: value('displayName').trim() || 'Forge Intake source',
     displayName: value('displayName').trim(),
     endpoint,
@@ -3229,7 +3250,7 @@ function humanSummary(status: ForgeIntakeReviewStatus, analysis: IntakeAnalysis 
     if (localNeedsReview) {
       const modelSummary = modelStatus === 'accepted' ? 'AI 审核已通过'
         : modelStatus === 'needs_review' || modelStatus === 'failed' ? 'AI 审核有提示或失败' : 'AI 尚未审核';
-      return `候选已生成；本地检查仍有待核对问题。${modelSummary}；请阅读具体提示，GM 可明确采用待审候选。`;
+      return `生成已完成，发现需要核对的地方。${modelSummary}。这些问题不会阻止生成或创建，请查看下方具体位置；提示只保留在 Forge 中。`;
     }
     return modelStatus === 'needs_review' || modelStatus === 'failed'
       ? '本地校验通过；AI 审核有提示或失败。请阅读具体提示，GM 仍可人工确认创建。'
@@ -3237,7 +3258,7 @@ function humanSummary(status: ForgeIntakeReviewStatus, analysis: IntakeAnalysis 
         : '本地校验通过；AI 尚未审核。GM 可人工核对并确认创建，也可明确请求额外付费审核。';
   }
   if (status === 'accepted' && applyable) return '本地校验已通过，可以由 GM 确认创建。';
-  if (status === 'needs_review') return '结果需要人工核对或一次修正；存在阻断问题时不能创建。';
+  if (status === 'needs_review') return '发现需要核对的地方；请查看具体提示。已有 AI 角色资料仍可继续生成。';
   if (status === 'rejected') return '本次结果未采用；可以修改来源后重新分析。';
   if (status === 'failed') return '本轮处理失败；请先查看需要核对的内容，再决定是否重新分析。';
   if (response || generation) return '结果已生成，请按顺序查看摘要、时间线、需要核对的内容和来源依据。';
@@ -3303,6 +3324,50 @@ function acceptedItemResponse(response: ForgeItemResponse): boolean {
     && isForgeCoreVersionSupported(result.target.fvttRuntimeVersion) && result.target.systemVersionObserved === EXPECTED_SYSTEM_VERSION;
 }
 function isCurrentRuntime(game: any): boolean { try { assertGm(game); assertExactRuntime(game); return true; } catch { return false; } }
+type DisplayIssue={code:string;path?:string;message:string;evidence?:readonly {quote:string}[]};
+function spellResolutionIssues(actor:any):DisplayIssue[]{
+  const resolution=actor?.flags?.['fvtt-json-generator-spell-resolver']?.spellResolution;
+  if(!resolution||!['failed','needs_review'].includes(resolution.status))return[];
+  const diagnostic=resolution.failureDiagnostic;
+  const position=Number.isInteger(diagnostic?.selectionIndex)?`第 ${diagnostic.selectionIndex}/${diagnostic.selectionCount} 项`:'部分法术';
+  return[{code:'SPELL_RESOLUTION_INCOMPLETE',path:'/spell-resolution',
+    message:`原生施法未完成，${position}未能解析。角色和完整施法文字已保留；请核对法术活动是否可用。`,
+    evidence:typeof resolution.error==='string'?[{quote:resolution.error}]:[]}];
+}
+function renderIssueList(entries:readonly DisplayIssue[],ir?:any):string{
+  const unique=[...new Map(entries.map(entry=>[entry.code+'\0'+entry.path,entry])).values()];
+  const operationSummaries=unique.filter(entry=>entry.code==='SOURCE_OPERATION_REVIEW');
+  const operationCodes=new Set(['SOURCE_OPERATION_FACT_CONFLICT','SOURCE_OPERATION_INVENTORY_CONFLICT','MIXED_FEATURE_SOURCE_CONFLICT','SOURCE_BASIC_OPERATION_OMITTED']);
+  const parentSummary=(entry:DisplayIssue)=>operationCodes.has(entry.code)?operationSummaries.find(summary=>summary.path&&(entry.path===summary.path||entry.path?.startsWith(summary.path+'/'))):undefined;
+  const labels:Record<string,string>={languages:'语言',attributes:'基础数值',hp:'生命值',ac:'护甲等级',saveDc:'施法豁免 DC',
+    usageGroups:'可施放法术与次数',sourceOperations:'动作活动',damage:'伤害',attack:'攻击',identity:'基本信息'};
+  const messages:Record<string,string>={
+    SOURCE_OPERATION_FACT_CONFLICT:'程序未能将这项动作的字段与原文逐项对应，生成结果仍保留，请核对。',
+    MIXED_FEATURE_SOURCE_CONFLICT:'这项动作的原文引用未完全匹配，生成结果仍保留，请核对。',
+    SOURCE_BASIC_OPERATION_OMITTED:'程序未能确认这项动作是否完整录入，请对照原文核对活动和伤害。',
+    SOURCE_BASE_STATIC_CONFLICT:'程序未能确认这个基础字段与原文一致，请对照下方来源核对。',
+    SPELL_SAVE_DC_EVIDENCE_MISMATCH:'程序未能将施法豁免 DC 与对应来源明确匹配，已保留 AI 给出的值。',
+    SPELL_NOT_EXPLICITLY_GRANTED:'程序未能将这些法术与原文的施法条目明确匹配，已保留生成结果。',
+    GEN_SOURCE_CANDIDATE_REVIEW_REQUIRED:'来源检查仍有疑点；生成结果已保留。',
+  };
+  return unique.filter(entry=>(entry.code!=='GEN_SOURCE_CANDIDATE_REVIEW_REQUIRED'||unique.length===1)&&!parentSummary(entry)).map(entry=>{
+    const parts=(entry.path??'').split('/').filter(Boolean);
+    let current=ir,location='';
+    for(const part of parts){current=current?.[part];if(current&&typeof current==='object')location=current.name??current.featureName??location;}
+    const field=[...parts].reverse().find(part=>labels[part]);
+    location=[location,field?labels[field]:''].filter(Boolean).join(' · ')||'生成内容';
+    const quote=entry.evidence?.map(ref=>ref.quote).filter(Boolean).join('\n');
+    const related=unique.filter(other=>parentSummary(other)===entry);
+    return `<li><strong>${escapeHtml(location)}</strong>：${escapeHtml(messages[entry.code]??entry.message)}
+      ${quote?`<blockquote>${escapeHtml(quote.slice(0,900))}${quote.length>900?'…':''}</blockquote>`:''}
+      <details><summary>检查详情${related.length?`（${related.length+1}项）`:''}</summary><small>${escapeHtml(entry.code)} · ${escapeHtml(entry.path??'')}</small><p>${escapeHtml(entry.message)}</p>
+      ${related.map(other=>`<p>${escapeHtml(other.code)} · ${escapeHtml(other.path??'')}：${escapeHtml(other.message)}</p>`).join('')}</details></li>`;
+  }).join('');
+}
+function renderBatchIssues(review:Readonly<ForgeIntakeReviewBundleV2>):string{
+  const list=renderIssueList([...review.deterministicFindings,...review.aiReviewFindings,...(review.candidateResponse?.diagnostics??[])]);
+  return list?`<section class="forge-findings forge-diagnostics"><strong>内容疑点与未匹配项（已保留生成结果）</strong><ul>${list}</ul></section>`:'';
+}
 function allFindings(analysis?: IntakeAnalysis, generation?: IntakeGeneration, stale?: ReturnType<typeof staleFinding>) {
   const entries = [...((analysis as any)?.findings ?? []), ...((generation as any)?.findings ?? []), ...(stale ? [stale] : [])];
   return [...new Map(entries.map((entry: any) => [`${entry.id}\u0000${entry.code}\u0000${entry.path}`, entry])).values()] as any[];

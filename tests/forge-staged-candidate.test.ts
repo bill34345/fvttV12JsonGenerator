@@ -55,11 +55,12 @@ for(const settings of [{toHit:999,target:1},{toHit:6,target:2},{toHit:-4,target:
   expect(validateMonsterIntakeIR(source,ir).blocking.length).toBeGreaterThan(0);
   const result=await generated(ir),actor=(result as any).artifact;
   expect(actor,JSON.stringify(result)).toBeDefined();expect(result.status).not.toBe('accepted');
-  const item=actor.items.find((i:any)=>i.flags?.fvttJsonGenerator?.candidateReview);
+  const item=actor.items.find((i:any)=>i.name.startsWith('Needle'));
   expect(item.system.uses.max).toBe('2');expect(item.system.description.value).toContain('one creature');
   const activity=Object.values<any>(item.system.activities).find(a=>a.type==='attack');
   expect(activity).toBeDefined();expect(activity.damage.parts[0]).toMatchObject({number:1,denomination:8,bonus:'3'});
-  expect(item.flags.fvttJsonGenerator.candidateReview.proposal.攻击.命中加值).toBe(settings.toHit);
+  expect(JSON.stringify(actor)).not.toContain('candidateReview');
+  expect((feature.candidateReview?.proposal as any).攻击.命中加值).toBe(settings.toHit);
 });
 
 test('one failed correction retains the original readable candidate and both failures without a third whole request',async()=>{
@@ -89,8 +90,8 @@ test('root source findings survive rendering and regeneration even when no featu
   expect(ir.creature.actions.every(feature=>!feature.candidateReview)).toBe(true);
   const first=await generated(ir),second=await generated(ir);
   expect(first.status).not.toBe('accepted');expect(second.status).not.toBe('accepted');
-  expect((first as any).artifact.flags.fvttJsonGenerator.candidateReview).toEqual((second as any).artifact.flags.fvttJsonGenerator.candidateReview);
-  expect((first as any).artifact.flags.fvttJsonGenerator.candidateReview.proposal.source).toBe(source);
+  expect(first.diagnostics).toEqual(second.diagnostics);
+  expect(JSON.stringify((first as any).artifact)).not.toContain('candidateReview');
   expect(first.diagnostics.map(f=>f.code)).toContain('GEN_SOURCE_CANDIDATE_REVIEW_REQUIRED');
 });
 
@@ -133,7 +134,8 @@ test('unsupported weekly spell grants keep GM counters without reinterpreting th
   expect(activities.some(a=>a.type==='cast')).toBe(false);
   expect(activities.find(a=>a.uses?.max==='2').uses.recovery).toEqual([]);
   expect(activities.find(a=>a.uses?.max==='2').name).toContain('GM次数');
-  expect(item.flags.fvttJsonGenerator.candidateReview.proposal.施法.法术[0].恢复).toBe('每周');
+  expect(JSON.stringify(actor)).not.toContain('candidateReview');
+  expect((ir.creature.spellcasting?.[0]?.candidateReview?.proposal as any).施法.法术[0].恢复).toBe('每周');
 });
 
 test('base number doubts retain the model number, full source and usable features with zero correction requests',async()=>{

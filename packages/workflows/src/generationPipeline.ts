@@ -34,6 +34,7 @@ export interface ActorGenerationPipelineOptions {
   /** Internal opt-in; CLI/Web defaults retain their existing localization behavior. */
   captureRulePresentation?: boolean;
   rulePresentationActorNormalizer?: ActorGeneratorOptions['rulePresentationActorNormalizer'];
+  reviewDelivery?: ActorGeneratorOptions['reviewDelivery'];
   iconOptions?: IconWorkflowOptions;
   iconWorkflow?: Pick<IconWorkflowPort, 'createResolutionSession'>;
 }
@@ -64,6 +65,7 @@ export async function generateActorArtifact(
     || options.reviewedLocalization?.policy === FACT_LOCALIZATION_POLICY);
   const actor = await projector.project(canonical, {
     targetVersion: options.fvttVersion,
+    reviewDelivery: options.reviewDelivery,
     effectProfile: options.effectProfile,
     route: options.route,
     translationService: options.translationService,

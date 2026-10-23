@@ -19,6 +19,7 @@ class Dnd5e439Projector implements GenerationProjector {
     if (document.kind === 'actor') {
       const generator = new ActorGenerator({
         fvttVersion: version,
+        reviewDelivery: options.reviewDelivery,
         effectProfile: options.effectProfile,
         translationService: options.translationService,
         iconResolver: options.iconResolver,
@@ -51,6 +52,7 @@ class Dnd5e533Projector implements GenerationProjector {
     if (document.kind === 'actor') {
       const generator = new ActorGenerator({
         fvttVersion: '14',
+        reviewDelivery: options.reviewDelivery,
         effectProfile: options.effectProfile,
         translationService: options.translationService,
         iconResolver: options.iconResolver,

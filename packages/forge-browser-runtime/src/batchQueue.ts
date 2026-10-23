@@ -24,7 +24,7 @@ export const FORGE_BATCH_APPLY_MANIFEST_SCHEMA = 'fvtt-json-forge-batch-apply-ma
 
 const QUEUE_KEYS = new Set(['schema', 'version', 'revision', 'updatedAt', 'collections', 'jobs']);
 const JOB_KEYS = new Set(['schema', 'version', 'id', 'collectionId', 'entryId', 'ordinal', 'status', 'attemptCount', 'updatedAt', 'latestReview', 'lastError', 'applyResult']);
-const APPLY_RESULT_KEYS = new Set(['status', 'objectKind', 'uuid', 'sourceId', 'sourceHash', 'artifactHash', 'message', 'at']);
+const APPLY_RESULT_KEYS = new Set(['status', 'objectKind', 'uuid', 'sourceId', 'sourceHash', 'artifactHash', 'message', 'readbackWarnings', 'at']);
 const STATUSES = ['pending', 'running', 'interrupted', 'ready_for_gm_review', 'reviewed_candidate', 'accepted', 'needs_review', 'failed', 'rejected', 'cancelled', 'applying', 'applied', 'apply_failed'] as const;
 const ISO_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
 const JOB_ID_PATTERN = /^job:v1:[0-9a-f]{64}$/u;
@@ -40,6 +40,7 @@ export interface ForgeBatchApplyResultV1 {
   sourceHash?: Sha256;
   artifactHash?: Sha256;
   message?: string;
+  readbackWarnings?: string[];
   at: string;
 }
 
@@ -541,9 +542,11 @@ function decodeApplyResult(value: unknown, path: string): ForgeBatchApplyResultV
   const sourceHash = record.sourceHash === undefined ? undefined : sha256(record.sourceHash, `${path}/sourceHash`);
   const artifactHash = record.artifactHash === undefined ? undefined : sha256(record.artifactHash, `${path}/artifactHash`);
   const message = record.message === undefined ? undefined : safeMessage(record.message);
+  if(record.readbackWarnings!==undefined&&!Array.isArray(record.readbackWarnings))throw new TypeError(`${path}/readbackWarnings must be an array.`);
+  const readbackWarnings=(record.readbackWarnings as unknown[]|undefined)?.map((message,index)=>boundedString(message,`${path}/readbackWarnings/${index}`,4096));
   const at = iso(record.at, `${path}/at`);
   if (status !== 'failed' && (!uuid || !sourceId || !sourceHash || !artifactHash)) throw new TypeError(`${path} successful result is incomplete.`);
-  return { status, objectKind, ...(uuid ? { uuid } : {}), ...(sourceId ? { sourceId } : {}), ...(sourceHash ? { sourceHash } : {}), ...(artifactHash ? { artifactHash } : {}), ...(message ? { message } : {}), at };
+  return { status, objectKind, ...(uuid ? { uuid } : {}), ...(sourceId ? { sourceId } : {}), ...(sourceHash ? { sourceHash } : {}), ...(artifactHash ? { artifactHash } : {}), ...(message ? { message } : {}), ...(readbackWarnings?{readbackWarnings}:{}), at };
 }
 
 function reviewStatus(review: Readonly<ForgeIntakeReviewBundleV2>): ForgeBatchJobStatus {

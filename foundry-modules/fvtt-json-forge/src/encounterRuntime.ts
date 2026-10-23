@@ -1,7 +1,7 @@
 import { hashArtifact } from '@fvtt-json-generator/forge-gateway-protocol';
 import { decodeEncounterAssetBytes, hashEncounterBytes } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import { assertPreparedForgeEncounter, type PreparedForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
-import { assertActorSemantics, assertExactRuntime, assertGm, MODULE_ID, prepareFoundryImportArtifact, markForgeSpellImportPending, completeForgeSpellImport,type ForgeGameLike } from './runtime';
+import { actorReadbackWarnings, assertExactRuntime, assertGm, MODULE_ID, prepareFoundryImportArtifact, markForgeSpellImportPending, completeForgeSpellImport,type ForgeGameLike } from './runtime';
 import {fixedEncounterCommand,decodeEncounterRuntimeConfiguration} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import {isForgeSpellImportPending} from '@fvtt-json-generator/contracts/forge-import-lifecycle';
 
@@ -24,7 +24,7 @@ export interface EncounterGame {
 }
 export interface EncounterImportResult {
   packageId: string; packageHash: string;
-  documents: Array<{ key: string; kind: 'Actor' | 'Macro'; uuid: string; id: string; name: string; status: 'created' | 'existing' }>;
+  documents: Array<{ key: string; kind: 'Actor' | 'Macro'; uuid: string; id: string; name: string; status: 'created' | 'existing'; readbackWarnings?:string[] }>;
 }
 export interface EncounterAssetPort {
   ensure(asset: PreparedForgeEncounter['bundle']['assets'][number], path: string): Promise<void>;
@@ -77,9 +77,10 @@ export async function importForgeEncounter(input: {
           if (!document) throw error;
         }
       }
-      verifyDocument(document, plan,status==='created');
+      const readbackWarnings=verifyDocument(document, plan,status==='created');
       if(plan.kind==='Actor')verifiedActors.push(document);
-      result.documents.push({ key: plan.key, kind: plan.kind, uuid: document.uuid, id: document.id, name: document.name, status });
+      result.documents.push({ key: plan.key, kind: plan.kind, uuid: document.uuid, id: document.id, name: document.name, status,
+        ...(readbackWarnings.length?{readbackWarnings}:{}) });
     }
     committed=true;
   } catch (error) {
@@ -114,9 +115,7 @@ function createDocumentPlans(prepared: PreparedForgeEncounter,game:EncounterGame
     // Legacy empty collection metadata is not a dnd5e skill and is discarded by its schema.
     if (Array.isArray(data.system?.skills?.value) && data.system.skills.value.length === 0) delete data.system.skills.value;
     data._id = encounterDocumentId(bundle.id, 'Actor', actor.key);
-    data.flags ??= {}; data.flags[MODULE_ID] = { encounter: identity('Actor', actor.key),
-      ...(actor.status!=='accepted'||actor.reviewFindings?.length?{candidateReview:{version:1,status:actor.status,
-        gmId:game.user.id,sourceHash:actor.sourceHash,artifactHash:actor.artifactHash,findings:actor.reviewFindings??[]}}:{}) };
+    data.flags ??= {}; data.flags[MODULE_ID] = { encounter: identity('Actor', actor.key) };
     markForgeSpellImportPending(data);
     for (const asset of bundle.assets) for (const target of asset.targets.filter(t => t.actorKey === actor.key)) {
       for (const path of target.fields) {
@@ -151,22 +150,25 @@ function assertEncounterEnvironment(game: EncounterGame):void {
   assertGm({user:game.user});assertExactRuntime({version:game.version,system:game.system});
 }
 function collection(game: EncounterGame, kind: 'Actor'|'Macro'): Collection { return kind === 'Actor' ? game.actors : game.macros; }
-function verifyDocument(document: EncounterDocument, plan: DocumentPlan,allowPendingNew=false): void {
+function verifyDocument(document: EncounterDocument, plan: DocumentPlan,allowPendingNew=false): string[] {
   const actual = document.toObject();
   if(plan.kind==='Actor'&&!allowPendingNew&&isForgeSpellImportPending(actual))throw new Error('Existing Forge Actor import is still pending; wait for or inspect that import before reuse.');
   if (document.id !== plan.data._id || hashArtifact(actual.flags?.[MODULE_ID]?.encounter ?? {}) !== hashArtifact(plan.data.flags[MODULE_ID].encounter)) {
     throw new Error(`${plan.data.name}：文档身份冲突，未覆盖已有内容。`);
   }
+  const warnings:string[]=[];
   if (plan.kind === 'Actor') {
-    assertActorSemantics(plan.data, actual);
+    warnings.push(...actorReadbackWarnings(plan.data, actual));
     for (const path of ['system.attributes.movement','system.attributes.init','system.skills','system.resources','system.traits','system.details.alignment']) {
       const read = (data:any) => path.split('.').reduce((value,key)=>value?.[key],data);
-      assertExpectedFields(read(actual),read(plan.data),path);
+      try{assertExpectedFields(read(actual),read(plan.data),path);}
+      catch(error){warnings.push(`${plan.data.name}：${error instanceof Error?error.message:String(error)}。角色已保留，请核对。`);}
     }
-    if (actual.img !== plan.data.img || actual.prototypeToken?.texture?.src !== plan.data.prototypeToken?.texture?.src) throw new Error(`${plan.data.name}：图片回读不一致。`);
+    if (actual.img !== plan.data.img || actual.prototypeToken?.texture?.src !== plan.data.prototypeToken?.texture?.src) warnings.push(`${plan.data.name}：图片保存值与生成结果不同，角色已保留，请核对。`);
   } else if (actual.command !== plan.data.command || actual.type !== 'script' || actual.name !== plan.data.name) {
     throw new Error(`${plan.data.name}：宏代码回读不一致。`);
   }
+  return warnings;
 }
 function assertExpectedFields(actual:any,expected:any,path:string):void {
   if (expected === undefined) return;

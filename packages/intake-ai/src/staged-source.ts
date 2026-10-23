@@ -50,7 +50,7 @@ const BASE_METADATA = /^(?:AC\b|Armor Class\b|HP\b|Hit Points\b|Speed\b|Initiati
 function bareHeading(line: string): string {
   return headerPresentation(line).trim().replace(/^#{1,6}\s*/u, '').replace(/[*_]/gu, '').replace(/[:：]\s*$/u, '').trim();
 }
-function sectionHeading(line: string): IntakeSection | undefined {
+export function sectionHeading(line: string): IntakeSection | undefined {
   const text = bareHeading(line).toLowerCase();
   return SECTIONS[text] ?? SECTIONS[text.replace(/\s+/gu, '')];
 }

@@ -7,6 +7,7 @@ import { assertEncounterLocalizationIdentity, localizedEncounterPresentation } f
 import type { ForgeEncounterPackageMacro } from './encounterPackage';
 import type { RulePresentationPlan } from '@fvtt-json-generator/generation/rule-presentation';
 import { actorRulePresentation } from './actorRulePresentationContext';
+import {actorSourceReviews} from './actorSourceReviewContext';
 
 export interface PreparedEncounterActor {
   key: string;
@@ -64,11 +65,7 @@ export async function prepareForgeEncounter(text: string, signal?: AbortSignal):
     if (!('result' in response)) throw new Error(`${input.label}：正式生成请求失败。`);
     const result = response.result;
     if (!result.artifact) throw new Error(`${input.label}：尚无可解析的 Actor 候选：${result.diagnostics.map(d => d.message).join('；')}`);
-    const retainedReviews=[{label:String(result.artifact.name),review:(result.artifact.flags as any)?.fvttJsonGenerator?.candidateReview},
-      ...(Array.isArray(result.artifact.items)?result.artifact.items:[]).map((item:any)=>({label:String(item.name),review:item.flags?.fvttJsonGenerator?.candidateReview}))];
-    const originalFindings=retainedReviews.flatMap(({label,review})=>Array.isArray(review?.findings)
-      ?review.findings.map((f:any)=>`${label}：${String(f.message)}（${String(f.code)}；${String(f.path)}）`):[]);
-    const reviewFindings=[...new Set([...originalFindings,...result.diagnostics.map(d=>`${d.code}：${d.message}`),...result.actorVerification.warnings])];
+    const reviewFindings=[...new Set([...actorSourceReviews(response),...result.diagnostics.map(d=>`${d.code}：${d.message}`),...result.actorVerification.warnings])];
     const artifact = result.artifact;
     assertEncounterStagedMarkerIntegrity(artifact);
     if(result.verification.mechanicsCoverage.some(m=>m.status==='literal-only'

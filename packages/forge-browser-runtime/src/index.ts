@@ -1,3 +1,4 @@
+import {withActorSourceReviews} from './actorSourceReviewContext';
 import {
   attachForgeSourceId,
   decodeForgeActorRequest,
@@ -121,6 +122,7 @@ export async function convertFinalActorSource(request: ForgeActorRequest, option
       fvttVersion: targetVersion,
       effectProfile: 'core',
       iconWorkflow: { createResolutionSession: createBundledIconResolutionSession },
+      reviewDelivery: 'external',
       iconOptions: { mode: value.resolvedTarget.iconMode },
       reviewedLocalization: options.reviewedLocalization,
       captureRulePresentation: targetVersion === '14' && options.captureRulePresentation === true,
@@ -190,16 +192,9 @@ export async function convertFinalActorSource(request: ForgeActorRequest, option
       : projectForgeVerification({ verification: { ...verification, status, diagnostics }, actorVerification }).actorVerification;
     const base = { ...makeResultBase(value, formalVerification.target.stats.systemVersion, finalVerification, finalActorVerification, safeDiagnostics),
       ...(generated.iconReview ? { iconReview: generated.iconReview } : {}) };
-    if(status!=='accepted'){
-      artifact.flags??={};
-      const flags=artifact.flags as Record<string,any>;
-      flags.fvttJsonGenerator??={};
-      flags.fvttJsonGenerator.deliveryReview={version:1,status,sourceHash:value.source.utf8Sha256,
-        diagnostics:safeDiagnostics,warnings:finalActorVerification.warnings};
-    }
     if (status === 'accepted') {
       if (!acceptedVerification) throw new TypeError('Accepted Forge verification was not proven by the closed projection.');
-      return withActorRulePresentation({
+      return withActorSourceReviews(withActorRulePresentation({
         protocolVersion: 1,
         requestId: value.requestId,
         result: {
@@ -209,10 +204,10 @@ export async function convertFinalActorSource(request: ForgeActorRequest, option
           artifactHash: hashArtifact(artifact),
           verification: acceptedVerification,
         },
-      }, generated.rulePresentation);
+      }, generated.rulePresentation),parsed);
     }
     if (status === 'needs_review') {
-      return withActorRulePresentation({
+      return withActorSourceReviews(withActorRulePresentation({
         protocolVersion: 1,
         requestId: value.requestId,
         result: {
@@ -221,11 +216,11 @@ export async function convertFinalActorSource(request: ForgeActorRequest, option
           artifact,
           verification: finalVerification,
         },
-      }, generated.rulePresentation);
+      }, generated.rulePresentation),parsed);
     }
     // A strict semantic failure remains a failure. Keep the generated candidate
     // so delivery and an explicit GM decision do not depend on that verdict.
-    return { protocolVersion: 1, requestId: value.requestId, result: { ...base, status: 'failed', artifact, verification: finalVerification } };
+    return withActorSourceReviews({ protocolVersion: 1, requestId: value.requestId, result: { ...base, status: 'failed', artifact, verification: finalVerification } },parsed);
   } catch (error) {
     return failedWorkflowResponse(value, error);
   }

@@ -979,7 +979,7 @@ describe('browser Forge Actor runtime', () => {
     expect(claw.flags.fvttJsonGenerator.conditionLifecycle.sourceText).toContain('逃脱DC 14');
   });
 
-  test('keeps a real empty legendary field blocked before AI review', async () => {
+  test('reports empty legendary metadata while delivering a literal candidate for the requested review', async () => {
     let reviewCalls = 0;
     const provider = ratWarlockProvider({
       review: async () => {
@@ -994,13 +994,15 @@ describe('browser Forge Actor runtime', () => {
 
     const result = await generateAndReviewBrowserActorIntake(input, analysis, provider);
 
-    expect(result.status).toBe('failed');
+    expect(result.status).toBe('needs_review');
+    expect(result.candidateAvailable).toBe(true);
+    expect(result.actorProjection).toBeDefined();
     expect(result.findings).toContainEqual(expect.objectContaining({
       code: 'INVALID_LEGENDARY_METADATA',
       path: '/creature/legendary',
       blocking: true,
     }));
-    expect(reviewCalls).toBe(0);
+    expect(reviewCalls).toBe(1);
   });
 
   test('never reports accepted when the final AI review still carries a blocking finding', async () => {

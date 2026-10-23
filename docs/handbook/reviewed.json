@@ -5,24 +5,24 @@
     "note": "已核对docs/web-deployment.md、docs/web-ai-connections.md与共享Forge响应契约：失败响应可保留Actor候选是可选扩展；本轮未改Web上传任务、下载产物推广或部署步骤，原条目保持。"
   },
   "markdown-convert": {
-    "fingerprint": "ce6915db196d4597998fae06d46fc5ebb46fcc4ae2dbeacb18538bc218d0ffd9",
+    "fingerprint": "a1daa6b31d71bfc1b18d67cf3ba7d62e94a849ea5f9ce4965133541eba88338c",
     "reviewedOn": "2026-10-23",
-    "note": "核对源到Actor检查新增NPC数值/公式分开比对；标准Markdown/CLI入口和参数未改变，不把Intake实体格式扩称CLI直接支持。"
+    "note": "已核对共享生成入口与现有手册：reviewDelivery默认保持document，保留候选的新投影只由Forge调用；CLI、Item、Species、Vault及翻译入口、版本和output登记门禁未改。"
   },
   "monster-intake": {
-    "fingerprint": "9480ec812bc81905c0a3da8bdb4375aac7f8a74286106b2845c5441727b97100",
+    "fingerprint": "6469a3a94723bef9b2f24dea1d7a44dc8dd0486bff8880966492b3a814d7fa4f",
     "reviewedOn": "2026-10-23",
-    "note": "已核对普通AI工厂、OP类型、引用与内部编号规范化及真实DS证据；更新规则由AI判断、原文由工具复制及复杂施法GM边界。绿龙v38和黄铜龙v39数据经当前代码及Mirror14.368/dnd5e5.3.3创建读回，不称同版首轮或完整玩法通过。"
+    "note": "已核对共享生成入口与现有手册：reviewDelivery默认保持document，保留候选的新投影只由Forge调用；CLI、Item、Species、Vault及翻译入口、版本和output登记门禁未改。"
   },
   "item-intake": {
-    "fingerprint": "993975f40914a11acf51b10e868bfd2c3f2c9b2ebdf35ca5ffb3e230985bf57e",
+    "fingerprint": "de5fed08af7a2a8298f3e0191408e1101db5b16942c9bc3d6160f5dae1c83ff4",
     "reviewedOn": "2026-10-23",
-    "note": "已核对独立provider及权威文档；本批Monster提取与兼容规范化不被这两个入口调用，其复用的严格JSON解析与传输未改。输入、输出、目标、审核及权限说明保持；本批没有新增两者的模型或实机验收。"
+    "note": "已核对共享生成入口与现有手册：reviewDelivery默认保持document，保留候选的新投影只由Forge调用；CLI、Item、Species、Vault及翻译入口、版本和output登记门禁未改。"
   },
   "species-intake": {
-    "fingerprint": "b8de4e82c07793962ad07a64786e4bc3917882e39f1eb6b7e91166b784e8beab",
+    "fingerprint": "f6a0374bfdc8e23ccc0328921186f9b36d3f4bf3ad0f4b4189eac29a095fee75",
     "reviewedOn": "2026-10-23",
-    "note": "已核对独立provider及权威文档；本批Monster提取与兼容规范化不被这两个入口调用，其复用的严格JSON解析与传输未改。输入、输出、目标、审核及权限说明保持；本批没有新增两者的模型或实机验收。"
+    "note": "已核对共享生成入口与现有手册：reviewDelivery默认保持document，保留候选的新投影只由Forge调用；CLI、Item、Species、Vault及翻译入口、版本和output登记门禁未改。"
   },
   "document-extraction": {
     "fingerprint": "1fadc1f19a0a8346a15306bb247d90ae4b2bbaf709177747d8aded524ec25bcc",
@@ -30,9 +30,9 @@
     "note": "已对照文档规则：仅报告/元数据显示改变且原MD、顺序、候选及下游行为有未变证据时缩小验收；正文或消费变化/证据不足仍核完整来源链。"
   },
   "vault-sync": {
-    "fingerprint": "a9743f2acc984292e2d02be772ee770d04947ece47a87ce02ec417ace47ce48b",
-    "reviewedOn": "2026-10-18",
-    "note": "人工核对本次workflows仅将来源名称存在性函数与browser共用；这两个入口不调用该验收函数，备份冲突、原位翻译、命令与产物说明均保持正确，无需改写。"
+    "fingerprint": "2ab15d35c727aba330d515e90698b8f52797d117c71ac54b99693a697db0c111",
+    "reviewedOn": "2026-10-23",
+    "note": "已核对共享生成入口与现有手册：reviewDelivery默认保持document，保留候选的新投影只由Forge调用；CLI、Item、Species、Vault及翻译入口、版本和output登记门禁未改。"
   },
   "goddessfantasy-crawl": {
     "fingerprint": "65f3ac605cce3698951456e9bb0831750d7e497429fe33c225589d36a06f0b14",
@@ -50,9 +50,9 @@
     "note": "已核对条目及共享README：旧文本与结构化格式入口不变，旧技能倍率和明确总加值兼容；本次未迁移现有文件。"
   },
   "json-translation": {
-    "fingerprint": "d05ce2ac0f374cd7cdfe3a87ee0592cdfb17400eadbb4f98998cec728df0042c",
-    "reviewedOn": "2026-10-18",
-    "note": "人工核对本次workflows仅将来源名称存在性函数与browser共用；这两个入口不调用该验收函数，备份冲突、原位翻译、命令与产物说明均保持正确，无需改写。"
+    "fingerprint": "0a956434d049128080a2255e2a4068afbef29963d00ca3513a4014f08ba1fd11",
+    "reviewedOn": "2026-10-23",
+    "note": "已核对共享生成入口与现有手册：reviewDelivery默认保持document，保留候选的新投影只由Forge调用；CLI、Item、Species、Vault及翻译入口、版本和output登记门禁未改。"
   },
   "foundry-ops": {
     "fingerprint": "a822f7eedff90d4c4b657b7a87291845561141aa757b4748bcf45b9b669e8889",
@@ -60,14 +60,14 @@
     "note": "逐项保留当前run/validationSelection/保留检查/Mirror及450秒门限；整合Selected Token首次安装白名单、去除自动合并重复目录项。历史测试仅显式只读复用已锁定输入，源码/lock/patch仍当前候选；本地整合与推送/实装/实机边界分开。"
   },
   "verification-development": {
-    "fingerprint": "8bc3383c75fecbaabad4c72438e895dd2f27bc1cc3cbe58600a9e32aa9bfb523",
+    "fingerprint": "a93d753e59f99f83e442dde87c35005ec25803547fd47900b09eba874cf5db64",
     "reviewedOn": "2026-10-23",
-    "note": "新增本worktree真实AI验收要求与34请求开发证据，区分固定输入检查和本批真实回复后续复验；记录实际版本、初始失败、内部编号修正及未执行层级。类型级提示词契约检查仅开发期，不进入正式模块，未改hook。"
+    "note": "已核对正式验证与来源核对说明：生成、创建和内容正确性继续分别记录；本次仅调整Forge候选交付与内容读回提示，未将测试通过替代语义验收。"
   },
   "human-encounter-intake": {
-    "fingerprint": "53222979d76842477996e9a99aa1b37a3ee15accc23c6a34a2eebacfdc542802",
+    "fingerprint": "00aeea9f5b495148e43ac8f0f157672bcdd328266432895c2e2daef815ddea8a",
     "reviewedOn": "2026-10-23",
-    "note": "已核对EncounterIntake复用Actor提取入口、候选策略及CLI说明；共享Monster引用与提示词内部更新不改变包、GM确认和启动权限或默认纠错设置。说明保持，本批普通Actor真机证据不外推战斗包。"
+    "note": "已核对当前实现及2026-10-24四份真实DS回复的Foundry复验：有疑点也保留Actor，审核提示不进入角色JSON；内容读回差异和Resolver失败在Forge显示，生成与内容正确性分别记录。同步创建、刷新提示及批量说明。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -125,9 +125,9 @@
     "note": "本次提交整理仅去除普通状态目录源码的末尾空白行，14项ID/名称/别名、入口和规则均未变；PDF精确路径标记binary以保持原件字节。已复核上述产品说明和现有实机范围保持，测试类型收窄不改业务。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "2be7680513e0d19ad409c59e2aaab53bb0a0e44e45a951561cd0460fe3038013",
+    "fingerprint": "71efde8de5041e4b9de9bfef1e82bc0e75f68ceb0de500bcc90e557c7ffa1a6e",
     "reviewedOn": "2026-10-23",
-    "note": "已核对普通AI工厂、OP类型、引用与内部编号规范化及真实DS证据；更新规则由AI判断、原文由工具复制及复杂施法GM边界。绿龙v38和黄铜龙v39数据经当前代码及Mirror14.368/dnd5e5.3.3创建读回，不称同版首轮或完整玩法通过。"
+    "note": "已核对最终所有Actor创建消费者：普通AI、批量、战斗包及标准资料/蓝图均展示内容读回提示；四样本真实创建证据与标准页面局部检查分开记录，既有预览文案失败有基线同值证据。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "2e22086b12b7f6d9730eadbd9e7951eb07dcb66beeff6a68a6e0dadf036c06d1",

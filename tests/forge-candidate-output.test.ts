@@ -7,6 +7,7 @@ import {prepareForgeEncounter} from '@fvtt-json-generator/forge-browser-runtime/
 import {buildForgeIntakeReviewBundleV2,serializeForgeIntakeReviewBundleV2,decodeForgeIntakeReviewBundleText} from '@fvtt-json-generator/forge-browser-runtime/intake-review-import';
 import {encodeForgeEncounterPackageZip,decodeForgeEncounterPackageZip,serializeForgeEncounterPackage} from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import {LURKER_SOURCE,buildValidLurkerIr} from '../src/core/intake/__tests__/fixtures/lurker';
+import {actorReadbackWarnings} from '../foundry-modules/fvtt-json-forge/src/runtime';
 import type {MonsterIntakeAiProvider} from '@fvtt-json-generator/intake-ai/types';
 
 const input={source:LURKER_SOURCE,sourceName:'candidate fixture',requestId:'candidate-output',fvttVersion:'14.364',systemVersion:'5.3.3'};
@@ -62,7 +63,8 @@ describe('Forge candidate delivery is separate from verification',()=>{
     const restored=await prepareForgeEncounter(serializeForgeEncounterPackage(bundle));
     expect(restored.actors[0]!.artifactHash).toBe(output.prepared!.actors[0]!.artifactHash);
     expect(restored.actors[0]!.status).not.toBe('accepted');expect(restored.reviewFindings!.length).toBeGreaterThan(0);
-    expect(JSON.stringify(restored.actors[0]!.artifact)).toContain('FIXTURE_REVIEW');
+    expect(JSON.stringify(restored.actors[0]!.artifact)).not.toContain('FIXTURE_REVIEW');
+    expect(restored.reviewFindings!.join('\n')).toContain('FIXTURE_REVIEW');
   });
   test('source review feedback survives default-off generation, package export and fresh preparation',async()=>{
     const {provider}=fixture(),ir=buildValidLurkerIr();
@@ -73,8 +75,8 @@ describe('Forge candidate delivery is separate from verification',()=>{
     expect(output.prepared).toBeDefined();
     const restored=await prepareForgeEncounter(serializeForgeEncounterPackage(output.prepared!.bundle));
     expect(restored.actors[0]!.status).toBe('needs_review');
-    expect(JSON.stringify(restored.actors[0]!.artifact)).toContain('SOURCE_REVIEW_FEEDBACK');
-    expect(JSON.stringify(restored.actors[0]!.artifact)).toContain('HP must be checked');
+    expect(JSON.stringify(restored.actors[0]!.artifact)).not.toContain('SOURCE_REVIEW_FEEDBACK');
+    expect(JSON.stringify(restored.actors[0]!.artifact)).not.toContain('HP must be checked');
     expect(restored.reviewFindings!.join('\n')).toContain('SOURCE_REVIEW_FEEDBACK');
   });
   test('portable review exports remain truthful and readable before and after GM adopts an unaccepted Actor',async()=>{
@@ -98,6 +100,57 @@ describe('Forge candidate delivery is separate from verification',()=>{
     expect(saved.deterministicFindings.some(f=>f.blocking)).toBe(true);expect(saved.gmApproval!.gmId).toBe('gm');
     expect(()=>buildForgeIntakeReviewBundleV2({...base,status:'accepted',gmApproval:approved.gmApproval})).toThrow();
   });
+});
+
+// Replays the four real DS extraction results from the preserved first pass.
+// This verifies delivery changes, not a new model run or prompt success rate.
+const officialCapture=process.env.FORGE_OFFICIAL_2024_CAPTURE;
+for(const caseId of ['lion','gladiator','priest','medusa'])test.skipIf(!officialCapture)(`official ${caseId}: source findings do not veto output or enter Actor JSON`,async()=>{
+  const source=readFileSync(`${officialCapture}/live/${caseId}/source.md`,'utf8');
+  const ir=JSON.parse(readFileSync(`${officialCapture}/live/${caseId}/ir.json`,'utf8'));
+  const original=JSON.stringify(ir),current={...input,source,requestId:`delivery-${caseId}`};
+  const provider={...fixture().provider,extract:noCall,discover:noCall};
+  const analysis=analyzeBrowserActorIntakeDraft(current,ir,provider);
+  const result=await generateBrowserActorIntakeCandidate(current,analysis,provider);
+  expect(result.candidateAvailable).toBe(true);
+  expect(result.status).toBe('ready_for_gm_review');
+  const actor=result.actorProjection as any,serialized=JSON.stringify(actor);
+  expect(actor.system.attributes.hp.max).toBe(ir.creature.attributes.hp.value);
+  expect(actor.system.attributes.hp.formula.replace(/\s/g,'')).toBe(ir.creature.attributes.hp.formula.replace(/\s/g,''));
+  for(const marker of ['candidateReview','deliveryReview','待审候选','ACTOR_LITERAL_DELIVERY'])expect(serialized).not.toContain(marker);
+  expect(result.findings.some(f=>f.code==='ACTOR_LITERAL_DELIVERY')).toBe(false);
+  if(caseId!=='lion')expect(result.findings.length).toBeGreaterThan(0);
+  if(caseId==='medusa'){
+    const snake=actor.items.find((item:any)=>item.name==='Snake Hair');
+    const damage=Object.values(snake.system.activities).flatMap((activity:any)=>activity.damage?.parts??[]);
+    expect(damage.some((part:any)=>part.number===4&&part.denomination===6&&part.types.includes('poison'))).toBe(true);
+  }
+  if(caseId==='gladiator'){
+    expect(actor.items.find((item:any)=>item.name==='Spear').type).toBe('feat');
+    const native=structuredClone(actor);
+    for(const activity of Object.values<any>(native.items.find((item:any)=>item.name==='Spear').system.activities))delete activity.range.long;
+    const warnings=actorReadbackWarnings(actor,native);
+    expect(warnings.some(message=>message.includes('Spear')&&message.includes('远射程')&&message.includes('60')&&message.includes('未保留'))).toBe(true);
+    expect(JSON.stringify(actor)).toBe(serialized);
+  }
+  expect(result.findings.filter(f=>f.code==='SOURCE_PART_NOT_PROJECTED').some(f=>/Section heading|Repeated ability table header/u.test(f.message))).toBe(false);
+  expect(approveBrowserActorIntakeCandidateForGm(current,result,'gm').gmApproval).toBeDefined();
+  expect(JSON.stringify(ir)).toBe(original);
+  expect(result.calls.review).toBe(0);expect(result.calls.repair).toBe(0);
+});
+
+test('a projection error still delivers literal actions and reports missing automation outside the Actor',async()=>{
+  const {ir,provider}=fixture();
+  const current={...input,renderMarkdown:()=>{throw Error('projection unavailable');}};
+  const result=await generateBrowserActorIntakeCandidate(current,analyzeBrowserActorIntakeDraft(current,ir,provider),provider);
+  expect(result.candidateAvailable).toBe(true);
+  expect(result.findings.some(f=>f.code==='ACTOR_LITERAL_DELIVERY')).toBe(true);
+  const actor=result.actorProjection as any;
+  expect(actor.system.attributes.hp.max).toBe(999);
+  expect(actor.items.some((item:any)=>item.name.startsWith(ir.creature.actions[0]!.name))).toBe(true);
+  expect(JSON.stringify(actor)).not.toContain('candidateReview');
+  expect(JSON.stringify(actor)).not.toContain('ACTOR_LITERAL_DELIVERY');
+  expect(result.formalStatus).not.toBe('accepted');
 });
 
 // Private captures are optional for clean checkouts. The current worktree runs

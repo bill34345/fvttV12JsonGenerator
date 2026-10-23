@@ -128,6 +128,8 @@ import { createRulePresentationPlan, type ConsumedRuleAction, type RulePresentat
 export type { TranslationServiceLike } from './actor-localizer';
 
 export interface ActorGeneratorOptions {
+  /** Forge displays review findings in its UI, outside the portable document. */
+  reviewDelivery?: 'document' | 'external';
   translationService?: TranslationServiceLike | null;
   fvttVersion?: FvttTargetVersion;
   effectProfile?: EffectProfile;
@@ -274,6 +276,7 @@ const CREATURE_TYPE_VALUE_MAP: Record<string, string> = {
 };
 
 export class ActorGenerator {
+  private readonly reviewDelivery: 'document' | 'external';
   private actionParser = new ActionParser();
   private englishActionParser = new EnglishActionParser();
   private activityGenerator: ActivityGenerator;
@@ -292,6 +295,7 @@ export class ActorGenerator {
   private deferRulePresentation = false;
 
   constructor(options: ActorGeneratorOptions = {}) {
+    this.reviewDelivery = options.reviewDelivery ?? 'document';
     this.translationService = options.translationService ?? undefined;
     this.fvttVersion = options.fvttVersion ?? '12';
     this.activityGenerator = new ActivityGenerator({ fvttVersion: this.fvttVersion });
@@ -346,8 +350,10 @@ export class ActorGenerator {
     this.resetActorDefaults(actor);
     if(parsed.candidateReview){
       if(!isSourceCandidateReview(parsed.candidateReview))throw new Error('InvalidSourceCandidateReview');
-      actor.flags??={};actor.flags.fvttJsonGenerator??={};
-      actor.flags.fvttJsonGenerator.candidateReview=structuredClone(parsed.candidateReview);
+      if(this.reviewDelivery==='document'){
+        actor.flags??={};actor.flags.fvttJsonGenerator??={};
+        actor.flags.fvttJsonGenerator.candidateReview=structuredClone(parsed.candidateReview);
+      }
     }
 
     // Patch Core Fields
@@ -995,7 +1001,7 @@ export class ActorGenerator {
         );
         if(action.candidateReview){
           if(!isSourceCandidateReview(action.candidateReview))throw new Error('InvalidSourceCandidateReview');
-          for(const item of items.slice(itemStart)){
+          for(const item of this.reviewDelivery==='document'?items.slice(itemStart):[]){
             item.flags??={};item.flags.fvttJsonGenerator??={};
             item.flags.fvttJsonGenerator.candidateReview=structuredClone(action.candidateReview);
             item.system.description.value='<p><strong>待审候选：规则检查未通过，请对照完整原文核对后决定使用。</strong></p>'+item.system.description.value;

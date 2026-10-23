@@ -36,6 +36,13 @@ export function verifyGeneratedDocument(
     diagnostics.push({code:'GEN_SOURCE_CANDIDATE_REVIEW_REQUIRED',severity:'warning',stage:'semantic',path:'actor/candidateReview',
       message:'The complete Actor retains unresolved source findings for user review; candidate delivery does not accept those findings.'});
   }
+  if(options.canonical.kind==='actor'){
+    const parsed=options.canonical.compatibilitySource;
+    for(const [section,actions]of Object.entries(parsed.structuredActions??{}))for(const [index,action]of(actions??[]).entries()){
+      if(action.candidateReview)diagnostics.push({code:'GEN_SOURCE_CANDIDATE_REVIEW_REQUIRED',severity:'warning',stage:'semantic',
+        path:`actor/structuredActions/${section}/${index}`,message:'This action has unresolved source findings; see the Forge review panel.'});
+    }
+  }
   const documents = options.canonical.kind === 'actor'
     ? (Array.isArray(options.output?.items) ? options.output.items : [])
     : [options.output];

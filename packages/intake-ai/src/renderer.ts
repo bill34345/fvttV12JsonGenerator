@@ -1,5 +1,6 @@
 import { displayName } from '@fvtt-json-generator/models/display-name';
 import yaml from 'js-yaml';
+export {prepareMonsterCandidateDelivery} from './candidate-delivery';
 import {sizeChoiceProgramNote} from './source-size';
 import {sourceLegendaryLairResistance} from '@fvtt-json-generator/models/source-operations';
 import { composeSourceTextPresentation, sourceTextPresentationBoundary, type SourceTextPresentation } from '@fvtt-json-generator/models/source-text-presentation';

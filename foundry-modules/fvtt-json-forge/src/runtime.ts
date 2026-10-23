@@ -71,24 +71,14 @@ export interface ForgeReviewedActorCandidateCreateInput extends ForgeAcceptedAct
   reviewApproval: ForgeActorCandidateReviewApproval;
 }
 
-interface ForgeActorCandidateReview {
-  version: 1;
-  gmId: string;
-  sourceHash: Sha256;
-  artifactHash: Sha256;
-  findingsHash: Sha256;
-  strictStatus: 'needs_review' | 'failed';
-  diagnostics: ForgeActorResult['diagnostics'];
-  verification: ForgeActorResult['verification'];
-  actorWarnings: string[];
-}
-
 export interface ForgeActorCreateResult {
   status: 'created' | 'existing';
   actor: ForgeActorLike;
   uuid: string;
   sourceId: ForgeSourceId;
   artifactHash: Sha256;
+  /** Delivery diagnostics belong to Forge's UI/history, never the Actor. */
+  readbackWarnings?: string[];
 }
 
 export class ForgeTemporaryActorCleanupError extends Error {
@@ -153,9 +143,8 @@ export async function createReviewedForgeActorCandidate(
     || !decoded.value.result.artifact) throw new Error('A decoded unaccepted Actor candidate is required for explicit GM review.');
   const result = decoded.value.result;
   assertResponseTarget(result.target, input.game);
-  if (!isUsableActorCandidateArtifact(result.artifact)
-    || result.diagnostics.some(diagnostic => diagnostic.severity === 'error' && diagnostic.stage !== 'semantic')) {
-    throw new Error('Actor candidate has a structural or parsing error and cannot be imported.');
+  if (!isUsableActorCandidateArtifact(result.artifact)) {
+    throw new Error('当前响应未包含 Actor 文档；请查看 Forge 中的生成错误。');
   }
   const approval = input.reviewApproval;
   const artifactHash = hashArtifact(result.artifact);
@@ -165,18 +154,12 @@ export async function createReviewedForgeActorCandidate(
     || approval.artifactHash !== artifactHash || (approval.findingsHash !== undefined && approval.findingsHash !== findingsHash)) {
     throw new Error('GM candidate approval does not match the current user, source, artifact or findings.');
   }
-  const candidateReview: ForgeActorCandidateReview = {
-    version: 1, gmId: approval.gmId, sourceHash: approval.sourceHash, artifactHash, findingsHash,
-    strictStatus: result.status, diagnostics: result.diagnostics, verification: result.verification,
-    actorWarnings: result.actorVerification.warnings,
-  };
-  return createForgeActorDocument(input, { sourceIdentity: result.sourceIdentity, artifact: result.artifact, artifactHash }, candidateReview);
+  return createForgeActorDocument(input, { sourceIdentity: result.sourceIdentity, artifact: result.artifact, artifactHash });
 }
 
 async function createForgeActorDocument(
   input: ForgeAcceptedActorCreateInput,
   result: { sourceIdentity: ForgeActorResult['sourceIdentity']; artifact: JsonObject; artifactHash: Sha256 },
-  candidateReview?: ForgeActorCandidateReview,
 ): Promise<ForgeActorCreateResult> {
   throwIfAborted(input.signal);
 
@@ -191,12 +174,11 @@ async function createForgeActorDocument(
     sourceHash: result.sourceIdentity.sourceHash,
     ...(input.rawSourceHash ? { rawSourceHash: input.rawSourceHash } : {}),
     artifactHash: result.artifactHash,
-    ...(candidateReview ? { candidateReview } : {}),
   } as const;
-  // Document.create() receives the complete verified Actor plus Forge identity.
+  // Document.create() receives the complete generated Actor plus Forge identity.
   // A portable caster's phase-only update follows successful readback to release
   // hydration. A crash after create may leave the complete pending Actor.
-  // Cancellation is honored before submission; readback failures roll back.
+  // Identity failures roll back; content differences are returned to the UI.
   const worldCreateData = prepareWorldCreateData(importArtifact, identity, documentId);
   const existing = findActors(collection, result.sourceIdentity.sourceId);
   const conflicting = existing.filter((actor) => getForgeIdentity(actor)?.artifactHash !== result.artifactHash);
@@ -214,7 +196,6 @@ async function createForgeActorDocument(
       result.sourceIdentity.sourceId,
       result.sourceIdentity.sourceHash,
       result.artifactHash,
-      candidateReview,
     );
   }
   const idCollision = findActorById(collection, documentId);
@@ -244,7 +225,6 @@ async function createForgeActorDocument(
           result.sourceIdentity.sourceId,
           result.sourceIdentity.sourceHash,
           result.artifactHash,
-          candidateReview,
         );
       }
       throw error;
@@ -264,8 +244,8 @@ async function createForgeActorDocument(
       result.artifactHash,
       input.rawSourceHash,
     );
-    assertCandidateReviewReadback(readback, candidateReview);
     const uuid=requireActorUuid(actor);
+    const readbackWarnings=actorReadbackWarnings(importArtifact,readback);
     cleanupRequired = false;
     // Readback is committed before publishing completion. A failed phase
     // update leaves the verified Actor in place; it must not race hydration
@@ -277,6 +257,7 @@ async function createForgeActorDocument(
       uuid,
       sourceId: result.sourceIdentity.sourceId,
       artifactHash: result.artifactHash,
+      ...(readbackWarnings.length?{readbackWarnings}:{}),
     };
   } finally {
     if (cleanupRequired && created) {
@@ -298,7 +279,6 @@ function prepareWorldCreateData(
     sourceHash: Sha256;
     rawSourceHash?: Sha256;
     artifactHash: Sha256;
-    candidateReview?: ForgeActorCandidateReview;
   },
   documentId: string,
 ): JsonObject {
@@ -489,7 +469,6 @@ function assertReadback(
   artifactHash: Sha256,
   rawSourceHash?: Sha256,
 ): void {
-  assertActorSemantics(artifact, readback);
   const identity = getForgeIdentity(readback);
   if (
     identity?.protocolVersion !== 1
@@ -514,19 +493,44 @@ export function assertActorSemantics(artifact: JsonObject, readback: unknown): v
   }
 }
 
+/** Creation is complete even when Foundry cleans or changes content. Keep the
+ * submitted artifact unchanged and report each observed difference separately. */
+export function actorReadbackWarnings(artifact:JsonObject,readback:unknown):string[]{
+  const warnings:string[]=[];
+  try{assertSourceOperationMidiSafety(artifact,readback);}catch(error){warnings.push(`活动兼容性需要核对：${error instanceof Error?error.message:String(error)}`);}
+  try{
+    const expected=actorSemantics(artifact,'artifact'),actual=projectReadbackToExpected(actorSemantics(readback,'readback'),expected);
+    const visit=(want:any,got:any,path:string):void=>{
+      if(stableJson(want)===stableJson(got))return;
+      if(want&&got&&typeof want==='object'&&typeof got==='object'&&Array.isArray(want)===Array.isArray(got)){
+        for(const key of new Set([...Object.keys(want),...Object.keys(got)]))visit(want[key],got[key],Array.isArray(want)?`${path}[${key}]`:`${path}.${key}`);
+        return;
+      }
+      const match=path.match(/^\$\.items\[(\d+)\](?:\.activities\[(\d+)\]\.value)?/u);
+      const item=match?(artifact.items as any[])?.[Number(match[1])]:undefined;
+      const activity=match?.[2]!==undefined?Object.entries(item?.system?.activities??{}).sort(([a],[b])=>a.localeCompare(b))[Number(match[2])]?.[1] as any:undefined;
+      const label=[String(artifact.name??'角色'),item?.name,activity?.name].filter(Boolean).join(' · ');
+      const names:Record<string,string>={'range.long':'远射程','range.value':'距离','hp.value':'当前生命值','hp.max':'最大生命值','hp.formula':'生命骰','damage.parts':'伤害','name':'名称','img':'图标'};
+      const field=Object.entries(names).find(([key])=>path.endsWith(key))?.[1]??path.replace(/^\$\.?/u,'');
+      const display=(value:unknown)=>value===undefined?'未保留':value===null?'空值':JSON.stringify(value).slice(0,240);
+      warnings.push(`${label}：${field}，生成值为 ${display(want)}，Foundry 保存值为 ${display(got)}。角色已保留，请核对。`);
+    };
+    visit(expected,actual,'$');
+  }catch(error){warnings.push(`角色已保留，但内容读回核对未完成：${error instanceof Error?error.message:String(error)}`);}
+  return [...new Set(warnings)];
+}
+
 function verifyReusableActor(
   actor: ForgeActorLike,
   artifact: JsonObject,
   sourceId: ForgeSourceId,
   sourceHash: Sha256,
   artifactHash: Sha256,
-  candidateReview?: ForgeActorCandidateReview,
 ): ForgeActorCreateResult {
   if(isForgeSpellImportPending(actor.toObject()))throw new Error('Existing Forge Actor import is still pending; wait for or inspect that import before reuse.');
+  let readback:unknown;
   try {
-    const readback = actor.toObject();
-    assertActorSemantics(artifact, readback);
-    assertCandidateReviewReadback(readback, candidateReview);
+    readback = actor.toObject();
     const identity = getForgeIdentity(readback);
     if (
       identity?.protocolVersion !== 1
@@ -540,20 +544,15 @@ function verifyReusableActor(
   } catch (cause) {
     throw new Error('Existing Forge Actor failed readback verification and was not changed. Use a new Forge source/package identity; existing Actors are not migrated.', { cause });
   }
+  const readbackWarnings=actorReadbackWarnings(artifact,readback);
   return {
     status: 'existing',
     actor,
     uuid: requireActorUuid(actor),
     sourceId,
     artifactHash,
+    ...(readbackWarnings.length?{readbackWarnings}:{}),
   };
-}
-
-function assertCandidateReviewReadback(readback: unknown, expected?: ForgeActorCandidateReview): void {
-  const actual = getRecord(getRecord(getRecord(readback).flags)[MODULE_ID]).candidateReview;
-  if (expected ? stableJson(actual) !== stableJson(expected) : actual !== undefined) {
-    throw new Error('Actor candidate review does not match the current explicit GM approval.');
-  }
 }
 
 function forgeActorDocumentId(sourceId: ForgeSourceId): string {
