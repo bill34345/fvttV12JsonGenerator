@@ -2,7 +2,9 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { MemoryIntakeCandidateStore, captureIntakeCandidate, revalidateIntakeCandidate, INTAKE_CANDIDATE_MAX_AGE_MS } from '../src/intakeCandidateRecovery';
 import { LURKER_SOURCE, buildValidLurkerIr } from '../../../src/core/intake/__tests__/fixtures/lurker';
 import { JEWEL_OF_THREE_PRAYERS_SOURCE, jewelCandidate, buildJewelOfThreePrayersIr } from '../../../src/core/intake/__tests__/fixtures/jewel-of-three-prayers';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { officialDragonSeeds } from '../../../tests/fixtures/forge-2024-dragon-seeds';
+import { buildCastActivitySource } from '../../monster-spell-resolver/src/cast-activity';
 import {
   buildForgeActorRequest,
   buildForgeItemRequest,
@@ -2373,6 +2375,61 @@ describe('complete ordinary candidate refresh recovery', () => {
     expect(recaptured.candidate.gmApproval).toBeUndefined(); expect(recaptured.bundle.gmApproval).toBeUndefined();
     expect(JSON.stringify(record)).toBe(baseline); expect(f.counts).toEqual({ discover: 1, extract: 1, create: 0 });
     await first.application.close();
+  });
+});
+
+describe('other official2024 spellcasting and legendary monsters', () => {
+  const available = existsSync('.local/forge-runtime-followup-20261022/qa-runtime-seed-b87a1f.json');
+  for (const id of ['green','brass']) (available ? test : test.skip)(`${id}: formal source/spell/resource fidelity and full candidate recovery`, async () => {
+    const seed = officialDragonSeeds().find(row => row.id === id)!;
+    let discovers = 0, extracts = 0;
+    const unexpected = async () => { throw Error('No model review/repair allowed.'); };
+    const provider = { providerName: 'fixed-official2024-dragons', extractionModel: 'frozen-ir', reviewModel: 'disabled',
+      discover: async () => { discovers++; return { schemaVersion: 1, candidates: [{ id, label: seed.name, start: 0, end: seed.source.length, quote: seed.source }] }; },
+      extract: async () => { extracts++; return structuredClone(seed.ir); }, review: unexpected, repair: unexpected };
+    const store = new MemoryIntakeCandidateStore();
+    const first = makeApplication({ createBrowserAiProvider: (() => provider) as any }, undefined, undefined, undefined, undefined, { candidateStore: store });
+    await settleBatch(first.application, first.root); setAiForm(first.application, first.root, 'ai-monster', seed.source);
+    await first.application.runAnalysis(first.root, false); await first.application.generate(first.root);
+    const saved = (await store.load()).single!;
+    expect(saved, JSON.stringify(first.notifications)).toBeDefined();
+    const originalCalls = { discovers, extracts }; expect(extracts).toBe(1);
+    const result = (saved.candidate.candidateResponse as any).result, actor = result.artifact, expected = seed.expected;
+    expect(result.status).toBe('accepted'); expect(actor.system.attributes.ac.flat).toBe(expected.ac);
+    expect(actor.system.attributes.hp.value).toBe(expected.hp); expect(actor.system.details.cr).toBe(expected.cr);
+    expect(actor.system.resources.legact.max).toBe(3); expect(actor.system.resources.legres.max).toBe(3);
+    const manifest = actor.flags['fvtt-json-generator-spell-resolver'].spellManifest;
+    const feature = actor.items.find((item: any) => item.name.startsWith(expected.legendary));
+    const group = manifest.spellcastingGroups.find((g: any) => g.featureItemKey === feature.flags.fvttJsonGenerator.spellcastingFeatureKey);
+    expect(group.ability).toBe(expected.ability); expect(group.saveDc).toBe(expected.dc);
+    expect(group.spellRefs[0].identifier).toBe(expected.spell);
+    const cast = buildCastActivitySource({ manifestId: manifest.manifestId, featureId: feature._id ?? 'ProofFeature0001', group, ref: group.spellRefs[0],
+      selectedUuid: 'Compendium.fixture.spells.Item.DragonSpell00001', activationType: 'legendary', activationCost: 1 }).activity;
+    expect(cast.activation).toEqual({ type: 'legendary', value: 1, override: true });
+    expect(cast.spell.ability).toBe(expected.ability); expect(cast.spell.challenge.save).toBe(String(expected.dc));
+    expect(cast.spell.level).toBe(id === 'green' ? 3 : undefined); // Brass inherits the selected spell's base level.
+    expect(cast.consumption).toEqual({ spellSlot: false, targets: [] }); expect(cast.uses).toBeUndefined();
+    expect(feature.flags.fvttJsonGenerator.spellcastingActivationType).toBe('legendary');
+    expect(feature.flags.fvttJsonGenerator.spellcastingActivationCost).toBe(1);
+    expect(actor.flags.fvttJsonGenerator.sourceLegendaryLedger).toBeDefined();
+    expect(actor.flags.fvttJsonGenerator.sourceLegendaryLedger.lairMax).toBe(4);
+    expect(actor.flags.fvttJsonGenerator.sourceLegendaryLedger.resistanceLairMax).toBe(4);
+    const resistance = actor.items.find((item: any) => item.name.startsWith('Legendary Resistance'));
+    expect(String(resistance.system.uses?.max ?? '')).toBe('');
+    await first.application.close();
+    const second = makeApplication({}, undefined, undefined, undefined, undefined, { candidateStore: store });
+    await settleBatch(second.application, second.root); await second.application.restoreSingleCandidate(second.root);
+    expect(second.application.status, JSON.stringify(second.notifications)).toBe('ready_for_gm_review');
+    expect(second.application.generation.candidateHash).toBe(saved.candidate.candidateHash);
+    expect(second.application.generation.candidateResponse).toEqual(saved.candidate.candidateResponse);
+    expect(second.application.generation.gmApproval).toBeUndefined(); expect({ discovers, extracts }).toEqual(originalCalls);
+    const evidence = process.env.FORGE_2024_DRAGON_EVIDENCE;
+    if (evidence) {
+      const path = `${evidence}/${id}.json`; if (existsSync(path)) throw Error('Refuse overwrite of sample evidence.');
+      writeFileSync(path, JSON.stringify({ seed, candidateHash: saved.candidate.candidateHash, response: saved.candidate.candidateResponse,
+        findings: saved.candidate.findings, calls: { discovers, extracts, liveModel: 0 }, recovered: true }, null, 2));
+    }
+    await second.application.close();
   });
 });
 
