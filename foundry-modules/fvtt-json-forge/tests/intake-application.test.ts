@@ -2397,6 +2397,7 @@ describe('other official2024 spellcasting and legendary monsters', () => {
     const result = (saved.candidate.candidateResponse as any).result, actor = result.artifact, expected = seed.expected;
     expect(result.status).toBe('accepted'); expect(actor.system.attributes.ac.flat).toBe(expected.ac);
     expect(actor.system.attributes.hp.value).toBe(expected.hp); expect(actor.system.details.cr).toBe(expected.cr);
+    expect(actor.system.attributes.hp.formula).toBe(seed.ir.creature.attributes.hp.formula);
     expect(actor.system.resources.legact.max).toBe(3); expect(actor.system.resources.legres.max).toBe(3);
     const manifest = actor.flags['fvtt-json-generator-spell-resolver'].spellManifest;
     const feature = actor.items.find((item: any) => item.name.startsWith(expected.legendary));

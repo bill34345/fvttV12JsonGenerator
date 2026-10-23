@@ -7,6 +7,10 @@ import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator'
 import {validateSourceBaseNumbers} from '../packages/intake-ai/src/base-source-numbers';
 import {validateStagedStaticSourceFacts} from '../packages/intake-ai/src/staged-source-facts';
 import data from './fixtures/forge-statblock-semantic-cases.json';
+import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
+import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
+import {convertMarkdownContentToJson} from '@fvtt-json-generator/workflows/single-file-conversion';
+import {headerPresentation} from '../packages/intake-ai/src/header-presentation';
 
 const request=(source:string)=>({source,sourceSha256:hashSource(source),candidate:{id:'semantic-regression',label:'Semantic regression',start:0,end:source.length,quote:source}});
 async function correct(source:string,creature:unknown){return runStagedMonsterExtraction(request(source),async call=>{await call.onAttempt(1);return{schemaVersion:1,creature:structuredClone(creature),uncertainties:[]};},{baseMode:'facts',featureMode:'source'});}
@@ -59,5 +63,44 @@ describe('source facts across ordinary and staged stat blocks',()=>{
     expect(()=>validateStagedStaticSourceFacts(source,ir.creature,'senses')).toThrow('BASE_STATIC_CONFLICT');
     ir.source={sha256:hashSource(source),length:source.length};
     expect(validateMonsterIntakeIR(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SOURCE_BASE_STATIC_CONFLICT',path:'/creature/senses'}));
+  });
+});
+
+describe('optional HP formulas in rendered HTML-entity table cells',()=>{
+  const seed=data.seeds[1]!;
+  const cases=[
+    {row:'| **HP&#x20;**&#x37;（3d4） |',hp:{value:7,formula:'3d4'}},
+    {row:'| **HP&#32;**&#50;&#50; (5d6 + 5) |',hp:{value:22,formula:'5d6 + 5'}},
+    {row:'| **HP&#X20;**35&#xFF08;10d4 + 10&#xFF09; |',hp:{value:35,formula:'10d4 + 10'}},
+    {row:'| **HP&#x20;**&#x37; |',hp:{value:7}},
+  ];
+  for(const c of cases)for(const newline of ['\n','\r\n'])test(`${c.row} (${JSON.stringify(newline)}) preserves source and formal Actor HP`,async()=>{
+    const source=seed.source.replace('HP 22 (5d6 + 5) Size Small',`${c.row}\n| ----------------------- |\nSize Small`).replaceAll('\n',newline);
+    const creature=structuredClone(seed.creature);creature.attributes.hp=c.hp as typeof creature.attributes.hp;
+    const ir=await correct(source,creature);
+    expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+    expect(ir.coverage.map(ref=>ref.quote).join('')).toBe(source);
+    for(const ref of ir.claims.flatMap(claim=>claim.evidence))expect(source.slice(ref.start,ref.end)).toBe(ref.quote);
+    const markdown=renderMonsterIntakeMarkdown(ir),output=await convertMarkdownContentToJson({content:markdown,fvttVersion:'14',effectProfile:'core',iconOptions:{mode:'off'},translationService:null});
+    expect(verifyMonsterIntake(source,ir,markdown,output.rawJson).status).toBe('accepted');
+    expect(output.rawJson).toMatchObject({system:{attributes:{hp:{value:c.hp.value,max:c.hp.value,formula:c.hp.formula??''}}}});
+    const wrong=structuredClone(ir);wrong.creature.attributes.hp.formula=c.hp.formula?'9d12': '3d4';
+    expect(validateMonsterIntakeIR(source,wrong).blocking).toContainEqual(expect.objectContaining({path:'/creature/attributes/hp/formula'}));
+    if(c.hp.formula){delete wrong.creature.attributes.hp.formula;expect(validateMonsterIntakeIR(source,wrong).blocking).toContainEqual(expect.objectContaining({code:'SOURCE_BASE_FORMULA_CONFLICT'}));}
+    wrong.creature.attributes.hp.value=99;
+    expect(validateMonsterIntakeIR(source,wrong).blocking).toContainEqual(expect.objectContaining({code:'SOURCE_BASE_NUMBER_CONFLICT',path:'/creature/attributes/hp/value'}));
+  });
+  test('a later damage formula cannot supply an absent HP formula',async()=>{
+    const source=seed.source.replace('HP 22 (5d6 + 5)','HP 22'),creature=structuredClone(seed.creature);
+    delete (creature.attributes.hp as {formula?:string}).formula;
+    const ir=await correct(source,creature);expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+    expect(ir.creature.attributes.hp.formula).toBeUndefined();
+    ir.creature.attributes.hp.formula='1d4 + 2';
+    expect(validateMonsterIntakeIR(source,ir).blocking).toContainEqual(expect.objectContaining({path:'/creature/attributes/hp/formula'}));
+  });
+  test('numeric entity decoding is single-pass and leaves invalid/control references literal',()=>{
+    for(const reference of ['&#0;','&#10;','&#xD800;','&#x110000;'])expect(headerPresentation(reference)).toBe(reference);
+    expect(headerPresentation('&#38;#x37;')).toBe('&#x37;');
+    expect(headerPresentation('HP &#0000055;（3d4）')).toBe('HP 7(3d4)');
   });
 });
