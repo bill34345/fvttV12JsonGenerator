@@ -33,6 +33,20 @@ beforeAll(async () => {
 });
 
 describe('Foundry Forge Actor creation boundary', () => {
+  test('native chat-flavor StringField trims only boundary whitespace and preserves the source body',()=>{
+    if(!('result'in acceptedResponse)||acceptedResponse.result.status!=='accepted')throw Error('Expected accepted fixture');
+    const expected:any=structuredClone(acceptedResponse.result.artifact);
+    const item=expected.items.find((entry:any)=>Object.keys(entry.system?.activities??{}).length),key=Object.keys(item.system.activities)[0]!;
+    const text='\r\nLegendary Resistance. If the dragon fails a saving throw,\nit can choose to succeed instead.\r\n';
+    item.system.activities[key].description={chatFlavor:text};
+    const actual=structuredClone(expected),activity=actual.items[expected.items.indexOf(item)].system.activities[key],before=hashArtifact(expected);
+    activity.description.chatFlavor=text.trim();
+    expect(()=>assertActorSemantics(expected,actual)).not.toThrow();expect(hashArtifact(expected)).toBe(before);
+    activity.description.chatFlavor=text.trim().replace('succeed','fail');
+    expect(()=>assertActorSemantics(expected,actual)).toThrow('description.chatFlavor');
+    activity.description.chatFlavor=text.trim().replace('\n',' ');
+    expect(()=>assertActorSemantics(expected,actual)).toThrow('description.chatFlavor');
+  });
   test('normalizes only native StringField activation-condition whitespace and still rejects changed rule text',()=>{
     if(!('result'in acceptedResponse)||acceptedResponse.result.status!=='accepted')throw Error('Expected accepted fixture');
     for(const condition of ['  Only while hidden.  ','Actions\n\nRend. Melee Attack Roll: +11.\n','\r\n仅当目标可见。\r\n']){

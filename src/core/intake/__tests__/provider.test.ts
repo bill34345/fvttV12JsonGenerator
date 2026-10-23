@@ -22,6 +22,17 @@ import type { HttpClient, HttpRequest, HttpResponse } from '../../translation/ty
 import { validateMonsterIntakeIR } from '../validator';
 import { buildRatWarlockIr, RAT_WARLOCK_SOURCE } from './fixtures/rat-warlock';
 import { buildValidLurkerIr, LURKER_SOURCE } from './fixtures/lurker';
+import {sourceLineCatalog,sourceProofCatalog,sourceGrantCatalog,materializeSourceLineReferences} from '../../../../packages/intake-ai/src/source-line-references';
+import type {SOURCE_OPERATION_CONTRACT} from '../../../../packages/intake-ai/src/source-operation-contract';
+import type {SourceOperation} from '@fvtt-json-generator/models/source-operations';
+
+// Compile-time contract check: a future canonical attack-kind change must
+// update the actual prompt, before another paid model trial discovers drift.
+type SplitKinds<S extends string>=S extends `${infer First}|${infer Rest}`?First|SplitKinds<Rest>:S;
+type PromptAttackKinds=typeof SOURCE_OPERATION_CONTRACT extends `${string}attack?:{type:${infer Kinds},toHit:${string}`?SplitKinds<Kinds>:never;
+type MustBeNever<T extends never>=T;
+type _MissingPromptKinds=MustBeNever<Exclude<NonNullable<SourceOperation['attack']>['type'],PromptAttackKinds>>;
+type _InventedPromptKinds=MustBeNever<Exclude<PromptAttackKinds,NonNullable<SourceOperation['attack']>['type']>>;
 
 function response(status: number, content: string): HttpResponse {
   return {
@@ -180,11 +191,13 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v28-source-identities');
+    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v39-source-grant-references');
     expect(prompt).toContain('feature.save is only for a source-explicit initial saving throw');
     expect(prompt).toContain('never copy the repeat-save DC into escapeDc');
     expect(prompt).toContain('biography is optional string prose, never an array or object');
     expect(prompt).toContain('cr must be a JSON number');
+    expect(prompt).toContain('type:mwak|rwak|msak|rsak|melee|ranged');
+    expect(prompt).toContain('without Weapon or Spell MUST use melee');
     expect(prompt).toContain('Parent object claims do not support child values');
     expect(prompt).toContain('partition the full candidate range');
     expect(prompt).toContain('activationType(action|bonus|reaction|legendary|special)');
@@ -256,7 +269,7 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v28-source-identities');
+    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v30-native-cast-reuse-contract');
     expect(prompt).toContain('A saving throw repeated at the end of each target turn');
     expect(prompt).toContain('source explicitly says bonus action');
     expect(prompt).toContain('special, passive, or empty');
@@ -322,7 +335,7 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v29-source-identities');
+    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v33-neutral-source-operation-carrier');
     expect(prompt).toContain('remove wrong save/escapeDc');
     expect(prompt).toContain('Never remove a required empty array in repair');
     expect(prompt).toContain('Standard NPC stat-block headings supply the default action economy');
@@ -1016,3 +1029,86 @@ function driftEveryEvidenceRange(value: unknown): void {
   }
   Object.values(record).forEach(driftEveryEvidenceRange);
 }
+
+describe('ordinary model source line references (format checks, no live AI)',()=>{
+  test('a manual spell token keeps its full qualifier and excludes the next native spell on the same line',()=>{
+    const token='Shapechange (Beast or Humanoid form only, no\nTemporary Hit Points gained from the spell)',source='At Will: '+token+', Speak with Animals\n';
+    const catalog=sourceGrantCatalog(source);
+    expect(catalog.map(row=>row.quote)).toEqual([token,'Speak with Animals']);
+    expect(materializeSourceLineReferences(source,{manualGrants:[{grantId:'G1'}]})).toEqual({manualGrants:[{start:9,end:9+token.length,quote:token}]});
+    for(const value of [{manualGrants:[{grantId:'G3'}]},{evidence:[{grantId:'G1'}]},{manualGrants:[{grantId:'G1',firstLineId:'L1'}]}])
+      expect(()=>materializeSourceLineReferences(source,value)).toThrow();
+    expect(sourceGrantCatalog('0/Day: Unknown\n')).toEqual([]);
+    expect(materializeSourceLineReferences('0/Day: Unknown\n',{description:{firstLineId:'L1',lastLineId:'L1'}}))
+      .toEqual({description:'0/Day: Unknown\n'});
+  });
+  test('copies an omitted spell identifier from the source name but preserves an explicit conflicting identity',async()=>{
+    const original=buildRatWarlockIr(),candidate={id:'source-identity',label:'Rat Warlock',start:RAT_WARLOCK_SOURCE.indexOf('鼠神邪术师 Warlock of the Rat God',1),end:RAT_WARLOCK_SOURCE.length,quote:''};
+    candidate.quote=RAT_WARLOCK_SOURCE.slice(candidate.start);
+    for(const conflict of [false,true]){
+      const reply:any=structuredClone(original);
+      for(const group of reply.creature.spellcasting)for(const usage of group.usageGroups)for(const ref of usage.spellRefs)delete ref.identifier;
+      if(conflict)reply.creature.spellcasting[0].usageGroups[0].spellRefs[0].identifier='wrong-spell-identity';
+      const provider=makeProvider(async()=>response(200,JSON.stringify(reply)));
+      const normalized=await provider.extract({source:RAT_WARLOCK_SOURCE,sourceSha256:original.source.sha256,candidate});
+      const ref=normalized.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[0]!;
+      expect(ref.identifier).toBe(conflict?'wrong-spell-identity':ref.englishName??ref.originalName);
+      const errors=validateMonsterIntakeIR(RAT_WARLOCK_SOURCE,normalized,{coverageRange:candidate}).blocking;
+      if(conflict)expect(errors.some(row=>row.code==='SPELL_REF_EVIDENCE_MISMATCH')).toBe(true);else expect(errors).toEqual([]);
+    }
+  });
+  test('selects the complete attack proof including the Hit clause after the ft abbreviation',()=>{
+    const source='Rend. Melee Attack Roll: +11, reach 10 ft. Hit: 15 (2d8\n+ 6) Slashing damage plus 7 (2d6) Poison damage.\n';
+    const catalog=sourceProofCatalog(source);
+    expect(catalog).toEqual([{id:'P1',text:'Rend.'},{id:'P2',text:source.slice(6).trim()}]);
+    expect(materializeSourceLineReferences(source,{proof:{attack:{clauseId:'P2'},damage:[{clauseId:'P2'}]}}))
+      .toEqual({proof:{attack:source.slice(6).trim(),damage:[source.slice(6).trim()]}});
+  });
+  test('rejects unknown, mixed and misplaced proof references within the same candidate bounds',()=>{
+    const source='Other.\nSave DC 12.\n',range={start:7,end:source.length};
+    expect(sourceProofCatalog(source,range)).toEqual([{id:'P1',text:'Save DC 12.'}]);
+    for(const value of [{proof:{save:{clauseId:'P2'}}},{description:{clauseId:'P1'}},{proof:{save:{clauseId:'P1',quote:'Other.'}}}])
+      expect(()=>materializeSourceLineReferences(source,value,range)).toThrow();
+  });
+  for(const newline of ['\n','\r\n','\r'])test(`copies selected lines and computes exact Unicode positions ${JSON.stringify(newline)}`,()=>{
+    const prefix='Other creature'+newline,body='Probe 🐉'+newline+'HP 7 (3d4)'+newline+'Save DC 12.'+newline,source=prefix+body+'Outside';
+    const range={start:prefix.length,end:prefix.length+body.length};
+    expect(sourceLineCatalog(source,range)).toEqual([{id:'L1',text:'Probe 🐉'},{id:'L2',text:'HP 7 (3d4)'},{id:'L3',text:'Save DC 12.'}]);
+    const proposal={description:{firstLineId:'L2',lastLineId:'L3'},evidence:[{firstLineId:'L2',lastLineId:'L2',quote:'3d4'}],coverage:[{firstLineId:'L1',lastLineId:'L3',classification:'mechanical',claimPaths:['/creature/test']}]};
+    const before=structuredClone(proposal),actual:any=materializeSourceLineReferences(source,proposal,range);
+    expect(proposal).toEqual(before);expect(actual.description).toBe('HP 7 (3d4)'+newline+'Save DC 12.'+newline);
+    const at=source.indexOf('3d4');expect(actual.evidence).toEqual([{start:at,end:at+3,quote:'3d4'}]);
+    expect(actual.coverage).toEqual([{...range,quote:body,classification:'mechanical',claimPaths:['/creature/test']}]);
+  });
+  test('copies proof sentences and restriction text without changing words',()=>{
+    const source='Save DC 12.\nFailure: 7 (2d6) fire damage.\n(level 3 version)\n';
+    const actual:any=materializeSourceLineReferences(source,{proof:{save:{firstLineId:'L1',lastLineId:'L1'},damage:[{firstLineId:'L2',lastLineId:'L2'}]},restriction:{text:{firstLineId:'L3',lastLineId:'L3',quote:'(level 3 version)'}}});
+    expect(actual.proof).toEqual({save:'Save DC 12.\n',damage:['Failure: 7 (2d6) fire damage.\n']});expect(actual.restriction.text).toBe('(level 3 version)');
+  });
+  for(const ref of [
+    {firstLineId:'L0',lastLineId:'L1'}, {firstLineId:'L2',lastLineId:'L1'}, {firstLineId:'L1',lastLineId:'L9'},
+    {firstLineId:'L1'}, {firstLineId:'L1',lastLineId:'L1',start:0,end:4},
+    {firstLineId:'L1',lastLineId:'L1',quote:'its ability'},
+    {firstLineId:'L2',lastLineId:'L2',quote:'HP 7'},
+  ])test('rejects bad, mixed, paraphrased or ambiguous references '+JSON.stringify(ref),()=>{
+    expect(()=>materializeSourceLineReferences('the ability\nHP 7 HP 7\n',{evidence:[ref]})).toThrow();
+  });
+  test('retains the legacy numeric reply and cannot select another candidate',()=>{
+    const source='Other\nHP 7\n',legacy={evidence:[{start:6,end:10,quote:'HP 7'}],number:99};
+    expect(materializeSourceLineReferences(source,legacy)).toEqual(legacy);
+    expect(()=>materializeSourceLineReferences(source,{evidence:[{firstLineId:'L2',lastLineId:'L2'}]},{start:0,end:6})).toThrow();
+  });
+  test('ordinary public provider sends original lines and binds a source reference before existing validation',async()=>{
+    const original=buildValidLurkerIr(),reply:any=structuredClone(original),ref=reply.claims[0].evidence[0];
+    const catalog=sourceLineCatalog(LURKER_SOURCE);
+    reply.claims[0].evidence[0]={firstLineId:'L1',lastLineId:catalog.at(-1)!.id,quote:ref.quote};
+    const requests:HttpRequest[]=[];
+    const provider=makeProvider(async(_url,init)=>{requests.push(init);return response(200,JSON.stringify(reply));});
+    const actual=await provider.extract({source:LURKER_SOURCE,sourceSha256:original.source.sha256,candidate:{id:'source-lines',label:'Lurker',start:0,end:LURKER_SOURCE.length,quote:LURKER_SOURCE}});
+    expect(JSON.parse(requests[0]!.body).messages[1].content).toContain('sourceLines');
+    expect(JSON.parse(requests[0]!.body).messages[1].content).toContain('sourceProofClauses');
+    expect(JSON.parse(requests[0]!.body).messages[1].content).toContain('sourceSpellGrants');
+    expect(actual.claims[0]!.evidence).toEqual(original.claims[0]!.evidence);
+    expect(validateMonsterIntakeIR(LURKER_SOURCE,actual).blocking).toEqual([]);
+  });
+});

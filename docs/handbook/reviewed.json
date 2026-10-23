@@ -10,19 +10,19 @@
     "note": "核对源到Actor检查新增NPC数值/公式分开比对；标准Markdown/CLI入口和参数未改变，不把Intake实体格式扩称CLI直接支持。"
   },
   "monster-intake": {
-    "fingerprint": "44b79b1cafcb6bcfe248037fce2444d3f20b77aa98cc702282f843490876cd45",
+    "fingerprint": "9480ec812bc81905c0a3da8bdb4375aac7f8a74286106b2845c5441727b97100",
     "reviewedOn": "2026-10-23",
-    "note": "核对数字实体HP表格7/3d4、可选公式与同源正式workflow；固定IR和本地读回通过，不宣称新模型质量。"
+    "note": "已核对普通AI工厂、OP类型、引用与内部编号规范化及真实DS证据；更新规则由AI判断、原文由工具复制及复杂施法GM边界。绿龙v38和黄铜龙v39数据经当前代码及Mirror14.368/dnd5e5.3.3创建读回，不称同版首轮或完整玩法通过。"
   },
   "item-intake": {
-    "fingerprint": "5ca44d8c342bb0c9313ebc7679b85dafe1f29c63a29860ce74738e858510a836",
+    "fingerprint": "993975f40914a11acf51b10e868bfd2c3f2c9b2ebdf35ca5ffb3e230985bf57e",
     "reviewedOn": "2026-10-23",
-    "note": "人工核对本次只有Monster基础头部呈现比较改变；Item入口、IR、charges、法术门禁及手册步骤未变。"
+    "note": "已核对独立provider及权威文档；本批Monster提取与兼容规范化不被这两个入口调用，其复用的严格JSON解析与传输未改。输入、输出、目标、审核及权限说明保持；本批没有新增两者的模型或实机验收。"
   },
   "species-intake": {
-    "fingerprint": "9845c1ea56ba783ea44a07cb024382dc668ffbafef19383bd981247c80797021",
+    "fingerprint": "b8de4e82c07793962ad07a64786e4bc3917882e39f1eb6b7e91166b784e8beab",
     "reviewedOn": "2026-10-23",
-    "note": "人工核对本次非Species投影/AC-HP模式改动；种族版本、ledger和手册步骤未变，不推广怪物HP验收。"
+    "note": "已核对独立provider及权威文档；本批Monster提取与兼容规范化不被这两个入口调用，其复用的严格JSON解析与传输未改。输入、输出、目标、审核及权限说明保持；本批没有新增两者的模型或实机验收。"
   },
   "document-extraction": {
     "fingerprint": "1fadc1f19a0a8346a15306bb247d90ae4b2bbaf709177747d8aded524ec25bcc",
@@ -60,14 +60,14 @@
     "note": "逐项保留当前run/validationSelection/保留检查/Mirror及450秒门限；整合Selected Token首次安装白名单、去除自动合并重复目录项。历史测试仅显式只读复用已锁定输入，源码/lock/patch仍当前候选；本地整合与推送/实装/实机边界分开。"
   },
   "verification-development": {
-    "fingerprint": "1e137aa25c407adf957e625a79f5ba09c08c48917e3e53c5c9d0dba38e5438ff",
+    "fingerprint": "8bc3383c75fecbaabad4c72438e895dd2f27bc1cc3cbe58600a9e32aa9bfb523",
     "reviewedOn": "2026-10-23",
-    "note": "核对HP来源及原生字段检查、10项新回归与4项既有失败边界；原机械/语义/运行层级仍准确。"
+    "note": "新增本worktree真实AI验收要求与34请求开发证据，区分固定输入检查和本批真实回复后续复验；记录实际版本、初始失败、内部编号修正及未执行层级。类型级提示词契约检查仅开发期，不进入正式模块，未改hook。"
   },
   "human-encounter-intake": {
-    "fingerprint": "462bc2103598c99c5532f1cb97f7d7c1f272c52511b55ee3e6aab65962f413e0",
+    "fingerprint": "53222979d76842477996e9a99aa1b37a3ee15accc23c6a34a2eebacfdc542802",
     "reviewedOn": "2026-10-23",
-    "note": "人工核对复用Monster来源校验支持数字实体，不改战斗包权限/成员/恢复/玩法出口；既有说明与限制保持。"
+    "note": "已核对EncounterIntake复用Actor提取入口、候选策略及CLI说明；共享Monster引用与提示词内部更新不改变包、GM确认和启动权限或默认纠错设置。说明保持，本批普通Actor真机证据不外推战斗包。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -125,9 +125,9 @@
     "note": "本次提交整理仅去除普通状态目录源码的末尾空白行，14项ID/名称/别名、入口和规则均未变；PDF精确路径标记binary以保持原件字节。已复核上述产品说明和现有实机范围保持，测试类型收窄不改业务。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "e24553f520e31e934dd61c24642b85131f4a96ad43ddcc687490a88ad5d0ccf9",
+    "fingerprint": "2be7680513e0d19ad409c59e2aaab53bb0a0e44e45a951561cd0460fe3038013",
     "reviewedOn": "2026-10-23",
-    "note": "核对HP原生formula、真实Forge创建读回7/7/3d4与安装脚本；原候选恢复、施法及玩法限制保留。"
+    "note": "已核对普通AI工厂、OP类型、引用与内部编号规范化及真实DS证据；更新规则由AI判断、原文由工具复制及复杂施法GM边界。绿龙v38和黄铜龙v39数据经当前代码及Mirror14.368/dnd5e5.3.3创建读回，不称同版首轮或完整玩法通过。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "2e22086b12b7f6d9730eadbd9e7951eb07dcb66beeff6a68a6e0dadf036c06d1",

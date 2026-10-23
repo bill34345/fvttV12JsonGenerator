@@ -385,7 +385,11 @@ function sourceOperationActivityGroups(artifact:unknown):Array<{index:number;act
     if(!activities.length||activities.some(({activity})=>{
       const marker=getRecord(getRecord(activity.flags).fvttJsonGenerator).sourceOperation;
       const matches=operations.filter((op:any)=>op?.id===marker?.id);
-      if(matches.length!==1||matches[0].sourceText!==rule.sourceText||marker.sourceText!==rule.sourceText)return true;
+      // Source-line references retain boundary newlines while the operation
+      // binder trims them. Require the same full rule; only edge whitespace
+      // may differ, never an interior edit or a neighbouring rule.
+      if(matches.length!==1||typeof matches[0].sourceText!=='string'||typeof marker.sourceText!=='string'
+        ||matches[0].sourceText.trim()!==rule.sourceText.trim()||marker.sourceText.trim()!==rule.sourceText.trim())return true;
       const op=matches[0],neutral=op.type==='attack'&&(op.attack?.type==='melee'||op.attack?.type==='ranged');
       if(!neutral)return marker.relationship!==op.relationship||activity.type!==op.type;
       // A source-neutral attack deliberately has two independent projections,
@@ -643,6 +647,10 @@ function projectActivityReadback(value: unknown, itemRange: unknown): unknown {
   // and the complete source/evidence in flags is retained byte for byte.
   const activation=getRecord(activity.activation);
   if(typeof activation.condition==='string')activity.activation={...activation,condition:activation.condition.trim()};
+  // dnd5e5.3.3 Activity.description.chatFlavor is also a default StringField
+  // in the installed Activity schema; Core14.368 trims its edges on creation.
+  const description=getRecord(activity.description);
+  if(typeof description.chatFlavor==='string')activity.description={...description,chatFlavor:description.chatFlavor.trim()};
   // Schema-derived: 5.3.3 Save/Damage have no includeBase field. Reject an
   // explicit value on either side, rather than dropping it as Doc noise.
   if((activity.type==='save'||activity.type==='damage')&&Object.hasOwn(getRecord(activity.damage),'includeBase')){

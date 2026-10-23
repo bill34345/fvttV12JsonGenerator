@@ -17,6 +17,7 @@ This module contains parallel Foundry 14 GM-facing Actor, bounded world Item, an
 ## 验证与验收
 
 - Select existing checks for the changed Forge behavior: source extraction/generation, candidate access and recovery, review/GM confirmation, creation and readback. Apply type/bundle/manifest checks and the relevant Actor or Item runtime path when affected; valid prior evidence is reusable. Documentation-only changes check meaning, references and generated consistency.
+- AI功能验收：本worktree按用户“AI这步依然需要测试”“以后这类测试AI这步不要绕开”的要求包含真实AI处理，提示词检查与优化属于本worktree；[原话、当前授权与结果](../../docs/plans/2026-10-20-forge-ab-current-state.md)。固定回复用于程序检查，不替代这类功能验收的真实AI步骤；本批新回复的后续复验须说明与真实调用的关联及分段边界，付费范围沿用任务授权。
 - Resolver owns spell source selection, owned cache, Cast parameters/resources and its adaptations. After those handoff responsibilities are proved, system/third-party spell movement, attacks, concentration and expiry do not automatically become Forge completion requirements. Continue into them for an affected Forge/Resolver change, an observed failure or an explicit independent user acceptance goal.
 - Use the existing [check selection and failure layers](../../docs/runbooks/development-feedback-loop.md#本批先选范围再运行前置检查); keep unresolved findings and non-blocking unverified limits distinct from current required work. Check independent fixture IDs and the relevant visibility/submission preconditions before writes, and stop when the selected evidence is sufficient. No separate per-action report is required.
 

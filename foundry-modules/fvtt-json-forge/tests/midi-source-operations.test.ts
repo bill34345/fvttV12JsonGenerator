@@ -59,6 +59,19 @@ describe('locked Midi independent source-operation import adapter',()=>{
     expect(plain).toEqual(unrelated);
   });
   test('an unbound Activity marker cannot receive a guessed compatibility adapter',()=>{const changed=structuredClone(artifact);activities(changed)[0].flags.fvttJsonGenerator.sourceOperation.relationship='follow-up';expect(()=>prepareFoundryImportArtifact(changed,{modules:moduleState()})).toThrow('Unbound source-operation');});
+  test('source-line boundary newlines keep bindings while changed operation text still fails before import',()=>{
+    const candidate=structuredClone(artifact);
+    for(const item of candidate.items){const rule=item.flags?.fvttJsonGenerator?.manualRule;if(rule?.sourceOperations)rule.sourceText='\n'+rule.sourceText.trim()+'\n';}
+    const before=JSON.stringify(candidate),adapted=prepareFoundryImportArtifact(candidate,{modules:moduleState()});
+    expect(JSON.stringify(candidate)).toBe(before);
+    expect(activities(adapted).every(activity=>activity.midiProperties.otherActivityCompatible===false&&activity.midiProperties.triggeredActivityId==='none')).toBe(true);
+    for(const layer of ['operation','marker']){
+      const wrong=structuredClone(candidate),item=wrong.items.find((entry:any)=>entry.flags?.fvttJsonGenerator?.manualRule?.sourceOperations);
+      if(layer==='operation')item.flags.fvttJsonGenerator.manualRule.sourceOperations[0].sourceText+=' Different source rule.';
+      else activities(wrong)[0].flags.fvttJsonGenerator.sourceOperation.sourceText+=' Different source rule.';
+      expect(()=>prepareFoundryImportArtifact(wrong,{modules:moduleState()})).toThrow('Unbound source-operation');
+    }
+  });
   test('normal single-Actor creation and reuse keep safety and reject an unsafe existing card without migration',async()=>{
     const env=runtime(),before=hashArtifact(artifact),created=await createAcceptedForgeActor({game:env.game,response});expect(created.status).toBe('created');expect((await createAcceptedForgeActor({game:env.game,response})).status).toBe('existing');expect(env.game.actors.createCount).toBe(1);expect(hashArtifact(artifact)).toBe(before);
     const existing=env.game.actors.contents[0],activity=activities(existing.data).find(activity=>activity.type==='attack');activity.otherActivityId='';const original=JSON.stringify(existing.data);

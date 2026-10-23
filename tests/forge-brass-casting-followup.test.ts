@@ -13,6 +13,9 @@ import {sourceSpellcastingAbility,assessSourceSpellcastingAbility} from '../pack
 import {stagedSpellcastingGroups,isSourceSpellcastingFeature,bindSourceGroupComponents,sourceSpellcastingIntroduction} from '../packages/intake-ai/src/staged-spellcasting';
 import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
 import {sourceSpellGrantTokens,sourceManualSpellGrant} from '../packages/intake-ai/src/spell-grant-tokens';
+import {officialDragonSeeds} from './fixtures/forge-2024-dragon-seeds';
+import type {MonsterIntakeIR} from '../packages/intake-ai/src/types';
+import {namespaceDuplicateSpellRefIds} from '../packages/intake-ai/src/spell-ref-identities';
 
 const header='Proof Sentinel\nMedium construct, unaligned\nArmor Class 14\nHit Points 30 (4d8 + 12)\nSpeed 30 ft.\nSTR DEX CON INT WIS CHA\n10 10 16 10 14 16\nChallenge 2\n';
 function synthetic(body:string){
@@ -32,6 +35,86 @@ function frozen(caseId:'N2'|'N3'){
   return{source,plan,base,decoded,paths,hashes:paths.map(path=>createHash('sha256').update(readFileSync(path)).digest('hex'))};
 }
 const localFrozenTest=existsSync(`${frozenRoot}/N3/source.md`)?test:test.skip;
+
+test('scoped ref-key formatting runs without private dragon fixtures and preserves the reuse target',()=>{
+  const parent={refId:'scorching-ray',originalName:'Scorching Ray'},child={...parent,reuseOf:{groupId:'spellcasting',refId:'scorching-ray'}};
+  const proposal={creature:{spellcasting:[{groupId:'spellcasting',usageGroups:[{spellRefs:[parent]}]},{groupId:'blazing-light',usageGroups:[{spellRefs:[child]}]}]}};
+  namespaceDuplicateSpellRefIds(proposal);
+  expect(parent.refId).not.toBe(child.refId);expect(child.reuseOf.refId).toBe(parent.refId);
+  expect([parent.originalName,child.originalName]).toEqual(['Scorching Ray','Scorching Ray']);
+  const once=JSON.stringify(proposal);namespaceDuplicateSpellRefIds(proposal);expect(JSON.stringify(proposal)).toBe(once);
+});
+
+localFrozenTest('provider ref keys may repeat across groups when every reuse target is unambiguous',()=>{
+  const {source,ir:original}=officialDragonSeeds().find(row=>row.id==='brass')!,ir=structuredClone(original) as MonsterIntakeIR;
+  const parent=ir.creature.spellcasting!.find(group=>group.featureName==='Spellcasting')!,child=ir.creature.spellcasting!.find(group=>group.featureName==='Blazing Light')!;
+  const owner=parent.usageGroups.flatMap(usage=>usage.spellRefs).find(ref=>ref.originalName==='Scorching Ray')!,reuse=child.usageGroups[0]!.spellRefs[0]!;
+  owner.refId='same-spell';reuse.refId='same-spell';reuse.reuseOf={groupId:parent.groupId,refId:'same-spell'};
+  namespaceDuplicateSpellRefIds(ir);
+  expect(owner.refId).not.toBe(reuse.refId);expect(reuse.reuseOf.refId).toBe(owner.refId);
+  expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+  const once=JSON.stringify(ir);namespaceDuplicateSpellRefIds(ir);expect(JSON.stringify(ir)).toBe(once);
+});
+localFrozenTest('ambiguous same-group ref keys remain invalid instead of receiving guessed links',()=>{
+  const {source,ir:original}=officialDragonSeeds().find(row=>row.id==='brass')!,ir=structuredClone(original) as MonsterIntakeIR;
+  const refs=ir.creature.spellcasting![0]!.usageGroups[0]!.spellRefs;
+  refs[1]!.refId=refs[0]!.refId;const before=JSON.stringify(ir);namespaceDuplicateSpellRefIds(ir);
+  expect(JSON.stringify(ir)).toBe(before);expect(validateMonsterIntakeIR(source,ir).blocking.some(row=>row.code==='DUPLICATE_ID')).toBe(true);
+});
+localFrozenTest('ref-key formatting cannot conceal a forbidden target-world identifier',()=>{
+  const {source,ir:original}=officialDragonSeeds().find(row=>row.id==='brass')!,ir=structuredClone(original) as MonsterIntakeIR;
+  const parent=ir.creature.spellcasting!.find(group=>group.featureName==='Spellcasting')!,child=ir.creature.spellcasting!.find(group=>group.featureName==='Blazing Light')!;
+  parent.usageGroups[0]!.spellRefs[0]!.refId='Actor.0123456789abcdef';child.usageGroups[0]!.spellRefs[0]!.refId='Actor.0123456789abcdef';
+  const before=JSON.stringify(ir);namespaceDuplicateSpellRefIds(ir);expect(JSON.stringify(ir)).toBe(before);
+  expect(validateMonsterIntakeIR(source,ir).blocking.some(row=>row.code==='FORBIDDEN_TARGET_WORLD_IDENTIFIER')).toBe(true);
+});
+
+localFrozenTest('a mixed native/manual spell grant keeps the original line ending without absorbing the next grant',()=>{
+  const {source,ir:original}=officialDragonSeeds().find(row=>row.id==='brass')!,ir=structuredClone(original) as MonsterIntakeIR;
+  const group=ir.creature.spellcasting!.find(entry=>entry.featureName==='Spellcasting')!;
+  const row=sourceManualSpellGrant(group.evidence[0]!,group.manualGrants![0]!)!.row;
+  let end=row.end;while(end<source.length&&/\s/u.test(source[end]!))end++;
+  expect(end).toBeGreaterThan(row.end);
+  group.usageGroups[0]!.evidence=[{start:row.start,end,quote:source.slice(row.start,end)}];
+  expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+  group.usageGroups[0]!.evidence=[{start:row.start,end:end+1,quote:source.slice(row.start,end+1)}];
+  expect(validateMonsterIntakeIR(source,ir).blocking.some(finding=>finding.code==='INVALID_SPELL_GRANT_SPAN')).toBe(true);
+});
+
+localFrozenTest('reference validation uses the resolved spell rather than program-private group/ref IDs',()=>{
+  const {source,ir:original}=officialDragonSeeds().find(row=>row.id==='brass')!,ir=structuredClone(original) as MonsterIntakeIR;
+  const groups=ir.creature.spellcasting!,ids=new Map<string,string>();
+  groups.forEach((group,i)=>{const old=group.groupId;group.groupId=`model-group-${i}`;ids.set(old,group.groupId);group.usageGroups.forEach((usage,j)=>usage.spellRefs.forEach((ref,k)=>{ids.set(old+'/'+ref.refId,`model-ref-${i}-${j}-${k}`);ref.refId=ids.get(old+'/'+ref.refId)!;}));});
+  for(const group of groups)for(const usage of group.usageGroups)for(const ref of usage.spellRefs)if(ref.reuseOf){const old=ref.reuseOf;ref.reuseOf={groupId:ids.get(old.groupId)!,refId:ids.get(old.groupId+'/'+old.refId)!};}
+  expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+  const child=groups.find(group=>group.featureName==='Blazing Light')!,ref=child.usageGroups[0]!.spellRefs[0]!;
+  ref.reuseOf!.refId='missing-ref';
+  expect(validateMonsterIntakeIR(source,ir).blocking.some(row=>row.code==='SPELL_REFERENCE_SOURCE_MISMATCH')).toBe(true);
+});
+localFrozenTest('reference validation accepts a wider source-proven profile citation but still rejects a different DC',()=>{
+  const {source,ir:original}=officialDragonSeeds().find(row=>row.id==='brass')!,ir=structuredClone(original) as MonsterIntakeIR,groups=ir.creature.spellcasting!;
+  const parent=groups.find(group=>group.featureName==='Spellcasting')!,child=groups.find(group=>group.featureName==='Blazing Light')!;
+  const start=parent.abilityEvidence[0]!.start,end=parent.saveDcEvidence![0]!.end;
+  child.saveDcEvidence=[{start,end,quote:source.slice(start,end)}];
+  expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+  child.saveDc=17;
+  expect(validateMonsterIntakeIR(source,ir).blocking.some(row=>row.code==='SPELL_REFERENCE_SOURCE_MISMATCH')).toBe(true);
+  child.saveDc=16;
+  const foreign=source.indexOf('DC 16',parent.evidence[0]!.end);
+  child.saveDcEvidence=[{start:foreign,end:foreign+5,quote:source.slice(foreign,foreign+5)}];
+  expect(validateMonsterIntakeIR(source,ir).blocking.length).toBeGreaterThan(0);
+});
+localFrozenTest('source-explicit casting level metadata agrees with its literal qualifier',()=>{
+  const {source,ir:original}=officialDragonSeeds().find(row=>row.id==='green')!,ir=structuredClone(original) as MonsterIntakeIR;
+  const child=ir.creature.spellcasting!.find(group=>group.featureName==='Mind Invasion')!,restriction=child.usageGroups[0]!.spellRefs[0]!.restrictions[0]!;
+  const parent=ir.creature.spellcasting!.find(group=>group.featureName==='Spellcasting')!;
+  parent.usageGroups[0]!.spellRefs.find(ref=>ref.originalName==='Mind Spike')!.restrictions[0]!.value=3;
+  restriction.value=3;
+  for(const entry of [restriction,parent.usageGroups[0]!.spellRefs.find(ref=>ref.originalName==='Mind Spike')!.restrictions[0]!])entry.text=entry.text.slice(1,-1);
+  expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+  restriction.value=4;
+  expect(validateMonsterIntakeIR(source,ir).blocking.some(row=>row.code==='SPELL_REFERENCE_SOURCE_MISMATCH')).toBe(true);
+});
 
 localFrozenTest('unchanged 2024 Brass form clears all six former strict adapter false positives',()=>{
   const data=frozen('N3');

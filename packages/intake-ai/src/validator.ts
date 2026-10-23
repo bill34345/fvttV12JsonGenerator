@@ -762,16 +762,16 @@ function validateSpellcasting(
     const reference=parent?sourceReferencedSpellAction(parent.quote):undefined;
     const daily=parent?sourceDailySpellAction(parent.quote):undefined;
     const inheritance=reference??daily;
-    let referenced:{owner:EvidenceRef;expected:CanonicalSpellcastingGroup}|undefined;
+    let referenced:{owner:EvidenceRef;expected:CanonicalSpellcastingGroup;groups:CanonicalSpellcastingGroup[];level?:number}|undefined;
     if(inheritance&&parent){
       try{
         const plan=splitStagedMonsterSource({source,sourceSha256:ir.source.sha256,candidate:{id:'reference-proof',label:ir.creature.identity.name,start:scope.start,end:scope.end,quote:source.slice(scope.start,scope.end)}});
         const unit=plan.features.find(unit=>unit.start===parent.start&&unit.end===parent.end);
         const owners=plan.features.filter(unit=>normalizedSourceSpellName(unit.name??'')===normalizedSourceSpellName(inheritance.parent));
-        const expected=unit?stagedSpellcastingGroups(plan).get(unit.id):undefined;
-        if(expected&&owners.length===1)referenced={owner:{start:owners[0]!.start,end:owners[0]!.end,quote:owners[0]!.quote},expected};
+        const sourceGroups=stagedSpellcastingGroups(plan),expected=unit?sourceGroups.get(unit.id):undefined;
+        if(expected&&owners.length===1)referenced={owner:{start:owners[0]!.start,end:owners[0]!.end,quote:owners[0]!.quote},expected,groups:[...sourceGroups.values()],level:reference?.level};
       }catch{/* No guessed inheritance: unresolved source references remain blocking. */}
-      if(!referenced||!sameReferencedSpellMechanics(group,referenced.expected))
+      if(!referenced||!sameReferencedSpellMechanics(group,referenced.expected,groups,referenced.groups,referenced.level))
         finding('SPELL_REFERENCE_SOURCE_MISMATCH',path,'The named source parent, exact spell and independent use quota or at-will reuse, profile, components and complete child evidence must agree; unknown or altered references cannot create executable Casts.','evidence',[parent]);
     }
     validateSpellcastingGroupFields(source, group, path, finding, referenced?.owner??parent);
@@ -865,17 +865,47 @@ function validateSpellcasting(
 
 /** IDs are schema identities; all referenced source mechanics and every exact
  * evidence span are independently regenerated, never trusted from the IR. */
-function sameReferencedSpellMechanics(group:CanonicalSpellcastingGroup,expected:CanonicalSpellcastingGroup):boolean{
-  const snapshot=(g:CanonicalSpellcastingGroup)=>({
-    evidence:g.evidence,ability:g.ability,abilityEvidence:g.abilityEvidence,saveDc:g.saveDc,saveDcEvidence:g.saveDcEvidence,
-    attackBonus:g.attackBonus,attackBonusEvidence:g.attackBonusEvidence,componentWaivers:g.componentWaivers,
-    activationType:g.activationType,legendaryCost:g.legendaryCost,recharge:g.recharge,casterLevel:g.casterLevel,casterLevelEvidence:g.casterLevelEvidence,manualGrants:g.manualGrants,
-    usageGroups:Array.isArray(g.usageGroups)?g.usageGroups.map(u=>({...u,spellRefs:Array.isArray(u.spellRefs)?u.spellRefs.map(ref=>{
-      const {refId,...sourceFacts}=ref;return sourceFacts;
-    }):u.spellRefs})):g.usageGroups});
+function sameReferencedSpellMechanics(group:CanonicalSpellcastingGroup,expected:CanonicalSpellcastingGroup,
+  actualGroups:CanonicalSpellcastingGroup[],expectedGroups:CanonicalSpellcastingGroup[],sourceLevel?:number):boolean{
+  // Source citations are validated separately below against this exact parent.
+  // Compare execution facts here, resolving opaque IDs to their source owner;
+  // a model's legal IDs need not equal the staged adapter's private IDs.
+  const target=(reuse:NonNullable<CanonicalSpellRef['reuseOf']>,all:CanonicalSpellcastingGroup[])=>{
+    const owner=all.find(candidate=>candidate?.groupId===reuse.groupId);
+    const spell=owner&&Array.isArray(owner.usageGroups)?owner.usageGroups.flatMap(usage=>Array.isArray(usage.spellRefs)?usage.spellRefs:[]).find(ref=>ref.refId===reuse.refId):undefined;
+    return owner&&spell&&typeof owner.description==='string'&&typeof spell.originalName==='string'
+      ?{parent:owner.description.trim(),spell:spell.originalName}:{invalid:true};
+  };
+  const sourceReference=sourceReferencedSpellAction(expected.description);
+  const levelAnnotation=sourceReference?.annotationStart===undefined?undefined
+    :expected.description.slice(sourceReference.annotationStart,sourceReference.annotationEnd);
+  const bareLevel=(text:string)=>{
+    const value=text.trim().replace(/\s+/gu,' ');
+    return value.startsWith('(')&&value.endsWith(')')?value.slice(1,-1).trim():value;
+  };
+  const snapshot=(g:CanonicalSpellcastingGroup,all:CanonicalSpellcastingGroup[])=>({
+    ability:g.ability,saveDc:g.saveDc,attackBonus:g.attackBonus,
+    componentWaivers:Array.isArray(g.componentWaivers)?g.componentWaivers.map(waiver=>waiver.component):g.componentWaivers,
+    activationType:g.activationType,legendaryCost:g.legendaryCost,recharge:g.recharge,casterLevel:g.casterLevel,
+    manualGrants:Array.isArray(g.manualGrants)?g.manualGrants.map(ref=>ref.quote):g.manualGrants,
+    usageGroups:Array.isArray(g.usageGroups)?g.usageGroups.map(u=>{
+      const {evidence,spellRefs,...usage}=u;
+      return {...usage,spellRefs:Array.isArray(spellRefs)?spellRefs.map(ref=>{
+        const {refId,evidence,reuseOf,restrictions,...sourceFacts}=ref;
+        sourceFacts.identifier=normalizeEvidenceToken(sourceFacts.identifier);
+        return {...sourceFacts,...(reuseOf?{reuseOf:target(reuseOf,all)}:{}),restrictions:Array.isArray(restrictions)?restrictions.map(restriction=>{
+          const {evidence,...meaning}=restriction;
+          if(meaning.kind==='casting'&&typeof meaning.text==='string'&&sourceLevel!==undefined&&levelAnnotation!==undefined
+            &&bareLevel(meaning.text)===bareLevel(levelAnnotation)&&(meaning.value===undefined||meaning.value===sourceLevel)){
+            meaning.text=bareLevel(levelAnnotation);delete meaning.value;
+          }
+          return meaning;
+        }):restrictions};
+      }):spellRefs};
+    }):g.usageGroups});
   const sorted=(value:unknown):unknown=>Array.isArray(value)?value.map(sorted):value&&typeof value==='object'
     ?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,sorted(item)])):value;
-  return JSON.stringify(sorted(snapshot(group)))===JSON.stringify(sorted(snapshot(expected)));
+  return JSON.stringify(sorted(snapshot(group,actualGroups)))===JSON.stringify(sorted(snapshot(expected,expectedGroups)));
 }
 
 function validateSourceGroupComponents(source:string,group:CanonicalSpellcastingGroup,path:string,parent:EvidenceRef|undefined,clause:ReturnType<typeof sourceGroupComponentClause>,finding:(code:string,path:string,message:string,origin:IntakeFinding['origin'],evidence?:EvidenceRef[])=>void):void{
@@ -1618,8 +1648,14 @@ function validateMinimalGrantSpans(
       const shared=usageGroup.usage==='daily-shared',count='count' in usageGroup?usageGroup.count:1;
       if(!daily||daily.count!==count||daily.shared!==shared||(!daily.each&&!daily.shared&&usageGroup.spellRefs.length!==1))finding('SPELL_DAILY_GRANT_EVIDENCE_MISMATCH',path,'Daily count and independent/shared ownership must match the exact grant label.','evidence',[grant]);
     }
-    const ownedManualTokens=manualTokens.filter(manual=>manual.row.start===grant.start&&manual.row.end===grant.end
-      &&manual.row.quote===grant.quote&&(manual.usage===usageGroup.usage
+    // Line references retain their original newline; the source tokenizer's
+    // row omits it. Require the same non-whitespace source slice, not identical
+    // newline inclusion. No neighbouring rule or other grant may be absorbed.
+    const sameRow=(row:EvidenceRef)=>{
+      const start=(ref:EvidenceRef)=>ref.start+ref.quote.length-ref.quote.trimStart().length;
+      return start(row)===start(grant)&&row.quote.trim()===grant.quote.trim();
+    };
+    const ownedManualTokens=manualTokens.filter(manual=>sameRow(manual.row)&&(manual.usage===usageGroup.usage
         ||manual.usage==='1/day-each'&&usageGroup.usage==='daily-each'&&'count'in usageGroup&&usageGroup.count===1))
       .filter(manual=>manual.count===undefined||'count'in usageGroup&&manual.count===usageGroup.count||manual.count===1&&usageGroup.usage==='1/day-each')
       .map(manual=>({evidence:manual.token,path:path+'/manualGrants'}));

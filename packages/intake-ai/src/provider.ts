@@ -26,13 +26,15 @@ import {FULL_IR_SOURCE_OPERATION_CONTRACT,bindProviderSourceContracts} from './s
 import {completeSourceFeatureEvidence,completeSourceSpellcastingEvidence} from './source-completeness';
 import { StagedExtractionError } from './staged-source';
 import { discoveryLinePayload, materializeDiscoveryLines } from './discovery';
+import {sourceLineCatalog,sourceProofCatalog,sourceGrantCatalog,materializeSourceLineReferences} from './source-line-references';
+import {namespaceDuplicateSpellRefIds} from './spell-ref-identities';
 export type { ProviderResponseEvidence, ProviderResponseEvidenceSink } from './provider-response-evidence';
 
 export const INTAKE_PROMPT_VERSIONS = {
   discover: 'monster-intake-discover-v2-source-lines',
-  extract: 'monster-intake-extract-v28-source-identities',
-  review: 'monster-intake-review-v28-source-identities',
-  repair: 'monster-intake-repair-v29-source-identities',
+  extract: 'monster-intake-extract-v39-source-grant-references',
+  review: 'monster-intake-review-v30-native-cast-reuse-contract',
+  repair: 'monster-intake-repair-v33-neutral-source-operation-carrier',
 } as const;
 
 export type MonsterIntakeProviderErrorCode =
@@ -174,6 +176,11 @@ const REPAIR_SOURCE_HINT_MAX_DIFFERING_MIDDLE = 96;
 const SOURCE_EVIDENCE_SEMANTICS = `Ability evidence must be a complete source clause that explicitly binds the chosen ability to spellcasting,
 not a bare ability token or partial clause suffix.
 refId is an internal stable key and may be ASCII, but identifier and all spell names must be source-side. originalName is the literal source name; englishName/chineseName and aliases require their own source proof. For a Chinese-only name, retain its literal Chinese identifier and chineseName equal to originalName, and omit englishName. Never invent an English translation to satisfy the key format. Destination spell-name translation, matching and UUID selection belong to the later Resolver stage, not source extraction, review or repair.
+Canonical casting groups support activationType, legendaryCost and recharge. An explicit action reusing its own
+Spellcasting parent's at-will spell uses a separate group with the action's activation/cost, and a child spellRef with
+reuseOf:{groupId:parentGroupId,refId:parentRefId}. It is not an independent duplicate spell. Inherit only the source-proven
+parent profile/components, retain child-specific source evidence/restrictions, and do not emit the same casting action
+again in an ordinary feature array. The structured group itself supplies that source section's visible ability.
 Every non-separator source phrase inside a usage grant,
 including parenthetical count, target, summoning, or casting limitations, must be represented by spell or restriction evidence;
 never silently leave such a phrase in the gap. Spell-ref evidence must cover only the literal spell identity or name phrase;
@@ -186,6 +193,13 @@ Keep numeric 0 only when exact source evidence explicitly states that field is 0
 For an explicit Melee or Ranged Weapon Attack with both reach and range, use the canonical hybrid representation:
 attack.type mwak plus reach, range, and longRange; this preserves both modes and is not an ambiguity.
 legendaryCost is a supported feature field. Populate it from explicit wording such as Costs 2 Actions or 需要2动作.
+A shared Legendary Actions preamble saying the creature expends a use for each listed action supplies legendaryCost:1
+to EVERY corresponding feature, including sourceOperations carriers and spellcasting references. Keep the complete
+preamble as source context/evidence; do not create an independent uses pool for this shared expenditure. An explicit
+different cost on a particular action controls that action. Do not infer a cost solely from a feature's name.
+Canonical creature.legendary also supports optional lairMax and recovery:"own-turn-start". An explicitly printed
+base/lair maximum differing by exactly one, recovering at this creature's own turn start, must preserve both maxima
+and that recovery. These are existing resource fields, not invented conditional automation or duplicate pools.
 An attack's printed average damage and its parenthesized dice formula are two views of the same damage; retain the
 source dice formula structurally and the average literally in description, without creating an uncertainty when they agree.
 Standard 2024 stat-block Initiative +4 (14), or 先攻 +4（14）, states modifier +4 followed by initiative score
@@ -243,11 +257,45 @@ Extract exactly one monster into MonsterIntakeIR schemaVersion 1 using stable En
 Every mechanical value needs an exact evidence range and every non-whitespace source span needs
 coverage as mechanical, narrative, or ignored-with-reason. Preserve ambiguous mechanics literally
 and add a blocking uncertainty instead of inventing a value.
+Select each complete source parent first and COPY its exact text into description and parent evidence.
+Never reconstruct a quotation from memory or rewrite its words. For a sourceOperations feature, the complete parent
+includes its printed name and any parenthesized recharge/use qualifier, not just the body after the title's period.
+The request supplies immutable sourceLines with IDs. In THIS extraction response, use source references instead of
+recopying original paragraphs or calculating character positions. A SourceRef is exactly
+{firstLineId:"L1",lastLineId:"L3"}; it selects all original text in those consecutive lines, including original newlines.
+For a clause or spell name within those lines, use {firstLineId:"L1",lastLineId:"L1",quote:"EXACT UNIQUE SUBSTRING"}.
+The optional quote must occur exactly once inside the selected lines. Do not rewrite any words. Never combine line IDs
+with numeric start/end. The program copies selected source text and computes its exact positions before validation.
+Use SourceRefs as description/preamble strings, evidence array entries and restriction text as needed.
+For OP proof.attack/save/damage/range/aoe/target, choose from request.sourceProofClauses and return {clauseId:"P1"};
+damage remains an array of those references. These IDs select exact original clauses using the existing proof protocol.
+Choose the clause that actually proves this operation, excluding a standalone title. A unit abbreviation such as "ft."
+does NOT end the attack clause: choose its complete catalog entry, including the following Hit sentence when present.
+Do not type, shorten or rewrap proof quotations yourself. The program substitutes the selected original text; you still
+choose its meaning and all operation values. Unknown or foreign clause references remain errors.
+If you emit sourceOperations, OMIT the outer feature's activityType, executionMode, nativeRuleText and manualRemainder:
+the program supplies utility/native-with-gm and the complete source parent. Each OP's type still says attack/save/damage.
+Never put a second flat save/attack/damage/appliedConditions/aoe object on that same sourceOperations feature.
+Coverage entries may use firstLineId,lastLineId plus classification,claimPaths,reason in place of start,end,quote.
+Keep one coverage owner per complete named ability or casting group; give the stat header and section/preamble lines
+their own contiguous coverage. Do not share one whole-creature coverage row across different abilities. Complete
+parent references include every line of that ability through the line before the next independent ability/section.
+These references only change how source text is transmitted; all numeric values, spell identities, conditions and
+boundaries must still be chosen by you from the source. The canonical shapes below describe the data AFTER reference
+expansion. Old numeric EvidenceRefs remain accepted for backwards compatibility; use SourceRefs in this new response.
+For spellRefs, OMIT identifier in your response. Keep originalName as the exact source spell name and refId as your
+opaque reference key; the program supplies the source-side identifier from the explicit englishName or originalName.
+Casting level and other qualifiers belong only in restrictions. Never append a level/version to the spell identity.
+For a manual spell within a row that also contains supported native spells, select its COMPLETE entry from
+request.sourceSpellGrants using manualGrants:[{grantId:"G1"}]. Each entry includes its own full qualifier but excludes the
+next spell, even when both share a physical line. You choose which spell requires GM handling. A whole ambiguous row
+or all-manual feature may still use a complete SourceRef; do not replace a single manual token with a whole-line span
+that also covers another executable spell.
 
 Required top-level shape:
 {"schemaVersion":1,"source":{"sha256":"request sourceSha256","length":123},"creature":CREATURE,"claims":[],"coverage":[],"uncertainties":[]}.
 CREATURE keys are exactly identity, abilities, attributes, saves, skills, defenses, senses, languages,
-  biography, legendary, spellcasting, sourceResourcePools, traits, actions, bonusActions, reactions, legendaryActions, mythicActions. biography is optional string prose, never an array or object. legendary is optional and uses exactly {max,preamble,evidence}; use it only when the source explicitly states the total legendary-action resource or a conditional-availability preamble, preserve that complete preamble literally, and never invent conditional automation. mythicActions is optional and must contain every feature under an explicit Mythic Actions/神话动作 section, kept separate from legendaryActions. identity uses name, englishName,
+  biography, legendary, spellcasting, sourceResourcePools, traits, actions, bonusActions, reactions, legendaryActions, mythicActions. biography is optional string prose, never an array or object. legendary is optional and uses {max,preamble,evidence,lairMax?,recovery?}; use it only when the source explicitly states the total legendary-action resource or a conditional-availability preamble, preserve that complete preamble literally, and never invent conditional automation. For an explicit base/lair maximum differing by exactly one and recovery at the start of each of this creature's turns, include BOTH source maxima as max and lairMax, plus recovery:"own-turn-start". For example, source 3 uses (4 in lair) means max:3,lairMax:4; the pool is not unconditional max:4 or max:3 alone. Omit lairMax when no lair alternative is printed; other conditional modes remain complete literal GM rules, not invented fields. mythicActions is optional and must contain every feature under an explicit Mythic Actions/神话动作 section, kept separate from legendaryActions. identity uses name, englishName,
 size(tiny|small|medium|large|huge|gargantuan), sourceSize(optional complete literal of explicit header size alternatives, or the approved Colossal mapping), swarmSize(optional individual creature size in a source-explicit swarm), creatureType, creatureTypeCustom, alignment. For a header choice such as "Medium or Small", size is one printed current option and sourceSize retains the complete literal alternatives; include its exact source-header claim. Do not treat an ability's transformation as a header size option. abilities uses
 str,dex,con,int,wis,cha numeric scores. attributes uses ac, acKind(flat|natural|default), acNote for literal
 conditional AC text, initiative, hp{value,formula},
@@ -261,10 +309,19 @@ Every feature uses name, englishName, description, optional activityType(attack|
 activationType(action|bonus|reaction|legendary|special). Activity type describes the mechanic; activation type describes
 when it is used, regardless of which section contains the feature. If source text says the creature uses a bonus action,
 reaction, or action, encode that exact action economy. Never use special merely because a feature appears under traits;
-special is only for an explicitly special activation that is not action, bonus action, reaction, or legendary. attack is
+special is only for an explicitly special activation that is not action, bonus action, reaction, or legendary.
+For a printed feature title with conditional use alternatives such as "(3/Day, or 4/Day in Lair)", keep that COMPLETE
+printed title in name and englishName. Do not shorten the title and replace its alternatives with an unconditional
+uses.max:3 pool: that loses the native conditional resource mapping. Preserve the complete title and description;
+the existing native generator owns the supported base/lair resource binding, not a separate ordinary Item uses pool.
+Legacy flat feature.attack is
 {type:mwak|rwak|msak|rsak,toHit,reach,range,longRange}; damage entries are
 {formula,type,relationship:base|additional|replacement|conditional,condition}; save is {dc,ability,condition};
 For the legacy single-operation format only, appliedConditions entries use {statuses,escapeDc,condition,duration,staged}. Do not infer automation from names or encode unsupported consequences as custom statuses. Features using sourceOperations follow its exclusive carrier contract below instead of these flat executable fields.
+For a basic Save with complex condition progression, repeated saves, or multiple alternative ending events, prefer a
+sourceOperations Save helper with the explicit DC, ability, range/area and full source proof. Preserve ALL condition
+stages, durations, repeat timing and ending events in the complete description for GM adjudication. Do not promise
+automatic condition progression or expiry; do not put legacy appliedConditions alongside sourceOperations.
 Source-explicit area templates use aoe:{shape:sphere|radius|cone|line|cube|cylinder|rectangle,radius:number} on the relevant sourceOperations OP, or on the legacy single-operation feature; never both. recharge uses a two-number range such as [5,6]. Populate supported mechanics when explicit, rather than leaving them only in a name or description. Source-explicit daily/rest uses remain carrier uses:{max:number,period:day|longRest|shortRest|dawn}; legendary cost uses legendaryCost:number.
 When one source feature only refers to another named attack, preserve that reference for the GM to invoke the already existing button. Do not copy another feature's attack/damage numbers as local mechanics. Retain any independently printed local operations under the shared sourceOperations contract below.
 For "Medium swarm of Tiny beasts", identity.size is medium, swarmSize is tiny, creatureType is beast. For "Size Huge (Swarm of Medium)" with Type Fiend (Yugoloth), size is huge, swarmSize is medium, creatureType is fiend, creatureTypeCustom is Yugoloth. Never infer identity from size words in ability prose.
@@ -284,13 +341,17 @@ Coverage entries use start,end,quote,classification mechanical|narrative|ignored
 and reason when ignored. Cover the candidate range, not other monsters in a collection.
 Coverage entries must partition the full candidate range without gaps or overlaps, including repeated table
 headers, section headings, and whitespace. Copy every quote verbatim; never abbreviate repeated text.
+Use the supplied line IDs to cover the candidate without calculating character counts. Each individual claim still
+needs its own exact evidence; a source reference to the full ability can support that ability's feature-index claim.
 Evidence offsets are absolute JavaScript UTF-16 offsets into request.source and quote must equal
 source.slice(start,end). uncertainties use id,code,path,message,blocking,evidence,candidates.
 
 Extract explicitly granted spells only. A spell merely mentioned in lore, biography, a comparison, or an
 example is not granted. spellcasting is an optional array of source groups. Each group uses exactly
 {groupId,featureName,featureEnglishName,description,evidence,ability,abilityEvidence,casterLevel,casterLevelEvidence,saveDc,saveDcEvidence,
-attackBonus,attackBonusEvidence,componentWaivers,usageGroups,manualGrants?}. componentWaivers entries use
+attackBonus,attackBonusEvidence,componentWaivers,usageGroups,manualGrants?,activationType?,legendaryCost?,recharge?}.
+activationType uses action|bonus|reaction|legendary and legendaryCost is numeric, including a source-proven shared one-use cost.
+componentWaivers entries use
 {component:"material",evidence}. usageGroups entries use exactly
 {usage:"at-will"|"1/day-each"|"prepared-cantrip",evidence,spellRefs} or
 {usage:"daily-each"|"daily-shared",count,evidence,spellRefs} or
@@ -300,6 +361,13 @@ one generated group/feature counter supports one shared pool. Multiple explicit 
 Preserve complex/unrepresentable grant rows as exact manualGrants EvidenceRef entries alongside supported usageGroups;
 an all-manual group may have no usageGroups, but its complete source, proven ability and manualGrants remain required.
 Never invent a spell or expose an unrestricted Cast for an unimplemented casting qualifier.
+Native casting supports source-explicit casting level, self-only target, waived components, a fixed non-Concentration
+duration, and an AC-already-included warning. Other casting overrides are not implemented: for example, changing which
+forms are allowed, suppressing granted Temporary Hit Points, or waiving the Temporary Hit Points needed to maintain a
+spell. Preserve such a spell's name AND complete qualifier together as manualGrants evidence; omit that spell from
+usageGroups[].spellRefs. Keep the other supported spells from that same usage line in usageGroups, whose evidence still
+contains the complete original usage line including the manual spell. A restrictions entry by itself does not make an
+unsupported casting override executable. Do not discard the qualifier or silently substitute the ordinary spell.
 Prepared spellcasting requires a positive integer casterLevel and casterLevelEvidence for the complete source clause
 that explicitly states the caster level. Use prepared-cantrip for a prepared cantrip grant and prepared-slots for each
 source-explicit spell level and slot pool. levelEvidence and slotsEvidence must exactly prove their numeric values inside
@@ -322,6 +390,19 @@ N环（M法位） or Nth level (M slots) grants as prepared-slots with numeric l
 Attach exact evidence to every spell, saveDc, attackBonus, component waiver, and restriction, and also to the
 spellcasting ability and usage label.
 Do not also emit structured spellcasting as an ordinary trait; the deterministic renderer creates its visible trait.
+A separately named action whose BODY explicitly uses the creature's own Spellcasting to cast a named spell is a real
+casting entry, even when it grants no new spell identity. Represent that entry as a separate structured spellcasting
+group named for that action, with its own complete action evidence and literal spell reference. Inherit ability, DC and
+component waivers only from the explicitly referenced same-creature Spellcasting parent, retaining exact parent evidence
+for each inherited field. An at-will parent spell stays at-will. Put the action's activationType and legendaryCost on this
+spellcasting GROUP, not an additional feature. The child spellRef must include reuseOf:{groupId:PARENT_GROUP_ID,refId:PARENT_REF_ID}
+pointing to the exact existing parent spellRef. Retain the parent's source identity and its applicable restrictions;
+the child's literal spell identity and any local casting qualifier still have their own disjoint child evidence.
+This is a second casting entry reusing an existing spell, not a new independent duplicate spell. Do not additionally
+emit this same action in traits/actions/legendaryActions: the renderer places the group's one generated feature into
+the section selected by activationType. Preserve its complete source description without inventing attack/damage OPs.
+Do not downgrade this explicit supported casting reference to an empty Utility or GM-only spell text. A mere mention,
+another creature's spell, or an uncertain parent is not such a grant; do not invent inheritance or independent daily uses.
 Before returning, audit every explicit source section against the corresponding IR collection. If the source contains
 Actions/动作, Bonus Actions/附赠动作, Reactions/反应, Legendary Actions/传奇动作, Mythic Actions/神话动作, Traits/特性, or a spellcasting block,
 the matching collection must contain every named source feature exactly once with exact evidence.
@@ -570,6 +651,10 @@ export class OpenAICompatibleMonsterIntakeProvider implements MonsterIntakeAiPro
         try{userPayload=discoveryLinePayload(payload as DiscoveryRequest);}
         catch{throw new MonsterIntakeProviderError('configuration','Invalid discovery source line request.');}
       }else if(stage==='repair')userPayload=repairPayloadWithSourceHints(payload);
+      else if(stage==='extract'&&!override&&typeof (payload as ExtractionRequest).source==='string'){
+        const request=payload as ExtractionRequest;
+        userPayload={...request,sourceLines:sourceLineCatalog(request.source,request.candidate),sourceProofClauses:sourceProofCatalog(request.source,request.candidate),sourceSpellGrants:sourceGrantCatalog(request.source,request.candidate).map(({id,quote})=>({id,text:quote})),sourceLength:request.source.length};
+      }
       const userContent = JSON.stringify(userPayload);
       const source = (payload as { source?: string }).source;
       const sourceHash=override?.sourceHash??sha256(typeof source==='string'?source:'');
@@ -773,7 +858,13 @@ function normalizeStageEvidence(stage: keyof typeof PROMPTS, value: unknown, pay
     ? (payload as Record<string, unknown>).source
     : undefined;
   if (typeof source !== 'string') return value;
-  const next = structuredClone(value as Record<string, unknown>);
+  const payloadRecord = payload as Record<string, unknown>;
+  const candidate = asObject(payloadRecord.candidate);
+  const bounds = Number.isInteger(candidate?.start) && Number.isInteger(candidate?.end)
+    ? { start: candidate!.start as number, end: candidate!.end as number }
+    : undefined;
+  const next = structuredClone((stage==='extract'&&!evidenceOnly
+    ?materializeSourceLineReferences(source,value,bounds):value) as Record<string, unknown>);
   if (stage === 'review') {
     if (!Array.isArray(next.findings)) return next;
     for (const findingValue of next.findings) {
@@ -789,23 +880,19 @@ function normalizeStageEvidence(stage: keyof typeof PROMPTS, value: unknown, pay
   }
 
   if (stage !== 'extract' && stage !== 'repair') return next;
-  const payloadRecord = payload as Record<string, unknown>;
   const sourceIdentity = asObject(next.source) ?? {};
   sourceIdentity.length = source.length;
   if (typeof payloadRecord.sourceSha256 === 'string' && payloadRecord.sourceSha256.length > 0) {
     sourceIdentity.sha256 = payloadRecord.sourceSha256;
   }
   next.source = sourceIdentity;
-  const candidate = asObject(payloadRecord.candidate);
-  const bounds = Number.isInteger(candidate?.start) && Number.isInteger(candidate?.end)
-    ? { start: candidate!.start as number, end: candidate!.end as number }
-    : undefined;
   normalizeProviderEvidenceTree(source, next, bounds);
   // Staged extraction owns only the evidence coordinates and source identity.
   // Proposed data must survive unchanged until its stage verifier rejects it;
   // legacy automation/optional-field normalization must not erase a conflict.
   if (evidenceOnly) return next;
   normalizeProviderSpellcastingIds(source, next);
+  namespaceDuplicateSpellRefIds(next);
   normalizeProviderMultiattackAutomation(next);
   normalizeProviderLegendaryMetadata(source, next);
   bindProviderSourceContracts(source,next,bounds);
@@ -920,7 +1007,12 @@ function normalizeProviderSpellcastingIds(source: string, value: Record<string, 
         if (!Array.isArray(usage?.spellRefs)) continue;
         for (const refValue of usage.spellRefs) {
           const ref = asObject(refValue);
-          if (!ref || Array.isArray(ref.aliases)) continue;
+          if (!ref) continue;
+          // Identity formatting is mechanical. A missing source key copies the
+          // model's source name; an explicit conflicting key stays an error.
+          const name=typeof ref.englishName==='string'&&ref.englishName.trim()?ref.englishName:ref.originalName;
+          if(!Object.hasOwn(ref,'identifier')&&typeof name==='string'&&name.trim())ref.identifier=name;
+          if (Array.isArray(ref.aliases)) continue;
           ref.aliases = [ref.originalName, ref.englishName, ref.chineseName]
             .filter((alias): alias is string => typeof alias === 'string' && alias.trim().length > 0)
             .filter((alias, aliasIndex, aliases) => aliases.indexOf(alias) === aliasIndex);
