@@ -34,6 +34,7 @@
 | 解析、生成、workflow、Intake、采集、图片 | `packages/AGENTS.md` 与对应 package 的 AGENTS |
 | CLI / Web | `apps/AGENTS.md`、`apps/cli/AGENTS.md`、`apps/web/AGENTS.md` |
 | Foundry 模块 | `foundry-modules/AGENTS.md` 与模块自己的 AGENTS |
+| 中文 Babele 补丁维护、更新上游汉化、合并自有译文 | `docs/runbooks/babele-zh-maintenance.md`，实际维护项目为 `I:\OpenCode\fvtt-babele-zh-maintenance`；先读取该项目 AGENTS 与架构后在对应目录执行，继续使用当前 Codex 项目交流 |
 | Lab、资产和运维 | `tools/AGENTS.md`、`tools/foundry-ops/AGENTS.md` |
 | 新外部接口、跨模块/版本/客户端、迁移、重复失败 | `docs/runbooks/development-feedback-loop.md` |
 

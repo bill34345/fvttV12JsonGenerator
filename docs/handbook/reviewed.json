@@ -1,4 +1,9 @@
 {
+  "babele-zh-maintenance": {
+    "fingerprint": "d4baa409ae39f37a3b77bbbd7181cdc6f06cab7d4e47b0a376b42ff196c60f49",
+    "reviewedOn": "2026-10-24",
+    "note": "已对照独立项目实际CLI与README，核对同一Codex项目路由、显式按需更新、冲突逐项选择、维护专用更新地址策略及未做Foundry实机验收的边界。"
+  },
   "legacy-next-test-inputs": {
     "fingerprint": "08a1e772f66a92314a36ae10574cf1f466bce95ef84fae113a590264703c6737",
     "reviewedOn": "2026-10-08",

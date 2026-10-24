@@ -1,5 +1,45 @@
 [
   {
+    "id": "babele-zh-maintenance",
+    "title": "中文 Babele 汉化维护",
+    "category": "maintain",
+    "summary": "在当前 Codex 项目交流，按需更新独立维护项目的上游中文补丁并保留自有译文。",
+    "when": "讨论中文 Babele 补丁更新、第三方合集译文增补或自用合并安装包时使用。",
+    "requires": [
+      "独立维护项目位于 I:/OpenCode/fvtt-babele-zh-maintenance，已准备锁定的上游输入。",
+      "Python 3.11+；维护工具只用标准库，无需另建 Codex 项目。"
+    ],
+    "steps": [
+      {
+        "title": "查看维护现状",
+        "text": "默认按脚本路径定位独立维护项目，当前工作目录不改变目标。先核对上游版本与本地增补。",
+        "command": "python -B \"I:/OpenCode/fvtt-babele-zh-maintenance/maintain.py\" status"
+      },
+      {
+        "title": "按需检查或更新上游",
+        "text": "check-upstream 只查一次最新正式版；明确要求更新时运行 update。无冲突则构建读回后切换维护版本；冲突输出三方内容，等用户逐项选择。",
+        "command": "python -B \"I:/OpenCode/fvtt-babele-zh-maintenance/maintain.py\" check-upstream\npython -B \"I:/OpenCode/fvtt-babele-zh-maintenance/maintain.py\" update"
+      },
+      {
+        "title": "读取交付记录",
+        "text": "使用命令输出的 zip 和 receipt 路径检查结果；冲突决策文件格式及具体参数见独立项目 README 与 --help。"
+      }
+    ],
+    "outputs": [
+      "保留来源、上游锁定版本和自有译文的同模块 ID 安装包，以及 ZIP 哈希与读回记录。",
+      "发生同处不同修改时，生成绑定精确输入的冲突计划与逐项选择示例。"
+    ],
+    "limits": [
+      "只在明确命令触发时访问上游，无后台监听或定时任务。",
+      "自用包取消上游更新地址，后续经维护项目更新；构建不自动安装 Foundry 或发布 Git。",
+      "文件读回及旧独立包的数据引擎证据不等于新合并包的 Foundry V14 实机验收。",
+      "本手册仅维护外部项目入口；该项目源码、测试与架构在其独立仓库维护。"
+    ],
+    "keywords": ["Babele", "Babel", "中文补丁", "汉化", "水晶浩劫", "上游", "三方合并"],
+    "sources": ["docs/runbooks/babele-zh-maintenance.md"],
+    "watch": ["docs/runbooks/babele-zh-maintenance.md"]
+  },
+  {
     "id": "legacy-next-test-inputs",
     "title": "ServerNext 历史回归测试输入",
     "category": "maintain",
