@@ -90,9 +90,9 @@
     "note": "已对照准备入口、170文件清单、默认定位与历史版本边界；201项受影响离线测试通过，Classpack临时夹具查询后原输入清单及字节保持不变；主线测试不依赖旧迁移树，保留本机F盘参考环境限制。"
   },
   "babele-zh-maintenance": {
-    "fingerprint": "b17476cc1d8cfa9958b066ef0724c8183cf604feb1bb0d22c0318b830b8d3e99",
+    "fingerprint": "c6907cbb793dbe797d9f67bbd957d7b086bd50806ba85b97fdbab77abade6921",
     "reviewedOn": "2026-10-25",
-    "note": "已对照怪物译文增补、独立项目实际四个overlay与第三环境边界，补充16怪物/162条目和关联规则入口；来源数、版本维度和其他条目不变。"
+    "note": "对照用户常驻双语命名要求、项目规则与本地汉化显示名实现，补充中文 English格式和AA精确匹配边界；其他字段建议与已确认要求分开。"
   },
   "chat-memory-guard": {
     "fingerprint": "778ebb668dd7af6a0a92cf198b10ccd4b0e8258a75cf2764535623938626a07d",

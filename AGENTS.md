@@ -10,6 +10,7 @@
 本项目把中文 YAML/Markdown、英文 bestiary 和正式 Intake 接受的文本转换为 Foundry dnd5e Actor/Item JSON。默认来源与输出在 `obsidian/dnd数据转fvttjson/input`、`obsidian/dnd数据转fvttjson/output`。
 
 - 最终 JSON 必须走来源 → CLI/Web → `@fvtt-json-generator/workflows` → parser/generation → verifier，不手写或修补最终 JSON。Intake 未达 promotion gate 不进入正式 output。
+- 生物名称，以及生物身上显示为独立栏位的所有特性（feature、action、reaction、bonus action等）和物品，必须使用 `中文 English`：中文后接一个空格和英文，中英文之间不加括号。保留来源英文名称用于检索及名称匹配。
 - 用户未指定目标时，代理显式使用 `--fvtt-version 14 --effect-profile core --icon-mode off`，按 Foundry `14.364` / dnd5e `5.3.3` 验证；用户明确指定受支持目标时遵从。CLI/workflow 省略版本仍默认 v12，Web 初始仍为 v14。图标 safe/override 仅在用户明确要求时启用。
 - 系统版本相关开发按 `docs/runbooks/dnd5e-version-following.md`：5.x 固定 5.3.3，ServerNext 跟随官方最新稳定 6.x。先核官方发布、本地系统及已启用模块全集的清单／代码版本门，再用 Context7 导航并对照目标 tag／提交的本地源码；查询中的版本限定不保证返回已锁版本。Next 落后时按已有本地升级授权先更新并窄验收，不连带升级 Core、Mirror 或生产，不把旧 PASS 自动推广到新版本。
 - 每次正式生成都按 `docs/generated-actor-verification.md` 对照来源；schema、测试和 verifier 通过不能代替语义验收。

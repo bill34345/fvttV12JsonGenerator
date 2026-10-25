@@ -29,6 +29,7 @@ python -B "I:/OpenCode/fvtt-babele-zh-maintenance/maintain.py" update
 - 初始上游 1.0.194，锁定 ZIP SHA-256 `abe1c245469b4a0f7dc9427c59ace8dbc1adcd92d9ba84891006112c6c1f9dcf`。
 - 首个增补：水晶浩劫 Crystal Chaos 1.0.1 的 21 个法术，独立保存译文、来源和既有数据引擎证据。
 - 后续怪物增补覆盖相同原包全部16个Actor、162个嵌入条目、97个效果，并补译直接依赖的潘多拉2篇日志和晶蚀涌动表4项结果。分别保存3个独立overlay，与既有法术一并构建；清单及原包规则/自动化差异见独立项目 `docs/crystal-monsters.md`。
+- 名称常驻规范：生物名称、独立特性/动作/反应/附赠动作及物品名称为 `中文 English`，中间一个空格、不加中英括号。水晶浩劫Token与子活动按对应名称同步；规则、其他字段建议及动画精确匹配边界见独立项目 `docs/bilingual-names.md`。
 - 按用户选择，自用包取消上游 manifest/download 更新地址，后续通过维护项目更新；包内保留原上游清单和来源。
 - 原有 Babele 2.9.1 的315项数据引擎检查属于旧独立包。2026-10-25的新合并包已在第三干净环境 Core14.368 / dnd5e6.0.6 / cn中完成水晶浩劫21法术API和来源语义对照，并检查5种原生说明界面、4个效果页/图片及召唤链接实际点击。
 - 第三环境为 `F:\FoundryLab\foundry-v14\data\babele-clean-v14`，用户地址 `http://babele-clean.localhost:30003`，实际仅监听127.0.0.1。独立主机名隔离多实例同名登录Cookie；只换端口不能隔离Cookie，无需修改hosts。仅安装水晶浩劫、Babele、合并汉化包及必要依赖；本轮没有安装、重启或改动Next/Mirror。
