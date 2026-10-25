@@ -1,8 +1,8 @@
 {
   "babele-zh-maintenance": {
-    "fingerprint": "72eb2527c764619746409331c439916a2bd32bd844a624c3ff377a9f97f565fe",
+    "fingerprint": "f03e1f3a6cafc79a2bc23ffcf4cfe72f4d5056ba5f37173b41479be80d426bfa",
     "reviewedOn": "2026-10-25",
-    "note": "对照Core会话Cookie源码、RFC6265及第三独立.localhost实际登录，更新用户入口以隔离跨端口登录Cookie；功能与验收范围不扩大。"
+    "note": "已按用户裁定核对三条中文说明与原话，三条实际API和原生说明页复验通过；更新来源记录，CLI/独立域名入口及验收范围不变。"
   },
   "legacy-next-test-inputs": {
     "fingerprint": "08a1e772f66a92314a36ae10574cf1f466bce95ef84fae113a590264703c6737",

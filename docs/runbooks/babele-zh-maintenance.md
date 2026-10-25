@@ -32,6 +32,7 @@ python -B "I:/OpenCode/fvtt-babele-zh-maintenance/maintain.py" update
 - 原有 Babele 2.9.1 的315项数据引擎检查属于旧独立包。2026-10-25的新合并包已在第三干净环境 Core14.368 / dnd5e6.0.6 / cn中完成水晶浩劫21法术API和来源语义对照，并检查5种原生说明界面、4个效果页/图片及召唤链接实际点击。
 - 第三环境为 `F:\FoundryLab\foundry-v14\data\babele-clean-v14`，用户地址 `http://babele-clean.localhost:30003`，实际仅监听127.0.0.1。独立主机名隔离多实例同名登录Cookie；只换端口不能隔离Cookie，无需修改hosts。仅安装水晶浩劫、Babele、合并汉化包及必要依赖；本轮没有安装、重启或改动Next/Mirror。
 - 本轮修复召唤Actor链接、4个效果图片、蓝宝石尘30秒对应轮数，以及dnd5e6.0.6将0.5分钟显示为1分钟的问题。显示适配器只改指定来源的卡片文字，时长数据不变；系统升级后须复核守卫。
-- 当前证据与源文3处歧义见独立项目 `docs/clean-lab-acceptance.md`。这不覆盖施法/战斗自动化、整本Adventure、上游所有译文、多人或长时运行；上游manifest仍verified13。
+- 源文3处问题已由用户裁定：水晶冲击示例为2d4力场加2d6穿刺；黄玉壁垒统一墙体指代；水晶与镜像仅范围伤害结束。实际包与复验进度见独立项目 `docs/clean-lab-acceptance.md`，不能将首轮旧哈希的通过直接推广到新正文。
+- 本次汉化验收不覆盖施法/战斗自动化、整本Adventure、上游所有译文、多人或长时运行；上游manifest仍verified13。
 
 本仓库的手册只维护这一外部项目入口与操作边界；外部项目的实际实现、测试和交付记录在其自身仓库维护。
