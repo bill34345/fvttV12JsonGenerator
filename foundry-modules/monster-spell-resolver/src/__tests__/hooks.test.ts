@@ -197,6 +197,22 @@ describe('Actor-level resolve pipeline', () => {
     return fixture;
   }
 
+  test.each(['object', 'array'] as const)('ignores another manifest saved mapping during current Actor preflight without changing the global %s setting', async shape => {
+    const fixture = serviceFixture();
+    const mapping = { logicalRefKey: logicalSpellRefKey('other-creature-manifest', 'innate', 'mage-armor'),
+      selectedUuid: 'Compendium.dnd5e.spells24.Item.abcdefghijklmnop', rules: '2024',
+      sourceInventoryHash: 'c'.repeat(64), candidateMetadataHash: 'b'.repeat(64),
+      resolutionConfigHash: 'd'.repeat(64), selectionOrigin: 'manual-review' };
+    fixture.settings.savedMappings = shape === 'array' ? [mapping] : { [mapping.logicalRefKey]: mapping };
+    const before = structuredClone(fixture.settings.savedMappings);
+    await fixture.service.processActor(fixture.target);
+    expect(fixture.calls.execute).toHaveLength(1);
+    expect(fixture.calls.review).toBe(0);
+    expect(fixture.calls.fetch).toEqual(['Compendium.dnd5e.spells24.Item.abcdefghijklmnop']);
+    expect(fixture.settings.savedMappings).toEqual(before);
+    expect(fixture.calls.saved).toEqual([]);
+  });
+
   test('normal Actor service accepts the same source-verified Chinese identity at selection and full-document validation', async () => {
     const fixture = localizedServiceFixture(), before = structuredClone(fixture.target.flags[RESOLVER_MODULE_ID].spellManifest);
     await fixture.service.processActor(fixture.target);

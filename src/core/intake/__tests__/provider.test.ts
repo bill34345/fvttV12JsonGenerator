@@ -23,13 +23,13 @@ import { validateMonsterIntakeIR } from '../validator';
 import { buildRatWarlockIr, RAT_WARLOCK_SOURCE } from './fixtures/rat-warlock';
 import { buildValidLurkerIr, LURKER_SOURCE } from './fixtures/lurker';
 import {sourceLineCatalog,sourceProofCatalog,materializeSourceLineReferences} from '../../../../packages/intake-ai/src/source-line-references';
-import type {SOURCE_OPERATION_CONTRACT} from '../../../../packages/intake-ai/src/source-operation-contract';
+import {SOURCE_OPERATION_SCHEMA} from '../../../../packages/intake-ai/src/source-operation-contract';
 import type {SourceOperation} from '@fvtt-json-generator/models/source-operations';
 
 // Compile-time contract check: a future canonical attack-kind change must
 // update the actual prompt, before another paid model trial discovers drift.
 type SplitKinds<S extends string>=S extends `${infer First}|${infer Rest}`?First|SplitKinds<Rest>:S;
-type PromptAttackKinds=typeof SOURCE_OPERATION_CONTRACT extends `${string}attack?:{type:${infer Kinds},toHit:${string}`?SplitKinds<Kinds>:never;
+type PromptAttackKinds=typeof SOURCE_OPERATION_SCHEMA extends `${string}attack?:{type:${infer Kinds},toHit:${string}`?SplitKinds<Kinds>:never;
 type MustBeNever<T extends never>=T;
 type _MissingPromptKinds=MustBeNever<Exclude<NonNullable<SourceOperation['attack']>['type'],PromptAttackKinds>>;
 type _InventedPromptKinds=MustBeNever<Exclude<PromptAttackKinds,NonNullable<SourceOperation['attack']>['type']>>;
@@ -176,223 +176,110 @@ describe('OpenAI-compatible monster intake provider', () => {
     expect(requests[0]!.init.headers.Authorization).toBe('Bearer secret');
   });
 
-  test('extraction prompt requires numeric CR, leaf claims, and exact full coverage', async () => {
-    const requests: Array<{ url: string; init: HttpRequest }> = [];
-    const provider = makeProvider(async (url, init) => {
-      requests.push({ url, init });
+  test('extraction prompt uses the canonical shape and exact quotes without a second source grammar', async () => {
+    const requests: HttpRequest[] = [];
+    const provider = makeProvider(async (_url, init) => {
+      requests.push(init);
       return response(200, '{"schemaVersion":1,"creature":{},"claims":[],"coverage":[],"uncertainties":[]}');
     });
-
-    await provider.extract({
-      source: 'monster',
-      sourceSha256: 'hash',
-      candidate: { id: 'monster', label: 'Monster', start: 0, end: 7, quote: 'monster' },
-    });
-
-    const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
-    const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v46-ai-owned-content-manual-array');
-    expect(prompt).toContain('proof:{attack?:string,save?:string,damage?:string[],healing?:string,range?:string,aoe?:string,target?:string}');
-    expect(prompt).toContain('Each proof string must quote the COMPLETE original sentence');
-    expect(prompt).toContain('use damage[].relationship:conditional');
-    expect(prompt).toContain('retain all three operations in source order');
-    expect(prompt).toContain('Never attach later recurring damage to the initial Save');
-    expect(prompt).toContain('an explicitly printed Emanation uses aoe.shape:radius');
-    expect(prompt).toContain('光环 means Emanation and uses radius; 球状 means Sphere and uses sphere');
-    expect(prompt).toContain('半径 alone is a dimension, not proof of an Emanation');
-    expect(prompt).toContain('Never infer an Emanation from an ability name containing Aura');
-    expect(prompt).toContain('ordinary-gear-out-of-scope');
-    expect(prompt).toContain('Keep ALL printed attacks and combat abilities as Features');
-    expect(prompt).toContain('Keep the printed final AC as a fixed numeric value');
-    expect(prompt).toContain('feature.save is only for a source-explicit initial saving throw');
-    expect(prompt).toContain('never copy the repeat-save DC into escapeDc');
-    expect(prompt).toContain('biography is optional string prose, never an array or object');
-    expect(prompt).toContain('cr must be a JSON number');
-    expect(prompt).toContain('type:mwak|rwak|msak|rsak|melee|ranged');
-    expect(prompt).toContain('without Weapon or Spell MUST use melee');
-    expect(prompt).toContain('Parent object claims do not support child values');
-    expect(prompt).toContain('partition the full candidate range');
-    expect(prompt).toContain('activationType(action|bonus|reaction|legendary|special)');
-    expect(prompt).toContain('regardless of which section contains the feature');
-    expect(prompt).toContain('Never use special merely because a feature appears under traits');
-    expect(prompt).toContain('If a save DC is explicit but its ability is not');
-    expect(prompt).toContain('do not emit structured save automation');
-    expect(prompt).toContain('canonical hybrid representation');
-    expect(prompt).toContain('legendaryCost is a supported feature field');
-    expect(prompt).toContain('printed average damage');
-    expect(prompt).toContain('Medium (any race)');
-    expect(prompt).toContain('explicitly granted spells only');
-    expect(prompt).toContain('never invent expectedLevel, expectedSchool, sourceBookHint, UUID, rules text, damage, or effects');
-    expect(prompt).toContain('usageGroups');
-    expect(prompt).toContain('prepared-cantrip');
-    expect(prompt).toContain('prepared-slots');
-    expect(prompt).toContain('casterLevelEvidence');
-    expect(prompt).toContain('levelEvidence');
-    expect(prompt).toContain('slotsEvidence');
-    expect(prompt.toLowerCase()).toContain('never infer spell levels, slot counts, or caster level from spell names');
-    expect(prompt).toContain('evidence to every spell, saveDc, attackBonus, component waiver, and restriction');
-    expect(prompt).toContain('Do not also emit structured spellcasting as an ordinary trait');
-    expect(prompt).toContain('complete literal grant line or span');
-    expect(prompt).toContain('each Spell ref and restriction evidence range must be contained');
-    expect(prompt).toContain('description must exactly equal one complete verified source slice');
-    expect(prompt).toContain('minimal, self-contained grant span');
-    expect(prompt).toContain('begin with the usage label after optional Markdown');
-    expect(prompt).toContain('standalone list conjunctions');
-    expect(prompt).toContain('exact keys {kind,text,value,evidence}');
-    expect(prompt).toContain('Never use literal or literalValue as restriction keys');
-    expect(prompt).toContain('complete explicit spellcasting group block including every usage grant');
-    expect(prompt).toContain('Ability evidence must be a complete source clause that explicitly binds the chosen ability to spellcasting');
-    expect(prompt).toContain('not a bare ability token or partial clause suffix');
-    expect(prompt).toContain('Every non-separator source phrase inside a usage grant');
-    expect(prompt).toContain('including parenthetical count, target, summoning, or casting limitations');
-    expect(prompt).toContain('represented by spell or restriction evidence');
-    expect(prompt).toContain('Spell-ref evidence must cover only the literal spell identity or name phrase');
-    expect(prompt).toContain('must exclude any parenthetical or limitation text represented by a restriction');
-    expect(prompt).toContain('Spell-ref and restriction evidence ranges');
-    expect(prompt).toContain('must be disjoint');
-    expect(prompt).toContain('Omit nullable senses and attack range fields when the source does not state them');
-    expect(prompt).toContain('never encode absence as numeric 0');
-    expect(prompt).toContain('hover is an optional JSON boolean');
-    expect(prompt).toContain('Biography, when present, must remain one JSON string');
-    expect(prompt).toContain('languages.custom is an optional JSON string, never an array or object');
-    expect(prompt).toContain('defenses use all four empty arrays');
-    expect(prompt).toContain('Do not emit an evidence claim or uncertainty solely because the source omits that optional list section');
-    expect(prompt).toContain('not an inferred immunity, resistance, skill, or language');
-    expect(prompt).toContain('Uncertainties are only for actual source ambiguity or conflict');
-    expect(prompt).toContain('Never emit provider bookkeeping uncertainty or ask a downstream validator to check offsets or slices');
-    expect(prompt).toContain('Standard 2024 stat-block Initiative +4 (14)');
-    expect(prompt).toContain('Multiattack is an action aggregator, not an attack roll');
-    expect(prompt).toContain('omit legendary entirely');
-    expect(prompt).toContain('not creature.legendaryActions');
-    expect(prompt).toContain('legendaryActions are required IR fields');
-    expect(prompt).toContain('Never remove a required empty array in repair');
-    expect(prompt).toContain('Standard NPC stat-block headings supply the default action economy');
-    expect(prompt).toContain('appliedConditions entry staged:true');
+    await provider.extract({ source: 'monster', sourceSha256: 'hash', candidate: { id: 'monster', label: 'Monster', start: 0, end: 7, quote: 'monster' } });
+    const body = JSON.parse(requests[0]!.body), prompt = body.messages[0].content as string;
+    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v48-consolidated-source-operations');
+    expect(prompt).toContain(SOURCE_OPERATION_SCHEMA);
+    for (const required of [
+      'The program checks structure, references and faithful conversion/save',
+      'All source mechanical fields are model-owned; the program does not infer them from titles or prose',
+      'Required feature collections are arrays', 'Printed AC stays fixed',
+      'EvidenceRef is {start:-1,end:-1,quote:string}',
+      'No source-line/clause IDs or manual offsets are requested',
+      'For a new default response, set claims:[] and coverage:[]',
+      'No per-leaf claim proof or whitespace partition is requested',
+      'Interpret resource scope from the whole governing ability and its alternatives',
+      'The literal word Shared/each is not required',
+      'Do not force a multi-spell ability to manual solely because its daily qualifier is in the title or parent sentence',
+      'Populate explicit capacities and recovery, not title-derived defaults',
+      'Attack/Save OP damage contains only unconditional base/additional parts',
+      'Conditional or replacement damage requires a separate Damage OP',
+      'Follow-ups are GM-invoked helpers and never spend the initial action/resource again',
+      'Use sourceOperations for every executable basic',
+      'Timed/staged/conditional consequences without an exact supported native representation stay in GM prose',
+      'prepared-cantrip', 'prepared-slots', 'casterLevelEvidence', 'slotsEvidence',
+      'manualGrants?:[]', 'aliases:[],restrictions:[],evidence:[]',
+      'An all-manual group still has usageGroups:[]',
+      'Declare actual unresolved meaning/conflict in your own reading',
+      'Do not manufacture bookkeeping/offset/coverage uncertainties',
+      'ordinary-gear-out-of-scope',
+    ]) expect(prompt).toContain(required);
+    for (const obsolete of ['Parent object claims do not support child values', 'partition the full candidate range',
+      'begin with the usage label after optional Markdown', 'EXAMPLE_IR_FRAGMENT_JSON:']) expect(prompt).not.toContain(obsolete);
+    const payload = JSON.parse(body.messages[1].content);
+    expect(payload).toEqual({ source: 'monster', sourceSha256: 'hash', sourceLength: 7, candidate: { id: 'monster', label: 'Monster', start: 0, end: 7 } });
   });
 
-  test('review prompt independently checks source action economy against IR and Actor activation', async () => {
-    const requests: Array<{ url: string; init: HttpRequest }> = [];
-    const provider = makeProvider(async (url, init) => {
-      requests.push({ url, init });
+  test('review prompt uses program candidate scope and concrete AI findings without ledger-driven source grammar', async () => {
+    const requests: HttpRequest[] = [], ir = buildValidLurkerIr();
+    const candidate = { id: 'review-scope', label: 'Lurker', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE };
+    const provider = makeProvider(async (_url, init) => {
+      requests.push(init);
       return response(200, '{"schemaVersion":1,"verdict":"accepted","findings":[]}');
     });
-
-    await provider.review({} as never);
-
-    const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
-    const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v36-ai-owned-content');
-    expect(prompt).toContain('ordinary inventory omission under this scope is intentional');
-    expect(prompt).toContain('Never mark a magic weapon or its abilities as ordinary gear');
-    expect(prompt).toContain('A saving throw repeated at the end of each target turn');
-    expect(prompt).toContain('source explicitly says bonus action');
-    expect(prompt).toContain('special, passive, or empty');
-    expect(prompt).toContain('护甲等级：<base AC>（<literal condition>）');
-    expect(prompt).toContain('same structured spellcasting contract');
-    expect(prompt).toContain('prepared-cantrip');
-    expect(prompt).toContain('prepared-slots');
-    expect(prompt).toContain('casterLevelEvidence');
-    expect(prompt.toLowerCase()).toContain('never infer spell levels, slot counts, or caster level from spell names');
-    expect(prompt).toContain('explicitly granted');
-    expect(prompt).toContain('usage evidence must cover the complete grant span');
-    expect(prompt).toContain('visible description must match verified group evidence');
-    expect(prompt).toContain('minimal and self-contained');
-    expect(prompt).toContain('null/undefined/omitted are equivalent');
-    expect(prompt).toContain('fixed diagnostic shape');
-    expect(prompt).toContain('never report those placeholders');
-    expect(prompt).toContain('exact keys {kind,text,value,evidence}');
-    expect(prompt).toContain('Never use literal or literalValue as restriction keys');
-    expect(prompt).toContain('complete explicit spellcasting group block including every usage grant');
-    expect(prompt).toContain('Ability evidence must be a complete source clause that explicitly binds the chosen ability to spellcasting');
-    expect(prompt).toContain('not a bare ability token or partial clause suffix');
-    expect(prompt).toContain('Every non-separator source phrase inside a usage grant');
-    expect(prompt).toContain('including parenthetical count, target, summoning, or casting limitations');
-    expect(prompt).toContain('represented by spell or restriction evidence');
-    expect(prompt).toContain('Spell-ref evidence must cover only the literal spell identity or name phrase');
-    expect(prompt).toContain('must exclude any parenthetical or limitation text represented by a restriction');
-    expect(prompt).toContain('Spell-ref and restriction evidence ranges');
-    expect(prompt).toContain('must be disjoint');
-    expect(prompt).toContain('Omit nullable senses and attack range fields when the source does not state them');
-    expect(prompt).toContain('never encode absence as numeric 0');
-    expect(prompt).toContain('Biography, when present, must remain one JSON string');
-    expect(prompt).toContain('Uncertainties are only for actual source ambiguity or conflict');
-    expect(prompt).toContain('Never emit provider bookkeeping uncertainty or ask a downstream validator to check offsets or slices');
-    expect(prompt).toContain('must create exactly one visible feat item');
-    expect(prompt).toContain('two views of the same generated feature');
-    expect(prompt).toContain('Report duplication only if creature.traits independently contains an additional spellcasting feature');
-    expect(prompt).toContain('findings must contain only actual unresolved defects');
-    expect(prompt).toContain('Do not echo a dismissed candidate finding');
-    expect(prompt).toContain('法术清单 metadata plus that one generated feat is not two traits');
-    expect(prompt).toContain('defenses use all four empty arrays');
-    expect(prompt).toContain('Each finding must use exactly {id,code,path,message,blocking,evidence?}');
-    expect(prompt).toContain('/creature/attributes/ac claim and its exact evidence jointly support base AC and acNote');
-    expect(prompt).toContain('do not require a second acNote claim');
-    expect(prompt).toContain('not creature.legendaryActions');
-    expect(prompt).toContain('legendaryActions are required IR fields');
-    expect(prompt).toContain('ordinary entries under Actions use action');
-    expect(prompt).toContain('with no action expenditure, uses special');
-    expect(prompt).toContain('Actions section. An explicit action');
-    expect(prompt).toContain('expenditure still controls even when the body');
-    expect(prompt).toContain('legact/legres with max 0 and spent/value 0');
-    expect(prompt).toContain('Positive granted resources without source evidence');
-    expect(prompt).toContain('an explicit positive source resource, remain blocking defects');
+    await provider.review({ source: LURKER_SOURCE, candidate, ir, markdown: '', actorProjection: {}, deterministicFindings: [] });
+    const body = JSON.parse(requests[0]!.body), prompt = body.messages[0].content as string;
+    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v37-consolidated-full-ir');
+    for (const required of [
+      'Act as an independent AI content reviewer',
+      'Return exactly {schemaVersion:1,verdict:accepted|revise|needs_review,findings:',
+      'Accepted has no blocking finding; revise/needs_review must have an actual finding',
+      'Program-provided candidate bounds define scope when present',
+      'a model-authored coverage ledger must not shrink the review scope',
+      'AI, not a deterministic source grammar, judges content',
+      'printed AC stays fixed and ordinary inventory is intentionally omitted',
+      'Unclassified 2024 melee/ranged attacks deliberately use a labelled GM attack roll',
+      'Explicit AI uncertainties remain visible',
+      'without enforcing per-leaf claims, whitespace coverage or a fixed grant-line grammar',
+      'Do not call a supported shared pool ambiguous just because its source lacks a literal keyword',
+      'Do not claim gameplay execution or script behavior that this projection cannot demonstrate',
+      'EvidenceRef is {start:-1,end:-1,quote:string}',
+    ]) expect(prompt).toContain(required);
+    expect(prompt).not.toContain('usage evidence must cover the complete grant span');
+    const payload = JSON.parse(body.messages[1].content);
+    expect(payload.source).toBe(LURKER_SOURCE);
+    expect(payload.candidate).toEqual({ id: candidate.id, label: candidate.label, start: candidate.start, end: candidate.end });
+    expect(payload.ir).toEqual(ir);
+    for (const field of ['sourceLines', 'sourceProofClauses', 'sourceSpellGrants']) expect(payload).not.toHaveProperty(field);
   });
 
-  test('repair prompt preserves the same source-evidenced spellcasting boundary', async () => {
-    const requests: Array<{ url: string; init: HttpRequest }> = [];
-    const provider = makeProvider(async (url, init) => {
-      requests.push({ url, init });
-      return response(200, '{"schemaVersion":1,"source":{"sha256":"hash","length":0},"creature":{},"claims":[],"coverage":[],"uncertainties":[]}');
+  test('repair prompt uses bounded patches and preserves source identity, valid fields and real AI uncertainty', async () => {
+    const requests: HttpRequest[] = [], ir = buildValidLurkerIr();
+    const candidate = { id: 'repair-scope', label: 'Lurker', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE };
+    const provider = makeProvider(async (_url, init) => {
+      requests.push(init);
+      return response(200, '{"schemaVersion":1,"operations":[]}');
     });
-
-    await provider.repair({} as never);
-
-    const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
-    const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v39-ai-owned-content');
-    expect(prompt).toContain('ordinary inventory omission under this scope is intentional');
-    expect(prompt).toContain('remove wrong save/escapeDc');
-    expect(prompt).toContain('Never remove a required empty array in repair');
-    expect(prompt).toContain('Standard NPC stat-block headings supply the default action economy');
-    expect(prompt).toContain('Return a compact JSON Patch envelope only');
-    expect(prompt).toContain('Do not repeat the complete MonsterIntakeIR');
-    expect(prompt).toContain('at most 64 operations');
-    expect(prompt).toContain('same structured spellcasting contract');
-    expect(prompt).toContain('prepared-cantrip');
-    expect(prompt).toContain('prepared-slots');
-    expect(prompt).toContain('casterLevelEvidence');
-    expect(prompt.toLowerCase()).toContain('never infer spell levels, slot counts, or caster level from spell names');
-    expect(prompt).toContain('Do not invent');
-    expect(prompt).toContain('exact keys {kind,text,value,evidence}');
-    expect(prompt).toContain('Never use literal or literalValue as restriction keys');
-    expect(prompt).toContain('complete explicit spellcasting group block including every usage grant');
-    expect(prompt).toContain('deterministic-validation stage may run before Markdown or Actor projection exists');
-    expect(prompt).toContain('Every EvidenceRef must use exact keys {start,end,quote}');
-    expect(prompt).toContain('quote must be non-empty and exactly equal source.slice(start,end)');
-    expect(prompt).toContain('absolute JavaScript UTF-16 offsets');
-    expect(prompt).toContain('Start from the supplied IR and patch only paths implicated by the supplied findings');
-    expect(prompt).toContain('Unchanged fields and evidence are preserved by the caller');
-    expect(prompt).toContain('Never drop quote or fabricate quote text from offsets');
-    expect(prompt).toContain('keep a blocking uncertainty instead of claiming the IR is repaired');
-    expect(prompt).toContain('Ability evidence must be a complete source clause that explicitly binds the chosen ability to spellcasting');
-    expect(prompt).toContain('not a bare ability token or partial clause suffix');
-    expect(prompt).toContain('Every non-separator source phrase inside a usage grant');
-    expect(prompt).toContain('including parenthetical count, target, summoning, or casting limitations');
-    expect(prompt).toContain('represented by spell or restriction evidence');
-    expect(prompt).toContain('Spell-ref evidence must cover only the literal spell identity or name phrase');
-    expect(prompt).toContain('must exclude any parenthetical or limitation text represented by a restriction');
-    expect(prompt).toContain('Spell-ref and restriction evidence ranges');
-    expect(prompt).toContain('must be disjoint');
-    expect(prompt).toContain('Omit nullable senses and attack range fields when the source does not state them');
-    expect(prompt).toContain('never encode absence as numeric 0');
-    expect(prompt).toContain('Biography, when present, must remain one JSON string');
-    expect(prompt).toContain('languages.custom is an optional JSON string, never an array or object');
-    expect(prompt).toContain('defenses use all four empty arrays');
-    expect(prompt).toContain('Do not emit an evidence claim or uncertainty solely because the source omits that optional list section');
-    expect(prompt).toContain('Uncertainties are only for actual source ambiguity or conflict');
-    expect(prompt).toContain('Never emit provider bookkeeping uncertainty or ask a downstream validator to check offsets or slices');
-    expect(prompt).toContain('Remove or resolve finding-related process uncertainties once exact evidence is established');
-    expect(prompt).toContain('Preserve unrelated real source uncertainties');
+    const repaired = await provider.repair({ stage: 'deterministic-validation', source: LURKER_SOURCE, candidate, ir, deterministicFindings: [] });
+    const body = JSON.parse(requests[0]!.body), prompt = body.messages[0].content as string;
+    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v41-consolidated-source-operations');
+    expect(prompt).toContain(SOURCE_OPERATION_SCHEMA);
+    for (const required of [
+      'Repair only the supplied IR problems',
+      'Return exactly {schemaVersion:1,operations:[{op:add|replace|remove,path,value?}]}',
+      'at most 64 JSON Patch operations',
+      'Paths stay under /creature, /claims, /coverage or /uncertainties',
+      'never edit request source identity, final Actor JSON or unrelated data',
+      'add/replace require value, remove omits value',
+      'Preserve valid mechanics and complete rule text',
+      'do not delete it merely to obtain an accepted status',
+      'repair preserves ir.source',
+      'The literal word Shared/each is not required',
+      'Do not force a multi-spell ability to manual solely because its daily qualifier is in the title or parent sentence',
+      'For a new default response, set claims:[] and coverage:[]',
+      'EvidenceRef is {start:-1,end:-1,quote:string}',
+    ]) expect(prompt).toContain(required);
+    expect(prompt).not.toContain('EXAMPLE_IR_FRAGMENT_JSON:');
+    const payload = JSON.parse(body.messages[1].content);
+    expect(payload.candidate).toEqual({ id: candidate.id, label: candidate.label, start: candidate.start, end: candidate.end });
+    expect(payload.ir).toEqual(ir); expect(repaired).toEqual(ir);
+    for (const field of ['sourceLines', 'sourceProofClauses', 'sourceSpellGrants']) expect(payload).not.toHaveProperty(field);
   });
 
   test('retries retryable 429 once and audits without secrets', async () => {
@@ -1140,16 +1027,18 @@ describe('ordinary model source line references (format checks, no live AI)',()=
     expect(materializeSourceLineReferences(source,legacy)).toEqual(legacy);
     expect(()=>materializeSourceLineReferences(source,{evidence:[{firstLineId:'L2',lastLineId:'L2'}]},{start:0,end:6})).toThrow();
   });
-  test('ordinary public provider sends original lines and binds a source reference before existing validation',async()=>{
+  test('the default request sends source once while the historical line-based reply reader stays compatible',async()=>{
     const original=buildValidLurkerIr(),reply:any=structuredClone(original),ref=reply.claims[0].evidence[0];
     const catalog=sourceLineCatalog(LURKER_SOURCE);
     reply.claims[0].evidence[0]={firstLineId:'L1',lastLineId:catalog.at(-1)!.id,quote:ref.quote};
     const requests:HttpRequest[]=[];
     const provider=makeProvider(async(_url,init)=>{requests.push(init);return response(200,JSON.stringify(reply));});
     const actual=await provider.extract({source:LURKER_SOURCE,sourceSha256:original.source.sha256,candidate:{id:'source-lines',label:'Lurker',start:0,end:LURKER_SOURCE.length,quote:LURKER_SOURCE}});
-    expect(JSON.parse(requests[0]!.body).messages[1].content).toContain('sourceLines');
-    expect(JSON.parse(requests[0]!.body).messages[1].content).toContain('sourceProofClauses');
-    expect(JSON.parse(JSON.parse(requests[0]!.body).messages[1].content)).not.toHaveProperty('sourceSpellGrants');
+    const content=JSON.parse(requests[0]!.body).messages[1].content,payload=JSON.parse(content);
+    expect(payload.source).toBe(LURKER_SOURCE);expect(payload.sourceLength).toBe(LURKER_SOURCE.length);
+    expect(payload.candidate).toEqual({id:'source-lines',label:'Lurker',start:0,end:LURKER_SOURCE.length});
+    for(const field of ['sourceLines','sourceProofClauses','sourceSpellGrants'])expect(payload).not.toHaveProperty(field);
+    expect(content.split(JSON.stringify(LURKER_SOURCE)).length-1).toBe(1);
     expect(actual.claims[0]!.evidence).toEqual(original.claims[0]!.evidence);
     expect(validateMonsterIntakeIR(LURKER_SOURCE,actual).blocking).toEqual([]);
   });

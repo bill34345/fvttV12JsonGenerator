@@ -107,6 +107,8 @@ export interface IntakeValidationResult {
 
 export interface ReviewRequest {
   source: string;
+  /** Program-selected source partition; model coverage cannot narrow this scope. */
+  candidate?: DiscoveryCandidate;
   ir: MonsterIntakeIR;
   markdown: string;
   actorProjection: unknown;
@@ -123,12 +125,14 @@ export type RepairRequest =
   | {
       stage: 'deterministic-validation';
       source: string;
+      candidate?: DiscoveryCandidate;
       ir: MonsterIntakeIR;
       deterministicFindings: IntakeFinding[];
     }
   | {
       stage: 'semantic-review';
       source: string;
+      candidate?: DiscoveryCandidate;
       ir: MonsterIntakeIR;
       markdown: string;
       actorProjection: unknown;

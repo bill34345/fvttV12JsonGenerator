@@ -111,12 +111,19 @@ describe('ordinary source contracts use complete indexed claims',()=>{
   test('the real erroneous repair still cannot combine separate shared spell pools',async()=>{
     const prompts:string[]=[],provider=offlineProvider([recorded.ordinary.content,recorded.ordinary.repairContent],prompts);await provider.extract(request(source));const ir=structuredClone(recorded.ordinary.repairInputIr) as any,repaired=await provider.repair({stage:'deterministic-validation',source,ir,deterministicFindings:validateMonsterIntakeIR(source,ir).findings});
     expect(validateMonsterIntakeIR(source,repaired).blocking.map(finding=>finding.code)).toContain('MULTIPLE_SHARED_SPELL_POOLS');
-    for(const prompt of prompts){expect(prompt).toContain('Each group has at most ONE daily-shared usageGroup');expect(prompt).toContain('EVERY group');expect(prompt).toContain('EXAMPLE_IR_FRAGMENT_JSON:');expect(prompt).toContain('Flat attack plus flat save generates only the Attack button');expect(prompt).not.toContain('carry its attack and damage fields with evidence for both');}
+    for(const prompt of prompts){expect(prompt).toContain('at most one daily-shared usageGroup per group');expect(prompt).toContain('The literal word Shared/each is not required');expect(prompt).toContain('On a sourceOperations feature, omit flat attack/save/damage');expect(prompt).toContain('No per-leaf claim proof or whitespace partition is requested');expect(prompt).not.toContain('EXAMPLE_IR_FRAGMENT_JSON:');}
   });
-  test('the prompt example has real complete per-group claims, one source partition and independent pools',()=>{
-    const lines=FULL_IR_SOURCE_OPERATION_CONTRACT.split('\n'),sample=JSON.parse(lines.find(line=>line.startsWith('EXAMPLE_SOURCE_JSON:'))!.slice('EXAMPLE_SOURCE_JSON: '.length)),fragment=JSON.parse(lines.find(line=>line.startsWith('EXAMPLE_IR_FRAGMENT_JSON:'))!.slice('EXAMPLE_IR_FRAGMENT_JSON: '.length));
-    const visit=(value:any)=>{if(!value||typeof value!=='object')return;if(typeof value.quote==='string')expect(sample.slice(value.start,value.end)).toBe(value.quote);for(const entry of Object.values(value))if(Array.isArray(entry))entry.forEach(visit);else visit(entry);};visit(fragment);
-    expect(fragment.creature.spellcasting.map((group:any)=>group.usageGroups.filter((usage:any)=>usage.usage==='daily-shared').map((usage:any)=>usage.count))).toEqual([[1],[2]]);expect(fragment.claims.map((claim:any)=>claim.path)).toEqual(fragment.coverage[0].claimPaths);expect(fragment.coverage).toHaveLength(1);expect(fragment.coverage[0].quote).toBe(sample);expect(new Set(fragment.creature.spellcasting.map((group:any)=>group.featureName)).size).toBe(2);
+  test('the consolidated prompt declares independent pools without per-group ledgers or example partitions',async()=>{
+    const prompts:string[]=[],provider=offlineProvider([recorded.ordinary.content],prompts);
+    await provider.extract(request(source));const prompt=prompts[0]!;
+    expect(prompt).toContain(FULL_IR_SOURCE_OPERATION_CONTRACT);
+    expect(prompt).toContain('distinct shared pools need distinct groups/feature names');
+    expect(prompt).toContain('at most one daily-shared usageGroup per group');
+    expect(prompt).toContain('model the actual membership, count and recovery');
+    expect(prompt).toContain('The literal word Shared/each is not required');
+    expect(prompt).toContain('For a new default response, set claims:[] and coverage:[]');
+    expect(prompt).toContain('No per-leaf claim proof or whitespace partition is requested');
+    expect(prompt).not.toContain('EXAMPLE_SOURCE_JSON:');expect(prompt).not.toContain('EXAMPLE_IR_FRAGMENT_JSON:');
   });
 });
 

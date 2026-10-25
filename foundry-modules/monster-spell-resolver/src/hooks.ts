@@ -677,7 +677,12 @@ function createPreflight(
       errorMessage(error),
     );
   }
-  const byKey = new Map(savedMappings.map((entry) => [entry.logicalRefKey, entry]));
+  // The world setting retains choices for many Actors. The planner accepts
+  // only this manifest's references; keep other valid choices in the setting.
+  const logicalKeys = new Set(manifest.spellcastingGroups.flatMap(group =>
+    group.spellRefs.map(ref => logicalSpellRefKey(manifest.manifestId, group.groupId, ref.refId))));
+  const byKey = new Map(savedMappings.filter(entry => logicalKeys.has(entry.logicalRefKey))
+    .map((entry) => [entry.logicalRefKey, entry]));
   for (const entry of additionalMappings) byKey.set(entry.logicalRefKey, entry);
   return planSpellHydration({
     manifest,

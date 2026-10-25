@@ -219,16 +219,24 @@ describe('closed canonical structure rejects unsafe or unprojectable values', ()
       nativeRuleText: '原生部分', manualRemainder: 'GM部分', sourceContext: ['共同前言'],
       spellUseRecords: [{ name: '手动法术', max: 2, period: 'day' }],
       gmTriggeredSave: { dc: 17, ability: 'wis', trigger: '条件满足', sourceText: '完整能力', failureStatuses: ['prone'] },
-      nativeFailureStatuses: ['prone'], appliedConditions: [{ statuses: ['prone', 'exhaustion', 'burning'], escapeDc: 17, condition: '由GM决定', duration: '1分钟', staged: true }],
+      nativeFailureStatuses: ['prone'],
       healing: { formula: '5', type: 'temphp' }, range: 30, targetSpecial: '一个目标', aoe: { shape: 'sphere', radius: 5 },
       save: { dc: 17, ability: 'wis', dcSourceKind: 'literal', outcome: 'half', condition: 'GM条件' },
       candidateReview: { version: 1, findings: [{ code: 'AI', path: '/', message: '检查' }], proposal: { value: 19 } }, candidateCounters: [{ name: '计数', max: 2, recovery: null }],
     });
+    ir.creature.actions.push({name:'独立状态',description:'状态说明',appliedConditions:[{statuses:['prone','exhaustion','burning'],escapeDc:17,condition:'由GM决定',duration:'1分钟',staged:true}]});
     expect(errors(ir)).toEqual([]);
   });
 });
 
 describe('source-operation execution combinations match the formal conversion boundary', () => {
+  test('reports an unsupported mixed native/GM embedded condition before conversion', () => {
+    const ir=fixture();
+    ir.creature.actions=[{name:'Timed consequence',description:'Complete rule',activityType:'save',save:{dc:17,ability:'wis'},
+      executionMode:'native-with-gm',nativeRuleText:'Basic save',manualRemainder:'Timed consequence',
+      appliedConditions:[{statuses:['paralyzed'],duration:'until next turn ends'}]}];
+    expect(errors(ir)).toContainEqual(expect.objectContaining({code:'INVALID_STRUCTURE',path:'/creature/actions/0/appliedConditions'}));
+  });
   const carrierFields: Array<[string, unknown]> = [
     ['attack', { type: 'mwak', toHit: 19, reach: 10 }],
     ['save', { dc: 17, ability: 'wis' }],

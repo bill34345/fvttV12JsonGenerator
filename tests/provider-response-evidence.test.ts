@@ -151,7 +151,11 @@ describe('explicit private response evidence before rejection', () => {
         expect(stages.filter(event=>event.stage==='feature').some(event=>event.processor==='model'&&event.status==='request')).toBe(true);
         expect(stages.at(-1)).toMatchObject({stage:'assembly',status:'validated',plannedCalls:2,retryCalls:0});
       }else{
-        expect(stages).toEqual([]);expect(payloads[0]).not.toHaveProperty('template');expect(payloads[0]).not.toHaveProperty('sourceSpellGrants');
+        expect(stages).toEqual([]);expect(payloads[0]).not.toHaveProperty('template');
+        for(const field of ['sourceSpellGrants','sourceLines','sourceProofClauses'])expect(payloads[0]).not.toHaveProperty(field);
+        expect(payloads[0].source).toBe(source);expect(payloads[0].sourceLength).toBe(source.length);
+        expect(payloads[0].candidate).toEqual({id:'proof',label:'Proof',start:0,end:source.length});
+        expect(JSON.stringify(payloads[0]).split(JSON.stringify(source)).length-1).toBe(1);
         expect(ir as unknown).toEqual(before);expect(fullIr).toEqual(before);
         expect(events[0]).toMatchObject({sourceHash:sha256(source),content:JSON.stringify(before),attempt:1});
       }

@@ -255,7 +255,7 @@
     "forge:brass-cast:verify": "bun run src/tools/runHermeticFoundryScript.ts forge:brass-cast:verify:raw",
     "forge:brass-cast:verify:raw": "bun run tests/diagnostics/forge-brass-cast-replay.ts --verify-existing",
     "test:forge-format-recovery": "bun run src/tools/runHermeticFoundryScript.ts test:forge-format-recovery:raw",
-    "test:forge-format-recovery:raw": "bun test tests/forge-format-recovery.test.ts tests/provider-response-evidence.test.ts src/core/intake/__tests__/provider.test.ts --max-concurrency 1",
+    "test:forge-format-recovery:raw": "bun test tests/forge-prompt-consolidation.test.ts tests/forge-format-recovery.test.ts tests/provider-response-evidence.test.ts src/core/intake/__tests__/provider.test.ts --max-concurrency 1 && bun test tests/forge-ordinary-source-contract.test.ts --test-name-pattern \"the consolidated prompt declares independent pools without per-group ledgers or example partitions\" --max-concurrency 1",
     "test:forge-format-consumers": "bun run src/tools/runHermeticFoundryScript.ts test:forge-format-consumers:raw",
     "test:forge-format-consumers:raw": "bun test tests/species-provider.test.ts tests/item-ai-intake.test.ts --max-concurrency 1",
     "test:forge-offline-candidates": "bun run src/tools/runHermeticFoundryScript.ts test:forge-offline-candidates:raw",

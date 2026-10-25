@@ -456,6 +456,7 @@ export async function repairBrowserActorIntake(
     const rawRepaired = isGenerationResult(current) && current.review && current.markdown
       ? await withAbort(counted.repair({
           stage: 'semantic-review',
+          candidate: prior.candidate,
           source: input.source,
           ir: prior.ir,
           markdown: current.markdown,
@@ -465,6 +466,7 @@ export async function repairBrowserActorIntake(
         }), signal)
       : await withAbort(counted.repair({
           stage: 'deterministic-validation',
+          candidate: prior.candidate,
           source: input.source,
           ir: prior.ir,
           deterministicFindings: prior.validation?.findings ?? prior.findings,
@@ -611,6 +613,7 @@ async function generateBrowserActorIntake(
     report('review', 'running');
     const rawReview = await withAbort(counted.review({
       source: input.source,
+      candidate: analysis.candidate,
       ir: analysis.ir,
       markdown: rendered.content,
       actorProjection,
@@ -719,7 +722,7 @@ export async function reviewBrowserActorIntakeCandidate(
   const stages = structuredClone(candidate.stages);
   markStage(stages, input.onStage, 'review', 'running');
   try {
-    const raw = await withAbort(provider.review({ source: input.source, ir: candidate.analysis.ir!, markdown: candidate.finalSource!,
+    const raw = await withAbort(provider.review({ source: input.source, candidate: candidate.analysis.candidate, ir: candidate.analysis.ir!, markdown: candidate.finalSource!,
       actorProjection: candidate.actorProjection, deterministicFindings: candidate.deterministicFindings ?? candidate.findings }), signal);
     const review = adjudicateBrowserActorReview(input.source, candidate.analysis.ir!, candidate.actorProjection,
       candidate.deterministicFindings ?? candidate.findings, raw);

@@ -135,7 +135,10 @@ export function validateMonsterIntakeStructure(
     optional(entry, 'activityType', path, (e, p) => enumeration(e, p, ['attack', 'save', 'damage', 'heal', 'utility']));
     optional(entry, 'activationType', path, (e, p) => enumeration(e, p, ['action', 'bonus', 'reaction', 'legendary', 'special']));
     optional(entry, 'executionMode', path, (e, p) => enumeration(e, p, ['gm-manual', 'native-with-gm']));
-    if(entry.executionMode==='native-with-gm'){string(entry.nativeRuleText,`${path}/nativeRuleText`);string(entry.manualRemainder,`${path}/manualRemainder`);}
+    if(entry.executionMode==='native-with-gm'){
+      string(entry.nativeRuleText,`${path}/nativeRuleText`);string(entry.manualRemainder,`${path}/manualRemainder`);
+      if(Array.isArray(entry.appliedConditions)&&entry.appliedConditions.length)invalid(`${path}/appliedConditions`,'Mixed native/GM features cannot carry embedded condition effects; keep the basic operation and complete GM consequence.');
+    }
     if(entry.uses!==undefined&&entry.recharge!==undefined)invalid(path,'A feature cannot carry both an independent use pool and recharge.');
     optional(entry, 'range', path, distance); optional(entry, 'attack', path, attack);
     optional(entry, 'damage', path, (e, p) => array(e, p, damage, 1, 12)); optional(entry, 'healing', path, healing);

@@ -26,9 +26,12 @@ describe('AI owns default creature content across program boundaries',()=>{
   const httpProvider=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',apiKey:'offline-placeholder',baseUrl:'https://example.test',model:'fixture',reviewModel:'fixture',maxAttempts:1,timeoutMs:1000,repairTimeoutMs:1000,
    httpClient:async(_url,init)=>{const body=JSON.parse(String(init?.body));system=body.messages[0].content;payload=JSON.parse(body.messages[1].content);return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify(original)}}]}),{status:200});}});
   const result=await httpProvider.extract({source:RAT_WARLOCK_SOURCE,sourceSha256:hashSource(RAT_WARLOCK_SOURCE),candidate});
-  expect(payload.sourceSpellGrants).toBeUndefined();expect(payload.sourceLines.length).toBeGreaterThan(0);
-  expect(system).toContain('You own all mechanics');expect(system).not.toContain('let the program bind condition');
-  expect(result.creature).toEqual(original.creature);expect(INTAKE_PROMPT_VERSIONS.extract).toContain('ai-owned-content');
+  expect(payload.source).toBe(RAT_WARLOCK_SOURCE);expect(payload.sourceLength).toBe(RAT_WARLOCK_SOURCE.length);
+  for(const field of ['sourceSpellGrants','sourceLines','sourceProofClauses'])expect(payload).not.toHaveProperty(field);
+  expect(payload.candidate).toEqual({id:candidate.id,label:candidate.label,start:candidate.start,end:candidate.end});
+  expect(system).toContain('All source mechanical fields are model-owned');expect(system).not.toContain('let the program bind condition');
+  expect(system).toContain('EvidenceRef is {start:-1,end:-1,quote:string}');
+  expect(result.creature).toEqual(original.creature);expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v48-consolidated-source-operations');
  });
  test('an explicitly manual casting group normalizes only its omitted empty list and retains valid attacks',async()=>{
   const original=buildRatWarlockIr(),group=original.creature.spellcasting![0]!;

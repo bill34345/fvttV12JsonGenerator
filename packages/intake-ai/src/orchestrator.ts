@@ -258,6 +258,7 @@ async function processIr(
         calls.repair += 1;
         const repaired = await provider.repair({
           stage: 'deterministic-validation',
+          candidate,
           source: options.source,
           ir,
           deterministicFindings: validation.findings,
@@ -284,7 +285,7 @@ async function processIr(
     const report = verifyMonsterIntake(options.source, ir, markdown, generated.rawJson, candidate);
     writeReports(bundlePath, report);
     calls.review += 1;
-    const rawReview = await provider.review({ source: options.source, ir, markdown, actorProjection: report.projection, deterministicFindings: report.findings });
+    const rawReview = await provider.review({ source: options.source, candidate, ir, markdown, actorProjection: report.projection, deterministicFindings: report.findings });
     writeJson(join(bundlePath, 'ai-review.raw.json'), rawReview);
     const review = adjudicateReview(options.source, candidate, ir, report.projection, rawReview);
     writeJson(join(bundlePath, 'ai-review.json'), review);
@@ -293,6 +294,7 @@ async function processIr(
       calls.repair += 1;
       const repaired = await provider.repair({
         stage: 'semantic-review',
+        candidate,
         source: options.source,
         ir,
         markdown,
