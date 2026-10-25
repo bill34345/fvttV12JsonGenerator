@@ -32,7 +32,7 @@
     "limits": [
       "只在明确命令触发时访问上游，无后台监听或定时任务。",
       "自用包取消上游更新地址，后续经维护项目更新；构建不自动安装 Foundry 或发布 Git。",
-      "第三干净环境30003已验水晶浩劫21法术译文、效果显示和召唤链接；Next/Mirror未改动，详见独立项目docs/clean-lab-acceptance.md。",
+      "第三干净环境http://babele-clean.localhost:30003已验水晶浩劫21法术译文、效果显示和召唤链接；独立主机名隔离登录Cookie，Next/Mirror未改动，详见独立项目docs/clean-lab-acceptance.md。",
       "本次不覆盖施法/战斗自动化、整本Adventure或全部上游译文；蓝宝石尘显示适配器限定Core14/dnd5e6.0.6，升级后需复核。",
       "本手册仅维护外部项目入口；该项目源码、测试与架构在其独立仓库维护。"
     ],

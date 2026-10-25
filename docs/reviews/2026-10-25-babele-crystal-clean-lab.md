@@ -4,7 +4,7 @@
 
 ## 对象与分层结论
 
-用户明确改为建立第三干净环境，现有Next与Mirror不动。新实例 `F:/FoundryLab/foundry-v14/data/babele-clean-v14`，地址 `http://127.0.0.1:30003`；复用Core14.368和Node24.17.0，dnd5e6.0.6与Next相同。仅启用Crystal Chaos1.0.1、Babele2.9.1、libWrapper1.13.5.1、foundry_chn14.365与1.0.194本地合并补丁。
+用户明确改为建立第三干净环境，现有Next与Mirror不动。新实例 `F:/FoundryLab/foundry-v14/data/babele-clean-v14`，用户地址 `http://babele-clean.localhost:30003`，实际监听127.0.0.1:30003；复用Core14.368和Node24.17.0，dnd5e6.0.6与Next相同。仅启用Crystal Chaos1.0.1、Babele2.9.1、libWrapper1.13.5.1、foundry_chn14.365与1.0.194本地合并补丁。
 
 21法术实际API核对、5种原生Item说明/4个Effects页及召唤链接点击已有有效证据；独立中英文语义复核未发现新的实质误译。发现并修复1个世界Actor链接、4个效果图片和蓝宝石尘轮数说明。显示适配器单项实机复验通过：原生卡片30秒钟、正文5轮、原始数据0.5 minute；父代理已实际查看说明与Details截图。清理状态和完整证据以独立项目记录为准。
 
@@ -24,6 +24,8 @@ Context7导航曾返回6.1.x页面，因此没有用它证明6.0.6行为。核�
 曾遇第三实例返回设置按钮未关闭世界。两次原生入口无新进展后，停止重复点击，检查Core处理代码并进行有范围外部搜索。AnySearch读取的[2022年Forge原始报告](https://forums.forge-vtt.com/t/cant-access-setup/17712)涉及托管站点所有者/admin权限，与本机干净实例不相同，未采用其设置密码方案，也未将其作为本机根因。
 
 本机通过正常登出、重新登录GM后返回设置成功；没有强杀活动世界或编辑实时数据库。此结果只证实该恢复步骤有效，不证明最初失败原因。
+
+最终交付时原IP登录再次回Join。已核Core14.368的dist/sessions.mjs固定设置名为session的host-only Cookie；[RFC6265](https://www.rfc-editor.org/rfc/rfc6265)明确同主机Cookie跨端口共享，单独端口并不能隔离三个实例的登录。新实例日志反复创建会话，与该覆盖机制吻合；未读取实际Cookie值，未证明具体覆盖来源。改用 `http://babele-clean.localhost:30003` 后正常GM登录成功，刷新和最后交付以独立项目DOMAIN-ISOLATION-RECEIPT.md为准。[RFC6761第6.3节](https://www.rfc-editor.org/rfc/rfc6761#section-6.3)定义.localhost回环保留名；没有改系统hosts、其他实例地址或读取/修改Cookie。后续第三环境入口固定为此独立主机名。
 
 ## 待判断本地化与复查
 

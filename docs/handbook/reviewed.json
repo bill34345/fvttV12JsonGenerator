@@ -1,8 +1,8 @@
 {
   "babele-zh-maintenance": {
-    "fingerprint": "05115243c62154e493644161116f7bf88922bd7dcb40b52dcb7a011ab54d13ed",
+    "fingerprint": "72eb2527c764619746409331c439916a2bd32bd844a624c3ff377a9f97f565fe",
     "reviewedOn": "2026-10-25",
-    "note": "已对照第三环境实际21法术与原生界面/效果/链接证据，更新30003入口、Next/Mirror不动、显示修复版本守卫和未验收战斗/整包的限制；独立项目继续拥有源码与详细证据。"
+    "note": "对照Core会话Cookie源码、RFC6265及第三独立.localhost实际登录，更新用户入口以隔离跨端口登录Cookie；功能与验收范围不扩大。"
   },
   "legacy-next-test-inputs": {
     "fingerprint": "08a1e772f66a92314a36ae10574cf1f466bce95ef84fae113a590264703c6737",
