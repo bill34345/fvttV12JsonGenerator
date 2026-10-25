@@ -1,8 +1,8 @@
 {
   "babele-zh-maintenance": {
-    "fingerprint": "621c134843fedcd6a8705063693247681980685904a3bf271c250539846bcd95",
+    "fingerprint": "b17476cc1d8cfa9958b066ef0724c8183cf604feb1bb0d22c0318b830b8d3e99",
     "reviewedOn": "2026-10-25",
-    "note": "已核对三种版本维度、99目标清单与规则证据；官网Verified与作者清单差异并列，未知与未声明保留，目录旧控件与新增筛选通过非浏览器验证。"
+    "note": "已对照怪物译文增补、独立项目实际四个overlay与第三环境边界，补充16怪物/162条目和关联规则入口；来源数、版本维度和其他条目不变。"
   },
   "legacy-next-test-inputs": {
     "fingerprint": "08a1e772f66a92314a36ae10574cf1f466bce95ef84fae113a590264703c6737",
