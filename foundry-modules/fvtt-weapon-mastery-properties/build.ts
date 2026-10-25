@@ -196,8 +196,8 @@ export function validateManifest(manifest: Record<string, any>): void {
   }
   const dnd5e = (manifest.relationships?.systems ?? []).find((entry: any) => entry.id === 'dnd5e');
   const system = dnd5e?.compatibility ?? {};
-  if (system.minimum !== '5.3.3' || system.verified !== '6.0.5' || system.maximum !== '6.0.5') {
-    throw new Error('dnd5e manifest must bound the reviewed 5.3.3 and 6.0.5 pairs.');
+  if (system.minimum !== '5.3.3' || system.verified !== '6.0.5' || system.maximum !== '6.0.6') {
+    throw new Error('dnd5e manifest must bound reviewed 5.3.3/6.0.5 and candidate 6.0.6.');
   }
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(['scripts/index.js'])) throw new Error('Browser entry contract drifted.');
   if (JSON.stringify(manifest.styles) !== JSON.stringify([{ src: 'styles/weapon-mastery-properties.css' }])) throw new Error('Style asset contract drifted.');

@@ -66,7 +66,7 @@ function isServerNextRuntime(runtime: Dnd5eRuntime): boolean {
 }
 
 function serverNextExhaustion(actor: any, dnd5eVersion: string): number | undefined {
-  if (dnd5eVersion === '6.0.5') {
+  if (dnd5eVersion === '6.0.5' || dnd5eVersion === '6.0.6') {
     const effects = actor.effects;
     if (!effects || typeof effects.get !== 'function') return undefined;
     const effect = effects.get(SERVER_NEXT_EXHAUSTION_EFFECT_ID);
@@ -94,6 +94,7 @@ export class Dnd5eAdapter {
       return {
         supported: false,
         supportError: error,
+        coreVersion: String(runtimeGame.version ?? runtimeGame.release?.version ?? ''),
         world: { id: String(runtimeGame.world?.id ?? ''), title: String(runtimeGame.world?.title ?? '') },
         system: { id: String(runtimeGame.system?.id ?? ''), version: String(runtimeGame.system?.version ?? '') },
         scene: scene ? { id: String(scene.id), name: String(scene.name ?? '') } : null,
@@ -159,6 +160,7 @@ export class Dnd5eAdapter {
     const hasCurrentCombatant = Boolean(combat?.combatant && combatTurn >= 0);
     return {
       supported: true,
+      coreVersion: String(runtimeGame.version ?? runtimeGame.release?.version ?? ''),
       world: { id: String(runtimeGame.world?.id ?? ''), title: String(runtimeGame.world?.title ?? '') },
       system: { id: String(runtimeGame.system?.id ?? ''), version: String(runtimeGame.system?.version ?? '') },
       scene: scene ? { id: String(scene.id), name: String(scene.name ?? '') } : null,

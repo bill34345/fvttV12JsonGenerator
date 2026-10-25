@@ -135,6 +135,103 @@ export function sanitizeTriggerStore(input: unknown): { store: TriggerStore; iss
   return { store: parsed.data, issues: parsed.issues };
 }
 
+/** Read valid definitions while recording fields a schema-1 rewrite would discard. */
+export function inspectStoredTriggerStore(input: unknown): { store: TriggerStore; issues: ValidationIssue[] } {
+  const parsed = sanitizeTriggerStore(input);
+  return { store: parsed.store, issues: [...parsed.issues, ...unsupportedStoredFields(input)] };
+}
+
+function unsupportedStoredFields(input: unknown): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  let value = input;
+  if (typeof value === 'string') {
+    try { value = JSON.parse(value) as unknown; } catch { return issues; }
+  }
+  try {
+    const check = (object: unknown, allowed: readonly string[], path: string): void => {
+      if (!isRecord(object)) return;
+      for (const key of Reflect.ownKeys(object)) {
+        const field = typeof key === 'string' ? key : String(key);
+        const descriptor = Object.getOwnPropertyDescriptor(object, key);
+        if (!descriptor || !('value' in descriptor) || typeof key !== 'string' || !allowed.includes(key)) {
+          issues.push({ path: `${path}.${field}`, message: 'unsupported or non-data field would be lost on save' });
+        }
+      }
+    };
+    if (!isRecord(value)) return issues;
+    check(value, ['schemaVersion', 'triggers'], 'store');
+    if (!Array.isArray(value.triggers)) return issues;
+    value.triggers.forEach((candidate: unknown, index: number) => {
+      const path = `triggers[${index}]`;
+      if (!isRecord(candidate)) return;
+      check(candidate, ['id', 'name', 'enabled', 'event', 'conditions', 'actions'], path);
+      const event = candidate.event;
+      if (isRecord(event)) check(event,
+        event.type === 'documentUpdate' ? ['type', 'documentType', 'watchedPaths'] : ['type', 'documentType'],
+        `${path}.event`);
+      const conditions = candidate.conditions;
+      if (isRecord(conditions)) {
+        check(conditions, ['mode', 'conditions'], `${path}.conditions`);
+        if (Array.isArray(conditions.conditions)) conditions.conditions.forEach((condition: unknown, conditionIndex: number) => {
+          const conditionPath = `${path}.conditions.conditions[${conditionIndex}]`;
+          if (!isRecord(condition)) return;
+          check(condition, ['left', 'right', 'operator', 'operands', 'op'], conditionPath);
+          if (condition.op !== undefined && condition.operator !== undefined && condition.op !== condition.operator) {
+            issues.push({ path: `${conditionPath}.op`, message: 'conflicting legacy operator would be lost on save' });
+          }
+          for (const side of ['left', 'right'] as const) {
+            const operand = condition[side];
+            if (isRecord(operand)) check(operand,
+              operand.type === 'literal' ? ['type', 'value'] : ['type', 'path'],
+              `${conditionPath}.${side}`);
+          }
+          if (condition.operands !== undefined) {
+            if (!Array.isArray(condition.operands) || condition.operands.length > 2) {
+              issues.push({ path: `${conditionPath}.operands`, message: 'unsupported legacy operands would be lost on save' });
+            } else condition.operands.forEach((operand: unknown, operandIndex: number) => {
+              const issuesBefore = issues.length;
+              if (isRecord(operand)) check(operand,
+                operand.type === 'literal' ? ['type', 'value'] : ['type', 'path'],
+                `${conditionPath}.operands[${operandIndex}]`);
+              const canonical = operandIndex === 0 ? condition.left : condition.right;
+              if (issues.length === issuesBefore && canonical !== undefined && !sameStoredValue(canonical, operand)) {
+                issues.push({ path: `${conditionPath}.operands[${operandIndex}]`, message: 'conflicting legacy operand would be lost on save' });
+              }
+            });
+          }
+        });
+      }
+      if (Array.isArray(candidate.actions)) candidate.actions.forEach((action: unknown, actionIndex: number) => {
+        if (isRecord(action)) check(action, ['type', 'macroUuid'], `${path}.actions[${actionIndex}]`);
+      });
+    });
+  } catch {
+    issues.push({ path: 'store', message: 'stored fields could not be inspected safely' });
+  }
+  return issues;
+}
+
+/** Object property order is irrelevant to JSON values; array order remains meaningful. */
+function sameStoredValue(left: unknown, right: unknown, visiting = new WeakSet<object>()): boolean {
+  if (Object.is(left, right)) return true;
+  if (left === null || right === null || typeof left !== typeof right || typeof left !== 'object') return false;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length || visiting.has(left)) return false;
+    visiting.add(left);
+    const same = left.every((value, index) => sameStoredValue(value, right[index], visiting));
+    visiting.delete(left);
+    return same;
+  }
+  if (!isRecord(left) || !isRecord(right) || visiting.has(left)) return false;
+  visiting.add(left);
+  const leftKeys = Object.keys(left).sort();
+  const rightKeys = Object.keys(right).sort();
+  const same = leftKeys.length === rightKeys.length
+    && leftKeys.every((key, index) => key === rightKeys[index] && sameStoredValue(left[key], right[key], visiting));
+  visiting.delete(left);
+  return same;
+}
+
 export function validateTriggerStore(input: unknown): TriggerStore {
   const parsed = parseTriggerStore(input);
   if (!parsed.success) throw validationError('store', parsed.issues);

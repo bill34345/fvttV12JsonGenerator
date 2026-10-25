@@ -12,20 +12,27 @@ export function profileAppRoot(config: FoundryLabConfig, profileId: ProfileId): 
 }
 export function buildLaunchCommand(config: FoundryLabConfig, profileId: ProfileId) {
   const profile = profileId === 'core-test' ? config.profiles.coreTest : config.profiles.serverMirror;
-  return { command: resolve(config.nodeRoot, 'node.exe'), args: [resolve(profileAppRoot(config, profileId), 'main.js'), '--dataPath', profile.dataPath, '--hostname', '127.0.0.1', '--port', String(profile.port), '--world', config.defaultWorldId, '--noupnp', '--noBackups'] };
+  return { command: resolve(config.nodeRoot, 'node.exe'), args: [resolve(profileAppRoot(config, profileId), 'main.js'), '--dataPath', profile.dataPath, '--hostname', '127.0.0.1', '--port', String(profile.port), '--world', config.defaultWorldId, '--noupnp', '--nobackups'] };
 }
-// Foundry 14.364's parseArgs/getEnvDataPath read only --key=value tokens even
-// though buildLaunchCommand preserves the project-facing command contract.
+// Foundry 14.364/14.368 parseArgs reads --key=value tokens, while 14.368's
+// config recognizes only the lower-case nobackups key. Keep split input options.
 export function buildRuntimeArgs(args: string[]): string[] {
   if (!args[0]) throw new Error('Foundry main script argument is required');
   const result: string[] = [args[0]];
   for (let i = 1; i < args.length; i++) {
     const value = args[i];
     if (!value) throw new Error('Foundry launch arguments must not be empty');
-    if (['--dataPath', '--hostname', '--port', '--world'].includes(value)) {
-      const next = args[++i]; if (!next) throw new Error(`Missing value for ${value}`); result.push(`${value}=${next}`);
+    if (/^--nobackups(?:=.*)?$/i.test(value)) {
+      const explicitValue = value.split('=', 2)[1];
+      if (explicitValue !== undefined && explicitValue.toLowerCase() !== 'true') throw new Error('Foundry no-backups flag must not be disabled');
+      if (args[i + 1] && !args[i + 1]!.startsWith('--')) throw new Error('Foundry no-backups flag must not take a separate value');
+    } else if (/^--backups(?:=.*)?$/i.test(value)) {
+      throw new Error('Conflicting Foundry backups flag');
+    } else if (['--dataPath', '--hostname', '--port', '--world'].includes(value)) {
+      const next = args[++i]; if (!next || next.startsWith('--')) throw new Error(`Missing value for ${value}`); result.push(`${value}=${next}`);
     } else result.push(value);
   }
+  result.push('--nobackups');
   return result;
 }
 export function validateListenerAddresses(addresses: string[]): void {

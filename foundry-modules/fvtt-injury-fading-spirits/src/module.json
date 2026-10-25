@@ -1,7 +1,7 @@
 {
   "id": "fvtt-injury-fading-spirits",
   "title": "消逝的灵魂 / The Fading Spirits",
-  "description": "独立的 GM 主导复活仪式；旧伤势 API 转发给 Custom Conditions。6.0.5 已有基础与快速复活的限定本地接受，其他分支待验。 / GM-authoritative resurrection rituals; legacy Injury API forwards to Custom Conditions. Scoped 6.0.5 basic and quick resurrection accepted locally; other branches remain untested.",
+  "description": "独立的 GM 主导复活仪式；旧伤势 API 转发给 Custom Conditions。6.0.5 有限定本地接受，6.0.6 为待实机候选。 / GM-authoritative resurrection rituals; legacy Injury API forwards to Custom Conditions. Scoped 6.0.5 local acceptance; 6.0.6 awaits live acceptance.",
   "version": "1.1.0",
   "compatibility": {
     "minimum": "14.364",
@@ -23,7 +23,7 @@
         "compatibility": {
           "minimum": "5.3.3",
           "verified": "5.3.3",
-          "maximum": "6.0.5"
+          "maximum": "6.0.6"
         }
       }
     ]

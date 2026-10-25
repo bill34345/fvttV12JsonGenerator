@@ -1,0 +1,78 @@
+{
+  "id": "session-monitor",
+  "title": "跑团会话监测器",
+  "category": "maintain",
+  "summary": "由 GM-only Foundry 模块和 Windows/Chrome companion 共同记录隐私过滤的浏览器、进程和生命周期排障时间线。",
+  "when": "需要定位跑团期间卡顿、renderer 变化、CDP 断连或浏览器内存信号时，按任务范围记录；长时验收须有明确要求及真实会话证据。",
+  "requires": [
+    "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
+    "GM",
+    "正常登录的 Foundry 世界",
+    "精确Foundry14.368/dnd5e6.0.6已完成GM短会话、普通重载恢复与历史保护；具体接受范围见限制，不自动升级其他环境。",
+    "仅在需要浏览器外的 Chrome/Windows 指标时启用可选 Companion；只使用模块面板不需要它"
+  ],
+  "steps": [
+    {
+      "title": "启用并确认 GM 面板",
+      "text": "在精确支持版本的世界启用模块并以 GM 进入；世界 ready 后页面会出现“跑团会话监测器”面板。玩家客户端不会启动监测运行时。"
+    },
+    {
+      "title": "查看操作帮助",
+      "text": "点击监测面板的“使用帮助”；已启用合集操作台时打开该模块的统一手册，否则打开模块自带只读窗口。查看帮助不会开始记录或更改设置。"
+    },
+    {
+      "title": "启动 companion",
+      "text": "需要同时记录 Chrome/Windows 信号时，在已授权的监测范围内从仓库根目录启动 companion；它只创建和管理自己的专用 Chrome profile，并等待 GM 正常登录，不读取日常浏览器凭据。",
+      "command": "bun run monitor:session -- record"
+    },
+    {
+      "title": "开始记录",
+      "text": "在 GM 面板点击“开始”；模块建立 IndexedDB 会话并立即采样，companion 在没有 active session 时会通过模块 API 开始或续接同一 session ID。"
+    },
+    {
+      "title": "标记卡顿",
+      "text": "记录期间遇到卡顿时点击“刚才卡顿”，或使用已注册但默认未绑定的 markJank GM 快捷键；关闭专用 Chrome 会被记录为下一代浏览器并尝试恢复同一会话。"
+    },
+    {
+      "title": "停止并查看报告",
+      "text": "跑团记录结束后点击“停止并导出”或按 Ctrl+C 结束 companion；检查 browser-session.json、companion.jsonl、companion-events.jsonl、session-combined.json、report.md 和 heap-timeline.svg。"
+    },
+    {
+      "title": "保存失败后续接",
+      "text": "出现操作未完成提示时，采集会暂停；短暂存储故障解除后点击“开始”续接，若已经进入停止收尾则重试“停止并导出”。重新载入也会核对已存记录再续接；达到时长或采样上限的会话继续结束，不补造样本。"
+    }
+  ],
+  "outputs": [
+    "Foundry 模块导出的 browser-session.json",
+    "Chrome/Windows 采样、错误和浏览器/renderer 代际事件 JSONL",
+    "合并后的 session-combined.json、隐私过滤 report.md 和 heap-timeline.svg"
+  ],
+  "limits": [
+    "历史接受绑定 Foundry 14.364 / dnd5e 5.3.3；Next 6.0.5 仅接受下列代表切片，v1 只在 GM 客户端运行；模块和 companion 只观察，不清缓存、不改设置、不删文档、不写 LevelDB",
+    "companion 只管理专用 Chrome profile，不接管日常 Chrome，不读取 Cookie、密码或浏览器凭据；GM 必须正常登录",
+    "单次会话最多 12 小时、4,320 个浏览器采样、10,000 个事件和 1,000 个错误，时长或采样上限会结束会话；事件或错误达到容量时只标记对应 truncated 并停止追加该类记录",
+    "本轮只执行短会话；长时 Foundry／Chrome 验收需明确任务授权，指标相关性不等于因果证明。",
+    "Next 14.368／6.0.5 本轮短会话 start／mark／stop、重载和既有历史保护通过；不代表长时采样、companion 或四小时跑团接受。",
+    "module/companion版本仍1.1.2、schema仍v1。2026-10-25在14.368/6.0.6完成一个真实GM短会话：开始、卡顿标记、普通重载、同ID恢复、6采样/6事件与一次停止；原历史保持，测试归档清理后公开list/export确认缺席。Companion、四小时与非GM设备未覆盖。",
+    "本地候选将记录与计数一次提交，停止前等待已接纳写入；原生接受限于上述正常短会话，存储失败恢复与权限变化另有局部检查，不能据此承诺长时性能或任意真实故障无损。"
+  ],
+  "keywords": [
+    "跑团",
+    "会话监测",
+    "卡顿",
+    "Chrome",
+    "CDP",
+    "renderer",
+    "heap",
+    "隐私"
+  ],
+  "sources": [
+    "foundry-modules/session-monitor/README.zh-CN.md",
+    "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
+  ],
+  "watch": [
+    "foundry-modules/session-monitor/",
+    "packages/suite-handbook/"
+  ],
+  "module": "session-monitor"
+}

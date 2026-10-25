@@ -138,6 +138,7 @@ export interface DeckEncounter {
 export interface DeckSnapshot {
   readonly supported: boolean;
   readonly supportError?: string;
+  readonly coreVersion: string;
   readonly world: Readonly<{ id: string; title: string }>;
   readonly system: Readonly<{ id: string; version: string }>;
   readonly scene: Readonly<{ id: string; name: string }> | null;
@@ -208,6 +209,7 @@ export interface DeckCommandResult {
 export interface DeckModuleApi {
   openPanel(): Promise<void>;
   openPopout(): Promise<void>;
+  openHelp(): Promise<void>;
   focusPopout(): boolean;
   close(mode: DeckCloseMode): Promise<void>;
   refresh(): void;

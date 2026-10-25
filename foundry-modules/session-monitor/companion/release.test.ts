@@ -34,7 +34,7 @@ describe('session monitor release contract', () => {
       minimum: '14.364', verified: '14.364', maximum: '14.368',
     });
     expect(moduleManifest.relationships?.systems?.find((system) => system.id === 'dnd5e')?.compatibility).toEqual({
-      minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.5',
+      minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.6',
     });
   });
 

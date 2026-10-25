@@ -34,6 +34,7 @@ describe("runtime compatibility", () => {
     { foundry: "14.368", dnd5e: "6.0.2" },
     { foundry: "14.368", dnd5e: "5.3.3" },
     { foundry: "14.368", dnd5e: "6.0.5" },
+    { foundry: "14.368", dnd5e: "6.0.6" },
   ])("accepts exact runtime pair %j", (versions) => {
     expect(
       evaluateRuntimeCompatibility(versions),
@@ -80,6 +81,8 @@ describe("runtime compatibility", () => {
     [{ foundry: "14.369", dnd5e: "6.0.2" }, "UNSUPPORTED_FOUNDRY_VERSION"],
     [{ foundry: "14.368", dnd5e: "6.0.1" }, "UNSUPPORTED_DND5E_VERSION"],
     [{ foundry: "14.368", dnd5e: "6.0.4" }, "UNSUPPORTED_DND5E_VERSION"],
+    [{ foundry: "14.368", dnd5e: "6.0.7" }, "UNSUPPORTED_DND5E_VERSION"],
+    [{ foundry: "14.364", dnd5e: "6.0.6" }, "UNSUPPORTED_DND5E_VERSION"],
     [{ foundry: "", dnd5e: "5.3.3" }, "MISSING_RUNTIME_VERSION"],
   ] as const)("fails closed for runtime %j", (versions, code) => {
     expect(evaluateRuntimeCompatibility(versions)).toMatchObject({

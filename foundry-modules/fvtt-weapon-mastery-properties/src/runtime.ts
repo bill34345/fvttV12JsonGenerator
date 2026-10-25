@@ -68,7 +68,7 @@ import { planWeaponConfigurationUpdate } from './adapters/configuration.ts';
 import { calculateCleaveChildDamage } from './adapters/cleave-damage.ts';
 import { useMidiActivityUntilAttack, useMidiActivityUntilTerminal } from './adapters/midi-activity.ts';
 import { createDamageProof, isUsageMessage, midiItemCardDamageMatches, recoverDamageProofUpdate, validateDamageProof, type DamageProof } from './adapters/damage-proof.ts';
-import { MODULE_ID, MODULE_VERSION } from './constants.ts';
+import { MODULE_ID, MODULE_VERSION, isNative6Dnd5eVersion } from './constants.ts';
 
 export const WEAPON_RUNTIME_API_VERSION = 1 as const;
 export const WEAPON_QUERY_PREPARE = `${MODULE_ID}.prepareUse` as const;
@@ -341,7 +341,7 @@ export class WeaponMasteryRuntime {
     for (const name of ['midi-qol.AttackRollComplete', 'midi-qol.DamageRollComplete', 'midi-qol.postActiveEffects', 'midi-qol.RollComplete', 'midi-qol.preAbort', 'midi-qol.postCleanup']) {
       this.onHook(name, (workflow: any) => this.observeMidiCompletion(name, workflow));
     }
-    const trigger = triggerEngineApi(this.globals);
+    const trigger = this.dependencies().ready ? triggerEngineApi(this.globals) : undefined;
     if (trigger && typeof trigger.subscribeExternal === 'function') {
       try {
         const unsubscribe = trigger.subscribeExternal((event: any) => this.onExternalEvent(event));
@@ -418,7 +418,7 @@ export class WeaponMasteryRuntime {
     } finally { this.#guarded.delete(activity); }
     if (!results) return this.cancelUse(prepared);
     const originId = results.message?.id;
-    const outcome = await this.rollPrepared(activity, prepared, request, {}, originId ? { data: originatingMessageData(originId, this.globals.game?.system?.version === '6.0.5') } : {});
+    const outcome = await this.rollPrepared(activity, prepared, request, {}, originId ? { data: originatingMessageData(originId, isNative6Dnd5eVersion(this.globals.game?.system?.version)) } : {});
     if (outcome.status === 'cancelled' && results.updates && typeof activity.refund === 'function') await activity.refund(results.updates);
     return { ...outcome, results };
   }
@@ -619,7 +619,7 @@ export class WeaponMasteryRuntime {
         ...message.data.flags[MODULE_ID], attackId,
         ...(typeof midiCardId === 'string' ? { midiCardId } : {}),
       };
-      if (typeof midiCardId === 'string' && this.globals.game?.system?.version === '6.0.5') {
+      if (typeof midiCardId === 'string' && isNative6Dnd5eVersion(this.globals.game?.system?.version)) {
         message.data.system ??= {};
         message.data.system.origin ??= midiCardId;
       }
@@ -821,7 +821,7 @@ export class WeaponMasteryRuntime {
   private observeNativeDamage(rolls: any[], data: any): void {
     for (const roll of rolls ?? []) {
       const message = roll?.parent;
-      const originId = dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5')?.originatingMessage;
+      const originId = dnd5eMessageData(message, isNative6Dnd5eVersion(this.globals.game?.system?.version))?.originatingMessage;
       const id = message?.flags?.[MODULE_ID]?.attackId ?? (originId ? this.#messageAttack.get(originId) : undefined);
       const state = typeof id === 'string' ? this.#pending.get(id) : undefined;
       if (state && message?.id && this.damageMessageMatchesState(message, state)) this.#messageAttack.set(message.id, id);
@@ -949,7 +949,7 @@ export class WeaponMasteryRuntime {
     attackId: string; attackMessageId: string; sourceActorUuid: string; requesterId: string;
   } | undefined {
     if (this.isMidiSameCard(damageMessage)) {
-      const flags = dnd5eMessageData(damageMessage, this.globals.game?.system?.version === '6.0.5');
+      const flags = dnd5eMessageData(damageMessage, isNative6Dnd5eVersion(this.globals.game?.system?.version));
       const sourceActorUuid = damageMessage.flags?.['midi-qol']?.sourceActorUuid;
       const linked = this.midiLinkedAttackMessages(damageMessage);
       const attack = linked.length === 1 ? linked[0] : undefined;
@@ -961,14 +961,14 @@ export class WeaponMasteryRuntime {
         || typeof flags?.activity?.uuid !== 'string' || typeof flags?.item?.uuid !== 'string'
         || !flags.item.uuid.startsWith(`${sourceActorUuid}.Item.`)
         || linked.length > 1
-        || (attack && (dnd5eMessageData(attack, this.globals.game?.system?.version === '6.0.5')?.activity?.uuid !== flags.activity.uuid
-          || dnd5eMessageData(attack, this.globals.game?.system?.version === '6.0.5')?.item?.uuid !== flags.item.uuid
+        || (attack && (dnd5eMessageData(attack, isNative6Dnd5eVersion(this.globals.game?.system?.version))?.activity?.uuid !== flags.activity.uuid
+          || dnd5eMessageData(attack, isNative6Dnd5eVersion(this.globals.game?.system?.version))?.item?.uuid !== flags.item.uuid
           || (attack.author?.id ?? attack.user?.id ?? attack.user) !== requesterId))
         || !this.midiCardMatchesTarget(damageMessage, actor)
         || !this.midiCardHasDamageRoll(damageMessage)) return undefined;
       return { attackId, attackMessageId, sourceActorUuid, requesterId };
     }
-    const damageFlags = dnd5eMessageData(damageMessage, this.globals.game?.system?.version === '6.0.5');
+    const damageFlags = dnd5eMessageData(damageMessage, isNative6Dnd5eVersion(this.globals.game?.system?.version));
     const damageAuthor = damageMessage?.author?.id ?? damageMessage?.user?.id ?? damageMessage?.user;
     if (damageFlags?.roll?.type !== 'damage' || typeof damageMessage?.id !== 'string'
       || typeof damageFlags?.activity?.uuid !== 'string' || typeof damageFlags?.item?.uuid !== 'string'
@@ -976,13 +976,13 @@ export class WeaponMasteryRuntime {
     const targetId = actorUuid(actor);
     const origin = damageFlags.originatingMessage;
     const candidates = collection(this.globals?.game?.messages).filter((message: any) => {
-      const flags = dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5');
+      const flags = dnd5eMessageData(message, isNative6Dnd5eVersion(this.globals.game?.system?.version));
       const author = message?.author?.id ?? message?.user?.id ?? message?.user;
       const usage = origin && origin !== message?.id ? this.globals?.game?.messages?.get?.(origin) : undefined;
       const usageLinked = !origin || origin === message?.id || (isUsageMessage(usage)
         && usage?.flags?.[MODULE_ID]?.attackId === message?.flags?.[MODULE_ID]?.attackId
-        && dnd5eMessageData(usage, this.globals.game?.system?.version === '6.0.5')?.activity?.uuid === flags?.activity?.uuid
-        && dnd5eMessageData(usage, this.globals.game?.system?.version === '6.0.5')?.item?.uuid === flags?.item?.uuid
+        && dnd5eMessageData(usage, isNative6Dnd5eVersion(this.globals.game?.system?.version))?.activity?.uuid === flags?.activity?.uuid
+        && dnd5eMessageData(usage, isNative6Dnd5eVersion(this.globals.game?.system?.version))?.item?.uuid === flags?.item?.uuid
         && flags?.originatingMessage === origin);
       return typeof message?.id === 'string' && typeof message?.flags?.[MODULE_ID]?.attackId === 'string'
         && flags?.roll?.type === 'attack' && flags?.activity?.uuid === damageFlags.activity.uuid
@@ -1048,7 +1048,7 @@ export class WeaponMasteryRuntime {
     }
     const attackMessage = await this.resolveMessage(completeProof.attackMessageId);
     const damageMessage = await this.resolveMessage(completeProof.damageMessageId);
-    const damageFlags = dnd5eMessageData(damageMessage, this.globals.game?.system?.version === '6.0.5');
+    const damageFlags = dnd5eMessageData(damageMessage, isNative6Dnd5eVersion(this.globals.game?.system?.version));
     const usageMessage = damageFlags?.originatingMessage && damageFlags.originatingMessage !== completeProof.attackMessageId
       ? await this.resolveMessage(damageFlags.originatingMessage) : undefined;
     const midiCard = this.isMidiSameCard(damageMessage)
@@ -1095,7 +1095,7 @@ export class WeaponMasteryRuntime {
     if (typeof messageId !== 'string') return undefined;
     const registered = this.globals?.game?.messages?.get?.(messageId);
     if (registered && registered !== message) message = registered;
-    const origin = dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5')?.originatingMessage;
+    const origin = dnd5eMessageData(message, isNative6Dnd5eVersion(this.globals.game?.system?.version))?.originatingMessage;
     const mapped = this.#messageAttack.get(messageId) ?? (typeof origin === 'string' ? this.#messageAttack.get(origin) : undefined);
     const candidates = [...this.#pending.values()].filter(state => {
       if (!state.started || !state.attackObserved || isTerminal(state.ledger)
@@ -1103,7 +1103,7 @@ export class WeaponMasteryRuntime {
       if (this.isMidiSameCard(message)) return this.midiCardMatchesState(message, actor, state);
       if (mapped) return state.prepared.attackId === mapped
         && (messageId === state.ledger.attackMessageId || this.damageMessageMatchesState(message, state));
-      const flags = dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5');
+      const flags = dnd5eMessageData(message, isNative6Dnd5eVersion(this.globals.game?.system?.version));
       const author = message?.author?.id ?? message?.user?.id ?? message?.user;
       return flags?.roll?.type === 'damage' && flags?.activity?.uuid === state.prepared.activityUuid
         && flags?.item?.uuid === state.prepared.itemUuid && author === state.ledger.requesterId
@@ -1145,13 +1145,13 @@ export class WeaponMasteryRuntime {
     for (const message of collection(this.globals?.game?.messages)) {
       if (typeof message?.id === 'string' && message.id !== card.id
         && message?.flags?.[MODULE_ID]?.midiCardId === card.id
-        && dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5')?.roll?.type === 'attack') byId.set(message.id, message);
+        && dnd5eMessageData(message, isNative6Dnd5eVersion(this.globals.game?.system?.version))?.roll?.type === 'attack') byId.set(message.id, message);
     }
     return [...byId.values()];
   }
 
   private midiCardMatchesState(message: any, actor: any, state: RuntimeState): boolean {
-    const dnd = dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5');
+    const dnd = dnd5eMessageData(message, isNative6Dnd5eVersion(this.globals.game?.system?.version));
     const midi = message?.flags?.['midi-qol'];
     const author = message?.author?.id ?? message?.user?.id ?? message?.user;
     const linked = this.midiLinkedAttackMessages(message);
@@ -1174,8 +1174,8 @@ export class WeaponMasteryRuntime {
     const id = message?.flags?.[MODULE_ID]?.attackId;
     const state = typeof id === 'string' ? this.#pending.get(id) : undefined;
     if (state && this.bindAttackMessage(state, message) && this.isGM()) void this.persistState(state).catch(error => this.report(error));
-    else if (state && dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5')?.activity?.uuid === state.prepared.activityUuid && dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5')?.item?.uuid === state.prepared.itemUuid && (message?.author?.id ?? message?.user?.id ?? message?.user) === state.ledger.requesterId && message?.timestamp >= state.prepared.createdAt && message?.id) this.#messageAttack.set(message.id, state.prepared.attackId);
-    const origin = dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5')?.originatingMessage;
+    else if (state && dnd5eMessageData(message, isNative6Dnd5eVersion(this.globals.game?.system?.version))?.activity?.uuid === state.prepared.activityUuid && dnd5eMessageData(message, isNative6Dnd5eVersion(this.globals.game?.system?.version))?.item?.uuid === state.prepared.itemUuid && (message?.author?.id ?? message?.user?.id ?? message?.user) === state.ledger.requesterId && message?.timestamp >= state.prepared.createdAt && message?.id) this.#messageAttack.set(message.id, state.prepared.attackId);
+    const origin = dnd5eMessageData(message, isNative6Dnd5eVersion(this.globals.game?.system?.version))?.originatingMessage;
     const originAttackId = typeof origin === 'string' ? this.#messageAttack.get(origin) : undefined;
     const originState = originAttackId ? this.#pending.get(originAttackId) : undefined;
     if (originState && message?.id && this.damageMessageMatchesState(message, originState)) {
@@ -1184,7 +1184,7 @@ export class WeaponMasteryRuntime {
   }
 
   private damageMessageMatchesState(message: any, state: RuntimeState): boolean {
-    const flags = dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5');
+    const flags = dnd5eMessageData(message, isNative6Dnd5eVersion(this.globals.game?.system?.version));
     const author = message?.author?.id ?? message?.user?.id ?? message?.user;
     return flags?.roll?.type === 'damage' && flags?.activity?.uuid === state.prepared.activityUuid
       && flags?.item?.uuid === state.prepared.itemUuid && author === state.ledger.requesterId
@@ -1228,6 +1228,8 @@ export class WeaponMasteryRuntime {
     if (!state) return { attackId: reference.attackId, status: 'failed', settlements: [], reason: 'unknown-attack' };
     if (!this.authorizedRequester(requester, state.sourceActor, state.item)) return { attackId: reference.attackId, status: 'blocked', settlements: [], reason: 'unauthorized' };
     if (isTerminal(state.ledger)) {
+      const durable = this.readLedger(state.sourceActor).find(entry => entry.attackId === state.ledger.attackId);
+      if (durable?.step !== state.ledger.step) return { attackId: reference.attackId, status: 'pending', settlements: [], reason: 'terminal-ledger-requires-gm-reconciliation' };
       const committed = state.ledger.step === 'committed';
       // Native postRollAttack may commit before rollAttack returns to our
       // wrapper. Preserve that authoritative result for the Cleave damage
@@ -1236,6 +1238,10 @@ export class WeaponMasteryRuntime {
         ...(committed && state.ledger.outcome ? { outcome: state.ledger.outcome } : {}), settlements: [] };
     }
     if (!state.started) return { attackId: reference.attackId, status: 'failed', settlements: [], reason: 'attack-not-started' };
+    const durableStart = this.readLedger(state.sourceActor).find(entry => entry.attackId === state.ledger.attackId);
+    if (state.ledger.steps.started !== 'started' || durableStart?.steps?.started !== 'started') {
+      return { attackId: reference.attackId, status: 'pending', settlements: [], reason: 'started-attack-requires-gm-reconciliation' };
+    }
     const actual = await this.actualOutcome(state, outcome);
     if (actual.outcome === 'failed' || actual.outcome === 'cancelled') return { attackId: reference.attackId, status: 'failed', settlements: [], reason: 'missing-authoritative-outcome' };
     state.prepared.outcome = actual.outcome;
@@ -1320,20 +1326,39 @@ export class WeaponMasteryRuntime {
     const state = await this.resolveState(prepared);
     if (!state) return { attackId: prepared.attackId, status: 'cancelled', settlements: [] };
     if (!this.authorizedRequester(requester, state.sourceActor, state.item)) return { attackId: prepared.attackId, status: 'blocked', settlements: [], reason: 'unauthorized' };
+    if (state.ledger.step === 'committed' || state.ledger.step === 'cancelled') {
+      const durable = this.readLedger(state.sourceActor).find(entry => entry.attackId === state.ledger.attackId);
+      if (durable?.step !== state.ledger.step) return { attackId: prepared.attackId, status: 'pending', settlements: [], reason: 'terminal-ledger-requires-gm-reconciliation' };
+    }
     if (state.ledger.step === 'committed') return { attackId: prepared.attackId, status: 'committed', settlements: [] };
     if (state.ledger.step === 'cancelled') return { attackId: prepared.attackId, status: 'cancelled', settlements: [] };
     if (state.started) return { attackId: prepared.attackId, status: 'pending', settlements: [], reason: 'started-attack-requires-gm-reconciliation' };
+    if (state.ledger.steps.prepared !== 'prepared') return { attackId: prepared.attackId, status: 'pending', settlements: [], reason: 'preparation-requires-gm-reconciliation' };
+    if (!this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
     for (const reservation of state.prepared.reservations) {
       if (reservation.ticket.state !== 'reserved') continue;
       const actor = await fromUuid(this.globals, reservation.actorUuid) ?? (reservation.actorUuid === actorUuid(state.sourceActor) ? state.sourceActor : undefined);
+      if (!this.isGM() || !this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
       const api = customConditionsApi(this.globals);
       if (actor && api?.cancel) {
         try { await api.cancel(actor, reservation.ticket); } catch { /* stale cancellation is already terminal */ }
+        if (!this.isGM()) throw new Error('Active GM changed during weapon effect cancellation.');
+        if (!this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
       }
     }
+    if (!this.isGM()) throw new Error('Active GM changed before attack cancellation persistence.');
+    if (!this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
+    const priorStep = state.ledger.step;
+    const priorCancelled = state.ledger.steps.cancelled;
     state.ledger.step = 'cancelled';
     state.ledger.steps.cancelled = 'cancelled';
-    await this.persistState(state);
+    try { await this.persistState(state); }
+    catch (error) {
+      state.ledger.step = priorStep;
+      if (priorCancelled === undefined) delete state.ledger.steps.cancelled;
+      else state.ledger.steps.cancelled = priorCancelled;
+      throw error;
+    }
     return { attackId: prepared.attackId, status: 'cancelled', settlements: [] };
   }
 
@@ -1341,27 +1366,60 @@ export class WeaponMasteryRuntime {
     const state = await this.resolveState(prepared);
     if (!state) throw new Error('Unknown weapon attack.');
     if (isTerminal(state.ledger)) throw new Error('Attack is already terminal.');
-    if (state.started) return state.prepared;
-    const api = customConditionsApi(this.globals);
+    if (state.ledger.steps.prepared !== 'prepared') throw new Error('Attack preparation requires GM reconciliation.');
+    if (state.started) {
+      if (state.ledger.steps.started === 'started'
+        && state.prepared.reservations.every(reservation => reservation.ticket.state !== 'reserved')) return state.prepared;
+      throw new Error('Attack start requires GM reconciliation.');
+    }
+    if (state.prepared.reservations.some(reservation => reservation.ticket.state !== 'reserved')) {
+      throw new Error('Attack start requires GM reconciliation.');
+    }
+    if (!this.isGM() || !this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
     for (const reservation of state.prepared.reservations) {
       if (reservation.ticket.state !== 'reserved') continue;
       const actor = await fromUuid(this.globals, reservation.actorUuid) ?? (reservation.actorUuid === actorUuid(state.sourceActor) ? state.sourceActor : undefined);
-      if (!actor || typeof api?.start !== 'function') throw new Error('Weapon effect reservation actor is unavailable.');
+      if (!this.isGM() || !this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
+      if (!actor || typeof customConditionsApi(this.globals)?.start !== 'function') throw new Error('Weapon effect reservation actor is unavailable.');
+      // Claim the started state before a non-transactional CC call. If a later
+      // reservation or dependency fails, cancellation must require GM review.
+      if (!state.started) {
+        state.started = true;
+        state.ledger.step = 'started';
+        await this.persistState(state);
+      }
+      if (!this.isGM() || !this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
+      const api = customConditionsApi(this.globals);
+      if (typeof api?.start !== 'function') throw new Error('Weapon effect reservation API is unavailable.');
       reservation.ticket = await api.start(actor, reservation.ticket);
+      if (!this.isGM()) throw new Error('Active GM changed during weapon effect start.');
+      if (!this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
+      await this.persistState(state);
     }
-    state.started = true;
-    state.ledger.step = 'started';
+    if (!state.started) {
+      if (!this.isGM() || !this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
+      state.started = true;
+      state.ledger.step = 'started';
+    }
+    if (!this.isGM()) throw new Error('Active GM changed before attack start completion.');
+    if (!this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
     state.ledger.steps.started = 'started';
-    await this.persistState(state);
+    try { await this.persistState(state); }
+    catch (error) { delete state.ledger.steps.started; throw error; }
     return state.prepared;
   }
 
   private async commitReservations(state: RuntimeState): Promise<void> {
-    const api = customConditionsApi(this.globals);
     for (const reservation of state.prepared.reservations) {
       const actor = await fromUuid(this.globals, reservation.actorUuid) ?? (reservation.actorUuid === actorUuid(state.sourceActor) ? state.sourceActor : undefined);
+      if (!this.isGM() || !this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
+      const api = customConditionsApi(this.globals);
       if (!actor || typeof api?.commit !== 'function') continue;
-      try { await api.commit(actor, reservation.ticket); } catch (error) {
+      try {
+        await api.commit(actor, reservation.ticket);
+        if (!this.isGM()) throw new Error('Active GM changed during weapon effect commit.');
+        if (!this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
+      } catch (error) {
         if (!String(errorMessage(error)).toLowerCase().includes('stale')) throw error;
       }
     }
@@ -1422,6 +1480,8 @@ export class WeaponMasteryRuntime {
           ? { reference: 'source', phase: 'start', turns: 1 }
           : undefined,
       });
+      if (!this.isGM()) throw new Error('Active GM changed during weapon effect application.');
+      if (!this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
       this.requireAppliedWeaponEffect(api, target, created, effectKind, settlement, sourceRef.actorUuid, targetRef.actorUuid);
       return true;
     }
@@ -1436,6 +1496,8 @@ export class WeaponMasteryRuntime {
         target: targetRef,
         expires: { reference: 'source', phase: 'end', turns: 1 },
       });
+      if (!this.isGM()) throw new Error('Active GM changed during weapon effect application.');
+      if (!this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
       this.requireAppliedWeaponEffect(api, source, created, 'vex', settlement, sourceRef.actorUuid, targetRef.actorUuid);
       return true;
     }
@@ -1581,7 +1643,7 @@ export class WeaponMasteryRuntime {
       }
       return true;
     }
-    const native6 = this.globals.game?.system?.version === '6.0.5';
+    const native6 = isNative6Dnd5eVersion(this.globals.game?.system?.version);
     // Both native attack and damage messages default to game.user.targets.
     // Bind the selected child explicitly without changing that user selection.
     const nativeTargets = [{ name: target.name, img: target.img, actor: actorUuid(target), token: documentUuid(token), ac: targetAc }];
@@ -1733,7 +1795,7 @@ export class WeaponMasteryRuntime {
       lightExtra = history.some(entry => entry.lightAttack && entry.itemUuid !== itemUuid(item) && entry.steps.attack === 'attack')
         && !history.some(entry => entry.lightExtraAttack && entry.step !== 'cancelled' && entry.step !== 'failed');
     }
-    const reservations = await this.reserveMatchingEffects(actor, target, id, actorUuid(target), documentUuid(tokenDocument));
+    const reservations: WeaponEffectReservationState[] = [];
     const now = Date.now();
     const prepared: PreparedWeaponUse = {
       schemaVersion: 1, attackId: id, sourceActorUuid: actorId, actorUuid: actorId,
@@ -1748,7 +1810,8 @@ export class WeaponMasteryRuntime {
       schemaVersion: 1, attackId: id, sourceActorUuid: actorId, itemUuid: itemUuid(item), activityUuid: activityUuid(activity),
       targetActorUuid: actorUuid(target), targetTokenUuid: documentUuid(tokenDocument),
       parentAttackId: prepared.parentAttackId, turnKey: turn.key,
-      step: 'prepared', steps: { prepared: 'prepared' }, reservations, usedRuleIds: [],
+      // An absent prepared marker is a durable, non-runnable preparation claim.
+      step: 'prepared', steps: {}, reservations, usedRuleIds: [],
       createdAt: now, updatedAt: now, requesterId: requester.id,
       lightAttack: isLightWeapon(item) && !offhand && prepared.action === 'attack',
       lightExtraAttack: lightExtra, attackMode: request.attackMode,
@@ -1756,7 +1819,21 @@ export class WeaponMasteryRuntime {
     };
     const state: RuntimeState = { prepared, sourceActor: actor, item, activity, targetActor: target, targetToken: tokenDocument?.object ?? tokenDocument, ledger, started: false, attackObserved: false, damageObserved: false };
     this.#pending.set(id, state);
+    // The source Actor claim must exist before any nontransactional CC reserve.
     await this.persistState(state);
+    await this.reserveMatchingEffects(actor, target, id, async reservation => {
+      reservations.push(reservation);
+      prepared.modifiers = this.modifiersFromReservations(reservations);
+      if (!this.isGM()) throw new Error('Active GM changed during weapon effect reservation.');
+      if (!this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
+      await this.persistState(state);
+    }, actorUuid(target), documentUuid(tokenDocument));
+    prepared.modifiers = this.modifiersFromReservations(reservations);
+    if (!this.isGM()) throw new Error('Active GM changed before attack preparation completion.');
+    if (!this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
+    ledger.steps.prepared = 'prepared';
+    try { await this.persistState(state); }
+    catch (error) { delete ledger.steps.prepared; throw error; }
     return prepared;
   }
 
@@ -1777,7 +1854,8 @@ export class WeaponMasteryRuntime {
 
   private async finalizeSelectionAsGM(reference: PreparedWeaponUse, selection: WeaponUseRequest, requester: any): Promise<PreparedWeaponUse> {
     const state = await this.resolveState(reference);
-    if (!state || state.started || isTerminal(state.ledger) || !this.authorizedRequester(requester, state.sourceActor, state.item)) throw new Error('Attack selection is no longer editable.');
+    if (!state || state.started || isTerminal(state.ledger) || state.ledger.steps.prepared !== 'prepared'
+      || !this.authorizedRequester(requester, state.sourceActor, state.item)) throw new Error('Attack selection is no longer editable.');
     const config = state.ledger.configuration;
     const selected = config?.mastery === 'native' ? selection.selectedMasteryRuleId ?? state.prepared.selectedMasteryRuleId : config?.mastery;
     const unlocked = nativeMasteryUnlocked(state.sourceActor, state.item, masteryQualificationKind(config, selected));
@@ -1804,10 +1882,12 @@ export class WeaponMasteryRuntime {
     return serializePrepared(state.prepared);
   }
 
-  private async reserveMatchingEffects(sourceActor: any, target: any, attackId: string, targetActorUuid?: string, targetTokenUuid?: string): Promise<WeaponEffectReservationState[]> {
+  private async reserveMatchingEffects(sourceActor: any, target: any, attackId: string,
+    onReserved: (reservation: WeaponEffectReservationState) => Promise<void>,
+    targetActorUuid?: string, targetTokenUuid?: string): Promise<void> {
+    if (!this.isGM() || !this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
     const api = customConditionsApi(this.globals);
-    if (!api || typeof api.list !== 'function' || typeof api.reserve !== 'function') return [];
-    const reserved: WeaponEffectReservationState[] = [];
+    if (!api || typeof api.list !== 'function' || typeof api.reserve !== 'function') throw new Error('Weapon effect reservation API is unavailable.');
     const sourceId = actorUuid(sourceActor);
     const targetId = targetActorUuid ?? actorUuid(target);
     const candidates: Array<{ actor: any; entry: any; targetActorUuid?: string }> = [];
@@ -1821,23 +1901,21 @@ export class WeaponMasteryRuntime {
       if (instance.effectKind === 'sap' && sourceId && instance.target?.actorUuid === sourceId) candidates.push({ actor: sourceActor, entry, targetActorUuid: sourceId });
     }
     for (const candidate of candidates) {
-      try {
-        const ticket = await api.reserve(candidate.actor, {
-          attackId,
-          effectId: candidate.entry.id,
-          ...(candidate.targetActorUuid ? { targetActorUuid: candidate.targetActorUuid } : {}),
-          ...(targetTokenUuid ? { targetTokenUuid } : {}),
-        });
-        if (ticket) reserved.push({ actorUuid: actorUuid(candidate.actor)!, ticket, kind: candidate.entry.instance?.effectKind, targetActorUuid: candidate.targetActorUuid });
-      } catch (error) {
-        for (const prior of reserved) {
-          const actor = prior.actorUuid === sourceId ? sourceActor : target;
-          try { await api.cancel(actor, prior.ticket); } catch { /* preserve original reservation failure */ }
-        }
-        throw error;
+      if (!this.isGM() || !this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
+      const currentApi = customConditionsApi(this.globals);
+      if (typeof currentApi?.reserve !== 'function') throw new Error('Weapon effect reservation API is unavailable.');
+      const ticket = await currentApi.reserve(candidate.actor, {
+        attackId,
+        effectId: candidate.entry.id,
+        ...(candidate.targetActorUuid ? { targetActorUuid: candidate.targetActorUuid } : {}),
+        ...(targetTokenUuid ? { targetTokenUuid } : {}),
+      });
+      if (ticket) {
+        const reservation = { actorUuid: actorUuid(candidate.actor)!, ticket,
+          kind: candidate.entry.instance?.effectKind, targetActorUuid: candidate.targetActorUuid };
+        await onReserved(reservation);
       }
     }
-    return reserved;
   }
 
   private modifiersFromReservations(reservations: WeaponEffectReservationState[]): { advantage: boolean; disadvantage: boolean } {
@@ -1907,7 +1985,7 @@ export class WeaponMasteryRuntime {
   }
 
   private bindAttackMessage(state: RuntimeState, message: any): boolean {
-    const flags = dnd5eMessageData(message, this.globals.game?.system?.version === '6.0.5');
+    const flags = dnd5eMessageData(message, isNative6Dnd5eVersion(this.globals.game?.system?.version));
     const moduleFlags = message?.flags?.[MODULE_ID];
     const author = message?.author?.id ?? message?.user?.id ?? message?.user;
     const speaker = message?.speaker;
@@ -1991,11 +2069,14 @@ export class WeaponMasteryRuntime {
 
 
   private async persistState(state: RuntimeState): Promise<void> {
-    // A player's state is a local transport cache, never a replacement for the GM ledger.
-    if (!this.isGM()) return;
+    // Player transport state is handled by rememberRemotePrepared, never by this GM-only durable writer.
+    if (!this.isGM()) throw new Error('Active GM changed before ledger persistence.');
     const key = actorUuid(state.sourceActor)!;
     const run = (this.#actorWrites.get(key) ?? Promise.resolve()).catch(() => undefined).then(async () => {
       if (!this.isGM()) throw new Error('Active GM changed before ledger persistence.');
+      if (!this.dependencies().ready || !triggerEngineApi(this.globals)) {
+        throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
+      }
       state.ledger.updatedAt = Date.now();
       const entries = this.readLedger(state.sourceActor).filter(entry => entry.attackId !== state.ledger.attackId);
       entries.push(clone(state.ledger));
@@ -2007,9 +2088,14 @@ export class WeaponMasteryRuntime {
       if (typeof state.sourceActor?.setFlag !== 'function') throw new Error('Actor ledger persistence is unavailable.');
       await state.sourceActor.setFlag(MODULE_ID, LEDGER_FLAG, next);
       this.#ledgerCache.set(key, next);
+      if (!this.isGM()) throw new Error('Active GM changed during ledger persistence.');
+      if (!this.dependencies().ready) throw new Error('Weapon mastery dependencies or exact runtime are unavailable.');
       const phase = state.ledger.step;
-      if (phase === 'prepared' || phase === 'committed' || phase === 'cancelled') {
-        await triggerEngineApi(this.globals).publishExternal({
+      if ((phase === 'prepared' && state.ledger.steps.prepared === 'prepared')
+        || phase === 'committed' || phase === 'cancelled') {
+        const trigger = triggerEngineApi(this.globals);
+        if (!trigger) throw new Error('Trigger Engine became unavailable after ledger persistence.');
+        await trigger.publishExternal({
           schemaVersion: 1, namespace: MODULE_ID,
           eventId: state.prepared.attackId + ':' + phase, type: 'attack.' + phase,
           attackId: state.prepared.attackId, sourceActorUuid: key,

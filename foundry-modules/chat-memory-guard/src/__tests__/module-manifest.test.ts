@@ -16,7 +16,7 @@ describe('chat memory guard module manifest', () => {
     });
     expect(manifest.relationships.systems[0]).toMatchObject({
       id: 'dnd5e',
-      compatibility: { minimum: '6.0.2', verified: '6.0.2', maximum: '6.0.5' },
+      compatibility: { minimum: '6.0.2', verified: '6.0.2', maximum: '6.0.6' },
     });
     expect(manifest.relationships.recommends).toBeUndefined();
     expect(manifest.languages).toEqual(expect.arrayContaining([

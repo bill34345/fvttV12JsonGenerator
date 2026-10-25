@@ -26,6 +26,7 @@
 - `bun run build:session-monitor`
 - `bun run typecheck:foundry-modules`
 - 运行时变化可以执行目的明确的项目本地 smoke；完成后恢复本轮拥有的模块配置、世界配置、专用 Chrome 和临时对象，保留可复用服务及验收原件。
+- `test:session-monitor`中的companion/session-monitor.test.ts会启动真实临时Chrome。普通非浏览器worker只跑本次相关src/release契约；需要该Chrome场景时先走根Chrome执行协议，不把隐藏浏览器副作用当纯unit。当前606只改manifest上限，module/companion/schema版本仍1.1.2；真实会话门保持原范围。
 
 ## 完成标准
 

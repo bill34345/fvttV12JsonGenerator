@@ -31,11 +31,14 @@ export interface ApplyAvatarInput {
   resolveContext(systemAvatar?: string): AvatarContext;
   thumbnail?: AvatarThumbnailCache;
   defaultAvatar?: string;
+  /** The owning runtime invalidates work when settings change or it stops. */
+  isCurrent?(): boolean;
 }
 
 const generations = new WeakMap<object, number>();
 
 export async function applyAvatarToCard(input: ApplyAvatarInput): Promise<void> {
+  if (input.isCurrent?.() === false) return;
   const avatar = input.card.querySelector('.message-header .message-sender .avatar');
   if (!avatar) return;
   const generation = (generations.get(avatar as object) ?? 0) + 1;
@@ -74,7 +77,7 @@ export async function applyAvatarToCard(input: ApplyAvatarInput): Promise<void> 
     input.settings.thumbnailMaxEdge,
     input.settings.thumbnailQuality,
   );
-  if (generations.get(avatar as object) !== generation) return;
+  if (input.isCurrent?.() === false || generations.get(avatar as object) !== generation) return;
   media.src = thumbnail ?? input.defaultAvatar ?? 'icons/svg/mystery-man.svg';
 }
 

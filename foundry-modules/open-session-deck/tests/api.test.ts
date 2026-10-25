@@ -6,6 +6,7 @@ function target(calls: string[]): DeckModuleApi {
   return {
     openPanel: async () => { calls.push('openPanel'); },
     openPopout: async () => { calls.push('openPopout'); },
+    openHelp: async () => { calls.push('openHelp'); },
     focusPopout: () => { calls.push('focusPopout'); return true; },
     close: async (mode) => { calls.push(`close:${mode}`); },
     refresh: () => { calls.push('refresh'); },
@@ -19,6 +20,7 @@ describe('public module API', () => {
     for (const invoke of [
       () => api.openPanel(),
       () => api.openPopout(),
+      () => api.openHelp(),
       () => api.focusPopout(),
       () => api.close('all'),
       () => api.refresh(),
@@ -35,9 +37,10 @@ describe('public module API', () => {
     controller = target(calls);
     await api.openPanel();
     await api.openPopout();
+    await api.openHelp();
     expect(api.focusPopout()).toBeTrue();
     await api.close('popout');
     api.refresh();
-    expect(calls).toEqual(['openPanel', 'openPopout', 'focusPopout', 'close:popout', 'refresh']);
+    expect(calls).toEqual(['openPanel', 'openPopout', 'openHelp', 'focusPopout', 'close:popout', 'refresh']);
   });
 });

@@ -14,11 +14,19 @@ import {
   type SyncTarget,
 } from './core.ts';
 import { MODULE_ID, MODULE_VERSION, SETTING_ENABLED, SYNC_OPTION_KEY } from './constants.ts';
+import { TokenSyncHelp } from './help.ts';
+
+const help = new TokenSyncHelp({
+  isGM: () => game.user?.isGM === true,
+  suiteModule: () => game.modules?.get?.('fvtt-suite-console'),
+  applicationV2: () => (globalThis as any).foundry?.applications?.api?.ApplicationV2,
+});
 
 const pending = createIntentStore();
 const confirmedStatus = createIntentStore();
 let recentContextMenu: { sourceTokenKey: string; statusId: string; active: boolean; createdAt: number } | null = null;
 let gradedQueue: Promise<void> = Promise.resolve();
+let gradedSyncBlocked = false;
 let gradedRightGesture = 0;
 let handledGradedRight: { gesture: number; sourceTokenKey: string; statusId: string } | null = null;
 
@@ -80,6 +88,47 @@ function gradedMaximum(statusId: string): number | null {
   return Number.isInteger(levels) && levels > 0 ? levels : null;
 }
 
+/** Core does not await dnd5e's descendant onCreate legacy-exhaustion update. */
+async function writeGradedStatus(actor: any, statusId: string, levels: number, previousLevel: number): Promise<void> {
+  const sourceAttributes = actor?._source?.system?.attributes;
+  const effectId = statusDefinition(statusId)?._id;
+  const effectExists = effectId ? Boolean(actor?.effects?.get?.(effectId)) : false;
+  if (statusId !== 'exhaustion' || previousLevel !== 0 || levels <= 0 || !sourceAttributes
+    || sourceAttributes.exhaustion || effectExists) {
+    await actor.toggleStatusEffect(statusId, { levels });
+    return;
+  }
+
+  const initiatingUserId = localUserId();
+  if (!initiatingUserId || typeof Hooks.on !== 'function' || typeof Hooks.off !== 'function') {
+    throw new Error('Native exhaustion synchronization hooks are unavailable.');
+  }
+  let hookId: unknown;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const synchronized = new Promise<void>((resolve) => {
+    hookId = Hooks.on('updateActor', (updated: any, changes: any, options: any, userId: string) => {
+      if (userId !== initiatingUserId || (updated !== actor && updated?.uuid !== actor?.uuid)) return;
+      const level = changes?.system?.attributes?.exhaustion ?? changes?.['system.attributes.exhaustion'];
+      // dnd5e records the derived level in _preUpdate. Its later, unawaited
+      // _onUpdateExhaustion is harmless only when the recorded delta is zero.
+      const previous = options?.dnd5e?.originalExhaustion ?? options?.['dnd5e.originalExhaustion'];
+      if (level === 1 && previous === 1 && updated?._source?.system?.attributes?.exhaustion === 1) resolve();
+    });
+  });
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timeoutId = setTimeout(() => {
+      gradedSyncBlocked = true;
+      reject(new Error('Native exhaustion synchronization did not finish; further graded HUD actions are blocked.'));
+    }, 10_000);
+  });
+  try {
+    await Promise.race([Promise.all([actor.toggleStatusEffect(statusId, { levels }), synchronized]), timeout]);
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+    if (hookId !== undefined) Hooks.off('updateActor', hookId);
+  }
+}
+
 function movementActions(): Record<string, any> | undefined {
   return CONFIG.Token?.movement?.actions;
 }
@@ -139,13 +188,13 @@ function captureStatusIntent(app: any, event: Event): void {
     // A queued job snapshots levels when it starts, so rapid +1, +1 clicks
     // observe the first completed update rather than racing from one value.
     gradedQueue = gradedQueue.then(async () => {
-      if (!isEnabled() || localUserId() !== userId) return;
+      if (!isEnabled() || gradedSyncBlocked || localUserId() !== userId) return;
       const currentFailures = validateTargets(targets, 'status', game.user);
       if (currentFailures.length) {
         notify('warn', failureMessage(currentFailures));
         return;
       }
-      await applyGradedStatusDelta(targets, statusId, effectId, maxLevel, right ? -1 : 1);
+      await applyGradedStatusDelta(targets, statusId, effectId, maxLevel, right ? -1 : 1, writeGradedStatus);
     }).catch((error: unknown) => {
       notify('error', `${localize('errors.syncFailed')}: ${String(error)}`);
       console.error(`[${MODULE_ID}] graded status transaction ${transactionId} failed`, error);
@@ -368,6 +417,7 @@ function setEnabled(active: boolean): void {
     return;
   }
   if (!active) {
+    gradedSyncBlocked = false;
     pending.clear();
     confirmedStatus.clear();
     recentContextMenu = null;
@@ -389,6 +439,17 @@ function addSceneControl(controls: Record<string, any>): void {
     toggle: true,
     active: isEnabled(),
     onChange: (_event: Event, active: boolean) => setEnabled(active),
+  };
+  tokenControl.tools.selectedTokenSyncHelp = {
+    name: 'selectedTokenSyncHelp',
+    title: `${MODULE_ID}.controls.help.name`,
+    icon: 'fa-solid fa-circle-question',
+    order: tokenControl.tools.selectedTokenSync.order + 1,
+    button: true,
+    onChange: () => help.open().catch((error: unknown) => {
+      notify('error', localize('errors.helpFailed'));
+      console.error(`[${MODULE_ID}] help could not open`, error);
+    }),
   };
 }
 

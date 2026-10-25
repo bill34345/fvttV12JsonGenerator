@@ -61,6 +61,18 @@ function fixture() {
 }
 
 describe('reviewed native6 weapon writer', () => {
+  test('6.0.6 writes canonical Slow changes and retains the public native6 capability', async () => {
+    const { globals, runtime, target, input } = fixture();
+    globals.game.system.version = '6.0.6';
+    const api = createWeaponEffectsApi(runtime);
+    expect(api.capabilities.native6Effects).toBe(1);
+    const effect = await api.apply(target, input(10));
+    expect(effect.changes).toBeUndefined();
+    expect(effect.system.changes).toContainEqual(expect.objectContaining({
+      type: 'add', key: 'system.attributes.movement.speeds.walk', value: '-10',
+    }));
+    await api.remove(target, effect.id);
+  });
   test('persists canonical rows, selects only strongest Slow and preserves row IDs at an unchanged turn', async () => {
     const { globals, source, target, runtime, input, writes } = fixture();
     const api = createWeaponEffectsApi(runtime);
@@ -97,9 +109,10 @@ describe('reviewed native6 weapon writer', () => {
     for (const [core, system, id, supported, native] of [
       ['14.364', '5.3.3', 'dnd5e', true, false],
       ['14.368', '6.0.5', 'dnd5e', true, true],
+      ['14.368', '6.0.6', 'dnd5e', true, true],
       ['14.364', '6.0.5', 'dnd5e', false, false],
       ['14.368', '5.3.3', 'dnd5e', true, false],
-      ['14.368', '6.0.6', 'dnd5e', false, false],
+      ['14.368', '6.0.7', 'dnd5e', false, false],
       ['14.368', '6.0.5', 'pf2e', false, false],
     ] as const) {
       const { globals, runtime, target, input } = fixture();

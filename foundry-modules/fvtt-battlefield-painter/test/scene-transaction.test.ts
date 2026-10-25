@@ -45,19 +45,34 @@ const plan = (): ScenePlan => ({
   Wall: [],
 });
 
+const sceneFixture = (calls: string[], failType?: string) => {
+  const collections: Record<string, Array<Record<string, unknown>>> = {
+    Tile: [], Region: [], AmbientLight: [], AmbientSound: [], Wall: [],
+  };
+  const sequence: Record<string, number> = {};
+  return {
+    tiles: collections.Tile, regions: collections.Region, lights: collections.AmbientLight,
+    sounds: collections.AmbientSound, walls: collections.Wall,
+    async createEmbeddedDocuments(type: string, sources: Array<Record<string, unknown>>) {
+      calls.push(`create:${type}`);
+      if (type === failType) throw new Error(`invalid ${type.toLowerCase()} source`);
+      const documents = sources.map(source => ({ ...structuredClone(source), id: `${type.toLowerCase()}-${sequence[type] = (sequence[type] ?? 0) + 1}` }));
+      collections[type]!.push(...documents);
+      return documents;
+    },
+    async deleteEmbeddedDocuments(type: string, ids: string[]) {
+      calls.push(`delete:${type}:${ids.join(",")}`);
+      const collection = collections[type]!;
+      collection.splice(0, collection.length, ...collection.filter(document => !ids.includes(document.id as string)));
+      return [];
+    },
+  };
+};
+
 describe("scene transaction", () => {
   test("creates embedded documents in deterministic order", async () => {
     const calls: string[] = [];
-    const scene = {
-      async createEmbeddedDocuments(type: string) {
-        calls.push(`create:${type}`);
-        return [{ id: `${type.toLowerCase()}-1` }];
-      },
-      async deleteEmbeddedDocuments(type: string) {
-        calls.push(`delete:${type}`);
-        return [];
-      },
-    };
+    const scene = sceneFixture(calls);
 
     await expect(applyScenePlan(scene, plan())).resolves.toEqual({
       Tile: ["tile-1"],
@@ -71,17 +86,7 @@ describe("scene transaction", () => {
 
   test("rolls back already-created documents in reverse order", async () => {
     const calls: string[] = [];
-    const scene = {
-      async createEmbeddedDocuments(type: string) {
-        calls.push(`create:${type}`);
-        if (type === "Region") throw new Error("invalid region source");
-        return [{ id: "tile-1" }];
-      },
-      async deleteEmbeddedDocuments(type: string, ids: string[]) {
-        calls.push(`delete:${type}:${ids.join(",")}`);
-        return [];
-      },
-    };
+    const scene = sceneFixture(calls, "Region");
 
     await expect(applyScenePlan(scene, plan())).rejects.toThrow(
       "Terrain transaction failed while creating Region",
@@ -112,7 +117,7 @@ describe("scene transaction", () => {
             alpha: 0.5,
             animation: { type: "torch", speed: 3, intensity: 2 },
           },
-          flags: plan().Tile[0]!.flags,
+          flags: { "fvtt-battlefield-painter": { ...plan().Tile[0]!.flags["fvtt-battlefield-painter"], role: "terrain-light" } },
         },
       ],
       AmbientSound: [
@@ -126,21 +131,11 @@ describe("scene transaction", () => {
           easing: true,
           repeat: true,
           walls: true,
-          flags: plan().Tile[0]!.flags,
+          flags: { "fvtt-battlefield-painter": { ...plan().Tile[0]!.flags["fvtt-battlefield-painter"], role: "terrain-sound" } },
         },
       ],
     };
-    const scene = {
-      async createEmbeddedDocuments(type: string) {
-        calls.push(`create:${type}`);
-        if (type === "AmbientSound") throw new Error("invalid sound source");
-        return [{ id: `${type.toLowerCase()}-1` }];
-      },
-      async deleteEmbeddedDocuments(type: string, ids: string[]) {
-        calls.push(`delete:${type}:${ids.join(",")}`);
-        return [];
-      },
-    };
+    const scene = sceneFixture(calls, "AmbientSound");
 
     await expect(applyScenePlan(scene, p2Plan)).rejects.toThrow(
       "Terrain transaction failed while creating AmbientSound",

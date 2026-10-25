@@ -27,6 +27,7 @@ function fixture(input: { legacy?: boolean; stacks?: number; ifs?: boolean; oldW
       settings: { get: (module: string, key: string) => settings.get(`${module}.${key}`),
         set: async (module: string, key: string, value: unknown) => { settings.set(`${module}.${key}`, value); } },
       socket: { on: (key: string, fn: any) => { sockets.set(key, fn); },
+        off: (key: string, fn: any) => { if (sockets.get(key) === fn) sockets.delete(key); },
         emit: (_key: string, payload: any) => { emits.push(payload); } },
     },
     Hooks: { on: (key: string, fn: any) => { hookMap.set(key, fn); return key; }, off() {} },
@@ -87,6 +88,48 @@ function hpEvent(actor: any, oldHp: number, newHp: number, modified: number) {
 }
 
 describe('Custom Conditions injury ownership', () => {
+  test('releases only its own socket listener across stop, restart, and socket replacement', () => {
+    const event = `module.${CC}`;
+    const socket = () => {
+      const listeners = new Map<string, Set<(...args: any[]) => unknown>>();
+      return {
+        on(name: string, handler: (...args: any[]) => unknown) {
+          if (!listeners.has(name)) listeners.set(name, new Set());
+          listeners.get(name)!.add(handler);
+        },
+        off(name: string, handler: (...args: any[]) => unknown) { listeners.get(name)?.delete(handler); },
+        handlers(name: string) { return [...(listeners.get(name) ?? [])]; },
+      };
+    };
+    const original = socket();
+    const foreign = () => undefined;
+    original.on(event, foreign);
+    const globals: any = {
+      game: {
+        version: '14.368', system: { id: 'dnd5e', version: '6.0.6' },
+        socket: original, modules: new Map(), actors: [],
+        settings: { get: () => false },
+      },
+      Hooks: { on: () => 'owned', off() {} },
+      CONFIG: { statusEffects: [] },
+    };
+    const runtime = new InjuryRuntime(globals, () => false);
+    runtime.start();
+    runtime.start();
+    expect(original.handlers(event)).toHaveLength(2);
+    const replacement = socket();
+    const other = () => undefined;
+    replacement.on(event, other);
+    globals.game.socket = replacement;
+    runtime.stop();
+    expect(original.handlers(event)).toEqual([foreign]);
+    expect(replacement.handlers(event)).toEqual([other]);
+    runtime.start();
+    expect(replacement.handlers(event)).toHaveLength(2);
+    runtime.stop();
+    expect(replacement.handlers(event)).toEqual([other]);
+  });
+
   test.each([['14.364', '5.3.3'], ['14.368', '6.0.5']])('uses captured prepared HP for nullable source maxima on %s/%s', async (core, system) => {
     const { runtime, actor, globals } = fixture();
     globals.game.version = core; globals.game.system.version = system;
@@ -317,6 +360,11 @@ describe('Custom Conditions injury ownership', () => {
     expect(injurySupported(globals)).toBeTrue();
     globals.game.version = '14.368'; globals.game.system.version = '6.0.5';
     expect(injurySupported(globals)).toBeTrue();
+    globals.game.system.version = '6.0.6';
+    expect(injurySupported(globals)).toBeTrue();
+    const currentDetails: Record<string, unknown> = {};
+    expect(applyNineteenCritical(currentDetails, 19, '6.0.6')).toBeTrue();
+    expect(currentDetails.outcome).toBe('revive');
     globals.game.system.version = '6.0.2';
     expect(injurySupported(globals)).toBeFalse();
     const details: Record<string, unknown> = {};

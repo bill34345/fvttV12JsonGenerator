@@ -42,9 +42,77 @@
       "本次不覆盖施法/战斗自动化、整本Adventure或全部上游译文；蓝宝石尘显示适配器限定Core14/dnd5e6.0.6，升级后需复核。",
       "本手册仅维护外部项目入口；该项目源码、测试与架构在其独立仓库维护。"
     ],
-    "keywords": ["Babele", "Babel", "中文补丁", "汉化", "水晶浩劫", "上游", "三方合并"],
-    "sources": ["docs/runbooks/babele-zh-maintenance.md"],
-    "watch": ["docs/runbooks/babele-zh-maintenance.md"]
+    "keywords": [
+      "Babele",
+      "Babel",
+      "中文补丁",
+      "汉化",
+      "水晶浩劫",
+      "上游",
+      "三方合并"
+    ],
+    "sources": [
+      "docs/runbooks/babele-zh-maintenance.md"
+    ],
+    "watch": [
+      "docs/runbooks/babele-zh-maintenance.md"
+    ]
+  },
+  {
+    "id": "version-selection",
+    "title": "选择 Foundry 与 dnd5e 版本",
+    "category": "maintain",
+    "summary": "先确认 Foundry V14 与 dnd5e 的组合，再查看所需工具是否支持；5.3.3 与 6.x 的验收分别记录。",
+    "when": "第一次使用、升级系统，或不确定某个模块能否在当前世界运行时先看这里。",
+    "requires": [
+      "当前世界的 Foundry Core 版本、游戏系统名称和 dnd5e 版本。",
+      "准备使用的具体工具；同一合集中的模块可能有不同支持范围。"
+    ],
+    "steps": [
+      {
+        "title": "确认两个版本号",
+        "text": "Foundry V14 是平台版本，dnd5e 5.3.3 或 6.x 是游戏系统版本，两者不能互相代替。查看当前世界的设置/系统信息，并记录完整版本号。"
+      },
+      {
+        "title": "选择对应系统线",
+        "text": "5.x 固定使用 5.3.3；6.x 按官方稳定发布逐项适配。已有运行记录包括 14.364/5.3.3、Mirror 14.368/5.3.3 和 Next 14.368/6.0.5；Next 已完成 14.368/6.0.6 系统更新与启动读回，具体模块功能仍按各自接受记录判断，见下方支持矩阵。"
+      },
+      {
+        "title": "生成资料时显式选择 V14",
+        "text": "常规生成使用 V14、core 和关闭图标匹配。CLI 省略版本仍默认 V12，Web 初始选择 V14；V14 输出不能据此视为已支持 dnd5e 6.x。将示例路径替换为真实来源。",
+        "command": "bun run src/index.ts \"path/to/source.md\" -o \"path/to/output.json\" --fvtt-version 14 --effect-profile core --icon-mode off"
+      },
+      {
+        "title": "升级前核对具体功能",
+        "text": "先看准备使用的工具的“开始前准备”和“适用范围”，再查支持矩阵。安装成功或部分玩法通过，不能代替整个模块组合的实际接受。升级和迁移按对应流程单独处理。"
+      }
+    ],
+    "outputs": [
+      "明确的 Core/系统组合，以及所需工具的已接受范围和待核对项。"
+    ],
+    "limits": [
+      "V14 是当前主要平台；V12 保留历史兼容实现，本页不改变 CLI 默认值或删除旧功能。",
+      "当前 Forge 正式生成目标仍为 dnd5e 5.3.3；6.x 的模块适配不代表全部生成、导入或玩法已经支持。",
+      "文中精确组合来自已有支持记录，不表示本轮查到的最新官方版本或你当前世界的实装版本。"
+    ],
+    "keywords": [
+      "版本",
+      "兼容性",
+      "V14",
+      "V12",
+      "5.3.3",
+      "6.x",
+      "ServerNext",
+      "Mirror"
+    ],
+    "sources": [
+      "docs/runbooks/dnd5e-version-following.md",
+      "docs/acceptance/current-support-matrix.md"
+    ],
+    "watch": [
+      "docs/runbooks/dnd5e-version-following.md",
+      "docs/acceptance/current-support-matrix.md"
+    ]
   },
   {
     "id": "legacy-next-test-inputs",
@@ -81,9 +149,21 @@
       "非空 FVTT_LEGACY_NEXT_INPUT_ROOT 仍优先；默认回归应按来源说明清除它。",
       "离线回归不代表现行版本玩法、安装或部署接受；不操作运行中世界或服务。"
     ],
-    "keywords": ["ServerNext", "测试", "worktree", "Midi", "Classpack", "历史输入"],
-    "sources": ["docs/runbooks/legacy-next-test-inputs.md"],
-    "watch": ["tools/legacy-next-inputs/", "tests/helpers/legacy-next-inputs.mjs"]
+    "keywords": [
+      "ServerNext",
+      "测试",
+      "worktree",
+      "Midi",
+      "Classpack",
+      "历史输入"
+    ],
+    "sources": [
+      "docs/runbooks/legacy-next-test-inputs.md"
+    ],
+    "watch": [
+      "tools/legacy-next-inputs/",
+      "tests/helpers/legacy-next-inputs.mjs"
+    ]
   },
   {
     "id": "web-workbench",
@@ -709,7 +789,7 @@
       },
       {
         "title": "预览 ServerNext 自有模块首次安装",
-        "text": "先完成候选构建及目标归属核对，在本进程显式设置 FVTT_OPS_LAB_ROOT=F:/FoundryLab/foundry-v14。此命令默认只核对清单，只有加入 --apply 才首次安装到 ServerNext；拒绝已有目标、链接、陈旧 manifest 或缺失资源，不创建备份。白名单支持 TE、CC、WMP 及 Selected Token Sync 首次安装；IFS 既有包升级须走单独的完整旧树校验流程。安装不等于启用或玩法接受。",
+        "text": "先完成候选构建及目标归属核对，在本进程显式设置 FVTT_OPS_LAB_ROOT=F:/FoundryLab/foundry-v14。此命令默认只核对清单，只有加入 --apply 才首次安装到 ServerNext；拒绝已有目标、链接、陈旧 manifest 或缺失资源，不创建备份。白名单支持TE、CC、WMP、Selected Token Sync及fvtt-suite-console首次安装；IFS 既有包升级须走单独的完整旧树校验流程。安装不等于启用或玩法接受。",
         "command": "bun run foundry:ops lab install-server-next-owned-module --module-id=fvtt-trigger-engine --version=0.2.0"
       },
       {
@@ -748,6 +828,7 @@
     ],
     "limits": [
       "本机与线上均不创建备份；旧文档里会创建快照、备份或迁移副本的路径不作为本手册的推荐操作。",
+      "本地launcher使用精确小写--nobackups，旧--noBackups仅在传参时规范化，显式禁用或冲突参数会拒绝；修正只对新启动生效。已有服务须在其owner批准的维护范围核对实际备份控件，不能仅凭命令中出现字符串声称生效。",
       "server-mirror 按用户要求常驻至关机，E2E 只复用并清理自己的测试对象，不自行启停 Foundry；核对实际 dataPath、端口和活动世界，启动参数使用连续的 --key=value。",
       "不得编辑运行中世界 LevelDB；本地检查不证明线上环境正常。",
       "手册不执行运维命令，安装、重启、迁移和清理都需要按各自范围处理。",
@@ -830,20 +911,36 @@
         "command": "bun run handbook:status\nbun run handbook:build\nbun run handbook:check"
       },
       {
+        "title": "验证共享手册或导出同源内容",
+        "text": "维护阅读视图或静态宿主时使用。以与CI一致的Bun 1.3.14验证局部状态、生命周期与宿主边界；来源人工核对有效后才导出JSON。导出供后续Foundry模块构建使用，本身不安装模块或连接世界。",
+        "command": "bun run test:suite-handbook\nbun run typecheck:handbook\nbun run handbook:export"
+      },
+      {
         "title": "选择5.x固定线或6.x跟随线",
         "text": "5.x固定5.3.3；Next的6.x先从官方发布确认最新稳定tag并比较本地系统，再带该tag查Context7并核固定提交源码。Next落后时按已授权的升级流程先更新及窄验收；Wiki／开发分支返回只作导航。具体版本用于复现，不是永久上限；没有后台定时监测。"
+      },
+      {
+        "title": "准备两种手册交付",
+        "text": "人工核对delivery策略与来源后生成完整离线HTML和Foundry用户投影，再准备模块ZIP、独立manifest/HTML及校验清单。模块ZIP不带完整工程HTML；这些命令不安装、不启动服务或发布，先通过手册同步门。",
+        "command": "bun run handbook:build\nbun run handbook:export\nbun run handbook:export:foundry\nbun run release:suite-console\nbun run verify-release:suite-console"
+      },
+      {
+        "title": "只读核对独立模块包",
+        "text": "维护者使用共用校验器检查指定stage与ZIP的CRC、路径、manifest身份和逐文件字节；可额外指定模块owner的白名单。结果仅证明本地包一致性，不安装模块，也不证明实机兼容或发行许可。",
+        "command": "python tools/module-artifacts/verify.py --help"
       }
     ],
     "outputs": [
       "与具体改动对应的检查证据和来源语义结论。",
-      "随代码合并更新的 工具手册.html，可直接离线打开。"
+      "随代码合并更新的 工具手册.html，可直接离线打开。",
+      "dist/handbook/content.json：与HTML同源的内容构建产物，供后续Foundry手册使用。"
     ],
     "limits": [
       "ci:verify 包含手册一致性检查，但不自动写说明，也不保证任何发布权限。",
       "CI 固定 Bun 1.3.14；本机运行相同门禁应使用该版本。全仓覆盖率保留完整测试清单、单进程报告和既有阈值；总进程有 450 秒 watchdog，单案与子操作限额继续保留。CLI 子进程同时读取标准输出与错误输出，并在超时后回收。已通过的实机 E2E 可按产物与环境身份复用。",
       "本手册是版本快照；单独复制到其他位置的 HTML 不会自动跟随 master 更新。",
-      "内部 package 是共享能力，不是每个都需要单独启动；Forge 浏览器 runtime、法术契约与血猎手数据包由对应产品入口使用。",
-      "ServerNext当前收尾以2026-10-05收尾记录及迁移总表的最新续记为准。历史源码与框选同步增量纳入本轮本地整合；本地合并、远端推送、包安装与实机接受分别核对。6.0.2专属运行合同不能直接用于6.0.5。"
+      "内部 package 是共享能力，不是每个都需要单独启动；共享手册、Forge 浏览器 runtime、法术契约与血猎手数据包由对应产品入口使用。",
+      "ServerNext历史收尾见2026-10-05记录及迁移总表，当前渐进重构和6.0.6前置见合集执行总账/支持矩阵。历史源码与框选同步增量已纳入本地整合；本地合并、远端推送、包安装与实机接受分别核对。6.0.2专属运行合同不能直接用于6.0.5或6.0.6。"
     ],
     "keywords": [
       "测试",
@@ -875,7 +972,16 @@
       "scripts/",
       "packages/forge-browser-runtime/",
       "packages/spell-manifest-contracts/",
-      "packages/blood-hunter-v14/"
+      "packages/blood-hunter-v14/",
+      "packages/suite-handbook/",
+      "docs/handbook/build.mjs",
+      "docs/handbook/delivery.json",
+      "docs/handbook/standalone.ts",
+      "docs/handbook/client.js",
+      "docs/handbook/template.html",
+      "docs/handbook/style.css",
+      "docs/handbook/tsconfig.json",
+      "tools/module-artifacts/"
     ]
   },
   {

@@ -9,7 +9,7 @@
 | `packages/` | contracts、parser、generation、workflows、Intake、爬虫、图片资产 | 可以被命令行、网页或其他功能复用的公共能力 |
 | `apps/cli/` | 命令行入口 | 从终端执行 Markdown → Foundry JSON 转换 |
 | `apps/web/` | Web 入口 | 上传、预览、后台生成和下载 JSON/ZIP |
-| `foundry-modules/` | Chat Memory Guard、Session Monitor、Monster Spell Resolver | 真正安装进 Foundry 浏览器运行时的独立模块 |
+| `foundry-modules/` | Forge、Battlefield Painter、Open Session Deck、状态/规则模块及独立补丁 owner | 面向 Foundry 的独立发布单元；本地候选/补丁目录不等于可销售模块 |
 | `tools/foundry-ops/` | Foundry Lab、资产盘点、世界检查、受限生产只读操作 | 管理和检查 Foundry 环境，不属于 JSON 生成器核心 |
 | `src/`、`scripts/` | 旧入口兼容层和暂缓迁移功能 | 不是新功能的默认归属地；修改前应先寻找上面的真实 owner |
 
@@ -22,13 +22,17 @@ Monster Spell Resolver 的源码、manifest、构建、本地安装生命周期�
 - 公共包、CLI、Web、Chat Memory Guard、Session Monitor 和 Foundry Ops 的分类与主要物理迁移已经完成；
 - Foundry Lab 和 reference cache 已切换到 `F:\FoundryLab`；
 - Monster Spell Resolver 的最终物理归位已经完成；
-- 文档索引、历史工作树治理和最终架构验收仍在进行；
-- 当前权威进度以执行总账为准，不以本页的概述替代。
+- 2026-07-31 架构重组的文档索引、历史工作树治理和最终架构验收已于 2026-08-01 完成，详见旧执行总账的阶段 6F/6G；这是该轮结果，不表示今天所有功能已经接受；
+- 后续各模块继续在原 owner 内发展，5.3.3 与 6.x 的支持分别记录；
+- 2026-10-11 的[工具合集与渐进重构建议](../reviews/2026-10-11-fvtt-suite-product-architecture.md)基于现有单仓库、共享核心和独立模块发布；品牌、收费与后续结构变更仍是待决定范围；
+- 当前功能接受以支持矩阵和对应模块记录为准。
+- 新一轮[工具合集渐进重构总计划](../plans/2026-10-11-fvtt-suite-refactor/PLAN.md)已建立并按用户授权从统一手册H1开始实施；逐模块子计划和真实进度分别见其索引与执行总账。H1共享阅读包与静态宿主的检查不代表Foundry窗口或模块发行已经完成。
 
 ## 从哪里继续阅读
 
 - 全局规则和功能路由：[根 AGENTS.md](../../AGENTS.md)
 - 项目使用说明：[根 README](../../README.md)
+- 当前产品化重构：[总计划](../plans/2026-10-11-fvtt-suite-refactor/PLAN.md)、[模块子计划索引](../plans/2026-10-11-fvtt-suite-refactor/MODULES.md)、[当前执行总账](../plans/2026-10-11-fvtt-suite-refactor/EXECUTION_LEDGER.md)
 - 原始架构重整计划：[项目分类与架构重整计划](../plans/2026-07-31-project-classification-and-architecture-reorganization.md)
 - 当前实际进度：[架构执行总账](../remediation/2026-07-31-architecture-reorganization/EXECUTION_LEDGER.md)
 - 长期缺陷与功能验收状态：[项目整改总账](../remediation/2026-07-15-project-hardening/EXECPLAN.md)

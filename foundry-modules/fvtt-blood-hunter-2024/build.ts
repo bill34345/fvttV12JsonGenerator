@@ -25,7 +25,7 @@ import {
 
 export const MODULE_ID = 'fvtt-blood-hunter-2024' as const;
 export const MODULE_VERSION = '1.0.0' as const;
-const SERVER_NEXT_DND5E_COMPATIBILITY_MAXIMUM = '6.0.5' as const;
+const SERVER_NEXT_DND5E_COMPATIBILITY_MAXIMUM = '6.0.6' as const;
 export const EXPECTED_ACTIVITY_COUNT = 117;
 export const EXPECTED_LEDGER_COUNT = 94;
 export const EXPECTED_EFFECT_CHANGE_COUNT = 72;
@@ -671,7 +671,7 @@ export function validateManifest(manifest: Record<string, unknown>): void {
   const dnd5e = systems.find((system) => system.id === 'dnd5e');
   const systemCompatibility = asRecord(dnd5e?.compatibility);
   const dnd5eVersion = foundry === '14.368' ? '6.0.2' : '5.3.3';
-  const maximumDnd5eVersions = foundry === '14.368' ? [dnd5eVersion, SERVER_NEXT_DND5E_COMPATIBILITY_MAXIMUM] : [dnd5eVersion];
+  const maximumDnd5eVersions = foundry === '14.368' ? [dnd5eVersion, '6.0.5', SERVER_NEXT_DND5E_COMPATIBILITY_MAXIMUM] : [dnd5eVersion];
   if (!dnd5e || systemCompatibility.minimum !== dnd5eVersion || systemCompatibility.verified !== dnd5eVersion || !maximumDnd5eVersions.includes(systemCompatibility.maximum)) throw new Error('Blood Hunter module manifest must preserve its exact projection version and reviewed runtime maximum.');
   const recommends = asArray<Record<string, unknown>>(relationships.recommends);
   const recommendedIds = recommends.map((entry) => entry.id).sort();
@@ -684,6 +684,25 @@ export function validateManifest(manifest: Record<string, unknown>): void {
     const pack = packs.find((entry) => entry.name === name);
     if (!pack || pack.type !== 'Item' || pack.system !== 'dnd5e' || pack.path !== `packs/${name}`) throw new Error(`Blood Hunter pack declaration is invalid: ${name}.`);
   }
+}
+
+/** Prepare a manifest-only compatibility candidate for an existing ServerNext installation. */
+export function projectBloodHunterServerNext606Manifest(manifest: Record<string, unknown>): Record<string, unknown> {
+  validateManifest(manifest);
+  const foundry = asRecord(manifest.compatibility);
+  const systems = asArray<Record<string, unknown>>(asRecord(manifest.relationships).systems);
+  const system = systems[0];
+  const compatibility = asRecord(system?.compatibility);
+  if (foundry.minimum !== '14.368' || foundry.verified !== '14.368' || foundry.maximum !== '14.368'
+    || systems.length !== 1 || system?.id !== 'dnd5e' || system.type !== 'system'
+    || compatibility.minimum !== '6.0.2' || compatibility.verified !== '6.0.2'
+    || !['6.0.2', '6.0.5'].includes(compatibility.maximum)) {
+    throw new Error('Blood Hunter manifest overlay requires one previously reviewed ServerNext dnd5e 6.0.2/6.0.5 candidate.');
+  }
+  const projected = structuredClone(manifest);
+  asRecord(asArray<Record<string, unknown>>(asRecord(projected.relationships).systems)[0]?.compatibility).maximum = SERVER_NEXT_DND5E_COMPATIBILITY_MAXIMUM;
+  validateManifest(projected);
+  return projected;
 }
 
 async function containsLock(root: string): Promise<boolean> {

@@ -1,4 +1,5 @@
 import { POPOUT_NAME, STYLESHEET_PATH, TEMPLATE_PATH } from './constants.ts';
+import { runDeckUiAction } from './ui-errors.ts';
 import type { DeckCommand, DeckSnapshot } from './types.ts';
 
 export interface DeckSurfaceHandlers {
@@ -6,6 +7,7 @@ export interface DeckSurfaceHandlers {
   executeBatch(commands: readonly DeckCommand[]): Promise<void>;
   openPanel(): Promise<void>;
   openPopout(): Promise<void>;
+  openHelp(): Promise<void>;
   closePopout(): Promise<void>;
   setTab(tab: 'party' | 'encounter'): Promise<void>;
   toggleDensity(): Promise<void>;
@@ -132,7 +134,7 @@ export class PopoutSurface {
     this.#snapshot = snapshot;
     if (this.opened) void this.#render().catch((error) => {
       ui.notifications?.error?.(`${game.i18n.localize('OSD.Notifications.PopoutFailed')}: ${String(error)}`);
-      void this.handlers.openPanel();
+      runDeckUiAction(() => this.handlers.openPanel());
     });
   }
   setBusy(targetKey: string, busy: boolean): void {
@@ -160,7 +162,7 @@ export class PopoutSurface {
     catch {
       this.#window = null;
       ui.notifications?.warn?.(game.i18n.localize('OSD.Notifications.PopoutDetached'));
-      void this.handlers.openPanel();
+      runDeckUiAction(() => this.handlers.openPanel());
       return null;
     }
   }
@@ -176,23 +178,24 @@ export function bindDeckRoot(root: HTMLElement | null, handlers: DeckSurfaceHand
     if (!button || button.disabled) return;
     event.preventDefault();
     const action = button.dataset.osdAction;
-    if (action === 'open-popout') void handlers.openPopout();
-    else if (action === 'open-panel') void handlers.openPanel();
-    else if (action === 'close-popout') void handlers.closePopout();
-    else if (action === 'party-tab' || action === 'encounter-tab') void handlers.setTab(action === 'party-tab' ? 'party' : 'encounter');
-    else if (action === 'toggle-density') void handlers.toggleDensity();
+    if (action === 'open-popout') runDeckUiAction(() => handlers.openPopout());
+    else if (action === 'open-panel') runDeckUiAction(() => handlers.openPanel());
+    else if (action === 'open-help') runDeckUiAction(() => handlers.openHelp(), 'OSD.Notifications.HelpFailed');
+    else if (action === 'close-popout') runDeckUiAction(() => handlers.closePopout());
+    else if (action === 'party-tab' || action === 'encounter-tab') runDeckUiAction(() => handlers.setTab(action === 'party-tab' ? 'party' : 'encounter'));
+    else if (action === 'toggle-density') runDeckUiAction(() => handlers.toggleDensity());
     else if (action === 'focus-current') root.querySelector<HTMLElement>('[data-current="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     else if (action === 'open-layer') openLayer(root, button.dataset.targetLayer);
     else if (action === 'close-layer') closeLayer(root, button.closest<HTMLElement>('[data-osd-layer]'));
     else if (action === 'batch-select-all') setBatchSelection(root, true);
     else if (action === 'batch-clear-all') setBatchSelection(root, false);
-    else if (action === 'batch-apply') void executeBatchAction(root, button, handlers);
-    else if (action === 'save-folder') void savePartyFolder(root, handlers);
-    else if (action === 'swap-initiative') void swapInitiative(root, button, handlers);
+    else if (action === 'batch-apply') runDeckUiAction(() => executeBatchAction(root, button, handlers));
+    else if (action === 'save-folder') runDeckUiAction(() => savePartyFolder(root, handlers));
+    else if (action === 'swap-initiative') runDeckUiAction(() => swapInitiative(root, button, handlers));
     else if (button.dataset.osdCommand) {
       const surfaceWindow = button.ownerDocument?.defaultView ?? window;
       if (button.dataset.confirm && !surfaceWindow.confirm(button.dataset.confirm)) return;
-      void handlers.execute(commandFromButton(button));
+      runDeckUiAction(() => handlers.execute(commandFromButton(button)));
     }
   });
 
@@ -207,9 +210,9 @@ export function bindDeckRoot(root: HTMLElement | null, handlers: DeckSurfaceHand
         statusId: element.dataset.statusId,
         active: (element as HTMLInputElement).checked,
       };
-      void handlers.execute(command).then(() => reopenDetails(root, preserveKey));
+      runDeckUiAction(() => handlers.execute(command).then(() => reopenDetails(root, preserveKey)));
     } else if (element.matches('[data-osd-direct-command]')) {
-      void handlers.execute(commandFromInput(element));
+      runDeckUiAction(() => handlers.execute(commandFromInput(element)));
     }
   });
 

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { MODULE_ID } from '../src/constants.ts';
 import { InjuryFadingRuntime, publicApi } from '../src/runtime.ts';
+import { readActorState, writeActorState } from '../src/persistence.ts';
 import { createActorModuleState } from '../src/state.ts';
 
 const original = new Map<string, unknown>();
@@ -39,6 +40,19 @@ beforeEach(() => {
 afterEach(() => { for (const [key, value] of original) (globalThis as any)[key] = value; original.clear(); });
 
 describe('Fading Spirits owns resurrection without injury automation', () => {
+  test('admits the exact 14.368/6.0.6 candidate and rejects future or crossed pairs', async () => {
+    for (const [core, system, supported] of [
+      ['14.368', '6.0.6', true],
+      ['14.364', '6.0.6', false],
+      ['14.368', '6.0.7', false],
+    ] as const) {
+      (globalThis as any).game.version = core;
+      (globalThis as any).game.system.version = system;
+      const runtime = new InjuryFadingRuntime();
+      await runtime.onReady();
+      expect(runtime.supported).toBe(supported);
+    }
+  });
   test('registers only resurrection UI hooks and works without Custom Conditions', async () => {
     const runtime = new InjuryFadingRuntime();
     runtime.initialize();
@@ -137,5 +151,111 @@ describe('Fading Spirits owns resurrection without injury automation', () => {
     expect(publicApi.getResurrectionState(actor).successfulReturns).toBe(3);
     await expect(new InjuryFadingRuntime().onReady()).resolves.toBeUndefined();
     expect(() => publicApi.getState(actor)).toThrow('broken CC injury');
+  });
+
+  test('death episode refuses to replace valid legacy history with stripped extension fields', async () => {
+    actor.flags[MODULE_ID].fadingSpirits.attemptHistory = [{
+      id: 'older-return', mode: 'normal', dc: 12, contributionSuccesses: 1,
+      contributionFailures: 0, result: 'success', at: 12, gmId: 'prior-gm',
+      legacySource: { page: 'old-campaign', keep: true },
+    }];
+    actor.flags[MODULE_ID].fadingSpirits.futureObject = { keep: 'Core object merge preserves this sibling' };
+    const original = structuredClone(actor.flags[MODULE_ID]);
+    const runtime = new InjuryFadingRuntime();
+    await runtime.onReady();
+    await expect(runtime.beginDeathEpisode(actor, 'new-death')).rejects.toThrow('attemptHistory');
+    expect(writes).toHaveLength(0);
+    expect(actor.flags[MODULE_ID]).toEqual(original);
+  });
+
+  test('ritual write refuses unknown historical array entries instead of silently filtering them', async () => {
+    actor.flags[MODULE_ID].fadingSpirits.attemptHistory = [
+      { id: 'old-mode', mode: 'legacy-rite', result: 'failure', at: 5, note: 'retain source' },
+    ];
+    const original = structuredClone(actor.flags[MODULE_ID]);
+    const state = readActorState(actor);
+    state.fadingSpirits.successfulReturns += 1;
+    await expect(writeActorState(actor, state, 'ritual:old-mode')).rejects.toThrow('attemptHistory');
+    expect(writes).toHaveLength(0);
+    expect(actor.flags[MODULE_ID]).toEqual(original);
+  });
+
+  test('ritual write refuses contributor array extensions that parsing would strip', async () => {
+    actor.flags[MODULE_ID].fadingSpirits.pendingRitual = {
+      id: 'old-ritual', mode: 'normal', startedAt: 1, gmId: 'prior-gm',
+      resolutionStartedAt: null, resolutionStartedBy: null, resolutionToken: null,
+      contributors: [{ actorUuid: 'Actor.ally', check: 'prc', ability: 'wis', dc: 15,
+        advantageMode: 'normal', requestMessageId: null, legacyPromise: 'keep' }],
+    };
+    const original = structuredClone(actor.flags[MODULE_ID]);
+    const state = readActorState(actor);
+    state.fadingSpirits.pendingRitual = null;
+    await expect(writeActorState(actor, state, 'ritual:old-ritual:resolve')).rejects.toThrow('pendingRitual');
+    expect(writes).toHaveLength(0);
+    expect(actor.flags[MODULE_ID]).toEqual(original);
+  });
+
+  test('valid older pending ritual and contributor may gain known defaults without refusal', async () => {
+    actor.flags[MODULE_ID].fadingSpirits.pendingRitual = {
+      id: 'older-ritual', mode: 'normal', startedAt: 1, gmId: 'prior-gm',
+      contributors: [{ actorUuid: 'Actor.ally', check: 'prc', dc: 15 }],
+    };
+    const state = readActorState(actor);
+    state.fadingSpirits.successfulReturns += 1;
+    await expect(writeActorState(actor, state, 'older-ritual:progress')).resolves.toBeUndefined();
+    expect(writes).toHaveLength(1);
+    expect(actor.flags[MODULE_ID].fadingSpirits.pendingRitual).toMatchObject({
+      id: 'older-ritual', mode: 'normal', startedAt: 1, gmId: 'prior-gm',
+      contributors: [{ actorUuid: 'Actor.ally', check: 'prc', dc: 15 }],
+    });
+  });
+
+  test('valid older history and resolution claim may gain known defaults without refusal', async () => {
+    actor.flags[MODULE_ID].fadingSpirits.attemptHistory = [
+      { id: 'older-attempt', mode: 'rapid', result: 'failure', at: 3 },
+    ];
+    actor.flags[MODULE_ID].fadingSpirits.resolutionInProgress = {
+      id: 'older-claim', mode: 'rapid', startedAt: 4, startedBy: 'prior-gm',
+    };
+    const state = readActorState(actor);
+    state.fadingSpirits.permanentDcPenalty += 1;
+    await expect(writeActorState(actor, state, 'older-claim:progress')).resolves.toBeUndefined();
+    expect(writes).toHaveLength(1);
+    expect(actor.flags[MODULE_ID].fadingSpirits.attemptHistory[0]).toMatchObject({
+      id: 'older-attempt', mode: 'rapid', result: 'failure', at: 3,
+    });
+    expect(actor.flags[MODULE_ID].fadingSpirits.resolutionInProgress).toMatchObject({
+      id: 'older-claim', mode: 'rapid', startedAt: 4, startedBy: 'prior-gm',
+    });
+  });
+
+  test('stale schema-1 proposal cannot overwrite current unrecognized whole fading payload', async () => {
+    for (const unknown of [['legacy', { keep: true }], 'legacy resurrection bytes']) {
+      const proposal = createActorModuleState(10, 10);
+      actor.flags[MODULE_ID].fadingSpirits = structuredClone(unknown);
+      const original = structuredClone(actor.flags[MODULE_ID]);
+      await expect(writeActorState(actor, proposal, 'stale:fading')).rejects.toThrow('fadingSpirits');
+      expect(writes).toHaveLength(0);
+      expect(actor.flags[MODULE_ID]).toEqual(original);
+    }
+  });
+
+  test('stale schema-1 proposal cannot replace a current future version with missing fading subtree', async () => {
+    const proposal = createActorModuleState(10, 10);
+    actor.flags[MODULE_ID] = { schemaVersion: 2, futureObject: { keep: true } };
+    const original = structuredClone(actor.flags[MODULE_ID]);
+    await expect(writeActorState(actor, proposal, 'stale:future')).rejects.toThrow('schema');
+    expect(writes).toHaveLength(0);
+    expect(actor.flags[MODULE_ID]).toEqual(original);
+  });
+
+  test('absent, null, and empty legacy fading payloads remain initializable', async () => {
+    for (const legacy of [undefined, null, {}]) {
+      writes = [];
+      actor.flags[MODULE_ID] = { schemaVersion: 1, ...(legacy === undefined ? {} : { fadingSpirits: legacy }) };
+      await expect(writeActorState(actor, createActorModuleState(10, 10), 'initialize:legacy')).resolves.toBeUndefined();
+      expect(writes).toHaveLength(1);
+      expect(actor.flags[MODULE_ID].fadingSpirits.attemptHistory).toEqual([]);
+    }
   });
 });

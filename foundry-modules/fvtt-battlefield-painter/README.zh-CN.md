@@ -4,7 +4,9 @@
 
 ## 版本与接受范围
 
-运行代码精确放行Foundry14.364/dnd5e5.3.3、Mirror14.368/5.3.3，以及既有Next14.368/6.0.2或6.0.5；其它配对失败关闭。manifest范围声明不代表所有组合和地形已接受。14.364的代表样本有真实三格型证据；既有Next接受只覆盖其报告里的Square Fire切片。Mirror14.368/5.3.3已取得本轮三格型代表交互、GM/SY实际移动、HexCols26basic/36阶段与音源技术生命周期证据，具体范围见[本轮技术验收](docs/completion-2026-10-05.md)。
+运行代码精确放行Foundry14.364/dnd5e5.3.3、Mirror14.368/5.3.3，以及Next14.368/6.0.2、6.0.5、6.0.6；其它配对失败关闭。6.0.6在本地Next已接受一格FireI事务、Region距离/成本、linked Token falling、普通重载、精确清理及非GM权限边界：玩家公开能力为`canMutate=false`，Painter工具栏缺席，observer Token无HUD且外来Token不可更新；绘制仅向GM开放，玩家入口拒绝已验；完整地形目录、所有网格/效果组合、长时和生产仍未接受。角色验收环境的额外消息已准确删除并确认原生缺席，作者和唯一whisper均为本轮TempPlayer，别名Dice So Nice!，Atlas归因假设已否证并符合已实装DSN6.3.1欢迎源；native terminal 的 Task 宏、原92宏行 hash、原7 User `_id` 读回、safeMLD/尺寸/viewport/UI、Core 与 Inspector 限定恢复均已闭合，但不等于旧A或完整User/所有Setting恢复。manifest范围声明不代表所有组合和地形已接受。14.364的代表样本有真实三格型证据；既有Next接受只覆盖其报告里的Square Fire切片。Mirror14.368/5.3.3已取得本轮三格型代表交互、GM/SY实际移动、HexCols26basic/36阶段与音源技术生命周期证据，具体范围见[本轮技术验收](docs/completion-2026-10-05.md)。
+
+6.0.6 的16个源码变更文件未触及本画笔使用的 Region 接口；`TokenDocument5e` 的 falling 更新按 Actor `lastMovedToken` 标记和指定用户工作。本地代表链已核对真实距离10/成本15、A升空后B地走清除 falling、三次原生移动、普通重载和完整来源恢复；该结果只覆盖本例和模块拥有的对象。
 
 素材为本项目原创或按明确许可制作，用户已确认的火焰、冰霜、荆棘及后续图案按来源记录保留。原版Tile Arsenal在本地作为独立模块安装和比较，文件不并入本模块。
 
@@ -45,3 +47,9 @@
 - [月蚀矿接受](docs/ruidium-integration-2026-09-12.md)、[素材来源](docs/asset-provenance.md)、[原版功能对照](docs/tile-arsenal-functional-parity-2026-09-12.md)。
 - [ServerNext范围](docs/server-next-candidate.md)：旧6.x切片不代替Mirror5.3.3新Core接受。
 - 狂野魔法和裂隙的深入功能暂缓；跨客户端并发锁、自动伤害、完整性能/长时和生产接受未在本轮关闭。
+
+## 场景事务读回（本地重构候选）
+
+一次笔划只有在创建数量、唯一新ID、实际Scene集合与计划归属一致后才报告成功。创建为空、只完成一部分、返回外来ID或其他创建步骤产生未报告对象时，事务会失败并报告。
+
+失败时只回滚本次返回且读回确认的对象；既有、外来、身份变化或未报告对象保留。删除被拒或回滚后仍有对象，会明确报告残留，不能把它解释为已经恢复干净。本次未新增或重做效果，原有Square Fire视觉证据保持历史范围；6.0.6 本地事务、Region移动、linked falling、普通重载和模块拥有对象的精确清理已在限定样本中接受，另接受非GM公开能力/工具栏/observer权限边界；绘制仅向GM开放，玩家入口拒绝已验；完整目录、全网格/效果组合、长时与生产仍待。角色验收环境的额外消息已准确删除并确认原生缺席；native terminal 的 Task 宏、原92宏行 hash、原7 User `_id` 读回、safeMLD/尺寸/viewport/UI、Core 与 Inspector 限定恢复已闭合，但不等于旧A或完整User/所有Setting恢复。

@@ -2,7 +2,7 @@
 
 ## 范围
 
-本目录是 `fvtt-selected-token-sync` 的唯一实现 owner。当前 `0.2.0` 候选只支持 ServerNext 的 Foundry VTT `14.368` 与 dnd5e `6.0.5`，负责把 Token HUD 发起的核心状态和 v14 `movementAction` 同步到当前框选 Token。旧 `0.1.0` 安装不因本候选改变。
+本目录是`fvtt-selected-token-sync`的唯一owner。当前0.2.0的Next目标为Foundry14.368，manifest系统范围6.0.5–6.0.6，verified保留6.0.5；606已有GM状态/分级/叠层/移动、同GM两客户端Poisoned及玩家帮助/权限拒绝限定接受，玩家写入和长时仍待验。它同步HUD核心状态及v14 movementAction，旧0.1.0安装不因候选自动改变。
 
 ## 硬边界
 
@@ -19,6 +19,6 @@
 - `bun run typecheck`
 - `bun run build`
 - `bun run labCli.ts install`（预览）与 `bun run labCli.ts verify-install`
-- 在 ServerNext v14.368 / dnd5e 6.0.5 做状态、分级状态、overlay、movementAction、权限和多客户端语义回放。
+- 6.0.6按状态/分级/overlay/movementAction/权限与多客户端做实际语义回放；原acceptance-macro.js锁6.0.5的证据保持，不改历史脚本来制造新版接受。
 
 机械测试通过不能代替真实 HUD/Document 语义验收；最终报告必须分别列出两类证据和尚未覆盖的生产/长时层级。

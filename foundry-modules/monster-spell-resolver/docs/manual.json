@@ -1,0 +1,77 @@
+{
+  "id": "monster-spell-resolver",
+  "title": "怪物法术解析器",
+  "category": "convert",
+  "summary": "读取生成 Actor 的可移植法术清单，在目标世界可读的 dnd5e Item pack 中选择法术，并安全水合模块拥有的 Spell 与 Cast Activity。",
+  "when": "生成 Actor 已携带有效 spell manifest，需要把便携法术引用解析到当前世界的具体法术资料包时使用。",
+  "requires": [
+    "精确配对14.364/5.3.3、14.368/5.3.3、14.368/6.0.2、6.0.5或6.0.6（606仅接受限定 Rat NPC 运行链）",
+    "GM/活动 GM 权威",
+    "带有效 spellManifest 的生成 Actor",
+    "至少一个已启用且可读取的目标世界 dnd5e Item 法术包"
+  ],
+  "steps": [
+    {
+      "title": "启用并等待来源索引",
+      "text": "在精确支持版本的世界启用模块；世界 ready 时模块读取已启用且可读的 Item pack 并建立来源索引。来源不可读、规则元数据无效或运行时不兼容时保持禁止写入。"
+    },
+    {
+      "title": "配置来源优先级",
+      "text": "在“游戏设置 → 模块设置”打开“目标世界法术解析器”，按包 ID/合集 ID 调整来源顺序，查看 2024/2014 计数和诊断，并在来源变化后点击“重建来源索引”。"
+    },
+    {
+      "title": "查阅使用帮助",
+      "text": "在“目标世界法术解析器”设置窗口点击“使用帮助”。GM 在统一手册合集已启用且接口可用时定位本条目，否则打开模块随包说明；点击帮助不会保存设置、重建索引或执行水合。"
+    },
+    {
+      "title": "解析带清单的 Actor",
+      "text": "在带有效 spellManifest 的 Actor 目录条目中使用标题栏或右键菜单的“解析或重新解析法术”；创建或更新这类 Actor 时也可能由模块排队处理。普通无 manifest Actor 不会被扫描。"
+    },
+    {
+      "title": "处理人工检查",
+      "text": "若出现法术解析检查窗口，选择一个具体目标法术来源；对模块管理内容的人工修改逐项选择“保留人工修改”或“用生成内容覆盖”，关闭窗口等同取消。"
+    },
+    {
+      "title": "查看结果与回退",
+      "text": "从同一 Actor 菜单查看解析报告、来源、导出诊断或撤销上次水合；状态为 hydrated 只表示模块拥有缓存投影已完成，原生 Cast 的攻击、豁免、目标、消耗仍需单独使用验证。"
+    }
+  ],
+  "outputs": [
+    "Actor 内模块拥有的 embedded Spell 和与生成 feature 关联的 Cast Activity",
+    "spellResolution 状态、来源选择、投影差异、报告和撤销快照",
+    "目标世界来源索引的包信息、规则计数、哈希和阻断诊断",
+    "统一手册中的本模块条目，或独立使用时的同源只读说明窗口"
+  ],
+  "limits": [
+    "2026-10-03新增Mirror14.368/5.3.3兼容候选；代码、manifest、测试和安装hash已核，新Core代表行为仍按本轮实机收据接受，旧版本PASS不自动扩大。",
+    "历史接受绑定 Foundry 14.364 / dnd5e 5.3.3；Next 6.0.5 仅接受下列代表切片；只有有效便携 manifest 的 Actor 才有资格处理",
+    "只修改模块拥有的 embedded Spells 和明确关联的 Cast Activities，不按名称扫描全世界，不修改 Compendium、Foundry/dnd5e 原型或生成阶段 manifest",
+    "水合按 Actor 全有或全无执行，中途失败尝试补偿回滚；人工 Keep/Overwrite/Cancel 未完成时不会 Apply。保存被拦截或不完整时报告提交失败；恢复只替换本模块记录，残留差异仍会报告。ServerNext 6.0.6 已在一个 Rat NPC 样本的原生角色卡上验证十条法术与对应施法入口；完整法术库、全部活动、玩家、长时和生产不在范围内。",
+    "portable/static manifest、目标世界 hydration、native Cast runtime 和生产接受是不同层级；单测、build 或 hydration 成功不能替代后两层",
+    "Next 14.368／6.0.5 本轮十法术自动水合的完整归属及正常 UI Undo／重载后 pending／零缓存通过；本轮没有 Review／Apply 点击，完整原生 Cast 矩阵未执行。",
+    "精确14.368/6.0.6已验证十条法术的来源、缓存和生成施法入口逐一对应。在当前含 Midi-QOL 的组合中，迷踪步经正常使用窗口消耗一次资源；撤销上次水合后回到待处理状态，法术缓存和生成施法入口均清除，普通重载后保持。实际传送落点、无Midi-QOL的组合及其他法术／活动仍须分别验证。",
+    "本例测试角色、消息和取证工具已清理，原世界内容、已采范围内的设置和账号／场景状态读回通过；未声称所有历史设置值都完成比较。精确范围与既有恢复缺口见支持记录。",
+    "新帮助入口仅供GM阅读；模块随包窗口及统一手册定位仍需真实Foundry界面验收，不扩大水合、权限或原生施法的已接受范围。"
+  ],
+  "keywords": [
+    "怪物",
+    "法术",
+    "spell manifest",
+    "水合",
+    "Cast Activity",
+    "2024",
+    "2014",
+    "来源索引",
+    "帮助",
+    "统一手册"
+  ],
+  "sources": [
+    "foundry-modules/monster-spell-resolver/README.zh-CN.md",
+    "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
+  ],
+  "watch": [
+    "foundry-modules/monster-spell-resolver/",
+    "packages/suite-handbook/"
+  ],
+  "module": "monster-spell-resolver"
+}

@@ -125,21 +125,30 @@ export function conditionLevel(actor: any, statusId: string, effectId: string | 
  * then re-read after each native write: world Actor updates can project into a
  * selected synthetic Actor before its own turn in this transaction.
  */
-export async function applyGradedStatusDelta(
+export function planGradedStatusDelta(
   targets: readonly SyncTarget[], statusId: string, effectId: string | undefined,
   maxLevel: number, delta: 1 | -1,
-): Promise<void> {
-  const actors = dedupeActors(targets);
-  const snapshots = actors.map((actor) => ({
+): { actor: any; desired: number }[] {
+  const snapshots = dedupeActors(targets).map((actor) => ({
     actor,
     desired: Math.min(maxLevel, Math.max(0, conditionLevel(actor, statusId, effectId) + delta)),
   }));
   snapshots.sort((a, b) => Number(a.actor?.isToken === true) - Number(b.actor?.isToken === true));
-  for (const { actor, desired } of snapshots) {
+  return snapshots;
+}
+
+type GradedStatusWriter = (actor: any, statusId: string, levels: number, previousLevel: number) => Promise<unknown>;
+
+export async function applyGradedStatusDelta(
+  targets: readonly SyncTarget[], statusId: string, effectId: string | undefined,
+  maxLevel: number, delta: 1 | -1,
+  write: GradedStatusWriter = (actor, id, levels) => actor.toggleStatusEffect(id, { levels }),
+): Promise<void> {
+  for (const { actor, desired } of planGradedStatusDelta(targets, statusId, effectId, maxLevel, delta)) {
     const current = conditionLevel(actor, statusId, effectId);
     const remaining = desired - current;
     if (remaining === 0) continue;
-    await actor.toggleStatusEffect(statusId, { levels: remaining });
+    await write(actor, statusId, remaining, current);
   }
 }
 

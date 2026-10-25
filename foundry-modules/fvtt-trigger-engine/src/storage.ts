@@ -1,6 +1,7 @@
 import {
   cloneTriggerStore,
   DEFAULT_TRIGGER_STORE,
+  inspectStoredTriggerStore,
   sanitizeTriggerStore,
   validateTriggerStore,
   type ValidationIssue,
@@ -51,15 +52,22 @@ export class FoundryTriggerStorage implements TriggerStorage {
 
   load(): TriggerStore {
     const raw = this.game?.settings?.get?.(MODULE_ID, TRIGGER_SETTING_KEY);
-    const result = sanitizeTriggerStore(raw);
+    const result = inspectStoredTriggerStore(raw);
     this.issues = result.issues;
     return result.store;
   }
 
   async save(store: TriggerStore): Promise<void> {
     const valid = validateTriggerStore(store);
+    const getter = this.game?.settings?.get;
     const setter = this.game?.settings?.set;
-    if (typeof setter !== 'function') throw new Error('Foundry world settings are unavailable.');
+    if (typeof getter !== 'function' || typeof setter !== 'function') throw new Error('Foundry world settings are unavailable.');
+    const current = inspectStoredTriggerStore(getter.call(this.game.settings, MODULE_ID, TRIGGER_SETTING_KEY));
+    this.issues = current.issues;
+    if (current.issues.length) {
+      const paths = current.issues.slice(0, 5).map((issue) => issue.path).join(', ');
+      throw new Error(`Existing Trigger Engine world setting contains unsupported or invalid data (${paths}); review the original value before saving.`);
+    }
     await setter.call(this.game.settings, MODULE_ID, TRIGGER_SETTING_KEY, cloneTriggerStore(valid));
     this.issues = [];
   }

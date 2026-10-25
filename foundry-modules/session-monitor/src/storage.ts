@@ -1,6 +1,11 @@
 import type { BrowserSample, MonitorEvent, SanitizedError, SessionExport, SessionMeta } from './schema';
 import { SCHEMA_VERSION } from './schema';
 
+export type SessionRecord =
+  | { kind: 'sample'; value: BrowserSample }
+  | { kind: 'event'; value: MonitorEvent }
+  | { kind: 'error'; value: SanitizedError };
+
 export interface SessionStore {
   open(): Promise<void>;
   createSession(meta: SessionMeta): Promise<void>;
@@ -10,6 +15,7 @@ export interface SessionStore {
   appendSample(sessionId: string, sample: BrowserSample): Promise<void>;
   appendEvent(sessionId: string, event: MonitorEvent): Promise<void>;
   appendError(sessionId: string, error: SanitizedError): Promise<void>;
+  commitRecord(meta: SessionMeta, record: SessionRecord): Promise<void>;
   exportSession(id: string): Promise<SessionExport | null>;
   listSessions(): Promise<SessionMeta[]>;
   deleteSession(id: string): Promise<void>;
@@ -71,6 +77,20 @@ export class MemorySessionStore implements SessionStore {
 
   async appendError(sessionId: string, error: SanitizedError): Promise<void> {
     this.errors.set(sessionId, [...(this.errors.get(sessionId) ?? []), structuredClone(error)]);
+  }
+
+  async commitRecord(meta: SessionMeta, record: SessionRecord): Promise<void> {
+    if (!this.sessions.has(meta.id)) throw new Error(`Unknown session: ${meta.id}`);
+    const target = record.kind === 'sample' ? this.samples : record.kind === 'event' ? this.events : this.errors;
+    const existing = target.get(meta.id) ?? [];
+    if (existing.some((entry) => entry.sequence === record.value.sequence)) {
+      throw new Error(`Duplicate ${record.kind} sequence ${record.value.sequence}`);
+    }
+    const nextMeta = structuredClone(meta);
+    const nextRows = [...existing, structuredClone(record.value)];
+    // Both clones and validation finish before either in-memory table changes.
+    this.sessions.set(meta.id, nextMeta);
+    (target as Map<string, typeof nextRows>).set(meta.id, nextRows);
   }
 
   async exportSession(id: string): Promise<SessionExport | null> {
@@ -153,6 +173,23 @@ export class IndexedDbSessionStore implements SessionStore {
 
   async appendError(sessionId: string, error: SanitizedError): Promise<void> {
     await this.#write('errors', 'add', row(sessionId, structuredClone(error)));
+  }
+
+  async commitRecord(meta: SessionMeta, record: SessionRecord): Promise<void> {
+    const name = record.kind === 'sample' ? 'samples' : record.kind === 'event' ? 'events' : 'errors';
+    const storedRow = row(meta.id, structuredClone(record.value));
+    const storedMeta = structuredClone(meta);
+    const transaction = this.#db().transaction(['sessions', name], 'readwrite');
+    const done = transactionDone(transaction);
+    try {
+      transaction.objectStore(name).add(storedRow);
+      transaction.objectStore('sessions').put(storedMeta);
+    } catch (error) {
+      try { transaction.abort(); } catch { /* The transaction may have aborted already. */ }
+      await done.catch(() => {});
+      throw error;
+    }
+    await done;
   }
 
   async exportSession(id: string): Promise<SessionExport | null> {

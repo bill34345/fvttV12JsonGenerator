@@ -56,7 +56,7 @@
   "IFS.Messages.InjuryCleared": "伤势已清除",
   "IFS.Errors.ActorRequired": "请先选择一个角色。",
   "IFS.Errors.ActiveGmOnly": "只有当前活动 GM 可以执行该操作。",
-  "IFS.Errors.UnsupportedRuntime": "消逝的灵魂需要 Foundry 14.364 / dnd5e 5.3.3，或 Foundry 14.368 / dnd5e 6.0.2 / 6.0.5；复活自动化已关闭。",
+  "IFS.Errors.UnsupportedRuntime": "消逝的灵魂需要 Foundry 14.364 / dnd5e 5.3.3，或 Foundry 14.368 / dnd5e 5.3.3 / 6.0.2 / 6.0.5 / 6.0.6；复活自动化已关闭。",
   "IFS.Errors.ResurrectionAlreadyConsumed": "本次死亡 episode 的灵魂已经回归。",
   "IFS.Errors.ResolutionInProgress": "另一个复活结算正在进行中。",
   "IFS.Errors.RitualPending": "已经有一个仪式正在等待处理。",

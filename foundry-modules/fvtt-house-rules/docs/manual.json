@@ -1,0 +1,69 @@
+{
+  "id": "fvtt-house-rules",
+  "title": "本团村规",
+  "category": "play",
+  "summary": "以显式标签和 GM 权威为前提，提供治疗药水、生命骰、弹药、隐匿和自然 1/重击等村规辅助。",
+  "when": "希望把本团约定接入 dnd5e 原生骰子、Activity、状态和 Document API，同时保留 GM 裁定时使用。",
+  "requires": [
+    "精确配对14.364/5.3.3、14.368/5.3.3、14.368/6.0.2、6.0.5或6.0.6；606已完成药水代表链，具体接受范围见限制",
+    "活动 GM",
+    "药水和弹药上的显式 fvtt-house-rules flags（使用对应功能时）"
+  ],
+  "steps": [
+    {
+      "title": "启用并确认默认状态",
+      "text": "在精确支持版本的世界中启用模块并重新加载；首次提示说明所有会修改数据的规则默认关闭。"
+    },
+    {
+      "title": "由 GM 配置规则",
+      "text": "在 Foundry“配置设置 → 模块设置”中逐项启用需要的功能，并设置低属性阈值、自然 1 后果倍率/其他 RollTable UUID 和隐匿全速等级；这些世界设置只有 GM 可改。"
+    },
+    {
+      "title": "准备显式标签",
+      "text": "在 Item 数据中使用 flags.fvtt-house-rules.potion 或 flags.fvtt-house-rules.ammo 写明药水骰、弹药 key 和 tier（0–3）。模块不从中文或英文名称猜测药水、弹药、武器或特性。"
+    },
+    {
+      "title": "在跑团中调用助手",
+      "text": "使用 game.fvttHouseRules 的 GM API 或对应原生事件处理药水 preview/apply/restore、生命骰赌博、弹药记录/找回、隐匿提示和自然 1 后果；GM-only 卡片确认前不会执行伤害、反击或武器损坏。"
+    },
+    {
+      "title": "运行规则检查",
+      "text": "维护者从仓库根目录运行模块测试；通过只代表规则投影与构建层检查，真实 Foundry 多客户端语义仍需单独回放。",
+      "command": "bun run test:house-rules"
+    }
+  ],
+  "outputs": [
+    "显式模块 flags、幂等事务 ledger 和 GM 世界设置",
+    "治疗药水的三个原生 heal Activity、生命骰与弹药账本、隐匿提醒",
+    "GM 确认的自然 1 后果卡和支持路径中的重击首颗伤害骰按满值投影"
+  ],
+  "limits": [
+    "2026-10-03新增Mirror14.368/5.3.3兼容候选；代码、manifest、测试和安装hash已核，新Core代表行为仍按本轮实机收据接受，旧版本PASS不自动扩大。",
+    "历史接受绑定 Foundry 14.364 / dnd5e 5.3.3；Next 6.0.5 仅接受下列代表切片；所有修改由确定性的活动 GM 执行",
+    "缺少显式标签、来源不唯一、对象无权限或版本不精确时失败关闭；不会按名称猜测或扫描全世界",
+    "MIDI-QOL 14.0.11、DAE 14.0.12 和 Die So Nice 6.2.9 的扩展路径只在精确版本组合下使用，其他组合保持原生或失败关闭",
+    "弹药找回、自然 1 后果、武器修复和重击适配都不自动代替 GM 裁定；盲骰原始面值不写入模块 flags、消息或审计摘要",
+    "Next 14.368／6.0.5 本轮药水 Preview／Apply、手改保护／恢复和正常重载通过；不代表全部村规、可选 Midi／DAE 组合或多客户端玩法通过。",
+    "本轮额外修复 Midi local.10 的 Check／Save 请求来源加值，两次真实结果为 +4；这不把 House 的可选 Midi／DAE 兼容门改成全量放行。",
+    "2026-10-25在14.368/6.0.6接受药水Apply、完整schema2快照、三条治疗Activity、手改保护、Restore及普通重载；弹药、聊天卡和其他村规不因此获得新接受。未确认的可选Midi/DAE/Dice So Nice组合仍拒绝。",
+    "新候选串行处理同一药水的应用/恢复，写入前通过当前注册模型生成完整预期；缺模型、异步等待期间手改或权限变化时拒绝继续。恢复已完成但记录清理失败时，同页面只在Item/快照/原图均未变化下重试清理，不重复写Activity。6.0.6代表链的世界文档和设置恢复一致；旧验收账号的历史原像缺口保留在执行总账，不声称全User恢复。"
+  ],
+  "keywords": [
+    "村规",
+    "治疗药水",
+    "生命骰",
+    "弹药",
+    "隐匿",
+    "自然 1",
+    "重击",
+    "GM"
+  ],
+  "sources": [
+    "foundry-modules/fvtt-house-rules/README.zh-CN.md",
+    "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
+  ],
+  "watch": [
+    "foundry-modules/fvtt-house-rules/"
+  ],
+  "module": "fvtt-house-rules"
+}

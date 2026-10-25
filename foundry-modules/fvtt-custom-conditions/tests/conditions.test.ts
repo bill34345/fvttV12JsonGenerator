@@ -47,7 +47,7 @@ function runtimeFixture(target = actor(), extra: Record<string, any> = {}) {
 }
 
 describe('custom condition contract', () => {
-  test.each([['14.364', '5.3.3'], ['14.368', '5.3.3'], ['14.368', '6.0.5']])('applies nineteen-condition instances and native roll config modifiers on %s/%s', async (core, system) => {
+  test.each([['14.364', '5.3.3'], ['14.368', '5.3.3'], ['14.368', '6.0.5'], ['14.368', '6.0.6']])('applies nineteen-condition instances and native roll config modifiers on %s/%s', async (core, system) => {
     const { runtime, target, handlers } = runtimeFixture(actor(), {
       game: { version: core, system: { id: 'dnd5e', version: system } },
     });
@@ -65,7 +65,7 @@ describe('custom condition contract', () => {
   });
 
   test.each([['14.364', '6.0.5', 'dnd5e'], ['14.368', '5.3.2', 'dnd5e'],
-    ['14.368', '6.0.6', 'dnd5e'], ['14.368', '6.0.5', 'other-system'],
+    ['14.368', '6.0.7', 'dnd5e'], ['14.368', '6.0.5', 'other-system'],
     ['14.364', '5.3.3', 'other-system']])('rejects unreviewed or crossed nineteen-condition runtime %s/%s/%s', async (core, system, id) => {
     const { runtime, target } = runtimeFixture(actor(), { game: { version: core, system: { id, version: system } } });
     expect(runtime.definitions()).toEqual([]);
@@ -237,6 +237,7 @@ describe('condition runtime', () => {
     let ready = false;
     let subscriptions = 0;
     const triggerApi = {
+      apiVersion: 1,
       subscribe: () => {
         if (!ready) throw new Error('FVTT Trigger Engine is not ready.');
         subscriptions += 1;
@@ -244,7 +245,7 @@ describe('condition runtime', () => {
       },
     };
     const globals: any = {
-      game: { modules: { get: () => ({ api: triggerApi }) } },
+      game: { modules: { get: () => ({ active: true, api: triggerApi }) } },
       CONFIG: { statusEffects: [] },
       Hooks: { on: (name: string, handler: any) => { handlers.set(name, handler); return name; }, off: () => {} },
     };
@@ -256,6 +257,36 @@ describe('condition runtime', () => {
     handlers.get('fvtt-trigger-engine.ready')();
     expect(subscriptions).toBe(1);
     runtime.stop();
+  });
+
+  test('subscribes only to an active Trigger Engine with the recognized API version', () => {
+    const handlers = new Map<string, any>();
+    const subscriptions: string[] = [];
+    let module: any;
+    const globals: any = {
+      game: { modules: { get: (id: string) => id === 'fvtt-trigger-engine' ? module : undefined } },
+      CONFIG: { statusEffects: [] },
+      Hooks: { on: (name: string, handler: any) => { handlers.set(name, handler); return name; }, off() {} },
+    };
+    const runtime = new ConditionRuntime(globals, () => true);
+    const subscribe = () => { subscriptions.push('called'); return () => { subscriptions.push('unsubscribed'); }; };
+    for (const candidate of [
+      { active: false, api: { apiVersion: 1, subscribe } },
+      { active: true, api: { apiVersion: 2, subscribe } },
+      { active: true, api: { subscribe } },
+      { active: true, api: { apiVersion: 1 } },
+    ]) {
+      module = candidate;
+      if (!runtime.started) runtime.start();
+      handlers.get('fvtt-trigger-engine.ready')();
+      expect(subscriptions).toEqual([]);
+    }
+    module = { active: true, api: { apiVersion: 1, subscribe } };
+    handlers.get('fvtt-trigger-engine.ready')();
+    handlers.get('fvtt-trigger-engine.ready')();
+    expect(subscriptions).toEqual(['called']);
+    runtime.stop();
+    expect(subscriptions).toEqual(['called', 'unsubscribed']);
   });
 
   test('applies a parameterized bleeding instance and exposes it through the same API used for static states', async () => {

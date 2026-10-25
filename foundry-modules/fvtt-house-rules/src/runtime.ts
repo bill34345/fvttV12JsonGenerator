@@ -15,10 +15,12 @@ import {
   transformNaturalTwentyBaseWeaponDamage,
 } from "./core/natural-roll";
 import type { NaturalOneConsequence } from "./core/natural-roll";
-import { buildPotionActivities, potionSnapshot, type HealingDice } from "./core/potion";
+import { buildPotionActivities, type HealingDice } from "./core/potion";
 import { advanceStealthMovement, endStealthForDash, nonCombatStealthSuggestion, type StealthState } from "./core/stealth";
 import { inspectMidiAdapter } from "./midi-adapter";
 import { isV1AmmoLedger, isV1TransactionLedger } from "./migrations";
+import { transactPotion } from "./potion-transaction";
+import { normalizePotionActivities } from "./potion-activity-normalization";
 import { setting } from "./settings";
 
 type AnyRecord = Record<string, any>;
@@ -111,7 +113,7 @@ function lockedRuntime(): boolean {
 function dnd5eSix(): boolean {
   const current = game();
   return lockedRuntime()
-    && (current?.system?.version === "6.0.2" || current?.system?.version === "6.0.5");
+    && (current?.system?.version === "6.0.2" || current?.system?.version === "6.0.5" || current?.system?.version === "6.0.6");
 }
 
 function nativeAmmunitionId(message: AnyRecord): string | null {
@@ -806,67 +808,29 @@ async function setWeaponPenalty(item: AnyRecord, targetPenalty: number): Promise
   return true;
 }
 
-function persistedPotionActivities(value: unknown): AnyRecord | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  try {
-    // Item.toObject() may retain undefined schema fields; module flags persist as JSON and omit them.
-    const persisted = JSON.parse(JSON.stringify(value));
-    return persisted && typeof persisted === "object" && !Array.isArray(persisted) ? persisted : null;
-  } catch {
-    return null;
-  }
-}
-
 export async function configurePotion(item: AnyRecord, mode: "preview" | "apply" | "restore"): Promise<AnyRecord | null> {
   if (!currentIsAuthority() || !enabled(SETTING.potion)) return null;
-  const tag = explicitFlag(item, FLAG.potion);
-  if (!tag?.healing || item?.type !== "consumable" || item?.pack || item?.inCompendium) return null;
-  const activities = buildPotionActivities(tag.dice as HealingDice, {
-    quick: game()?.i18n?.localize?.("FVTT_HOUSE_RULES.Potion.Quick") ?? "Quick Drink",
-    max: game()?.i18n?.localize?.("FVTT_HOUSE_RULES.Potion.Max") ?? "Careful Drink",
-    feed: game()?.i18n?.localize?.("FVTT_HOUSE_RULES.Potion.Feed") ?? "Administer Potion"
-  });
-  if (!activities) return null;
-  if (mode === "preview") return { activities };
-  if (!isMutableDocument(item)) return null;
-  if (mode === "restore") {
-    const snapshot = explicitFlag(item, FLAG.potionSnapshot);
-    if (!snapshot || snapshot.schema !== 2) return null;
-    const original = persistedPotionActivities(snapshot.activities);
-    const applied = persistedPotionActivities(snapshot.appliedActivities);
-    const current = persistedPotionActivities(item.toObject?.()?.system?.activities);
-    const replacement = runtime().foundry?.data?.operators?.ForcedReplacement;
-    const equals = runtime().foundry?.utils?.equals;
-    if (!original || !applied || !current
-      || typeof replacement?.create !== "function" || typeof equals !== "function") return null;
-    // A generated activity may have been edited after apply, even if its module flag remains.
-    if (!equals(current, applied)) return null;
-    const updated = await item.update({ "system.activities": replacement.create(structuredClone(original)) });
-    if (!updated || !equals(persistedPotionActivities(item.toObject?.()?.system?.activities), original)) return null;
-    await item.unsetFlag(MODULE_ID, FLAG.potionSnapshot);
-    return { restored: true };
+  const planActivities = () => {
+    const tag = explicitFlag(item, FLAG.potion);
+    if (!tag?.healing || item?.type !== "consumable" || item?.pack || item?.inCompendium) return null;
+    return buildPotionActivities(tag.dice as HealingDice, {
+      quick: game()?.i18n?.localize?.("FVTT_HOUSE_RULES.Potion.Quick") ?? "Quick Drink",
+      max: game()?.i18n?.localize?.("FVTT_HOUSE_RULES.Potion.Max") ?? "Careful Drink",
+      feed: game()?.i18n?.localize?.("FVTT_HOUSE_RULES.Potion.Feed") ?? "Administer Potion"
+    });
+  };
+  if (mode === "preview") {
+    const activities = planActivities();
+    return activities ? { activities } : null;
   }
-  if (explicitFlag(item, FLAG.potionSnapshot)) return null;
-  const source = item.toObject?.()?.system?.activities;
-  const original = persistedPotionActivities(source);
-  if (!original || Object.keys(activities).some(key => Object.hasOwn(source, key))) return null;
-  // A schema 1 snapshot remains available if the update fails, but is not safe to restore automatically.
-  await item.setFlag(MODULE_ID, FLAG.potionSnapshot, potionSnapshot(original));
-  const pending = explicitFlag(item, FLAG.potionSnapshot);
-  const equals = runtime().foundry?.utils?.equals;
-  if (pending?.schema !== 1 || typeof equals !== "function" || !equals(pending.activities, original)) return null;
-  const updated = await item.update({ "system.activities": activities });
-  const applied = persistedPotionActivities(item.toObject?.()?.system?.activities);
-  if (!updated || !applied
-    || Object.keys(activities).some(key => !Object.hasOwn(applied, key))) return null;
-  await item.setFlag(MODULE_ID, FLAG.potionSnapshot, {
-    schema: 2, activities: structuredClone(original), appliedActivities: structuredClone(applied)
+  if (!isMutableDocument(item)) return null;
+  return transactPotion(item, mode, planActivities, {
+    canWrite: () => currentIsAuthority() && enabled(SETTING.potion) && isMutableDocument(item),
+    snapshot: () => explicitFlag(item, FLAG.potionSnapshot),
+    equals: runtime().foundry?.utils?.equals,
+    replacement: runtime().foundry?.data?.operators?.ForcedReplacement,
+    normalizeActivities: activities => normalizePotionActivities(item, activities, runtime().CONFIG?.DND5E?.activityTypes)
   });
-  const saved = explicitFlag(item, FLAG.potionSnapshot);
-  if (saved?.schema !== 2 || typeof equals !== "function"
-    || !equals(persistedPotionActivities(saved.activities), original)
-    || !equals(persistedPotionActivities(saved.appliedActivities), applied)) return null;
-  return { applied: true, activities };
 }
 
 export async function gambleHitPoints(actor: AnyRecord, classItem: AnyRecord, level: number): Promise<AnyRecord | null> {

@@ -1,0 +1,74 @@
+{
+  "id": "fvtt-battlefield-painter",
+  "title": "战场地形画笔",
+  "category": "play",
+  "summary": "GM在网格场景绘制42种可追踪地形选项，并使用阶段、颜色、光、可选声音、Region铺设及擦除/历史。",
+  "when": "跑团中需要快速铺设地形、改变阶段、表达移动代价或清理本模块地形文档时使用。",
+  "requires": [
+    "代码精确支持14.364/5.3.3、Mirror14.368/5.3.3及Next14.368/6.0.2、6.0.5、6.0.6；606已接受本地一格事务/Region移动/linked falling/重载及非GM权限边界的限定案例，绘制仅向GM开放且玩家入口拒绝已验",
+    "GM",
+    "已在画布查看的场景和可用网格"
+  ],
+  "steps": [
+    {
+      "title": "启用并打开场景",
+      "text": "以 GM 身份在精确支持版本的世界中启用模块，然后打开并激活要编辑的场景。非 GM、无活动场景或网格接口不可用时不会允许修改。"
+    },
+    {
+      "title": "打开地形画笔",
+      "text": "在场景控制组的 Tiles 工具栏点击火焰图标“战场地形画笔”，打开 ApplicationV2 控制面板。该入口只在精确版本和 GM 客户端中出现。"
+    },
+    {
+      "title": "选择地形与画笔",
+      "text": "从42选项选择地形及其1至4阶段；支持换色的13类有原色加12色，环境音默认关闭。选择自由、直线或填充，以及0至4格半径。"
+    },
+    {
+      "title": "在画布上操作",
+      "text": "启用后左键拖动并松开提交；擦除/阶段只改命中格位，撤销重做核对当前笔画。选中Region后可点铺设入口或Shift+P；Shift选地形收起面板，落笔后恢复。"
+    },
+    {
+      "title": "处理清除与旧声音",
+      "text": "需要清理本场景地形时先查看数量预览，再在确认框中确认；发现旧版本 AmbientSound 时也必须由 GM 显式确认清理。旧声音清理不可撤销，模块不会自动迁移或删除场景数据。"
+    }
+  ],
+  "outputs": [
+    "模块拥有的Tile、Region、Wall、AmbientLight及可选AmbientSound文档",
+    "36地形配置加6月蚀矿图案；各配置1至4阶段、部分颜色和本模块历史",
+    "移动/阻挡按各配置说明；整张素材擦除保持原图框和选图"
+  ],
+  "limits": [
+    "42项已整合为0.3.0-alpha.2候选；Mirror14.368/5.3.3的新Core接受按本轮原件记录，既有14.364代表样本和Next Fire切片不互相替代",
+    "13类换色和9类可选声音已实现；V3含7音源，GM七源技术播放/长短循环/近远/音量参数和Fire历史刷新擦除通过，SY七源近处播放和Energy代表近远返回也取得实际证据。能量原字节保持，其他6条约180秒立体声；旧场景音量不自动修改，主观音色仍单独保留。",
+    "复现音效时输入、输出目录必须互不包含，校验报告放在两个目录树外；输出音频文件不能通过软链接指向其他文件",
+    "Mirror14.368/5.3.3的HexCols26项/36阶段视觉、三格型代表交互及SY密地2倍/清地正常成本已取得实际证据；HexRows这次清地与Energy远返由真人操作。未扩大为全部42项/所有动作接受，也未宣称当前自动拖动接口的时序问题已修复。",
+    "不自动伤害、传送、滑倒或施法；狂野魔法/裂隙深入功能和完整长时/生产接受继续排除",
+    "旧白噪声声音单独显式清理；清除只处理拥有标记的文档。安装器拒绝覆盖现有目标，共享安装升级按运维记录进行",
+    "6.0.6真实一格FireI前置已核对Region距离10/成本15、linked falling、三次原生移动、普通重载和精确来源恢复；同时核对了玩家入口/权限拒绝，画笔不会向玩家开放，观察者看不到 Token HUD，也不能更新外来 Token。绘制仅向GM开放且玩家入口拒绝已验；全目录、长时与生产仍未验收。",
+    "报告绘制成功前仍核对Scene实际创建与计划归属。失败只清理本次读回确认的对象，未报告/外来对象和删除被拒的残留会明确列出；本轮事务/移动/重载及模块拥有对象的限定实机链已接受，不能据此认为全场景或全目录已完全恢复。"
+  ],
+  "keywords": [
+    "战场",
+    "地形",
+    "火焰",
+    "冰霜",
+    "荆棘",
+    "画笔",
+    "Canvas",
+    "Region"
+  ],
+  "sources": [
+    "foundry-modules/fvtt-battlefield-painter/README.zh-CN.md",
+    "foundry-modules/fvtt-battlefield-painter/docs/acceptance-checklist.md",
+    "docs/reviews/2026-10-01-next-605-custom-module-restoration.md",
+    "foundry-modules/fvtt-battlefield-painter/docs/CONTINUATION.md",
+    "foundry-modules/fvtt-battlefield-painter/docs/audio-v3-integration-2026-10-04.md",
+    "foundry-modules/fvtt-battlefield-painter/docs/PAUSED-PROGRESS-2026-10-04.md",
+    "docs/reviews/2026-10-03-foundry-14-365-mirror-upgrade-and-tile-arsenal.md",
+    "foundry-modules/fvtt-battlefield-painter/docs/completion-2026-10-05.md",
+    "foundry-modules/fvtt-battlefield-painter/docs/local-integration-scope-2026-10-05.md"
+  ],
+  "watch": [
+    "foundry-modules/fvtt-battlefield-painter/"
+  ],
+  "module": "fvtt-battlefield-painter"
+}

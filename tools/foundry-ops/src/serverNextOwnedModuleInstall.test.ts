@@ -47,8 +47,8 @@ beforeEach(async () => {
 afterEach(async () => { await rm(temporary, { recursive: true }); });
 
 describe('ServerNext repository-owned module installer', () => {
-  it.each(['fvtt-trigger-engine', 'fvtt-custom-conditions', 'fvtt-weapon-mastery-properties'])('previews and installs the exact %s candidate without replacing existing files', async (moduleId) => {
-    const version = moduleId === 'fvtt-weapon-mastery-properties' ? '0.1.0' : '0.2.0';
+  it.each(['fvtt-trigger-engine', 'fvtt-custom-conditions', 'fvtt-weapon-mastery-properties', 'fvtt-suite-console'])('previews and installs the exact %s candidate without replacing existing files', async (moduleId) => {
+    const version = ['fvtt-weapon-mastery-properties', 'fvtt-suite-console'].includes(moduleId) ? '0.1.0' : '0.2.0';
     const owner = resolve(repoRoot, 'foundry-modules', moduleId);
     const build = resolve(owner, 'dist/module');
     await mkdir(resolve(owner, 'src'), { recursive: true });

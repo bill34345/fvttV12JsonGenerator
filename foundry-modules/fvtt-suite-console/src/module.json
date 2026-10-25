@@ -1,0 +1,18 @@
+{
+  "id": "fvtt-suite-console",
+  "title": "FVTT 工具合集 · 统一操作手册",
+  "description": "供 GM 在 Foundry 内搜索工具用途、阅读步骤与版本限制的只读手册。命令仅可复制，阅读不修改世界或设置。",
+  "version": "0.3.0",
+  "compatibility": {
+    "minimum": "14.368",
+    "verified": "14.368",
+    "maximum": "14.368"
+  },
+  "esmodules": [
+    "scripts/index.js"
+  ],
+  "styles": [
+    "styles/suite-handbook.css"
+  ],
+  "socket": false
+}

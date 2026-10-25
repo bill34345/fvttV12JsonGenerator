@@ -55,8 +55,8 @@ export function validateManifest(manifest: Record<string, any>): void {
   }
   const dnd5e = (manifest.relationships?.systems ?? []).find((entry: any) => entry.id === 'dnd5e');
   const system = dnd5e?.compatibility ?? {};
-  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '6.0.5') {
-    throw new Error('dnd5e compatibility must span 5.3.3 to 6.0.5 with verification at 5.3.3.');
+  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '6.0.6') {
+    throw new Error('dnd5e compatibility must span 5.3.3 to 6.0.6 with verification at 5.3.3.');
   }
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(['scripts/index.js'])) throw new Error('Browser entry contract drifted.');
   if (JSON.stringify(manifest.styles) !== JSON.stringify([{ src: 'styles/trigger-engine.css' }])) throw new Error('Style asset contract drifted.');

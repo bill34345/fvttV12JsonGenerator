@@ -593,16 +593,578 @@ function installQueryTransport(
 }
 
 describe('weapon mastery runtime integration', () => {
+  test('inactive CC or invalid TE retained APIs cannot subscribe, reserve, publish, or begin an attack', async () => {
+    for (const defect of ['cc-inactive', 'cc-active-unknown', 'te-inactive', 'te-active-unknown', 'te-version', 'te-capability']) {
+      const world = createWorld();
+      const cc = world.globals.game.modules.get('fvtt-custom-conditions');
+      const te = world.globals.game.modules.get('fvtt-trigger-engine');
+      let subscriptions = 0;
+      let publishes = 0;
+      te.api.subscribeExternal = () => { subscriptions++; return () => {}; };
+      te.api.publishExternal = async () => { publishes++; return { status: 'published' }; };
+      if (defect === 'cc-inactive') cc.active = false;
+      if (defect === 'cc-active-unknown') delete cc.active;
+      if (defect === 'te-inactive') te.active = false;
+      if (defect === 'te-active-unknown') delete te.active;
+      if (defect === 'te-version') te.version = '0.2.1';
+      if (defect === 'te-capability') te.api.capabilities.externalEvents = 0;
+      const attacker = makeActor(`gate-${defect}-attacker`);
+      const target = makeActor(`gate-${defect}-target`);
+      attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, `gate-${defect}-vex`));
+      const item = makeItem(world, attacker, `gate-${defect}-item`, masteryConfiguration('vex'));
+      const activity = makeActivity(world, item, `gate-${defect}-activity`);
+      const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+      runtime.start();
+      expect(subscriptions).toBe(0);
+      expect(runtime.dependencies().ready).toBeFalse();
+      await expect(runtime.prepareUse(activity, { targetActor: target, attackId: `gate-${defect}` })).rejects.toThrow('dependencies');
+      expect(cc.api.weaponEffects.events).toEqual([]);
+      expect(attacker.getFlag(MODULE_ID, 'ledger')).toBeUndefined();
+      expect(activity.calls.use).toBe(0);
+      expect(activity.calls.rollAttack).toBe(0);
+      expect(publishes).toBe(0);
+      runtime.stop();
+    }
+  });
+
+  test('dependency loss after preparation prevents reservation start and another ledger/publication write', async () => {
+    for (const lost of ['cc-active', 'te-capability']) {
+      const world = createWorld();
+      const cc = world.globals.game.modules.get('fvtt-custom-conditions');
+      const te = world.globals.game.modules.get('fvtt-trigger-engine');
+      let publishes = 0;
+      te.api.publishExternal = async () => { publishes++; return { status: 'published' }; };
+      const attacker = makeActor(`lost-${lost}-attacker`);
+      const target = makeActor(`lost-${lost}-target`);
+      attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, `lost-${lost}-vex`));
+      const item = makeItem(world, attacker, `lost-${lost}-item`, masteryConfiguration('vex'));
+      const activity = makeActivity(world, item, `lost-${lost}-activity`);
+      const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+      runtime.start();
+      const prepared = await runtime.prepareUse(activity, { targetActor: target, attackId: `lost-${lost}` });
+      expect(prepared?.reservations).toHaveLength(1);
+      const ledgerBefore = structuredClone(attacker.getFlag(MODULE_ID, 'ledger'));
+      const eventsBefore = [...cc.api.weaponEffects.events];
+      const publishesBefore = publishes;
+      if (lost === 'cc-active') cc.active = false;
+      else te.api.capabilities.externalEvents = 0;
+      await expect(runtime.startUse(prepared!)).rejects.toThrow('dependencies');
+      expect(attacker.getFlag(MODULE_ID, 'ledger')).toEqual(ledgerBefore);
+      expect(cc.api.weaponEffects.events).toEqual(eventsBefore);
+      expect(publishes).toBe(publishesBefore);
+      expect(activity.calls.use).toBe(0);
+      runtime.stop();
+    }
+  });
+
+  test('CC, TE, or active GM lost during Actor resolution cannot use a retained CC start API', async () => {
+    for (const lost of ['cc', 'te', 'gm']) {
+      const world = createWorld();
+      const cc = world.globals.game.modules.get('fvtt-custom-conditions');
+      const te = world.globals.game.modules.get('fvtt-trigger-engine');
+      let publishes = 0;
+      te.api.publishExternal = async () => { publishes++; return { status: 'published' }; };
+      const attacker = makeActor(`resolve-${lost}-attacker`);
+      const target = makeActor(`resolve-${lost}-target`);
+      attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, `resolve-${lost}-vex`));
+      const item = makeItem(world, attacker, `resolve-${lost}-item`, masteryConfiguration('vex'));
+      const activity = makeActivity(world, item, `resolve-${lost}-activity`);
+      const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+      runtime.start();
+      const prepared = await runtime.prepareUse(activity, { targetActor: target, attackId: `resolve-${lost}` });
+      expect(prepared?.reservations).toHaveLength(1);
+      const priorLedger = structuredClone(attacker.getFlag(MODULE_ID, 'ledger'));
+      const priorEvents = [...cc.api.weaponEffects.events];
+      const priorPublishes = publishes;
+      let writes = 0;
+      const setFlag = attacker.setFlag;
+      attacker.setFlag = async (...args: any[]) => { writes++; return setFlag(...args); };
+      const fromUuid = world.globals.foundry.utils.fromUuid;
+      let release!: () => void, entered!: () => void;
+      const gate = new Promise<void>(resolve => { release = resolve; });
+      const waiting = new Promise<void>(resolve => { entered = resolve; });
+      let held = false;
+      world.globals.foundry.utils.fromUuid = async (uuid: string) => {
+        if (uuid === attacker.uuid && !held) { held = true; entered(); await gate; }
+        return fromUuid(uuid);
+      };
+      const starting = runtime.startUse(prepared!);
+      await waiting;
+      if (lost === 'cc') cc.active = false;
+      if (lost === 'te') te.api.capabilities.externalEvents = 0;
+      if (lost === 'gm') world.globals.game.users.activeGM = undefined;
+      release();
+      await expect(starting).rejects.toThrow();
+      expect(cc.api.weaponEffects.events).toEqual(priorEvents);
+      expect(attacker.getFlag(MODULE_ID, 'ledger')).toEqual(priorLedger);
+      expect(writes).toBe(0);
+      expect(publishes).toBe(priorPublishes);
+      cc.active = true;
+      te.api.capabilities.externalEvents = 1;
+      world.globals.game.users.activeGM = world.gm;
+      expect((await runtime.cancelUse(prepared!)).status).toBe('cancelled');
+      expect(attacker.effects[0].instance.reservation).toBeUndefined();
+      runtime.stop();
+    }
+  });
+
+  test('a second reservation failure retains the already-started first effect for reconciliation', async () => {
+    const world = createWorld();
+    const cc = world.globals.game.modules.get('fvtt-custom-conditions');
+    const attacker = makeActor('partial-start-attacker');
+    const target = makeActor('partial-start-target');
+    attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, 'partial-first'));
+    attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, 'partial-second'));
+    const item = makeItem(world, attacker, 'partial-start-item', masteryConfiguration('vex'));
+    const activity = makeActivity(world, item, 'partial-start-activity');
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    const prepared = await runtime.prepareUse(activity, { targetActor: target, attackId: 'partial-start' });
+    expect(prepared?.reservations).toHaveLength(2);
+    const fromUuid = world.globals.foundry.utils.fromUuid;
+    let release!: () => void, entered!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const waiting = new Promise<void>(resolve => { entered = resolve; });
+    let actorResolutions = 0;
+    world.globals.foundry.utils.fromUuid = async (uuid: string) => {
+      if (uuid === attacker.uuid && ++actorResolutions === 2) { entered(); await gate; }
+      return fromUuid(uuid);
+    };
+    const starting = runtime.startUse(prepared!);
+    await waiting;
+    cc.active = false;
+    release();
+    await expect(starting).rejects.toThrow();
+    expect(cc.api.weaponEffects.events.filter((entry: string) => entry.startsWith('start:'))).toEqual(['start:partial-first']);
+    cc.active = true;
+    const cancelled = await runtime.cancelUse(prepared!);
+    expect(cancelled.status).toBe('pending');
+    expect(cancelled.reason).toBe('started-attack-requires-gm-reconciliation');
+    const claim = attacker.getFlag(MODULE_ID, 'ledger').find((entry: any) => entry.attackId === prepared!.attackId);
+    expect(claim?.step).toBe('started');
+    expect(claim?.steps.started).not.toBe('started');
+    await expect(runtime.startUse(prepared!)).rejects.toThrow('reconciliation');
+    runtime.stop();
+    const recovered = createWeaponMasteryRuntime({ globals: world.globals });
+    recovered.start();
+    const reference = { attackId: prepared!.attackId, sourceActorUuid: attacker.uuid } as any;
+    await expect(recovered.startUse(reference)).rejects.toThrow('reconciliation');
+    putMessage(world, activity, 'partial-start-linked-message', { attackId: prepared!.attackId });
+    await linkRollMessage(world, activity, 'partial-start-linked-message');
+    const priorEvents = [...cc.api.weaponEffects.events];
+    const committed = await recovered.commitUse(reference, { messageId: 'partial-start-linked-message' });
+    expect(committed.status).toBe('pending');
+    expect(committed.reason).toBe('started-attack-requires-gm-reconciliation');
+    expect(cc.api.weaponEffects.events).toEqual(priorEvents);
+    expect(attacker.getFlag(MODULE_ID, 'ledger').find((entry: any) => entry.attackId === prepared!.attackId)?.step).toBe('started');
+    expect(cc.api.weaponEffects.events.filter((entry: string) => entry.startsWith('start:'))).toEqual(['start:partial-first']);
+    recovered.stop();
+  });
+
+  test('failed first started-claim write cannot produce a false idempotent start', async () => {
+    const world = createWorld();
+    const attacker = makeActor('start-claim-fail-attacker');
+    const target = makeActor('start-claim-fail-target');
+    attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, 'start-claim-fail-vex'));
+    const item = makeItem(world, attacker, 'start-claim-fail-item', masteryConfiguration('vex'));
+    const activity = makeActivity(world, item, 'start-claim-fail-activity');
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    const prepared = await runtime.prepareUse(activity, { targetActor: target, attackId: 'start-claim-fail' });
+    const setFlag = attacker.setFlag;
+    attacker.setFlag = async () => { throw new Error('started claim write failed'); };
+    await expect(runtime.startUse(prepared!)).rejects.toThrow('started claim write failed');
+    await expect(runtime.startUse(prepared!)).rejects.toThrow('reconciliation');
+    expect(world.effectApis[0]?.events.filter((event: string) => event.startsWith('start:'))).toEqual([]);
+    expect(attacker.getFlag(MODULE_ID, 'ledger')?.find((entry: any) => entry.attackId === prepared!.attackId)?.step).toBe('prepared');
+    attacker.setFlag = setFlag;
+    runtime.stop();
+  });
+
+  test('failed final started confirmation is not an idempotent success after reload', async () => {
+    const world = createWorld();
+    const attacker = makeActor('start-confirm-fail-attacker');
+    const target = makeActor('start-confirm-fail-target');
+    attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, 'start-confirm-fail-vex'));
+    const item = makeItem(world, attacker, 'start-confirm-fail-item', masteryConfiguration('vex'));
+    const activity = makeActivity(world, item, 'start-confirm-fail-activity');
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    const prepared = await runtime.prepareUse(activity, { targetActor: target, attackId: 'start-confirm-fail' });
+    const setFlag = attacker.setFlag;
+    let writes = 0;
+    attacker.setFlag = async (...args: any[]) => {
+      if (++writes === 3) throw new Error('started confirmation write failed');
+      return setFlag(...args);
+    };
+    await expect(runtime.startUse(prepared!)).rejects.toThrow('started confirmation write failed');
+    const claim = attacker.getFlag(MODULE_ID, 'ledger')?.find((entry: any) => entry.attackId === prepared!.attackId);
+    expect(claim?.step).toBe('started');
+    expect(claim?.steps.started).not.toBe('started');
+    expect(claim?.reservations[0]?.ticket.state).toBe('started');
+    await expect(runtime.startUse(prepared!)).rejects.toThrow('reconciliation');
+    runtime.stop();
+    const recovered = createWeaponMasteryRuntime({ globals: world.globals });
+    recovered.start();
+    await expect(recovered.startUse({ attackId: prepared!.attackId, sourceActorUuid: attacker.uuid } as any)).rejects.toThrow('reconciliation');
+    expect(world.effectApis[0]?.events.filter((event: string) => event.startsWith('start:'))).toEqual(['start:start-confirm-fail-vex']);
+    recovered.stop();
+  });
+
+  test('confirmed started attack remains idempotent on repeat start', async () => {
+    const world = createWorld();
+    const attacker = makeActor('confirmed-start-attacker');
+    const target = makeActor('confirmed-start-target');
+    attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, 'confirmed-start-vex'));
+    const item = makeItem(world, attacker, 'confirmed-start-item', masteryConfiguration('vex'));
+    const activity = makeActivity(world, item, 'confirmed-start-activity');
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    const prepared = await runtime.prepareUse(activity, { targetActor: target, attackId: 'confirmed-start' });
+    await runtime.startUse(prepared!);
+    const calls = world.effectApis[0]?.events.filter((event: string) => event.startsWith('start:'));
+    expect(calls).toEqual(['start:confirmed-start-vex']);
+    expect(attacker.getFlag(MODULE_ID, 'ledger')?.find((entry: any) => entry.attackId === prepared!.attackId)?.steps.started).toBe('started');
+    expect((await runtime.startUse(prepared!)).attackId).toBe(prepared!.attackId);
+    expect(world.effectApis[0]?.events.filter((event: string) => event.startsWith('start:'))).toEqual(calls);
+    runtime.stop();
+    const recovered = createWeaponMasteryRuntime({ globals: world.globals });
+    recovered.start();
+    expect((await recovered.startUse({ attackId: prepared!.attackId, sourceActorUuid: attacker.uuid } as any)).attackId).toBe(prepared!.attackId);
+    expect(world.effectApis[0]?.events.filter((event: string) => event.startsWith('start:'))).toEqual(calls);
+    recovered.stop();
+  });
+
+  test('GM loss during the last CC start cannot confirm an unpersisted completed start', async () => {
+    const world = createWorld();
+    const cc = world.globals.game.modules.get('fvtt-custom-conditions');
+    const attacker = makeActor('last-start-gm-loss-attacker');
+    const target = makeActor('last-start-gm-loss-target');
+    attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, 'last-start-gm-loss-vex'));
+    const item = makeItem(world, attacker, 'last-start-gm-loss-item', masteryConfiguration('vex'));
+    const activity = makeActivity(world, item, 'last-start-gm-loss-activity');
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    const prepared = await runtime.prepareUse(activity, { targetActor: target, attackId: 'last-start-gm-loss' });
+    const start = cc.api.weaponEffects.start;
+    let entered!: () => void, release!: () => void;
+    const waiting = new Promise<void>(resolve => { entered = resolve; });
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    cc.api.weaponEffects.start = async (...args: any[]) => { entered(); await gate; return start(...args); };
+    const starting = runtime.startUse(prepared!);
+    await waiting;
+    const claim = attacker.getFlag(MODULE_ID, 'ledger')?.find((entry: any) => entry.attackId === prepared!.attackId);
+    expect(claim?.step).toBe('started');
+    expect(claim?.steps.started).not.toBe('started');
+    world.globals.game.users.activeGM = undefined;
+    release();
+    await expect(starting).rejects.toThrow('Active GM');
+    expect(attacker.effects[0].instance.reservation?.state).toBe('started');
+    expect(attacker.getFlag(MODULE_ID, 'ledger')?.find((entry: any) => entry.attackId === prepared!.attackId)?.steps.started).not.toBe('started');
+    world.globals.game.users.activeGM = world.gm;
+    await expect(runtime.startUse(prepared!)).rejects.toThrow('reconciliation');
+    runtime.stop();
+    const recovered = createWeaponMasteryRuntime({ globals: world.globals });
+    recovered.start();
+    await expect(recovered.startUse({ attackId: prepared!.attackId, sourceActorUuid: attacker.uuid } as any)).rejects.toThrow('reconciliation');
+    recovered.stop();
+  });
+
+  test('GM loss during returned CC reserve cannot turn an incomplete claim into prepared', async () => {
+    const world = createWorld();
+    const cc = world.globals.game.modules.get('fvtt-custom-conditions');
+    const attacker = makeActor('last-reserve-gm-loss-attacker');
+    const target = makeActor('last-reserve-gm-loss-target');
+    attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, 'last-reserve-gm-loss-vex'));
+    const item = makeItem(world, attacker, 'last-reserve-gm-loss-item', masteryConfiguration('vex'));
+    const activity = makeActivity(world, item, 'last-reserve-gm-loss-activity');
+    const events: AnyRecord[] = [];
+    world.globals.game.modules.get('fvtt-trigger-engine').api.publishExternal = async (event: AnyRecord) => { events.push(event); };
+    const reserve = cc.api.weaponEffects.reserve;
+    let entered!: () => void, release!: () => void;
+    const waiting = new Promise<void>(resolve => { entered = resolve; });
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    cc.api.weaponEffects.reserve = async (...args: any[]) => { entered(); await gate; return reserve(...args); };
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    const preparing = runtime.prepareUse(activity, { targetActor: target, attackId: 'last-reserve-gm-loss' });
+    await waiting;
+    expect(attacker.getFlag(MODULE_ID, 'ledger')?.find((entry: any) => entry.attackId === 'last-reserve-gm-loss')?.steps.prepared).toBeUndefined();
+    world.globals.game.users.activeGM = undefined;
+    release();
+    await expect(preparing).rejects.toThrow('Active GM');
+    expect(events).toEqual([]);
+    expect(attacker.getFlag(MODULE_ID, 'ledger')?.find((entry: any) => entry.attackId === 'last-reserve-gm-loss')?.steps.prepared).toBeUndefined();
+    world.globals.game.users.activeGM = world.gm;
+    expect((await runtime.cancelUse({ attackId: 'last-reserve-gm-loss', sourceActorUuid: attacker.uuid } as any)).status).toBe('pending');
+    await expect(runtime.prepareUse(activity, { targetActor: target, attackId: 'last-reserve-gm-loss' })).rejects.toThrow('already been used');
+    runtime.stop();
+  });
+
+  test('GM loss during CC cancel cannot falsely confirm a terminal cancellation', async () => {
+    const world = createWorld();
+    const cc = world.globals.game.modules.get('fvtt-custom-conditions');
+    const attacker = makeActor('last-cancel-gm-loss-attacker');
+    const target = makeActor('last-cancel-gm-loss-target');
+    attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, 'last-cancel-gm-loss-vex'));
+    const item = makeItem(world, attacker, 'last-cancel-gm-loss-item', masteryConfiguration('vex'));
+    const activity = makeActivity(world, item, 'last-cancel-gm-loss-activity');
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    const prepared = await runtime.prepareUse(activity, { targetActor: target, attackId: 'last-cancel-gm-loss' });
+    const cancel = cc.api.weaponEffects.cancel;
+    let entered!: () => void, release!: () => void;
+    const waiting = new Promise<void>(resolve => { entered = resolve; });
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    cc.api.weaponEffects.cancel = async (...args: any[]) => { entered(); await gate; return cancel(...args); };
+    const cancelling = runtime.cancelUse(prepared!);
+    await waiting;
+    world.globals.game.users.activeGM = undefined;
+    release();
+    await expect(cancelling).rejects.toThrow('Active GM');
+    expect(attacker.getFlag(MODULE_ID, 'ledger')?.find((entry: any) => entry.attackId === prepared!.attackId)?.step).toBe('prepared');
+    world.globals.game.users.activeGM = world.gm;
+    expect((await runtime.cancelUse(prepared!)).status).toBe('cancelled');
+    runtime.stop();
+  });
+
+  test('zero-reservation start still confirms one durable completed marker', async () => {
+    const world = createWorld();
+    const attacker = makeActor('zero-reservation-attacker');
+    const target = makeActor('zero-reservation-target');
+    const item = makeItem(world, attacker, 'zero-reservation-item', disabledConfiguration());
+    const activity = makeActivity(world, item, 'zero-reservation-activity');
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    const prepared = await runtime.prepareUse(activity, { targetActor: target, attackId: 'zero-reservation' });
+    expect(prepared?.reservations).toEqual([]);
+    await runtime.startUse(prepared!);
+    const entry = attacker.getFlag(MODULE_ID, 'ledger')?.find((ledger: any) => ledger.attackId === prepared!.attackId);
+    expect(entry).toMatchObject({ step: 'started', steps: { prepared: 'prepared', started: 'started' }, reservations: [] });
+    expect((await runtime.startUse(prepared!)).attackId).toBe(prepared!.attackId);
+    expect(world.effectApis[0]?.events).toEqual([]);
+    runtime.stop();
+  });
+
+  test('failed terminal ledger write cannot become a cached committed result', async () => {
+    const world = createWorld();
+    const attacker = makeActor('terminal-write-attacker');
+    const target = makeActor('terminal-write-target');
+    const item = makeItem(world, attacker, 'terminal-write-item', disabledConfiguration());
+    const activity = makeActivity(world, item, 'terminal-write-activity');
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    const prepared = await runtime.prepareUse(activity, { targetActor: target, attackId: 'terminal-write' });
+    await runtime.startUse(prepared!);
+    putMessage(world, activity, 'terminal-write-message', { attackId: prepared!.attackId });
+    await linkRollMessage(world, activity, 'terminal-write-message');
+    const setFlag = attacker.setFlag;
+    attacker.setFlag = async (namespace: string, key: string, value: any) => {
+      if (value.some((entry: any) => entry.attackId === prepared!.attackId && entry.step === 'committed')) {
+        throw new Error('terminal ledger write failed');
+      }
+      return setFlag(namespace, key, value);
+    };
+    await expect(runtime.commitUse(prepared!, { messageId: 'terminal-write-message' })).rejects.toThrow('terminal ledger write failed');
+    expect(attacker.getFlag(MODULE_ID, 'ledger')?.find((entry: any) => entry.attackId === prepared!.attackId)?.step).not.toBe('committed');
+    expect((await runtime.commitUse(prepared!, { messageId: 'terminal-write-message' })).status).not.toBe('committed');
+    runtime.stop();
+  });
+
+  test('CC loss during cancellation Actor resolution cannot invoke the retained cancel API', async () => {
+    const world = createWorld();
+    const cc = world.globals.game.modules.get('fvtt-custom-conditions');
+    const attacker = makeActor('cancel-gate-attacker');
+    const target = makeActor('cancel-gate-target');
+    attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, 'cancel-gate-vex'));
+    const item = makeItem(world, attacker, 'cancel-gate-item', masteryConfiguration('vex'));
+    const activity = makeActivity(world, item, 'cancel-gate-activity');
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    const prepared = await runtime.prepareUse(activity, { targetActor: target, attackId: 'cancel-gate' });
+    expect(prepared?.reservations).toHaveLength(1);
+    const ledgerBefore = structuredClone(attacker.getFlag(MODULE_ID, 'ledger'));
+    const eventsBefore = [...cc.api.weaponEffects.events];
+    const fromUuid = world.globals.foundry.utils.fromUuid;
+    let release!: () => void, entered!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const waiting = new Promise<void>(resolve => { entered = resolve; });
+    let held = false;
+    world.globals.foundry.utils.fromUuid = async (uuid: string) => {
+      if (uuid === attacker.uuid && !held) { held = true; entered(); await gate; }
+      return fromUuid(uuid);
+    };
+    const cancelling = runtime.cancelUse(prepared!);
+    await waiting;
+    cc.active = false;
+    release();
+    await expect(cancelling).rejects.toThrow('dependencies');
+    expect(cc.api.weaponEffects.events).toEqual(eventsBefore);
+    expect(attacker.getFlag(MODULE_ID, 'ledger')).toEqual(ledgerBefore);
+    cc.active = true;
+    expect((await runtime.cancelUse(prepared!)).status).toBe('cancelled');
+    runtime.stop();
+  });
+
+  test('a failed initial ledger claim makes no CC reservation or prepared event', async () => {
+    const world = createWorld();
+    const attacker = makeActor('claim-fail-attacker');
+    const target = makeActor('claim-fail-target');
+    attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, 'claim-fail-vex'));
+    const item = makeItem(world, attacker, 'claim-fail-item', masteryConfiguration('vex'));
+    const activity = makeActivity(world, item, 'claim-fail-activity');
+    let publishes = 0;
+    world.globals.game.modules.get('fvtt-trigger-engine').api.publishExternal = async () => { publishes++; };
+    attacker.setFlag = async () => { throw new Error('initial claim write failed'); };
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    await expect(runtime.prepareUse(activity, { targetActor: target, attackId: 'claim-fail' })).rejects.toThrow('initial claim write failed');
+    expect(world.effectApis[0]?.events ?? []).toEqual([]);
+    expect(attacker.getFlag(MODULE_ID, 'ledger')).toBeUndefined();
+    expect(publishes).toBe(0);
+    await expect(runtime.prepareUse(activity, { targetActor: target, attackId: 'claim-fail' })).rejects.toThrow('already been used');
+    runtime.stop();
+  });
+
+  test('first durable ticket survives later dependency loss without a false prepared event or clean cancel', async () => {
+    const world = createWorld();
+    const cc = world.globals.game.modules.get('fvtt-custom-conditions');
+    const attacker = makeActor('orphan-attacker');
+    const target = makeActor('orphan-target');
+    attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, 'orphan-first'));
+    attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, 'orphan-second'));
+    const item = makeItem(world, attacker, 'orphan-item', masteryConfiguration('vex'));
+    const activity = makeActivity(world, item, 'orphan-activity');
+    let publishes = 0, writes = 0;
+    world.globals.game.modules.get('fvtt-trigger-engine').api.publishExternal = async () => { publishes++; };
+    const setFlag = attacker.setFlag;
+    attacker.setFlag = async (...args: any[]) => {
+      const result = await setFlag(...args);
+      if (++writes === 2) cc.active = false; // initial claim, then first returned ticket
+      return result;
+    };
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    await expect(runtime.prepareUse(activity, { targetActor: target, attackId: 'orphan-attack' })).rejects.toThrow('dependencies');
+    const ledger = attacker.getFlag(MODULE_ID, 'ledger')?.find((entry: any) => entry.attackId === 'orphan-attack');
+    expect(ledger?.step).toBe('prepared');
+    expect(ledger?.steps.prepared).not.toBe('prepared');
+    expect(ledger?.reservations).toHaveLength(1);
+    expect(ledger?.reservations[0].ticket.effectId).toBe('orphan-first');
+    expect(cc.api.weaponEffects.events.filter((event: string) => event.startsWith('reserve:'))).toEqual(['reserve:orphan-first']);
+    expect(publishes).toBe(0);
+    cc.active = true;
+    expect((await runtime.cancelUse({ attackId: 'orphan-attack', sourceActorUuid: attacker.uuid } as any)).status).toBe('pending');
+    await expect(runtime.startUse({ attackId: 'orphan-attack', sourceActorUuid: attacker.uuid } as any)).rejects.toThrow('preparation');
+    await expect(runtime.prepareUse(activity, { targetActor: target, attackId: 'orphan-attack' })).rejects.toThrow('already been used');
+    runtime.stop();
+  });
+
+  test('final preparation persistence failure retains the exact earlier ticket without publishing prepared', async () => {
+    const world = createWorld();
+    const attacker = makeActor('final-write-attacker');
+    const target = makeActor('final-write-target');
+    attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, 'final-write-vex'));
+    const item = makeItem(world, attacker, 'final-write-item', masteryConfiguration('vex'));
+    const activity = makeActivity(world, item, 'final-write-activity');
+    const events: AnyRecord[] = [];
+    world.globals.game.modules.get('fvtt-trigger-engine').api.publishExternal = async (event: AnyRecord) => { events.push(event); };
+    let writes = 0;
+    const setFlag = attacker.setFlag;
+    attacker.setFlag = async (...args: any[]) => {
+      if (++writes === 3) throw new Error('final preparation write failed');
+      return setFlag(...args);
+    };
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    await expect(runtime.prepareUse(activity, { targetActor: target, attackId: 'final-write' })).rejects.toThrow('final preparation write failed');
+    const ledger = attacker.getFlag(MODULE_ID, 'ledger')?.find((entry: any) => entry.attackId === 'final-write');
+    expect(writes).toBe(3);
+    expect(ledger?.steps.prepared).not.toBe('prepared');
+    expect(ledger?.reservations[0].ticket).toMatchObject({ effectId: 'final-write-vex', attackId: 'final-write', state: 'reserved' });
+    expect(events).toEqual([]);
+    runtime.stop();
+    const recovered = createWeaponMasteryRuntime({ globals: world.globals });
+    recovered.start();
+    const reference = { attackId: 'final-write', sourceActorUuid: attacker.uuid } as any;
+    expect((await recovered.cancelUse(reference)).status).toBe('pending');
+    await expect(recovered.startUse(reference)).rejects.toThrow('preparation');
+    await expect(recovered.prepareUse(activity, { targetActor: target, attackId: 'final-write' })).rejects.toThrow('already been used');
+    recovered.stop();
+  });
+
+  test('an in-flight unknown CC reserve leaves a discoverable incomplete claim after client recovery', async () => {
+    const world = createWorld();
+    const cc = world.globals.game.modules.get('fvtt-custom-conditions');
+    const attacker = makeActor('unknown-reserve-attacker');
+    const target = makeActor('unknown-reserve-target');
+    attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, 'unknown-reserve-vex'));
+    const item = makeItem(world, attacker, 'unknown-reserve-item', masteryConfiguration('vex'));
+    const activity = makeActivity(world, item, 'unknown-reserve-activity');
+    const published: AnyRecord[] = [];
+    world.globals.game.modules.get('fvtt-trigger-engine').api.publishExternal = async (event: AnyRecord) => { published.push(event); };
+    const reserve = cc.api.weaponEffects.reserve;
+    let entered!: () => void, release!: () => void;
+    const waiting = new Promise<void>(resolve => { entered = resolve; });
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    cc.api.weaponEffects.reserve = async (...args: any[]) => { entered(); await gate; return reserve(...args); };
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    const preparing = runtime.prepareUse(activity, { targetActor: target, attackId: 'unknown-reserve' });
+    await waiting;
+    expect(attacker.getFlag(MODULE_ID, 'ledger')?.find((entry: any) => entry.attackId === 'unknown-reserve')).toMatchObject({
+      step: 'prepared', reservations: [], steps: {},
+    });
+    expect(published).toEqual([]);
+    cc.active = false;
+    release();
+    await expect(preparing).rejects.toThrow('dependencies');
+    expect(attacker.effects[0].instance.reservation).toMatchObject({ attackId: 'unknown-reserve', state: 'reserved' });
+    expect(attacker.getFlag(MODULE_ID, 'ledger')?.find((entry: any) => entry.attackId === 'unknown-reserve')?.steps.prepared).toBeUndefined();
+    runtime.stop();
+    cc.active = true;
+    const recovered = createWeaponMasteryRuntime({ globals: world.globals });
+    recovered.start();
+    const reference = { attackId: 'unknown-reserve', sourceActorUuid: attacker.uuid } as any;
+    expect((await recovered.cancelUse(reference)).status).toBe('pending');
+    await expect(recovered.startUse(reference)).rejects.toThrow('preparation');
+    await expect(recovered.prepareUse(activity, { targetActor: target, attackId: 'unknown-reserve' })).rejects.toThrow('already been used');
+    expect(published).toEqual([]);
+    recovered.stop();
+  });
+
+  test('complete preparation emits exactly one prepared event with final reservation count', async () => {
+    const world = createWorld();
+    const attacker = makeActor('complete-prep-attacker');
+    const target = makeActor('complete-prep-target');
+    attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, 'complete-first'));
+    attacker.effects.push(makeEffect('vex', attacker.uuid, target.uuid, 'complete-second'));
+    const item = makeItem(world, attacker, 'complete-prep-item', masteryConfiguration('vex'));
+    const activity = makeActivity(world, item, 'complete-prep-activity');
+    const published: AnyRecord[] = [];
+    world.globals.game.modules.get('fvtt-trigger-engine').api.publishExternal = async (event: AnyRecord) => { published.push(event); };
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    const prepared = await runtime.prepareUse(activity, { targetActor: target, attackId: 'complete-prep' });
+    expect(prepared?.reservations).toHaveLength(2);
+    expect(published).toHaveLength(1);
+    expect(published[0]).toMatchObject({ eventId: 'complete-prep:prepared', data: { reservationCount: 2 } });
+    expect(attacker.getFlag(MODULE_ID, 'ledger')?.find((entry: any) => entry.attackId === 'complete-prep')?.steps.prepared).toBe('prepared');
+    expect((await runtime.cancelUse(prepared!)).status).toBe('cancelled');
+    runtime.stop();
+  });
+
   for (const version of [
     { core: '14.364', system: '5.3.3', midi: '14.0.11' },
     { core: '14.368', system: '5.3.3', midi: '14.0.11' },
     { core: '14.368', system: '6.0.5', midi: '14.6.0-beta.4338eeab.local.10' },
+    { core: '14.368', system: '6.0.6', midi: '14.6.0-beta.4338eeab.local.10' },
   ]) test('public Midi use owns one attack and one prepared nonce through cleanup on ' + version.core + '/' + version.system, async () => {
     const world = createWorld();
     world.globals.game.version = version.core;
     world.globals.game.system.version = version.system;
     const originalGet = world.globals.game.modules.get.bind(world.globals.game.modules);
-    if (version.system === '6.0.5') originalGet('fvtt-custom-conditions').api.weaponEffects.capabilities = { native6Effects: 1 };
+    if (version.system.startsWith('6.')) originalGet('fvtt-custom-conditions').api.weaponEffects.capabilities = { native6Effects: 1 };
     world.globals.game.modules.get = (id: string) => id === 'midi-qol'
       ? { active: true, version: version.midi } : originalGet(id);
     const attacker = makeActor('public-midi-attacker');
@@ -636,7 +1198,7 @@ describe('weapon mastery runtime integration', () => {
       await world.globals.Hooks.call('midi-qol.preAttackRoll', workflow);
       const native = makeMessage(world, 'public-midi-native-attack', attacker.uuid, activity.uuid, item.uuid,
         { total: 15, isSuccess: true }, workflow[PRIVATE_USE_KEY]);
-      if (version.system === '6.0.5') {
+      if (version.system.startsWith('6.')) {
         native.type = 'attack';
         native.system = {
           activity: { uuid: activity.uuid }, item: { uuid: item.uuid },
@@ -1615,13 +2177,15 @@ describe('weapon mastery runtime integration', () => {
   test.each([
     ['14.364', '5.3.3', false],
     ['14.368', '6.0.5', false],
+    ['14.368', '6.0.6', false],
     ['14.364', '5.3.3', true],
     ['14.368', '6.0.5', true],
+    ['14.368', '6.0.6', true],
   ])('Cleave binds secondary attack and damage while preserving the primary selection on %s/%s (post-hook commits first: %s)', async (core, system, commitBeforeReturn) => {
     const world = createWorld();
     world.globals.game.version = core;
     world.globals.game.system.version = system;
-    const native6 = system === '6.0.5';
+    const native6 = system === '6.0.5' || system === '6.0.6';
     if (native6) world.globals.game.modules.get('fvtt-custom-conditions').api.weaponEffects.capabilities = { native6Effects: 1 };
     const attacker = makeActor('attacker', 'player', ['longsword']);
     const primary = makeActor('primary');

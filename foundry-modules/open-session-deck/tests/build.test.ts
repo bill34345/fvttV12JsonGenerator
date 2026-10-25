@@ -11,12 +11,14 @@ describe('Open Session Deck build', () => {
     expect(() => validateManifest(manifest)).not.toThrow();
     expect(manifest.socket).toBe(false);
     expect(manifest.relationships.systems.map((entry: any) => entry.id)).toEqual(['dnd5e']);
+    expect(manifest.relationships.systems[0].compatibility).toEqual({ minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.6' });
   });
 
   test('rejects compatibility and networking drift', async () => {
     const manifest = JSON.parse(await readFile(resolve(import.meta.dir, '../src/module.json'), 'utf8'));
     expect(() => validateManifest({ ...manifest, compatibility: { ...manifest.compatibility, maximum: '14.365' } })).toThrow('14.368');
-    expect(() => validateManifest({ ...manifest, relationships: { systems: [{ id: 'dnd5e', compatibility: { minimum: '5.3.3', verified: '6.0.2', maximum: '6.0.5' } }] } })).toThrow('5.3.3');
+    expect(() => validateManifest({ ...manifest, relationships: { systems: [{ id: 'dnd5e', compatibility: { minimum: '5.3.3', verified: '6.0.2', maximum: '6.0.6' } }] } })).toThrow('5.3.3');
+    expect(() => validateManifest({ ...manifest, relationships: { systems: [{ id: 'dnd5e', compatibility: { minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.7' } }] } })).toThrow('6.0.6');
     expect(() => validateManifest({ ...manifest, socket: true })).toThrow('socket');
   });
 

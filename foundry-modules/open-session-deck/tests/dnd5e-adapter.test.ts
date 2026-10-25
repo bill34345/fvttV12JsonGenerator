@@ -84,6 +84,7 @@ describe('Dnd5eAdapter snapshots', () => {
     expect(supportError(runtime())).toBeUndefined();
     expect(supportError(runtime({ foundryVersion: '14.368', systemVersion: '6.0.2' }))).toBeUndefined();
     expect(supportError(runtime({ foundryVersion: '14.368', systemVersion: '6.0.5' }))).toBeUndefined();
+    expect(supportError(runtime({ foundryVersion: '14.368', systemVersion: '6.0.6' }))).toBeUndefined();
     expect(supportError(runtime({ foundryVersion: '14.365' }))).toContain('14.364');
     expect(supportError(runtime({ systemVersion: '5.4.0' }))).toContain('5.3.3');
     expect(supportError(runtime({ foundryVersion: '14.368' }))).toBeUndefined();
@@ -91,6 +92,8 @@ describe('Dnd5eAdapter snapshots', () => {
     expect(supportError(runtime({ foundryVersion: '14.369', systemVersion: '6.0.2' }))).toContain('14.368');
     expect(supportError(runtime({ foundryVersion: '14.368', systemVersion: '6.0.4' }))).toContain('6.0.5');
     expect(supportError(runtime({ foundryVersion: '14.364', systemVersion: '6.0.5' }))).toContain('6.0.2 or 6.0.5');
+    expect(supportError(runtime({ foundryVersion: '14.364', systemVersion: '6.0.6' }))).toContain('unsupported');
+    expect(supportError(runtime({ foundryVersion: '14.368', systemVersion: '6.0.7' }))).toContain('6.0.6');
     expect(supportError(runtime({ systemId: 'daggerheart' }))).toContain('dnd5e');
   });
 
@@ -99,6 +102,8 @@ describe('Dnd5eAdapter snapshots', () => {
     const adapter = new Dnd5eAdapter(runtime({ actors: [hero], users: [{ id: 'p', name: 'P', isGM: false, active: true, character: hero }], systemId: 'daggerheart' }));
     const value = adapter.buildSnapshot();
     expect(value.supported).toBeFalse();
+    expect(value.coreVersion).toBe('14.364');
+    expect(value.system).toEqual({ id: 'daggerheart', version: '5.3.3' });
     expect(value.party).toEqual([]);
     expect(value.encounter.active).toBeFalse();
     expect(value.encounter.commands.nextTurn.enabled).toBeFalse();
@@ -108,6 +113,7 @@ describe('Dnd5eAdapter snapshots', () => {
 
   test('keeps no-active-combat commands unavailable with an explicit reason', () => {
     const value = new Dnd5eAdapter(runtime()).buildSnapshot();
+    expect(value.coreVersion).toBe('14.364');
     expect(value.encounter.active).toBeFalse();
     expect(value.encounter.commands).toEqual({
       previousTurn: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
@@ -116,6 +122,17 @@ describe('Dnd5eAdapter snapshots', () => {
       swapInitiative: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
       rollNpcInitiative: { enabled: false, tooltipKey: 'OSD.Errors.NoActiveCombat' },
     });
+  });
+
+  test('projects the actual Next Core and dnd5e pair without changing the support gate', () => {
+    const value = new Dnd5eAdapter(runtime({ foundryVersion: '14.368', systemVersion: '6.0.5' })).buildSnapshot();
+    expect(value.coreVersion).toBe('14.368');
+    expect(value.system).toEqual({ id: 'dnd5e', version: '6.0.5' });
+    expect(value.supported).toBeTrue();
+    const rejected = new Dnd5eAdapter(runtime({ foundryVersion: '14.368', systemVersion: '6.0.7' })).buildSnapshot();
+    expect(rejected.coreVersion).toBe('14.368');
+    expect(rejected.system.version).toBe('6.0.7');
+    expect(rejected.supported).toBeFalse();
   });
 
   test('keeps turn controls unavailable when active combat has no current combatant', () => {
@@ -297,6 +314,40 @@ describe('Dnd5eAdapter commands', () => {
       ['toggleStatusEffect', 'exhaustion', { levels: 1 }],
       ['toggleStatusEffect', 'exhaustion', { levels: -1 }],
     ]);
+  });
+
+  test('6.0.6 reads the fixed native effect and changes levels only through toggleStatusEffect', async () => {
+    const calls: unknown[] = [];
+    const effectIds: string[] = [];
+    // 6.0.6 ActiveEffect5e.ID.EXHAUSTION = staticID("dnd5eexhaustion"); ConditionData._applyDelta uses that same ID.
+    const exhaustionEffect = { system: { level: 2 } };
+    const effects = { get: (id: string) => { effectIds.push(id); return id === 'dnd5eexhaustion0' ? exhaustionEffect : undefined; } };
+    const hero = actor('hero-606', {
+      calls, effects, legacyExhaustion: 5, conditions: { exhaustion: 4 },
+      onToggleStatusEffect: (_statusId: string, options: { levels: number }) => { exhaustionEffect.system.level += options.levels; },
+    });
+    const adapter = new Dnd5eAdapter(runtime({ actors: [hero], foundryVersion: '14.368', systemVersion: '6.0.6' }));
+    expect(adapter.buildSnapshot().party[0]!.exhaustion).toBe(2);
+    await adapter.execute({ id: 'actor.adjust-exhaustion', targetUuid: hero.uuid, delta: 1 });
+    expect(adapter.buildSnapshot().party[0]!.exhaustion).toBe(3);
+    await adapter.execute({ id: 'actor.adjust-exhaustion', targetUuid: hero.uuid, delta: -1 });
+    expect(adapter.buildSnapshot().party[0]!.exhaustion).toBe(2);
+    expect(effectIds.length).toBeGreaterThan(0);
+    expect(new Set(effectIds)).toEqual(new Set(['dnd5eexhaustion0']));
+    expect(calls).toEqual([
+      ['toggleStatusEffect', 'exhaustion', { levels: 1 }],
+      ['toggleStatusEffect', 'exhaustion', { levels: -1 }],
+    ]);
+    exhaustionEffect.system.level = 6;
+    expect(adapter.buildSnapshot().party[0]!.commands.exhaustionUp.enabled).toBeFalse();
+    await expect(adapter.execute({ id: 'actor.adjust-exhaustion', targetUuid: hero.uuid, delta: 1 })).rejects.toThrow('maximum');
+    expect(calls).toHaveLength(2);
+
+    const wrongCore = new Dnd5eAdapter(runtime({ actors: [hero], foundryVersion: '14.364', systemVersion: '6.0.6' }));
+    const futureSystem = new Dnd5eAdapter(runtime({ actors: [hero], foundryVersion: '14.368', systemVersion: '6.0.7' }));
+    await expect(wrongCore.execute({ id: 'actor.adjust-exhaustion', targetUuid: hero.uuid, delta: 1 })).rejects.toThrow('unsupported');
+    await expect(futureSystem.execute({ id: 'actor.adjust-exhaustion', targetUuid: hero.uuid, delta: 1 })).rejects.toThrow('unsupported');
+    expect(calls).toHaveLength(2);
   });
 
   test('disables dnd5e 6.0.5 exhaustion commands when the native effect level is malformed', async () => {

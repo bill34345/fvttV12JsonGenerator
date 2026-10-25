@@ -2,7 +2,7 @@
 
 ## 范围
 
-- 本目录是同一 module/pack/document identity 下的纯内容 Species 模块发布单元：既有 V14 精确绑定 Foundry `14.364` / dnd5e `5.3.3` / Core；V12 candidate 精确绑定 Foundry `12.331` / dnd5e `4.3.9` / Core / 2024；ServerNext 内容身份保留 `14.368` / dnd5e `6.0.2` / Core / 2024，单独的 manifest runtime maximum 可明确设为 `6.0.5`，不改写目标身份或 accepted ledger。
+- 本目录是同一module/pack/document identity下的纯内容Species发布单元：V14精确14.364/5.3.3/core，V12候选12.331/4.3.9/core/2024，Next内容身份保留14.368/6.0.2/core/2024。manifest runtime maximum可显式设6.0.5或6.0.6；后者已有Ogre新角色授予、1/5级HP/移动、资源/长休、重载和清理限定接受；不改写内容身份或accepted ledger，不推广全物种/等级。
 - build 只消费 target-aware accepted ledger、当前 Species Markdown 和 `@fvtt-json-generator/generation/species` 公共接口；不得把 Intake/provider/compiler带入浏览器运行时。
 
 ## 构建与安全
@@ -11,8 +11,8 @@
 - ledger、Markdown SHA-256、来源 SHA-256、logical hash 任一 stale/缺失/不一致时 fail-closed。
 - LevelDB 只在随机临时根写入；V14 普通运行从 `FVTT_OPS_LAB_ROOT/app/14.364` 只读加载 `classic-level`。V12 static candidate 可使用 hermetic runner 注入的 `FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY`；任何未来可安装 V12 build 必须改用真实 `app/12.331/node_modules/classic-level`。不得把临时 Lab 根误当成依赖安装。
 - V12 identity 必须包含 `supportStatus: "static-candidate"`；不得调用现有 V14 installer、不得把 ZIP/LevelDB 验证称为 V12 runtime Pass。
-- ServerNext identity 也必须包含 `supportStatus: "static-candidate"`；现有 V14 installer 不能安装候选。旧 `14` accepted ledger 不授权 `14.368` 构建；这里沿用已接受的 `14.368` / `6.0.2` 来源投影，不得将其重标为 `6.0.5`，runtime maximum 只用于 manifest 的兼容范围。
-- 安装目标只能是配置后的本地 Lab `data/server-mirror/Data/modules/fvtt-homebrew-species`；拒绝生产路径、路径逃逸、reparse 和 foreign same-ID。
+- ServerNext identity也必须含`supportStatus: "static-candidate"`；旧14 ledger不授权14.368构建。Next使用已接受的14.368/6.0.2来源投影，不能重标为6.0.5或6.0.6。既有V14 installer不能安装候选；本批已安装Next内容只允许经独立身份核对更新manifest，不替换已迁移pack。
+- 既有V14安装器仅指向配置的Mirror模块目录。Next候选使用独立的精确目标、owned identity和逐文件hash核对；拒绝生产、逃逸、reparse及foreign same-ID。
 
 ## 验收
 
