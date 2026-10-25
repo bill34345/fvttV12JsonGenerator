@@ -8,7 +8,7 @@
 
 ## 接续步骤
 
-1. 读取独立项目 `AGENTS.md`、`README.md`；涉及架构或范围时读取 `docs/architecture.md` 和 `docs/requirements.md`。
+1. 读取独立项目 `AGENTS.md`、`README.md` 与 `docs/current-state.md`；当前交付、接续用法及待处理项集中在current-state，旧验收记录保留其历史范围。涉及架构或范围时读取 `docs/architecture.md` 和 `docs/requirements.md`。
 2. 在独立项目核对 Git 状态、当前 state 与 overlay；不把当前生成器仓库当作译文存放位置。
 3. 用户只问现状时运行 status，只问有无新版时运行 check-upstream；明确要求更新时运行 update。没有后台监听或定时任务。
 4. 无冲突自动合并；同处冲突输出三方值，按照用户逐项选择完成。维护版本仅在 ZIP 构建和读回完成后切换。
@@ -26,6 +26,7 @@ python -B "I:/OpenCode/fvtt-babele-zh-maintenance/maintain.py" update
 
 ## 当前基线与交付边界
 
+- 首版收尾快照为独立项目 `docs/current-state.md`：当前包SHA-256为 `6bdba6e491dc17d02545759e14a87a9359e1ebe8ba1d2c181d143b03c5960bbe`，位于其 `dist/20261025T150456Z-95e1d8bf-69db6f9d6ec2/`。以后更新按新receipt与受影响验收刷新该页；收尾不触发上游查询、重打包或服务启停。
 - 初始上游 1.0.194，锁定 ZIP SHA-256 `abe1c245469b4a0f7dc9427c59ace8dbc1adcd92d9ba84891006112c6c1f9dcf`。
 - 首个增补：水晶浩劫 Crystal Chaos 1.0.1 的 21 个法术，独立保存译文、来源和既有数据引擎证据。
 - 后续怪物增补覆盖相同原包全部16个Actor、162个嵌入条目、97个效果，并补译直接依赖的潘多拉2篇日志和晶蚀涌动表4项结果。分别保存3个独立overlay，与既有法术一并构建；清单及原包规则/自动化差异见独立项目 `docs/crystal-monsters.md`。

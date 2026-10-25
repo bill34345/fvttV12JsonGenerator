@@ -90,9 +90,9 @@
     "note": "已对照准备入口、170文件清单、默认定位与历史版本边界；201项受影响离线测试通过，Classpack临时夹具查询后原输入清单及字节保持不变；主线测试不依赖旧迁移树，保留本机F盘参考环境限制。"
   },
   "babele-zh-maintenance": {
-    "fingerprint": "50cac474be8a43b344935c71711756af196160703258f4c1e8536b3f8219ea3e",
+    "fingerprint": "1b9623a7ea556db39772d7316f302f30eb1fee823778a96a894bb94cc07ed269",
     "reviewedOn": "2026-10-25",
-    "note": "已核对CHM术语表入口、244核心英文和扩展来源索引；类别/版次/出处/多义保留，用户Force确认与派生短语分开，系统Force标签与AI正文翻译边界明确。"
+    "note": "首版收尾已对照独立项目当前交付页、包与验收记录：增加current-state接续入口，历史验收明确为快照；命令、版本及安装授权边界不变，Force标签和动画精确匹配仍列待办。"
   },
   "chat-memory-guard": {
     "fingerprint": "778ebb668dd7af6a0a92cf198b10ccd4b0e8258a75cf2764535623938626a07d",

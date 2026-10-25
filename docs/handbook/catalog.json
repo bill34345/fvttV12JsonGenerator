@@ -1133,7 +1133,7 @@
       },
       {
         "title": "读取交付记录",
-        "text": "使用命令输出的 zip 和 receipt 路径检查结果；冲突决策文件格式及具体参数见独立项目 README 与 --help。"
+        "text": "先看独立项目docs/current-state.md，集中核对当前包、已验范围、接续用法和遗留项；初建验收页仅为历史快照。后续构建使用命令输出的zip和receipt；冲突决策格式及参数见README与--help。"
       },
       {
         "title": "查看包含哪些内容",
