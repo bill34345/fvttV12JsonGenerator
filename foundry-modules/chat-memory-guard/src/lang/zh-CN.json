@@ -1,4 +1,6 @@
 {
+  "CMG.Help.Label": "使用帮助",
+  "CMG.Help.Failed": "无法打开聊天内存保护说明，请稍后重试。",
   "CMG.Settings.MenuName": "聊天内存保护",
   "CMG.Settings.MenuLabel": "配置聊天内存保护",
   "CMG.Settings.MenuHint": "限制当前浏览器中聊天卡片和头像缩略图的保留数量，不删除世界聊天记录。",

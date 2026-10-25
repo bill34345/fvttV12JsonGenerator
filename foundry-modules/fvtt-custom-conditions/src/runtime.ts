@@ -1,4 +1,4 @@
-import { genericConditionsSupported } from './runtime-compatibility.ts';
+import { genericConditionsSupported, isNative6SystemVersion } from './runtime-compatibility.ts';
 import {
   CONDITION_DEFINITIONS,
   buildConditionFlag,
@@ -504,8 +504,9 @@ export class ConditionRuntime {
 
   private connectTriggerEngine(): void {
     if (this.#unsubscribe) return;
-    const api = this.globals.game?.modules?.get?.(TRIGGER_ENGINE_MODULE_ID)?.api;
-    if (!api || typeof api.subscribe !== 'function') return;
+    const module = this.globals.game?.modules?.get?.(TRIGGER_ENGINE_MODULE_ID);
+    const api = module?.api;
+    if (module?.active !== true || api?.apiVersion !== 1 || typeof api.subscribe !== 'function') return;
     try {
       this.#unsubscribe = api.subscribe((context: TriggerEventContextLike) => this.handleTriggerEvent(context));
     } catch (error) {
@@ -549,7 +550,7 @@ export class ConditionRuntime {
     // the engine combines this source with legitimate disadvantage normally.
     const game = this.globals.game;
     const optional = game?.modules?.get?.('automated-conditions-5e');
-    if (game?.version !== '14.368' || game?.system?.version !== '6.0.5'
+    if (game?.version !== '14.368' || !isNative6SystemVersion(game?.system?.version)
       || optional?.active !== true || optional.version !== '14.603.2') return;
     const table = this.globals.ac5e?.statusEffectsTables;
     const id = projectedConditionStatusId('defenseless');
@@ -870,7 +871,7 @@ export class ConditionRuntime {
     const actor = activity?.actor ?? activity?.item?.actor;
     if (!actor || actor.documentName !== 'Actor') return;
     const activation = String(activity?.activation?.type ?? activity?.system?.activation?.type ?? '');
-    // dnd5e 5.3.3 and 6.0.5 fire postUseActivity before an Attack Activity's
+    // dnd5e 5.3.3 and reviewed 6.0.x fire postUseActivity before an Attack Activity's
     // roll dialog. Defer either activity category until the non-empty rollAttack hook.
     if (!isAttackActivity(activity)) {
       if (activation === 'action') void this.markActionUsed(actor).catch((error) => this.report(error));
@@ -884,7 +885,7 @@ export class ConditionRuntime {
       || !this.#pendingAttackTurnKeys.has(config)) return;
     const combatKey = this.#pendingAttackTurnKeys.get(config);
     this.#pendingAttackTurnKeys.delete(config);
-    // dnd5e 5.3.3 and 6.0.5 call this cancellable hook after the attack dialog but
+    // dnd5e 5.3.3 and reviewed 6.0.x call this cancellable hook after the attack dialog but
     // before evaluating the roll. Another choice can finish while it is open.
     const activity = config.subject;
     const actor = activity?.actor ?? activity?.item?.actor;
@@ -986,7 +987,7 @@ export class ConditionRuntime {
 
   private prepareHelplessCriticalMessage(message: any, data: any): void {
     const flags = data?.flags?.dnd5e ?? message?.flags?.dnd5e;
-    const canonical = this.globals.game?.system?.version === '6.0.5';
+    const canonical = isNative6SystemVersion(this.globals.game?.system?.version);
     const type = canonical ? (data?.type ?? message?.type) : flags?.roll?.type;
     if (type !== 'attack') return;
     const descriptors = canonical ? (data?.system?.targets ?? message?.system?.targets) : flags?.targets;
@@ -1087,11 +1088,11 @@ export function changesFor(instance: ConditionInstance, systemVersion?: string):
   if (instance.conditionId === 'addled') for (const ability of ['int', 'wis', 'cha']) { disadvantage(ability, 'check'); disadvantage(ability, 'save'); }
   if (instance.conditionId === 'clumsy') { disadvantage('dex', 'check'); disadvantage('dex', 'save'); }
   if (instance.conditionId === 'enfeebled') { disadvantage('str', 'check'); disadvantage('str', 'save'); }
-  // 6.0.5 builds native AttackActivity roll modes from these Actor fields before
+  // Reviewed 6.0.x builds native AttackActivity roll modes from these Actor fields before
   // preRollAttack. Persist the ability-specific source so later roll modules
   // can combine it with legitimate advantage, rather than relying on a late
   // boolean alone. 5.3.3 has no ability.attack.roll schema; keep its Hook path.
-  if (systemVersion === '6.0.5') {
+  if (isNative6SystemVersion(systemVersion)) {
     if (instance.conditionId === 'addled') for (const ability of ['int', 'wis', 'cha']) disadvantage(ability, 'attack');
     if (instance.conditionId === 'clumsy') disadvantage('dex', 'attack');
     if (instance.conditionId === 'enfeebled') disadvantage('str', 'attack');
@@ -1105,8 +1106,8 @@ function nativeMovementPropertyStatusId(conditionId: ConditionId): string | unde
 }
 
 function nativeMovementPropertyStatuses(conditionId: ConditionId, composite: readonly ConditionId[] | undefined, systemVersion: string | undefined): string[] {
-  if (systemVersion !== '6.0.5') return [];
-  // 6.0.5 parses condition properties as status-level by splitting on "-".
+  if (!isNative6SystemVersion(systemVersion)) return [];
+  // Reviewed 6.0.x parses condition properties as status-level by splitting on "-".
   // Keep the public status IDs intact; these unregistered internal aliases are
   // collected from ActiveEffect.statuses and do not create extra HUD entries.
   return [conditionId, ...(composite ?? [])].flatMap((id) => {
@@ -1156,7 +1157,7 @@ function registerStatusEffects(globals: any): void {
     }
   }
   const effects = globals.CONFIG?.DND5E?.conditionEffects;
-  if (globals.game?.system?.version === '6.0.5') {
+  if (isNative6SystemVersion(globals.game?.system?.version)) {
     effects?.noMovement?.add?.(nativeMovementPropertyStatusId('immobilized'));
     effects?.noMovement?.add?.(nativeMovementPropertyStatusId('frozen'));
     effects?.halfMovement?.add?.(nativeMovementPropertyStatusId('slowed'));

@@ -1,0 +1,817 @@
+/* The handbook is confined to the suite's ApplicationV2 window. */
+.fvtt-suite-console {
+  min-width: 360px;
+  min-height: 420px;
+}
+
+.fvtt-suite-console .window-content {
+  container: suite-handbook-window / inline-size;
+  display: flex;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.fvtt-suite-console .suite-handbook-host {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.fvtt-suite-console .handbook-root {
+  --hb-bg: #f9faf7;
+  --hb-panel: #fff;
+  --hb-side: #f0f3ee;
+  --hb-text: #202c27;
+  --hb-muted: #57665e;
+  --hb-line: #dce3da;
+  --hb-accent: #2a6047;
+  --hb-accent-bg: #e4eee5;
+  --hb-code: #eff3ee;
+  --hb-warn: #756031;
+  color-scheme: light;
+  position: relative;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--hb-bg);
+  color: var(--hb-text);
+  font: 14px/1.65 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+.fvtt-suite-console .handbook-root[data-handbook-theme="dark"] {
+  --hb-bg: #171e1a;
+  --hb-panel: #202923;
+  --hb-side: #1b241e;
+  --hb-text: #e1e9e0;
+  --hb-muted: #afbfaf;
+  --hb-line: #36483a;
+  --hb-accent: #a6d6ad;
+  --hb-accent-bg: #2a4433;
+  --hb-code: #172019;
+  --hb-warn: #d8c18d;
+  color-scheme: dark;
+}
+
+.fvtt-suite-console .handbook-root *,
+.fvtt-suite-console .handbook-root *::before,
+.fvtt-suite-console .handbook-root *::after {
+  box-sizing: border-box;
+}
+
+.fvtt-suite-console .handbook-root ::selection {
+  background: var(--hb-accent);
+  color: var(--hb-bg);
+}
+
+.fvtt-suite-console .handbook-root :is(button, input) {
+  font: inherit;
+}
+
+.fvtt-suite-console .handbook-root button {
+  display: inline-block;
+  height: auto;
+  min-height: 0;
+  min-width: 0;
+  border: 1px solid var(--hb-line);
+  border-radius: 6px;
+  padding: 6px 11px;
+  background: var(--hb-panel);
+  color: var(--hb-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.fvtt-suite-console .handbook-root button:hover {
+  background: var(--hb-accent-bg);
+  color: var(--hb-text);
+}
+
+.fvtt-suite-console .handbook-root :is(button, input, summary):focus-visible {
+  outline: 2px solid var(--hb-accent);
+  outline-offset: 2px;
+}
+
+.fvtt-suite-console .handbook-root :is(h1, h2, h3, p) {
+  margin-top: 0;
+}
+
+.fvtt-suite-console .handbook-root :is(h1, h2, h3) {
+  color: var(--hb-text);
+  font-family: inherit;
+  font-weight: 650;
+}
+
+.fvtt-suite-console .handbook-root h1 {
+  margin-bottom: 15px;
+  font-size: clamp(23px, 2.4rem, 31px);
+  line-height: 1.3;
+  letter-spacing: -0.025em;
+}
+
+.fvtt-suite-console .handbook-root h2 {
+  margin-bottom: 12px;
+  font-size: 19px;
+  line-height: 1.4;
+}
+
+.fvtt-suite-console .handbook-root h3 {
+  margin-bottom: 4px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.fvtt-suite-console .handbook-root p {
+  margin-bottom: 12px;
+}
+
+.fvtt-suite-console .handbook-root small {
+  font-size: 11px;
+}
+
+.fvtt-suite-console .handbook-root aside {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 23px 17px;
+  border-right: 1px solid var(--hb-line);
+  background: var(--hb-side);
+}
+
+.fvtt-suite-console .handbook-root .brand {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.fvtt-suite-console .handbook-root .brand:hover {
+  background: transparent;
+  color: var(--hb-accent);
+}
+
+.fvtt-suite-console .handbook-root .brand small {
+  display: block;
+  margin-top: 3px;
+  color: var(--hb-muted);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+}
+
+.fvtt-suite-console .handbook-root .brand-mark {
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  height: 38px;
+  border-radius: 5px;
+  background: var(--hb-accent);
+  color: var(--hb-bg);
+  font: 25px Georgia, serif;
+}
+
+.fvtt-suite-console .handbook-root .nav-caption {
+  margin: 29px 9px 8px;
+  color: var(--hb-muted);
+  font-size: 11px;
+}
+
+.fvtt-suite-console .handbook-root [data-navigation] {
+  display: grid;
+  gap: 3px;
+}
+
+.fvtt-suite-console .handbook-root [data-navigation] [data-route] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  padding: 8px 9px;
+  background: transparent;
+  color: var(--hb-muted);
+  font-size: 13px;
+}
+
+.fvtt-suite-console .handbook-root [data-navigation] [data-route]:is(:hover, .active) {
+  background: var(--hb-accent-bg);
+  color: var(--hb-accent);
+}
+
+.fvtt-suite-console .handbook-root [data-navigation] [data-route].active {
+  font-weight: 650;
+}
+
+.fvtt-suite-console .handbook-root [data-navigation] span {
+  flex: none;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fvtt-suite-console .handbook-root .sidebar-note {
+  margin: 28px 9px;
+  color: var(--hb-muted);
+  font-size: 12px;
+}
+
+.fvtt-suite-console .handbook-root .sidebar-note strong {
+  color: var(--hb-text);
+}
+
+.fvtt-suite-console .handbook-root .sidebar-note p {
+  margin: 5px 0;
+}
+
+.fvtt-suite-console .handbook-root .sidebar-note button,
+.fvtt-suite-console .handbook-root footer button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--hb-accent);
+  font-size: inherit;
+}
+
+.fvtt-suite-console .handbook-root footer {
+  display: grid;
+  gap: 5px;
+  margin-top: auto;
+  padding: 15px 9px 0;
+  border-top: 1px solid var(--hb-line);
+  color: var(--hb-muted);
+  font-size: 11px;
+}
+
+.fvtt-suite-console .handbook-root .workspace {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.fvtt-suite-console .handbook-root .topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  min-height: 56px;
+  padding: 8px 25px;
+  border-bottom: 1px solid var(--hb-line);
+  color: var(--hb-muted);
+  font-size: 12px;
+}
+
+.fvtt-suite-console .handbook-root [data-breadcrumb] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fvtt-suite-console .handbook-root .quiet {
+  flex: none;
+  background: transparent;
+  font-size: 12px;
+}
+
+.fvtt-suite-console .handbook-root .mobile-only {
+  display: none;
+}
+
+.fvtt-suite-console .handbook-root .search-wrap {
+  min-width: 0;
+  padding: 15px 25px 0;
+}
+
+.fvtt-suite-console .handbook-root .search-wrap label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--hb-muted);
+  font-size: 11px;
+}
+
+.fvtt-suite-console .handbook-root .search-box {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  border: 1px solid var(--hb-line);
+  border-radius: 7px;
+  padding: 6px 11px;
+  background: var(--hb-panel);
+}
+
+.fvtt-suite-console .handbook-root .search-box span {
+  color: var(--hb-muted);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.fvtt-suite-console .handbook-root .search-box input {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  color: var(--hb-text);
+  caret-color: var(--hb-accent);
+  outline-offset: 0;
+}
+
+.fvtt-suite-console .handbook-root .search-box input::placeholder {
+  color: var(--hb-muted);
+  opacity: 1;
+}
+
+.fvtt-suite-console .handbook-root kbd {
+  flex: none;
+  border: 1px solid var(--hb-line);
+  border-radius: 3px;
+  padding: 0 5px;
+  color: var(--hb-muted);
+  font: inherit;
+  font-size: 10px;
+}
+
+.fvtt-suite-console .handbook-root [data-main] {
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 24px 25px 38px;
+  overflow-wrap: anywhere;
+  scrollbar-color: var(--hb-line) transparent;
+  scrollbar-width: thin;
+}
+
+.fvtt-suite-console .handbook-root [data-main]:focus {
+  outline: none;
+}
+
+.fvtt-suite-console .handbook-root .intro {
+  max-width: 68ch;
+  color: var(--hb-muted);
+  font-size: 14px;
+}
+
+.fvtt-suite-console .handbook-root .hero {
+  margin-bottom: 26px;
+}
+
+.fvtt-suite-console .handbook-root .guide-link {
+  display: inline-block;
+  border-color: var(--hb-accent);
+  margin: 3px 0 12px;
+  color: var(--hb-accent);
+  font-weight: 600;
+}
+
+.fvtt-suite-console .handbook-root .section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 26px;
+}
+
+.fvtt-suite-console .handbook-root .section-heading small {
+  color: var(--hb-muted);
+}
+
+.fvtt-suite-console .handbook-root .task-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fvtt-suite-console .handbook-root .task-link {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 15px;
+}
+
+.fvtt-suite-console .handbook-root .task-link strong {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 15px;
+}
+
+.fvtt-suite-console .handbook-root .task-link p {
+  margin: 6px 0 0;
+  color: var(--hb-muted);
+  font-size: 12px;
+}
+
+.fvtt-suite-console .handbook-root .tool-list {
+  border-top: 1px solid var(--hb-line);
+}
+
+.fvtt-suite-console .handbook-root .tool-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--hb-line);
+  border-radius: 0;
+  padding: 16px 3px;
+  background: transparent;
+}
+
+.fvtt-suite-console .handbook-root .tool-row:hover h3 {
+  color: var(--hb-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.fvtt-suite-console .handbook-root .tool-row > div,
+.fvtt-suite-console .handbook-root .step > div {
+  min-width: 0;
+}
+
+.fvtt-suite-console .handbook-root .tool-row p {
+  margin: 4px 0 0;
+  color: var(--hb-muted);
+  font-size: 12px;
+}
+
+.fvtt-suite-console .handbook-root .row-meta {
+  color: var(--hb-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.fvtt-suite-console .handbook-root .module-state-brief {
+  display: inline-block;
+  max-width: 100%;
+  margin: 2px 0;
+  border: 1px solid var(--hb-line);
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: var(--hb-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.fvtt-suite-console .handbook-root [data-handbook-module-state="enabled"] .module-state-value,
+.fvtt-suite-console .handbook-root .module-state-brief[data-handbook-module-state="enabled"] {
+  color: var(--hb-accent);
+}
+
+.fvtt-suite-console .handbook-root .module-state-detail {
+  display: grid;
+  gap: 6px;
+  margin: 18px 0;
+  border: 1px solid var(--hb-line);
+  border-radius: 6px;
+  padding: 12px 14px;
+  background: var(--hb-panel);
+  overflow-wrap: anywhere;
+}
+
+.fvtt-suite-console .handbook-root .module-state-heading {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.fvtt-suite-console .handbook-root .module-state-id {
+  color: var(--hb-muted);
+  font-size: 11px;
+}
+
+.fvtt-suite-console .handbook-root .module-state-detail .subtle {
+  margin: 0;
+}
+
+.fvtt-suite-console .handbook-root [data-main] > article {
+  max-width: 72ch;
+}
+
+.fvtt-suite-console .handbook-root .article section {
+  margin-top: 27px;
+}
+
+.fvtt-suite-console .handbook-root .article :is(ul, ol) {
+  margin-top: 8px;
+  padding-left: 22px;
+}
+
+.fvtt-suite-console .handbook-root .article li {
+  padding: 3px 0;
+}
+
+.fvtt-suite-console .handbook-root .back-link,
+.fvtt-suite-console .handbook-root .source-link,
+.fvtt-suite-console .handbook-root .hero .subtle [data-route],
+.fvtt-suite-console .handbook-root .article p [data-route] {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--hb-accent);
+}
+
+.fvtt-suite-console .handbook-root .guide-link:hover,
+.fvtt-suite-console .handbook-root .back-link:hover,
+.fvtt-suite-console .handbook-root .source-link:hover,
+.fvtt-suite-console .handbook-root .hero .subtle [data-route]:hover,
+.fvtt-suite-console .handbook-root .article p [data-route]:hover {
+  color: var(--hb-accent);
+}
+
+.fvtt-suite-console .handbook-root .back-link {
+  display: inline-block;
+  margin-bottom: 17px;
+  font-size: 12px;
+}
+
+.fvtt-suite-console .handbook-root .source-link {
+  display: block;
+  width: 100%;
+  padding: 9px 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.fvtt-suite-console .handbook-root .meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 15px 0 20px;
+  color: var(--hb-muted);
+  font-size: 11px;
+}
+
+.fvtt-suite-console .handbook-root .tag {
+  border-radius: 4px;
+  padding: 3px 8px;
+  background: var(--hb-accent-bg);
+  color: var(--hb-accent);
+}
+
+.fvtt-suite-console .handbook-root .article-index {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 18px 0;
+  padding: 10px 0;
+  border-block: 1px solid var(--hb-line);
+}
+
+.fvtt-suite-console .handbook-root .article-index button {
+  background: transparent;
+  font-size: 11px;
+}
+
+.fvtt-suite-console .handbook-root [data-handbook-section] {
+  scroll-margin-top: 16px;
+}
+
+.fvtt-suite-console .handbook-root [data-handbook-section]:focus-visible {
+  outline: 2px solid var(--hb-accent);
+  outline-offset: 3px;
+}
+
+.fvtt-suite-console .handbook-root .notice {
+  margin: 19px 0;
+  border-left: 1px solid var(--hb-accent);
+  padding: 12px 15px;
+  background: var(--hb-accent-bg);
+  font-size: 12px;
+}
+
+.fvtt-suite-console .handbook-root .notice p:last-child {
+  margin-bottom: 0;
+}
+
+.fvtt-suite-console .handbook-root .limitations {
+  border-left-color: var(--hb-warn);
+}
+
+.fvtt-suite-console .handbook-root .step {
+  display: grid;
+  grid-template-columns: 25px minmax(0, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.fvtt-suite-console .handbook-root .step-num {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--hb-line);
+  border-radius: 50%;
+  color: var(--hb-accent);
+  font-size: 11px;
+}
+
+.fvtt-suite-console .handbook-root .step p {
+  margin: 5px 0 8px;
+  color: var(--hb-muted);
+  font-size: 12px;
+}
+
+.fvtt-suite-console .handbook-root .code-wrap {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--hb-line);
+  border-radius: 6px;
+  background: var(--hb-code);
+}
+
+.fvtt-suite-console .handbook-root .code-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--hb-line);
+  color: var(--hb-muted);
+  font-size: 10px;
+}
+
+.fvtt-suite-console .handbook-root .copy {
+  flex: none;
+  padding: 3px 8px;
+  background: transparent;
+  font-size: 11px;
+}
+
+.fvtt-suite-console .handbook-root .command,
+.fvtt-suite-console .handbook-root .source-body {
+  max-width: 100%;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  user-select: text;
+}
+
+.fvtt-suite-console .handbook-root .command {
+  padding: 11px;
+  font: 11px/1.6 Consolas, monospace;
+}
+
+/* Core styles inline code as nowrap; commands retain source line breaks. */
+.fvtt-suite-console .handbook-root .command > code {
+  display: block;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.fvtt-suite-console .handbook-root .source-body {
+  padding: 16px;
+  border: 1px solid var(--hb-line);
+  border-radius: 6px;
+  background: var(--hb-panel);
+  font: 12px/1.75 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+.fvtt-suite-console .handbook-root .source-details {
+  margin-top: 16px;
+}
+
+.fvtt-suite-console .handbook-root .source-details summary {
+  padding: 8px 0;
+  color: var(--hb-accent);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.fvtt-suite-console .handbook-root .empty {
+  margin-top: 18px;
+  border: 1px dashed var(--hb-line);
+  border-radius: 6px;
+  padding: 25px;
+}
+
+.fvtt-suite-console .handbook-root .subtle {
+  color: var(--hb-muted);
+  font-size: 12px;
+}
+
+.fvtt-suite-console .handbook-root .skip {
+  position: absolute;
+  top: -100px;
+  left: 10px;
+  z-index: 5;
+}
+
+.fvtt-suite-console .handbook-root .skip:focus {
+  top: 10px;
+}
+
+.fvtt-suite-console .handbook-root .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@container suite-handbook-window (max-width: 720px) {
+  .fvtt-suite-console .handbook-root {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fvtt-suite-console .handbook-root aside {
+    display: none;
+  }
+
+  .fvtt-suite-console .handbook-root.menu-open aside {
+    position: absolute;
+    z-index: 4;
+    top: 52px;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    width: min(320px, 100%);
+    border-right: 1px solid var(--hb-line);
+    box-shadow: 8px 12px 24px rgb(0 0 0 / 14%);
+  }
+
+  .fvtt-suite-console .handbook-root .mobile-only {
+    display: inline-block;
+  }
+
+  .fvtt-suite-console .handbook-root .topbar {
+    min-height: 52px;
+    padding: 6px 14px;
+  }
+
+  .fvtt-suite-console .handbook-root .search-wrap {
+    padding: 12px 14px 0;
+  }
+
+  .fvtt-suite-console .handbook-root [data-main] {
+    padding: 19px 14px 28px;
+  }
+
+  .fvtt-suite-console .handbook-root .task-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fvtt-suite-console .handbook-root .row-meta {
+    display: none;
+  }
+}
+
+@container suite-handbook-window (max-width: 430px) {
+  .fvtt-suite-console .handbook-root .search-box kbd {
+    display: none;
+  }
+
+  .fvtt-suite-console .handbook-root .topbar {
+    gap: 6px;
+  }
+
+  .fvtt-suite-console .handbook-root .quiet {
+    padding-inline: 7px;
+  }
+
+  .fvtt-suite-console .handbook-root .source-body {
+    padding: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fvtt-suite-console .handbook-root *,
+  .fvtt-suite-console .handbook-root *::before,
+  .fvtt-suite-console .handbook-root *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

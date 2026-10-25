@@ -1,7 +1,7 @@
 {
   "id": "fvtt-weapon-mastery-properties",
   "title": "武器精通与特性 / Weapon Mastery & Properties",
-  "description": "Source-driven D&D 2024 weapon masteries and configured properties for the exact reviewed 14.364/5.3.3, 14.368/5.3.3 and 14.368/6.0.5 pairs.",
+  "description": "Source-driven D&D 2024 weapon masteries and configured properties for exact 14.364/5.3.3, 14.368/5.3.3, 14.368/6.0.5 pairs; 14.368/6.0.6 is a live-unverified candidate.",
   "version": "0.1.0",
   "compatibility": {
     "minimum": "14.364",
@@ -41,7 +41,7 @@
         "compatibility": {
           "minimum": "5.3.3",
           "verified": "6.0.5",
-          "maximum": "6.0.5"
+          "maximum": "6.0.6"
         }
       }
     ],

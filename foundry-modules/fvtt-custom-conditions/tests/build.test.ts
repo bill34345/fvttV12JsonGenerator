@@ -63,7 +63,7 @@ describe('custom conditions release artifact', () => {
       socket: true,
       relationships: {
         requires: [{ id: 'fvtt-trigger-engine' }],
-        systems: [{ id: 'dnd5e', compatibility: { minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.5' } }],
+        systems: [{ id: 'dnd5e', compatibility: { minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.6' } }],
       },
     })).not.toThrow();
   });

@@ -259,7 +259,9 @@ describe('compact GM panel layout', () => {
 describe('runtime lifecycle', () => {
   const runtimes: SessionMonitorRuntime[] = [];
   afterEach(async () => {
-    for (const runtime of runtimes.splice(0)) await runtime.stopSession({ download: false });
+    for (const runtime of runtimes.splice(0)) {
+      if (runtime.getStatus().enabled) await runtime.stopSession({ download: false });
+    }
   });
 
   test('keeps non-GM clients disabled', async () => {
@@ -278,6 +280,7 @@ describe('runtime lifecycle', () => {
     ['14.364', '5.3.3'],
     ['14.368', '6.0.2'],
     ['14.368', '6.0.5'],
+    ['14.368', '6.0.6'],
   ])('records a GM start, sample, marker, and stop on Foundry %s / dnd5e %s without gameplay writes', async (foundryVersion, systemVersion) => {
     const store = new MemorySessionStore();
     const hooks = fakeHooks();

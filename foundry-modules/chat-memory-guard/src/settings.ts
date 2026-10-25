@@ -1,3 +1,5 @@
+import { openChatGuardHelp } from './help';
+
 export type AvatarSource = 'system' | 'token' | 'actor' | 'hidden';
 export type ImageMode = 'original' | 'thumbnail';
 
@@ -151,6 +153,7 @@ export function createSettingsApplicationClass(): any {
       },
       position: { width: 620 },
       form: { closeOnSubmit: true, handler: this.onSubmit },
+      actions: { openHelp: this.openHelp },
     };
 
     static PARTS = {
@@ -172,6 +175,15 @@ export function createSettingsApplicationClass(): any {
         })),
         buttons: [{ type: 'submit', icon: 'fa-solid fa-save', label: 'CMG.Settings.Save' }],
       };
+    }
+
+    static async openHelp(event: Event) {
+      event.preventDefault();
+      try { await openChatGuardHelp(); }
+      catch {
+        const global = globalThis as any;
+        global.ui?.notifications?.error?.(global.game?.i18n?.localize?.('CMG.Help.Failed') ?? 'Chat Memory Guard help could not open.');
+      }
     }
 
     static async onSubmit(_event: unknown, _form: unknown, formData: any) {

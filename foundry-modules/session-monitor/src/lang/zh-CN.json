@@ -10,5 +10,7 @@
   "FSM.Action.mark": "刚才卡顿",
   "FSM.Action.stop": "停止并导出",
   "FSM.Keybinding.markJank": "标记 Session Monitor 卡顿",
-  "FSM.Keybinding.markJankHint": "在活动的 GM 会话中添加卡顿标记"
+  "FSM.Keybinding.markJankHint": "在活动的 GM 会话中添加卡顿标记",
+  "FSM.Action.help": "使用帮助",
+  "FSM.Error.operation": "操作未完成，请重试或重新载入。"
 }

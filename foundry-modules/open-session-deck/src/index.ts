@@ -2,6 +2,7 @@ import { DeckController, registerSettings } from './controller.ts';
 import { createDeckApi } from './api.ts';
 import { MODULE_ID, SETTINGS } from './constants.ts';
 import { registerTrackerPrivacyHooks } from './tracker-privacy.ts';
+import { runDeckUiAction } from './ui-errors.ts';
 
 let controller: DeckController | undefined;
 
@@ -16,7 +17,7 @@ Hooks.once('init', () => {
     hint: 'OSD.Keybindings.Toggle.Hint',
     editable: [],
     restricted: true,
-    onDown: () => { if (!game.user?.isGM || !controller) return false; void controller.openLastMode(); return true; },
+    onDown: () => { if (!game.user?.isGM || !controller) return false; runDeckUiAction(() => controller!.openLastMode()); return true; },
     onUp: () => false,
   });
   const module = game.modules?.get?.(MODULE_ID);
@@ -35,7 +36,7 @@ Hooks.on('getSceneControlButtons', (controls: Record<string, any>) => {
     order: Object.keys(tokenControl.tools).length + 1,
     button: true,
     visible: true,
-    onChange: () => { if (controller) void controller.openLastMode(); },
+    onChange: () => { if (controller) runDeckUiAction(() => controller!.openLastMode()); },
   };
 });
 

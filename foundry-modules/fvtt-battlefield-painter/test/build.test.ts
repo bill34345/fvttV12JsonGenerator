@@ -29,7 +29,7 @@ describe("module manifest", () => {
     expect(manifest.relationships.systems[0].compatibility).toEqual({
       minimum: "5.3.3",
       verified: "5.3.3",
-      maximum: "6.0.5",
+      maximum: "6.0.6",
     });
     expect(manifest.description).toContain("clustered lights");
     expect(manifest.description).not.toContain("ambience");

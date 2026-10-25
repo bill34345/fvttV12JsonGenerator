@@ -9,12 +9,16 @@
     "controls": {
       "toggle": {
         "name": "Selected Token Sync"
+      },
+      "help": {
+        "name": "Selected Token Sync Help"
       }
     },
     "errors": {
       "notAllEligible": "Selected Token Sync was cancelled because not every selected token is editable",
       "syncFailed": "Selected Token Sync could not update every target",
       "settingFailed": "Selected Token Sync could not save its setting",
+      "helpFailed": "Selected Token Sync could not open its help. Please try again later",
       "multistatusConflict": "Selected Token Sync is disabled because Multi Token Status is active"
     }
   }

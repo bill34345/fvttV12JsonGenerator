@@ -1,7 +1,7 @@
 {
   "FVTT_HOUSE_RULES": {
     "FirstRun": "本团村规已安装。所有会修改数据的功能均为关闭；GM 可在配置设置中逐项启用。",
-    "UnsupportedRuntime": "本团村规已失败关闭：仅支持 Foundry 14.364 / dnd5e 5.3.3 或 Foundry 14.368 / dnd5e 6.0.2 / 6.0.5。",
+    "UnsupportedRuntime": "本团村规已失败关闭：仅支持 Foundry 14.364 / dnd5e 5.3.3 或 Foundry 14.368 / dnd5e 5.3.3 / 6.0.2 / 6.0.5 / 6.0.6。",
     "LowAbility": "当前选中的角色有属性值不高于提醒阈值；本提示不会修改角色。",
     "Dismiss": "忽略",
     "Nat1": {

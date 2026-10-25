@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "foundryEntries": [
+    "version-selection",
+    "web-workbench",
+    "markdown-convert",
+    "monster-intake",
+    "item-intake",
+    "species-intake",
+    "document-extraction",
+    "goddessfantasy-crawl",
+    "artwork-icons",
+    "json-translation",
+    "human-encounter-intake",
+    "chat-memory-guard",
+    "fvtt-babele-rolltable-embed-translation",
+    "fvtt-battlefield-painter",
+    "fvtt-blood-hunter-2024",
+    "fvtt-homebrew-species",
+    "fvtt-house-rules",
+    "fvtt-injury-fading-spirits",
+    "fvtt-trigger-engine",
+    "fvtt-custom-conditions",
+    "fvtt-json-forge",
+    "fvtt-selected-token-sync",
+    "monster-spell-resolver",
+    "open-session-deck",
+    "session-monitor",
+    "fvtt-weapon-mastery-properties",
+    "midi-qol",
+    "fvtt-suite-console"
+  ],
+  "offlineOnlyEntries": [
+    {
+      "entryId": "legacy-next-test-inputs",
+      "reason": "ServerNext历史回归输入属于工程验收，不是GM日常操作。"
+    },
+    {
+      "entryId": "vault-sync",
+      "reason": "历史同步入口包含与无备份约定冲突的流程，完整离线手册保留限制和背景。"
+    },
+    {
+      "entryId": "legacy-text",
+      "reason": "旧纯文本与V12兼容路径仅保留历史工程说明，不进入V14用户模块默认目录。"
+    },
+    {
+      "entryId": "foundry-ops",
+      "reason": "环境、资产与服务运维保留在离线工程说明，不属于Foundry内的用户功能。"
+    },
+    {
+      "entryId": "verification-development",
+      "reason": "验证命令和开发资料保留在完整离线手册。"
+    },
+    {
+      "entryId": "crystalbleed-v12",
+      "reason": "V12专用来源与宏保留在历史离线说明，不扩大新V14模块承诺。"
+    },
+    {
+      "entryId": "midi-qol-server-next-patch",
+      "reason": "上游源码补丁与构建步骤属于工程维护；用户运行说明仍由midi-qol条目提供。"
+    },
+    {
+      "entryId": "server-next-external-candidates",
+      "reason": "外部候选调查及未接受清单留在工程手册，不随用户模块宣称可用或可分发。"
+    },
+    {
+      "entryId": "babele-zh-maintenance",
+      "reason": "中文Babele汉化的上游更新和冲突处理由独立维护项目执行，在完整离线手册保留入口，不属于Foundry内日常用户工具。"
+    }
+  ]
+}

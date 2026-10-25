@@ -4,7 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 // CLI integration and the Session Monitor build run in their own public CI steps.
-export const COVERAGE_TEST_PATTERN = '^(?!AI Item Intake CLI|Species Intake CLI|CLI document input|AI monster intake CLI|CLI v14 safe icon mode|CLI item import|CLI plaintext actor import|Session Monitor subprocess build gate)';
+// This real-browser case requires the separate Chrome execution protocol.
+export const DEFERRED_BROWSER_TEST = 'full Chrome restart recovery relaunches a real dedicated Chrome and resumes the same active session';
+export const COVERAGE_TEST_PATTERN = `^(?!AI Item Intake CLI|Species Intake CLI|CLI document input|AI monster intake CLI|CLI v14 safe icon mode|CLI item import|CLI plaintext actor import|Session Monitor subprocess build gate|${DEFERRED_BROWSER_TEST}$)`;
 
 export function partitionCoverageTests(paths: string[], maximumFiles = 30): string[][] {
   if (!Number.isSafeInteger(maximumFiles) || maximumFiles < 1) throw new Error('Invalid shard size.');
@@ -55,7 +57,10 @@ export async function runCoverageShards(): Promise<void> {
   // Use the deterministic inventory in ONE process after fixing leaking test state.
   const shards = [partitionCoverageTests(discovered.stdout.split('\0').filter(Boolean)).flat()];
   const evidenceRoot = await mkdtemp(join(tmpdir(), 'fvtt-coverage-shards-'));
-  const manifest = { status: 'running', evidenceRoot, functionCoverage: 'single-process Bun report; no aggregate merging', shards };
+  const manifest = {
+    status: 'running', evidenceRoot, functionCoverage: 'single-process Bun report; no aggregate merging', shards,
+    deferredBrowserTests: [{ name: DEFERRED_BROWSER_TEST, reason: 'Separate real-Chrome acceptance; not executed by non-browser integration CI.' }],
+  };
   await mkdir('coverage', { recursive: true });
   await writeFile('coverage/run.json', JSON.stringify(manifest, null, 2));
   try {
@@ -66,14 +71,14 @@ export async function runCoverageShards(): Promise<void> {
       await runCoverageProcess(process.execPath, [
         'test', '--coverage', '--coverage-reporter=lcov', `--coverage-dir=${directory}`, '--max-concurrency=1',
         '--test-name-pattern', COVERAGE_TEST_PATTERN, ...files.map(file => `./${file}`),
-      // The 368-file inventory took over 300s while making steady progress.
-      // Keep the single-process report and a bounded margin for the final files.
-      ], 450_000);
+      // The 443-file integration inventory reached its final file at 450s.
+      // Keep one process and allow a bounded margin for report finalization.
+      ], 600_000);
       report = await readFile(join(directory, 'lcov.info'), 'utf8');
     }
     await writeFile('coverage/lcov.info', report);
     manifest.status = 'passed';
-    console.log('Completed the complete test inventory in one bounded process; coverage report requires no merging.');
+    console.log('Completed the non-browser coverage inventory in one bounded process; the manifest records the deferred real-Chrome case.');
   } catch (error) {
     manifest.status = 'failed';
     throw error;

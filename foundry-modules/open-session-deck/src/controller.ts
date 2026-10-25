@@ -1,11 +1,14 @@
 import { Dnd5eAdapter, createGlobalRuntime } from './dnd5e-adapter.ts';
 import { MODULE_ID, SETTINGS } from './constants.ts';
 import { DeckStore } from './store.ts';
+import { DeckHelp } from './help.ts';
+import { runDeckUiAction } from './ui-errors.ts';
 import { PanelSurface, PopoutSurface, type DeckSurfaceHandlers } from './surfaces.ts';
 import type { DeckCloseMode, DeckCommand, DeckModuleApi, DeckOpenMode, DeckSnapshot, DeckTab } from './types.ts';
 
 const EMPTY_SNAPSHOT: DeckSnapshot = {
   supported: false,
+  coreVersion: '',
   world: { id: '', title: '' },
   system: { id: '', version: '' },
   scene: null,
@@ -40,6 +43,7 @@ export class DeckController implements DeckModuleApi, DeckSurfaceHandlers {
   readonly store = new DeckStore(EMPTY_SNAPSHOT, () => this.adapter.buildSnapshot());
   readonly panel = new PanelSurface(EMPTY_SNAPSHOT, this);
   readonly popout = new PopoutSurface(EMPTY_SNAPSHOT, this);
+  readonly help = new DeckHelp();
   #busy = new Set<string>();
   #unsubscribe?: () => void;
 
@@ -47,11 +51,13 @@ export class DeckController implements DeckModuleApi, DeckSurfaceHandlers {
     this.assertGm();
     this.#unsubscribe = this.store.subscribe((snapshot) => { this.panel.render(snapshot); this.popout.render(snapshot); });
     this.registerInvalidationHooks();
-    window.addEventListener('beforeunload', () => void this.popout.close(), { once: true });
+    window.addEventListener('beforeunload', () => runDeckUiAction(() => this.popout.close()), { once: true });
     await this.store.refreshNow();
   }
 
   async openPanel(): Promise<void> { this.assertGm(); await game.settings.set(MODULE_ID, SETTINGS.lastOpenMode, 'panel'); await this.panel.open(); }
+
+  async openHelp(): Promise<void> { this.assertGm(); await this.help.open(); }
 
   async openPopout(): Promise<void> {
     this.assertGm();
@@ -140,8 +146,8 @@ export class DeckController implements DeckModuleApi, DeckSurfaceHandlers {
       'updateUser', 'canvasReady', 'canvasTearDown',
     ]) Hooks.on(hook, () => {
       if (!game.user?.isGM) {
-        void this.panel.close();
-        void this.popout.close();
+        runDeckUiAction(() => this.panel.close());
+        runDeckUiAction(() => this.popout.close());
         return;
       }
       this.store.invalidate();

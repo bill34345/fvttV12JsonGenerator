@@ -179,6 +179,15 @@ describe("terrain service", () => {
     expect(scene.lights).toHaveLength(2);
   });
 
+  test("does not report painted cells when Core returns no persisted Tiles", async () => {
+    const scene = new FakeScene();
+    const create = scene.createEmbeddedDocuments.bind(scene);
+    scene.createEmbeddedDocuments = async (type, sources) => type === "Tile" ? [] : create(type, sources);
+    await expect(serviceFor(scene).paintCells("fire", 0, [cells[0]!])).rejects.toThrow(/Tile.*expected 1.*returned 0/i);
+    expect(scene.tiles).toHaveLength(0);
+    expect(scene.regions).toHaveLength(0);
+  });
+
   test("keeps visual bleed out of Region geometry", async () => {
     const scene = new FakeScene();
     await serviceFor(scene, false, 0.08).paintCells("brambles", 0, [cells[0]!]);

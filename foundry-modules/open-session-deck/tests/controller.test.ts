@@ -54,6 +54,43 @@ function installControllerGlobals() {
 }
 
 describe('DeckController behavior', () => {
+  test('panel close and reopen do not add invalidation subscriptions', async () => {
+    const fixture = installControllerGlobals();
+    const controller = new DeckController();
+    let builds = 0;
+    const originalBuild = controller.adapter.buildSnapshot.bind(controller.adapter);
+    controller.adapter.buildSnapshot = () => { builds += 1; return originalBuild(); };
+    controller.panel.open = async () => {};
+    controller.panel.close = async () => {};
+    await controller.start();
+    const hookCount = fixture.hookCallbacks.size;
+    for (let index = 0; index < 3; index += 1) {
+      await controller.openPanel();
+      await controller.close('panel');
+    }
+    expect(fixture.hookCallbacks.size).toBe(hookCount);
+    fixture.hookCallbacks.get('updateActor')!();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(builds).toBe(2);
+  });
+
+  test('help stays outside panel, popout, command, and setting-write paths', async () => {
+    const fixture = installControllerGlobals();
+    const controller = new DeckController();
+    let opens = 0;
+    controller.help.open = async () => { opens += 1; };
+    controller.panel.open = async () => { throw new Error('panel opened'); };
+    controller.popout.open = async () => { throw new Error('popout opened'); };
+    controller.adapter.execute = async () => { throw new Error('command executed'); };
+    fixture.game.settings.set = async () => { throw new Error('setting written'); };
+    await controller.openHelp();
+    expect(opens).toBe(1);
+    expect(fixture.settings.get('lastOpenMode')).toBe('panel');
+    fixture.game.user.isGM = false;
+    await expect(controller.openHelp()).rejects.toThrow('GMs only');
+    expect(opens).toBe(1);
+  });
+
   test('routes panel and popout lifecycle, remembers successful modes, and falls back after blocked or failed popouts', async () => {
     const fixture = installControllerGlobals();
     const controller = new DeckController();

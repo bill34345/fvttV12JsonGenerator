@@ -45,7 +45,7 @@ function actorCard(overrides: Record<string, unknown> = {}) {
 function context() {
   const combatant = actorCard({ current: true, partyMember: true, combatantId: 'hero-turn', initiative: 18.14, hasInitiative: true, tokenUuid: 'Scene.scene.Token.hero' });
   return {
-    supported: true, world: { title: 'World' }, system: { id: 'dnd5e', version: '5.3.3' }, scene: { name: 'Scene' }, onlineUsers: 1,
+    supported: true, coreVersion: '14.368', world: { title: 'World' }, system: { id: 'dnd5e', version: '5.3.3' }, scene: { name: 'Scene' }, onlineUsers: 1,
     party: [actorCard()], hasParty: true, statusOptions: [{ id: 'poisoned', label: 'Poisoned' }], partyFolder: { selectedId: 'party', selectedName: 'Party', includeDescendants: true, missing: false, options: [] }, rosterManager: [], stalePinned: [], staleHidden: [], staleCount: 0,
     encounter: {
       active: true, uuid: 'Combat.one', round: 1, displayTurn: 1, combatants: [combatant],
@@ -59,6 +59,42 @@ function context() {
 }
 
 describe('Deck template semantics', () => {
+  test('shows the actual runtime pair and support state in both surfaces', () => {
+    const supported = render(context());
+    const popout = render({ ...context(), isPopout: true });
+    expect(supported).toContain('Current runtime: Core 14.368 · dnd5e 5.3.3 · Supported pair');
+    expect(popout).toContain('Current runtime: Core 14.368 · dnd5e 5.3.3 · Supported pair');
+    const unsupported = render({ ...context(), supported: false, coreVersion: '14.369', system: { id: 'dnd5e', version: '6.0.6' }, supportError: 'Unsupported pair' });
+    expect(unsupported).toContain('Core 14.369 · dnd5e 6.0.6 · Unsupported pair');
+    expect(unsupported).toContain('Unsupported pair</div>');
+  });
+
+  test('puts existing availability reasons on every direct-edit input', () => {
+    const value = context();
+    value.party = [actorCard({ commands: { ...actorCard().commands, setHp: disabled('OSD.Errors.NativeApiUnavailable') } })];
+    const html = render(value);
+    const inputs = [...html.matchAll(/<input[^>]*data-osd-direct-command="[^"]+"[^>]*>/g)].map(([input]) => input);
+    expect(inputs.length).toBeGreaterThan(0);
+    for (const input of inputs) {
+      expect(input).toContain('title="');
+      expect(input).toContain('data-tooltip="');
+    }
+    const directLabels = [...html.matchAll(/<label[^>]*>[\s\S]*?<\/label>/g)].map(([label]) => label).filter((label) => label.includes('data-osd-direct-command='));
+    expect(directLabels).toHaveLength(inputs.length);
+    for (const label of directLabels) {
+      expect(label.slice(0, label.indexOf('>'))).toContain('title="');
+      expect(label.slice(0, label.indexOf('>'))).toContain('data-tooltip="');
+    }
+    expect(inputs.find((input) => input.includes('data-osd-direct-command="actor.set-hp"'))).toContain('title="The required dnd5e operation is unavailable for this Actor."');
+  });
+  test('keeps the localized help control in both shared panel and popout toolbars', () => {
+    const panel = render(context());
+    const popout = render({ ...context(), isPopout: true });
+    expect(panel).toContain('data-osd-action="open-help"');
+    expect(popout).toContain('data-osd-action="open-help"');
+    expect(panel).toContain('>Help</button>');
+    expect(popout).toContain('>Help</button>');
+  });
   test('renders direct party controls and keeps the same party member compact in encounter', () => {
     const html = render(context());
     expect(html).toContain('Alice, Bob');

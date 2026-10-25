@@ -1,0 +1,70 @@
+{
+  "id": "fvtt-blood-hunter-2024",
+  "title": "血猎手 2024",
+  "category": "library",
+  "summary": "提供血猎手 2024 的职业、结社和特性合集，使用 dnd5e 原生升级流程。",
+  "when": "给新角色添加血猎手职业、查看结社特性，或只读检查旧角色与当前内容差异时使用。",
+  "requires": [
+    "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
+    "GM",
+    "可被 canonical flags 或严格 legacy 条件唯一匹配的 Blood Hunter Actor（迁移时）",
+    "新增精确Foundry14.368/dnd5e6.0.6受限新角色/职业授予接受；旧角色仍只读Preview，不自动升级其他环境。"
+  ],
+  "steps": [
+    {
+      "title": "启用并检查内容包",
+      "text": "在精确支持版本的世界中启用模块，打开 Compendium 目录确认“血猎手 2024：职业”“血猎手 2024：子职”和“血猎手 2024：特性”三个 Item pack 可读。"
+    },
+    {
+      "title": "给新角色添加职业",
+      "text": "从 classes（职业）合集中把“血猎手”拖入角色卡，按 dnd5e 原生 Advancement 提示完成选择。"
+    },
+    {
+      "title": "按原生流程升级",
+      "text": "通过角色卡的升级流程选择结社和对应特性；需要 GM/玩家判断的规则按原文处理，不把 assisted 项当作全自动。"
+    },
+    {
+      "title": "更新合集后检查角色",
+      "text": "已经加入角色卡的职业和特性是快照，模块更新不会实时替换它们。核对角色已有等级、选择和消耗，再决定是否需要另行处理。"
+    },
+    {
+      "title": "旧角色仅做只读预览",
+      "text": "GM 在“游戏设置 → 模块设置”打开“血猎手 2024：角色迁移”，输入 Actor ID 或精确名称，点击 Preview 查看差异。当前 Create migrated copy 与 Apply original 流程要求创建副本和 JSON 备份，与本项目无备份规则冲突，因此停在 Preview，不继续迁移。"
+    }
+  ],
+  "outputs": [
+    "classes、subclasses、features 三个 dnd5e Item Compendium pack",
+    "原生角色卡中的血猎手职业、结社及按升级流程授予的特性",
+    "旧角色的只读 Preview 差异报告；当前流程停在预览，不创建角色副本或 JSON 备份"
+  ],
+  "limits": [
+    "历史接受绑定 Foundry 14.364 / dnd5e 5.3.3；Next 6.0.5 仅接受下列代表切片；MIDI-QOL 14.0.11 和 DAE 14.0.12 是推荐依赖而非硬依赖",
+    "不会自动 ready 扫描 Actor；不修改 HP、Actor system、职业等级、spent uses、已选 advancement、非 Blood Hunter Item 或其他 flags",
+    "旧安装替换及角色迁移包含备份行为，与本项目无备份规则冲突。当前仅介绍已安装内容的使用和只读 Preview；执行这些旧写入流程前须先处理冲突，不能用隐藏副本绕过。",
+    "这是构建快照，不实时同步远程 homebrew、旧 side-data 或 Actor 变化；本地静态检查不等于真实游戏性验收",
+    "内容投影身份保持原已接受的 dnd5e 6.0.2，6.0.5 是本轮运行兼容目标；更新保留现有合集数据库，不重复生成或迁移。",
+    "Next 14.368／6.0.5 本轮只验证来源／内容身份、启用和现有三合集读取；四子职完整 Core／Modded 游戏性矩阵未执行。",
+    "Next 6.0.6内容身份与verified仍6.0.2；本轮四个临时3级角色的职业/子职授予、Item links/配方、普通重载和精确清理已接受，同一官方Archery来源的4条记录另有独立核对；不代表全等级、全部特性、渎魂分支的自动法术/契术位配置或生产通过。",
+    "只读Preview会比较当前说明、Activity和Effect，不把未更新的来源hash当成“没有手改”。旧角色名称/类型或其他无逐字段决策的变化会跳过并保留整个Item，须人工核对；本轮不执行旧角色Copy/Apply或备份。新建角色的受限职业授予链已单独验收。",
+    "旧写入迁移依赖副本和JSON备份，与当前无备份约定冲突；本轮只处理Preview，不运行实际Copy/Apply。无备份迁移方式和内容发行范围仍待明确。"
+  ],
+  "keywords": [
+    "Blood Hunter",
+    "血猎手",
+    "职业",
+    "子职",
+    "迁移",
+    "Actor",
+    "Activity",
+    "Effect"
+  ],
+  "sources": [
+    "foundry-modules/fvtt-blood-hunter-2024/README.zh-CN.md",
+    "README.md",
+    "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
+  ],
+  "watch": [
+    "foundry-modules/fvtt-blood-hunter-2024/"
+  ],
+  "module": "fvtt-blood-hunter-2024"
+}

@@ -1,0 +1,672 @@
+{
+  "schemaVersion": 1,
+  "status": "DRAFT_NOT_FOR_INSTALLATION",
+  "basis": "task worktree source and local file receipts, 2026-10-12",
+  "corePrinciple": "One repository, independently built modules; keep existing runtime identities.",
+  "modules": [
+    {
+      "owner": "chat-memory-guard",
+      "moduleId": "chat-memory-guard",
+      "version": "1.1.0",
+      "manifest": "foundry-modules/chat-memory-guard/src/module.json",
+      "manifestSha256": "fbb76cbe88e22d8bea7431940dc06e3902f6c1208fa0b07d7299edfdf684a58a",
+      "manifestCompatibility": {
+        "minimum": "14.368",
+        "verified": "14.368",
+        "maximum": "14.368"
+      },
+      "relationships": {
+        "systems": [
+          {
+            "id": "dnd5e",
+            "type": "system",
+            "compatibility": {
+              "minimum": "6.0.2",
+              "verified": "6.0.2",
+              "maximum": "6.0.6"
+            }
+          }
+        ]
+      },
+      "classification": "maintained-module",
+      "candidate": {
+        "receipt": "chat-guard-g1-g3-shared-build.json",
+        "artifact": {
+          "path": "foundry-modules/chat-memory-guard/dist/chat-memory-guard.zip",
+          "bytes": 42761,
+          "sha256": "1c3f58ffd6656d8d09a9ae9c2212b94e55196f15c20f573d04ab076492a35dde"
+        },
+        "status": "LOCAL_PACKAGE_VERIFIED_NOT_INSTALLED"
+      },
+      "distributionApproved": false,
+      "runtimeEvidence": "See exact scope in EXECUTION_LEDGER.md; manifests and local tests do not prove runtime acceptance."
+    },
+    {
+      "owner": "fvtt-babele-rolltable-embed-translation",
+      "moduleId": "fvtt-babele-rolltable-embed-translation",
+      "version": "0.2.1",
+      "manifest": "foundry-modules/fvtt-babele-rolltable-embed-translation/src/module.json",
+      "manifestSha256": "a00981060b6220f7039be610e7d403591ab4e9dc3c666b68dd0d0d6a5f294323",
+      "manifestCompatibility": {
+        "minimum": "14.368",
+        "verified": "14.368",
+        "maximum": "14.368"
+      },
+      "relationships": {
+        "systems": [
+          {
+            "id": "dnd5e",
+            "type": "system",
+            "compatibility": {
+              "minimum": "6.0.2",
+              "verified": "6.0.2",
+              "maximum": "6.0.6"
+            }
+          }
+        ],
+        "requires": [
+          {
+            "id": "babele",
+            "type": "module",
+            "compatibility": {
+              "minimum": "2.9.1",
+              "verified": "2.9.1",
+              "maximum": "2.9.1"
+            }
+          },
+          {
+            "id": "lib-wrapper",
+            "type": "module",
+            "compatibility": {
+              "minimum": "1.13.5.1",
+              "verified": "1.13.5.1",
+              "maximum": "1.13.5.1"
+            }
+          }
+        ]
+      },
+      "classification": "maintained-module",
+      "candidate": {
+        "receipt": "babele-b1-b3-build.json",
+        "artifact": {
+          "path": "foundry-modules/fvtt-babele-rolltable-embed-translation/dist/fvtt-babele-rolltable-embed-translation.zip",
+          "bytes": 12074,
+          "sha256": "a4ea11a222a0970a502c7ec79834ff626ac02dd31e22c57e56f522854c411535"
+        },
+        "status": "LOCAL_PACKAGE_VERIFIED_NOT_INSTALLED"
+      },
+      "distributionApproved": false,
+      "runtimeEvidence": "See exact scope in EXECUTION_LEDGER.md; manifests and local tests do not prove runtime acceptance."
+    },
+    {
+      "owner": "fvtt-battlefield-painter",
+      "moduleId": "fvtt-battlefield-painter",
+      "version": "0.3.0-alpha.2",
+      "manifest": "foundry-modules/fvtt-battlefield-painter/module.json",
+      "manifestSha256": "3a9d5b4685df5e74ce6dfa65a5e5f2e3fe599c1b9a6dae42a04e89dbf7027d6f",
+      "manifestCompatibility": {
+        "minimum": "14.364",
+        "verified": "14.364",
+        "maximum": "14.368"
+      },
+      "relationships": {
+        "systems": [
+          {
+            "id": "dnd5e",
+            "type": "system",
+            "compatibility": {
+              "minimum": "5.3.3",
+              "verified": "5.3.3",
+              "maximum": "6.0.6"
+            }
+          }
+        ]
+      },
+      "classification": "maintained-module",
+      "candidate": {
+        "receipt": "painter-p2-build.json",
+        "artifact": {
+          "path": "foundry-modules/fvtt-battlefield-painter/dist/fvtt-battlefield-painter.zip",
+          "bytes": 136398345,
+          "sha256": "0d4d8ed06586d5793d75841955a4b61757d04a2a5bf947543e0c98766f2663d8"
+        },
+        "status": "LOCAL_PACKAGE_VERIFIED_NOT_INSTALLED"
+      },
+      "distributionApproved": false,
+      "runtimeEvidence": "See exact scope in EXECUTION_LEDGER.md; manifests and local tests do not prove runtime acceptance."
+    },
+    {
+      "owner": "fvtt-blood-hunter-2024",
+      "moduleId": "fvtt-blood-hunter-2024",
+      "version": "1.0.0",
+      "manifest": "foundry-modules/fvtt-blood-hunter-2024/src/module.json",
+      "manifestSha256": "3cd2426dfaf60b516654b1cdf48b677a95a54c96687414a4bd1afbaba591ff87",
+      "manifestCompatibility": {
+        "minimum": "14.364",
+        "verified": "14.364",
+        "maximum": "14.364"
+      },
+      "relationships": {
+        "systems": [
+          {
+            "id": "dnd5e",
+            "type": "system",
+            "compatibility": {
+              "minimum": "5.3.3",
+              "verified": "5.3.3",
+              "maximum": "5.3.3"
+            }
+          }
+        ],
+        "recommends": [
+          {
+            "id": "midi-qol",
+            "type": "module",
+            "compatibility": {
+              "minimum": "14.0.11",
+              "verified": "14.0.11",
+              "maximum": "14.0.11"
+            }
+          },
+          {
+            "id": "dae",
+            "type": "module",
+            "compatibility": {
+              "minimum": "14.0.12",
+              "verified": "14.0.12",
+              "maximum": "14.0.12"
+            }
+          }
+        ]
+      },
+      "classification": "content-review-required",
+      "candidate": {
+        "status": "SEE_MODULE_LEDGER"
+      },
+      "distributionApproved": false,
+      "runtimeEvidence": "See exact scope in EXECUTION_LEDGER.md; manifests and local tests do not prove runtime acceptance."
+    },
+    {
+      "owner": "fvtt-custom-conditions",
+      "moduleId": "fvtt-custom-conditions",
+      "version": "0.2.0",
+      "manifest": "foundry-modules/fvtt-custom-conditions/src/module.json",
+      "manifestSha256": "91d19c515b3f003fac3437860450b1e19b92b7abb2332de8c4f2255f313e9dcd",
+      "manifestCompatibility": {
+        "minimum": "14.364",
+        "verified": "14.364",
+        "maximum": "14.368"
+      },
+      "relationships": {
+        "systems": [
+          {
+            "id": "dnd5e",
+            "type": "system",
+            "compatibility": {
+              "minimum": "5.3.3",
+              "verified": "5.3.3",
+              "maximum": "6.0.6"
+            }
+          }
+        ],
+        "requires": [
+          {
+            "id": "fvtt-trigger-engine",
+            "type": "module",
+            "compatibility": {
+              "minimum": "0.2.0",
+              "verified": "0.2.0",
+              "maximum": "0.2.x"
+            }
+          }
+        ]
+      },
+      "classification": "maintained-module",
+      "candidate": {
+        "status": "SEE_MODULE_LEDGER"
+      },
+      "distributionApproved": false,
+      "runtimeEvidence": "See exact scope in EXECUTION_LEDGER.md; manifests and local tests do not prove runtime acceptance."
+    },
+    {
+      "owner": "fvtt-homebrew-species",
+      "moduleId": "fvtt-homebrew-species",
+      "version": "1.0.0",
+      "manifest": "foundry-modules/fvtt-homebrew-species/src/module.json",
+      "manifestSha256": "b4bd3965c8ab243d7b118e1c737520973e8b89f08706c85054920df9ad859b83",
+      "manifestCompatibility": {
+        "minimum": "14.364",
+        "verified": "14.364",
+        "maximum": "14.364"
+      },
+      "relationships": {
+        "systems": [
+          {
+            "id": "dnd5e",
+            "type": "system",
+            "compatibility": {
+              "minimum": "5.3.3",
+              "verified": "5.3.3",
+              "maximum": "5.3.3"
+            }
+          }
+        ]
+      },
+      "classification": "content-review-required",
+      "candidate": {
+        "status": "SEE_MODULE_LEDGER"
+      },
+      "distributionApproved": false,
+      "runtimeEvidence": "See exact scope in EXECUTION_LEDGER.md; manifests and local tests do not prove runtime acceptance."
+    },
+    {
+      "owner": "fvtt-house-rules",
+      "moduleId": "fvtt-house-rules",
+      "version": "0.1.3",
+      "manifest": "foundry-modules/fvtt-house-rules/src/module.json",
+      "manifestSha256": "c04278ef005456bd4a349f9a09e4a5e028497781439e0db8acbb274580d4a3f8",
+      "manifestCompatibility": {
+        "minimum": "14.364",
+        "verified": "14.364",
+        "maximum": "14.368"
+      },
+      "relationships": {
+        "systems": [
+          {
+            "id": "dnd5e",
+            "type": "system",
+            "compatibility": {
+              "minimum": "5.3.3",
+              "verified": "5.3.3",
+              "maximum": "6.0.6"
+            }
+          }
+        ],
+        "recommends": [
+          {
+            "id": "midi-qol",
+            "type": "module",
+            "compatibility": {
+              "minimum": "14.0.11",
+              "verified": "14.0.11",
+              "maximum": "14.6.0-beta.4338eeab.local.9"
+            }
+          },
+          {
+            "id": "dae",
+            "type": "module",
+            "compatibility": {
+              "minimum": "14.0.12",
+              "verified": "14.0.12",
+              "maximum": "14.0.14"
+            }
+          }
+        ]
+      },
+      "classification": "maintained-module",
+      "candidate": {
+        "receipt": "house-h1-h2-build.json",
+        "artifact": {
+          "path": "foundry-modules/fvtt-house-rules/release/fvtt-house-rules-0.1.3.zip",
+          "bytes": 105446,
+          "sha256": "cb71e3186780d8925c1fc4e22de86dc52e4c8fa433c0f4ec0923139bc671ef9b"
+        },
+        "status": "LOCAL_PACKAGE_VERIFIED_NOT_INSTALLED"
+      },
+      "distributionApproved": false,
+      "runtimeEvidence": "See exact scope in EXECUTION_LEDGER.md; manifests and local tests do not prove runtime acceptance."
+    },
+    {
+      "owner": "fvtt-injury-fading-spirits",
+      "moduleId": "fvtt-injury-fading-spirits",
+      "version": "1.1.0",
+      "manifest": "foundry-modules/fvtt-injury-fading-spirits/src/module.json",
+      "manifestSha256": "302d9ccbdb32e1fb5760a3729f7ea23bbd8175d469a6f1ff380052cc6849d47b",
+      "manifestCompatibility": {
+        "minimum": "14.364",
+        "verified": "14.364",
+        "maximum": "14.368"
+      },
+      "relationships": {
+        "systems": [
+          {
+            "id": "dnd5e",
+            "type": "system",
+            "compatibility": {
+              "minimum": "5.3.3",
+              "verified": "5.3.3",
+              "maximum": "6.0.6"
+            }
+          }
+        ]
+      },
+      "classification": "maintained-module",
+      "candidate": {
+        "receipt": "ifs-f1-f3-build.json",
+        "artifact": {
+          "path": "foundry-modules/fvtt-injury-fading-spirits/dist/fvtt-injury-fading-spirits.zip",
+          "bytes": 80588,
+          "sha256": "e978d6b2989caf56df4e9873607e877a79052528d4e67288c93df39f1d4d2cde"
+        },
+        "status": "LOCAL_PACKAGE_VERIFIED_NOT_INSTALLED"
+      },
+      "distributionApproved": false,
+      "runtimeEvidence": "See exact scope in EXECUTION_LEDGER.md; manifests and local tests do not prove runtime acceptance."
+    },
+    {
+      "owner": "fvtt-json-forge",
+      "moduleId": "fvtt-json-forge",
+      "version": "0.5.0",
+      "manifest": "foundry-modules/fvtt-json-forge/src/module.json",
+      "manifestSha256": "d8dbe9ce6e76bb6fd769af9d2812fc3993f32836dd3838b20f03f78ed0d71e7c",
+      "manifestCompatibility": {
+        "minimum": "14.364",
+        "verified": "14.364",
+        "maximum": "14.368"
+      },
+      "relationships": {
+        "systems": [
+          {
+            "id": "dnd5e",
+            "type": "system",
+            "compatibility": {
+              "minimum": "5.3.3",
+              "verified": "5.3.3",
+              "maximum": "5.3.3"
+            }
+          }
+        ]
+      },
+      "classification": "maintained-module",
+      "candidate": {
+        "status": "SEE_MODULE_LEDGER"
+      },
+      "distributionApproved": false,
+      "runtimeEvidence": "See exact scope in EXECUTION_LEDGER.md; manifests and local tests do not prove runtime acceptance."
+    },
+    {
+      "owner": "fvtt-selected-token-sync",
+      "moduleId": "fvtt-selected-token-sync",
+      "version": "0.2.0",
+      "manifest": "foundry-modules/fvtt-selected-token-sync/src/module.json",
+      "manifestSha256": "87d0db391e305c567a402eddb70666e6dc6f98ac85e093216f7e16193b7da327",
+      "manifestCompatibility": {
+        "minimum": "14.368",
+        "verified": "14.368",
+        "maximum": "14.368"
+      },
+      "relationships": {
+        "systems": [
+          {
+            "id": "dnd5e",
+            "type": "system",
+            "compatibility": {
+              "minimum": "6.0.5",
+              "verified": "6.0.5",
+              "maximum": "6.0.6"
+            }
+          }
+        ]
+      },
+      "classification": "maintained-module",
+      "candidate": {
+        "receipt": "tokensync-s3-shared-build.json",
+        "artifact": {
+          "path": "foundry-modules/fvtt-selected-token-sync/dist/fvtt-selected-token-sync.zip",
+          "bytes": 38382,
+          "sha256": "a3b5848e5ea489613c2e8478f1910cdd2464e2d2eb78e3dbb7c3eb4a126c3138"
+        },
+        "status": "LOCAL_PACKAGE_VERIFIED_NOT_INSTALLED"
+      },
+      "distributionApproved": false,
+      "runtimeEvidence": "See exact scope in EXECUTION_LEDGER.md; manifests and local tests do not prove runtime acceptance."
+    },
+    {
+      "owner": "fvtt-suite-console",
+      "moduleId": "fvtt-suite-console",
+      "version": "0.3.0",
+      "manifest": "foundry-modules/fvtt-suite-console/src/module.json",
+      "manifestSha256": "13904ef2e0c8e178599236ecac27026b5a343f8180fd3d71b06a51aa563a74ac",
+      "manifestCompatibility": {
+        "minimum": "14.368",
+        "verified": "14.368",
+        "maximum": "14.368"
+      },
+      "relationships": {},
+      "classification": "maintained-module",
+      "candidate": {
+        "status": "LOCAL_DELIVERY_VERIFIED_NOT_INSTALLED",
+        "receipt": "foundry-modules/fvtt-suite-console/dist/release/release-candidate.json",
+        "artifact": {
+          "name": "fvtt-suite-console-0.3.0.zip",
+          "bytes": 869950,
+          "sha256": "1ee2a4d9e32ad6ac0eb86bdd59a05ccb3507fd5f03d1a996e1685e79ffbbe7ca"
+        },
+        "offlineHandbook": {
+          "sourcePath": "工具手册.html",
+          "name": "工具手册.html",
+          "bytes": 1237947,
+          "sourceSha256": "1c0366923fc00d7f14818f822bf4cc580fd254037bd7e3113cc1f3e4726ce3f1",
+          "deliverySha256": "1c0366923fc00d7f14818f822bf4cc580fd254037bd7e3113cc1f3e4726ce3f1"
+        }
+      },
+      "distributionApproved": false,
+      "runtimeEvidence": "See exact scope in EXECUTION_LEDGER.md; manifests and local tests do not prove runtime acceptance."
+    },
+    {
+      "owner": "fvtt-trigger-engine",
+      "moduleId": "fvtt-trigger-engine",
+      "version": "0.2.0",
+      "manifest": "foundry-modules/fvtt-trigger-engine/src/module.json",
+      "manifestSha256": "3c4a14695c739b8355a2c798491bc255857bde1cf51dd5aced15076173ae3dae",
+      "manifestCompatibility": {
+        "minimum": "14.364",
+        "verified": "14.364",
+        "maximum": "14.368"
+      },
+      "relationships": {
+        "systems": [
+          {
+            "id": "dnd5e",
+            "type": "system",
+            "compatibility": {
+              "minimum": "5.3.3",
+              "verified": "5.3.3",
+              "maximum": "6.0.6"
+            }
+          }
+        ]
+      },
+      "classification": "maintained-module",
+      "candidate": {
+        "status": "SEE_MODULE_LEDGER"
+      },
+      "distributionApproved": false,
+      "runtimeEvidence": "See exact scope in EXECUTION_LEDGER.md; manifests and local tests do not prove runtime acceptance."
+    },
+    {
+      "owner": "fvtt-weapon-mastery-properties",
+      "moduleId": "fvtt-weapon-mastery-properties",
+      "version": "0.1.0",
+      "manifest": "foundry-modules/fvtt-weapon-mastery-properties/src/module.json",
+      "manifestSha256": "dfee708fd4d4ddc8f36852bc50d17cbe604f6df8bc039454c7851a221b883baf",
+      "manifestCompatibility": {
+        "minimum": "14.364",
+        "verified": "14.368",
+        "maximum": "14.368"
+      },
+      "relationships": {
+        "systems": [
+          {
+            "id": "dnd5e",
+            "type": "system",
+            "compatibility": {
+              "minimum": "5.3.3",
+              "verified": "6.0.5",
+              "maximum": "6.0.6"
+            }
+          }
+        ],
+        "requires": [
+          {
+            "id": "fvtt-custom-conditions",
+            "type": "module",
+            "compatibility": {
+              "minimum": "0.1.1",
+              "verified": "0.2.0",
+              "maximum": "0.2.0"
+            }
+          },
+          {
+            "id": "fvtt-trigger-engine",
+            "type": "module",
+            "compatibility": {
+              "minimum": "0.1.1",
+              "verified": "0.2.0",
+              "maximum": "0.2.0"
+            }
+          }
+        ]
+      },
+      "classification": "maintained-module",
+      "candidate": {
+        "status": "SEE_MODULE_LEDGER"
+      },
+      "distributionApproved": false,
+      "runtimeEvidence": "See exact scope in EXECUTION_LEDGER.md; manifests and local tests do not prove runtime acceptance."
+    },
+    {
+      "owner": "monster-spell-resolver",
+      "moduleId": "fvtt-json-generator-spell-resolver",
+      "version": "0.1.7",
+      "manifest": "foundry-modules/monster-spell-resolver/src/module.json",
+      "manifestSha256": "39d11dba507e7c92c4eed6f82faefd21514f4e98e5f5b0866d80ea712034151e",
+      "manifestCompatibility": {
+        "minimum": "14.364",
+        "verified": "14.364",
+        "maximum": "14.368"
+      },
+      "relationships": {
+        "systems": [
+          {
+            "id": "dnd5e",
+            "type": "system",
+            "compatibility": {
+              "minimum": "5.3.3",
+              "verified": "5.3.3",
+              "maximum": "6.0.6"
+            }
+          }
+        ]
+      },
+      "classification": "maintained-module",
+      "candidate": {
+        "receipt": "resolver-r1-r3-shared-build.json",
+        "artifact": {
+          "path": "foundry-modules/monster-spell-resolver/dist/fvtt-json-generator-spell-resolver.zip",
+          "bytes": 299426,
+          "sha256": "11d3f3625967f9c326167268c382dbf4b34edbbf93eef054f833d858952e5d55"
+        },
+        "status": "LOCAL_PACKAGE_VERIFIED_NOT_INSTALLED"
+      },
+      "distributionApproved": false,
+      "runtimeEvidence": "See exact scope in EXECUTION_LEDGER.md; manifests and local tests do not prove runtime acceptance."
+    },
+    {
+      "owner": "open-session-deck",
+      "moduleId": "open-session-deck",
+      "version": "0.2.0",
+      "manifest": "foundry-modules/open-session-deck/src/module.json",
+      "manifestSha256": "821d0740f424e5b209e1ef7b75af1178aefa76b442c86966576b112e7f014c0b",
+      "manifestCompatibility": {
+        "minimum": "14.364",
+        "verified": "14.364",
+        "maximum": "14.368"
+      },
+      "relationships": {
+        "systems": [
+          {
+            "id": "dnd5e",
+            "type": "system",
+            "compatibility": {
+              "minimum": "5.3.3",
+              "verified": "5.3.3",
+              "maximum": "6.0.6"
+            }
+          }
+        ]
+      },
+      "classification": "maintained-module",
+      "candidate": {
+        "status": "SEE_MODULE_LEDGER"
+      },
+      "distributionApproved": false,
+      "runtimeEvidence": "See exact scope in EXECUTION_LEDGER.md; manifests and local tests do not prove runtime acceptance."
+    },
+    {
+      "owner": "session-monitor",
+      "moduleId": "fvtt-session-monitor",
+      "version": "1.1.2",
+      "manifest": "foundry-modules/session-monitor/src/module.json",
+      "manifestSha256": "67ad90f751889ed5c83bf0c93963089fe3afc6e443825cfdf1bb25eca5c37a87",
+      "manifestCompatibility": {
+        "minimum": "14.364",
+        "verified": "14.364",
+        "maximum": "14.368"
+      },
+      "relationships": {
+        "systems": [
+          {
+            "id": "dnd5e",
+            "type": "system",
+            "compatibility": {
+              "minimum": "5.3.3",
+              "verified": "5.3.3",
+              "maximum": "6.0.6"
+            }
+          }
+        ],
+        "recommends": [
+          {
+            "id": "midi-qol",
+            "type": "module",
+            "compatibility": {
+              "minimum": "14.0.11",
+              "verified": "14.0.11",
+              "maximum": "14.0.11"
+            }
+          },
+          {
+            "id": "sequencer",
+            "type": "module",
+            "compatibility": {
+              "minimum": "4.2.3",
+              "verified": "4.2.3",
+              "maximum": "4.2.3"
+            }
+          }
+        ]
+      },
+      "classification": "maintained-module",
+      "candidate": {
+        "receipt": "monitor-m1-m3-build.json",
+        "artifact": {
+          "path": "foundry-modules/session-monitor/dist/fvtt-session-monitor.zip",
+          "bytes": 80440,
+          "sha256": "de9b49a14fcce1c9e21cf1bb15b1ed4a31d39d3e6e11835cf9b77744d6748c1a"
+        },
+        "status": "LOCAL_PACKAGE_VERIFIED_NOT_INSTALLED"
+      },
+      "distributionApproved": false,
+      "runtimeEvidence": "See exact scope in EXECUTION_LEDGER.md; manifests and local tests do not prove runtime acceptance."
+    }
+  ],
+  "externalExclusion": "midi-qol and server-next-external-candidates are not bundle-owned assets. See workstreams/external-source-register.md.",
+  "pending": [
+    "Forge source handoff and shared-core/default-version changes",
+    "Native acceptance once shared Chrome is free",
+    "Blood Hunter no-backup migration product decision",
+    "Content redistribution review, brand, price and update channel",
+    "Explicit Git integration and external publication authorization"
+  ]
+}

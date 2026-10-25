@@ -11,7 +11,7 @@ describe('release contract', () => {
     expect(manifest.version).toBe(MODULE_VERSION);
     expect(packageJson.version).toBe(MODULE_VERSION);
     expect(manifest.compatibility).toEqual({ minimum: '14.364', verified: '14.364', maximum: '14.368' });
-    expect(manifest.relationships.systems[0].compatibility).toEqual({ minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.5' });
+    expect(manifest.relationships.systems[0].compatibility).toEqual({ minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.6' });
     expect(() => validateManifest({ ...manifest, compatibility: { ...manifest.compatibility, verified: '14.368' } })).toThrow();
     expect(manifest.languages).toEqual(expect.arrayContaining([
       expect.objectContaining({ lang: 'en', path: 'lang/en.json' }),

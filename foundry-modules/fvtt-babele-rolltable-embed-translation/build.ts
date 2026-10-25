@@ -8,7 +8,11 @@ const distRoot = resolve(packageRoot, 'dist');
 const moduleRoot = resolve(distRoot, 'module');
 
 export async function buildModule(): Promise<{ moduleRoot: string; zipPath: string }> {
-  await rm(distRoot, { recursive: true, force: true });
+  try {
+    await rm(distRoot, { recursive: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
   await mkdir(resolve(moduleRoot, 'scripts'), { recursive: true });
 
   const build = await Bun.build({

@@ -109,6 +109,7 @@ export const evaluateRuntimeCompatibility = ({
     { foundry: "14.368", dnd5e: "5.3.3" },
     { foundry: "14.368", dnd5e: "6.0.2" },
     { foundry: "14.368", dnd5e: "6.0.5" },
+    { foundry: "14.368", dnd5e: "6.0.6" },
   ] as const;
   const diagnostics: CompatibilityDiagnostic[] = [];
   if (!foundry || !dnd5e) {
@@ -129,7 +130,7 @@ export const evaluateRuntimeCompatibility = ({
       diagnostics.push({
         code: "UNSUPPORTED_DND5E_VERSION",
         blocking: true,
-        message: `Battlefield Painter alpha requires Foundry 14.364/dnd5e 5.3.3 or Foundry 14.368/dnd5e 5.3.3, 6.0.2 or 6.0.5; received ${foundry}/dnd5e ${dnd5e}`,
+        message: `Battlefield Painter alpha requires Foundry 14.364/dnd5e 5.3.3 or Foundry 14.368/dnd5e 5.3.3, 6.0.2, 6.0.5 or 6.0.6; received ${foundry}/dnd5e ${dnd5e}`,
       });
     }
   }

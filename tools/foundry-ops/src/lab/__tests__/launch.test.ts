@@ -8,13 +8,13 @@ import { buildLaunchCommand, buildRuntimeArgs, buildSafeOptions, cleanupStaleOpt
 describe('Foundry profile launcher', () => {
   const config = createLabConfig('I:/OpenCode/fvttV12JsonGenerator');
   it('builds a loopback-only core command', () => {
-    expect(buildLaunchCommand(config, 'core-test')).toEqual({ command: resolve(config.nodeRoot, 'node.exe'), args: [resolve(config.appRoot, 'main.js'), '--dataPath', config.profiles.coreTest.dataPath, '--hostname', '127.0.0.1', '--port', '30000', '--world', 'cor-cotn', '--noupnp', '--noBackups'] });
+    expect(buildLaunchCommand(config, 'core-test')).toEqual({ command: resolve(config.nodeRoot, 'node.exe'), args: [resolve(config.appRoot, 'main.js'), '--dataPath', config.profiles.coreTest.dataPath, '--hostname', '127.0.0.1', '--port', '30000', '--world', 'cor-cotn', '--noupnp', '--nobackups'] });
   });
   it('uses an independent server mirror port and path', () => {
     const command = buildLaunchCommand(config, 'server-mirror');
     expect(command.args).toContain('30001');
     expect(command.args).toContain(config.profiles.serverMirror.dataPath);
-    expect(buildRuntimeArgs(command.args)).toContain('--noBackups');
+    expect(buildRuntimeArgs(command.args)).toContain('--nobackups');
   });
   it('binds process ownership and executable arguments to the explicitly selected Mirror Core', () => {
     const upgraded = createLabConfig('I:/fixture/repo', { FVTT_OPS_MIRROR_FOUNDRY_VERSION: '14.368' });
@@ -28,8 +28,24 @@ describe('Foundry profile launcher', () => {
   it('adapts the public command shape to Foundry 14.364 equals-style parsing', () => {
     expect(buildRuntimeArgs(buildLaunchCommand(config, 'core-test').args)).toEqual([
       resolve(config.appRoot, 'main.js'), `--dataPath=${config.profiles.coreTest.dataPath}`,
-      '--hostname=127.0.0.1', '--port=30000', '--world=cor-cotn', '--noupnp', '--noBackups',
+      '--hostname=127.0.0.1', '--port=30000', '--world=cor-cotn', '--noupnp', '--nobackups',
     ]);
+  });
+  it('passes one exact lower-case no-backups flag through missing, current, and legacy inputs', () => {
+    const main = resolve(config.appRoot, 'main.js');
+    const options = ['--dataPath', config.profiles.coreTest.dataPath, '--port=30000', '--world', 'cor-cotn'];
+    const expected = [main, `--dataPath=${config.profiles.coreTest.dataPath}`, '--port=30000', '--world=cor-cotn', '--nobackups'];
+    for (const flags of [[], ['--nobackups'], ['--noBackups'], ['--noBackups', '--nobackups'], ['--noBackups=true']]) {
+      expect(buildRuntimeArgs([main, ...options, ...flags])).toEqual(expected);
+    }
+  });
+  it('rejects an explicit attempt to disable backups protection', () => {
+    const main = resolve(config.appRoot, 'main.js');
+    for (const flag of ['--nobackups=false', '--noBackups=false', '--nobackups=0', '--backups']) {
+      expect(() => buildRuntimeArgs([main, flag])).toThrow('backups');
+    }
+    expect(() => buildRuntimeArgs([main, '--noBackups', 'false'])).toThrow('separate value');
+    expect(() => buildRuntimeArgs([main, '--dataPath', '--noBackups'])).toThrow('Missing value');
   });
   it('rejects wildcard or non-loopback listeners', () => {
     expect(() => validateListenerAddresses(['127.0.0.1', '::1'])).not.toThrow();

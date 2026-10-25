@@ -1,8 +1,8 @@
 {
-  "babele-zh-maintenance": {
-    "fingerprint": "621c134843fedcd6a8705063693247681980685904a3bf271c250539846bcd95",
+  "version-selection": {
+    "fingerprint": "761b6768c4f226a2045b314653b100e7dd20f702ef0329fde290764ae5ce2569",
     "reviewedOn": "2026-10-25",
-    "note": "已核对三种版本维度、99目标清单与规则证据；官网Verified与作者清单差异并列，未知与未声明保留，目录旧控件与新增筛选通过非浏览器验证。"
+    "note": "已核合并后的支持矩阵与实际入口：正式生成仍14.364/5.3.3/core，CLI默认V12，Forge/Intake目标不扩大；606模块限定代表接受及旧User/Calendar/归档缺口保留。新增Babele独立维护入口不改变生成行为。"
   },
   "legacy-next-test-inputs": {
     "fingerprint": "08a1e772f66a92314a36ae10574cf1f466bce95ef84fae113a590264703c6737",
@@ -15,14 +15,14 @@
     "note": "对照 CLI 参数、Web 与 Intake 文档，区分文本和 OCR 链路、目标版本、来源验证与运行时边界"
   },
   "markdown-convert": {
-    "fingerprint": "cc4c9d3c22b1c8d340ecf4cbf77e4bc1f88de5dc68ada8af34c73e22f3551980",
-    "reviewedOn": "2026-10-05",
-    "note": "对照本次支持表新增原生Cleave接受：正式生成仍14.364/5.3.3、core默认、来源promotion和verifier均不改变，不把Next运行接受扩为任意输入生成支持。"
+    "fingerprint": "96dcbfc1409e822c75683e86bb2f6c9211c3e8695e5e7975483aa6dffaec9d59",
+    "reviewedOn": "2026-10-25",
+    "note": "已核合并后的支持矩阵与实际入口：正式生成仍14.364/5.3.3/core，CLI默认V12，Forge/Intake目标不扩大；606模块限定代表接受及旧User/Calendar/归档缺口保留。新增Babele独立维护入口不改变生成行为。"
   },
   "monster-intake": {
-    "fingerprint": "4de4963065e35f2e0a19c755cd1e1f7fadde02429b7fd5c7a28e36ca4977fdaa",
-    "reviewedOn": "2026-10-05",
-    "note": "对照本次支持表新增原生Cleave接受：正式生成仍14.364/5.3.3、core默认、来源promotion和verifier均不改变，不把Next运行接受扩为任意输入生成支持。"
+    "fingerprint": "f759e63b775c1de0057d86ba566ea60ad9b313cd8a229481d9d0c3a50fbaacf2",
+    "reviewedOn": "2026-10-25",
+    "note": "已核合并后的支持矩阵与实际入口：正式生成仍14.364/5.3.3/core，CLI默认V12，Forge/Intake目标不扩大；606模块限定代表接受及旧User/Calendar/归档缺口保留。新增Babele独立维护入口不改变生成行为。"
   },
   "item-intake": {
     "fingerprint": "631b2a7e939fc49ff194cf48f682aedfbe503ce2f57088a0cfc90b8e94a61c0a",
@@ -40,39 +40,39 @@
     "note": "已对照文档规则：仅报告/元数据显示改变且原MD、顺序、候选及下游行为有未变证据时缩小验收；正文或消费变化/证据不足仍核完整来源链。"
   },
   "vault-sync": {
-    "fingerprint": "f1adf7fac3afb168c26c4146801c00d476ca1e9a3679887ecdb98eb35fbddc11",
-    "reviewedOn": "2026-09-12",
-    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+    "fingerprint": "199c4e667a243fdeba26747d3f83b5e9e7fd9fecba6377b0fcf7046bce5c67b9",
+    "reviewedOn": "2026-10-25",
+    "note": "已逐项对照master与topic的README差异及现有命令：本次只整合V14/6.x分层说明和共享手册入口；Web工作台旧名保持，转换/采集/图标/翻译命令及Vault Sync备份冲突限制不变。"
   },
   "goddessfantasy-crawl": {
-    "fingerprint": "64792117f98292b555e33d7a293818521c949a610bc549d5125bb0084bac1478",
-    "reviewedOn": "2026-09-12",
-    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+    "fingerprint": "ee01375f13010c0477ed5c563419be971cc6fda15a6a0e45a71006dd66779367",
+    "reviewedOn": "2026-10-25",
+    "note": "已逐项对照master与topic的README差异及现有命令：本次只整合V14/6.x分层说明和共享手册入口；Web工作台旧名保持，转换/采集/图标/翻译命令及Vault Sync备份冲突限制不变。"
   },
   "artwork-icons": {
-    "fingerprint": "9c6ae355c8ac665d6b95bb388661d257257a582f557c3b2c57d29907aa9e440f",
-    "reviewedOn": "2026-09-12",
-    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+    "fingerprint": "56d80659dbf9439545062ae67a15949ca8367c40bba7b5e7cd2bf5bf7c38adf8",
+    "reviewedOn": "2026-10-25",
+    "note": "已逐项对照master与topic的README差异及现有命令：本次只整合V14/6.x分层说明和共享手册入口；Web工作台旧名保持，转换/采集/图标/翻译命令及Vault Sync备份冲突限制不变。"
   },
   "legacy-text": {
-    "fingerprint": "8cab6a716854b28a7f1f6192c5ac336f50ece653ac2df847de842b1f8d0f9abf",
-    "reviewedOn": "2026-09-12",
-    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+    "fingerprint": "33ef4cdc51c2ca34b1a7c73eb5f677fd5be6b6c9733fcf49f01866e8ceec9ad6",
+    "reviewedOn": "2026-10-25",
+    "note": "已逐项对照master与topic的README差异及现有命令：本次只整合V14/6.x分层说明和共享手册入口；Web工作台旧名保持，转换/采集/图标/翻译命令及Vault Sync备份冲突限制不变。"
   },
   "json-translation": {
-    "fingerprint": "2ce05e584bc481c29671e2de3496a848bf76ecd7f0037f502525bc93bd5e1646",
-    "reviewedOn": "2026-09-12",
-    "note": "核对批处理、图片、翻译与运维入口，明确原位写入、无备份冲突和手册随功能合并的流程"
+    "fingerprint": "00ad3b0ebd7ebeae743e77b1a8b9693ca93833300e93add32acf34dac19ea4e3",
+    "reviewedOn": "2026-10-25",
+    "note": "已逐项对照master与topic的README差异及现有命令：本次只整合V14/6.x分层说明和共享手册入口；Web工作台旧名保持，转换/采集/图标/翻译命令及Vault Sync备份冲突限制不变。"
   },
   "foundry-ops": {
-    "fingerprint": "a822f7eedff90d4c4b657b7a87291845561141aa757b4748bcf45b9b669e8889",
-    "reviewedOn": "2026-10-05",
-    "note": "逐项保留当前run/validationSelection/保留检查/Mirror及450秒门限；整合Selected Token首次安装白名单、去除自动合并重复目录项。历史测试仅显式只读复用已锁定输入，源码/lock/patch仍当前候选；本地整合与推送/实装/实机边界分开。"
+    "fingerprint": "79cb7dc9aa59b8297002f4809362b741dcf518b0e17f01ee7ff6dc9d90344036",
+    "reviewedOn": "2026-10-25",
+    "note": "已对照精确Core14.364/14.368配置与14.368纯parseArgs：CLI只消费小写nobackups；共用launcher修正/规范化并拒绝禁用，176项安全测试与tools类型通过。入口、路径、权限与无备份限制保持，新增仅新启动生效/需真实控件读回；原Setup失败保留，新34112真实控件0限定通过。 本次只纳入源码，不运行launcher/安装器，不操作Lab或生产。"
   },
   "verification-development": {
-    "fingerprint": "0e29e9b30c541529cce6291b27c39f6bac28b4252939a08fb45c1473dfb849ee",
-    "reviewedOn": "2026-10-08",
-    "note": "已对照两份原研究、独立审查与现行owner，保留固定来源和许可边界；Actor蓝图/资料块及统一工作台标为已实现，其余仍为研究提案。仅新增资料索引和离线阅读来源，命令、输入输出、支持版本与运行行为不变。"
+    "fingerprint": "590f7f0484bca5aec80755d0d3a623b98ae14f4565cb56ce2425c5841e663ebc",
+    "reviewedOn": "2026-10-25",
+    "note": "已核workspace依赖、公开脚本、手册owner/共享包、模块构建与module-artifacts入口；完整手册37/Foundry28/offline9，保留master Babele说明。CI精确隔离旧Monitor真实Chrome重启并记录deferred，其余库存/阈值及CLI/build gate保留；生成目标和权限不扩大。 整合时仅清理新增文件末尾多余空行，共享视图/TE事件逻辑及用户步骤不变；已核差异，不扩大运行接受。 实测443文件到最后一文件时触发旧450秒上限，仅将完整单进程覆盖率门调整为600秒，阈值不变，原失败日志保留，已通过前序门复用。"
   },
   "human-encounter-intake": {
     "fingerprint": "b547a9a9b37125d162d137d004906a9deb98a1f1a3f791705ff568fef1a21972",
@@ -89,50 +89,55 @@
     "reviewedOn": "2026-10-08",
     "note": "已对照准备入口、170文件清单、默认定位与历史版本边界；201项受影响离线测试通过，Classpack临时夹具查询后原输入清单及字节保持不变；主线测试不依赖旧迁移树，保留本机F盘参考环境限制。"
   },
+  "babele-zh-maintenance": {
+    "fingerprint": "621c134843fedcd6a8705063693247681980685904a3bf271c250539846bcd95",
+    "reviewedOn": "2026-10-25",
+    "note": "已核对三种版本维度、99目标清单与规则证据；官网Verified与作者清单差异并列，未知与未声明保留，目录旧控件与新增筛选通过非浏览器验证。"
+  },
   "chat-memory-guard": {
-    "fingerprint": "a09895d737dfe042ac2fa75d1db275b510d9c795da1164735c34c0c837816aa5",
-    "reviewedOn": "2026-10-01",
-    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
+    "fingerprint": "778ebb668dd7af6a0a92cf198b10ccd4b0e8258a75cf2764535623938626a07d",
+    "reviewedOn": "2026-10-25",
+    "note": "已逐项对照owner正文/README、精确版本门和原总账：Guard25世界消息/20页面卡、启停重载/帮助；Babele25/5翻译行/原UUID/重复渲染；MonitorGM短会话/重载/单stop/历史保护限定接受。真实缩略图、滚动暂停、全表库、更多客户端和长时不推广；AGENTS过时待验文字已同步。 整合时仅清理新增文件末尾多余空行，共享视图/TE事件逻辑及用户步骤不变；已核差异，不扩大运行接受。"
   },
   "fvtt-babele-rolltable-embed-translation": {
-    "fingerprint": "2b56cb4132bf2b9d273b3fc82f7f3d98bcd37d3babcb80fd5858d2c0ad89c6f6",
-    "reviewedOn": "2026-10-01",
-    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
+    "fingerprint": "880955d454590d81d2865625a119a84e3fe371dc5cbbe84a493860237e0b139c",
+    "reviewedOn": "2026-10-25",
+    "note": "已逐项对照owner正文/README、精确版本门和原总账：Guard25世界消息/20页面卡、启停重载/帮助；Babele25/5翻译行/原UUID/重复渲染；MonitorGM短会话/重载/单stop/历史保护限定接受。真实缩略图、滚动暂停、全表库、更多客户端和长时不推广；AGENTS过时待验文字已同步。"
   },
   "fvtt-battlefield-painter": {
-    "fingerprint": "438be4cb9f7c91d987af095f9c862f618c2b33a4345957628b2e6a1b8ab28fa9",
-    "reviewedOn": "2026-10-05",
-    "note": "保留master刚集成的42项地形、六条长音源、14.368/5.3.3范围及原接受边界；画笔AGENTS同时保留最新技能/接续指针并加入按影响验收。仅检查触发规则变化，无业务源码或素材修改。"
+    "fingerprint": "2f9284f1465032bfab9afb49c6b10986fa94121f8c1a09b77b68d138fcd5fdf8",
+    "reviewedOn": "2026-10-25",
+    "note": "已核6.0.6 FireI事务、Region成本/linked falling、重载、非GM入口和权限拒绝及原生清理代表链。绘制仍仅向GM开放；全目录、更多组合、长时和生产范围未扩大。 本次AGENTS同步同一限定接受，不改变操作权限。"
   },
   "fvtt-blood-hunter-2024": {
-    "fingerprint": "6770b9da39deb148e76a44872147b1977d827582830ac8db153b6c2f4b38fb91",
-    "reviewedOn": "2026-10-01",
-    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
+    "fingerprint": "2294f3499892c5a11f28df9728fa6c43243296bfe9a6db2aef0983692e09163b",
+    "reviewedOn": "2026-10-25",
+    "note": "已核四支新建3级角色的原生职业/子职授予、links/配方/scale、普通重载和精确清理。旧角色本轮仅只读Preview，不执行Copy/Apply/备份；全等级和渎魂自动法术/契术位仍未接受。 已核Next构建函数：内容/verified仍602，runtime maximum606；不以根旧manifest混淆Next构建。"
   },
   "fvtt-homebrew-species": {
-    "fingerprint": "08762ebdbb4655ad01354079c0b8f46cace4181c7cfebb184ec9e41ee48c9701",
-    "reviewedOn": "2026-10-01",
-    "note": "对照各模块入口、README与本轮恢复记录：版本门及代表行为范围保持，新增发布授权接续说明；原E2E与精确清理证据复用，不提升未执行玩法。Species另核CI测试依赖注入不改变真实14.368路径拒绝或6.0.2内容身份。"
+    "fingerprint": "81fd95c8dccd1df26a50bf7a2654e54d2a7bb1ff3bd16d3322965501b19d8e21",
+    "reviewedOn": "2026-10-25",
+    "note": "已核Ogre原生授予、野蛮人1/5级HP与移动、两次资源/第三次拒绝、长休、重载和清理代表链。内容身份仍6.0.2；ASI属性分配、全物种/等级、武器自动化和生产未扩大。 已核Next manifest投影：verified/content602与maximum606分开，不重造pack或改accepted ledger。"
   },
   "fvtt-house-rules": {
-    "fingerprint": "5f8aae935e17bf2c1e01fe6e121f4e66c952b3a58bf94a6253305d908084ce99",
-    "reviewedOn": "2026-10-03",
-    "note": "逐项对照源码精确Core/system门、manifest和已有接受范围；新增Mirror368/5.3.3保持旧配对。Painter42选项/颜色/Region/9类可选声音及待听感项已对齐，Forge保留0.4来源/UI，加载与行为接受继续分层。"
+    "fingerprint": "6c542a545338790149452aaa01967150a744457586e2ac92d1ee7f0cd4e83dcf",
+    "reviewedOn": "2026-10-25",
+    "note": "已核对当前注册Activity模型在首次写入前产生完整预期，缺模型零写、严格手改保护与schema2恢复保持；既有实机原件的快速/喂服2d4+2、谨慎8+2及bonus/action语义存在，真实Apply/Restore/普通重载已接受。旧User原像缺口按用户决定保留，不扩大可选Midi/DAE/DSN或其他村规；未重跑药水。 AGENTS同步已有接受；本次仅代码整合，未运行Apply或Restore。"
   },
   "fvtt-injury-fading-spirits": {
-    "fingerprint": "455e1d1fcb4dd6dde20e7d362ebb041899a33a8dbaa485e1065f5d8cc9cde926",
-    "reviewedOn": "2026-10-05",
-    "note": "对照runtime、manifest和README：精确14.364/5.3.3、Mirror14.368/5.3.3、14.368/6.0.2及Next14.368/6.0.5；Next基础及快速复活限定接受，其他仪式玩家多GM不提升。"
+    "fingerprint": "d7a9e7b0b957c33a53291a7592c28eb492fdc94e7cb90d2646e93d9351f670e3",
+    "reviewedOn": "2026-10-25",
+    "note": "已核6.0.6有CC与无CC的普通复活代表链、原生贡献/GM裁定/真实盲骰、旧卡不重结算、重载/下一死亡阶段、未来版本零写拒绝和清理。停用CC不使用残留接口；其他复活模式、更多玩家/多GM及长时未扩大。 额外完整run下载缺口保留，AGENTS同步受限原生证据。"
   },
   "fvtt-trigger-engine": {
-    "fingerprint": "626460dd08209b871aaaa57ff64e30849c4b21d477fe59aa092d77bceb65f1eb",
-    "reviewedOn": "2026-10-05",
-    "note": "对照runtime和README：14.364/5.3.3、Mirror14.368/5.3.3、Next14.368/6.0.5精确配对；活动GM事件、回合和CC消费只在已验限定切片，不扩大任意宏或多GM。"
+    "fingerprint": "8eddefd174f4adf80a72fe058780ae01d8dcae5f427b886273032cf85884dd06",
+    "reviewedOn": "2026-10-25",
+    "note": "已核CC/TE active/API/能力与GM持久门、原总账606首次保存/事件、Addled/Frozen、HP/伤势/短休及消费接口；WMP Slow/IFS普通复活代表链指向各自范围。socket stop仅单测，全状态/全复活/多GM仍未覆盖，历史证据不改写。 整合时仅清理新增文件末尾多余空行，共享视图/TE事件逻辑及用户步骤不变；已核差异，不扩大运行接受。"
   },
   "fvtt-custom-conditions": {
-    "fingerprint": "eaec3a2067d947d61c83034becb04f11da6bc3cc7e91a700cfc933467bc04746",
-    "reviewedOn": "2026-10-05",
-    "note": "对照当前精确配对源码和README：14.364/5.3.3、Mirror14.368/5.3.3、Next14.368/6.0.5并存；native6效果写入按dnd5e系统版本而非Core判断，Slow与WMP限定实机及历史来源缺口保留。"
+    "fingerprint": "9233c27183aefe5958f6a75efa00117851d08cf7c6d9d500fbe9d2acbde21477",
+    "reviewedOn": "2026-10-25",
+    "note": "已核CC/TE active/API/能力与GM持久门、原总账606首次保存/事件、Addled/Frozen、HP/伤势/短休及消费接口；WMP Slow/IFS普通复活代表链指向各自范围。socket stop仅单测，全状态/全复活/多GM仍未覆盖，历史证据不改写。"
   },
   "fvtt-json-forge": {
     "fingerprint": "69ea1867603d7fe3875b3076253dc9218dad96c1ec340cab3513a675df684d46",
@@ -140,29 +145,29 @@
     "note": "本轮仅精修Forge模板与样式：控件主次、表单、原生header字体隔离、即时键盘焦点及宽窄布局。已对照目录入口、蓝图/标准/AI步骤、身份/创建/Provider边界，用户入口、输入输出与支持范围均不变；既有说明继续适用，不缩watch。"
   },
   "fvtt-selected-token-sync": {
-    "fingerprint": "2e22086b12b7f6d9730eadbd9e7951eb07dcb66beeff6a68a6e0dadf036c06d1",
-    "reviewedOn": "2026-10-05",
-    "note": "框选同步0.2.0精确Next配对与各Actor增减一级语义、首次安装/权限限制一致，构建5文件与现装一致，复用原限定HUD接受。WMP真实Cleave事件先后缺口已定点修补并276回归通过，已装新build而实机复验待收据，仍不扩大完整八精通。"
+    "fingerprint": "b888eae16a4a0dc1c058805448887553cb8617c6e81dc15bf345e9b0a6b353eb",
+    "reviewedOn": "2026-10-25",
+    "note": "已核6.0.6 GM原生HUD/等级边界/叠层/移动、同GM两客户端Poisoned、玩家帮助和无权限边界及原生终态。玩家同步写入与长时未接受；旧CalendarA按用户决定保留B，完整已采safeMLD恢复。实装后备帮助仍为旧文案，不作已部署新说明的证明。 本次AGENTS同步已有接受；未重新部署后备帮助。 整合时仅清理新增文件末尾多余空行，共享视图/TE事件逻辑及用户步骤不变；已核差异，不扩大运行接受。"
   },
   "monster-spell-resolver": {
-    "fingerprint": "bb3856fa6fc538cb98c89fb5f4d0946a246f6991002af177fa1f78bd0cd19602",
-    "reviewedOn": "2026-10-03",
-    "note": "逐项对照源码精确Core/system门、manifest和已有接受范围；新增Mirror368/5.3.3保持旧配对。Painter42选项/颜色/Region/9类可选声音及待听感项已对齐，Forge保留0.4来源/UI，加载与行为接受继续分层。"
+    "fingerprint": "f5a0cd65e6d3c1180e376c3729ed3a280a20e4026f7fea37505481df80534ffc",
+    "reviewedOn": "2026-10-25",
+    "note": "已核6.0.6 Rat NPC原生卡上的十个严格来源Spell/Cast/引用、一次Midi Use资源变化、Undo/普通重载和完整owned缓存清理。不推广纯Core无Midi、真实传送落点、全法术/全部Activity或生产。 AGENTS同步限定接受及其余Cast/Review边界。 整合时仅清理新增文件末尾多余空行，共享视图/TE事件逻辑及用户步骤不变；已核差异，不扩大运行接受。"
   },
   "open-session-deck": {
-    "fingerprint": "136bb0745de37ef6c710902f47f48710e5b9c0589fe8bffe5dc4c106b08a4505",
-    "reviewedOn": "2026-10-03",
-    "note": "逐项对照源码精确Core/system门、manifest和已有接受范围；新增Mirror368/5.3.3保持旧配对。Painter42选项/颜色/Region/9类可选声音及待听感项已对齐，Forge保留0.4来源/UI，加载与行为接受继续分层。"
+    "fingerprint": "362daaac742cc522a9994a421cecd54097cfcddc992107091507bf08ef3bec71",
+    "reviewedOn": "2026-10-25",
+    "note": "已核6.0.6 GM面板/副屏代表行为、临时生命自然busy/disabled、失效目标行消失以及玩家公开入口GM-only拒绝。状态编辑仅向GM开放；通用stale分支、其余GM命令、禁用原因UI和更多并发矩阵仍按未验范围保留。 英文README/AGENTS同步限定606证据，不声称完整GM命令矩阵。"
   },
   "session-monitor": {
-    "fingerprint": "edad1e41c7657101576ea5a1458cfc6683af67034e326e3afb8b4043a23ebd2f",
-    "reviewedOn": "2026-10-02",
-    "note": "只收敛30分钟总上限残留，保留已发布Next代表切片、隐私和明确长时授权边界"
+    "fingerprint": "84f2b29042e6cedac47459937a6b9564f73c19e383b44cf514c7c06402ab9af1",
+    "reviewedOn": "2026-10-25",
+    "note": "已逐项对照owner正文/README、精确版本门和原总账：Guard25世界消息/20页面卡、启停重载/帮助；Babele25/5翻译行/原UUID/重复渲染；MonitorGM短会话/重载/单stop/历史保护限定接受。真实缩略图、滚动暂停、全表库、更多客户端和长时不推广；AGENTS过时待验文字已同步。 整合时仅清理新增文件末尾多余空行，共享视图/TE事件逻辑及用户步骤不变；已核差异，不扩大运行接受。"
   },
   "fvtt-weapon-mastery-properties": {
-    "fingerprint": "81017162139ec54edbe6885413938dde9970ff6b98fde1d9484d37d89de527e1",
-    "reviewedOn": "2026-10-05",
-    "note": "对照已完成的本地master快进a3ae8c2、合并后干净状态和33项手册检查补最终状态；本次只更新交付记录，不改变已验代码、Cleave玩法或既有运行边界，复用有效CI与实机证据。"
+    "fingerprint": "fe128a328c2afe0ac5cb3668169337f8fd8f425ab3545d51ec2cb79461068b43",
+    "reviewedOn": "2026-10-25",
+    "note": "已核源码active/API/能力门和持久marker，并对照总账WMP R5/R6：606单GM Sap预约取消、Club伤害/Slow、重复提交零重复结算、重载/清理已接受。README/手册/AGENTS统一该范围，manifest verified仍605；旧User UNKNOWN与完整精通/玩家/多GM/长时/生产缺口保留。"
   },
   "midi-qol": {
     "fingerprint": "440e5e28a279a80de552f6f05a67d7cb6290d48c5e8e102a48de48fd89a7bb38",
@@ -170,8 +175,13 @@
     "note": "已对照准备入口、170文件清单、默认定位与历史版本边界；201项受影响离线测试通过，Classpack临时夹具查询后原输入清单及字节保持不变；主线测试不依赖旧迁移树，保留本机F盘参考环境限制。"
   },
   "server-next-external-candidates": {
-    "fingerprint": "a72a3f7bbc6391ae07935e615d64ae9b41a562288dbc08730bb4b0fbbfef22e4",
-    "reviewedOn": "2026-10-08",
-    "note": "已对照准备入口、170文件清单、默认定位与历史版本边界；201项受影响离线测试通过，Classpack临时夹具查询后原输入清单及字节保持不变；主线测试不依赖旧迁移树，保留本机F盘参考环境限制。"
+    "fingerprint": "d61f5777f275d31d535fbfccf23d982102ca18b8c8dafa690812ce438cbf21de",
+    "reviewedOn": "2026-10-25",
+    "note": "已逐项核对只扩606 maximum及现有入口；Chat/Babele/Monitor仅局部非浏览器证据，Species正式accepted构建身份仍602，BloodHunter缺受保护来源只作manifest投影，Classpack只加载且迁移API仍拒绝606，既有ItemPiles602限制保留。不得覆盖packs/scripts或据此宣称玩法/会话/升级通过。 本次保留这份静态分发边界；Species/BH后续原生代表链另按各owner记录，不推广外部候选全玩法。"
+  },
+  "fvtt-suite-console": {
+    "fingerprint": "9361d4919485ca036b9726da48799b92a317513bc68b716e4b995c787603dd27",
+    "reviewedOn": "2026-10-25",
+    "note": "已核Core14.368/ABI1、只读权限与共享渲染依赖；完整离线目录37项，Foundry仍28项，master新增Babele维护入口进入offline9。新组合仅文档内容/打包身份改变；既有H2/H3/H4运行和视觉证据按旧精确构建保留，未重放或部署新包。 整合时仅清理新增文件末尾多余空行，共享视图/TE事件逻辑及用户步骤不变；已核差异，不扩大运行接受。"
   }
 }

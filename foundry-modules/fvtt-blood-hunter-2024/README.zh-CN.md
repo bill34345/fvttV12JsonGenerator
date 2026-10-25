@@ -1,6 +1,12 @@
 # 血猎手 2024 独立 Foundry 模块
 
-`fvtt-blood-hunter-2024` 是独立模块，版本为 `1.0.0`：默认构建精确对应 Foundry Virtual Tabletop `14.364`、dnd5e `5.3.3`；显式 `--target=server-next` 仍以 Foundry `14.368`、dnd5e `6.0.2` 作为编译内容身份，生成的 manifest 则记录 `minimum/verified=6.0.2`、`maximum=6.0.5`，用于当前 ServerNext 兼容检查。它提供三个 Item compendium pack：`classes`、`subclasses`、`features`。模块不依赖 Plutonium 或 classpack；MIDI-QOL `14.0.11` 与 DAE `14.0.12` 是旧目标推荐版本，不是硬依赖，不能据此推断 ServerNext 本机版本的额外自动化已经验收。
+## ServerNext 6.0.6 当前限定接受
+
+本轮仅接受新建临时角色与职业授予：四个3级角色的职业/子职内容、Item links/配方、普通重载读回和精确清理通过；来源投影与模块契约差异为0，同一官方 Archery 来源的4条记录另有独立核对。旧角色更新保持只读 Preview，不执行 Copy/Apply 或备份。其余等级/选择组合、ActorDelta 与旧人物迁移尚未接受；Profane 的法术/契术位配置（该来源为 none/empty ability、GM-assisted）和生产仍未接受。整体内容编译 identity 仍为6.0.2，不能把这条3级授予接受扩大成整体6.0.6。
+
+`fvtt-blood-hunter-2024` 是独立模块，版本为 `1.0.0`：默认构建精确对应 Foundry Virtual Tabletop `14.364`、dnd5e `5.3.3`；显式 `--target=server-next` 仍以 Foundry `14.368`、dnd5e `6.0.2` 作为编译内容身份，生成的 manifest 则记录 `minimum/verified=6.0.2`、`maximum=6.0.6`，整体内容仍是6.0.2身份。6.0.6当前只接受上方列出的新建3级角色/职业授予代表链；其余等级/选择组合、ActorDelta 与原人物迁移尚未接受。它提供三个 Item compendium pack：`classes`、`subclasses`、`features`。模块不依赖 Plutonium 或 classpack；MIDI-QOL `14.0.11` 与 DAE `14.0.12` 是旧目标推荐版本，不是硬依赖，不能据此推断 ServerNext 本机版本的额外自动化已经验收。
+
+若锁定来源 JSON 当前不可用于重新构建，运维可在核对现有 ServerNext 安装身份、文件清单与来源记录后，使用 `projectBloodHunterServerNext606Manifest()` 准备**仅含 manifest 版本上限变化**的候选。该函数只接受已有的 14.368 / dnd5e 6.0.2 投影且上限为 6.0.2 或 6.0.5 的 manifest，不读取或生成内容包；角色 Item、pack、浏览器脚本与迁移契约均沿用原安装。是否安装该候选取决于独立的运维保护与版本检查，不能据此宣称 6.0.6 内容编译、角色升级或迁移已经验收。
 
 ## 构建
 
@@ -82,3 +88,9 @@ Callum 的旧“破晓血仪” fixture（0 Activity、0 Effect）覆盖 Preview
 - **external-rule**：依赖外部规则或外部 compendium UUID 的部分；identity manifest 会保留 12 个 dnd5e UUID，缺引用即 fail-closed。
 
 这是一次构建快照，不是实时同步：安装后不会监视远程 homebrew、旧 side-data 或 Actor 变化。旧 side-data 只作为迁移识别/审查的历史输入，不是权威规则来源；权威来源是本次 raw source 与公开编译器输出。线上生产 Foundry（8080）不在本任务部署范围内，也不会由本模块 CLI 触碰。
+
+## 本地候选的只读 Preview
+
+已安装条目的来源hash只说明当时的来源版本，不能证明当前内容没有手改。Preview现在比较当前说明、Activity和Effect，并忽略既有已消耗次数、等级与advancement选择。相同来源版本下，名称、类型或其他无逐字段决策的业务变化会明确跳过，保留整个Item，要求人工核对。
+
+本轮仅完成合成数据上的Preview判断与模块契约检查；没有执行真实角色的复制、备份或迁移。旧Copy/Apply流程仍要求副本和JSON备份，不能在当前无备份约定下调用；须先明确新的迁移模式。内容包来源与分发范围也没有因此获得商品发行许可。

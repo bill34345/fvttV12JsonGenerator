@@ -12,7 +12,24 @@ afterAll(() => {
   originalGlobalDescriptors.clear();
 });
 
-const hooks = new Map<string, (...args: any[]) => any>();
+const hooks = new Map<string, Map<number, (...args: any[]) => any>>();
+let hookId = 0;
+function addHook(name: string, fn: (...args: any[]) => any): number {
+  const callbacks = hooks.get(name) ?? new Map();
+  hooks.set(name, callbacks);
+  const id = ++hookId;
+  callbacks.set(id, fn);
+  return id;
+}
+function removeHook(name: string, id: number): void {
+  const callbacks = hooks.get(name);
+  callbacks?.delete(id);
+  if (!callbacks?.size) hooks.delete(name);
+}
+function emitHook(name: string, ...args: any[]): false | void {
+  const results = [...(hooks.get(name)?.values() ?? [])].map(fn => fn(...args));
+  if (results.includes(false)) return false;
+}
 const errors: string[] = [];
 const warnings: string[] = [];
 
@@ -43,7 +60,14 @@ class ElementStub {
 
 Object.assign(globalThis, {
   Element: ElementStub, HTMLElement: ElementStub,
-  Hooks: { on: (name: string, fn: any) => hooks.set(name, fn), once: (name: string, fn: any) => hooks.set(name, fn) },
+  Hooks: {
+    on: addHook,
+    off: removeHook,
+    once: (name: string, fn: any) => {
+      const id = addHook(name, (...args: any[]) => { removeHook(name, id); return fn(...args); });
+      return id;
+    },
+  },
   CONFIG: {
     statusEffects: {
       exhaustion: { id: 'exhaustion', _id: 'dnd5eexhaustion' },
@@ -96,7 +120,7 @@ function setup(first: any, second: any) {
   const movementTray = new ElementStub();
   root.tray = tray;
   root.movementTray = movementTray;
-  hooks.get('renderTokenHUD')?.({ object: tokens[0], document: tokens[0]!.document, actor: first }, root);
+  emitHook('renderTokenHUD', { object: tokens[0], document: tokens[0]!.document, actor: first }, root);
   const icon = new ElementStub();
   icon.dataset.statusId = 'exhaustion';
   return { tray, movementTray, icon, tokens };
@@ -105,6 +129,112 @@ function setup(first: any, second: any) {
 async function settled() { await Bun.sleep(0); await Bun.sleep(0); }
 
 describe('native HUD capture for graded conditions', () => {
+  test('two HUD increments from zero wait for native exhaustion legacy synchronization', async () => {
+    const first = makeActor('first-create', 0) as any;
+    const second = makeActor('already-graded', 3);
+    first._source = { system: { attributes: { exhaustion: 0 } } };
+    const nativeToggle = first.toggleStatusEffect.bind(first);
+    let releaseSync!: () => void;
+    const syncGate = new Promise<void>((resolve) => { releaseSync = resolve; });
+    let syncDone!: Promise<void>;
+    let foreignCalls = 0;
+    const foreignId = addHook('updateActor', () => { foreignCalls++; });
+    first.toggleStatusEffect = async (statusId: string, options: any) => {
+      const created = !first.effects.has('dnd5eexhaustion');
+      await nativeToggle(statusId, options);
+      if (created && statusId === 'exhaustion') {
+        // Core's descendant onCreate is not awaited by createDocuments; dnd5e
+        // later writes legacy exhaustion=1 and rebases the native Effect delta.
+        syncDone = Promise.resolve().then(async () => {
+          await syncGate;
+          // _preUpdate captures the derived level before the legacy write.
+          const originalExhaustion = first.effects.get('dnd5eexhaustion')?.system.level ?? 0;
+          first._source.system.attributes.exhaustion = 1;
+          emitHook('updateActor', first, { 'system.attributes.exhaustion': 1 },
+            { dnd5e: { originalExhaustion } }, 'local');
+          // Core does not await Actor._onUpdate's encumbrance call. When that
+          // finishes, the recorded original level determines the Effect delta.
+          await Promise.resolve();
+          const delta = 1 - originalExhaustion;
+          if (delta) {
+            const level = first.effects.get('dnd5eexhaustion')?.system.level ?? 0;
+            first.effects.set('dnd5eexhaustion', { system: { type: 'exhaustion', level: level + delta } });
+          }
+        });
+      }
+    };
+    const { tray, icon } = setup(first, second);
+    tray.dispatch('click', icon, 0);
+    tray.dispatch('click', icon, 0);
+    await settled();
+    emitHook('updateActor', { uuid: 'Actor.foreign', _source: { system: { attributes: { exhaustion: 1 } } } },
+      { 'system.attributes.exhaustion': 1 }, { dnd5e: { originalExhaustion: 1 } }, 'local');
+    emitHook('updateActor', first, { 'system.attributes.exhaustion': 1 }, { dnd5e: { originalExhaustion: 1 } }, 'foreign-user');
+    emitHook('updateActor', first, { 'system.attributes.exhaustion': 1 }, { dnd5e: { originalExhaustion: 2 } }, 'local');
+    await settled();
+    expect(first.calls).toHaveLength(1);
+    releaseSync();
+    await syncDone;
+    await settled();
+    expect([first, second].map((actor) => actor.effects.get('dnd5eexhaustion')?.system.level)).toEqual([2, 5]);
+    expect(hooks.get('updateActor')?.size).toBe(1);
+    expect(hooks.get('updateActor')?.has(foreignId)).toBe(true);
+    expect(foreignCalls).toBe(4);
+    removeHook('updateActor', foreignId);
+  });
+  test('first-create timeout stops queued graded writes, removes only its Hook, and disable permits recovery', async () => {
+    const first = makeActor('timeout-create', 0) as any;
+    const second = makeActor('timeout-second', 2);
+    first._source = { system: { attributes: { exhaustion: 0 } } };
+    const originalTimeout = globalThis.setTimeout, originalClear = globalThis.clearTimeout;
+    const timer = Symbol('owned-graded-timeout') as any;
+    let expire!: () => void, cleared = false, foreignCalls = 0;
+    const foreignId = addHook('updateActor', () => { foreignCalls++; });
+    const errorCount = errors.length;
+    const controls: any = { tokens: { tools: {} } };
+    emitHook('getSceneControlButtons', controls);
+    try {
+      globalThis.setTimeout = ((fn: (...args: any[]) => void, ms?: number, ...args: any[]) => {
+        if (ms === 10_000) { expire = () => fn(...args); return timer; }
+        return originalTimeout(fn, ms, ...args);
+      }) as typeof setTimeout;
+      globalThis.clearTimeout = ((id: any) => {
+        if (id === timer) cleared = true;
+        else originalClear(id);
+      }) as typeof clearTimeout;
+      const { tray, icon } = setup(first, second);
+      tray.dispatch('click', icon, 0);
+      tray.dispatch('click', icon, 0);
+      await settled();
+      expect(first.calls).toHaveLength(1);
+      expect(second.calls).toHaveLength(0);
+      expire();
+      await settled();
+      expect(cleared).toBe(true);
+      expect(errors.slice(errorCount).some(message => message.includes('synchronization did not finish'))).toBe(true);
+      expect(first.calls).toHaveLength(1);
+      expect(second.calls).toHaveLength(0);
+      expect(hooks.get('updateActor')?.size).toBe(1);
+      emitHook('updateActor', first, {}, {}, 'local');
+      expect(foreignCalls).toBe(1);
+      tray.dispatch('click', icon, 0);
+      await settled();
+      expect(first.calls).toHaveLength(1);
+      controls.tokens.tools.selectedTokenSync.onChange(null, false);
+      controls.tokens.tools.selectedTokenSync.onChange(null, true);
+      const resumed = setup(makeActor('resumed-first', 1), second);
+      resumed.tray.dispatch('click', resumed.icon, 0);
+      await settled();
+      expect(second.calls).toHaveLength(1);
+      expect(second.effects.get('dnd5eexhaustion').system.level).toBe(3);
+    } finally {
+      controls.tokens.tools.selectedTokenSync.onChange(null, false);
+      globalThis.setTimeout = originalTimeout;
+      globalThis.clearTimeout = originalClear;
+      removeHook('updateActor', foreignId);
+      errors.splice(errorCount);
+    }
+  });
   test('rapid left clicks serialize one level per click on every selected Actor', async () => {
     const first = makeActor('first', 1);
     const second = makeActor('second', 3);
@@ -158,13 +288,13 @@ describe('native HUD capture for graded conditions', () => {
     icon.dataset.statusId = 'poisoned';
     expect(tray.dispatch('click', icon, 0)).toBe(false);
     const effect = { target: first, parent: first, statuses: new Set(['poisoned']) };
-    hooks.get('preCreateActiveEffect')?.(effect, {}, {}, 'local');
-    hooks.get('createActiveEffect')?.(effect, {}, 'local');
+    emitHook('preCreateActiveEffect', effect, {}, {}, 'local');
+    emitHook('createActiveEffect', effect, {}, 'local');
     await settled();
     expect(second.calls).toEqual([{ id: 'poisoned', options: { active: true, overlay: false } }]);
     const before = second.calls.length;
-    hooks.get('createActiveEffect')?.(effect, {}, 'other-client');
-    hooks.get('updateActiveEffect')?.(effect, {}, {}, 'local');
+    emitHook('createActiveEffect', effect, {}, 'other-client');
+    emitHook('updateActiveEffect', effect, {}, {}, 'local');
     await settled();
     expect(second.calls).toHaveLength(before);
     expect(errors).toEqual([]);
@@ -181,11 +311,44 @@ describe('native HUD capture for graded conditions', () => {
       updateDocuments: async (updates: any[], options: any) => { calls.push({ updates, options }); },
     };
     expect(movementTray.dispatch('click', action, 0)).toBe(false);
-    expect(hooks.get('preUpdateToken')?.(tokens[0]!.document, { movementAction: 'fly' }, {}, 'local')).toBe(false);
+    expect(emitHook('preUpdateToken', tokens[0]!.document, { movementAction: 'fly' }, {}, 'local')).toBe(false);
     await settled();
     expect(calls).toHaveLength(1);
     expect(calls[0].updates).toEqual([{ _id: '0', movementAction: 'fly' }, { _id: '1', movementAction: 'fly' }]);
     expect(first.calls).toEqual([]);
     expect(second.calls).toEqual([]);
+  });
+
+  test('the registered help button opens the precise manual without toggling or syncing', async () => {
+    const state = (globalThis as any).game;
+    const originalGet = state.modules.get;
+    const originalSet = state.settings.set;
+    const originalIsGM = state.user.isGM;
+    const opened: unknown[] = [];
+    const writes: unknown[] = [];
+    const first = makeActor('help-first', 0);
+    const second = makeActor('help-second', 0);
+    setup(first, second);
+    state.user.isGM = true;
+    state.modules.get = (id: string) => id === 'fvtt-suite-console' ? {
+      active: true, api: { moduleId: id, apiVersion: 1, openHelp: async (request: unknown) => opened.push(request) },
+    } : null;
+    state.settings.set = async (...args: unknown[]) => { writes.push(args); };
+    try {
+      const controls: any = { tokens: { tools: {} } };
+      emitHook('getSceneControlButtons', controls);
+      const button = controls.tokens.tools.selectedTokenSyncHelp;
+      expect(button.button).toBeTrue();
+      expect(button.toggle).toBeUndefined();
+      await button.onChange();
+      expect(opened).toEqual([{ entryId: 'fvtt-selected-token-sync' }]);
+      expect(writes).toEqual([]);
+      expect(first.calls).toEqual([]);
+      expect(second.calls).toEqual([]);
+    } finally {
+      state.modules.get = originalGet;
+      state.settings.set = originalSet;
+      state.user.isGM = originalIsGM;
+    }
   });
 });

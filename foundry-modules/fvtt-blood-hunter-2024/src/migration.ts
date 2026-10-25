@@ -146,6 +146,11 @@ function targetLogicalHash(item: RuntimeDocument): string | undefined {
 function comparableItem(item: Pick<ExistingItem, 'name' | 'type' | 'system' | 'effects'>): JsonObject {
   const next = clone({ name: item.name, type: item.type, system: item.system ?? {}, effects: item.effects ?? [] });
   const system = asRecord(next.system);
+  // The existing merge path materializes absent optional containers as {}.
+  // Normalize just those containers, while retaining every saved rule field.
+  system.uses ??= {};
+  system.activities ??= {};
+  system.advancement ??= {};
   const uses = asRecord(system.uses);
   delete uses.spent;
   delete system.levels;
@@ -160,13 +165,30 @@ function comparableItem(item: Pick<ExistingItem, 'name' | 'type' | 'system' | 'e
 function logicalEqual(existing: ExistingItem, target: RuntimeDocument): boolean {
   const existingHash = currentLogicalHash(existing);
   const targetHash = targetLogicalHash(target);
-  if (existingHash && targetHash) return existingHash === targetHash;
+  // A stored source hash identifies the installed revision, not the current
+  // embedded Item contents. Hand edits do not automatically refresh this flag.
+  if (existingHash && targetHash && existingHash !== targetHash) return false;
   return canonicalJson(comparableItem(existing)) === canonicalJson(comparableItem(target));
+}
+
+function hasUnreviewableSameRevisionEdit(existing: ExistingItem, target: RuntimeDocument): boolean {
+  const hash = currentLogicalHash(existing);
+  if (!hash || hash !== targetLogicalHash(target)) return false;
+  const remaining = (item: ExistingItem | RuntimeDocument) => {
+    const value = comparableItem(item);
+    delete value.effects;
+    delete asRecord(value.system).description;
+    delete asRecord(value.system).activities;
+    return value;
+  };
+  return canonicalJson(remaining(existing)) !== canonicalJson(remaining(target));
 }
 
 function conflictsFor(existing: ExistingItem, target: RuntimeDocument, flagged: boolean): MigrationConflict[] {
   if (!flagged || logicalEqual(existing, target)) return [];
   const conflicts: MigrationConflict[] = [];
+  const comparableExisting = comparableItem(existing);
+  const comparableTarget = comparableItem(target);
   for (const path of CONFLICT_PATHS) {
     const current = path === 'system.description'
       ? asRecord(existing.system).description
@@ -178,7 +200,9 @@ function conflictsFor(existing: ExistingItem, target: RuntimeDocument, flagged: 
       : path === 'system.activities'
         ? asRecord(target.system).activities
         : target.effects;
-    if (canonicalJson(current) !== canonicalJson(incoming)) {
+    const comparablePath = (item: JsonObject) => path === 'effects'
+      ? item.effects : asRecord(item.system)[path === 'system.description' ? 'description' : 'activities'];
+    if (canonicalJson(comparablePath(comparableExisting)) !== canonicalJson(comparablePath(comparableTarget))) {
       conflicts.push({
         itemId: existing._id,
         canonicalId: target._id,
@@ -271,6 +295,14 @@ export function planActorMigration(actor: ActorLike, contract: MigrationContract
       continue;
     }
     const existing = candidates[0]!;
+    if (flagged.length === 1 && hasUnreviewableSameRevisionEdit(existing, target)) {
+      actions.push({
+        action: 'skip', canonicalId: target._id, targetItem: clone(target),
+        existingItemIds: [existing._id], legacy: false, conflicts: [],
+        reason: '同一来源版本存在名称、类型或其他未提供逐字段决策的手改；保留整个 Item，先人工核对后重新 Preview。',
+      });
+      continue;
+    }
     const conflicts = conflictsFor(existing, target, flagged.length === 1);
     if (conflicts.length > 0) allConflicts.push(...conflicts);
     actions.push({

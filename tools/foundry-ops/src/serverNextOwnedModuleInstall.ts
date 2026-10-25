@@ -5,6 +5,7 @@ import { isAbsolute, join, parse, relative, resolve } from 'node:path';
 import { assertExactLabPath, assertExactRepoPath, assertNoReparsePathComponents, createLabConfig } from './config';
 
 const OWNED_MODULES = {
+  'fvtt-suite-console': { owner: 'fvtt-suite-console', manifest: 'src/module.json', build: 'dist/module' },
   'fvtt-trigger-engine': { owner: 'fvtt-trigger-engine', manifest: 'src/module.json', build: 'dist/module' },
   'fvtt-custom-conditions': { owner: 'fvtt-custom-conditions', manifest: 'src/module.json', build: 'dist/module' },
   'fvtt-weapon-mastery-properties': { owner: 'fvtt-weapon-mastery-properties', manifest: 'src/module.json', build: 'dist/module' },

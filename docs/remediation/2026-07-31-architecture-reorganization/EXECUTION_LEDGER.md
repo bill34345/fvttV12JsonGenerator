@@ -1,12 +1,16 @@
 # Architecture Reorganization Execution Ledger
 
-- 状态：in_progress
+- 状态：completed（2026-08-01 阶段 6F/6G 收尾；2026-10-11 校正顶部旧状态）
 - 开始日期：2026-07-31
 - 执行分支：`codex/architecture-reorganization-20260731`
 - 基线提交：`64ad9b79c71fdc38d1113e5983dc2394680c4ab9`
 - 执行方案：`docs/plans/2026-07-31-project-classification-and-architecture-reorganization.md`
 - 原 hardening 权威账本：`docs/remediation/2026-07-15-project-hardening/EXECPLAN.md`
 - 当前支持边界：`docs/acceptance/current-support-matrix.md`
+
+2026-10-11 现况校正：本轮旧架构重组已按下方阶段及 2026-08-01 收尾记录完成，顶部旧 `in_progress` 不再代表现况。新的工具合集、命名、双系统线与渐进重构建议另见[产品架构审计](../../reviews/2026-10-11-fvtt-suite-product-architecture.md)；它不重开旧搬迁阶段，不扩大原运行时接受，也不构成收费/外部发布授权。
+
+后续用户已要求写[工具合集渐进重构总计划](../../plans/2026-10-11-fvtt-suite-refactor/PLAN.md)与每个模块子计划，统一操作手册进入Foundry。新项目进度只由其[新执行总账](../../plans/2026-10-11-fvtt-suite-refactor/EXECUTION_LEDGER.md)维护；此处七月重组继续保持completed，不建立第二份新进度。
 
 ## 权威边界
 

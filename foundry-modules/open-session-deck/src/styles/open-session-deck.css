@@ -32,6 +32,8 @@
 .osd-header { min-height: 58px; display: grid; grid-template-columns: minmax(180px, auto) 1fr auto; align-items: center; gap: 16px; padding: 8px 12px; border-bottom: 1px solid var(--osd-border); background: var(--osd-panel-soft); }
 .osd-heading h1 { font-family: var(--font-h1, var(--font-body)); font-size: 20px; letter-spacing: .01em; }
 .osd-heading p { margin-top: 2px; color: var(--osd-muted); font-size: 12px; }
+.osd-heading .osd-runtime { overflow-wrap: anywhere; }
+.osd-deck:not(.osd-compact) .osd-runtime { font-variant-numeric: tabular-nums; }
 .osd-turn-heading { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--osd-muted); }
 .osd-turn-heading b { color: var(--osd-accent); }
 .osd-header-actions, .osd-encounter-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; flex-wrap: wrap; }
@@ -174,3 +176,42 @@
   .osd-column { padding: 14px; }
   .osd-party-grid { grid-template-columns: minmax(190px, 2.2fr) repeat(5, minmax(64px, .75fr)) minmax(52px, .58fr) minmax(74px, .8fr); gap: 8px; }
 }
+.open-session-deck-help .window-content { display: flex; min-height: 0; padding: 0; overflow: hidden; }
+.open-session-deck-help .osd-help-root {
+  --osd-help-bg: #171d22;
+  --osd-help-text: #f1f3ee;
+  --osd-help-muted: #b6c4ba;
+  --osd-help-line: #40534a;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  padding: 22px clamp(18px, 4vw, 40px) 36px;
+  background: var(--osd-help-bg);
+  color: var(--osd-help-text);
+  font: 14px/1.65 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  overflow-wrap: anywhere;
+}
+.theme-light .open-session-deck-help .osd-help-root {
+  --osd-help-bg: #f9faf7;
+  --osd-help-text: #202c27;
+  --osd-help-muted: #526257;
+  --osd-help-line: #dce3da;
+}
+.open-session-deck-help .osd-help-root * { box-sizing: border-box; }
+.open-session-deck-help .osd-help-root h1,
+.open-session-deck-help .osd-help-root h2,
+.open-session-deck-help .osd-help-root h3,
+.open-session-deck-help .osd-help-root p { margin: 0; color: var(--osd-help-text); }
+.open-session-deck-help .osd-help-root h1 { font-size: 25px; line-height: 1.3; }
+.open-session-deck-help .osd-help-root h2 { margin-bottom: 8px; font-size: 18px; }
+.open-session-deck-help .osd-help-root h3 { font-size: 15px; }
+.open-session-deck-help .osd-help-root > p { margin-top: 8px; }
+.open-session-deck-help .osd-help-root .osd-help-summary { color: var(--osd-help-muted); }
+.open-session-deck-help .osd-help-root section { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--osd-help-line); }
+.open-session-deck-help .osd-help-root ul,
+.open-session-deck-help .osd-help-root ol { margin: 0; padding-left: 24px; }
+.open-session-deck-help .osd-help-root li { margin: 7px 0; padding-left: 3px; }
+.open-session-deck-help .osd-help-root li p { margin-top: 2px; }

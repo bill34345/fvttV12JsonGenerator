@@ -1,8 +1,16 @@
-import { evaluateConditionGroup, watchedPathsMatch } from './evaluator.ts';
+import { triggerMatchesEvent } from './evaluator.ts';
+import {
+  cloneExternalEvent,
+  externalEventKey,
+  parseExternalEventLedger,
+  planExternalEventPublication,
+  serializeExternalEventLedger,
+  validateExternalEvent,
+} from './external-events.ts';
 import {
   cloneTrigger,
   cloneTriggerStore,
-  sanitizeTriggerStore,
+  inspectStoredTriggerStore,
   validateTriggerDefinition,
   validateTriggerStore,
   type ValidationIssue,
@@ -15,7 +23,6 @@ import type {
   CombatTurnContext,
   CombatUpdateReport,
   ExternalEvent,
-  ExternalEventData,
   ExternalEventListener,
   ExternalEventPublishResult,
   DocumentUpdateReport,
@@ -28,11 +35,6 @@ import type {
   TriggerEventListener,
   TriggerExecutionResult,
   TriggerStore,
-} from './types.ts';
-import {
-  EXTERNAL_EVENT_LEDGER_SCHEMA_VERSION,
-  EXTERNAL_EVENT_LIMITS,
-  EXTERNAL_EVENT_SCHEMA_VERSION,
 } from './types.ts';
 
 export interface TriggerEngineRuntimeOptions {
@@ -79,6 +81,8 @@ export class TriggerEngineRuntime {
   #snapshots = new Map<string, unknown>();
   #preparedHpSnapshots = new Map<string, PreparedHitPoints>();
   #documentQueues = new Map<string, Promise<void>>();
+  #definitionMutationQueue: Promise<void> = Promise.resolve();
+  #reportedStoreIssues = '';
   #combatSnapshots = new Map<string, CombatStateSnapshot>();
   #combatQueues = new Map<string, Promise<void>>();
   #snapshotHooks: Array<[string, unknown]> = [];
@@ -260,7 +264,7 @@ export class TriggerEngineRuntime {
   async reload(): Promise<TriggerStore> {
     try {
       const raw = await this.storage.load();
-      this.applySettingValue(raw);
+      this.acceptSettingValue(raw, (this.storage as TriggerStorage & { issues?: readonly ValidationIssue[] }).issues ?? []);
     } catch (error) {
       this.#triggers = [];
       this.#invalidIssues = [{ path: 'store', message: `load failed: ${String(error)}` }];
@@ -271,9 +275,21 @@ export class TriggerEngineRuntime {
 
   /** Apply a world-setting broadcast to this client's validated runtime cache. */
   applySettingValue(raw: unknown): TriggerStore {
-    const parsed = sanitizeTriggerStore(raw);
+    return this.acceptSettingValue(raw);
+  }
+
+  private acceptSettingValue(raw: unknown, inheritedIssues: readonly ValidationIssue[] = []): TriggerStore {
+    const parsed = inspectStoredTriggerStore(raw);
     this.#triggers = parsed.store.triggers.map(cloneTrigger);
-    this.#invalidIssues = parsed.issues;
+    this.#invalidIssues = [...inheritedIssues, ...parsed.issues];
+    const issueSignature = this.#invalidIssues.map((issue) => `${issue.path}:${issue.message}`).join('|');
+    if (!issueSignature) this.#reportedStoreIssues = '';
+    else if (issueSignature !== this.#reportedStoreIssues && this.isActiveGM()) {
+      this.#reportedStoreIssues = issueSignature;
+      this.globals.ui?.notifications?.warn?.(
+        'Trigger Engine definitions contain unsupported or invalid saved data. The original setting is preserved; review it before editing.',
+      );
+    }
     return this.triggerStore();
   }
 
@@ -287,33 +303,40 @@ export class TriggerEngineRuntime {
 
   async createTrigger(input: TriggerDefinition): Promise<TriggerDefinition> {
     const trigger = validateTriggerDefinition(input);
-    if (this.#triggers.some((entry) => entry.id === trigger.id)) throw new Error(`Trigger ID already exists: ${trigger.id}`);
-    await this.persist({ schemaVersion: DEFAULT_TRIGGER_STORE.schemaVersion, triggers: [...this.#triggers, trigger] });
-    return cloneTrigger(trigger);
+    return this.mutateDefinition(async () => {
+      if (this.#triggers.some((entry) => entry.id === trigger.id)) throw new Error(`Trigger ID already exists: ${trigger.id}`);
+      await this.persist({ schemaVersion: DEFAULT_TRIGGER_STORE.schemaVersion, triggers: [...this.#triggers, trigger] });
+      return cloneTrigger(trigger);
+    });
   }
 
   async updateTrigger(id: string, patch: Partial<TriggerDefinition>): Promise<TriggerDefinition> {
-    const index = this.#triggers.findIndex((entry) => entry.id === id);
-    if (index < 0) throw new Error(`Unknown trigger ID: ${id}`);
-    const merged = validateTriggerDefinition({ ...this.#triggers[index], ...patch });
-    if (merged.id !== id && this.#triggers.some((entry, candidateIndex) => candidateIndex !== index && entry.id === merged.id)) {
-      throw new Error(`Trigger ID already exists: ${merged.id}`);
-    }
-    const triggers = this.#triggers.map((entry, candidateIndex) => candidateIndex === index ? merged : entry);
-    await this.persist({ schemaVersion: DEFAULT_TRIGGER_STORE.schemaVersion, triggers });
-    return cloneTrigger(merged);
+    const requestedPatch = cloneUnknown(patch);
+    return this.mutateDefinition(async () => {
+      const index = this.#triggers.findIndex((entry) => entry.id === id);
+      if (index < 0) throw new Error(`Unknown trigger ID: ${id}`);
+      const merged = validateTriggerDefinition({ ...this.#triggers[index], ...requestedPatch });
+      if (merged.id !== id && this.#triggers.some((entry, candidateIndex) => candidateIndex !== index && entry.id === merged.id)) {
+        throw new Error(`Trigger ID already exists: ${merged.id}`);
+      }
+      const triggers = this.#triggers.map((entry, candidateIndex) => candidateIndex === index ? merged : entry);
+      await this.persist({ schemaVersion: DEFAULT_TRIGGER_STORE.schemaVersion, triggers });
+      return cloneTrigger(merged);
+    });
   }
 
   async copyTrigger(id: string): Promise<TriggerDefinition> {
-    const source = this.#triggers.find((entry) => entry.id === id);
-    if (!source) throw new Error(`Unknown trigger ID: ${id}`);
-    const baseId = `${source.id}-copy`;
-    let nextId = baseId;
-    let suffix = 2;
-    while (this.#triggers.some((entry) => entry.id === nextId)) nextId = `${baseId}-${suffix++}`;
-    const copy = validateTriggerDefinition({ ...cloneTrigger(source), id: nextId, name: `${source.name} (Copy)` });
-    await this.persist({ schemaVersion: DEFAULT_TRIGGER_STORE.schemaVersion, triggers: [...this.#triggers, copy] });
-    return cloneTrigger(copy);
+    return this.mutateDefinition(async () => {
+      const source = this.#triggers.find((entry) => entry.id === id);
+      if (!source) throw new Error(`Unknown trigger ID: ${id}`);
+      const baseId = `${source.id}-copy`;
+      let nextId = baseId;
+      let suffix = 2;
+      while (this.#triggers.some((entry) => entry.id === nextId)) nextId = `${baseId}-${suffix++}`;
+      const copy = validateTriggerDefinition({ ...cloneTrigger(source), id: nextId, name: `${source.name} (Copy)` });
+      await this.persist({ schemaVersion: DEFAULT_TRIGGER_STORE.schemaVersion, triggers: [...this.#triggers, copy] });
+      return cloneTrigger(copy);
+    });
   }
 
   async setTriggerEnabled(id: string, enabled: boolean): Promise<TriggerDefinition> {
@@ -322,8 +345,10 @@ export class TriggerEngineRuntime {
   }
 
   async deleteTrigger(id: string): Promise<void> {
-    if (!this.#triggers.some((entry) => entry.id === id)) throw new Error(`Unknown trigger ID: ${id}`);
-    await this.persist({ schemaVersion: DEFAULT_TRIGGER_STORE.schemaVersion, triggers: this.#triggers.filter((entry) => entry.id !== id) });
+    return this.mutateDefinition(async () => {
+      if (!this.#triggers.some((entry) => entry.id === id)) throw new Error(`Unknown trigger ID: ${id}`);
+      await this.persist({ schemaVersion: DEFAULT_TRIGGER_STORE.schemaVersion, triggers: this.#triggers.filter((entry) => entry.id !== id) });
+    });
   }
 
   /**
@@ -532,8 +557,7 @@ export class TriggerEngineRuntime {
     const matchedTriggerIds: string[] = [];
     for (const trigger of this.#triggers) {
       if (!this.isActiveGM()) return { combatUuid: combatUuidValue, key: context.key, matchedTriggerIds, results, skippedReason: 'inactive-gm' };
-      if (!trigger.enabled || trigger.event.type !== eventTypeForCombatContext(context) || trigger.event.documentType !== 'Actor') continue;
-      if (!evaluateConditionGroup(trigger.conditions, before, after)) continue;
+      if (!triggerMatchesEvent(trigger, { type: eventTypeForCombatContext(context), documentType: 'Actor' }, before, after)) continue;
       matchedTriggerIds.push(trigger.id);
       try {
         results.push(await this.executeTrigger(
@@ -600,9 +624,7 @@ export class TriggerEngineRuntime {
     const matchedTriggerIds: string[] = [];
     for (const trigger of this.#triggers) {
       if (!this.isActiveGM()) return { documentUuid: documentUuidValue, matchedTriggerIds, results, skippedReason: 'inactive-gm' };
-      if (!trigger.enabled || trigger.event.type !== 'documentUpdate' || trigger.event.documentType !== 'Actor') continue;
-      if (!watchedPathsMatch(trigger.event.watchedPaths, changed)) continue;
-      if (!evaluateConditionGroup(trigger.conditions, before, after)) continue;
+      if (!triggerMatchesEvent(trigger, { type: 'documentUpdate', documentType: 'Actor' }, before, after, changed)) continue;
       matchedTriggerIds.push(trigger.id);
 
       if (suppressedTriggerIds.has(trigger.id)) {
@@ -633,16 +655,15 @@ export class TriggerEngineRuntime {
     if (!this.isActiveGM()) throw new Error('External events are available to active GMs only.');
     await this.ensureExternalEventLedgerLoaded();
     if (!this.isActiveGM()) throw new Error('External events are available to active GMs only.');
-    const key = externalEventKey(event);
-    if (this.#externalEventKeys.has(key)) {
+    const plan = planExternalEventPublication(this.#externalEvents, this.#externalEventKeys, event);
+    if (plan.status === 'duplicate') {
       return { status: 'duplicate', event: cloneExternalEvent(event) };
     }
 
     const previousEvents = this.#externalEvents;
     const previousKeys = this.#externalEventKeys;
-    const nextEvents = trimExternalEvents([...previousEvents, event]);
-    this.#externalEvents = nextEvents;
-    this.#externalEventKeys = new Set(nextEvents.map(externalEventKey));
+    this.#externalEvents = plan.events;
+    this.#externalEventKeys = plan.keys;
     try {
       if (!this.isActiveGM()) throw new Error('External events are available to active GMs only.');
       await this.saveExternalEventLedger();
@@ -735,6 +756,7 @@ export class TriggerEngineRuntime {
   private async emitExternalEvent(event: ExternalEvent): Promise<void> {
     const listeners = [...this.#externalEventListeners];
     for (const listener of listeners) {
+      if (!this.#externalEventListeners.has(listener)) continue;
       try { await listener(cloneExternalEvent(event)); }
       catch (error) { this.logger.error('[fvtt-trigger-engine] external event listener failed', error); }
     }
@@ -747,8 +769,24 @@ export class TriggerEngineRuntime {
 
   private async persist(store: TriggerStore): Promise<void> {
     const valid = validateTriggerStore(store);
+    if (!this.isActiveGM()) throw new Error('Trigger definitions are available to active GMs only.');
     await this.storage.save(valid);
     this.applySettingValue(valid);
+  }
+
+  private mutateDefinition<T>(operation: () => Promise<T>): Promise<T> {
+    const run = this.#definitionMutationQueue.catch(() => undefined).then(async () => {
+      if (!this.isActiveGM()) throw new Error('Trigger definitions are available to active GMs only.');
+      await this.reload();
+      if (!this.isActiveGM()) throw new Error('Trigger definitions are available to active GMs only.');
+      if (this.#invalidIssues.length) {
+        const paths = this.#invalidIssues.slice(0, 5).map((issue) => issue.path).join(', ');
+        throw new Error(`Existing Trigger Engine world setting contains unsupported or invalid data (${paths}); review the original value before saving.`);
+      }
+      return operation();
+    });
+    this.#definitionMutationQueue = run.then(() => undefined, () => undefined);
+    return run;
   }
 
   private async emitEvent(context: TriggerEventContext): Promise<void> {
@@ -756,6 +794,7 @@ export class TriggerEngineRuntime {
     for (const listener of listeners) {
       // Subscribers may await a document write or dialog while active GM changes.
       if (!this.isActiveGM()) return;
+      if (!this.#eventListeners.has(listener)) continue;
       try { await listener(cloneEventContext(context)); }
       catch (error) { this.logger.error('[fvtt-trigger-engine] event listener failed', error); }
     }
@@ -1186,186 +1225,6 @@ function createFoundryExternalEventStorage(game: any): ExternalEventLedgerStorag
     load: () => settings.get(MODULE_ID, EXTERNAL_EVENT_SETTING_KEY),
     save: (serializedLedger: string) => settings.set(MODULE_ID, EXTERNAL_EVENT_SETTING_KEY, serializedLedger),
   };
-}
-
-function validateExternalEvent(input: unknown): ExternalEvent {
-  if (!isSafePlainRecord(input)) throw new TypeError('External event must be a plain data object.');
-  const value = input as Record<string, unknown>;
-  const allowedKeys = new Set([
-    'schemaVersion', 'namespace', 'eventId', 'type', 'sourceActorUuid',
-    'targetActorUuid', 'activityUuid', 'attackId', 'timestamp', 'data',
-  ]);
-  for (const key of safeOwnKeys(value)) {
-    if (typeof key !== 'string' || !allowedKeys.has(key)) throw new TypeError(`External event contains unsupported field: ${String(key)}.`);
-  }
-
-  const schemaVersion = ownValue(value, 'schemaVersion');
-  if (schemaVersion !== EXTERNAL_EVENT_SCHEMA_VERSION) throw new TypeError('External event schemaVersion must be 1.');
-  const namespace = readExternalIdentifier(ownValue(value, 'namespace'), 'namespace', EXTERNAL_EVENT_LIMITS.maxNamespaceOrTypeLength);
-  const type = readExternalIdentifier(ownValue(value, 'type'), 'type', EXTERNAL_EVENT_LIMITS.maxNamespaceOrTypeLength);
-  if (!/^[A-Za-z][A-Za-z0-9._-]{0,63}$/u.test(namespace)) throw new TypeError('External event namespace is unsafe.');
-  if (!/^[A-Za-z][A-Za-z0-9._-]{0,63}$/u.test(type)) throw new TypeError('External event type is unsafe.');
-
-  const eventId = readExternalIdentifier(ownValue(value, 'eventId'), 'eventId');
-  const sourceActorUuid = readExternalIdentifier(ownValue(value, 'sourceActorUuid'), 'sourceActorUuid');
-  const targetActorUuidValue = optionalOwnValue(value, 'targetActorUuid');
-  const targetActorUuid = targetActorUuidValue === undefined
-    ? undefined
-    : readExternalIdentifier(targetActorUuidValue, 'targetActorUuid');
-  const activityUuid = readExternalIdentifier(ownValue(value, 'activityUuid'), 'activityUuid');
-  const attackId = readExternalIdentifier(ownValue(value, 'attackId'), 'attackId');
-  const timestamp = ownValue(value, 'timestamp');
-  if (typeof timestamp !== 'number' || !Number.isSafeInteger(timestamp) || timestamp < 0) {
-    throw new TypeError('External event timestamp must be a non-negative safe integer.');
-  }
-
-  const dataValue = optionalOwnValue(value, 'data');
-  const data = dataValue === undefined ? undefined : validateExternalData(dataValue);
-  const normalized: ExternalEvent = {
-    schemaVersion: EXTERNAL_EVENT_SCHEMA_VERSION,
-    namespace,
-    eventId,
-    type,
-    sourceActorUuid,
-    ...(targetActorUuid === undefined ? {} : { targetActorUuid }),
-    activityUuid,
-    attackId,
-    timestamp,
-    ...(data === undefined ? {} : { data }),
-  };
-  const serialized = JSON.stringify(normalized);
-  if (byteLength(serialized) > EXTERNAL_EVENT_LIMITS.maxEnvelopeBytes) {
-    throw new TypeError(`External event exceeds ${EXTERNAL_EVENT_LIMITS.maxEnvelopeBytes} bytes.`);
-  }
-  return normalized;
-}
-
-function validateExternalData(input: unknown): ExternalEventData {
-  if (!isSafePlainRecord(input)) throw new TypeError('External event data must be a plain record.');
-  const data = input as Record<string, unknown>;
-  const keys = safeOwnKeys(data);
-  if (keys.some((key) => typeof key !== 'string')) throw new TypeError('External event data keys must be strings.');
-  if (keys.length > EXTERNAL_EVENT_LIMITS.maxDataKeys) throw new TypeError(`External event data may contain at most ${EXTERNAL_EVENT_LIMITS.maxDataKeys} fields.`);
-
-  const normalized: ExternalEventData = {};
-  for (const key of keys as string[]) {
-    if (key === '__proto__' || key === 'constructor' || key === 'prototype') throw new TypeError(`External event data key is unsafe: ${key}.`);
-    if (!/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/u.test(key) || key.length > EXTERNAL_EVENT_LIMITS.maxDataKeyLength) {
-      throw new TypeError(`External event data key is unsafe: ${key}.`);
-    }
-    if (/(?:blind|secret|hidden|raw|roll|dice?|formula)/iu.test(key)) {
-      throw new TypeError(`External event data cannot contain raw roll field: ${key}.`);
-    }
-    const value = ownValue(data, key);
-    if (value === null || typeof value === 'boolean') {
-      normalized[key] = value;
-      continue;
-    }
-    if (typeof value === 'number') {
-      if (!Number.isFinite(value)) throw new TypeError(`External event data field is not finite: ${key}.`);
-      normalized[key] = value;
-      continue;
-    }
-    if (typeof value === 'string') {
-      if (value.length > EXTERNAL_EVENT_LIMITS.maxDataStringLength || /[\u0000-\u001f\u007f]/u.test(value)) {
-        throw new TypeError(`External event data string is unsafe or oversized: ${key}.`);
-      }
-      normalized[key] = value;
-      continue;
-    }
-    throw new TypeError(`External event data must contain primitive values: ${key}.`);
-  }
-  return normalized;
-}
-
-function readExternalIdentifier(value: unknown, path: string, maxLength: number = EXTERNAL_EVENT_LIMITS.maxIdentifierLength): string {
-  if (typeof value !== 'string' || value.length === 0 || value.length > maxLength) {
-    throw new TypeError(`External event ${path} must be a non-empty bounded string.`);
-  }
-  if (/[\u0000-\u001f\u007f]/u.test(value)) throw new TypeError(`External event ${path} contains unsafe control characters.`);
-  return value;
-}
-
-function parseExternalEventLedger(raw: unknown): ExternalEvent[] {
-  let candidate = raw;
-  if (typeof candidate === 'string') {
-    try { candidate = JSON.parse(candidate) as unknown; }
-    catch { return []; }
-  }
-  if (!isSafePlainRecord(candidate)) return [];
-  try {
-    if (ownValue(candidate, 'schemaVersion') !== EXTERNAL_EVENT_LEDGER_SCHEMA_VERSION) return [];
-    const rawEvents = ownValue(candidate, 'events');
-    if (!Array.isArray(rawEvents)) return [];
-
-    const byKey = new Map<string, ExternalEvent>();
-    for (const rawEvent of rawEvents) {
-      try {
-        const event = validateExternalEvent(rawEvent);
-        const key = externalEventKey(event);
-        byKey.delete(key);
-        byKey.set(key, event);
-      } catch {
-        // World settings are untrusted input; invalid ledger entries are ignored.
-      }
-    }
-    return trimExternalEvents([...byKey.values()]);
-  } catch {
-    return [];
-  }
-}
-
-function serializeExternalEventLedger(events: readonly ExternalEvent[]): string {
-  const bounded = trimExternalEvents(events);
-  return JSON.stringify({ schemaVersion: EXTERNAL_EVENT_LEDGER_SCHEMA_VERSION, events: bounded });
-}
-
-function trimExternalEvents(events: readonly ExternalEvent[]): ExternalEvent[] {
-  const bounded = events.slice(-EXTERNAL_EVENT_LIMITS.maxLedgerEntries).map(cloneExternalEvent);
-  while (bounded.length > 0 && byteLength(JSON.stringify({ schemaVersion: EXTERNAL_EVENT_LEDGER_SCHEMA_VERSION, events: bounded })) > EXTERNAL_EVENT_LIMITS.maxLedgerBytes) {
-    bounded.shift();
-  }
-  return bounded;
-}
-
-function cloneExternalEvent(event: ExternalEvent): ExternalEvent {
-  return JSON.parse(JSON.stringify(event)) as ExternalEvent;
-}
-
-function externalEventKey(event: ExternalEvent): string {
-  return `${event.namespace}\u001f${event.eventId}`;
-}
-
-function byteLength(value: string): number {
-  return new TextEncoder().encode(value).byteLength;
-}
-
-function safeOwnKeys(value: object): (string | symbol)[] {
-  try { return Reflect.ownKeys(value); }
-  catch { throw new TypeError('External event contains an unreadable object.'); }
-}
-
-function ownValue(value: Record<string, unknown>, key: string): unknown {
-  const descriptor = Object.getOwnPropertyDescriptor(value, key);
-  if (!descriptor || !('value' in descriptor)) throw new TypeError(`External event field must be a data property: ${key}.`);
-  return descriptor.value;
-}
-
-function optionalOwnValue(value: Record<string, unknown>, key: string): unknown {
-  const descriptor = Object.getOwnPropertyDescriptor(value, key);
-  if (!descriptor) return undefined;
-  if (!('value' in descriptor)) throw new TypeError(`External event field must be a data property: ${key}.`);
-  return descriptor.value;
-}
-
-function isSafePlainRecord(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-  try {
-    const prototype = Object.getPrototypeOf(value);
-    return prototype === Object.prototype || prototype === null;
-  } catch {
-    return false;
-  }
 }
 
 function isRecord(value: unknown): value is Record<string, any> {

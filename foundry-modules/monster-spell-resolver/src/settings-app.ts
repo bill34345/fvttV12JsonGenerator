@@ -1,6 +1,7 @@
 import { RESOLVER_MODULE_ID } from '../../../src/core/spell-resolution/types';
 import type { SpellResolutionConfiguration } from '../../../src/core/spell-resolution';
 import { projectResolverRuntimeDiagnostics, type ResolverRuntimeApi } from './runtime-api';
+import { openResolverHelp } from './help';
 
 export interface ResolverSettingsContextInput {
   sourcePriority: SpellResolutionConfiguration['sourcePriority'];
@@ -129,6 +130,7 @@ export function createResolverSettingsApplicationClass(): any {
       position: { width: 720 },
       form: { closeOnSubmit: true, handler: this.onSubmit },
       actions: {
+        openHelp: this.openHelp,
         addPriority: this.addPriority,
         removePriority: this.removePriority,
         movePriority: this.movePriority,
@@ -153,6 +155,15 @@ export function createResolverSettingsApplicationClass(): any {
         }),
         buttons: [{ type: 'submit', icon: 'fa-solid fa-save', label: 'FVTTJSONSPELL.Settings.Save' }],
       };
+    }
+
+    static async openHelp(event: Event) {
+      event.preventDefault();
+      try { await openResolverHelp(); }
+      catch {
+        const global = globalThis as any;
+        global.ui?.notifications?.error?.(global.game?.i18n?.localize?.('FVTTJSONSPELL.Help.Failed') ?? 'Spell Resolver help could not open.');
+      }
     }
 
     static async onSubmit(_event: unknown, _form: unknown, formData: any) {

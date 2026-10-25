@@ -2,6 +2,20 @@
 module.exports = {
   forbidden: [
     {
+      name: 'suite-console-is-browser-safe',
+      severity: 'error',
+      comment: 'The read-only handbook host depends only on its browser-safe public reader.',
+      from: { path: '^foundry-modules/fvtt-suite-console/src/' },
+      to: { path: '^(node:|bun:|src/|scripts/|apps/|tools/|packages/(?!suite-handbook/)|foundry-modules/(?!fvtt-suite-console/))' },
+    },
+    {
+      name: 'suite-handbook-is-browser-safe',
+      severity: 'error',
+      comment: 'The handbook reader is root-local and independent of Node, Foundry and delivery layers.',
+      from: { path: '^packages/suite-handbook/src/' },
+      to: { path: '^(node:|bun:|src/|scripts/|apps/|foundry-modules/|tools/|packages/(?!suite-handbook/))' },
+    },
+    {
       name: 'no-circular',
       severity: 'error',
       comment: 'Cycles hide ownership and make package extraction unsafe.',
@@ -287,16 +301,16 @@ module.exports = {
     {
       name: 'chat-memory-guard-independent-release',
       severity: 'error',
-      comment: 'Chat Memory Guard is a self-contained release unit and cannot import generator, delivery, operator, or sibling-module internals.',
+      comment: 'Chat Memory Guard bundles only the public browser-safe handbook entry; generator, operator and sibling-module internals remain forbidden.',
       from: { path: '^foundry-modules/chat-memory-guard/' },
-      to: { path: '^(src/|scripts/|apps/|packages/|foundry-modules/(?!chat-memory-guard/))' },
+      to: { path: '^(src/|scripts/|apps/|packages/(?!suite-handbook/src/index\\.ts$)|foundry-modules/(?!chat-memory-guard/))' },
     },
     {
       name: 'session-monitor-independent-release',
       severity: 'error',
-      comment: 'Session Monitor owns its browser module and companion together; only the shared contracts package may cross into the release unit.',
+      comment: 'Session Monitor owns its browser module and companion together; shared hash and the public browser-safe handbook entry are its only cross-package surfaces.',
       from: { path: '^foundry-modules/session-monitor/', pathNot: '/node_modules/' },
-      to: { path: '^(src/|scripts/|apps/|packages/(?!contracts/)|foundry-modules/(?!session-monitor/))' },
+      to: { path: '^(src/|scripts/|apps/|packages/(?!contracts/|suite-handbook/src/index\\.ts$)|foundry-modules/(?!session-monitor/))' },
     },
     {
       name: 'session-monitor-contract-surface',

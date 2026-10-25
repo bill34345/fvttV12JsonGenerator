@@ -23,7 +23,7 @@ let notifications: string[];
 let hooks: Map<string, (...args: any[]) => unknown>;
 
 beforeEach(() => {
-  for (const key of ["game", "ui", "Hooks", "document", "fromUuid", "canvas", "foundry"]) {
+  for (const key of ["game", "ui", "Hooks", "document", "fromUuid", "canvas", "foundry", "CONFIG"]) {
     originalGlobals.set(key, globals[key]);
   }
   values = new Map<string, unknown>([
@@ -79,6 +79,11 @@ beforeEach(() => {
     data: { operators: { ForcedReplacement: { create: (value: unknown) => ({ __forcedReplacement: value }) } } },
     utils: { equals: isDeepStrictEqual },
   };
+  globals.CONFIG = { DND5E: { activityTypes: { heal: { documentClass: class {
+    readonly source: AnyRecord;
+    constructor(source: AnyRecord) { this.source = structuredClone(source); }
+    toObject() { return structuredClone(this.source); }
+  } } } } };
 });
 
 afterEach(() => {
@@ -105,6 +110,12 @@ function flaggedDocument(type: string, flags: AnyRecord, activities: AnyRecord =
     toObject: () => ({ system: { activities: structuredClone(document.system.activities) } }),
   };
   return { document, writes, flagWrites };
+}
+
+function deferred() {
+  let release!: () => void;
+  const promise = new Promise<void>(resolve => { release = resolve; });
+  return { promise, release };
 }
 
 describe("house-rules runtime and settings integration", () => {
@@ -283,6 +294,251 @@ describe("house-rules runtime and settings integration", () => {
     expect(Object.keys(potion.system.activities)).toHaveLength(3);
   });
 
+  test("serializes concurrent apply calls on the same potion", async () => {
+    const { document: potion, writes } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    const gate = deferred();
+    const setFlag = potion.setFlag;
+    potion.setFlag = async (...args: unknown[]) => {
+      await gate.promise;
+      return setFlag(...args);
+    };
+    const a = configurePotion(potion, "apply");
+    const b = configurePotion(potion, "apply");
+    gate.release();
+    expect([await a, await b].filter(Boolean)).toHaveLength(1);
+    expect(writes).toHaveLength(1);
+    expect(potion.getFlag(MODULE_ID, FLAG.potionSnapshot)).toMatchObject({ schema: 2, activities: {} });
+  });
+
+  test("does not treat a GM edit during initial snapshot persistence as the original", async () => {
+    const { document: potion, writes } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    const gate = deferred();
+    const entered = deferred();
+    const setFlag = potion.setFlag;
+    potion.setFlag = async (...args: unknown[]) => { entered.release(); await gate.promise; return setFlag(...args); };
+    const apply = configurePotion(potion, "apply");
+    await entered.promise;
+    potion.system.activities.manual = { type: "heal" };
+    gate.release();
+    expect(await apply).toBeNull();
+    expect(writes).toHaveLength(0);
+    expect(potion.system.activities.manual).toEqual({ type: "heal" });
+  });
+
+  test("does not continue applying after authority changes during the snapshot write", async () => {
+    const { document: potion, writes } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    const gate = deferred();
+    const entered = deferred();
+    const setFlag = potion.setFlag;
+    potion.setFlag = async (...args: unknown[]) => { entered.release(); await gate.promise; return setFlag(...args); };
+    const apply = configurePotion(potion, "apply");
+    await entered.promise;
+    globals.game.user = globals.game.users[1];
+    gate.release();
+    expect(await apply).toBeNull();
+    expect(writes).toHaveLength(0);
+  });
+
+  test("does not report restored when Foundry vetoes snapshot removal", async () => {
+    const { document: potion } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    expect(await configurePotion(potion, "apply")).toMatchObject({ applied: true });
+    potion.unsetFlag = async () => undefined;
+    expect(await configurePotion(potion, "restore")).toBeNull();
+    expect(potion.getFlag(MODULE_ID, FLAG.potionSnapshot)).toMatchObject({ schema: 2 });
+  });
+
+  test("keeps the pre-edit baseline when a GM edits during post-apply snapshot persistence", async () => {
+    const { document: potion } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    const gate = deferred();
+    const entered = deferred();
+    const setFlag = potion.setFlag;
+    let calls = 0;
+    potion.setFlag = async (...args: unknown[]) => {
+      if (++calls === 2) { entered.release(); await gate.promise; }
+      return setFlag(...args);
+    };
+    const apply = configurePotion(potion, "apply");
+    await entered.promise;
+    potion.system.activities.manual = { type: "heal" };
+    gate.release();
+    expect(await apply).toBeNull();
+    expect(potion.getFlag(MODULE_ID, FLAG.potionSnapshot)).toMatchObject({ schema: 2 });
+    expect(potion.getFlag(MODULE_ID, FLAG.potionSnapshot).appliedActivities.manual).toBeUndefined();
+    expect(await configurePotion(potion, "restore")).toBeNull();
+    expect(potion.system.activities.manual).toEqual({ type: "heal" });
+  });
+
+  test("retains the snapshot if authority changes while a restore update is pending", async () => {
+    const { document: potion } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    expect(await configurePotion(potion, "apply")).toMatchObject({ applied: true });
+    const gate = deferred();
+    const entered = deferred();
+    const update = potion.update;
+    potion.update = async (change: AnyRecord) => {
+      const result = await update(change);
+      entered.release();
+      await gate.promise;
+      return result;
+    };
+    const restore = configurePotion(potion, "restore");
+    await entered.promise;
+    globals.game.user = globals.game.users[1];
+    gate.release();
+    expect(await restore).toBeNull();
+    expect(potion.getFlag(MODULE_ID, FLAG.potionSnapshot)).toMatchObject({ schema: 2 });
+  });
+
+  test("does not adopt an Activity added while the native apply update is pending", async () => {
+    const { document: potion } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    const entered = deferred();
+    const gate = deferred();
+    const update = potion.update;
+    potion.update = async (change: AnyRecord) => {
+      const result = await update(change);
+      entered.release();
+      await gate.promise;
+      return result;
+    };
+    const apply = configurePotion(potion, "apply");
+    await entered.promise;
+    potion.system.activities.manual = { type: "utility" };
+    gate.release();
+    expect(await apply).toBeNull();
+    expect(potion.getFlag(MODULE_ID, FLAG.potionSnapshot)).toMatchObject({ schema: 1, activities: {} });
+    expect(await configurePotion(potion, "restore")).toBeNull();
+    expect(potion.system.activities.manual).toEqual({ type: "utility" });
+  });
+
+  test("does not adopt an edit to a generated Activity during the native apply update", async () => {
+    const { document: potion } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    const entered = deferred();
+    const gate = deferred();
+    const update = potion.update;
+    potion.update = async (change: AnyRecord) => {
+      const result = await update(change);
+      entered.release();
+      await gate.promise;
+      return result;
+    };
+    const apply = configurePotion(potion, "apply");
+    await entered.promise;
+    potion.system.activities.hrPotionMax.healing.custom.formula = "100";
+    gate.release();
+    expect(await apply).toBeNull();
+    expect(potion.getFlag(MODULE_ID, FLAG.potionSnapshot)).toMatchObject({ schema: 1 });
+  });
+
+  test("retries only snapshot cleanup after a vetoed restore unset", async () => {
+    const { document: potion, writes } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    expect(await configurePotion(potion, "apply")).toMatchObject({ applied: true });
+    const unsetFlag = potion.unsetFlag;
+    potion.unsetFlag = async () => undefined;
+    expect(await configurePotion(potion, "restore")).toBeNull();
+    const afterRestoreWrites = writes.length;
+    potion.unsetFlag = unsetFlag;
+    expect(await configurePotion(potion, "restore")).toEqual({ restored: true });
+    expect(writes).toHaveLength(afterRestoreWrites);
+    expect(potion.getFlag(MODULE_ID, FLAG.potionSnapshot)).toBeUndefined();
+  });
+
+  test("accepts native generated IDs and the known empty healing scaling default", async () => {
+    const { document: potion } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    const update = potion.update;
+    potion.update = async (change: AnyRecord) => {
+      const result = await update(change);
+      const activities = potion.system.activities;
+      if (!change["system.activities"]?.__forcedReplacement) {
+        potion.system.activities = Object.fromEntries((Object.values(activities) as AnyRecord[]).map((activity) => {
+          activity.healing.scaling = { formula: undefined };
+          return [activity._id, activity];
+        }));
+      }
+      return result;
+    };
+    expect(await configurePotion(potion, "apply")).toMatchObject({ applied: true });
+    expect(Object.keys(potion.system.activities)).toEqual(["hrPotionQ0000001", "hrPotionM0000001", "hrPotionF0000001"]);
+    expect(await configurePotion(potion, "restore")).toEqual({ restored: true });
+  });
+
+  test("refuses pending restore cleanup after an outside Activity change", async () => {
+    const { document: potion, writes } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    expect(await configurePotion(potion, "apply")).toMatchObject({ applied: true });
+    const unsetFlag = potion.unsetFlag;
+    potion.unsetFlag = async () => undefined;
+    expect(await configurePotion(potion, "restore")).toBeNull();
+    potion.unsetFlag = unsetFlag;
+    potion.system.activities.manual = { type: "utility" };
+    const before = writes.length;
+    expect(await configurePotion(potion, "restore")).toBeNull();
+    expect(writes).toHaveLength(before);
+    expect(potion.getFlag(MODULE_ID, FLAG.potionSnapshot)).toMatchObject({ schema: 2 });
+    expect(potion.system.activities.manual).toEqual({ type: "utility" });
+  });
+
+  test("refuses pending restore cleanup when its saved snapshot changes", async () => {
+    const { document: potion, writes } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    expect(await configurePotion(potion, "apply")).toMatchObject({ applied: true });
+    const unsetFlag = potion.unsetFlag;
+    potion.unsetFlag = async () => undefined;
+    expect(await configurePotion(potion, "restore")).toBeNull();
+    potion.unsetFlag = unsetFlag;
+    potion.getFlag(MODULE_ID, FLAG.potionSnapshot).activities.manual = { type: "utility" };
+    const before = writes.length;
+    expect(await configurePotion(potion, "restore")).toBeNull();
+    expect(writes).toHaveLength(before);
+    expect(potion.getFlag(MODULE_ID, FLAG.potionSnapshot)).toMatchObject({ schema: 2 });
+  });
+
+  test("finishes pending restore cleanup after authority returns without repeating the update", async () => {
+    const { document: potion, writes } = flaggedDocument("consumable", {
+      [FLAG.potion]: { healing: true, dice: { number: 2, denomination: 4 } },
+    }, {});
+    expect(await configurePotion(potion, "apply")).toMatchObject({ applied: true });
+    const entered = deferred();
+    const gate = deferred();
+    const update = potion.update;
+    potion.update = async (change: AnyRecord) => {
+      const result = await update(change);
+      entered.release();
+      await gate.promise;
+      return result;
+    };
+    const restore = configurePotion(potion, "restore");
+    await entered.promise;
+    globals.game.user = globals.game.users[1];
+    gate.release();
+    expect(await restore).toBeNull();
+    const afterRestoreWrites = writes.length;
+    globals.game.user = globals.game.users[0];
+    expect(await configurePotion(potion, "restore")).toEqual({ restored: true });
+    expect(writes).toHaveLength(afterRestoreWrites);
+    expect(potion.getFlag(MODULE_ID, FLAG.potionSnapshot)).toBeUndefined();
+  });
+
   test("rerolls a one once, persists the accepted class HP, and rejects a replay", async () => {
     const { document: actor, flagWrites } = flaggedDocument("character", {});
     actor.id = "actor";
@@ -344,9 +600,15 @@ describe("house-rules runtime and settings integration", () => {
     expect(globals.game.fvttHouseRules.runtime.locked()).toBeTrue();
     globals.game.system.version = "6.0.5";
     expect(globals.game.fvttHouseRules.runtime.locked()).toBeTrue();
+    globals.game.system.version = "6.0.6";
+    expect(globals.game.fvttHouseRules.runtime.locked()).toBeTrue();
+    globals.game.system.version = "6.0.7";
+    expect(globals.game.fvttHouseRules.runtime.locked()).toBeFalse();
     globals.game.system.version = "6.0.4";
     expect(globals.game.fvttHouseRules.runtime.locked()).toBeFalse();
     globals.game.version = "14.364";
+    expect(globals.game.fvttHouseRules.runtime.locked()).toBeFalse();
+    globals.game.system.version = "6.0.6";
     expect(globals.game.fvttHouseRules.runtime.locked()).toBeFalse();
     globals.game.version = "14.369";
     expect(globals.game.fvttHouseRules.runtime.locked()).toBeFalse();

@@ -22,7 +22,7 @@
         "compatibility": {
           "minimum": "6.0.5",
           "verified": "6.0.5",
-          "maximum": "6.0.5"
+          "maximum": "6.0.6"
         }
       }
     ]

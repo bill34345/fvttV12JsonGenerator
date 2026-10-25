@@ -1,4 +1,6 @@
 {
+  "FVTTJSONSPELL.Help.Label": "Usage help",
+  "FVTTJSONSPELL.Help.Failed": "Spell Resolver help could not open. Check your GM role and try again.",
   "FVTTJSONSPELL.Settings.SourcePriority.Name": "Spell source priority",
   "FVTTJSONSPELL.Settings.SourcePriority.Hint": "Ordered package and pack preferences used only after exact spell identity matching.",
   "FVTTJSONSPELL.Settings.SavedMappings.Name": "Saved spell mappings",

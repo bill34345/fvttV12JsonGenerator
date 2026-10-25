@@ -18,6 +18,7 @@ afterEach(() => {
 function snapshot(refreshedAt = 0): DeckSnapshot {
   return {
     supported: true,
+    coreVersion: '14.368',
     world: { id: 'world', title: 'World' },
     system: { id: 'dnd5e', version: '5.3.3' },
     scene: null,
@@ -46,7 +47,7 @@ function snapshot(refreshedAt = 0): DeckSnapshot {
 
 function handlers(onOpenPanel: () => void = () => {}): DeckSurfaceHandlers {
   return {
-    execute: async () => {}, executeBatch: async () => {}, openPanel: async () => { onOpenPanel(); }, openPopout: async () => {}, closePopout: async () => {},
+    execute: async () => {}, executeBatch: async () => {}, openPanel: async () => { onOpenPanel(); }, openPopout: async () => {}, openHelp: async () => {}, closePopout: async () => {},
     setTab: async () => {}, toggleDensity: async () => {},
   };
 }
@@ -135,6 +136,60 @@ describe('PanelSurface', () => {
 });
 
 describe('PopoutSurface', () => {
+  test('reports rejected toolbar and auxiliary actions without duplicating listeners after rebinding', async () => {
+    const errors: string[] = [];
+    const listeners: Array<(event: any) => void> = [];
+    const root: any = {
+      dataset: {},
+      addEventListener: (name: string, callback: (event: any) => void) => { if (name === 'click') listeners.push(callback); },
+      querySelectorAll: (selector: string) => selector === '[data-osd-batch-actor]:checked' ? [{ value: 'Actor.hero' }] : [],
+    };
+    const surfaceHandlers = handlers();
+    for (const key of ['openPanel', 'openPopout', 'closePopout', 'setTab', 'toggleDensity', 'executeBatch'] as const) {
+      (surfaceHandlers as any)[key] = async () => { throw new Error(key); };
+    }
+    Object.assign(globalThis, {
+      game: { i18n: { localize: (key: string) => key } },
+      ui: { notifications: { error: (message: string) => errors.push(message) } },
+    });
+    bindDeckRoot(root, surfaceHandlers);
+    bindDeckRoot(root, surfaceHandlers);
+    expect(listeners).toHaveLength(1);
+    for (const action of ['open-panel', 'open-popout', 'close-popout', 'party-tab', 'toggle-density', 'batch-apply']) {
+      const layer = { querySelector: () => null };
+      const button: any = {
+        disabled: false, dataset: { osdAction: action, batchCommand: 'actor.damage' },
+        closest: (selector: string) => selector.startsWith('button') ? button : selector.includes('data-osd-layer') ? layer : null,
+      };
+      listeners[0]!({ target: button, preventDefault: () => {} });
+      await Promise.resolve();
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(errors).toEqual([
+      'OSD.Notifications.ActionFailed: Error: openPanel',
+      'OSD.Notifications.ActionFailed: Error: openPopout',
+      'OSD.Notifications.ActionFailed: Error: closePopout',
+      'OSD.Notifications.ActionFailed: Error: setTab',
+      'OSD.Notifications.ActionFailed: Error: toggleDensity',
+      'OSD.Notifications.ActionFailed: Error: executeBatch',
+    ]);
+  });
+
+  test('shared toolbar routes help without any Deck command or panel transition', async () => {
+    let click: ((event: any) => void) | undefined;
+    const calls: string[] = [];
+    const root: any = { dataset: {}, addEventListener: (name: string, callback: (event: any) => void) => { if (name === 'click') click = callback; }, querySelectorAll: () => [] };
+    const surfaceHandlers = handlers(() => calls.push('panel'));
+    surfaceHandlers.openHelp = async () => { calls.push('help'); };
+    surfaceHandlers.execute = async () => { calls.push('command'); };
+    surfaceHandlers.openPopout = async () => { calls.push('popout'); };
+    bindDeckRoot(root, surfaceHandlers);
+    const button: any = { disabled: false, dataset: { osdAction: 'open-help' }, closest: () => button };
+    click?.({ target: button, preventDefault: () => {} });
+    await Promise.resolve();
+    expect(calls).toEqual(['help']);
+  });
+
   test('opens a dialog and confirms commands in the popout document realm', async () => {
     let click: ((event: any) => void) | undefined;
     let shown = 0;

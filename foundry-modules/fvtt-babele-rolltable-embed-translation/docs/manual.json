@@ -1,0 +1,67 @@
+{
+  "id": "fvtt-babele-rolltable-embed-translation",
+  "title": "Babele 随机表嵌入翻译兼容",
+  "category": "maintain",
+  "summary": "在 Babele 翻译已经存在时，修复 Foundry v14 的 @Embed 随机表结果仍显示英文的渲染缺口。",
+  "when": "Journal、聊天或其他文本中的 Compendium RollTable 使用 @Embed 后，表名已翻译但结果行仍为英文时使用。",
+  "requires": [
+    "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
+    "Babele 2.9.1",
+    "libWrapper 1.13.5.1",
+    "可读取的 Babele 随机表翻译文件",
+    "精确Foundry14.368/dnd5e6.0.6已完成两表限定接受；具体范围见限制，不自动升级其他环境。"
+  ],
+  "steps": [
+    {
+      "title": "准备依赖并启用模块",
+      "text": "在目标世界先启用 Babele 与 libWrapper，再启用本模块并重新加载世界。模块在 init 阶段只注册 RollTable 的渲染包装；依赖缺失时不会提供翻译覆盖。"
+    },
+    {
+      "title": "准备可读取的随机表",
+      "text": "确保目标 Compendium RollTable 对当前世界可读，并由 Babele 提供对应翻译。翻译源继续由现有 Babele 翻译包维护，本模块不编辑翻译文件。"
+    },
+    {
+      "title": "渲染 @Embed",
+      "text": "在 Journal、聊天或其他支持富文本的地方插入目标随机表的 @Embed，再打开包含该表的页面，核对表名和各范围对应的中文结果。"
+    },
+    {
+      "title": "核对结果与链接",
+      "text": "检查各个范围是否仍对应正确的结果。若使用狂野魔法浪涌或困惑术，可按原始说明逐行对照；文档型结果应仍能打开原来的目标条目。"
+    },
+    {
+      "title": "运行离线检查",
+      "text": "维护者从仓库根目录运行模块测试；测试和构建只证明静态包装逻辑，实际表格行仍需在锁定版本的 Foundry UI 中复核。",
+      "command": "bun run test:fvtt-babele-rolltable-embed-translation"
+    }
+  ],
+  "outputs": [
+    "Compendium RollTable @Embed 中按范围显示的中文结果",
+    "文档型结果继续生成指向原 UUID 的 content-link",
+    "翻译失败时保留 Foundry 原生嵌入结果"
+  ],
+  "limits": [
+    "只修正随机表嵌入的显示，不改写随机表、角色、物品、日志或世界设置。",
+    "Babele 或 libWrapper 不可用、翻译失败或数据无法对齐时会保持原生输出或停用覆盖",
+    "历史依赖验收为 14.364／5.3.3；本轮 Next 14.368／6.0.5 两表切片另验，Babele 2.9.1／libWrapper 1.13.5.1 不随系统升级而自动获得新接受。",
+    "单测、构建和安装校验不等于实际 UI 中的 25 行、5 行和文档链接验收",
+    "Next 14.368／6.0.5 本轮两表 25／5 行中文嵌入、原始 UUID、可见界面和来源未写入均通过；不代表任意翻译文件都可对齐。",
+    "2026-10-25在14.368/6.0.6接受狂野魔法25/25、困惑术5/5中文结果、基本方位原UUID、重复渲染和真实窗口；源表与世界文档保持不变。完整表库、英文表头、内联标签和实际掷表未覆盖。",
+    "新候选按唯一ID优先、唯一范围回退；重复或歧义匹配保留原文。翻译只提供名称和描述，不改变原UUID、范围和抽取状态；任一行渲染失败时保留整张原生表。6.0.6代表接受限于上述两表。"
+  ],
+  "keywords": [
+    "Babele",
+    "@Embed",
+    "RollTable",
+    "随机表",
+    "翻译",
+    "content-link"
+  ],
+  "sources": [
+    "foundry-modules/fvtt-babele-rolltable-embed-translation/README.zh-CN.md",
+    "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
+  ],
+  "watch": [
+    "foundry-modules/fvtt-babele-rolltable-embed-translation/"
+  ],
+  "module": "fvtt-babele-rolltable-embed-translation"
+}
