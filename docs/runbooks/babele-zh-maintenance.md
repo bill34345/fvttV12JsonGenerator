@@ -40,3 +40,5 @@ python -B "I:/OpenCode/fvtt-babele-zh-maintenance/maintain.py" update
 ## 查看包内内容目录
 
 独立项目根文件 `I:\OpenCode\fvtt-babele-zh-maintenance\中文Babele内容目录.html` 为单文件离线目录，包含当前包的99个来源目标，支持名称/ID搜索、类别/内容类型/发布方筛选、展开全部合集及打印。官方/第三方分类、原始导出格式和实机验收范围分别标明；统计口径及重建命令见独立项目 `docs/catalog/README.md`。页面来源日期和ZIP哈希指明具体快照，不承诺持续更新。
+
+版本栏分开显示dnd5e系统最低/verified/最高、2014/2024规则证据、FVTT官网支持/Verified及原包Core清单。另有本包规则与原包当前规则的独立筛选；两处Core声明不同会同时保留。未声明、非标准声明和未取得清单分别标明，不能从缺失上限或官网声明推断汉化快照已验证兼容。
