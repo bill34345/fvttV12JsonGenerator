@@ -36,3 +36,7 @@ python -B "I:/OpenCode/fvtt-babele-zh-maintenance/maintain.py" update
 - 本次汉化验收不覆盖施法/战斗自动化、整本Adventure、上游所有译文、多人或长时运行；上游manifest仍verified13。
 
 本仓库的手册只维护这一外部项目入口与操作边界；外部项目的实际实现、测试和交付记录在其自身仓库维护。
+
+## 查看包内内容目录
+
+独立项目根文件 `I:\OpenCode\fvtt-babele-zh-maintenance\中文Babele内容目录.html` 为单文件离线目录，包含当前包的99个来源目标，支持名称/ID搜索、类别/内容类型/发布方筛选、展开全部合集及打印。官方/第三方分类、原始导出格式和实机验收范围分别标明；统计口径及重建命令见独立项目 `docs/catalog/README.md`。页面来源日期和ZIP哈希指明具体快照，不承诺持续更新。

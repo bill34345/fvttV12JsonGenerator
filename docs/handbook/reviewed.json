@@ -1,8 +1,8 @@
 {
   "babele-zh-maintenance": {
-    "fingerprint": "f03e1f3a6cafc79a2bc23ffcf4cfe72f4d5056ba5f37173b41479be80d426bfa",
+    "fingerprint": "d4bea1e9b129b78d5fbba7264dad45bbf7b0bb837e71ae9972113aed111e550e",
     "reviewedOn": "2026-10-25",
-    "note": "已按用户裁定核对三条中文说明与原话，三条实际API和原生说明页复验通过；更新来源记录，CLI/独立域名入口及验收范围不变。"
+    "note": "已逐项核对99目标目录的619文件口径、官方/第三方来源和原始导出限制；补充离线目录入口，明确实际浏览器因file协议被拒而未验。"
   },
   "legacy-next-test-inputs": {
     "fingerprint": "08a1e772f66a92314a36ae10574cf1f466bce95ef84fae113a590264703c6737",
