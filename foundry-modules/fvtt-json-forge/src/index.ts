@@ -82,7 +82,7 @@ export function mountForgeDirectoryButton(kind: 'Actor' | 'Item', html: any, env
   const button = document.createElement('button');
   button.type = 'button'; button.className = 'forge-directory-entry';
   button.dataset.forgeDirectoryEntry = kind;
-  button.title = kind === 'Actor' ? '从规则资料生成或导入生物，也可处理召唤战斗包' : '从规则资料生成或导入物品';
+  button.title = kind === 'Actor' ? '从规则资料生成或导入生物，包含能力关联的召唤生物或物件' : '从规则资料生成或导入物品';
   const icon = document.createElement('i'); icon.className = 'fas fa-hammer'; icon.setAttribute('aria-hidden', 'true');
   const label = document.createElement('span'); label.textContent = kind === 'Actor' ? 'Forge 生物' : 'Forge 物品';
   button.append(icon, label);

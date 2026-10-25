@@ -2,6 +2,8 @@ import {test,expect} from 'bun:test';
 import {existsSync,readFileSync} from 'node:fs';
 import {sha256} from '@fvtt-json-generator/contracts/hash';
 import {parseStrictJson,MonsterIntakeProviderError,OpenAICompatibleMonsterIntakeProvider,type ProviderResponseEvidence,type IntakeProviderAuditEvent} from '@fvtt-json-generator/intake-ai/provider';
+import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
+import {buildValidLurkerIr,LURKER_SOURCE} from '../src/core/intake/__tests__/fixtures/lurker';
 
 const suffixes=['}','}}',"'}",'"}'] as const;
 const bodies=[
@@ -92,4 +94,15 @@ test('format receipts retain only hashes and fixed punctuation when the original
   const prefix=JSON.stringify({schemaVersion:1,candidates:[],secret:connection.apiKey}),raw=prefix+"'}",events:ProviderResponseEvidence[]=[];
   const provider=new OpenAICompatibleMonsterIntakeProvider({...connection,httpClient:async()=>response(raw),responseEvidence:{record:event=>{events.push(event);}}});
   await provider.discover(request);expect(events[0]!.redacted).toBe(true);expect(events[0]!.responseHash).toBe(sha256(raw));expect(events[0]!.formatRecovery?.parsedObjectHash).toBe(sha256(prefix));expect(JSON.stringify(events)).not.toContain(connection.apiKey);
+});
+
+test('syntax recovery preserves the complete AI proposal and leaves an invalid optional shape visible',async()=>{
+  const proposal=buildValidLurkerIr();proposal.creature.spellcasting=[];(proposal.creature as any).legendary=null;
+  proposal.creature.actions[0]!.activityType='attack';proposal.creature.actions[0]!.attack={type:'mwak',toHit:19,reach:5};
+  const before=structuredClone(proposal),prefix=JSON.stringify(proposal),raw=prefix+"'}",events:ProviderResponseEvidence[]=[];let calls=0;
+  const provider=new OpenAICompatibleMonsterIntakeProvider({...connection,httpClient:async()=>{calls++;return response(raw);},responseEvidence:{record:event=>{events.push(event);}}});
+  const normalized=await provider.extract({source:LURKER_SOURCE,sourceSha256:before.source.sha256,candidate:{id:'format-preservation',label:'AI proposal',start:0,end:LURKER_SOURCE.length,quote:LURKER_SOURCE}});
+  expect(calls).toBe(1);expect(normalized.creature).toEqual(before.creature);expect(proposal).toEqual(before);
+  expect(events).toHaveLength(1);expect(events[0]).toMatchObject({content:raw,responseHash:sha256(raw),formatRecovery:{parsedObjectHash:sha256(prefix),removedTail:"'}"}});
+  expect(validateMonsterIntakeIR(LURKER_SOURCE,normalized).blocking).toContainEqual(expect.objectContaining({code:'INVALID_STRUCTURE',path:'/creature/legendary'}));
 });

@@ -42,7 +42,7 @@ export async function importForgeEncounter(input: {
   if (!input.reviewed) throw new Error('请先核对角色、宏代码和保留的GM操作规则。');
   input.signal?.throwIfAborted();
   const locks = importLocks.get(game) ?? new Set<string>(); importLocks.set(game, locks);
-  if (locks.has(prepared.bundle.id)) throw new Error('这个战斗包正在导入，请等待当前操作完成。');
+  if (locks.has(prepared.bundle.id)) throw new Error('这个生物导入文件正在导入，请等待当前操作完成。');
   locks.add(prepared.bundle.id);
   const created: Array<{kind:'Actor'|'Macro';document:EncounterDocument}> = [];
   const verifiedActors: EncounterDocument[]=[];
@@ -234,7 +234,7 @@ export function createEncounterAssetPort(foundryGlobal: any, game: EncounterGame
     const expected = decodeEncounterAssetBytes(asset);
     const existing = await fetch(path, { cache: 'no-store', credentials: 'same-origin' });
     if (existing.ok) {
-      if (hashEncounterBytes(new Uint8Array(await existing.arrayBuffer())) !== asset.sha256) throw new Error('现存图片内容与战斗包不符，拒绝覆盖。');
+      if (hashEncounterBytes(new Uint8Array(await existing.arrayBuffer())) !== asset.sha256) throw new Error('现存图片内容与生物导入文件不符，拒绝覆盖。');
       return;
     }
     if (existing.status !== 404) throw new Error(`无法检查图片目标（HTTP ${existing.status}）。`);

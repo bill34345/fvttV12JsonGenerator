@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { buildForgeActorRequest, convertFinalActorSource } from '@fvtt-json-generator/forge-browser-runtime';
 import {
   buildEncounterMacroCommand,
+  compileEncounterSelection,
   createEncounterAutomationProvider,
   EncounterAutomationSelectionNeedsReviewError,
   decodeEncounterAutomation,
@@ -11,6 +12,7 @@ import {
 } from '../packages/intake-ai/src/encounter-automation';
 import { RAT_WARLOCK_SOURCE, buildRatWarlockIr } from '../src/core/intake/__tests__/fixtures/rat-warlock';
 import { createEncounterIntakeProviders } from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
+import {renderMonsterFeatureName} from '@fvtt-json-generator/intake-ai/renderer';
 
 const originalFetch = globalThis.fetch;
 
@@ -23,26 +25,24 @@ function request(): EncounterAutomationRequest {
   ir.creature.actions[0]!.evidence = [{ start, end: start + quote.length, quote }];
   return {
     source: RAT_WARLOCK_SOURCE,
-    actors: [{ key: 'rat', ir, source: RAT_WARLOCK_SOURCE, artifact: {} }],
+    actors: [{ key: 'rat', ir, source: RAT_WARLOCK_SOURCE, artifact: {items:[{name:renderMonsterFeatureName(ir.creature.actions[0]!),system:{activities:{attack:{type:'attack',attack:{}}}}}]} }],
   };
 }
 
 function automation(input = request()): EncounterAutomationIR {
   const feature = input.actors[0]!.ir.creature.actions[0]!;
   const quote = '啃咬Bite。近战武器攻击：命中+4，触及5尺，单一目标。命中：4（1d4+2）穿刺伤害。';
-  return {
-    version: 1,
+  return compileEncounterSelection({
+    version: 2,
     name: '鼠神邪术师战斗辅助',
-    command: `const rat = forgeEncounter.actors.rat;
-const selected = canvas.tokens.controlled.find((token) => token.actor === rat);
-return { showPanel() { return selected; }, history: [] };`,
     notes: '仅处理来源明确的 GM 辅助步骤。',
     rules: [{
-      actorKey: 'rat', featureName: feature.name, section: 'action', quote,
-      gmSteps: ['GM 按该来源动作与已选中指示物的 actor 核对后处理。'],
+      id:'rat-manual',kind:'gm-manual',parameters:{},actorKey: 'rat', featureName: feature.name, section: 'action', quote,
+      gmSteps: ['GM 按该来源动作与已选中指示物的 actor 核对后处理。','特殊后果不自动执行，由 GM 手动追踪并结束。'],
     }],
+    legendaryRecovery:[],
     manualSteps: ['未涵盖的目标选择仍由 GM 决定。'],
-  };
+  },input);
 }
 
 function installFakeTransport(payloads: unknown[], seen: Array<{ url: string; body: any }> = []): void {
@@ -71,7 +71,9 @@ describe('encounter automation Intake', () => {
       ['prototype key', JSON.parse('{"version":1,"name":"x","command":"const rat = forgeEncounter.actors.rat; return { showPanel() {} };","notes":"","rules":[{"actorKey":"rat","featureName":"啃咬","section":"action","quote":"近战武器攻击：命中+4，触及5尺，单一目标。命中：4（1d4+2）穿刺伤害。","gmSteps":["GM处理"]}],"manualSteps":[],"__proto__":{}}')],
     ];
     for (const [label, value] of invalids) expect(() => decodeEncounterAutomation(value, input), label).toThrow();
-    expect(decodeEncounterAutomation({ ...valid, rules: [] }, input).rules).toEqual([]);
+    expect(()=>decodeEncounterAutomation({ ...valid, rules: [] }, input)).toThrow();
+    const empty=compileEncounterSelection({...valid.selection!,rules:[]},input);
+    expect(decodeEncounterAutomation(empty,input).rules).toEqual([]);
     expect(renderEncounterActorSource(input.actors[0]!.ir, [])).not.toContain('行为机制:');
   });
 
@@ -160,12 +162,12 @@ describe('encounter automation Intake', () => {
     }
   });
 
-  test('one source-bound compiler failure gets one data-only correction with unchanged actor evidence',async()=>{
+  test('one structural compiler failure gets one data-only correction with unchanged actor evidence',async()=>{
     const input=request();
     const feature=input.actors[0]!.ir.creature.actions[0]!;
     const proposed={version:2,name:'Reviewed control',notes:'',manualSteps:[],legendaryRecovery:[],rules:[
       {id:'manual',kind:'gm-manual',actorKey:'rat',featureName:feature.name,section:'action',
-        quote:feature.evidence![0]!.quote,gmSteps:['Read source.','Apply the rule.'],parameters:{}}]};
+        quote:feature.evidence![0]!.quote,gmSteps:['Read source.'],parameters:{}}]};
     const corrected={...proposed,rules:[]};
     const seen:Array<{url:string;body:any}>=[];
     installFakeTransport([proposed,corrected],seen);
@@ -179,7 +181,7 @@ describe('encounter automation Intake', () => {
     expect(second.actors).toEqual(first.actors);
     expect(second.prior).toEqual({version:3,rules:[{featureRef:'feature-1-action-1',kind:'gm-manual',parameters:{},gmSteps:proposed.rules[0]!.gmSteps}],legendaryRecovery:[],unresolved:[]});
     expect(second.findings).toHaveLength(1);
-    expect(second.findings[0]).toContain('source-bound compilation');
+    expect(second.findings[0]).toContain('closed-data compilation');
   });
 
   test('second data failure is typed, and executable fields never enter correction prior or output',async()=>{
@@ -231,20 +233,17 @@ describe('encounter automation Intake', () => {
     expect(source).toContain('规则来源: source-derived');
     expect(source).toContain('说明: 啃咬Bite。近战武器攻击');
     const command = buildEncounterMacroCommand(value);
-    expect(command).toContain('game.forgeEncounterRuntimes');
-    expect(command).toContain('forgeEncounter.packageHash');
-    expect(command).toContain('return await (async function startEncounterRuntime()');
+    expect(command).toBe(value.command);
+    expect(command).toContain("game.modules.get('fvtt-json-forge').api.startEncounterAutomation(forgeEncounter,");
     expect(command).not.toContain('globalThis.forgeEncounter');
-    expect(command).toContain('registeredHooks');
-    expect(command).toContain('await current.showPanel()');
-    expect(command).toContain('companion?.stop?.()');
+    expect(command).not.toContain('registeredHooks');
 
     const response = await convertFinalActorSource(buildForgeActorRequest({
       content: source, displayName: 'Rat', requestId: 'encounter-automation-shape', fvttVersion: '14.364', systemVersion: '5.3.3',
     }));
     expect('result' in response).toBeTrue();
     if (!('result' in response)) throw new Error('Expected a browser runtime result.');
-    expect(response.result.status).toBe('needs_review');
+    expect(response.result.status,JSON.stringify(response.result.diagnostics)).toBe('needs_review');
     if (!('artifact' in response.result)) throw new Error('Expected formal artifact for review.');
     const carrier = (response.result.artifact!.items as any[]).find((item) => item.name === '啃咬 Bite');
     expect(carrier.flags.fvttJsonGenerator.behaviorMechanics).toEqual([expect.objectContaining({
@@ -252,26 +251,36 @@ describe('encounter automation Intake', () => {
     })]);
   });
 
-  test('uses the imported macro lexical context prefix and waits for startup', async () => {
+  test('the fixed selection command uses imported lexical bindings and awaits its module API', async () => {
     const input = request();
     const command = buildEncounterMacroCommand(automation(input));
     const prefix = 'const forgeEncounter = Object.freeze({ ...{"actors":{"rat":"Actor.0123456789abcdef"},"bindingKeys":{"rat":"rat"},"covers":[],"packageHash":"package-hash","packageId":"rat-encounter"}, actors: Object.freeze({"rat":"Actor.0123456789abcdef"}) });\n';
     const scope = globalThis as Record<string, unknown>;
     const saved = { game: scope.game, canvas: scope.canvas, Hooks: scope.Hooks, forgeEncounter: scope.forgeEncounter };
     const released: Array<[string, number]> = [];
+    let releaseStart: (()=>void)|undefined;
+    const startGate=new Promise<void>(resolve=>{releaseStart=resolve;});
+    const companion={showPanel(){},history:[]};
     try {
       scope.forgeEncounter = undefined;
-      scope.game = { user: { isGM: true }, version: '14.364', system: { id: 'dnd5e', version: '5.3.3' } };
+      const starts:any[]=[];
+      scope.game = { user: { isGM: true }, version: '14.364', system: { id: 'dnd5e', version: '5.3.3' },
+        modules:new Map([['fvtt-json-forge',{api:{startEncounterAutomation:async(binding:unknown,configuration:unknown)=>{
+          starts.push({binding,configuration});await startGate;return companion;
+        }}}]]) };
       scope.canvas = { scene: {}, tokens: { controlled: [] } };
       scope.Hooks = { on: () => 1, once: () => 2, off: (name: string, id: number) => { released.push([name, id]); } };
       const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as new (body: string) => () => Promise<any>;
       const start = new AsyncFunction(`${prefix}${command}`);
-      const runtime = await start();
-      expect(runtime.packageHash).toBe('package-hash');
-      expect((scope.game as any).forgeEncounterRuntimes.get('rat-encounter')).toBe(runtime);
-      expect(await start()).toBe(runtime);
-      await runtime.stop();
-      expect((scope.game as any).forgeEncounterRuntimes.has('rat-encounter')).toBeFalse();
+      let settled=false;
+      const pending=start().then(value=>{settled=true;return value;});
+      await Promise.resolve();
+      expect(starts).toHaveLength(1);
+      expect(settled).toBe(false);
+      expect(starts[0].binding.actors).toEqual({rat:'Actor.0123456789abcdef'});
+      expect(starts[0].configuration.rules[0].kind).toBe('gm-manual');
+      releaseStart!();
+      expect(await pending).toBe(companion);
       expect(released).toEqual([]);
     } finally {
       scope.game = saved.game;
@@ -281,8 +290,11 @@ describe('encounter automation Intake', () => {
     }
   });
 
-  test('serializes concurrent starts by package ID and releases a failed start for an explicit retry', async () => {
+  test('the explicitly reviewed legacy wrapper serializes starts and releases a failed start for an explicit retry', async () => {
     const input = request();
+    // Historical manually reviewed imports have no AI selection. Their wrapper
+    // lifecycle remains a separate compatibility boundary from AI compilation.
+    const {selection:_,...legacyAutomation}=automation(input);
     const prefix = 'const forgeEncounter = Object.freeze({ ...{"actors":{"rat":"Actor.0123456789abcdef"},"bindingKeys":{"rat":"rat"},"covers":[],"packageHash":"package-hash","packageId":"rat-encounter"}, actors: Object.freeze({"rat":"Actor.0123456789abcdef"}) });\n';
     const scope = globalThis as Record<string, any>;
     const saved = { game: scope.game, canvas: scope.canvas, Hooks: scope.Hooks };
@@ -300,7 +312,7 @@ describe('encounter automation Intake', () => {
       scope.__encounterStarts = 0;
       scope.__encounterStartGate = firstStartGate;
       const command = buildEncounterMacroCommand({
-        ...automation(input),
+        ...legacyAutomation,
         command: `const rat = forgeEncounter.actors.rat;
 globalThis.__encounterStarts += 1;
 Hooks.on('encounter-test', () => rat);
@@ -325,7 +337,7 @@ return { showPanel() {}, history: [] };`,
       let releaseFailure: (() => void) | undefined;
       scope.__encounterFailureGate = new Promise<void>((resolve) => { releaseFailure = resolve; });
       const failedCommand = buildEncounterMacroCommand({
-        ...automation(input),
+        ...legacyAutomation,
         command: `const rat = forgeEncounter.actors.rat;
 Hooks.on('encounter-failure', () => rat);
 await globalThis.__encounterFailureGate;
@@ -348,7 +360,7 @@ return { showPanel() {}, history: [] };`,
       let releasePanelFailure: (() => void) | undefined;
       scope.__encounterPanelFailureGate = new Promise<void>((resolve) => { releasePanelFailure = resolve; });
       const panelFailureCommand = buildEncounterMacroCommand({
-        ...automation(input),
+        ...legacyAutomation,
         command: `const rat = forgeEncounter.actors.rat;
 globalThis.__encounterPanelStarts += 1;
 Hooks.on('encounter-panel-failure', () => rat);

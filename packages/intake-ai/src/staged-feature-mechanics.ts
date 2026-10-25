@@ -1,4 +1,5 @@
 import type { CanonicalFeature } from './types';
+import {nativeAreaShape} from '@fvtt-json-generator/models/source-operations';
 import {sourceActorNameMatches} from './source-subject';
 import {stagedDamageLabels,stagedDamageType} from './staged-source-facts';
 import {sourceManualSpellUses,sourceGmTriggeredSave,sourceFailedSaveStatuses} from '@fvtt-json-generator/models/source-rule-facts';
@@ -202,7 +203,7 @@ export function sourceOperationFeatureErrors(feature:CanonicalFeature,actorName?
       const existingArea=op.range===undefined&&modelProven?sourceOperationExistingArea(feature.description,feature.sourceOperations!,index):undefined;
       const placement=sourceActorRangeDistance(areaQuote,actorName)??sourceAdjacentPointPlacement(feature.description,op.proof?.range,areaQuote,actorName)
         ??(modelProven?ownedHeaderRange:undefined);
-      const ownEmanation=op.aoe.shape==='radius'&&(/^(?:Each|Every|Any) creature within \d+ (?:feet|ft\.) of /iu.test(areaQuote.trim())&&placement===op.aoe.radius
+      const ownEmanation=nativeAreaShape(op.aoe.shape,op.aoe.radius,areaQuote)==='radius'&&(/^(?:Each|Every|Any) creature within \d+ (?:feet|ft\.) of /iu.test(areaQuote.trim())&&placement===op.aoe.radius
         ||modelProven&&sourceOperationSelfArea(feature.description,op,actorName));
       if(ownEmanation&&op.range!==undefined)errors.push({field:`sourceOperations/${index}/range`,message:'The source Actor is this emanation centre; its radius is not a remote placement range.'});
       if(!existingArea&&!ownEmanation&&(placement===undefined||op.range!==placement))errors.push({field:`sourceOperations/${index}/range`,message:'A remote area needs its source-proven placement range; it cannot become a self-centred template.'});

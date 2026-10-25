@@ -15,6 +15,8 @@ import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator'
 import {sourceSpellGrantTokens,sourceManualSpellGrant} from '../packages/intake-ai/src/spell-grant-tokens';
 import {officialDragonSeeds} from './fixtures/forge-2024-dragon-seeds';
 import type {MonsterIntakeIR} from '../packages/intake-ai/src/types';
+import {validateStagedStaticSourceFacts} from '../packages/intake-ai/src/staged-source-facts';
+import {buildValidLurkerIr} from '../src/core/intake/__tests__/fixtures/lurker';
 import {namespaceDuplicateSpellRefIds} from '../packages/intake-ai/src/spell-ref-identities';
 
 const header='Proof Sentinel\nMedium construct, unaligned\nArmor Class 14\nHit Points 30 (4d8 + 12)\nSpeed 30 ft.\nSTR DEX CON INT WIS CHA\n10 10 16 10 14 16\nChallenge 2\n';
@@ -150,6 +152,45 @@ test('daily spell grammar does not turn an unknown trigger, wrong quota or gener
     'Recovery (2/Day). If Bloodied, the sentinel casts the Fireball spell, using the same spellcasting ability as Spellcasting.',
     'Recovery (2/Day). The sentinel casts the Fireball spell if Bloodied, using the same spellcasting ability as Spellcasting.',
   ])expect(sourceDailySpellAction(source)).toBeUndefined();
+});
+
+test('daily choices keep every comma-separated spell and its exact wrapped coordinates',()=>{
+  for(const names of ['Blink, Dispel\nMagic, or Revivify','Blink, Dispel\nMagic, Revivify, or Lesser Restoration','Blink, Dispel\nMagic, Revivify or Lesser Restoration']){
+    const source=`Recovery (3/Day). The sentinel casts ${names}, using the same spellcasting ability as Spellcasting.`;
+    const parsed=sourceDailySpellAction(source)!;
+    expect(parsed).toBeDefined();expect(parsed.count).toBe(3);expect(parsed.parent).toBe('Spellcasting');
+    expect(parsed.spells.map(s=>s.name)).toEqual(names.includes('Lesser')?['Blink','Dispel Magic','Revivify','Lesser Restoration']:['Blink','Dispel Magic','Revivify']);
+    expect(parsed.spells.every(s=>source.slice(s.start,s.end).replace(/\s+/gu,' ')===s.name)).toBe(true);
+  }
+  for(const names of ['Blink, Revivify','Blink and Revivify','Blink or Revivify, Lesser Restoration','Blink,, or Revivify','Blink or Blink']){
+    expect(sourceDailySpellAction(`Recovery (3/Day). The sentinel casts ${names}, using the same spellcasting ability as Spellcasting.`)).toBeUndefined();
+  }
+});
+
+test('language choice connector is presentation, while the chosen count and language remain checked',()=>{
+  const creature=buildValidLurkerIr().creature,source='Languages Common plus one other language';
+  for(const custom of ['one other language','plus one other language']){
+    creature.languages={values:['common'],custom};const before=JSON.stringify(creature);
+    expect(()=>validateStagedStaticSourceFacts(source,creature,'languages')).not.toThrow();expect(JSON.stringify(creature)).toBe(before);
+  }
+  for(const languages of [{values:['common'],custom:'two other languages'},{values:['elvish'],custom:'one other language'},{values:['common'],custom:''}]){
+    creature.languages=languages;expect(()=>validateStagedStaticSourceFacts(source,creature,'languages')).toThrow();
+  }
+});
+test('a printed Primordial dialect survives as either the full phrase or the same language and custom note',()=>{
+  const creature=buildValidLurkerIr().creature;
+  for(const [source,languages] of [
+    ['Languages Primordial (Ignan)',{values:['Primordial'],custom:'Ignan'}],
+    ['Languages Primordial (Ignan)',{values:['Primordial (Ignan)']}],
+    ['语言 原初语（火族语）',{values:['primordial'],custom:'火族语'}],
+  ] as const){
+    creature.languages=structuredClone(languages) as any;const before=JSON.stringify(creature);
+    expect(()=>validateStagedStaticSourceFacts(source,creature,'languages')).not.toThrow();expect(JSON.stringify(creature)).toBe(before);
+  }
+  for(const languages of [{values:['Primordial'],custom:'Aquan'},{values:['Primordial']},{values:['Ignan']}]){
+    creature.languages=languages;expect(()=>validateStagedStaticSourceFacts('Languages Primordial (Ignan)',creature,'languages')).toThrow();
+  }
+  creature.languages={values:['Common']};expect(()=>validateStagedStaticSourceFacts('Languages Common (cannot speak)',creature,'languages')).toThrow();
 });
 for(const ability of ['Charisma','Wisdom','Intelligence'])test('a later named spell form restriction cannot qualify the parent '+ability+' profile',()=>{
   const source=`Spellcasting. The sentinel casts the following spells, using\n${ability} as the spellcasting ability (spell save DC 15):\nAt Will: Shapechange (Beast form only, no Temporary Hit Points gained from the spell), Detect Magic`;

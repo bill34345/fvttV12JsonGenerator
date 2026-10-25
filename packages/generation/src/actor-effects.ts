@@ -98,7 +98,7 @@ export function enforceCoreConditionLifecycles(actor: any, sourceByItem?: Readon
   for (const [index, item] of (actor.items ?? []).entries()) {
     // These paths already prove each native failure state from its own source
     // operation and exclude complex lifecycles before constructing the Effect.
-    if (item.flags?.fvttJsonGenerator?.manualRule) continue;
+    if (item.flags?.fvttJsonGenerator?.manualRule || item.flags?.fvttJsonGenerator?.literalMechanics?.version === 1) continue;
     const sourceText = sourceByItem?.get(index) ?? String(item.system?.description?.value ?? '').replace(/<[^>]*>/gu, ' ').replace(/&nbsp;/gu, ' ').trim();
     const removed = new Set<string>(), statuses = new Set<string>();
     for (const effect of item.effects ?? []) {

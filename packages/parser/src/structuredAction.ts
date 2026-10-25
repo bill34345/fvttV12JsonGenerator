@@ -1,5 +1,5 @@
 import { splitBilingualName } from '@fvtt-json-generator/models/display-name';
-import { sourceOperationErrors,isSourceCandidateReview,candidateSourceOperationShapeErrors } from '@fvtt-json-generator/models/source-operations';
+import { sourceOperationStructureErrors,isSourceCandidateReview } from '@fvtt-json-generator/models/source-operations';
 import type {
   StructuredActionData,
   DamagePart,
@@ -15,7 +15,7 @@ import type {
   TriggerType,
 } from '@fvtt-json-generator/models/action';
 import { parseSupportedRuleFacts } from './sourceRuleFacts';
-import {sourceManualSpellUses,sourceGmTriggeredSave} from '@fvtt-json-generator/models/source-rule-facts';
+import {SOURCE_NATIVE_FAILURE_LABELS} from '@fvtt-json-generator/models/source-rule-facts';
 import {
   isWeaponMasteryId,
   parseWeaponConfiguration,
@@ -47,6 +47,29 @@ const AOE_SHAPE_MAP: Record<string, string> = {
   '矩形': 'rect',
 };
 
+const closedRecord = (value: unknown, keys: readonly string[]): value is Record<string, unknown> => !!value
+  && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every(key => keys.includes(key));
+const nonempty = (value: unknown): value is string => typeof value === 'string' && !!value.trim();
+const positiveInteger = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) > 0;
+const nativeStatuses = (value: unknown): boolean => Array.isArray(value) && value.length <= 15
+  && value.every(status => typeof status === 'string' && Object.hasOwn(SOURCE_NATIVE_FAILURE_LABELS, status))
+  && new Set(value).size === value.length;
+
+/** Typed GM fields are authored IR data; descriptions never prove or rebuild them. */
+function assertExplicitGmFields(record: Record<string, unknown>, executionMode: unknown): void {
+  if (record.spellUseRecords !== undefined && (executionMode !== 'native-with-gm'
+    || !Array.isArray(record.spellUseRecords) || !record.spellUseRecords.length || record.spellUseRecords.length > 128
+    || record.spellUseRecords.some(value => !closedRecord(value, ['name', 'max', 'period'])
+      || !nonempty(value.name) || !positiveInteger(value.max) || value.period !== 'day'))) throw new Error('InvalidManualSpellUsesStructure');
+  if (record.gmTriggeredSave !== undefined) {
+    const save = record.gmTriggeredSave;
+    if (executionMode !== 'native-with-gm' || !closedRecord(save, ['dc', 'ability', 'trigger', 'sourceText', 'failureStatuses'])
+      || !positiveInteger(save.dc) || typeof save.ability !== 'string' || !['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(save.ability)
+      || !nonempty(save.trigger) || !nonempty(save.sourceText) || !nativeStatuses(save.failureStatuses)) throw new Error('InvalidGmTriggeredSaveStructure');
+  }
+  if (record.nativeFailureStatuses !== undefined && (executionMode !== 'native-with-gm' || !nativeStatuses(record.nativeFailureStatuses))) throw new Error('InvalidNativeFailureStatusesStructure');
+}
+
 export class StructuredActionParser {
   public parseStructuredSection(section: unknown, sectionName: string): StructuredActionData[] {
     if (!section || !Array.isArray(section)) {
@@ -65,20 +88,14 @@ export class StructuredActionParser {
     const describe = (entry as Record<string, unknown>)['描述'] ?? (entry as Record<string, unknown>)['describe'] ?? '';
 
     const record = entry as Record<string, unknown>;
+    if (record.literalMechanics !== undefined && record.literalMechanics !== true) throw new Error('InvalidLiteralMechanics');
     if(record.candidateReview!==undefined&&!isSourceCandidateReview(record.candidateReview))throw new Error('InvalidSourceCandidateReview');
     if(record.candidateCounters!==undefined&&(!record.candidateReview||!Array.isArray(record.candidateCounters)||record.candidateCounters.some((counter:any)=>!counter||typeof counter.name!=='string'||!counter.name.trim()||!Number.isSafeInteger(counter.max)||counter.max<1||counter.recovery!==null&&typeof counter.recovery!=='string')))throw Error('InvalidSourceCandidateCounter');
     const executionMode = record['执行模式'] ?? record.executionMode;
     if (executionMode !== undefined && executionMode !== 'gm-manual'&&executionMode!=='native-with-gm') throw new Error('InvalidFeatureExecutionMode');
     if(executionMode==='native-with-gm'&&(!String(record.nativeRuleText??'').trim()||!String(record.manualRemainder??'').trim()))throw new Error('InvalidMixedFeatureBoundary');
-    if(record.spellUseRecords!==undefined){
-      const expected=sourceManualSpellUses(String(describe));
-      if(executionMode!=='native-with-gm'||!expected||JSON.stringify(record.spellUseRecords)!==JSON.stringify(expected.records)||record.nativeRuleText!==expected.ruleText)
-        throw new Error('InvalidManualSpellUsesSource');
-    }
-    if(record.gmTriggeredSave!==undefined&&(executionMode!=='native-with-gm'||JSON.stringify(record.gmTriggeredSave)!==JSON.stringify(sourceGmTriggeredSave(String(describe)))))throw new Error('InvalidGmTriggeredSaveSource');
-    if(record.nativeFailureStatuses!==undefined&&executionMode!=='native-with-gm')throw new Error('InvalidNativeFailureStatusesSource');
-    if(record.sourceOperations!==undefined&&(executionMode!=='native-with-gm'||(record.candidateReview
-      ?candidateSourceOperationShapeErrors(record.sourceOperations):sourceOperationErrors(String(describe),record.sourceOperations,Array.isArray(record.sourceContext)?record.sourceContext:[])).length))throw new Error('InvalidSourceOperations');
+    assertExplicitGmFields(record, executionMode);
+    if(record.sourceOperations!==undefined&&(executionMode!=='native-with-gm'||sourceOperationStructureErrors(record.sourceOperations).length))throw new Error('InvalidSourceOperations');
     if(record.sourceContext!==undefined&&(!Array.isArray(record.sourceContext)||record.sourceContext.some(context=>typeof context!=='string'||!context.trim())))throw new Error('InvalidSourceOperationContext');
     if(record.sourceFeatureId!==undefined&&(typeof record.sourceFeatureId!=='string'||!/^\w{16}$/u.test(record.sourceFeatureId)))throw new Error('InvalidSourceFeatureIdentity');
     if (executionMode === 'gm-manual') {
@@ -117,11 +134,12 @@ export class StructuredActionParser {
       ...(record.candidateReview?{candidateReview:structuredClone(record.candidateReview) as StructuredActionData['candidateReview']}:{}),
       ...(record.candidateCounters?{candidateCounters:structuredClone(record.candidateCounters) as StructuredActionData['candidateCounters']}:{}),
       name: literalName?String(name):this.extractName(String(name)),
+      ...(record.literalMechanics === true ? { literalMechanics: true as const } : {}),
       ...(executionMode === 'gm-manual'||executionMode==='native-with-gm' ? { executionMode } : {}),
       ...(executionMode==='native-with-gm'?{nativeRuleText:String(record.nativeRuleText),manualRemainder:String(record.manualRemainder)}:{}),
-      ...(record.spellUseRecords!==undefined?{spellUseRecords:sourceManualSpellUses(String(describe))!.records}:{}),
-      ...(record.gmTriggeredSave!==undefined?{gmTriggeredSave:sourceGmTriggeredSave(String(describe))!}:{}),
-      ...(record.nativeFailureStatuses!==undefined?{nativeFailureStatuses:record.nativeFailureStatuses as StructuredActionData['nativeFailureStatuses']}:{}),
+      ...(record.spellUseRecords!==undefined?{spellUseRecords:structuredClone(record.spellUseRecords) as StructuredActionData['spellUseRecords']}:{}),
+      ...(record.gmTriggeredSave!==undefined?{gmTriggeredSave:structuredClone(record.gmTriggeredSave) as StructuredActionData['gmTriggeredSave']}:{}),
+      ...(record.nativeFailureStatuses!==undefined?{nativeFailureStatuses:structuredClone(record.nativeFailureStatuses) as StructuredActionData['nativeFailureStatuses']}:{}),
       ...(record.sourceOperations!==undefined?{sourceOperations:structuredClone(record.sourceOperations) as StructuredActionData['sourceOperations']}:{}),
       ...(record.sourceContext!==undefined?{sourceContext:[...record.sourceContext as string[]]}:{}),
       ...(record.sourceFeatureId!==undefined?{sourceFeatureId:record.sourceFeatureId as string}:{}),
@@ -138,8 +156,8 @@ export class StructuredActionParser {
       describe: String(describe),
     };
     if (rawDamage !== undefined) action.sourceDamageParts = this.parseSourceDamageParts(rawDamage);
-    action.sourceRuleFacts = executionMode === 'gm-manual'||executionMode==='native-with-gm' ? [] : parseSupportedRuleFacts(action.describe ?? '');
-    if(executionMode==='native-with-gm'&&['none','half','full'].includes(String(record.saveOutcome)))action.saveOutcome=record.saveOutcome as 'none'|'half'|'full';
+    action.sourceRuleFacts = record.literalMechanics === true || executionMode === 'gm-manual'||executionMode==='native-with-gm' ? [] : parseSupportedRuleFacts(action.describe ?? '');
+    if((record.literalMechanics === true || executionMode==='native-with-gm')&&['none','half','full'].includes(String(record.saveOutcome)))action.saveOutcome=record.saveOutcome as 'none'|'half'|'full';
     const explicitRange=record['范围']??record.range;
     if(typeof explicitRange==='string'&&explicitRange.trim())action.range=explicitRange.trim();
     if(typeof record.targetSpecial==='string'&&record.targetSpecial.trim())action.targetSpecial=record.targetSpecial.trim();
@@ -232,6 +250,10 @@ export class StructuredActionParser {
       action.embeddedEffects = embeddedEffects;
     }
 
+    if (action.spellUseRecords && (action.type !== 'utility' || action.uses || action.recharge || action.perLongRest !== undefined)) throw new Error('InvalidManualSpellUsesCombination');
+    if (action.gmTriggeredSave && (action.type !== 'attack' || action.DC !== undefined || action.nativeFailureStatuses !== undefined)) throw new Error('InvalidGmTriggeredSaveCombination');
+    if (action.gmTriggeredSave && (!action.attackType || !Number.isSafeInteger(action.toHit))) throw new Error('InvalidGmTriggeredSavePrimaryAttack');
+    if (action.nativeFailureStatuses && (action.type !== 'save' || !positiveInteger(action.DC) || !action.ability || !['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(action.ability))) throw new Error('InvalidNativeFailureStatusesCombination');
     return action;
   }
 

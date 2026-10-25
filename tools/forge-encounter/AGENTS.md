@@ -1,6 +1,6 @@
-# Forge 人类MD Intake 与战斗包制作
+# Forge 生物生成与关联召唤物工具
 
-本目录承载人类MD多生物Intake的CLI入口，以及携带正式来源和配套脚本的便携战斗包制作。Actor数据必须来自正式workflow，并由接收端重新生成；不在打包器里手写或修补Actor JSON。examples是明确的样本来源和专用宏，不作为通用AI推断规则。
+本目录承载规则资料Intake的CLI入口，以及携带正式来源和配套脚本的生物导入文件制作。本体及能力关联的召唤生物／物件统一属于生物生成，面向用户称“生物与召唤物”，不使用encounter package或战斗包作独立功能分类；旧代码符号和协议仅作兼容标识，命名依据见[当前决定](../../docs/plans/2026-10-20-forge-ab-current-state.md)。Actor数据必须来自正式workflow，并由接收端重新生成；不在打包器里手写或修补Actor JSON。examples是明确的样本来源和专用宏，不作为通用AI推断规则。
 
 真实AI调用使用已配置的专用Provider；先扫描来源与显示名称中的配置凭据，逐阶段保留来源hash、IR与审阅记录。本地入口默认使用DS API deepseek-flash（V4.1 Flash），从外部现有凭据读取到内存，不持久化Key。Luna Max仅负责已授权的server-mirror验收操作，完成后返回报告，不持续监听。审核不通过不输出可导入包。
 

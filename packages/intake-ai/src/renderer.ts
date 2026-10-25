@@ -2,9 +2,8 @@ import { displayName } from '@fvtt-json-generator/models/display-name';
 import yaml from 'js-yaml';
 export {prepareMonsterCandidateDelivery} from './candidate-delivery';
 import {sizeChoiceProgramNote} from './source-size';
-import {sourceLegendaryLairResistance} from '@fvtt-json-generator/models/source-operations';
+import {nativeAreaShape} from '@fvtt-json-generator/models/source-operations';
 import { composeSourceTextPresentation, sourceTextPresentationBoundary, type SourceTextPresentation } from '@fvtt-json-generator/models/source-text-presentation';
-import {sourceDailySpellAction} from './daily-spell-action';
 import {validateMonsterIntakeIR} from './validator';
 import type {SourceCandidateReview} from '@fvtt-json-generator/models/source-operations';
 import type {
@@ -99,7 +98,7 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR, source?:string)
     传奇动作次数: creature.legendary?.max,
     ...(creature.legendary?.lairMax?{'intake-legendary-ledger':{
       max:creature.legendary.max,lairMax:creature.legendary.lairMax,recovery:creature.legendary.recovery,
-      ...(()=>{const counters=creature.traits.flatMap(feature=>{const counter=sourceLegendaryLairResistance(feature.name,feature.description,[creature.identity.name,creature.identity.englishName].filter((value):value is string=>!!value));return counter?[counter]:[];});if(counters.length>1)throw Error('Conflicting source legendary resistance counters');return counters[0]?{resistanceMax:counters[0].max,resistanceLairMax:counters[0].lairMax}:{};})(),
+      ...(creature.legendary.resistanceMax===undefined?{}:{resistanceMax:creature.legendary.resistanceMax,resistanceLairMax:creature.legendary.resistanceLairMax}),
     }}:{}),
     施法属性: prepared?.ability??(castingAbilities.length===1?castingAbilities[0]:undefined),
     施法者等级: prepared?.casterLevel,
@@ -221,6 +220,7 @@ function stableIdPart(value: string): string {
 
 function renderSpellcastingFeature(group: CanonicalSpellcastingGroup): Record<string, unknown> {
   const native=group.usageGroups.length>0,manual=group.manualGrants?.map(ref=>ref.quote).join('\n');
+  const shared=group.usageGroups.find(usage=>usage.usage==='daily-shared');
   return {
     ...renderFeature({
       name: group.featureName,
@@ -233,7 +233,7 @@ function renderSpellcastingFeature(group: CanonicalSpellcastingGroup): Record<st
       ...(group.activationType?{activationType:group.activationType}:{}),
       ...(group.recharge?{recharge:group.recharge}:{}),
       ...(group.legendaryCost!==undefined?{legendaryCost:group.legendaryCost}:{}),
-      ...(sourceDailySpellAction(group.description)?{uses:{max:sourceDailySpellAction(group.description)!.count,period:'day' as const}}:{}),
+      ...(shared?.usage==='daily-shared'?{uses:{max:shared.count,period:'day' as const}}:{}),
     }, 'trait'),
     // Source-derived machine linkage; it does not alter the visible description.
     ...(native?{spellcastingFeatureKey: group.groupId}:{}),
@@ -254,6 +254,9 @@ export function renderMonsterFeatureName(feature: Pick<CanonicalFeature, 'name'|
 function renderFeature(feature: CanonicalFeature, section: string,sharedPool=false): Record<string, unknown> {
   const result: Record<string, unknown> = {
     名称: renderMonsterFeatureName(feature),
+    // Program-owned projection boundary. Full AI prose remains visible, but
+    // only the explicit fields below may supply executable mechanics.
+    literalMechanics: true,
     // Canonical names/aliases have already been rendered. Do not let the
     // legacy bilingual YAML grammar reinterpret an authored (Prototype).
     literalName: true,
@@ -313,7 +316,7 @@ function renderFeature(feature: CanonicalFeature, section: string,sharedPool=fal
     if(feature.save.outcome)result.saveOutcome=feature.save.outcome;
     if (feature.save.condition) result.豁免条件 = feature.save.condition;
   }
-  if (feature.aoe) result.AoE = { 形状: AOE_ZH[feature.aoe.shape], 范围: feature.aoe.radius };
+  if (feature.aoe) result.AoE = { 形状: AOE_ZH[nativeAreaShape(feature.aoe.shape,feature.aoe.radius,feature.nativeRuleText??feature.description)], 范围: feature.aoe.radius };
   if (feature.appliedConditions?.length) {
     result.内嵌效果 = feature.appliedConditions.flatMap((applied) => {
       const types = applied.statuses.length > 0 ? applied.statuses : [applied.condition ?? 'Effect'];

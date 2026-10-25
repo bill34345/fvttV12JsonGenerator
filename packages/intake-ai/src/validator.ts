@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { validateMonsterIntakeStructure } from './structure-validator';
 import {sourceDamageUpgradeExpectations,sourceDamageUpgradeRelations} from './source-damage-upgrade';
 import { explicitMovementHoverEvidence } from './movement-evidence';
 import { dailySpellGrantLabel, DAILY_SPELL_LABEL, sourceSpellComponentClause } from './spell-grant-label';
@@ -92,7 +93,17 @@ function validateSourceBaseFacts(source:string,ir:MonsterIntakeIR,range:{start:n
   return header;
 }
 
+/** Default import validation checks structure and source identity only. */
 export function validateMonsterIntakeIR(
+  source: string,
+  value: unknown,
+  options: { coverageRange?: { start: number; end: number } } = {},
+): IntakeValidationResult {
+  return validateMonsterIntakeStructure(source, value, options);
+}
+
+/** Explicit offline source audit. Never run as the default import validator. */
+export function auditMonsterIntakeSource(
   source: string,
   value: unknown,
   options: { coverageRange?: { start: number; end: number } } = {},
@@ -324,7 +335,9 @@ function validateCreature(
         if(feature.executionMode==='native-with-gm'){
           const parent=completeSourceFeatureEvidence(source,ir,feature,featurePath,scope);
           if(feature.sourceOperations!==undefined&&!parent)finding('SOURCE_OPERATION_PARENT_CONFLICT',featurePath+'/evidence','Source operations require the complete exact parent ability in the current candidate, with its own feature-index claim and mechanical coverage.','evidence',feature.evidence);
-          if(!parent||!mixedFeatureSourceMatches(feature,section,ir.creature.identity.name,sourceFeatureLegendaryCost(source,ir,feature,featurePath,scope)))
+          // SourceOP parents, facts and carriers already have specific findings
+          // above. Do not turn one field conflict into a second generic error.
+          if(feature.sourceOperations===undefined&&(!parent||!mixedFeatureSourceMatches(feature,section,ir.creature.identity.name,sourceFeatureLegendaryCost(source,ir,feature,featurePath,scope))))
             finding('MIXED_FEATURE_SOURCE_CONFLICT',featurePath,'Mixed operations require complete source identity and exact primary facts; the remainder cannot create executable fields.','evidence');
         }
         else if (feature.executionMode !== 'gm-manual') finding('INVALID_FEATURE_EXECUTION_MODE',featurePath+'/executionMode','Unsupported feature execution mode.','schema');
@@ -774,7 +787,7 @@ function validateSpellcasting(
       if(!referenced||!sameReferencedSpellMechanics(group,referenced.expected,groups,referenced.groups,referenced.level))
         finding('SPELL_REFERENCE_SOURCE_MISMATCH',path,'The named source parent, exact spell and independent use quota or at-will reuse, profile, components and complete child evidence must agree; unknown or altered references cannot create executable Casts.','evidence',[parent]);
     }
-    validateSpellcastingGroupFields(source, group, path, finding, referenced?.owner??parent);
+    validateSpellcastingGroupFields(source, group, path, finding, referenced?.owner??parent, daily&&referenced?parent:undefined);
     // A wrong visible description remains rejected below. Its unchanged exact
     // complete source evidence must still expose an omitted component fact.
     const carrier=Array.isArray(group.evidence)&&group.evidence.length===1?group.evidence[0]:undefined;
@@ -803,7 +816,7 @@ function validateSpellcasting(
           const token=sourceManualSpellGrant(parent,manual);return token?[token]:[];
         }):[];
         const inheritedRestrictions=reference&&referenced?referenced.expected.usageGroups.flatMap(usage=>usage.spellRefs.flatMap(ref=>ref.restrictions)):[];
-        validateSpellUsageGroup(source, usageGroup, usagePath, finding, [...(Array.isArray(group.componentWaivers)?group.componentWaivers.flatMap(waiver=>isRecord(waiver)&&Array.isArray(waiver.evidence)?waiver.evidence.filter(isValidEvidenceShape):[]):[]),...(component&&!component.ambiguous?[component.evidence]:[])],manualTokens,inheritedRestrictions);
+        validateSpellUsageGroup(source, usageGroup, usagePath, finding, [...(Array.isArray(group.componentWaivers)?group.componentWaivers.flatMap(waiver=>isRecord(waiver)&&Array.isArray(waiver.evidence)?waiver.evidence.filter(isValidEvidenceShape):[]):[]),...(component&&!component.ambiguous?[component.evidence]:[])],manualTokens,inheritedRestrictions,daily&&referenced?parent:undefined);
         if (!isRecord(usageGroup) || !Array.isArray(usageGroup.spellRefs)) return;
         usageGroup.spellRefs.forEach((ref, refIndex) => {
           const portableRefIndex = spellRefs.length;
@@ -1002,6 +1015,7 @@ function validateSpellcastingGroupFields(
   path: string,
   finding: (code: string, path: string, message: string, origin: IntakeFinding['origin'], evidence?: EvidenceRef[]) => void,
   sourceParent?: EvidenceRef,
+  abilityParent?: EvidenceRef,
 ): void {
   validateUnknownSpellcastingProperties(group as unknown as Record<string, unknown>, SPELLCASTING_GROUP_KEYS, path, finding);
   if(group.candidateReview!==undefined&&!isSourceCandidateReview(group.candidateReview))
@@ -1048,7 +1062,8 @@ function validateSpellcastingGroupFields(
   const sourceCost=group.activationType==='legendary'?Number(/\bCosts?\s+(\d+)\s+Actions?/iu.exec(group.featureName)?.[1]??1):undefined;
   if(group.legendaryCost!==sourceCost)finding('SPELL_LEGENDARY_COST_SOURCE_MISMATCH',`${path}/legendaryCost`,'Legendary Cast cost must match its source heading, defaulting to one use in the legendary section.','evidence',group.evidence);
   validateSpellEvidenceArray(source, group.abilityEvidence, `${path}/abilityEvidence`, finding);
-  const abilityAssessment=ABILITIES.includes(group.ability)?assessSourceSpellcastingAbility(source,group.ability,group.abilityEvidence,sourceParent?[sourceParent]:group.evidence):undefined;
+  const abilityOwner=abilityParent??sourceParent;
+  const abilityAssessment=ABILITIES.includes(group.ability)?assessSourceSpellcastingAbility(source,group.ability,group.abilityEvidence,abilityOwner?[abilityOwner]:group.evidence):undefined;
   if (abilityAssessment&&abilityAssessment.status!=='supported') {
     finding(
       'SPELL_ABILITY_EVIDENCE_MISMATCH',
@@ -1168,6 +1183,7 @@ function validateSpellUsageGroup(
   sharedWaiverEvidence: EvidenceRef[] = [],
   manualTokens: Array<NonNullable<ReturnType<typeof sourceManualSpellGrant>>> = [],
   inheritedRestrictions: CanonicalSpellRef['restrictions'] = [],
+  dailyParent?: EvidenceRef,
 ): void {
   if (!isRecord(usageGroup)
     || !['at-will', '1/day-each', 'daily-each', 'daily-shared', 'prepared-cantrip', 'prepared-slots'].includes(String(usageGroup.usage))) {
@@ -1306,7 +1322,7 @@ function validateSpellUsageGroup(
       }
     });
   }
-  validateMinimalGrantSpans(usageGroup, path, finding, manualTokens);
+  validateMinimalGrantSpans(usageGroup, path, finding, manualTokens,dailyParent);
 }
 
 // source-derived: these checks bind structured spell mechanics to exact source slices.
@@ -1568,9 +1584,11 @@ function validateMinimalGrantSpans(
   path: string,
   finding: (code: string, path: string, message: string, origin: IntakeFinding['origin'], evidence?: EvidenceRef[]) => void,
   manualTokens: Array<NonNullable<ReturnType<typeof sourceManualSpellGrant>>> = [],
+  dailyParent?: EvidenceRef,
 ): void {
   if(usageGroup.evidence?.length===1&&isValidEvidenceShape(usageGroup.evidence[0])){
-    const parent=usageGroup.evidence[0]!,daily=sourceDailySpellAction(parent.quote),reference=sourceReferencedSpellAction(parent.quote);
+    const grant=usageGroup.evidence[0]!,parent=dailyParent??grant;
+    const daily=sourceDailySpellAction(parent.quote),reference=dailyParent?undefined:sourceReferencedSpellAction(parent.quote);
     if(reference){
       const entry=usageGroup.spellRefs?.[0];
       const exact=usageGroup.usage==='at-will'&&usageGroup.spellRefs?.length===1&&entry?.originalName===reference.name
@@ -1580,7 +1598,10 @@ function validateMinimalGrantSpans(
     }
     if(daily){
       const expected=daily.spells.length>1?'daily-shared':'daily-each';
-      const exact=usageGroup.usage===expected&&'count'in usageGroup&&usageGroup.count===daily.count
+      const namesEnd=Math.max(...daily.spells.map(spell=>spell.end));
+      const ownSpan=grant.start===parent.start&&grant.end<=parent.end&&grant.end>=parent.start+namesEnd
+        &&(grant.end===parent.end||/^[,\s]*$/u.test(parent.quote.slice(namesEnd,grant.end-parent.start)));
+      const exact=ownSpan&&usageGroup.usage===expected&&'count'in usageGroup&&usageGroup.count===daily.count
         &&usageGroup.spellRefs?.length===daily.spells.length&&daily.spells.every((entry,index)=>{
           const ref=usageGroup.spellRefs[index]!;
           return ref.originalName===entry.name&&ref.evidence.length===1&&ref.evidence[0]!.start===parent.start+entry.start&&ref.evidence[0]!.end===parent.start+entry.end

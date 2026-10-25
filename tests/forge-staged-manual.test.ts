@@ -146,6 +146,10 @@ describe('complete manual rules reach the formal Actor without native inference'
     expect(actor.effects).toEqual([]);expect(actor.items.every((item:any)=>item.effects.length===0)).toBe(true);
     const legacyDocument=yaml.load(markdown.slice(4,-4)) as Record<string,unknown>;
     delete legacyDocument['intake-biography-mode'];delete legacyDocument['intake-biography-presentation'];
+    // Candidate review belongs to the literal Intake contract. A legacy
+    // comparison must remove that metadata too, without weakening its guard.
+    expect(()=>new YamlParser().parse(yaml.dump(legacyDocument))).toThrow('InvalidSourceCandidateReview');
+    delete legacyDocument['intake-candidate-review'];
     const legacy=new ActorGenerator({fvttVersion:'14',effectProfile:'core'}).generate(new YamlParser().parse(yaml.dump(legacyDocument)));
     expect(legacy.items.map((item:any)=>item.name)).toContain('Arcana/Nature (Uncommon)');
     expect(legacy.items.some((item:any)=>item.name.startsWith('Nature/Religion (Rare)'))).toBe(true);
@@ -192,7 +196,15 @@ describe('complete manual rules reach the formal Actor without native inference'
     const data=fixture('Unsafe Rule. One target takes 7 (2d6) Fire damage.');
     data.ir.creature.actions[0]!.damage=[{formula:'9d6',type:'fire',relationship:'base'}];
     expect(validateMonsterIntakeIR(data.source,data.ir).blocking.some(f=>f.code==='MANUAL_FEATURE_EXECUTABLE_FIELDS')).toBe(true);
-    const {result}=await run(data);expect(result.prepared).toBeUndefined();
+    const original=structuredClone(data);
+    const {result,calls}=await run(data);
+    expect(result.prepared).toBeDefined();expect(calls).toBe(0);
+    expect(result.report.findings.some(f=>f.includes('MANUAL_FEATURE_EXECUTABLE_FIELDS'))).toBe(true);
+    const generation=result.report.actors[0]!.generation!;
+    expect(generation.candidateAvailable).toBe(true);
+    expect(generation.intakeVerificationStatus).not.toBe('accepted');
+    expect(generation.findings.some(f=>f.code==='MANUAL_FEATURE_EXECUTABLE_FIELDS'&&f.blocking)).toBe(true);
+    expect(data).toEqual(original);
   });
   test('a complete manual span cannot swallow a second independent named ability',()=>{
     const data=fixture('Whole Rule. Choose a visible target.\nSecond Rule. The target cannot regain hit points.');

@@ -39,15 +39,9 @@ const textFields=new Set(['description','nativeRuleText','manualRemainder','prea
 export function materializeSourceLineReferences(source:string,value:unknown,range:Range={start:0,end:source.length}):unknown{
   const table=new Map(lines(source,range).map(row=>[row.id,row]));
   const proofs=new Map(sourceProofCatalog(source,range).map(row=>[row.id,row.text]));
-  const grants=new Map(sourceGrantCatalog(source,range).map(({id,...ref})=>[id,ref]));
   const visit=(entry:any,key='',proof=false):any=>{
     if(Array.isArray(entry))return entry.map(row=>visit(row,key,proof));
     if(!entry||typeof entry!=='object')return entry;
-    if(Object.hasOwn(entry,'grantId')){
-      const selected=key==='manualGrants'&&typeof entry.grantId==='string'?grants.get(entry.grantId):undefined;
-      if(!selected||Object.keys(entry).length!==1)throw new TypeError('Invalid or misplaced source grant reference.');
-      return {...selected};
-    }
     if(Object.hasOwn(entry,'clauseId')){
       const selected=proof&&typeof entry.clauseId==='string'?proofs.get(entry.clauseId):undefined;
       if(selected===undefined||Object.keys(entry).length!==1)throw new TypeError('Invalid or misplaced source proof reference.');

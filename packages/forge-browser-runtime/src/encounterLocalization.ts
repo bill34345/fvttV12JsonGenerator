@@ -56,7 +56,7 @@ function checkedPart(request: LocalizationRequest, value: ForgeLocalizationDraft
 export function assertForgeEncounterLocalizationDraft(prepared: PreparedForgeEncounter, value: ForgeEncounterLocalizationDraft): void {
   sourcePrepared(prepared);
   if (value.version !== 1 || value.sourcePackageId !== prepared.bundle.id || value.sourcePackageHash !== prepared.hash
-    || value.actors.length !== prepared.actors.length) throw new TypeError('中文草稿与当前战斗包不一致。');
+    || value.actors.length !== prepared.actors.length) throw new TypeError('中文草稿与当前生物导入文件不一致。');
   const policy = value.packageText.request.policy;
   const previews = prepared.actors.map(actor => {
     const entry = value.actors.find(part => part.key === actor.key);

@@ -1,6 +1,6 @@
 import { displayName } from '@fvtt-json-generator/models/display-name';
-import {sourceOperationErrors,candidateSourceOperationShapeErrors,isSourceCandidateReview,sourceOperationTargetType,sourceOperationTargetCount,sourceOperationSelfTarget,sourceOperationSelfArea,isNeutralSourceAttack,sourceActorNameMatches} from '@fvtt-json-generator/models/source-operations';
-import {generateGmAttackActivities} from './gm-attack-activities';
+import {sourceOperationStructureErrors,isSourceCandidateReview,sourceOperationTargetType,sourceOperationTargetCount,sourceOperationSelfTarget,sourceOperationSelfArea,isNeutralSourceAttack,sourceActorNameMatches} from '@fvtt-json-generator/models/source-operations';
+import {generateGmAttackActivities,sourceAttackActivityRange} from './gm-attack-activities';
 import {applySourceAttackDamageModes} from './source-attack-modes';
 import { ActionParser } from '@fvtt-json-generator/parser/action';
 import { isConditionId, projectedConditionStatusId } from '@fvtt-json-generator/contracts/conditions';
@@ -12,7 +12,7 @@ import { conditionalAttackSaveTrigger, normalizedSourceDamageParts } from './sav
 import type { AttackAbility } from './attack-ability';
 import type { ParsedNPC } from '@fvtt-json-generator/parser/mapping';
 import { composeSourceTextPresentation, decodeSourceTextPresentation } from '@fvtt-json-generator/models/source-text-presentation';
-import {sourceManualSpellUses,sourceGmTriggeredSave,sourceFailedSaveStatuses,SOURCE_NATIVE_FAILURE_LABELS} from '@fvtt-json-generator/models/source-rule-facts';
+import {SOURCE_NATIVE_FAILURE_LABELS} from '@fvtt-json-generator/models/source-rule-facts';
 import { spellsMapper } from './spellsMapper';
 import { i18n } from '@fvtt-json-generator/parser/i18n';
 import { EffectProfileApplier, type EffectProfile } from './effectProfileApplier';
@@ -119,11 +119,36 @@ import {
   type GenerationResources,
 } from './resources';
 import { createStableDocumentId } from './stableId';
+import {nativeAreaShape} from '@fvtt-json-generator/models/source-operations';
 import { applyActorResourceSemantics } from './actor-resource-semantics';
 import { applyActorBehaviorSemantics } from './actor-behavior-semantics';
 import type { GenerationIconResolver } from './ports';
 import { projectWeaponProperties } from './weapon-properties';
 import { createRulePresentationPlan, type ConsumedRuleAction, type RulePresentationPlan } from './rule-presentation';
+
+const closedGmRecord = (value: unknown, keys: readonly string[]): value is Record<string, unknown> => !!value
+  && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every(key => keys.includes(key));
+const gmText = (value: unknown): value is string => typeof value === 'string' && !!value.trim();
+const gmPositiveInteger = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) > 0;
+const gmStatuses = (value: unknown): boolean => Array.isArray(value) && value.length <= 15
+  && value.every(status => typeof status === 'string' && Object.hasOwn(SOURCE_NATIVE_FAILURE_LABELS, status))
+  && new Set(value).size === value.length;
+
+function assertExplicitGmMechanics(action: StructuredActionData): void {
+  if (action.spellUseRecords !== undefined && (!Array.isArray(action.spellUseRecords) || !action.spellUseRecords.length || action.spellUseRecords.length > 128
+    || action.spellUseRecords.some(record => !closedGmRecord(record, ['name', 'max', 'period']) || !gmText(record.name) || !gmPositiveInteger(record.max) || record.period !== 'day')
+    || action.type !== 'utility' || action.uses || action.recharge || action.perLongRest !== undefined)) throw new Error('InvalidManualSpellUsesStructure');
+  if (action.nativeFailureStatuses !== undefined && (action.type !== 'save' || !gmStatuses(action.nativeFailureStatuses) || !gmPositiveInteger(action.DC)
+    || !action.ability || !['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(action.ability))) throw new Error('InvalidNativeFailureStatusesStructure');
+  if (action.gmTriggeredSave !== undefined) {
+    const save = action.gmTriggeredSave;
+    if (!closedGmRecord(save, ['dc', 'ability', 'trigger', 'sourceText', 'failureStatuses']) || !gmPositiveInteger(save.dc)
+      || typeof save.ability !== 'string' || !['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(save.ability)
+      || !gmText(save.trigger) || !gmText(save.sourceText) || !gmStatuses(save.failureStatuses)
+      || action.type !== 'attack' || !action.attackType || !['mwak', 'rwak', 'msak', 'rsak'].includes(action.attackType) || !Number.isSafeInteger(action.toHit)
+      || action.DC !== undefined || action.nativeFailureStatuses !== undefined) throw new Error('InvalidGmTriggeredSaveStructure');
+  }
+}
 
 export type { TranslationServiceLike } from './actor-localizer';
 
@@ -1040,9 +1065,62 @@ export class ActorGenerator {
     logicalPath: string,
     sectionOverride?: string,
   ): void {
+    if (action.literalMechanics !== undefined && action.literalMechanics !== true) throw new Error('InvalidLiteralMechanics');
+    if (action.spellUseRecords !== undefined || action.gmTriggeredSave !== undefined || action.nativeFailureStatuses !== undefined) {
+      if (action.executionMode !== 'native-with-gm') throw new Error('InvalidExplicitGmExecutionMode');
+      assertExplicitGmMechanics(action);
+    }
+    if (action.literalMechanics && !action.executionMode) {
+      // explicit-exception: canonical Intake owns its typed mechanics. Hide
+      // prose (including nested effect prose) from every legacy fallback.
+      const safe: StructuredActionData = {
+        ...action, literalMechanics: undefined, name: '', englishName: undefined,
+        describe: '', nativeRuleText: undefined, manualRemainder: undefined, sourceRuleFacts: [],
+        embeddedEffects: action.embeddedEffects?.map(effect => ({ ...effect, describe: '' })),
+        failEffects: action.failEffects?.map(effect => ({ ...effect, describe: undefined })),
+        successEffects: action.successEffects?.map(effect => ({ ...effect, describe: undefined })),
+        subActions: action.subActions?.map(sub => ({ ...sub, describe: '' })),
+      };
+      this.appendSingleStructuredAction(items, safe, activationType, activityContext, logicalPath, sectionOverride);
+      const item = items.at(-1)!;
+      item.name = displayName(action.name, action.englishName);
+      item.system.description = { value: formatLiteralHtml(action.describe ?? ''), chat: '' };
+      for (const activity of Object.values(item.system.activities ?? {}) as any[]) {
+        if (!activity.name) activity.name = item.name;
+        activity.description = { chatFlavor: formatLiteralHtml(action.describe ?? '') };
+      }
+      for (const [index, embedded] of (action.embeddedEffects ?? []).entries()) {
+        if (item.effects[index]) item.effects[index].description = embedded.describe;
+      }
+      const conditionalParts = (action.sourceDamageParts ?? []).flatMap((part, index) =>
+        (part.relationship === 'base' || part.relationship === 'additional') && !part.condition ? [] : [{ part, index }]);
+      const base = Object.values(item.system.activities ?? {})[0] as any;
+      if (conditionalParts.length && action.type === 'damage' && !action.damage?.length && !action.uses && !action.recharge && action.perLongRest === undefined) item.system.activities = {};
+      for (const { part, index } of conditionalParts) {
+        // The explicit relationship chooses a separate GM roll. It never
+        // changes the primary roll, spends its resource again or reads prose.
+        const generated = this.activityGenerator.generate({ name: '', type: 'damage', desc: '', logicalPath: `${logicalPath}/literal-damage/${index}`,
+          damage: [{ formula: part.formula, type: part.type, ...(part.types ? { types: part.types } : {}) }] }, {});
+        const helper = Object.values(generated)[0] as any;
+        helper.name = `${part.relationship === 'replacement' ? 'GM替代伤害' : 'GM条件伤害'} ${index + 1}`;
+        helper.activation = { type: 'special', value: null, override: true, condition: part.condition ?? '' };
+        helper.consumption = { targets: [], spellSlot: false, scaling: { allowed: false, max: '' } };
+        helper.effects = [];
+        if (base?.range) helper.range = structuredClone(base.range);
+        if (base?.target) helper.target = structuredClone(base.target);
+        helper.description = { chatFlavor: formatLiteralHtml([part.condition, action.describe].filter(Boolean).join('\n\n')) };
+        helper.flags = { fvttJsonGenerator: { literalDamage: { version: 1, partIndex: index, part: structuredClone(part) } } };
+        item.system.activities[helper._id] = helper;
+      }
+      item.flags ??= {}; item.flags.fvttJsonGenerator ??= {};
+      item.flags.fvttJsonGenerator.literalMechanics = { version: 1, description: action.describe ?? '', logicalPath,
+        ...(action.sourceDamageParts ? { sourceDamageParts: structuredClone(action.sourceDamageParts) } : {}) };
+      // Retain the sanitized consumed record: later lifecycle and presentation
+      // passes must not turn the restored display prose back into mechanics.
+      return;
+    }
     if(action.sourceOperations){
-      if(!this.isV14()||action.executionMode!=='native-with-gm'||(action.candidateReview
-        ?candidateSourceOperationShapeErrors(action.sourceOperations):sourceOperationErrors(action.describe??'',action.sourceOperations,action.sourceContext)).length)throw new Error('InvalidSourceOperations');
+      if(!this.isV14()||action.executionMode!=='native-with-gm'||sourceOperationStructureErrors(action.sourceOperations).length)throw new Error('InvalidSourceOperations');
       if(action.attackType||action.DC!==undefined||action.damage?.length||action.embeddedEffects?.length||action.subActions?.length||action.gmTriggeredSave||action.nativeFailureStatuses)throw new Error('ConflictingSourceOperations');
       // Build the existing resource/section carrier without feeding any rule
       // prose into legacy inference. Each child is an explicit clickable roll.
@@ -1067,8 +1145,10 @@ export class ActorGenerator {
         const activities=neutral?generateGmAttackActivities(op,logicalPath+'/source-operation/'+op.id,part=>this.activityGenerator.formatDamage(part)):this.activityGenerator.generate(data,{});
         for(const activity of Object.values(activities) as any[]){
           const role=neutral?activity.flags.fvttJsonGenerator.sourceOperation.role:undefined;
+          const attackMode=neutral?activity.flags.fvttJsonGenerator.sourceOperation.attackMode:undefined;
           const followUp=op.relationship==='follow-up'||role==='damage';
-          activity.name=op.name+(neutral?(role==='damage'?'（命中后伤害）':'（GM攻击检定）'):'');
+          const modeLabel=attackMode==='melee'?'近战':attackMode==='ranged'?`远程 ${op.attack!.range}${op.attack!.longRange!==undefined?'/'+op.attack!.longRange:''} 尺`:'';
+          activity.name=op.name+(neutral?(role==='damage'?'（命中后伤害）':`（${modeLabel?modeLabel+' · ':''}GM攻击检定）`):'');
           const condition=[contextText,op.condition,sourceText].filter(Boolean).join('\n');
           activity.activation=followUp?{type:'special',value:null,override:true,condition}:{...base.activation,condition};
           activity.consumption=followUp?{targets:[],spellSlot:false,scaling:{allowed:false,max:''}}:structuredClone(base.consumption??{targets:[],spellSlot:false,scaling:{allowed:false,max:''}});
@@ -1089,7 +1169,8 @@ export class ActorGenerator {
           if(op.aoe){
             // schema-derived: 5.3.3 names the square template square; explicit
             // line width/cylinder height must override its default 5 feet.
-            activity.target={override:true,prompt:true,template:{type:op.aoe.shape==='rectangle'?'square':op.aoe.shape,size:String(op.aoe.radius),...(op.aoe.width!==undefined?{width:String(op.aoe.width)}:{}),...(op.aoe.height!==undefined?{height:String(op.aoe.height)}:{}),units:'ft'},affects:{count:'',type:recipientType,choice:false,special:op.targetSpecial??''}};
+            const shape=nativeAreaShape(op.aoe.shape,op.aoe.radius,op.proof.aoe??'');
+            activity.target={override:true,prompt:true,template:{type:shape==='rectangle'?'square':shape,size:String(op.aoe.radius),...(op.aoe.width!==undefined?{width:String(op.aoe.width)}:{}),...(op.aoe.height!==undefined?{height:String(op.aoe.height)}:{}),units:'ft'},affects:{count:'',type:recipientType,choice:false,special:op.targetSpecial??''}};
           }
           // RangeField defaults to Self in 5.3.3, even for Save/Damage.
           // Only a source-proven recipient or area origin may retain Self;
@@ -1107,18 +1188,18 @@ export class ActorGenerator {
           if(!op.healing&&!op.proof.upgrade&&activity.target?.affects)activity.target.affects.count=sourceOperationTargetCount(sourceText,op)??'';
           if(op.attack){
             if(!neutral)activity.attack.type.value=op.attack.type.startsWith('r')?'ranged':'melee';
-            activity.range={override:true,units:'ft',value:op.attack.range??op.attack.reach??null,...(op.attack.longRange?{long:op.attack.longRange}:{}),special:''};
+            activity.range=sourceAttackActivityRange(op.attack,attackMode);
           }
           const boundary=neutral?'GM辅助攻击：分类未注明；通用检定不使用武器/法术攻击钩子。优势、劣势、命中与暴击由GM按原文处理。':'';
           const adjustment=op.damageAdjustment?'来源角色处于Bloodied时，本次造成的伤害减半。只掷骰一次，由GM结算；不自动改变生命值。':'';
           activity.description={chatFlavor:formatMixedRuleHtml([boundary,adjustment,contextText,sourceText].filter(Boolean).join('\n\n'),false,operationKinds)};
           activity.flags={fvttJsonGenerator:{sourceLogicalPath:logicalPath+'/source-operation/'+op.id,sourceOperation:{id:op.id,relationship:followUp?'follow-up':op.relationship,sourceText:op.sourceText,
-            ...(neutral?{role,attackClassification:'unspecified',attackKind:op.attack!.type}:{}),...(op.damageAdjustment?{damageAdjustment:structuredClone(op.damageAdjustment)}:{})}}};
+            ...(neutral?{role,...(attackMode?{attackMode}:{}),attackClassification:'unspecified',attackKind:op.attack!.type}:{}),...(op.damageAdjustment?{damageAdjustment:structuredClone(op.damageAdjustment)}:{})}}};
           item.system.activities[activity._id]=activity;
           if(!neutral&&op.attack?.reach!==undefined&&op.attack.range!==undefined&&op.attack.type.startsWith('m')){
             activity.name=op.name+' (近战)';activity.range={override:true,units:'ft',value:op.attack.reach,special:''};
             const ranged=structuredClone(activity);ranged._id=createStableDocumentId({kind:'activity',path:logicalPath+'/source-operation/'+op.id+'/ranged'});
-            ranged.name=op.name+' (远程)';ranged.attack.type.value='ranged';ranged.range={override:true,units:'ft',value:op.attack.range,...(op.attack.longRange?{long:op.attack.longRange}:{}),special:''};
+            ranged.name=op.name+' (远程)';ranged.attack.type.value='ranged';ranged.range=sourceAttackActivityRange(op.attack,'ranged');
             item.system.activities[ranged._id]=ranged;
           }
         }
@@ -1134,18 +1215,15 @@ export class ActorGenerator {
       const sourceText=action.describe??'';
       if(!sourceText.trim()||!action.nativeRuleText?.trim()||!action.manualRemainder?.trim()||action.embeddedEffects?.length||action.subActions?.length||action.failEffects?.length)
         throw new Error('InvalidMixedFeatureBoundary');
-      // Only the verified primary text enters any legacy semantic fallbacks.
-      // The full description is restored after all executable fields are built.
-      const safe={...action,executionMode:undefined,nativeRuleText:undefined,manualRemainder:undefined,spellUseRecords:undefined,gmTriggeredSave:undefined,nativeFailureStatuses:undefined,describe:action.nativeRuleText,sourceRuleFacts:[]};
+      // Typed primary mechanics do not require the program to parse either
+      // the full description or the AI's native-rule presentation text.
+      const safe={...action,literalMechanics:true as const,executionMode:undefined,nativeRuleText:undefined,manualRemainder:undefined,spellUseRecords:undefined,gmTriggeredSave:undefined,nativeFailureStatuses:undefined,describe:'',sourceRuleFacts:[]};
       this.appendSingleStructuredAction(items,safe,activationType,activityContext,logicalPath,sectionOverride);
       const item=items.at(-1)!;
       if(item.effects?.length)throw new Error('MixedFeatureUnexpectedEffects');
       if(action.nativeFailureStatuses){
-        const dcText=sourceText.replace(/[*_]/gu,'').replace(/\s+/gu,' '),saveClause=/\b(?:DC\s*\d+\s+(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+saving throw|(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+Saving Throw:\s*DC\s*\d+)/iu.exec(dcText);
-        const expected=saveClause?sourceFailedSaveStatuses(dcText.slice(saveClause.index+saveClause[0].length)):[];
-        if(action.type!=='save'||!expected.length||JSON.stringify(action.nativeFailureStatuses)!==JSON.stringify(expected))throw new Error('InvalidNativeFailureStatusesSource');
         const activity=Object.values(item.system.activities)[0] as any;activity.effects=[];
-        for(const status of expected){const id=createStableDocumentId({kind:'effect',path:logicalPath+'/failure/'+status});item.effects.push({_id:id,name:SOURCE_NATIVE_FAILURE_LABELS[status],type:'base',img:`systems/dnd5e/icons/svg/statuses/${status}.svg`,transfer:false,disabled:false,statuses:[status],changes:[],duration:{},description:sourceText});activity.effects.push({_id:id,onSave:false});}
+        for(const status of action.nativeFailureStatuses){const id=createStableDocumentId({kind:'effect',path:logicalPath+'/failure/'+status});item.effects.push({_id:id,name:SOURCE_NATIVE_FAILURE_LABELS[status],type:'base',img:`systems/dnd5e/icons/svg/statuses/${status}.svg`,transfer:false,disabled:false,statuses:[status],changes:[],duration:{},description:sourceText});activity.effects.push({_id:id,onSave:false});}
       }
       // The existing common attack contract carries both source distances.
       // When they are explicitly rendered as alternatives, expose two modes
@@ -1161,13 +1239,10 @@ export class ActorGenerator {
         item.system.activities[ranged._id]=ranged;
       }
       if(action.spellUseRecords){
-        const expected=sourceManualSpellUses(sourceText);
-        if(action.type!=='utility'||action.uses||action.recharge||!expected||JSON.stringify(action.spellUseRecords)!==JSON.stringify(expected.records)||action.nativeRuleText!==expected.ruleText)
-          throw new Error('InvalidManualSpellUsesSource');
         const [base]=Object.values(item.system.activities) as any[];
         if(!base||base.type!=='utility'||Object.keys(item.system.activities).length!==1)throw new Error('ManualSpellUsesRequireUtility');
         item.system.activities={};delete item.system.uses;
-        for(const [index,record] of expected.records.entries()){
+        for(const [index,record] of action.spellUseRecords.entries()){
           const activity=structuredClone(base);activity._id=createStableDocumentId({kind:'activity',path:logicalPath+'/gm-spell-use/'+index});
           activity.name=`GM施法记录：${record.name}（${record.max}/日）`;
           activity.uses={spent:0,max:String(record.max),recovery:[{period:'day',type:'recoverAll'}]};
@@ -1176,10 +1251,9 @@ export class ActorGenerator {
         }
       }
       if(action.gmTriggeredSave){
-        const save=sourceGmTriggeredSave(sourceText);
-        if(action.type!=='attack'||!save||JSON.stringify(save)!==JSON.stringify(action.gmTriggeredSave))throw new Error('InvalidGmTriggeredSaveSource');
+        const save=action.gmTriggeredSave;
         const abilities={str:'力量',dex:'敏捷',con:'体质',int:'智力',wis:'感知',cha:'魅力'};
-        const generated=this.activityGenerator.generate({name:`GM触发 ${abilities[save.ability]}豁免`,type:'save',logicalPath:logicalPath+'/gm-save',desc:save.sourceText,save:{dc:save.dc,ability:save.ability,dcSourceKind:'literal',outcome:'none'}},activityContext);
+        const generated=this.activityGenerator.generate({name:`GM触发 ${abilities[save.ability]}豁免`,type:'save',logicalPath:logicalPath+'/gm-save',desc:'',save:{dc:save.dc,ability:save.ability,dcSourceKind:'literal',outcome:'none'}},{});
         const activity=Object.values(generated)[0] as any;
         activity.activation={type:'special',value:null,override:true,condition:save.trigger};
         activity.consumption={targets:[],spellSlot:false,scaling:{allowed:false,max:''}};
@@ -1197,7 +1271,7 @@ export class ActorGenerator {
       item.system.description={value:formatMixedRuleHtml(sourceText,true,operations),chat:''};
       for(const activity of Object.values(item.system.activities) as any[])activity.description={chatFlavor:formatMixedRuleHtml(sourceText,false,operations)};
       item.flags.fvttJsonGenerator.manualRule={version:1,mode:'native-with-gm',sourceText,nativeRuleText:action.nativeRuleText,manualRemainder:action.manualRemainder,operations,logicalPath};
-      const consumed=this.consumedRuleActions.at(-1);if(consumed)consumed.sourceStructured=action;
+      const consumed=this.consumedRuleActions.at(-1);if(consumed)consumed.sourceStructured={...safe,literalMechanics:undefined};
       return;
     }
     if (action.executionMode === 'gm-manual') {

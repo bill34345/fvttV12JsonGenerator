@@ -1,4 +1,5 @@
 import { NATIVE_LIFECYCLE_STATUS_DEFINITIONS } from '@fvtt-json-generator/contracts/status-lifecycle';
+import {nativeAreaShape} from '@fvtt-json-generator/models/source-operations';
 import type { ActionData, SourceDamagePart, SourceRuleFact, StructuredActionData } from '@fvtt-json-generator/models/action';
 import { conditionalAttackSaveTrigger, normalizedSourceDamageParts } from './save-outcome';
 
@@ -29,7 +30,7 @@ const UNIT: Record<string, string> = {
   round: '轮', minute: '分钟', hour: '小时', day: '天',
   rounds: '轮', minutes: '分钟', hours: '小时', days: '天',
 };
-const SHAPE: Record<string, string> = { sphere: '球形', radius: '球形', cone: '锥形', line: '线形', cube: '立方体', cylinder: '圆柱形', rectangle: '矩形', 球形: '球形', 锥形: '锥形', 线形: '线形', 立方体: '立方体', 圆柱形: '圆柱形', 矩形: '矩形' };
+const SHAPE: Record<string, string> = { sphere: '球状', radius: '光环', cone: '锥形', line: '线形', cube: '立方体', cylinder: '圆柱形', rectangle: '矩形', 球形: '球形', 锥形: '锥形', 线形: '线形', 立方体: '立方体', 圆柱形: '圆柱形', 矩形: '矩形' };
 const STATUS = Object.fromEntries(Object.entries(NATIVE_LIFECYCLE_STATUS_DEFINITIONS)
   .flatMap(([, definition]) => definition.sourceNames.map(name => [name.toLowerCase(), definition.label])));
 
@@ -74,7 +75,7 @@ export function summarizeStructuredRule(input: {
     if(op.save)add(prefix+'/save','DC '+op.save.dc+op.save.abilities.map(ability=>ABILITY[ability]).join('或')+'豁免'+(op.save.choice==='target'?'，由目标选择属性':'')+(op.save.outcome==='half'?'，成功时伤害减半':''));
     if(op.healing)add(prefix+'/healing',op.healing.formula+'点'+(op.healing.type==='temphp'?'临时生命值':'治疗')+'，'+(op.healing.target.type==='self'?'自身':'同一来源受者')+'；时机与资格按完整原文');
     for(const[index,part]of(op.damage??[]).entries())add(prefix+'/damage/'+index,part.formula+'点'+(part.types??[part.type]).map(type=>DAMAGE[type]??type).join('或')+'伤害'+(part.types?'（同次掷骰自选一种类型）':'')+(['conditional','replacement'].includes(part.relationship)?'，由GM判断来源条件':''));
-    if(op.aoe)add(prefix+'/aoe',op.aoe.radius+'尺'+(op.aoe.shape==='radius'?'自身光环':SHAPE[op.aoe.shape])+'区域');
+    if(op.aoe){const shape=nativeAreaShape(op.aoe.shape,op.aoe.radius,op.proof.aoe??'');add(prefix+'/aoe',op.aoe.radius+'尺'+(shape==='radius'?'光环':SHAPE[shape])+'区域');}
     if(op.relationship==='follow-up')add(prefix+'/trigger','后续操作由GM按完整来源单独触发，不再次消耗主能力次数');
     unknown(prefix+'/adjudication',op.sourceText);
   }

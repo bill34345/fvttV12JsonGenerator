@@ -44,6 +44,7 @@ import type {
 import { renderIntakeVerificationMarkdown, verifyMonsterIntake } from './verifier';
 import { validateMonsterIntakeIR } from './validator';
 import { normalizeMonsterSourceFacts } from './source-facts';
+import { normalizeMonsterIntakeProposal } from './provider';
 
 export {
   chunkSource,
@@ -261,7 +262,7 @@ async function processIr(
           ir,
           deterministicFindings: validation.findings,
         });
-        ir = anchorIrEvidence(options.source, candidate, mergeConservativeRepair(ir, repaired, options.source));
+        ir = anchorIrEvidence(options.source, candidate, structuredClone(repaired));
         continue;
       }
       const spellResolution = spellResolutionForFindings(
@@ -299,7 +300,7 @@ async function processIr(
         deterministicFindings: report.findings,
         review,
       });
-      ir = anchorIrEvidence(options.source, candidate, mergeConservativeRepair(ir, repaired, options.source));
+      ir = anchorIrEvidence(options.source, candidate, structuredClone(repaired));
       continue;
     }
     if (review.verdict !== 'accepted' || combined.some((finding) => finding.blocking)) {
@@ -492,7 +493,12 @@ function combineFindings(deterministic: IntakeFinding[], review: AiReviewResult)
   return [...deterministic, ...(Array.isArray(review.findings) ? review.findings.map((finding) => ({ ...finding, origin: 'ai-review' as const })) : [])];
 }
 
-export function adjudicateReview(
+/** AI review findings retain the model's own verdict and severity. */
+export function adjudicateReview(_source:string,_candidate:DiscoveryCandidate,_ir:MonsterIntakeIR,_projection:Record<string,unknown>,review:AiReviewResult):AiReviewResult {
+  return structuredClone(review);
+}
+
+export function adjudicateReviewSourceAudit(
   source: string,
   candidate: DiscoveryCandidate,
   ir: MonsterIntakeIR,
@@ -783,7 +789,16 @@ function setJsonPointer(target: unknown, pointer: string, value: unknown): void 
   cursor[parts.at(-1)!] = value;
 }
 
-export function anchorIrEvidence(
+/** Default anchoring only repairs exact citation coordinates and technical IDs.
+ * AI-authored content is never reconstructed from the original prose. */
+export function anchorIrEvidence(source:string,candidate:DiscoveryCandidate,ir:MonsterIntakeIR,_options:Record<string,boolean>={}):MonsterIntakeIR {
+  const next=normalizeMonsterIntakeProposal(source,ir,candidate);
+  for(const ref of collectGeneralEvidenceRefs(next))anchorEvidenceRef(source,[{start:candidate.start,end:candidate.end}],ref);
+  return next;
+}
+
+/** Explicit historical source-audit normalization, never the default generator. */
+export function anchorIrEvidenceSourceAudit(
   source: string,
   candidate: DiscoveryCandidate,
   ir: MonsterIntakeIR,

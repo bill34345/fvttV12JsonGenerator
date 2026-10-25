@@ -159,7 +159,7 @@ test('candidate metadata cannot grant automatic source acceptance or unsafe oper
 const brassRoot='.local/forge-new-three-paired-20261022';
 const brassPaths=[brassRoot+'/N3/source.md',brassRoot+'/frozen-model-calls/forge-N3-7-reply-0.txt',brassRoot+'/frozen-model-calls/forge-N3-8-reply-0.txt'];
 const localFrozenTest=brassPaths.every(path=>existsSync(path))?test:test.skip;
-localFrozenTest('unchanged local frozen 2024 Brass Dragon passes source-bound checks with no correction',async()=>{
+localFrozenTest('unchanged local frozen 2024 Brass Dragon preserves its declared IR without deriving an absent resistance ledger',async()=>{
   const originals=brassPaths.map(path=>readFileSync(path)),hashes=originals.map(bytes=>createHash('sha256').update(bytes).digest('hex'));
   const text=originals[0]!.toString('utf8').replace(/^\uFEFF/u,''),replies=originals.slice(1).map(bytes=>JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/u,'')));
   const calls:string[]=[];
@@ -177,7 +177,9 @@ localFrozenTest('unchanged local frozen 2024 Brass Dragon passes source-bound ch
   expect(Object.values<any>(sands.system.activities).some(a=>a.type==='save'&&a.save.dc.formula==='16')).toBe(true);
   expect(sands.system.description.value).toContain('Speed is halved');
   expect(actor.items.find((item:any)=>item.name==='Legendary Resistance (3/Day, or 4/Day in Lair)').system.uses?.max).toBeUndefined();
-  expect(actor.system.resources.legres.max).toBe(3);
+  expect(ir.creature.legendary?.resistanceMax).toBeUndefined();
+  expect(actor.system.resources.legres.max).toBe(0);
+  expect(actor.items.find((item:any)=>item.name==='Legendary Resistance (3/Day, or 4/Day in Lair)').system.description.value).toContain('3/Day');
   expect(ir.creature.spellcasting?.flatMap(group=>group.usageGroups.flatMap(usage=>usage.spellRefs)).length).toBeGreaterThan(0);
   expect(brassPaths.map(path=>createHash('sha256').update(readFileSync(path)).digest('hex'))).toEqual(hashes);
 });

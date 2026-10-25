@@ -1,7 +1,6 @@
 import type { CanonicalFeature, MonsterIntakeIR } from './types';
 import { renderMonsterFeatureName } from './renderer';
 import { ENCOUNTER_CAPABILITY_KINDS, type EncounterCapabilitySelection } from './encounter-capabilities';
-import { completeSourceFeatureEvidence } from './source-completeness';
 
 const SECTIONS = {trait:'traits',action:'actions',bonus:'bonusActions',reaction:'reactions',legendary:'legendaryActions'} as const;
 type Section = keyof typeof SECTIONS;
@@ -12,8 +11,8 @@ export interface EncounterProposalContext {
   bindings:Binding[];
 }
 
-/** Input reduction only. The compiler retains the original source, IR and
- * formal artifact; summaries never replace their source/target checks. */
+/** Input reduction only. The AI receives the complete source; citations locate
+ * its feature choices without reparsing prose to certify their semantics. */
 export function encounterProposalContext(request:{source:string;actors:ActorInput[]}, configuredConditions:unknown[]):EncounterProposalContext {
   const bindings:Binding[]=[];
   const actors=request.actors.map((actor,actorIndex)=>{
@@ -26,26 +25,12 @@ export function encounterProposalContext(request:{source:string;actors:ActorInpu
       const itemName=renderMonsterFeatureName(feature);
       const path=`/creature/${collection}/${index}`;
       const references=[...(feature.evidence??[]),...actor.ir.claims.filter(claim=>claim.path===path).flatMap(claim=>claim.evidence)];
-      const normalized=(text:string)=>text.replace(/\s+/gu,' ').trim();
-      const completeNamedParagraph=(quote:string,start:number,end:number)=>{
-        const names=[feature.name,feature.englishName,`${feature.name}${feature.englishName??''}`,`${feature.name} ${feature.englishName??''}`,`${feature.name} (${feature.englishName??''})`,`${feature.name}（${feature.englishName??''}）`].filter(Boolean) as string[];
-        const text=normalized(quote).replace(/^\d+[.)]\s*/u,'');
-        const heading=names.some(name=>text.startsWith(`${name}.`)||text.startsWith(`${name}。`)||text.startsWith(`${name}:`)||text.startsWith(`${name}：`));
-        const before=actor.source.slice(0,start),after=actor.source.slice(end);
-        return heading&&(start===0||/\r?\n[ \t]*\r?\n[ \t]*$/u.test(before))
-          &&(!after.trim()||/^[ \t]*\r?\n[ \t]*\r?\n/u.test(after));
-      };
-      const unit=completeSourceFeatureEvidence(actor.source,actor.ir,feature,path);
-      const complete=unit&&actor.source.indexOf(unit.quote)===actor.source.lastIndexOf(unit.quote)?unit.quote:undefined;
       const exactReferences=references.filter(e=>Number.isInteger(e.start)&&Number.isInteger(e.end)&&e.start>=0&&e.end>e.start&&e.end<=actor.source.length
-        &&actor.source.slice(e.start,e.end)===e.quote&&actor.source.indexOf(e.quote)===actor.source.lastIndexOf(e.quote)
-        &&(normalized(e.quote).includes(normalized(feature.description))||completeNamedParagraph(e.quote,e.start,e.end)))
-        .sort((a,b)=>a.quote.length-b.quote.length||a.start-b.start);
-      // Preserve an already-complete narrower body citation. The complete
-      // coverage unit supplies missing proof, not a new title requirement.
-      const contained=unit&&exactReferences.find(ref=>ref.start>=unit.start&&ref.end<=unit.end
-        &&normalized(ref.quote).includes(normalized(feature.description)));
-      const quote=contained?.quote??complete??exactReferences[0]?.quote;
+        &&actor.source.slice(e.start,e.end)===e.quote&&e.quote.length<=8000)
+        .sort((a,b)=>b.quote.length-a.quote.length||a.start-b.start);
+      // Missing paragraph-shaped evidence cannot block a supported feature.
+      // Its opaque reference is authoritative; the full source is in payload.
+      const quote=exactReferences[0]?.quote??actor.source.slice(0,8000);
       bindings.push({ref,actorKey:actor.key,section:section as Section,feature,quote,itemName});
       const items=(actor.artifact as any)?.items;
       const carriers=Array.isArray(items)?items.filter((item:any)=>item.name===itemName):[];
@@ -67,8 +52,8 @@ export class EncounterProposalError extends TypeError {
   constructor(readonly code:string,readonly path:string,readonly expected:string){super(`Encounter proposal ${code} at ${path}: ${expected}`);}
 }
 
-/** Tool-generated identities and complete quotes are expanded into the existing
- * selection contract. Existing v2 proposals retain their original compiler;
+/** Tool-generated identities and retained locators expand into the existing
+ * selection contract. Existing v2 proposals use the same structural compiler;
  * an invalid v3 proposal never falls back to v2. */
 export function expandEncounterProposal(value:unknown,context:EncounterProposalContext):unknown {
   if(value&&typeof value==='object'&&(value as any).version!==3)return value;
@@ -84,7 +69,7 @@ export function expandEncounterProposal(value:unknown,context:EncounterProposalC
     const binding=context.bindings.find(binding=>binding.ref===raw.featureRef);
     if(!binding||seen.has(binding.ref))throw new EncounterProposalError('INVALID_FEATURE_REF',`${path}/featureRef`,'one unique supplied feature reference');
     seen.add(binding.ref);
-    if(!binding.quote)throw new EncounterProposalError('MISSING_SOURCE_EVIDENCE',`${path}/featureRef`,'complete exact evidence for this feature');
+    if(!binding.quote)throw new EncounterProposalError('MISSING_SOURCE_EVIDENCE',`${path}/featureRef`,'a locator in the supplied source');
     if(!ENCOUNTER_CAPABILITY_KINDS.includes(raw.kind))throw new EncounterProposalError('INVALID_CAPABILITY',`${path}/kind`,'a supported fixed capability');
     const parameters={...recordObject(raw.parameters,`${path}/parameters`)};
     for(const field of ['followupRuleId','wardRuleId','breakRuleId'])if(parameters[field]!==undefined){

@@ -493,6 +493,24 @@ describe('Forge Intake Application review workspace', () => {
     expect(renders).toBe(1);
   });
 
+  test('a hydrated spell with a literal qualifier remains created and shows the concrete GM note', async () => {
+    const actor={flags:{'fvtt-json-generator-spell-resolver':{
+      spellManifest:{spellcastingGroups:[{groupId:'aid',spellRefs:[{refId:'bless',englishName:'Bless'}]}]},
+      spellResolution:{status:'hydrated',report:{literalRestrictions:[{groupId:'aid',refId:'bless',kind:'casting',text:'using the same spellcasting ability as Spellcasting.'}]}}
+    }}};
+    const {application,root}=makeApplication({
+      analyzePlaintextActorSource: ((source:string)=>({status:'ready_to_generate',rawSourceHash:hashSource(source),candidate:{id:'one',label:'one',start:0,end:source.length,quote:source},canonicalSource:ACTOR_SOURCE,findings:[]})) as any,
+      createAcceptedForgeActor:(async()=>({...actorCreateResult(),actor})) as any,
+    },undefined,undefined,undefined,undefined,{directoryKind:'Actor',initialMode:'plaintext-actor'});
+    root.mode.value='plaintext-actor';root.source.value='one creature';root.displayName.value='Spell qualifier';
+    await (application as any).analyze(root);await (application as any).generate(root);await (application as any).create(root);
+    expect(root.createdDocument.hidden).toBe(false);
+    expect(root.completionIssues.innerHTML).toContain('Bless');
+    expect(root.completionIssues.innerHTML).toContain('已按 AI 给出的参数录入施法活动');
+    expect(root.completionIssues.innerHTML).toContain('using the same spellcasting ability as Spellcasting.');
+    expect(root.completionIssues.innerHTML).not.toContain('原生施法未完成');
+  });
+
   test('runs plaintext Analyze then Generate, and routes accepted creation only to the Actor adapter', async () => {
     let actorCreates = 0;
     let itemCreates = 0;

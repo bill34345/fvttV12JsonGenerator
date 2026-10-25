@@ -50,7 +50,7 @@ const pendingWrites = new Map<string, Promise<void>>();
 interface StoredCheckpoint { revision: number; snapshot: string | null }
 
 export class EncounterRecoveryConflictError extends Error {
-  constructor() { super('另一窗口已更新战斗包任务；请关闭旧窗口并重新打开当前任务。'); this.name = 'EncounterRecoveryConflictError'; }
+  constructor() { super('另一窗口已更新生物生成任务；请关闭旧窗口并重新打开当前任务。'); this.name = 'EncounterRecoveryConflictError'; }
 }
 
 /** One browser-local checkpoint per Foundry world and GM. No accepted result is persisted. */
@@ -113,36 +113,36 @@ export class IndexedDbEncounterRecoveryStore implements EncounterRecoveryStore {
   }
 
   private async open(): Promise<IDBDatabase> {
-    if (!this.factory) throw new Error('当前浏览器无法使用 IndexedDB，战斗包任务暂不能在刷新后恢复。');
+    if (!this.factory) throw new Error('当前浏览器无法使用 IndexedDB，生物生成任务暂不能在刷新后恢复。');
     return new Promise((resolve, reject) => {
       const open = this.factory!.open(DATABASE, 1);
       open.onupgradeneeded = () => { if (!open.result.objectStoreNames.contains(STORE)) open.result.createObjectStore(STORE); };
       open.onsuccess = () => resolve(open.result);
-      open.onerror = () => reject(open.error ?? new Error('无法打开战斗包任务存储。'));
-      open.onblocked = () => reject(new Error('另一个窗口正在占用战斗包任务存储。'));
+      open.onerror = () => reject(open.error ?? new Error('无法打开生物与召唤物任务存储。'));
+      open.onblocked = () => reject(new Error('另一个窗口正在占用生物生成任务存储。'));
     });
   }
 }
 
 function assertEnvelope(value: StoredCheckpoint): void {
   if(!value||!Number.isSafeInteger(value.revision)||value.revision<1||value.revision>Number.MAX_SAFE_INTEGER-1
-    ||(value.snapshot!==null&&typeof value.snapshot!=='string'))throw new TypeError('无效的战斗包任务存储记录。');
+    ||(value.snapshot!==null&&typeof value.snapshot!=='string'))throw new TypeError('无效的生物生成任务存储记录。');
 }
 
 export function serializeEncounterRecovery(snapshot: EncounterRecoverySnapshot): string {
   const value = JSON.stringify(snapshot);
-  if (value.length > MAX_BYTES) throw new RangeError('战斗包任务记录过大，未覆盖此前保存的记录。');
+  if (value.length > MAX_BYTES) throw new RangeError('生物生成任务记录过大，未覆盖此前保存的记录。');
   scanSecrets(snapshot);
   decodeEncounterRecovery(value);
   return value;
 }
 
 export function decodeEncounterRecovery(value: string): EncounterRecoverySnapshot {
-  if (value.length > MAX_BYTES) throw new RangeError('战斗包任务记录超出大小限制。');
+  if (value.length > MAX_BYTES) throw new RangeError('生物生成任务记录超出大小限制。');
   assertEncounterSecretsAbsent(value, []);
   const data: unknown = JSON.parse(value);
   scanSecrets(data);
-  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new TypeError('无效的战斗包任务记录。');
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new TypeError('无效的生物生成任务记录。');
   const record = data as Record<string, unknown>;
   if(record.version===2){
     if(record.kind!=='uploaded-package'||typeof record.target!=='string'
@@ -162,7 +162,7 @@ export function decodeEncounterRecovery(value: string): EncounterRecoverySnapsho
         ||!Array.isArray((record.localizationDraft as Record<string,unknown>).actors)
         ||!(record.localizationDraft as Record<string,unknown>).packageText))
       ||['source','sourceHash','label','outputLanguage','report','reviewed','accepted'].some(key=>key in record))
-      throw new TypeError('上传战斗包恢复记录与包、目标或译文进度不符。');
+      throw new TypeError('上传的生物导入文件恢复记录与包、目标或译文进度不符。');
     return record as unknown as UploadedEncounterRecoverySnapshot;
   }
   if (record.version !== 1 || typeof record.source !== 'string' || !record.source.trim() || record.source.length > 24000
@@ -171,7 +171,7 @@ export function decodeEncounterRecovery(value: string): EncounterRecoverySnapsho
     || typeof record.sourceHash !== 'string' || record.sourceHash !== hashSource(record.source)
     || typeof record.catalogHash !== 'string' || !/^[a-f0-9]{64}$/.test(record.catalogHash)
     || typeof record.target !== 'string' || !/^14\.(?:364|368)\/dnd5e\/5\.3\.3\/core$/.test(record.target))
-    throw new TypeError('战斗包任务记录与来源或目标不符。');
+    throw new TypeError('生物生成任务记录与来源或目标不符。');
   if (record.report !== undefined) {
     const report = record.report as Partial<EncounterIntakeReport>;
     const sourceText = record.source as string;
@@ -185,7 +185,7 @@ export function decodeEncounterRecovery(value: string): EncounterRecoverySnapsho
         ||sourceText.slice(actor.start,actor.end)!==actor.source
         ||!actor.analysis||typeof actor.analysis!=='object'||Array.isArray(actor.analysis))
       ||(report.packageHash!==undefined&&!/^[a-f0-9]{64}$/.test(report.packageHash)))
-      throw new TypeError('战斗包来源报告与保存的任务不符。');
+      throw new TypeError('生物导入文件来源报告与保存的任务不符。');
     const actors=report.actors;
     if(report.members!==undefined&&(!Array.isArray(report.members)||report.members.length<1||report.members.length>6
       ||report.members.length<actors.length||report.members.some((member,index)=>!member||member.key!==`actor-${index+1}`
@@ -203,7 +203,7 @@ export function decodeEncounterRecovery(value: string): EncounterRecoverySnapsho
     try {
       if (typeof record.package !== 'string' || record.package.length > MAX_BYTES || !expected
         || encounterPackageHash(decodeForgeEncounterPackageText(record.package)) !== expected) throw new TypeError();
-    } catch { throw new TypeError('保存的战斗包与来源报告不符。'); }
+    } catch { throw new TypeError('保存的生物导入文件与来源报告不符。'); }
   }
   if (record.translationReport !== undefined && (!Array.isArray(record.translationReport) || record.translationReport.length > 8))
     throw new TypeError('无效的中文审核进度。');
@@ -216,7 +216,7 @@ function scanSecrets(value: unknown): void {
   if(Array.isArray(value)){for(const entry of value)scanSecrets(entry);return;}
   for(const [key,entry] of Object.entries(value)){
     if(['apiKey','authorization','cookie','endpoint','baseUrl','rawResponse','providerResponse','savedApiKeys'].includes(key))
-      throw new TypeError('战斗包安全检查拒绝了凭据或原始服务响应。');
+      throw new TypeError('生物导入文件安全检查拒绝了凭据或原始服务响应。');
     scanSecrets(entry);
   }
 }

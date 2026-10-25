@@ -14,7 +14,7 @@ import { draftForgeEncounterLocalization, localizeForgeEncounter,
   type EncounterLocalizationProgress, type ForgeEncounterLocalizationDraft } from './encounterLocalization';
 import type { MonsterIntakeAiProvider, DiscoveryCandidate, MonsterIntakeIR } from '@fvtt-json-generator/intake-ai/types';
 import {
-  buildEncounterMacroCommand, renderEncounterActorSource, decodeEncounterAutomation, compileEncounterSelection, encounterStagedConditionRequirements,encounterManualConditionRequirements, manualForcedMovementRequirements,
+  buildEncounterMacroCommand, renderEncounterActorSource, decodeEncounterAutomation, compileEncounterSelection, encounterStagedConditionRequirements,encounterManualConditionRequirements,
   type EncounterAutomationIR, type EncounterAutomationRequest, type EncounterAutomationRule, type EncounterCompilerRejection,
 } from '@fvtt-json-generator/intake-ai/encounter-automation';
 import {
@@ -121,9 +121,9 @@ export function assertEncounterSecretsAbsent(content:string,forbiddenValues:read
   if(/(?:^|\n)\s*(?:authorization|proxy-authorization|cookie|set-cookie)\s*:/iu.test(content)
     ||/\bBearer\s+[A-Za-z0-9._~+/=-]{8,}/iu.test(content)
     ||/"(?:apiKey|authorization|cookie|endpoint|baseUrl|rawResponse|providerResponse|savedApiKeys)"\s*:/iu.test(content)){
-    throw new TypeError('战斗包安全检查拒绝了凭据或原始服务响应。');
+    throw new TypeError('生物导入文件安全检查拒绝了凭据或原始服务响应。');
   }
-  for(const value of forbiddenValues){if(value.trim()&&content.includes(value.trim()))throw new TypeError('战斗包包含当前配置的敏感连接信息。');}
+  for(const value of forbiddenValues){if(value.trim()&&content.includes(value.trim()))throw new TypeError('生物导入文件包含当前配置的敏感连接信息。');}
 }
 
 export function createEncounterIntakeProviders(options:BrowserAiProviderOptions & {allowLocalBridge?:boolean;onCompilationRejected?:(evidence:EncounterCompilerRejection)=>void;responseEvidence?:import('@fvtt-json-generator/intake-ai/provider').ProviderResponseEvidenceSink;
@@ -148,7 +148,6 @@ export function createEncounterIntakeProviders(options:BrowserAiProviderOptions 
     model:options.model,reviewModel:options.model,timeoutMs:providerTimeoutMs,repairTimeoutMs:providerRepairTimeoutMs,
     reviewFocus:'forge-brief',
     evidenceAnchoring:'exact-quotes',
-    stagedExtraction:{baseMode:'facts',featureMode:'whole-v2',maxCorrections:options.autoCorrect===true?1:0,preserveCandidates:true,signal:combineEncounterSignals(signal,attemptSignal),onStage:options.onExtractionStage},
     responseEvidence:options.responseEvidence,
     waitPolicy,onActivity:options.onActivity,
     transport,httpClient:(requestUrl,init)=>fetch(requestUrl,{...init,signal:combineEncounterSignals(signal,attemptSignal,init?.signal)})});
@@ -262,7 +261,7 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
     const discovery=local?{candidates:local}:await provider.discover({source,sourceSha256:report.sourceHash,chunkStart:0,chunkEnd:source.length});
     signal?.throwIfAborted();
     const raw=normalizeDiscovery(source,discovery.candidates);
-    if(raw.length<1||raw.length>6)return pending(['战斗包入口需要识别1至6种生物；不会自动选取第一种或忽略其余生物。']);
+    if(raw.length<1||raw.length>6)return pending(['生物与召唤物入口需要识别1至6种生物；不会自动选取第一种或忽略其余生物。']);
     const candidates=partitionDiscoveryCandidates(source,raw);
     if(previous?.members&&(previous.members.length!==candidates.length||previous.members.some((member,index)=>
       member.key!==`actor-${index+1}`||member.start!==candidates[index]!.start||member.end!==candidates[index]!.end)))
@@ -369,7 +368,7 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
         {source,conditionCatalog,actors:[{key:native.key,ir:native.analysis.ir!,source:native.source,artifact:native.generation.actorProjection}]}):undefined;
       report.generationRoute=sourceRecovery?'encounter-with-controller':'single-actor-native';
       if(sourceRecovery)report.automation=sourceRecovery;
-      progress('唯一生物已通过原生生成与来源校验，省略配套控制配置请求；仍需GM确认。');
+      progress('唯一生物已通过原生生成与转换保真检查，省略配套控制配置请求；仍需GM确认。');
       const actorSource=sourceRecovery?renderEncounterActorSource(native.analysis.ir!,[],native.source):native.generation.finalSource!;
       const bundle:ForgeEncounterPackage={schema:'fvtt-json-forge-encounter',version:1,id:`intake-${report.sourceHash.slice(0,20)}`,
         label:input.label,target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:native.key,
@@ -378,7 +377,7 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
     }
     report.generationRoute='encounter-with-controller';
     const request:EncounterAutomationRequest={source,conditionCatalog,actors:report.actors.map(a=>({key:a.key,ir:a.analysis.ir!,source:a.source,artifact:a.generation!.actorProjection}))};
-    progress('角色来源审核已通过，正在提取固定自动化能力与参数；AI不会编写宏代码。');
+    progress('生物结构与转换检查已通过，正在提取固定自动化能力与参数；AI不会编写宏代码。');
     let automation=decodeEncounterAutomation(await automationProvider.generate(request),request);signal?.throwIfAborted();
     for(let attempt=0;attempt<2;attempt++){
       report.automation=automation;publish();
@@ -391,8 +390,7 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
         for(const required of manualPreparationRules(actor.analysis.ir!,actor.source,actor.key)){
           if(rules.filter(rule=>rule.actorKey===actor.key&&rule.section===required.section
             &&rule.featureName===required.featureName
-            && (manualForcedMovementRequirements(actor.analysis.ir!,actor.source).some(movement=>movement.section===required.section&&movement.featureName===required.featureName)
-              ? rule.capabilityKind==='gm-manual' : ['gm-manual','status-lifecycle'].includes(rule.capabilityKind??''))).length!==1){
+            && ['gm-manual','status-lifecycle'].includes(rule.capabilityKind??'')).length!==1){
             return pending([`${actor.key} 的 ${required.section}/${required.featureName} 缺少来源绑定的 GM 手工条件覆盖。`]);
           }
         }
@@ -404,7 +402,7 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
         macros:[{key:'battle-control',name:automation.name,command,commandHash:hashSource(command),
           bindings:Object.fromEntries(report.actors.map(a=>[a.key,a.key])),covers:[...rules.map(r=>({actorKey:r.actorKey,mechanicId:r.mechanicId})),...stagedCovers,...manualCovers],
           notes:[automation.notes,...automation.manualSteps,`原始资料SHA-256：${report.sourceHash}`].join('\n')}],assets:[]};
-      progress('工具已生成固定控制入口，正在核对整包和自动化配置的来源语义。');
+      progress('工具已生成固定控制入口，正在核对导入文件结构和固定能力配置。');
       const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(bundle),signal);
       for(const actor of report.actors){
         const pendingRules=manualPreparationRules(actor.analysis.ir!,actor.source,actor.key);
@@ -450,7 +448,7 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
       progress('自动化审阅发现问题，进行本次唯一一次修正。');
       automation=decodeEncounterAutomation(await automationProvider.generate({...request,prior:automation,findings:review.findings}),request);signal?.throwIfAborted();
     }
-    return pending(['没有产生已审核的战斗包。']);
+    return pending(['没有产生已审核的生物导入文件。']);
   }catch(error){
     if(!continuationValidated){
       report.status='failed';report.findings=[signal?.aborted?'任务已取消。':safeFailure(error)];
@@ -493,7 +491,7 @@ export async function reviewForgeEncounterCandidate(input:{
     ||(input.report.members&&(input.report.members.length!==input.report.actors.length||input.report.members.some((member,index)=>
       member.status!=='available'||member.key!==input.report.actors[index]?.key
       ||member.start!==input.report.actors[index]?.start||member.end!==input.report.actors[index]?.end)))
-    ||(!actorsOnly&&!input.report.automation))throw new TypeError('战斗包来源、模型或正式候选已变化，不能审核旧候选。');
+    ||(!actorsOnly&&!input.report.automation))throw new TypeError('生物导入文件来源、模型或正式候选已变化，不能审核旧候选。');
   const report=structuredClone(input.report);
   const publish=()=>input.onReport?.(structuredClone(report));
   // Check every actor and the final fixed configuration before any paid audit.
@@ -501,7 +499,7 @@ export async function reviewForgeEncounterCandidate(input:{
     if(actor.source!==source.slice(actor.start,actor.end)||!prepared.bundle.actors.some(entry=>entry.key===actor.key)
       ||!actor.generation||!actor.analysis.ir
       ||JSON.stringify(actor.analysis.ir)!==JSON.stringify(actor.generation.analysis.ir))
-      throw new TypeError('战斗包生物分段或生成身份与当前候选不一致。');
+      throw new TypeError('生物导入文件生物分段或生成身份与当前候选不一致。');
     const actorInput=encounterActorInput(report,actor);
     const response=assertBrowserActorIntakeReviewContext(actorInput,actor.generation,provider,true);
     if(!actor.generation.candidateAvailable||!response.result.artifact)
@@ -589,11 +587,6 @@ function manualPreparationRules(ir:MonsterIntakeIR,source:string,actorKey:string
   const sections=[['trait',ir.creature.traits],['action',ir.creature.actions],['bonus',ir.creature.bonusActions],
     ['reaction',ir.creature.reactions],['legendary',ir.creature.legendaryActions]] as const;
   const rules:Array<EncounterAutomationRule & {mechanicId:string;capabilityKind:'gm-manual'}>=[];
-  for (const movement of manualForcedMovementRequirements(ir, source)) {
-    rules.push({actorKey, section:movement.section, featureName:movement.featureName, quote:movement.quote,
-      mechanicId:`encounter-pending-push-${movement.section}-${Number(movement.claimPath.split('/').at(-1))+1}`,
-      capabilityKind:'gm-manual',gmSteps:['使用原生豁免判定；推离仅由 GM 手动处理，当前是准备声明。',movement.description]});
-  }
   for(const [section,features] of sections)for(const [index,feature] of features.entries()){
     const conditions=feature.appliedConditions??[];
     if(conditions.length===0||conditions.some(condition=>condition.staged))continue;
@@ -619,17 +612,14 @@ function hasManualPreparationEvidence(
   return encounterManualConditionRequirements(ir,rules).every(requirement=>requirement.conditionPaths.every(path=>
     findings.some(finding=>finding.path===path&&finding.code==='ACTOR_CONDITION_REQUIRES_GM')
     &&!findings.some(finding=>finding.path===path&&finding.code==='ACTOR_CONDITION_DRIFT')))
-    &&manualForcedMovementRequirements(ir,source).every(requirement=>
-      findings.some(finding=>finding.code==='ACTOR_FORCED_MOVEMENT_REQUIRES_GM'
-        &&finding.path===requirement.claimPath)
-      &&!findings.some(finding=>finding.code==='ACTOR_FORCED_MOVEMENT_UNBOUND'&&finding.path===requirement.claimPath));
+;
 }
 function safeFailure(error:unknown):string{
   const message=error instanceof Error?error.message:'生成失败';
   return message.replace(/https?:\/\/\S+/gi,'[endpoint]').replace(/Bearer\s+\S+/gi,'[credential]').slice(0,1600);
 }
 function actorStageLabel(stage:string):string{
-  return ({discover:'识别来源',extract:'提取规则',validate:'核对来源',repair:'修正草稿',generate:'正式生成',review:'模型简要复核',finalize:'完成核对'} as Record<string,string>)[stage]??'处理当前阶段';
+  return ({discover:'识别来源',extract:'提取规则',validate:'检查结构',repair:'修正草稿',generate:'正式生成',review:'模型简要复核',finalize:'完成核对'} as Record<string,string>)[stage]??'处理当前阶段';
 }
 function actorStageStatus(status:string):string{
   return ({running:'进行中',completed:'已完成',failed:'失败',skipped:'已跳过'} as Record<string,string>)[status]??'状态待核对';

@@ -64,7 +64,7 @@ describe('encounter task checkpoint', () => {
     const changed = { ...original, label: 'Changed candidate with the old source identity' };
     expect(JSON.stringify(changed)).toContain(hashSource(source));
     const data = snapshot({ report: { ...report(), packageHash: prepared.hash }, package: JSON.stringify(changed) });
-    expect(() => serializeEncounterRecovery(data)).toThrow('保存的战斗包与来源报告不符');
+    expect(() => serializeEncounterRecovery(data)).toThrow('保存的生物导入文件与来源报告不符');
   });
 
   test('source is saved before the first AI request and restored after reopening', async () => {
@@ -128,9 +128,9 @@ describe('encounter task checkpoint', () => {
   test('uploaded package checkpoints reject corruption and restore only after formal preview with no provider',async()=>{
     const valid=await uploadedSnapshot();
     expect(decodeEncounterRecovery(serializeEncounterRecovery(valid))).toEqual(valid);
-    expect(()=>serializeEncounterRecovery({...valid,packageSha256:'0'.repeat(64)})).toThrow('上传战斗包');
-    expect(()=>serializeEncounterRecovery({...valid,report:report()} as any)).toThrow('上传战斗包');
-    expect(()=>serializeEncounterRecovery({...valid,translationReport:[{status:'accepted'}]} as any)).toThrow('上传战斗包');
+    expect(()=>serializeEncounterRecovery({...valid,packageSha256:'0'.repeat(64)})).toThrow('上传的生物导入文件');
+    expect(()=>serializeEncounterRecovery({...valid,report:report()} as any)).toThrow('上传的生物导入文件');
+    expect(()=>serializeEncounterRecovery({...valid,translationReport:[{status:'accepted'}]} as any)).toThrow('上传的生物导入文件');
     const wrongRequest={...valid,translationReport:[{actorKey:'main',status:'draft_ready',request:{sourceHash:'0'.repeat(64)},draft:{texts:[]}}]};
     const harness=app({load:async()=>wrongRequest as any,save:async()=>undefined});
     const before=await harness.application._prepareContext();

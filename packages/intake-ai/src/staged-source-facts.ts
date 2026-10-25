@@ -112,7 +112,7 @@ const SKILLS: Record<string, string> = {
   sleightofhand: 'sleightofhand', 巧手: 'sleightofhand', stealth: 'stealth', 隐匿: 'stealth', survival: 'survival', 生存: 'survival', 求生: 'survival',
 };
 const LANGUAGES: Record<string, string> = {
-  all: 'all', 所有语言: 'all', 全部: 'all', abyssal: 'abyssal', 深渊语: 'abyssal', aquan: 'aquan', 水族语: 'aquan', celestial: 'celestial', 天界语: 'celestial', common: 'common', 通用语: 'common',
+  all: 'all', 所有语言: 'all', 全部: 'all', abyssal: 'abyssal', 深渊语: 'abyssal', aquan: 'aquan', 水族语: 'aquan', auran:'auran', 风族语:'auran', ignan:'ignan', 火族语:'ignan', celestial: 'celestial', 天界语: 'celestial', common: 'common', 通用语: 'common',
   deepspeech: 'deep', deep: 'deep', 深潜语: 'deep', draconic: 'draconic', 龙语: 'draconic', dwarvish: 'dwarvish', dwarven: 'dwarvish', 矮人语: 'dwarvish',
   elvish: 'elvish', 精灵语: 'elvish', giant: 'giant', 巨人语: 'giant', gnomish: 'gnomish', 侏儒语: 'gnomish', goblin: 'goblin', 地精语: 'goblin', halfling: 'halfling', 半身人语: 'halfling',
   infernal: 'infernal', 炼狱语: 'infernal', orc: 'orc', 兽人语: 'orc', primordial: 'primordial', 原初语: 'primordial', sylvan: 'sylvan', 木族语: 'sylvan', terran: 'terran', 土族语: 'terran', undercommon: 'undercommon', 地底通用语: 'undercommon',
@@ -141,12 +141,20 @@ export const stagedDamageLabels=Object.keys(DAMAGE);
 export const stagedDamageType=(value:string):string|undefined=>DAMAGE[token(value)];
 const empty = (value: string) => /^(?:none|—|-|无)[。.]?$/iu.test(clean(value));
 const parts = (value: string) => clean(value).split(/[,，;；、]/u).map(value => value.trim().replace(/^and\s+/iu, '')).filter(Boolean);
+/** The 5.3.3 language tree groups these four named dialects under Primordial.
+ * Keep both printed facts when the qualifier is stored as a custom note;
+ * arbitrary parenthetical restrictions must remain complete and checked. */
+const languageDialectParts=(value:string):string[]=>{
+  const match=/^(.+?)\s*\(([^(),]+)\)$/u.exec(clean(value));
+  return match&&LANGUAGES[token(match[1]!)]==='primordial'&&['aquan','auran','ignan','terran'].includes(LANGUAGES[token(match[2]!)]??'')
+    ?[match[1]!.trim(),match[2]!.trim()]:[value];
+};
 const languageParts=(value:string)=>parts(value).flatMap(part=>part.split(/以及|\s+and\s+/iu))
   // A named language and an open-ended choice are separate facts. Retain the
   // complete choice (including its number), whether supplied together or as
   // a native language plus a custom note. Never invent the other languages.
   .flatMap(part=>part.split(/\s+(?=plus\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+other\s+languages?\b)/iu))
-  .map(part=>part.trim().replace(/^(?:以及|and\s+)/iu,'')).filter(Boolean);
+  .map(part=>part.trim().replace(/^(?:以及|and\s+)/iu,'')).filter(Boolean).flatMap(languageDialectParts);
 /** Exact source language qualifiers remain notes, never inferred speaking
  * capabilities. Used only to restore an absent note; conflicts are not erased. */
 export function sourceLanguageNotes(source:string,values:readonly string[]):string|undefined {
@@ -430,8 +438,9 @@ export function validateStagedStaticSourceFacts(source: string, creature: Canoni
   if(!field||field==='languages'){
   const languageBody = entries.get('languages');
   const expectedLanguages = languageBody && !empty(languageBody) ? languageParts(languageBody) : [];
-  const actualLanguages = [...creature.languages.values, ...(creature.languages.custom ? languageParts(creature.languages.custom) : [])];
-  const languageIdentity = (value: string) => LANGUAGES[token(value)] ?? clean(value).toLowerCase().replace(/[.]$/u, '');
+  const actualLanguages = [...creature.languages.values.flatMap(languageDialectParts), ...(creature.languages.custom ? languageParts(creature.languages.custom) : [])];
+  const languageIdentity = (value: string) => LANGUAGES[token(value)] ?? clean(value).toLowerCase().replace(/[.]$/u, '')
+    .replace(/^plus\s+(?=(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+other\s+languages?\b)/iu,'');
   if (JSON.stringify(actualLanguages.map(languageIdentity).sort()) !== JSON.stringify(expectedLanguages.map(languageIdentity).sort())) fail('BASE_STATIC_CONFLICT', 'languages');
 
   }

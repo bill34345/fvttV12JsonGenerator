@@ -35,9 +35,11 @@ describe('explicit private response evidence before rejection', () => {
     expect(event.requestHash).toMatch(/^[0-9a-f]{64}$/u);
     expect(event.redacted).toBe(true);
     expect(event.truncated).toBe(false);
-    for (const sensitive of ['fixture-private-key', 'another-token', 'session-value', 'other-value', connection.baseUrl, source])
+    for (const sensitive of ['fixture-private-key', 'another-token', 'session-value', 'other-value', connection.baseUrl, source]) {
       expect(JSON.stringify(event)).not.toContain(sensitive);
-    expect(JSON.stringify(audits)).not.toContain('content');
+      expect(JSON.stringify(audits)).not.toContain(sensitive);
+    }
+    for (const audit of audits) for (const field of ['content', 'request', 'response', 'messages']) expect(audit).not.toHaveProperty(field);
     expect(JSON.stringify(audits)).not.toContain('invalid JSON');
   });
 
@@ -88,32 +90,43 @@ describe('explicit private response evidence before rejection', () => {
     try {
       const providers = createEncounterIntakeProviders({ ...connection, autoCorrect:true, responseEvidence: { record: event => { events.push(event); } } });
       const stagedSource='Proof CR 1\nMedium construct\nArmor Class 15\nHit Points 20\nSpeed 30 ft.\nSTR 10 DEX 10 CON 10 INT 10 WIS 10 CHA 10\nChallenge 1\nActions\nSlam. One target takes 3 damage.\n';
-      const baseSource=stagedSource.slice(0,stagedSource.indexOf('Actions\n'));
       await expect(providers.provider.extract({source:stagedSource,sourceSha256:sha256(stagedSource),candidate:{id:'proof',label:'Proof',start:0,end:stagedSource.length,quote:stagedSource}})).rejects.toThrow();
       await expect(providers.automationProvider.generate({source:LURKER_SOURCE,actors:[{key:'actor-1',source:LURKER_SOURCE,
         ir:buildValidLurkerIr(),artifact:{items:[]}}]})).rejects.toThrow();
       const input = localizationRequest(sha256(source), [localizationText('body', 'A rule.')]);
       await expect(providers.translationService.translate(input)).rejects.toThrow();
-      expect(events.map(event => event.stage)).toEqual(['extract', 'extract', 'automation-generate', 'translate']);
-      expect(calls).toBe(4); // The malformed base gets exactly one separately captured correction.
-      expect(events[1]!.requestHash).not.toBe(events[0]!.requestHash);
-      expect(events[1]!.content).toBe('constructed bad reply');
-      expect(events[0]!.sourceHash).toBe(sha256(baseSource));
-      expect(events[3]!.sourceHash).toBe(sha256(source));
-      expect(events[2]).toMatchObject({sourceHash:sha256(LURKER_SOURCE),attempt:1,content:'constructed bad reply',truncated:false,redacted:false});
-      expect(events[2]!.requestHash).toMatch(/^[0-9a-f]{64}$/u);
+      expect(events.map(event => event.stage)).toEqual(['extract', 'automation-generate', 'translate']);
+      expect(calls).toBe(3); // The default full-IR request has no hidden staged correction.
+      expect(events[0]).toMatchObject({sourceHash:sha256(stagedSource),attempt:1,content:'constructed bad reply'});
+      expect(events[2]!.sourceHash).toBe(sha256(source));
+      expect(events[1]).toMatchObject({sourceHash:sha256(LURKER_SOURCE),attempt:1,content:'constructed bad reply',truncated:false,redacted:false});
+      for(const event of events)expect(event.requestHash).toMatch(/^[0-9a-f]{64}$/u);
     } finally { globalThis.fetch = originalFetch; }
   });
-  test('the Forge BW factory records one complete whole-feature request and preserves both operations', async () => {
-    const originalFetch=globalThis.fetch, events:ProviderResponseEvidence[]=[],stages:any[]=[];
+  for(const legacy of [false,true])test(legacy
+    ? 'explicit legacy BW records its base and whole-feature requests and preserves both operations'
+    : 'the default Forge factory records one full-IR request and preserves both AI-authored operations', async () => {
+    const originalFetch=globalThis.fetch, events:ProviderResponseEvidence[]=[],stages:any[]=[],payloads:any[]=[];
     const source='Proof CR 1\nMedium construct, unaligned\nArmor Class 15\nHit Points 20\nSpeed 30 ft.\nSTR 10 DEX 10 CON 10 INT 10 WIS 10 CHA 10\nChallenge 1\nActions\nSlam. Melee Weapon Attack: +2 to hit, reach 5 ft., one target. Hit: 3 (1d6) bludgeoning damage.\nDream Snare (Recharge 5-6). Each creature within 20 feet must make a DC 12 Wisdom saving throw or fall asleep until the end of its next turn.\n';
     const facts={schemaVersion:1,creature:{identity:{name:'Proof',size:'medium',creatureType:'construct',alignment:'unaligned'},
       abilities:{str:10,dex:10,con:10,int:10,wis:10,cha:10},attributes:{ac:15,hp:{value:20},movement:{walk:30},cr:1},
       saves:{},skills:{},defenses:{resistances:[],immunities:[],vulnerabilities:[],conditionImmunities:[]},senses:{},languages:{values:[]}},uncertainties:[]};
+    const slam=source.slice(source.indexOf('Slam.'),source.indexOf('\nDream Snare'));
+    const snare=source.slice(source.indexOf('Dream Snare')).trim();
+    const fullIr={...facts,source:{sha256:sha256(source),length:source.length},claims:[],coverage:[],
+      creature:{...facts.creature,traits:[],bonusActions:[],reactions:[],legendaryActions:[],actions:[
+        {name:'Slam',description:slam,activityType:'utility',executionMode:'native-with-gm',nativeRuleText:slam,manualRemainder:slam,
+          sourceOperations:[{id:'slam',name:'Slam attack',type:'attack',relationship:'primary',sourceText:slam,
+            attack:{type:'mwak',toHit:2,reach:5},damage:[{formula:'1d6',type:'bludgeoning',relationship:'base'}],proof:{}}]},
+        {name:'Dream Snare (Recharge 5-6)',description:snare,activityType:'utility',executionMode:'native-with-gm',nativeRuleText:snare,manualRemainder:'fall asleep until the end of its next turn',recharge:[5,6],
+          sourceOperations:[{id:'snare',name:'Dream Snare save',type:'save',relationship:'primary',sourceText:snare,
+            save:{dc:12,abilities:['wis'],choice:'single',outcome:'none'},range:20,proof:{}}]},
+      ]}};
+    const before=structuredClone(fullIr);
     let calls=0;
     globalThis.fetch=(async(_url:unknown,init:any)=>{
-      calls++;const payload=JSON.parse(JSON.parse(init.body).messages[1].content);
-      if(!payload.template)return response(JSON.stringify(facts));
+      calls++;const payload=JSON.parse(JSON.parse(init.body).messages[1].content);payloads.push(payload);
+      if(!payload.template)return response(JSON.stringify(legacy?facts:fullIr));
       const form=yaml.load(payload.template) as any;
       Object.assign(form.动作[0],{攻击:{类型:'近战武器攻击',命中加值:2,触及尺:5,射程尺:null,远射程尺:null,目标数量:1,目标限制:null},
         伤害:[{公式:'1d6',伤害类型:'bludgeoning',生效条件:null,倍率:1,成功时倍率:null}]});
@@ -121,19 +134,27 @@ describe('explicit private response evidence before rejection', () => {
       return response(JSON.stringify({markdown:yaml.dump(form,{noRefs:true,lineWidth:-1})}));
     }) as unknown as typeof fetch;
     try{
-      const providers=createEncounterIntakeProviders({...connection,onExtractionStage:event=>{stages.push(event);},
-        responseEvidence:{record:event=>{events.push(event);}}});
-      const ir=await providers.provider.extract({source,sourceSha256:sha256(source),candidate:{id:'proof',label:'Proof',start:0,end:source.length,quote:source}});
-      expect(calls).toBe(2);expect(events).toHaveLength(2);expect(events.every(event=>event.stage==='extract')).toBe(true);
+      const sink={record:(event:ProviderResponseEvidence)=>{events.push(event);}};
+      const provider=legacy
+        ?new OpenAICompatibleMonsterIntakeProvider({...connection,maxAttempts:1,stagedExtraction:{baseMode:'facts',featureMode:'whole-v2',maxCorrections:0,onStage:event=>{stages.push(event);}},responseEvidence:sink})
+        :createEncounterIntakeProviders({...connection,onExtractionStage:event=>{stages.push(event);},responseEvidence:sink}).provider;
+      const ir=await provider.extract({source,sourceSha256:sha256(source),candidate:{id:'proof',label:'Proof',start:0,end:source.length,quote:source}});
+      expect(calls).toBe(legacy?2:1);expect(events).toHaveLength(legacy?2:1);expect(events.every(event=>event.stage==='extract')).toBe(true);
       expect(ir.creature.actions).toHaveLength(2);
       expect(ir.creature.actions[0]).toMatchObject({name:'Slam',executionMode:'native-with-gm',sourceOperations:[{type:'attack',attack:{toHit:2}}]});
       expect(ir.creature.actions[1]).toMatchObject({name:'Dream Snare (Recharge 5-6)',executionMode:'native-with-gm',sourceOperations:[{type:'save',save:{dc:12,abilities:['wis']}}],recharge:[5,6]});
       expect(ir.creature.actions[1]!.appliedConditions).toBeUndefined();
       expect(ir.creature.actions[1]!.description).toContain('or fall asleep until the end of its next turn.');
       expect(ir.creature.actions[1]!.damage).toBeUndefined();expect(ir.creature.actions[1]!.manualRemainder).toContain('fall asleep');
-      expect(stages.filter(event=>event.stage==='feature'&&event.unitId!=='all'&&event.status==='validated'&&event.processor==='program')).toHaveLength(2);
-      expect(stages.filter(event=>event.stage==='feature').some(event=>event.processor==='model'&&event.status==='request')).toBe(true);
-      expect(stages.at(-1)).toMatchObject({stage:'assembly',status:'validated',plannedCalls:2,retryCalls:0});
+      if(legacy){
+        expect(stages.filter(event=>event.stage==='feature'&&event.unitId!=='all'&&event.status==='validated'&&event.processor==='program')).toHaveLength(2);
+        expect(stages.filter(event=>event.stage==='feature').some(event=>event.processor==='model'&&event.status==='request')).toBe(true);
+        expect(stages.at(-1)).toMatchObject({stage:'assembly',status:'validated',plannedCalls:2,retryCalls:0});
+      }else{
+        expect(stages).toEqual([]);expect(payloads[0]).not.toHaveProperty('template');expect(payloads[0]).not.toHaveProperty('sourceSpellGrants');
+        expect(ir as unknown).toEqual(before);expect(fullIr).toEqual(before);
+        expect(events[0]).toMatchObject({sourceHash:sha256(source),content:JSON.stringify(before),attempt:1});
+      }
     }finally{globalThis.fetch=originalFetch;}
   });
 });

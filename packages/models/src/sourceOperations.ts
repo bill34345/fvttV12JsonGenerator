@@ -1,4 +1,8 @@
 import type {NativeFailureStatus,SourceOperation,SourceOperationAbility} from './sourceOperationTypes';
+import {sourceOperationStructureErrors} from './sourceOperationStructure';
+export {sourceOperationStructureErrors} from './sourceOperationStructure';
+import {nativeAreaShape} from './sourceNativeArea';
+export {nativeAreaShape} from './sourceNativeArea';
 import {sourceHealingOperations,sourceHealingOperationErrors} from './sourceHealingOperations';
 export {sourceHealingOperations} from './sourceHealingOperations';
 export type {SourceOperation,SourceOperationAbility} from './sourceOperationTypes';
@@ -554,10 +558,13 @@ function sourceIndependentDamageCondition(source:string,q:string,atom:{formula:s
 /** Round-area size is its radius, not a nearby height or point distance. */
 function sourceRoundAreaRadius(q:string,shape:'cylinder'|'sphere',source=q):number|undefined{
   q=sourceSpellHeader(source,q)?.body??q;
-  const chineseShape=shape==='cylinder'?'圆柱形':'球形',cylinders=[...q.matchAll(new RegExp(`\\b${shape}\\b|${chineseShape}`,'giu'))];if(cylinders.length!==1)return;
+  const chineseShape=shape==='cylinder'?'圆柱形':'球(?:形|状)',cylinders=[...q.matchAll(new RegExp(`\\b${shape}\\b|${chineseShape}`,'giu'))];if(cylinders.length!==1)return;
   const at=cylinders[0]!.index!,before=q.slice(0,at),after=q.slice(at+cylinders[0]![0].length);
-  if(cylinders[0]![0]===chineseShape){
-    const radius=/半径\s*(\d+)\s*尺(?:[,，、\s]*(?:高|高度)\s*\d+\s*尺)?\s*的?$/u.exec(before)??/^\s*(?:的)?半径\s*(\d+)\s*尺/u.exec(after);
+  if(new RegExp(`^(?:${chineseShape})$`,'u').test(cylinders[0]![0])){
+    const radius=/半径\s*(\d+)\s*尺(?:[,，、\s]*(?:高|高度)\s*\d+\s*尺)?\s*的?$/u.exec(before)??/^\s*(?:的)?半径\s*(\d+)\s*尺/u.exec(after)
+      // CHM: 半径20尺的黄色恶心气体云团球状区域. A descriptive
+      // noun may intervene, but another measurement or clause may not.
+      ??(shape==='sphere'?/半径\s*(\d+)\s*尺[^\d。.;；，,]{0,40}$/u.exec(before):undefined);
     if(radius)return Number(radius[1]);
     if(/(?:高|高度)\s*\d+\s*尺\s*的?$/u.test(before))return;
     const simple=/(?<!\d)(\d+)\s*尺\s*的?$/u.exec(before);return simple?Number(simple[1]):undefined;
@@ -684,19 +691,30 @@ function sourceLegacyCombinedAttack(q:string,attack:unknown):boolean{
     &&(range[0]![2]===undefined?attack.longRange===undefined:attack.longRange===Number(range[0]![2]));
 }
 
+/** One neutral source operation can carry both printed geometries; the
+ * generator projects two mutually exclusive GM rolls from this same data. */
+function sourceNeutralCombinedAttack(q:string,attack:unknown):boolean{
+  if(!object(attack)||!['melee','ranged'].includes(attack.type)||!/\bmelee\s+or\s+ranged\s+attack\s+roll\s*[:：]/iu.test(q))return false;
+  const reach=[...q.matchAll(/\breach\s*[:：]?\s*(\d+)\s*(?:ft\.?|feet)\b/giu)],range=[...q.matchAll(/\brange\s*[:：]?\s*(\d+)(?:\s*\/\s*(\d+))?\s*(?:ft\.?|feet)\b/giu)];
+  return reach.length===1&&range.length===1&&Number.isSafeInteger(attack.reach)&&Number.isSafeInteger(attack.range)
+    &&attack.reach===Number(reach[0]![1])&&attack.range===Number(range[0]![1])
+    &&(range[0]![2]===undefined?attack.longRange===undefined:attack.longRange===Number(range[0]![2]));
+}
+
 function sourceAttackFactErrors(q:string,attack:NonNullable<SourceOperation['attack']>,alternative=false,neutralChoice?:'melee'|'ranged'):string[]{
   const choice=sourceAttackBonusChoice(q),header=choice?/\b(melee|ranged)\s+(weapon|spell)\s+attack\b/iu.exec(q):undefined;
   const errors:string[]=[],melee=header?header[1]!.toLowerCase()==='melee':/\bmelee\b|近战/iu.test(q),ranged=header?header[1]!.toLowerCase()==='ranged':/\branged\b|远程/iu.test(q),spell=header?header[2]!.toLowerCase()==='spell':/\bspell\b|法术/iu.test(q);
   const combined=/\bmelee\s+or\s+ranged\s+(?:(?:weapon|spell)\s+)?attack(?:\s+roll)?\b/iu.test(q);
   const rangedMode=typeof attack.type==='string'&&attack.type.startsWith('r');
-  const neutral=isNeutralSourceAttack({attack}),sourceNeutral=sourceNeutralAttackKind(q),expected=neutralChoice??sourceNeutral??(neutral?undefined:(combined&&rangedMode?'r':melee?'m':ranged?'r':'')+(spell?'s':'w')+'ak');
+  const hybrid=sourceNeutralCombinedAttack(q,attack);
+  const neutral=isNeutralSourceAttack({attack}),sourceNeutral=sourceNeutralAttackKind(q),expected=hybrid?attack.type:neutralChoice??sourceNeutral??(neutral?undefined:(combined&&rangedMode?'r':melee?'m':ranged?'r':'')+(spell?'s':'w')+'ak');
   const bonus=sourceAttackBonuses(q),toHit=choice?(alternative?choice.conditionalBonus:choice.defaultBonus):bonus.length===1?bonus[0]:undefined;
   // The final target slot can restrict eligibility ("one target not grappled
   // by ..."). Negating that target does not negate the Attack declaration.
   const targetBoundary=Math.max(q.lastIndexOf(','),q.lastIndexOf('，'),q.lastIndexOf(';'),q.lastIndexOf('；'));
   const predicate=sourceRollOnlyConditionText(targetBoundary<0?q:q.slice(0,targetBoundary));
   if(/\bmelee\s+and\s+ranged\s+(?:(?:weapon|spell)\s+)?attack\b/iu.test(q))errors.push('attack/type-or-bonus');
-  if(combined&&!sourceLegacyCombinedAttack(q,attack)&&(rangedMode?(attack.range===undefined||attack.reach!==undefined):(attack.reach===undefined||attack.range!==undefined)))errors.push('attack/type-or-bonus');
+  if(combined&&!hybrid&&!sourceLegacyCombinedAttack(q,attack)&&(rangedMode?(attack.range===undefined||attack.reach!==undefined):(attack.reach===undefined||attack.range!==undefined)))errors.push('attack/type-or-bonus');
   if(!Number.isSafeInteger(attack.toHit)||toHit===undefined||toHit!==attack.toHit||attack.type!==expected||!/attack|攻击/iu.test(q)||/\b(?:not|no|cannot)\b|不能|无法|并非/iu.test(predicate))errors.push('attack/type-or-bonus');
   for(const [field,label]of [['reach','reach|触及'],['range','range|射程']] as const){
     const expectedValue=attack[field];if(expectedValue===undefined)continue;
@@ -709,7 +727,7 @@ function sourceAttackFactErrors(q:string,attack:NonNullable<SourceOperation['att
   if(neutral){
     const reach=/\breach\s+(\d+)\s*(?:ft\.?|feet)/iu.exec(q),range=/\brange\s+(\d+)(?:\s*\/\s*(\d+))?\s*(?:ft\.?|feet)/iu.exec(q);
     const wantReach=neutralChoice==='ranged'?undefined:reach?Number(reach[1]):undefined,wantRange=neutralChoice==='melee'?undefined:range?Number(range[1]):undefined,wantLong=neutralChoice==='melee'?undefined:range?.[2]?Number(range[2]):undefined;
-    if(attack.reach!==wantReach||attack.range!==wantRange||attack.longRange!==wantLong||combined&&!neutralChoice||attack.reach!==undefined&&attack.range!==undefined)errors.push('attack/neutral-geometry');
+    if(attack.reach!==wantReach||attack.range!==wantRange||attack.longRange!==wantLong||!hybrid&&(combined&&!neutralChoice||attack.reach!==undefined&&attack.range!==undefined))errors.push('attack/neutral-geometry');
   }
   return errors;
 }
@@ -1028,6 +1046,11 @@ export function sourceOperationSelfTarget(source:string,op:SourceOperation):bool
 export function sourceOperationSelfArea(source:string,op:SourceOperation,actorName?:string|readonly string[]):boolean{
   if(!op.aoe||typeof op.proof?.aoe!=='string')return false;
   const all=sourceOperationClauses(source).map(text),q=text(op.proof.aoe),at=all.indexOf(q);if(at<0)return false;
+  // CHM 2024 prints the emitter before its Emanation distance. Bind that
+  // exact subject; a target/ally's area cannot establish Actor Self range.
+  const chineseOrigin=/源自\s*([^，,。.;；：:\d]+?)\s*(?:的\s*)?\d+\s*尺\s*(?:的\s*)?光环/u.exec(q)?.[1]
+    ??/(?:环绕|围绕)(?:在)?\s*([^，,。.;；：:\d]+?)\s*(?:的\s*)?周围\s*\d+\s*尺\s*(?:的\s*)?光环/u.exec(q)?.[1];
+  if(chineseOrigin&&nativeAreaShape('sphere',op.aoe.radius,q)==='radius')return /^(?:你|你自身|自身)$/u.test(chineseOrigin.trim())||sourceActorNameMatches(chineseOrigin,actorName);
   const origin=/\b(?:originating|extend(?:ing|s)?) from\s+(.+?)(?=\s+(?:at|when|while|that|who|which|to|must|makes?|takes?|has|unless|and)\b|[(),.;。]|$)/iu.exec(q)?.[1]
     ??/\bwithin\s+\d+\s+(?:feet|ft\.?)\s+of\s+(.+?)(?=\s+(?:at|when|while|that|who|which|to|must|makes?|takes?|has|unless|and)\b|[(),.;。]|$)/iu.exec(q)?.[1];
   if(origin){
@@ -1291,15 +1314,17 @@ export function sourceOperationErrors(source: string, value: unknown,contexts:re
         const q=quote('aoe',op.proof.aoe),areaIndex=clauses.findIndex(clause=>text(clause)===q);
         if(areaIndex>clauseIndex&&!scaling&&!existingArea)fail('aoe/operation-owner');
         if(sourceSpellHeader(source,q)&&!sourceSpellHeaderOperationOwner(source,op)&&!existingArea)fail('aoe/operation-owner');
-        const labels:Record<string,string>={sphere:'sphere|球形',radius:'radius|emanation|半径',cone:'cone|锥形',line:'line|线形',cube:'cube|立方体',cylinder:'cylinder|圆柱形',rectangle:'rectangle|矩形'};
-        const shape=labels[op.aoe.shape],value=op.aoe.radius;
-        const eachWithin=op.aoe.shape==='radius'&&new RegExp(`(?:^(?:Each|Every|Any) creature within ${value} (?:feet|ft\\.?) of\\s|\\bforcing (?:each|every|any) creature within ${value} (?:feet|ft\\.?) of [^,.;。]+? to make\\b)`,'iu').test(q);
-        const square=op.aoe.shape==='rectangle'&&(new RegExp(`(?<![\\d.])${value}[-\\s]*(?:foot|feet|ft\\.?)[-\\s]*square(?:\\s+area)?\\b`,'iu').test(q)||new RegExp(`(?<![\\d.])${value}\\s*尺(?:见方|的?正方形)`,'u').test(q));
-        const line=op.aoe.shape==='line'?sourceLineDimensions(q):undefined,height=op.aoe.shape==='cylinder'?sourceCylinderHeight(q):undefined;
-        if(op.aoe.width!==undefined&&(op.aoe.shape!=='line'||!Number.isSafeInteger(op.aoe.width)||op.aoe.width<1||op.aoe.width!==line?.width)||op.aoe.shape==='line'&&line?.width!==undefined&&op.aoe.width!==line.width)fail('aoe/width');
-        if(op.aoe.height!==undefined&&(op.aoe.shape!=='cylinder'||!Number.isSafeInteger(op.aoe.height)||op.aoe.height<1||op.aoe.height!==height)||op.aoe.shape==='cylinder'&&height!==undefined&&op.aoe.height!==height)fail('aoe/height');
-      const proven=op.aoe.shape==='cylinder'||op.aoe.shape==='sphere'?sourceRoundAreaRadius(q,op.aoe.shape,source)===value:op.aoe.shape==='line'?line?.length===value:op.aoe.shape==='rectangle'?square:eachWithin||new RegExp(`(?:${value})[-\\s]*(?:(?:foot|feet|ft\\.?)|尺)[-\\s]*(?:${shape})|(?:${shape})[^。.;；]{0,20}?(?:${value})\\s*(?:ft\\.?|feet|尺)`,'iu').test(q);
-        if(!shape||!Number.isSafeInteger(value)||value<1||!proven)fail('aoe');
+        const labels:Record<string,string>={sphere:'sphere|球形|球状',radius:'radius|emanation|半径|光环',cone:'cone|锥形',line:'line|线形',cube:'cube|立方体',cylinder:'cylinder|圆柱形',rectangle:'rectangle|矩形'};
+        const nativeShape=nativeAreaShape(op.aoe.shape,op.aoe.radius,q),shape=labels[nativeShape],value=op.aoe.radius;
+        const eachWithin=nativeShape==='radius'&&new RegExp(`(?:^(?:Each|Every|Any) creature within ${value} (?:feet|ft\\.?) of\\s|\\bforcing (?:each|every|any) creature within ${value} (?:feet|ft\\.?) of [^,.;。]+? to make\\b)`,'iu').test(q);
+        const square=nativeShape==='rectangle'&&(new RegExp(`(?<![\\d.])${value}[-\\s]*(?:foot|feet|ft\\.?)[-\\s]*square(?:\\s+area)?\\b`,'iu').test(q)||new RegExp(`(?<![\\d.])${value}\\s*尺(?:见方|的?正方形)`,'u').test(q));
+        const line=nativeShape==='line'?sourceLineDimensions(q):undefined,height=nativeShape==='cylinder'?sourceCylinderHeight(q):undefined;
+        if(op.aoe.width!==undefined&&(nativeShape!=='line'||!Number.isSafeInteger(op.aoe.width)||op.aoe.width<1||op.aoe.width!==line?.width)||nativeShape==='line'&&line?.width!==undefined&&op.aoe.width!==line.width)fail('aoe/width');
+        if(op.aoe.height!==undefined&&(nativeShape!=='cylinder'||!Number.isSafeInteger(op.aoe.height)||op.aoe.height<1||op.aoe.height!==height)||nativeShape==='cylinder'&&height!==undefined&&op.aoe.height!==height)fail('aoe/height');
+      const proven=nativeShape==='cylinder'||nativeShape==='sphere'?sourceRoundAreaRadius(q,nativeShape,source)===value:nativeShape==='line'?line?.length===value:nativeShape==='rectangle'?square:nativeShape==='radius'&&/\bEmanation\b|光环/iu.test(q)?nativeAreaShape('sphere',value,q)==='radius':eachWithin||new RegExp(`(?:${value})[-\\s]*(?:(?:foot|feet|ft\\.?)|尺)[-\\s]*(?:${shape})|(?:${shape})[^。.;；]{0,20}?(?:${value})\\s*(?:ft\\.?|feet|尺)`,'iu').test(q);
+        // A genuine Sphere also has a radius. Its 半径 is a measurement,
+        // never evidence that this geometry is the Emanation type radius.
+        if(!shape||!Number.isSafeInteger(value)||value<1||!proven||nativeShape==='radius'&&sourceRoundAreaRadius(q,'sphere',source)!==undefined)fail('aoe');
       }
     }
     if(op.targetSpecial!==undefined){const q=quote('target',op.proof.target);if(typeof op.targetSpecial!=='string'||!op.targetSpecial.trim()||!q.includes(text(op.targetSpecial))||!sourceTargetRecipientBound(source,op,q,targetDamageSpans))fail('targetSpecial');}
@@ -1310,7 +1335,7 @@ export function sourceOperationErrors(source: string, value: unknown,contexts:re
   for(const clause of clauses){
     const q=text(clause);
     const choice=sourceAttackBonusChoice(clause);
-    if(/\bmelee\s+or\s+ranged\s+(?:(?:weapon|spell)\s+)?attack(?:\s+roll)?\b/iu.test(q)&&!value.some((op,index)=>object(op)&&(sourceSameClauseAttackChoice(op,value[index-1],q,source)==='range'||op.type==='attack'&&object(op.proof)&&text(String(op.proof.attack??''))===q&&sourceLegacyCombinedAttack(q,op.attack))))errors.push('inventory/attack-choice-omitted');
+    if(/\bmelee\s+or\s+ranged\s+(?:(?:weapon|spell)\s+)?attack(?:\s+roll)?\b/iu.test(q)&&!value.some((op,index)=>object(op)&&(sourceSameClauseAttackChoice(op,value[index-1],q,source)==='range'||op.type==='attack'&&object(op.proof)&&text(String(op.proof.attack??''))===q&&(sourceLegacyCombinedAttack(q,op.attack)||sourceNeutralCombinedAttack(q,op.attack)))))errors.push('inventory/attack-choice-omitted');
     if(choice&&(!value.some(op=>object(op)&&op.type==='attack'&&op.relationship==='primary'&&op.condition===undefined&&op.attack?.toHit===choice.defaultBonus&&object(op.proof)&&text(String(op.proof.attack??''))===q)
       ||!value.some(op=>object(op)&&op.type==='attack'&&op.relationship==='alternative'&&op.condition===choice.condition&&op.attack?.toHit===choice.conditionalBonus&&object(op.proof)&&text(String(op.proof.attack??''))===q)))errors.push('inventory/attack-choice-omitted');
     const quoteCount=clauses.filter(clause=>text(clause)===q).length;
@@ -1341,14 +1366,23 @@ export function sourceOperationErrors(source: string, value: unknown,contexts:re
 function prepareSourceOperationEvidence(source: string, value: unknown): unknown {
   const clauses=sourceOperationClauses(source),clauseKey=(value:string)=>text(value).replace(/[。.!?！？]$/u,'');
   const saveOccurrences=new Map<string,number>();
-  const originalQuote=(quote:unknown):unknown=>{
-    if(typeof quote!=='string')return quote;
+  const completeQuote=(quote:unknown):string|undefined=>{
+    if(typeof quote!=='string')return;
     const matches=clauses.filter(clause=>clauseKey(clause)===clauseKey(quote));
-    return matches.length===1?matches[0]:quote;
+    return matches.length===1?matches[0]:undefined;
   };
+  const originalQuote=(quote:unknown):unknown=>completeQuote(quote)??quote;
   const prepared=Array.isArray(value)?value.map(op=>{
     if(!object(op))return op;
-    const proof=object(op.proof)?Object.fromEntries(Object.entries(op.proof).map(([key,value])=>[key,key==='damage'&&Array.isArray(value)?value.map(originalQuote):originalQuote(value)])):op.proof;
+    const proof=object(op.proof)?Object.fromEntries(Object.entries(op.proof).map(([key,value])=>{
+      if(key==='damage'&&Array.isArray(value))return[key,value.map(originalQuote)];
+      // Recover only a redundant list wrapper around one already supplied,
+      // complete and uniquely source-bound scalar quote. Do not choose among
+      // quotes, repair their text, or coerce damage/unknown proof fields.
+      const scalar=['attack','save','healing','range','aoe','target'].includes(key);
+      const unwrapped=scalar&&Array.isArray(value)&&value.length===1?completeQuote(value[0]):undefined;
+      return[key,unwrapped??originalQuote(value)];
+    })):op.proof;
     if(op.type==='save'&&object(proof)&&typeof proof.save==='string'){
       // A model may also quote adjacent complete result sentences. Canonicalize
       // only redundant result context after this exact Save, never clipped
@@ -1408,6 +1442,41 @@ export function materializeSourceOperationEvidence(source:string,value:unknown,o
   }):prepared;
 }
 
+/** Default AI binding owns only representation and evidence coordinates.
+ * The model owns mechanics, branches, conditions and declared statuses. */
+export function materializeStructuredSourceOperations(source:string,value:unknown,offset?:number):unknown{
+  if(!Array.isArray(value))return value;
+  const clauses=sourceOperationClauses(source),key=(quote:string)=>text(quote).replace(/[。.!?！？]$/u,'');
+  const complete=(quote:unknown):unknown=>{
+    if(typeof quote!=='string')return quote;
+    const matches=clauses.filter(clause=>key(clause)===key(quote));
+    return matches.length===1?matches[0]:quote;
+  };
+  return structuredClone(value).map(op=>{
+    if(!object(op))return op;
+    const proof=object(op.proof)?Object.fromEntries(Object.entries(op.proof).map(([name,value])=>{
+      if(name==='damage'&&Array.isArray(value))return[name,value.map(complete)];
+      if(['attack','save','healing','range','aoe','target'].includes(name)&&Array.isArray(value)&&value.length===1&&typeof value[0]==='string'){
+        const matches=clauses.filter(clause=>key(clause)===key(value[0]));
+        if(matches.length===1)return[name,matches[0]];
+      }
+      return[name,complete(value)];
+    })):op.proof;
+    const bound:Record<string,any>={...op,proof,sourceText:op.sourceText??source.trim()};
+    if(bound.evidence===undefined&&offset!==undefined&&typeof bound.sourceText==='string'){
+      const start=source.indexOf(bound.sourceText);
+      if(start>=0&&source.indexOf(bound.sourceText,start+1)<0)bound.evidence={start:offset+start,end:offset+start+bound.sourceText.length,quote:bound.sourceText};
+    }
+    return bound;
+  });
+}
+
+export function bindStructuredSourceOperations(source:string,value:unknown,offset?:number):SourceOperation[]{
+  const prepared=materializeStructuredSourceOperations(source,value,offset),errors=sourceOperationStructureErrors(prepared);
+  if(errors.length)throw new Error('InvalidSourceOperationStructure: '+errors.join(', '));
+  return prepared as SourceOperation[];
+}
+
 /** Staged/parser/generation callers retain strict binding. */
 export function bindSourceOperations(source: string, value: unknown, offset=0): SourceOperation[] {
   const prepared=prepareSourceOperationEvidence(source,value),errors=sourceOperationErrors(source,prepared);
@@ -1422,7 +1491,10 @@ export function bindSourceOperations(source: string, value: unknown, offset=0): 
  * Legacy fields remain valid consumers; the richer contract is only required
  * when a complete ability cannot fit those fields without losing an operation. */
 export function sourceFeatureBasicOmissions(source:string,feature:CanonicalFeature):string[]{
-  if(feature.sourceOperations)return sourceOperationErrors(source,feature.sourceOperations,feature.sourceContext);
+  // Wrong facts, conditions or proof are reported by their own source checks.
+  // They are not evidence that an independently clickable operation is absent.
+  if(feature.sourceOperations!==undefined)return sourceOperationErrors(source,feature.sourceOperations,feature.sourceContext)
+    .filter(error=>error==='operations'?Array.isArray(feature.sourceOperations)&&feature.sourceOperations.length===0:/^inventory\/[^/]+-omitted(?:-or-duplicated)?$/u.test(error));
   if(sourceHealingOperations(source))return['healing-operations'];
   const errors:string[]=[];
   for(const clause of sourceOperationClauses(source)){

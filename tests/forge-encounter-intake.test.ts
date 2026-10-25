@@ -1,6 +1,7 @@
 import {describe,test,expect} from 'bun:test';
 import {generateEncounterFromHumanMarkdown,reviewForgeEncounterCandidate,createEncounterIntakeProviders,assertEncounterSecretsAbsent,explicitCreatureSections,type EncounterAutomationPort} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import type {MonsterIntakeAiProvider} from '@fvtt-json-generator/intake-ai/types';
+import {compileEncounterSelection} from '@fvtt-json-generator/intake-ai/encounter-automation';
 import {RAT_WARLOCK_SOURCE,buildRatWarlockIr} from '../src/core/intake/__tests__/fixtures/rat-warlock';
 import {LURKER_SOURCE,buildValidLurkerIr} from '../src/core/intake/__tests__/fixtures/lurker';
 
@@ -12,7 +13,9 @@ function fixture(){
       {id:'second',label:'Lurker',start:RAT_WARLOCK_SOURCE.length,end:source.length,quote:LURKER_SOURCE}]}),
     extract:async r=>r.source===RAT_WARLOCK_SOURCE?buildRatWarlockIr():buildValidLurkerIr(),
     repair:async r=>r.ir,review:async()=>{actorReviewCalls++;return {schemaVersion:1,verdict:'accepted',findings:[]};}};
-  const automationProvider:EncounterAutomationPort={generate:async()=>{automationCalls++;return {version:1,name:'Fixture control',command:'const primary = await fromUuid(forgeEncounter.actors["actor-1"]); return {showPanel(){}, stop(){}};',notes:'Offline fixture',rules:[],manualSteps:[]};},
+  const automationProvider:EncounterAutomationPort={generate:async request=>{automationCalls++;return compileEncounterSelection({
+    version:2,name:'Fixture control',notes:'Offline closed capability fixture',rules:[],legendaryRecovery:[],manualSteps:[],
+  },request);},
     review:async()=>{automationReviewCalls++;return {verdict:'accepted',findings:[]};}};
   return {provider,automationProvider,get automationCalls(){return automationCalls;},get actorReviewCalls(){return actorReviewCalls;},get automationReviewCalls(){return automationReviewCalls;}};
 }
@@ -56,7 +59,7 @@ describe('human Markdown multi-actor encounter intake',()=>{
     if(result.report.status!=='ready_for_gm_review')console.log(result.report.findings);
     expect(result.report.status).toBe('ready_for_gm_review');expect(result.prepared?.actors).toHaveLength(2);
     expect(result.report.actors.map(a=>a.source)).toEqual([RAT_WARLOCK_SOURCE,LURKER_SOURCE]);
-    expect(env.automationCalls).toBe(1);
+    expect(env.automationCalls,JSON.stringify(result.report.findings)).toBe(1);
     expect(env.actorReviewCalls).toBe(2);
     expect(env.automationReviewCalls).toBe(1);
     expect(result.report.actors.map(actor=>actor.generation?.calls.review)).toEqual([1,1]);

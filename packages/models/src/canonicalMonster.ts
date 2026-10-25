@@ -199,6 +199,9 @@ export interface CanonicalMonster {
     /** Native lair checkbox adds exactly one; both source choices remain. */
     lairMax?: number;
     recovery?: 'own-turn-start';
+    /** Explicit AI-owned native resistance ledger, independent of the title. */
+    resistanceMax?: number;
+    resistanceLairMax?: number;
     preamble: string;
     evidence: EvidenceRef[];
   };

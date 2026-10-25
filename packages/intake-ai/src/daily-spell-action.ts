@@ -5,12 +5,15 @@
 import {sourceActorNameMatches} from '@fvtt-json-generator/models/source-operations';
 
 export function sourceDailySpellAction(source:string){
-  const match=/^(?<title>[^\r\n]+?)\s*\((?<count>[1-9]\d*)\s*\/\s*Day\)\.\s*(?<caster>[^.\r\n]+?)\s+casts\s+(?<names>[A-Za-z][A-Za-z '’\-\r\n]+?)(?:,?\s+(?<trigger>in response to the spell['’]s trigger))?,?\s+using\s+the\s+same\s+spellcasting\s+ability\s+as\s+(?<parent>[A-Za-z][A-Za-z '’\-]+)\.\s*$/iu.exec(source);
+  const match=/^(?<title>[^\r\n]+?)\s*\((?<count>[1-9]\d*)\s*\/\s*Day\)\.\s*(?<caster>[^.\r\n]+?)\s+casts\s+(?<names>[A-Za-z][A-Za-z, '’\-\r\n]+?)(?:,?\s+(?<trigger>in response to the spell['’]s trigger))?,?\s+using\s+the\s+same\s+spellcasting\s+ability\s+as\s+(?<parent>[A-Za-z][A-Za-z '’\-]+)\.\s*$/iu.exec(source);
   if(!match?.groups)return;
   if(/\b(?:if|when|unless|while|only|after|before|not|cannot)\b|[,，]/iu.test(match.groups.caster!))return;
   const count=Number(match.groups.count);if(!Number.isSafeInteger(count))return;
-  const raw=match.groups.names!,parts=raw.split(/\s+or\s+/iu);
-  if(parts.length>2)return;
+  const raw=match.groups.names!,separators=[...raw.matchAll(/,\s*(?:or\b\s*)?|\bor\b\s*/giu)];
+  // A comma list needs one final OR. Do not reinterpret AND, comma-only
+  // collections, empty entries, or a second choice introducer as one grant.
+  if(separators.length&&(!/\bor\b/iu.test(separators.at(-1)![0])||separators.slice(0,-1).some(part=>/\bor\b/iu.test(part[0]))))return;
+  const parts=raw.split(/,\s*(?:or\b\s*)?|\bor\b\s*/iu);
   let cursor=source.indexOf(raw,match[0].indexOf(' casts '));
   if(cursor<0)return;
   const spells=parts.map(part=>{

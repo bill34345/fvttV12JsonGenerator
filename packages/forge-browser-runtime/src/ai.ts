@@ -10,6 +10,7 @@ import {
   INTAKE_PROMPT_VERSIONS,
   MonsterIntakeProviderError,
   OpenAICompatibleMonsterIntakeProvider,
+  normalizeMonsterIntakeProposal,
   type OpenAICompatibleMonsterIntakeOptions,
 } from '@fvtt-json-generator/intake-ai/provider';
 import type {
@@ -31,7 +32,6 @@ import {
 import { renderMonsterIntakeMarkdown, prepareMonsterCandidateDelivery } from '@fvtt-json-generator/intake-ai/renderer';
 import { validateMonsterIntakeIR } from '@fvtt-json-generator/intake-ai/validator';
 import { verifyMonsterIntake } from '@fvtt-json-generator/intake-ai/verifier';
-import { normalizeMonsterSourceFacts } from '@fvtt-json-generator/intake-ai/source-facts';
 import {
   BROWSER_AI_REPAIR_TIMEOUT_MS,
   BROWSER_AI_STAGE_TIMEOUT_MS,
@@ -411,7 +411,7 @@ function normalizeBrowserMonsterIr(
   candidate: DiscoveryCandidate,
   ir: MonsterIntakeIR,
 ): MonsterIntakeIR {
-  const next = structuredClone(ir);
+  const next = normalizeMonsterIntakeProposal(source,ir,candidate);
   for (const claim of Array.isArray(next.claims) ? next.claims : []) {
     for (const ref of Array.isArray(claim?.evidence) ? claim.evidence : []) {
       if (typeof ref.quote === 'string') continue;
@@ -425,46 +425,6 @@ function normalizeBrowserMonsterIr(
     }
   }
 
-  const referencedPaths = [
-    ...(Array.isArray(next.claims) ? next.claims.map((claim) => claim?.path) : []),
-    ...(Array.isArray(next.coverage) ? next.coverage.flatMap((entry) => (
-      Array.isArray(entry?.claimPaths) ? entry.claimPaths : []
-    )) : []),
-  ].filter((path): path is string => typeof path === 'string');
-  for (const [section, sourceSignal] of Object.entries(ABSENT_OPTIONAL_FEATURE_SECTION_SIGNALS)) {
-    const featureSection = section as keyof typeof ABSENT_OPTIONAL_FEATURE_SECTION_SIGNALS;
-    const parentPath = `/creature/${featureSection}`;
-    const current = next.creature[featureSection];
-    if (current !== undefined && current !== null) continue;
-    if (sourceSignal.test(source)) continue;
-    if (referencedPaths.some((path) => path === parentPath || path.startsWith(`${parentPath}/`))) continue;
-    next.creature[featureSection] = [];
-  }
-
-  const claims = Array.isArray(next.claims) ? next.claims : [];
-  normalizeMonsterSourceFacts(next,source,candidate);
-  for (const entry of Array.isArray(next.coverage) ? next.coverage : []) {
-    if (!Array.isArray(entry?.claimPaths)) continue;
-    // A model may call a standalone section label mechanical even though it
-    // asserts no rule. Keep real mechanics subject to the unchanged validator.
-    if (isExactBareMonsterSectionHeading(source, candidate, entry)) entry.classification = 'narrative';
-    entry.claimPaths = [...new Set(entry.claimPaths.flatMap((path) => {
-      if (!/^\/creature\/(?:traits|actions|bonusActions|reactions|legendaryActions|mythicActions)$/u.test(path)) {
-        return [path];
-      }
-      const childPaths = claims.filter((claim) => (
-        typeof claim?.path === 'string'
-        && claim.path.startsWith(`${path}/`)
-        && Array.isArray(claim.evidence)
-        && claim.evidence.some((ref) => (
-          source.slice(ref.start, ref.end) === ref.quote
-          && ref.start < entry.end
-          && ref.end > entry.start
-        ))
-      )).map((claim) => claim.path);
-      return childPaths.length > 0 ? childPaths : [path];
-    }))];
-  }
   return next;
 }
 
@@ -938,17 +898,7 @@ function adjudicateBrowserActorReview(
   deterministicFindings: IntakeFinding[],
   review: AiReviewResult,
 ): AiReviewResult {
-  const findings = review.findings.filter((finding) => !(
-    isDisprovedOptionalLegendaryPlaceholderFinding(source, ir, actorProjection, finding)
-    || isDisprovedDerivedDamageBonusFinding(deterministicFindings, finding)
-    || isDisprovedAbsentSenseZeroFinding(ir, actorProjection, deterministicFindings, finding)
-    || isDisprovedCreatureTypeFinding(ir, actorProjection, finding)
-  ));
-  return {
-    ...review,
-    verdict: findings.some((finding) => finding.blocking) ? review.verdict : 'accepted',
-    findings,
-  };
+  return structuredClone(review);
 }
 
 function isDisprovedOptionalLegendaryPlaceholderFinding(
@@ -1104,7 +1054,7 @@ function verifyRenderedActor(
 ) {
   const actor = actorFromResponse(response);
   try{return verifyMonsterIntake(source, ir, markdown, actor, candidate);}
-  catch{return{status:'needs_review' as const,findings:[boundedFinding('INTAKE_VERIFICATION_UNAVAILABLE','程序未能完成来源核对；已有候选保留，须由 GM 对照完整来源检查。')]};}
+  catch{return{status:'needs_review' as const,findings:[boundedFinding('INTAKE_VERIFICATION_UNAVAILABLE','程序未能完成结构与转换保真检查；已有候选保留，请核对具体生成结果。')]};}
 }
 
 function actorFromResponse(response: ForgeActorResponse): unknown {

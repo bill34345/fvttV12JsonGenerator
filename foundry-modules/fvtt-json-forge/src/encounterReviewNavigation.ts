@@ -54,7 +54,7 @@ export function encounterReviewNavigation(report: EncounterIntakeReport | undefi
     if (entry.status === 'accepted' && !entry.findings?.length) continue;
     const unknownActor=!!entry.actorKey&&!names.has(entry.actorKey);
     const actorKey = entry.actorKey && !unknownActor ? entry.actorKey : undefined;
-    const actor = unknownActor?'归属待核':actorKey?names.get(actorKey)!:'战斗包';
+    const actor = unknownActor?'归属待核':actorKey?names.get(actorKey)!:'整份资料';
     const fields = new Map(!unknownActor?entry.request?.texts?.map(field => [field.id, field]) ?? []:[]);
     const drafts = new Map(entry.draft?.texts?.map(field => [field.id, field.text]) ?? []);
     for (const finding of entry.findings?.length ? entry.findings : entry.status === 'needs_review' ? ['译文未通过审核；请检查完整审核记录。'] : []) {
@@ -74,7 +74,7 @@ export function encounterReviewNavigation(report: EncounterIntakeReport | undefi
   const automationReview=current?.automationReview;
   for (const finding of !advisoryReview&&automationReview&&'verdict'in automationReview&&automationReview.verdict==='needs_review'
     ?automationReview.findings:[])
-    add({actor:'战斗包',field:'自动化规则',kind:'规则审核失败',message:finding,action:'resume'});
+    add({actor:'整份资料',field:'自动化规则',kind:'规则审核失败',message:finding,action:'resume'});
   for (const finding of (advisoryReview?[]:(current?.findings??[]))) {
     if (issues.some(issue=>finding.includes(issue.kind) && finding.includes(issue.message))) continue;
     add({actor:'归属待核',field:'审核报告',kind:'待处理',message:finding,action:prepared?'inspect':'resume'});
@@ -86,9 +86,9 @@ export function encounterReviewNavigation(report: EncounterIntakeReport | undefi
   const automatic = rules.length - manual;
   const accepted = currentProgress.filter(entry => entry.status === 'accepted' && !entry.findings?.length && !!entry.actorKey).length;
   const draftReady=currentProgress.filter(entry=>entry.status==='draft_ready'&&!entry.findings?.length&&!!entry.actorKey).length;
-  const packageIssues = issues.filter(issue => !issue.actorKey && issue.actor === '战斗包').length;
-  const summary = accepted && packageIssues ? `${accepted} 个角色译文已通过，战斗包 ${packageIssues} 个字段或规则待处理。已通过译文可在继续翻译时复用。`
-    :draftReady&&packageIssues?`${draftReady} 个角色中文草稿已通过本地校验（尚未批准），战斗包 ${packageIssues} 个字段或规则待处理。`:undefined;
+  const packageIssues = issues.filter(issue => !issue.actorKey && issue.actor === '整份资料').length;
+  const summary = accepted && packageIssues ? `${accepted} 个角色译文已通过，整份资料 ${packageIssues} 个字段或规则待处理。已通过译文可在继续翻译时复用。`
+    :draftReady&&packageIssues?`${draftReady} 个角色中文草稿已通过本地校验（尚未批准），整份资料 ${packageIssues} 个字段或规则待处理。`:undefined;
   return {actorCount:names.size,automatic,manual,blocked:issues.length,issues,summary,
     actors:[...names].map(([key,label]) => ({key,label:approvedActorName(key,label,currentProgress)}))};
 }
@@ -96,7 +96,7 @@ export function encounterReviewNavigation(report: EncounterIntakeReport | undefi
 function describeField(field:LocalizationText, actor:EncounterIntakeReport['actors'][number]|undefined,
   bundle:{label:string;macros:readonly {name:string;notes:string}[]}|undefined, preparedArtifact?:unknown):string {
   if (!actor&&!preparedArtifact) {
-    if (bundle && field.id===localizationText('title',bundle.label).id && field.source===bundle.label) return '战斗包名称';
+    if (bundle && field.id===localizationText('title',bundle.label).id && field.source===bundle.label) return '资料名称';
     const macroNames=bundle?.macros.filter(macro=>field.id===localizationText('title',macro.name).id&&field.source===macro.name)??[];
     if (macroNames.length===1) return '控制宏名称';
     if (macroNames.length>1) return '控制宏名称（多处同文，归属待核）';

@@ -36,7 +36,7 @@ export function createForgeEncounterApplicationClass(environment: {
   const Base = foundry.applications.api.HandlebarsApplicationMixin(foundry.applications.api.ApplicationV2);
   return class ForgeEncounterApplication extends Base {
     static DEFAULT_OPTIONS = { id:'fvtt-json-forge-encounter', classes:['fvtt-json-forge'],
-      position:{width:850,height:850},window:{title:'Forge 战斗包导入',resizable:true} };
+      position:{width:850,height:850},window:{title:'Forge 生物与召唤物',resizable:true} };
     static PARTS = { form:{template:'modules/fvtt-json-forge/templates/forge-encounter.hbs'} };
     private prepared?: PreparedForgeEncounter;
     private result?: EncounterImportResult;
@@ -44,7 +44,7 @@ export function createForgeEncounterApplicationClass(environment: {
     private busy = false;
     private importing = false;
     private reviewed = false;
-    private status = '选择战斗包，预览角色、召唤物和配套宏。';
+    private status = '选择生物导入文件，预览角色、召唤物和配套宏。';
     private error = '';
     private controller?: AbortController;
     private fileRevision = 0;
@@ -186,13 +186,13 @@ export function createForgeEncounterApplicationClass(environment: {
               fixedBlocks:row.fixedBlocks.map(block=>({...block,modeLabel:block.executionMode==='native'?'原生规则':'需要 GM 辅助'})),
               editableSlots:row.editableSlots.map(slot=>{
                 const field=packagePart.request.texts.find(entry=>entry.id===slot.textId);
-                if(!field)throw new TypeError('战斗包中文预览的剩余文本不属于当前翻译请求。');
+                if(!field)throw new TypeError('生物生成中文预览的剩余文本不属于当前翻译请求。');
                 return {...slot,partKey:'_package',reviewLabel:slot.review==='gm-assisted'?'待 GM 核对':'常规文本',
                   editable:field.kind==='body'&&!this.busy&&!this.result};
               })}));
             const packageIds=new Set(draftPreview.packageFactsRows.flatMap(row=>row.editableSlots.map(slot=>slot.textId)));
             if(!draftPreview.packageFactsRows.length||packagePart.request.texts.some(field=>!packageIds.has(field.id)))
-              throw new TypeError('战斗包中文预览遗漏了完整来源、规则或显示字段。');
+              throw new TypeError('生物生成中文预览遗漏了完整来源、规则或显示字段。');
             draftPreview.packageFields=[];
           }
         }catch(error){
@@ -426,7 +426,7 @@ export function createForgeEncounterApplicationClass(environment: {
       let continuationPublished=false;
       this.clearReportPresentation();this.busy=true;this.aiRunning=true;this.error='';this.prepared=undefined;this.generationReviewBinding=undefined;this.recoveryPackage=undefined;this.recoveryUploadedHash=undefined;this.recoveryUploadedProgress=undefined;this.recoveryUploadedDraft=undefined;this.recoveredReview=false;this.result=undefined;this.reviewed=false;this.aiReport=undefined;this.translationReport=[];this.localizationDraft=undefined;this.translationReviewed=false;this.file=undefined;
       this.progressDetail=resume?'正在核对保存的草稿身份；有效 IR 将重新验证并做本地校验。':'准备识别生物与生成规则。';
-      this.status='正在从原始资料生成并本地校验战斗包；不会创建世界文档。';void this.render();
+      this.status='正在从原始资料生成并本地校验生物导入文件；不会创建世界文档。';void this.render();
       try{
         assertGm(game);assertExactRuntime(game);
         const options=environment.getAiOptions?.(controller);
@@ -465,7 +465,7 @@ export function createForgeEncounterApplicationClass(environment: {
         this.aiReport=output.report;this.recoveryReport=output.report;this.queueRecoverySave();
         if(!output.prepared){
           const count=output.report.actors.filter(actor=>actor.generation?.candidateAvailable).length;
-          this.status=count?`已有 ${count} 个生物候选可逐个查看和下载；完整战斗包尚未完成，失败及未处理成员仍保留。`
+          this.status=count?`已有 ${count} 个生物候选可逐个查看和下载；完整生物导入文件尚未完成，失败及未处理成员仍保留。`
             :'本轮尚无可获取的 Actor 候选；失败与未处理成员及来源仍保留。';
           this.error=output.report.findings.join('\n');return;
         }
@@ -669,11 +669,11 @@ export function createForgeEncounterApplicationClass(environment: {
       if(this.busy||!this.file)return;
       this.clearReportPresentation();this.busy=true;this.error='';this.prepared=undefined;this.generationReviewBinding=undefined;this.localizationDraft=undefined;
       this.translationReviewed=false;this.result=undefined;this.reviewed=false;
-      this.status='正在校验战斗包，并通过正式工作流重新生成角色；不创建世界文档。';
+      this.status='正在校验生物导入文件，并通过正式工作流重新生成角色；不创建世界文档。';
       const revision=this.fileRevision;const file=this.file;this.controller=new AbortController();void this.render();
       try {
         assertGm(game);assertExactRuntime(game);
-        if(file.size>32*1024*1024)throw new Error('战斗包不能超过32 MiB。');
+        if(file.size>32*1024*1024)throw new Error('生物导入文件不能超过32 MiB。');
         const bytes=new Uint8Array(await file.arrayBuffer());
         const text=bytes[0]===0x50&&bytes[1]===0x4b
           ? serializeForgeEncounterPackage(await decodeForgeEncounterPackageZip(bytes)) : new TextDecoder('utf-8',{fatal:true}).decode(bytes);
@@ -692,7 +692,7 @@ export function createForgeEncounterApplicationClass(environment: {
       if(this.busy||this.closed||!this.recoveryPackage||(!this.recoveryReport&&!this.recoveryUploadedHash))return;
       const revision=this.fileRevision,serialized=this.recoveryPackage,report=this.recoveryReport,uploadedHash=this.recoveryUploadedHash;
       this.clearReportPresentation();
-      this.busy=true;this.reviewed=false;this.result=undefined;this.error='';this.status='正在重新校验本地保存的战斗包；不会请求 AI 或创建世界文档。';void this.render();
+      this.busy=true;this.reviewed=false;this.result=undefined;this.error='';this.status='正在重新校验本地保存的生物导入文件；不会请求 AI 或创建世界文档。';void this.render();
       const controller=new AbortController();this.controller=controller;
       try {
         const binding=this.recoveryBinding();
@@ -746,7 +746,7 @@ export function createForgeEncounterApplicationClass(environment: {
           this.recoveryUploadedProgress=loaded.translationReport;this.recoveryUploadedDraft=loaded.localizationDraft;
           this.translationReport=[];this.recoveryCatalogHash=loaded.catalogHash;
           this.generationReviewBinding=undefined;this.translationReviewed=false;this.reviewed=false;
-          this.status='已恢复上传战斗包与部分译文；点击“重新预览”核对包和字段身份，不会请求 AI 或继承 GM 确认。';
+          this.status='已恢复上传的生物导入文件与部分译文；点击“重新预览”核对包和字段身份，不会请求 AI 或继承 GM 确认。';
           return;
         }
         this.humanSource=loaded.source;this.humanLabel=loaded.label;this.outputLanguage=loaded.outputLanguage;
@@ -814,7 +814,7 @@ export function createForgeEncounterApplicationClass(environment: {
       this.prepared=undefined;this.generationReviewBinding=undefined;this.result=undefined;this.reviewed=false;this.aiReport=undefined;
       this.recoveryReport=undefined;this.recoveryPackage=undefined;this.recoveryUploadedHash=undefined;this.recoveryUploadedProgress=undefined;this.recoveryUploadedDraft=undefined;this.recoveredReview=false;this.translationReport=[];this.localizationDraft=undefined;this.translationReviewed=false;this.progressDetail='';
       try {if(this.recoveryStore){this.pendingSave=this.recoveryStore.clear();await this.pendingSave;}
-        this.error='';this.status='已清除当前世界与 GM 的本地战斗包任务。';}
+        this.error='';this.status='已清除当前世界与 GM 的本地生物生成任务。';}
       catch(error){this.error=`本地任务清除失败：${message(error)}`;this.status='本地任务可能仍在，请核对后重试。';}
       if(!this.closed)void this.render();
     }
@@ -857,7 +857,7 @@ export function createForgeEncounterApplicationClass(environment: {
       return text;
     }
     private currentPackageText():string {
-      if(!this.prepared)throw new Error('当前没有可查看的战斗包。');
+      if(!this.prepared)throw new Error('当前没有可查看的生物导入文件。');
       this.refreshKnownSecrets();
       const text=serializeForgeEncounterPackage(this.prepared.bundle);
       assertEncounterSecretsAbsent(text,this.forbiddenValues);
@@ -877,14 +877,14 @@ export function createForgeEncounterApplicationClass(environment: {
     private viewActorCandidate(key:string):void{
       if(this.closed||this.busy)return;
       try{this.textView={kind:'actor',actorKey:key,name:`forge-${key}-candidate.json`,text:this.currentActorText(key)};
-        this.error='';this.status='当前生物的完整候选 JSON 已展开；其检查问题仍保留，这不是完整战斗包。';}
+        this.error='';this.status='当前生物的完整候选 JSON 已展开；其检查问题仍保留，这不是完整生物导入文件。';}
       catch(error){this.textView=undefined;this.error=message(error);}
       if(!this.closed)void this.render();
     }
     private downloadActorCandidate(key:string):void{
       if(this.closed||this.busy)return;
       try{download(`forge-${key}-candidate.json`,this.currentActorText(key),'application/json');
-        this.error='';this.status='已请求下载当前生物候选 JSON；完整战斗包及检查结论保持原状态。';}
+        this.error='';this.status='已请求下载当前生物候选 JSON；完整生物导入文件及检查结论保持原状态。';}
       catch(error){this.error=message(error);}
       if(!this.closed)void this.render();
     }
@@ -896,8 +896,8 @@ export function createForgeEncounterApplicationClass(environment: {
     }
     private viewPackage():void {
       if(this.closed||this.busy||!this.prepared)return;
-      try {this.textView={kind:'package',name:`${this.prepared.bundle.id}.forge-encounter.json`,text:this.currentPackageText()};this.error='';this.status='战斗包 JSON 已在下方展开，可全选复制。';}
-      catch{this.textView=undefined;this.error='战斗包未通过连接安全核对。';this.status='战斗包 JSON 无法显示。';}
+      try {this.textView={kind:'package',name:`${this.prepared.bundle.id}.forge-encounter.json`,text:this.currentPackageText()};this.error='';this.status='生物导入文件 JSON 已在下方展开，可全选复制。';}
+      catch{this.textView=undefined;this.error='生物导入文件未通过连接安全核对。';this.status='生物导入文件 JSON 无法显示。';}
       if(!this.closed)void this.render();
     }
     private async copyVisibleText():Promise<void> {

@@ -35,11 +35,11 @@ function ratCases() {
 }
 
 describe('native dnd5e 5.3.3 Cast Activity source', () => {
-  test('the complete original manifest retains its ray-limited spell and rejects an unrestricted Cast for it',()=>{
+  test('the complete original manifest retains its ray-limited spell and reports its manual restriction',()=>{
     const parsed=new YamlParser().parse(renderMonsterIntakeMarkdown(buildRatWarlockIr())),manifest=parsed.spellManifest!,group=manifest.spellcastingGroups[0]!;
     expect(group.spellRefs).toHaveLength(10);
     const limited=group.spellRefs.filter(ref=>ref.restrictions.some(r=>r.kind==='casting'));expect(limited).toHaveLength(1);
-    for(const ref of limited)expect(()=>buildCastActivitySource({manifestId:manifest.manifestId,featureId:'RatFeature000001',group,ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'})).toThrow('Unsupported source casting restriction');
+    for(const ref of limited){const built=buildCastActivitySource({manifestId:manifest.manifestId,featureId:'RatFeature000001',group,ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'});expect(built.literalRestrictions).toEqual([expect.objectContaining({kind:'casting',text:ref.restrictions.find(r=>r.kind==='casting')!.text,status:'literal-unsupported'})]);expect(built.activity.spell.ability).toBe(group.ability);}
     expect(ratCases().length+limited.length).toBe(10);
   });
   for(const activationType of ['action','bonus','reaction'] as const)test('ordinary Actions inherit spell timing; explicit bonus/reaction carriers retain timing: '+activationType,()=>{
@@ -52,9 +52,9 @@ describe('native dnd5e 5.3.3 Cast Activity source', () => {
     const built=buildCastActivitySource({manifestId:'source-variant',featureId:'VariantFeature01',group:{groupId:'variants',featureItemKey:'variants',spellRefs:[ref]},ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'});
     expect(built.activity.duration).toEqual({value,units,concentration:false,override:true});expect(built.literalRestrictions).toEqual([]);
   });
-  test('a qualified duration blocks native Cast rather than becoming unrestricted',()=>{
+  test('a qualified duration remains a manual note without overriding the AI parameters',()=>{
     const base=ratCases()[0]!.ref,ref:PortableSpellRef={...base,method:'at-will',uses:undefined,ignoresMaterialComponents:false,restrictions:[{kind:'casting',text:'无须任何法术成分',evidence:[]},{kind:'casting',text:'持续24小时，若目标未受伤',evidence:[]}]};
-    expect(()=>buildCastActivitySource({manifestId:'source-variant',featureId:'VariantFeature01',group:{groupId:'variants',featureItemKey:'variants',spellRefs:[ref]},ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'})).toThrow('Unsupported source casting restriction');
+    const built=buildCastActivitySource({manifestId:'source-variant',featureId:'VariantFeature01',group:{groupId:'variants',featureItemKey:'variants',spellRefs:[ref]},ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'});expect(built.activity.duration).toBeUndefined();expect(built.activity.spell.properties).toEqual(['vocal','somatic','material']);expect(built.literalRestrictions).toEqual([expect.objectContaining({kind:'casting',text:'持续24小时，若目标未受伤',status:'literal-unsupported'})]);
   });
   test('uses native Actor spell slots for a source-leveled prepared spell', () => {
     const base = structuredClone(ratCases()[0]!.ref);

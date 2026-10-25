@@ -1,4 +1,5 @@
 import {displayName} from '@fvtt-json-generator/models/display-name';
+import {nativeAreaShape} from '@fvtt-json-generator/models/source-operations';
 import yaml from 'js-yaml';
 import { projectedConditionStatusId, readConditionInstance } from '@fvtt-json-generator/contracts/conditions';
 import { readEncounterRuleMarker } from '@fvtt-json-generator/contracts/encounter-rules';
@@ -16,10 +17,11 @@ import type {
   MonsterIntakeIR,
   PortableSpellResolutionStatus,
 } from './types';
-import { renderPreparedSpellcastingProfile } from './renderer';
+import { renderMonsterFeatureName, renderPreparedSpellcastingProfile } from './renderer';
 import { formatMixedRuleHtml } from '@fvtt-json-generator/generation/actor-text';
-import { sourceConditionLifecycle, isGeneratedConditionId } from '@fvtt-json-generator/generation/actor-effects';
-import { validateMonsterIntakeIR } from './validator';
+import { sourceConditionLifecycle, simpleConditionDuration, isGeneratedConditionId } from '@fvtt-json-generator/generation/actor-effects';
+import { auditMonsterIntakeSource, validateMonsterIntakeIR } from './validator';
+import { hasLiteralDamageHelpers, isLiteralDamageHelperOnly, verifyMonsterProjectionPreservation } from './projection-verifier';
 import { hasManualForcedMovementMechanic, manualForcedMovementRequirements } from './manual-forced-movement';
 import { completeSourceFeatureEvidence, sourceFeatureLegendaryCost, sourceRuleText } from './source-completeness';
 import {sourceStatHeader} from './staged-source';
@@ -43,7 +45,34 @@ export function verifyMonsterIntake(
   actor: unknown,
   coverageRange?: { start: number; end: number },
 ): IntakeVerificationReport {
-  const findings = [...validateMonsterIntakeIR(source, ir, { coverageRange }).findings];
+  return verifyMonsterIntakeProjection(source, ir, markdown, actor, coverageRange, false);
+}
+
+/** Optional offline source audit. The normal import path never calls this. */
+export function auditMonsterIntakeSourceProjection(
+  source: string,
+  ir: MonsterIntakeIR,
+  markdown: string,
+  actor: unknown,
+  coverageRange?: { start: number; end: number },
+): IntakeVerificationReport {
+  return verifyMonsterIntakeProjection(source, ir, markdown, actor, coverageRange, true);
+}
+
+function verifyMonsterIntakeProjection(
+  source: string,
+  ir: MonsterIntakeIR,
+  markdown: string,
+  actor: unknown,
+  coverageRange: { start: number; end: number } | undefined,
+  auditSource: boolean,
+): IntakeVerificationReport {
+  const validation = auditSource ? auditMonsterIntakeSource(source, ir, { coverageRange })
+    : validateMonsterIntakeIR(source, ir, { coverageRange });
+  const findings = [...validation.findings];
+  // A malformed IR has no safe projection to inspect. Retain the actual
+  // structural findings rather than throwing while reading required fields.
+  if (validation.findings.some(finding => finding.blocking && finding.origin === 'schema')) return { schemaVersion: 1, status: 'needs_review', findings, projection: {}, spellResolution: { required: false, status: 'not-required', spellCount: 0 } };
   const expected = ir.creature;
   const projection = projectActor(actor, {
     skillKeys: Object.keys(expected.skills).map(normalizeSkillKey),
@@ -55,7 +84,7 @@ export function verifyMonsterIntake(
     id: `${code.toLowerCase()}:${path}`.replace(/[^a-z0-9:/_-]+/g, '-'),
     code, path, message, blocking: true, origin: 'semantic',
   });
-  try {
+  if (auditSource) try {
     const scope=coverageRange??{start:0,end:source.length};
     const header=sourceStatHeader({source,sourceSha256:ir.source.sha256,candidate:{id:'sense-qualifier',label:expected.identity.name,...scope,quote:source.slice(scope.start,scope.end)}});
     const rule=sourceSenseQualifier(header.quote);
@@ -89,8 +118,11 @@ export function verifyMonsterIntake(
     const marker=asRecord(asRecord(asRecord(asRecord(actor).flags).fvttJsonGenerator).sourceLegendaryLedger);
     if(lair.value!==true||lair.inside!==false||marker.version!==1||marker.max!==expected.legendary.max||marker.lairMax!==expected.legendary.lairMax||marker.recovery!==expected.legendary.recovery)
       add('ACTOR_LEGENDARY_LAIR_DRIFT','/creature/legendary','Both native lair choices and source recovery boundary must survive into the Actor.');
-    const resistance=expected.traits.flatMap(feature=>{const value=sourceLegendaryLairResistance(feature.name,feature.description,[expected.identity.name,expected.identity.englishName].filter((name):name is string=>!!name));return value?[value]:[];})[0];
-    if(resistance&&(numeric(asRecord(resources.legres).max)!==resistance.max||marker.resistanceMax!==resistance.max||marker.resistanceLairMax!==resistance.lairMax))
+    const resistance=expected.legendary.resistanceMax!==undefined?{max:expected.legendary.resistanceMax,lairMax:expected.legendary.resistanceLairMax}
+      :auditSource?expected.traits.flatMap(feature=>{const value=sourceLegendaryLairResistance(feature.name,feature.description,[expected.identity.name,expected.identity.englishName].filter((name):name is string=>!!name));return value?[value]:[];})[0]:undefined;
+    if(resistance&&(numeric(asRecord(resources.legres).max)!==resistance.max
+      ||expected.legendary.resistanceMax!==undefined&&numericOrUndefined(asRecord(resources.legres).spent)!==0
+      ||marker.resistanceMax!==resistance.max||marker.resistanceLairMax!==resistance.lairMax))
       add('ACTOR_LEGENDARY_RESISTANCE_DRIFT','/creature/legendary','Conditional resistance counter must retain the same native base/lair choices.');
   }
   compare(add, 'ACTOR_TYPE_DRIFT', '/creature/identity/creatureType', normalizeCreatureTypeFixed(expected.identity.creatureType), normalizeCreatureTypeFixed(projection.creatureType));
@@ -116,14 +148,14 @@ export function verifyMonsterIntake(
   for (const [sense, value] of Object.entries(expected.senses)) compare(add, 'ACTOR_SENSE_DRIFT', `/creature/senses/${sense}`, value, (projection.senses as Record<string, unknown>)?.[sense]);
   compareSet(add, 'ACTOR_LANGUAGE_DRIFT', '/creature/languages/values', expected.languages.values, projection.languages, normalizeLanguageFixed);
   compare(add, 'ACTOR_LANGUAGE_NOTE_DRIFT', '/creature/languages/custom', expected.languages.custom, projection.languageCustom);
-  const featureContext={source,ir,range:coverageRange,isV14:/^14(?:\.|$)/u.test(String(asRecord(asRecord(actor)._stats).coreVersion??''))};
+  const featureContext={source,ir,range:coverageRange,auditSource,isV14:/^14(?:\.|$)/u.test(String(asRecord(asRecord(actor)._stats).coreVersion??''))};
   compareFeatureSections(add, expected.traits, projection.items, 'traits',featureContext);
   compareFeatureSections(add, expected.actions, projection.items, 'actions',featureContext);
   compareFeatureSections(add, expected.bonusActions, projection.items, 'bonusActions',featureContext);
   compareFeatureSections(add, expected.reactions, projection.items, 'reactions',featureContext);
   compareFeatureSections(add, expected.legendaryActions, projection.items, 'legendaryActions',featureContext);
   compareFeatureSections(add, expected.mythicActions ?? [], projection.items, 'mythicActions',featureContext);
-  for (const requirement of manualForcedMovementRequirements(ir, source)) {
+  for (const requirement of auditSource ? manualForcedMovementRequirements(ir, source) : []) {
     const featureIndex = Number(requirement.claimPath.split('/').at(-1));
     const sourceSection = requirement.claimPath.split('/')[2]!;
     const feature = (expected as any)[sourceSection][featureIndex] as CanonicalFeature;
@@ -135,6 +167,7 @@ export function verifyMonsterIntake(
         : `${requirement.featureName} requires a complete source-bound GM rule for its failed-save push.`);
   }
 
+  if (!auditSource) verifyMonsterProjectionPreservation(ir, markdown, projection, add);
   const spellResolution = verifyPortableSpellResolution(source, ir, markdown, actor, add, () => findings.length);
   // YAML may quote CRLF-containing strings with escaped newlines. Inspect the
   // decoded description, while retaining the exact source evidence separately.
@@ -397,7 +430,9 @@ function extractRenderedSpellManifest(markdown: string): PortableSpellManifest |
     ? firstClosing
     : normalized.endsWith('\n---') ? normalized.length - '\n---'.length : -1;
   if (end <= 3) return undefined;
-  const root = asRecord(yaml.load(normalized.slice(4, end)));
+  let root: Record<string, unknown>;
+  try { root = asRecord(yaml.load(normalized.slice(4, end))); }
+  catch { return undefined; }
   const candidate = Object.values(root).find((value) => {
     const record = asRecord(value);
     return record.schemaVersion === 1 && record.rulesPreference === '2024' && Array.isArray(record.spellcastingGroups);
@@ -629,6 +664,8 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
       name: activity.name,
       type: activity.type,
       activation: asRecord(activity.activation).type,
+      activationValue: asRecord(activity.activation).value,
+      activationOverride: asRecord(activity.activation).override,
       condition: asRecord(activity.activation).condition,
       description: stripHtml(String(asRecord(activity.description).chatFlavor ?? '')),
       consumption: asRecord(activity.consumption),
@@ -639,6 +676,7 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
       attackData:asRecord(activity.attack),
       rollData:asRecord(activity.roll),
       sourceOperation:asRecord(asRecord(asRecord(activity.flags).fvttJsonGenerator).sourceOperation),
+      literalDamage:asRecord(asRecord(asRecord(activity.flags).fvttJsonGenerator).literalDamage),
       onSave:activityDamage.onSave,
       includeBase:activityDamage.includeBase,
       targetSpecial:asRecord(asRecord(activity.target).affects).special,
@@ -647,6 +685,10 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
       targetOverride:asRecord(activity.target).override,
       healing:{formula:damageFormulaFromActivityPart(asRecord(activity.healing),activity,damageAbilities),types:arrayValues(asRecord(activity.healing).types)},
       damageParts:parts.map(part=>({formula:damageFormulaFromActivityPart(part,activity,damageAbilities),types:arrayValues(part.types)})),
+      effectiveDamageParts:[
+        ...(activityDamage.includeBase===true&&Object.keys(damageBase).length?[{formula:nativeBaseDamageFormula(damageBase,String(asRecord(activity.attack).ability??''),damageAbilities),types:arrayValues(damageBase.types)}]:[]),
+        ...parts.map(part=>({formula:damageFormulaFromActivityPart(part,activity,damageAbilities),types:arrayValues(part.types)})),
+      ],
       effectLinks: Array.isArray(activity.effects)?activity.effects.length:0,
       effectIds:Array.isArray(activity.effects)?activity.effects.map(link=>asRecord(link)._id):[],
       effectLinksData:Array.isArray(activity.effects)?activity.effects.map(link=>asRecord(link)):[],
@@ -691,6 +733,7 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
     statuses: effects,
     behaviorMechanics,
     manualRule: asRecord(itemFlags.fvttJsonGenerator).manualRule,
+    literalMechanics: asRecord(asRecord(itemFlags.fvttJsonGenerator).literalMechanics),
     nativeWeapon:{properties:arrayValues(system.properties),type:asRecord(system.type),range:asRecord(system.range),damage:asRecord(system.damage)},
     effectCount: Array.isArray(item.effects)?item.effects.length:0,
     effectDefinitions:Array.isArray(item.effects)?item.effects.map(effect=>({_id:asRecord(effect)._id,statuses:arrayValues(asRecord(effect).statuses),duration:asRecord(asRecord(effect).duration)})):[],
@@ -778,7 +821,7 @@ function compareFeatureSections(
   expected: CanonicalFeature[],
   actorItems: unknown,
   section: string,
-  context:{source:string;ir:MonsterIntakeIR;range?:{start:number;end:number};isV14:boolean},
+  context:{source:string;ir:MonsterIntakeIR;range?:{start:number;end:number};isV14:boolean;auditSource:boolean},
 ): void {
   const items = Array.isArray(actorItems) ? actorItems.map(asRecord) : [];
   const sectionActivation = section === 'actions' ? 'action'
@@ -789,8 +832,8 @@ function compareFeatureSections(
           : undefined;
   for (const [index, feature] of expected.entries()) {
     const expectedActivation = feature.activationType ?? sectionActivation;
-    const expectedItemActivation=feature.sourceOperations?.[0]?.relationship==='follow-up'?'special':expectedActivation;
-    const named = items.filter((item) => featureNamesMatch(item, feature));
+    const expectedItemActivation=feature.sourceOperations?.[0]?.relationship==='follow-up'||!context.auditSource&&isLiteralDamageHelperOnly(feature)?'special':expectedActivation;
+    const named = items.filter((item) => featureNamesMatch(item, feature, context.auditSource));
     const found = named.find((item) => !expectedItemActivation || item.activation === expectedItemActivation) ?? named[0];
     if (!found) {
       add('ACTOR_FEATURE_MISSING', `/creature/${section}/${index}`, `Actor is missing separate feature: ${feature.name}`);
@@ -812,7 +855,7 @@ function compareFeatureSections(
     const sharedCarrier=sharedPool?items.find(item=>item.sourceFeatureId===sharedPool.members[0]!.featureId):undefined;
     const isSharedCarrier=sharedPool?.members[0]?.featureId===feature.sourceFeatureId;
     const resourceTarget=sharedPool?String(sharedCarrier?.id??''):'';
-    const complete=context.isV14&&completeSourceFeatureEvidence(context.source,context.ir,feature,path,context.range);
+    const complete=context.isV14&&(!context.auditSource||completeSourceFeatureEvidence(context.source,context.ir,feature,path,context.range));
     const fullLiteral=Boolean(complete&&sourceRuleText(description).includes(sourceRuleText(feature.description)));
     if(feature.executionMode==='gm-manual'){
       const marker=asRecord(found.manualRule);
@@ -825,10 +868,13 @@ function compareFeatureSections(
         add('ACTOR_MANUAL_RULE_LOSS',path,'Manual Item must preserve the complete source rule and its source identity.');
       if(found.manualExecutable || (Array.isArray(found.activities)?found.activities:[]).length!==1)
         add('ACTOR_MANUAL_RULE_EXECUTION_DRIFT',path,'Manual Item must have one non-executing Utility and zero automatic effects, rolls or resource consumption.');
-      const declared=sourceFeatureResources(feature.name,feature.description,context.ir.creature.identity.name),uses=asRecord(found.uses);
+      const uses=asRecord(found.uses);
+      if(context.auditSource){
+      const declared=sourceFeatureResources(feature.name,feature.description,context.ir.creature.identity.name);
       if(declared.legendaryCost===undefined)declared.legendaryCost=sourceFeatureLegendaryCost(context.source,context.ir,feature,path,context.range);
       if(['uses','recharge','legendaryCost'].some(key=>feature[key as keyof CanonicalFeature]!==undefined&&JSON.stringify(feature[key as keyof CanonicalFeature])!==JSON.stringify(declared[key as keyof typeof declared])))
         add('ACTOR_MANUAL_RESOURCE_SOURCE_CONFLICT',path,'Manual counters must be proved by the owning source feature, not merely copied from the IR.');
+      }
       const expectedMax=feature.uses?.max??(feature.recharge?1:undefined),recovery=feature.uses?[{period:({day:'day',longRest:'lr',shortRest:'sr',dawn:'dawn'} as const)[feature.uses.period],type:'recoverAll'}]:feature.recharge?[{period:'recharge',type:'recoverAll',formula:String(feature.recharge[0])}]:[];
       if(uses.max!==expectedMax||JSON.stringify(found.useRecovery)!==JSON.stringify(recovery))
         add('ACTOR_MANUAL_RESOURCE_DRIFT',path,'Manual maximum and recovery must match the source-proven optional counter; no additional native counter may appear.');
@@ -849,7 +895,7 @@ function compareFeatureSections(
         ];
       });
       const dual=(op:ViewOp)=>Boolean(!(modes?.kind==='versatile'&&op.id===modes.attackId)&&op.attack?.reach!==undefined&&op.attack.range!==undefined&&op.attack.type.startsWith('m'));
-      if(activities.length!==viewOps.reduce((count,op)=>count+(isNeutralSourceAttack(op)?1+(op.damage?.length?1:0):dual(op)?2:1),0)||found.effectCount!==expectedEffectCount)add('ACTOR_SOURCE_OPERATION_COUNT_DRIFT',path,'Only source-proven operations and mutually exclusive attack modes may execute.');
+      if(activities.length!==viewOps.reduce((count,op)=>count+(isNeutralSourceAttack(op)?(op.attack!.reach!==undefined&&op.attack!.range!==undefined?2:1)+(op.damage?.length?1:0):dual(op)?2:1),0)||found.effectCount!==expectedEffectCount)add('ACTOR_SOURCE_OPERATION_COUNT_DRIFT',path,'Only source-proven operations and mutually exclusive attack modes may execute.');
       if(modes?.kind==='versatile'){
         const native=asRecord(found.nativeWeapon),damage=asRecord(native.damage),weaponType=asRecord(native.type),range=asRecord(native.range),op=feature.sourceOperations.find(op=>op.id===modes.attackId)!;
         const partMatches=(value:unknown,expected:typeof modes.ordinary)=>{const part=asRecord(value);return compact(damageFormulaFromActivityPart(part,{attack:{ability:'none'}},{}))===compact(expected.formula)&&JSON.stringify(arrayValues(part.types))===JSON.stringify(expected.types??[expected.type]);};
@@ -863,19 +909,20 @@ function compareFeatureSections(
         if(matches.some(entry=>JSON.stringify(asRecord(entry.sourceOperation).damageAdjustment)!==JSON.stringify(op.damageAdjustment)))add('ACTOR_SOURCE_OPERATION_DAMAGE_ADJUSTMENT_DRIFT',path+'/sourceOperations/'+op.id,'The source-bound outgoing damage condition and factor must be retained without an extra roll or automatic effect.');
         if(isNeutralSourceAttack(op)){
           const rolls=matches.filter(entry=>asRecord(entry.sourceOperation).role==='attack-roll'),damages=matches.filter(entry=>asRecord(entry.sourceOperation).role==='damage');
-          if(rolls.length!==1||damages.length!==(op.damage?.length?1:0)||matches.length!==rolls.length+damages.length||found.type==='weapon')add('ACTOR_GM_ATTACK_IDENTITY_DRIFT',path+'/sourceOperations/'+op.id,'Unclassified attacks require one explicitly labelled GM roll and, if present, one separately triggered damage roll.');
+          const gmDual=op.attack!.reach!==undefined&&op.attack!.range!==undefined;
+          if(rolls.length!==(gmDual?2:1)||damages.length!==(op.damage?.length?1:0)||matches.length!==rolls.length+damages.length||found.type==='weapon')add('ACTOR_GM_ATTACK_IDENTITY_DRIFT',path+'/sourceOperations/'+op.id,'Unclassified attacks require one explicitly labelled GM roll and, if present, one separately triggered damage roll.');
           for(const entry of matches){
-            const marker=asRecord(entry.sourceOperation),damageRole=marker.role==='damage',roll=asRecord(entry.rollData),range=asRecord(entry.range),parts=Array.isArray(entry.damageParts)?entry.damageParts.map(asRecord):[];
+            const marker=asRecord(entry.sourceOperation),damageRole=marker.role==='damage',attackMode=marker.attackMode,roll=asRecord(entry.rollData),range=asRecord(entry.range),parts=Array.isArray(entry.damageParts)?entry.damageParts.map(asRecord):[];
             if(marker.sourceText!==op.sourceText||marker.attackClassification!=='unspecified'||marker.attackKind!==op.attack!.type||marker.relationship!==(damageRole?'follow-up':op.relationship)
-              ||entry.type!==(damageRole?'damage':'utility')||entry.name!==op.name+(damageRole?'（命中后伤害）':'（GM攻击检定）')||entry.condition!==condition
+              ||entry.type!==(damageRole?'damage':'utility')||entry.name!==op.name+(damageRole?'（命中后伤害）':`（${attackMode==='melee'?'近战 · ':attackMode==='ranged'?`远程 ${op.attack!.range}${op.attack!.longRange!==undefined?'/'+op.attack!.longRange:''} 尺 · `:''}GM攻击检定）`)||entry.condition!==condition
               ||entry.activation!==(damageRole||op.relationship==='follow-up'?'special':expectedActivation??'')||Object.keys(asRecord(entry.attackData)).length
               ||Object.keys(asRecord(entry.saveData)).length||arrayValues(entry.effectIds).length||entry.includeBase!==undefined) add('ACTOR_GM_ATTACK_IDENTITY_DRIFT',path+'/sourceOperations/'+op.id,'A generic GM roll cannot silently become a native weapon/spell Attack or automatic follow-up.');
             if(!damageRole&&(roll.formula!=='1d20'+(op.attack!.toHit>=0?'+':'')+op.attack!.toHit||roll.name!=='GM辅助攻击检定'||roll.prompt!==true||roll.visible!==false||parts.length))add('ACTOR_GM_ATTACK_ROLL_DRIFT',path+'/sourceOperations/'+op.id,'GM attack formula must use exactly the source total once, without damage or inferred ability/proficiency.');
             if(damageRole&&(Object.keys(roll).length||parts.length!==(op.damage?.length??0)||parts.some((part,index)=>compact(String(part.formula??''))!==compact(op.damage![index]!.formula)||JSON.stringify(arrayValues(part.types))!==JSON.stringify(op.damage![index]!.types??[op.damage![index]!.type]))))add('ACTOR_SOURCE_OPERATION_DAMAGE_DRIFT',path+'/sourceOperations/'+op.id,'GM-triggered hit damage must retain its one complete source roll.');
-            if(range.override!==true||range.units!=='ft'||range.value!==(op.attack!.range??op.attack!.reach??null)||(range.long??undefined)!==op.attack!.longRange) add('ACTOR_SOURCE_OPERATION_RANGE_DRIFT',path+'/sourceOperations/'+op.id,'The GM attack and damage must retain the exact source distance, including zero.');
-            if(entry.targetSpecial!==(op.targetSpecial??'')||asRecord(entry.targetAffects).type!==(sourceOperationTargetType(feature.description,op)??'any'))add('ACTOR_SOURCE_OPERATION_TARGET_DRIFT',path+'/sourceOperations/'+op.id,'Unknown target kinds cannot be guessed into creatures for a GM attack.');
+            if(range.override!==true||range.units!=='ft'||range.value!==(attackMode==='melee'?op.attack!.reach:op.attack!.range??op.attack!.reach??null)||range.long!==undefined||range.special!==(attackMode==='melee'?'':op.attack!.longRange!==undefined?`远射程 ${op.attack!.longRange} 尺`:'')) add('ACTOR_SOURCE_OPERATION_RANGE_DRIFT',path+'/sourceOperations/'+op.id,'The GM attack and damage must retain the exact source distance, including zero.');
+            if(entry.targetSpecial!==(op.targetSpecial??'')||context.auditSource&&asRecord(entry.targetAffects).type!==(sourceOperationTargetType(feature.description,op)??'any'))add('ACTOR_SOURCE_OPERATION_TARGET_DRIFT',path+'/sourceOperations/'+op.id,'The explicit IR target restriction must be retained.');
             const template=asRecord(entry.areaTemplate),target=asRecord(entry.targetAffects),empty=(value:unknown)=>value===undefined||value===null||value==='';
-            if(entry.targetOverride!==true||entry.targetPrompt!==true||target.count!==(sourceOperationTargetCount(feature.description,op)??'')||target.choice!==false||template.type!==''||template.units!=='ft'
+            if(entry.targetOverride!==true||entry.targetPrompt!==true||context.auditSource&&target.count!==(sourceOperationTargetCount(feature.description,op)??'')||target.choice!==false||template.type!==''||template.units!=='ft'
               ||['size','width','height','count'].some(key=>!empty(template[key]))||template.contiguous!==undefined&&template.contiguous!==false) add('ACTOR_SOURCE_OPERATION_TARGET_DRIFT',path+'/sourceOperations/'+op.id,'A GM attack cannot acquire an unprinted target count or area template.');
             const costs=asRecord(entry.consumption).targets,expectedCost=!damageRole&&op.relationship!=='follow-up'&&Boolean(feature.uses||feature.recharge);
             if(!Array.isArray(costs)||costs.length!==(expectedCost?1:0)||expectedCost&&(asRecord(costs[0]).type!=='itemUses'||asRecord(costs[0]).target!==resourceTarget||String(asRecord(costs[0]).value)!=='1'))add('ACTOR_SOURCE_OPERATION_RESOURCE_DRIFT',path+'/sourceOperations/'+op.id,'GM hit damage cannot consume the attack resource a second time.');
@@ -890,7 +937,7 @@ function compareFeatureSections(
           if(attack.flat!==true||Number(attack.bonus)!==op.attack.toHit||type.value!==(nativeVersatile&&op.attack.range!==undefined?'':op.attack.type.startsWith('r')?'ranged':'melee')||type.classification!==(op.attack.type.endsWith('sak')?'spell':'weapon')||(nativeVersatile?attack.ability!=='none'||range.override!==false:Number(range.value)!==(dual(op)?op.attack.reach:op.attack.range??op.attack.reach??0))||range.units!=='ft')add('ACTOR_SOURCE_OPERATION_ATTACK_DRIFT',path+'/sourceOperations/'+op.id,'The printed attack total, mode and distance must be literal.');
           if(dual(op)){
             const ranged=matches[1]!,rangedAttack=asRecord(ranged.attackData),rangedRange=asRecord(ranged.range);
-            if(ranged.name!==op.name+' (远程)'+(op.nameSuffix??'')||asRecord(rangedAttack.type).value!=='ranged'||rangedAttack.flat!==true||Number(rangedAttack.bonus)!==op.attack.toHit||Number(rangedRange.value)!==op.attack.range||(op.attack.longRange!==undefined&&Number(rangedRange.long)!==op.attack.longRange)||JSON.stringify(ranged.damageParts)!==JSON.stringify(activity.damageParts)||JSON.stringify(ranged.consumption)!==JSON.stringify(activity.consumption)||ranged.condition!==condition)add('ACTOR_SOURCE_OPERATION_ATTACK_MODE_DRIFT',path+'/sourceOperations/'+op.id,'Melee and ranged modes must share their printed attack/damage and pool, with their own source distances.');
+            if(ranged.name!==op.name+' (远程)'+(op.nameSuffix??'')||asRecord(rangedAttack.type).value!=='ranged'||rangedAttack.flat!==true||Number(rangedAttack.bonus)!==op.attack.toHit||Number(rangedRange.value)!==op.attack.range||(rangedRange.special!==(op.attack.longRange!==undefined?`远射程 ${op.attack.longRange} 尺`:''))||JSON.stringify(ranged.damageParts)!==JSON.stringify(activity.damageParts)||JSON.stringify(ranged.consumption)!==JSON.stringify(activity.consumption)||ranged.condition!==condition)add('ACTOR_SOURCE_OPERATION_ATTACK_MODE_DRIFT',path+'/sourceOperations/'+op.id,'Melee and ranged modes must share their printed attack/damage and pool, with their own source distances.');
           }
         }
         if(op.save){
@@ -910,7 +957,7 @@ function compareFeatureSections(
         if(parts.length!==(op.damage?.length??0)||!baseFieldValid||parts.some((part,index)=>compact(String(part.formula??''))!==compact(op.damage![index]!.formula)||JSON.stringify(arrayValues(part.types))!==JSON.stringify(op.damage![index]!.types??[op.damage![index]!.type])))add('ACTOR_SOURCE_OPERATION_DAMAGE_DRIFT',path+'/sourceOperations/'+op.id,'Each operation must retain its own complete damage parts and type choices. Attack must explicitly exclude Item base damage; Save/Damage cannot contain a non-native includeBase field.');
         const operationRange=asRecord(activity.range);
         if(op.range!==undefined&&(Number(operationRange.value)!==op.range||operationRange.units!=='ft'))add('ACTOR_SOURCE_OPERATION_RANGE_DRIFT',path+'/sourceOperations/'+op.id,'Source placement distance and self origin must remain distinct.');
-        if(!op.attack&&op.range===undefined){
+        if(context.auditSource&&!op.attack&&op.range===undefined){
           const self=op.healing?op.healing.target.type==='self':sourceOperationSelfTarget(feature.description,op)||sourceOperationSelfArea(feature.description,op,displayName(context.ir.creature.identity.name,context.ir.creature.identity.englishName));
           // Old source-proven Self may rely on RangeField's native default.
           // Account for Item inheritance before accepting that compatibility.
@@ -921,11 +968,12 @@ function compareFeatureSections(
         }
         if(op.aoe){
           const area=asRecord(activity.areaTemplate),dimension=(key:'width'|'height',expected:number|undefined)=>expected!==undefined?!(typeof area[key]==='number'||typeof area[key]==='string')||Number(area[key])!==expected:![undefined,'',5,'5'].includes(area[key] as any);
-          if(area.type!==(op.aoe.shape==='rectangle'?'square':op.aoe.shape)||Number(area.size)!==op.aoe.radius||area.units!=='ft'||op.aoe.shape==='line'&&dimension('width',op.aoe.width)||op.aoe.shape==='cylinder'&&dimension('height',op.aoe.height))add('ACTOR_SOURCE_OPERATION_AREA_DRIFT',path+'/sourceOperations/'+op.id,'Native area shape, size, explicit width/height or units changed.');
+          const shape=nativeAreaShape(op.aoe.shape,op.aoe.radius,op.proof.aoe??'');
+          if(area.type!==(shape==='rectangle'?'square':shape)||Number(area.size)!==op.aoe.radius||area.units!=='ft'||op.aoe.shape==='line'&&dimension('width',op.aoe.width)||op.aoe.shape==='cylinder'&&dimension('height',op.aoe.height))add('ACTOR_SOURCE_OPERATION_AREA_DRIFT',path+'/sourceOperations/'+op.id,'Native area shape, size, explicit width/height or units changed.');
         }
         if(op.proof.upgrade&&(asRecord(activity.targetAffects).type!=='creature'||String(asRecord(activity.targetAffects).count)!=='1'||activity.targetSpecial!==op.proof.damage![0]))add('ACTOR_SOURCE_OPERATION_TARGET_DRIFT',path+'/sourceOperations/'+op.id,'Upgraded damage must retain the one creature hit under the complete original trigger.');
-        if(op.targetSpecial!==undefined&&(activity.targetSpecial!==op.targetSpecial||asRecord(activity.targetAffects).type!==(sourceOperationTargetType(feature.description,op)??'creature')))add('ACTOR_SOURCE_OPERATION_TARGET_DRIFT',path+'/sourceOperations/'+op.id,'Source target restrictions or explicit recipient kind changed.');
-        if(!op.healing&&!op.proof.upgrade&&op.targetSpecial!==undefined&&asRecord(activity.targetAffects).count!==(sourceOperationTargetCount(feature.description,op)??''))add('ACTOR_SOURCE_OPERATION_TARGET_DRIFT',path+'/sourceOperations/'+op.id,'Explicit singular source recipients must retain their native count and complete qualification.');
+        if(op.targetSpecial!==undefined&&(activity.targetSpecial!==op.targetSpecial||context.auditSource&&asRecord(activity.targetAffects).type!==(sourceOperationTargetType(feature.description,op)??'creature')))add('ACTOR_SOURCE_OPERATION_TARGET_DRIFT',path+'/sourceOperations/'+op.id,'The explicit IR target restriction must be retained.');
+        if(context.auditSource&&!op.healing&&!op.proof.upgrade&&op.targetSpecial!==undefined&&asRecord(activity.targetAffects).count!==(sourceOperationTargetCount(feature.description,op)??''))add('ACTOR_SOURCE_OPERATION_TARGET_DRIFT',path+'/sourceOperations/'+op.id,'Explicit singular source recipients must retain their native count and complete qualification.');
         const costs=asRecord(activity.consumption).targets,expectedCost=op.relationship!=='follow-up'&&Boolean(feature.uses||feature.recharge);
         if(!Array.isArray(costs)||costs.length!==(expectedCost?1:0)||expectedCost&&(asRecord(costs[0]).type!=='itemUses'||asRecord(costs[0]).target!==resourceTarget||String(asRecord(costs[0]).value)!=='1'))add('ACTOR_SOURCE_OPERATION_RESOURCE_DRIFT',path+'/sourceOperations/'+op.id,'A follow-up cannot consume again; source alternatives share exactly one feature pool.');
       }
@@ -974,8 +1022,9 @@ function compareFeatureSections(
       }
       if(feature.aoe){
         const area=asRecord(activities[0]?.areaTemplate),range=asRecord(activities[0]?.range);
-        if(area.type!==feature.aoe.shape||Number(area.size)!==feature.aoe.radius||area.units!=='ft'
-          ||feature.aoe.shape==='radius'&&range.units!=='self')
+        const shape=nativeAreaShape(feature.aoe.shape,feature.aoe.radius,feature.nativeRuleText??feature.description);
+        if(area.type!==shape||Number(area.size)!==feature.aoe.radius||area.units!=='ft'
+          ||shape==='radius'&&range.units!=='self')
           add('ACTOR_MIXED_AREA_DRIFT',path+'/aoe','The native area shape, size, units and self origin must match the source-declared primary operation.');
       }
       const maximum=sharedPool?(isSharedCarrier?sharedPool.max:undefined):feature.uses?.max??(feature.recharge?1:undefined);
@@ -1032,6 +1081,9 @@ function compareFeatureSections(
       compare(add, 'ACTOR_LEGENDARY_COST_DRIFT', `/creature/${section}/${index}/legendaryCost`, feature.legendaryCost, found.activationValue);
     }
     for (const [damageIndex, damage] of (feature.damage ?? []).entries()) {
+      // The dedicated literal-damage comparison verifies the complete IR
+      // ledger, primary roll and every separately triggered GM helper.
+      if (!context.auditSource && hasLiteralDamageHelpers(feature)) continue;
       const projectedFormulas = arrayValues(found.damageFormulas);
       const actualFormulas = projectedFormulas.length > 0 ? projectedFormulas : [String(found.damageFormula ?? '')];
       const ordinaryLabel=/^(?:Failure(?:\s*\(\s*half\s+(?:as\s+much\s+)?damage\s+on\s+(?:a\s+)?Success\s*\))?|on\s+a\s+failed\s+save)$/iu;
@@ -1046,7 +1098,7 @@ function compareFeatureSections(
         const native=nativeFormulas.length>allowed.length
           ||nativeFormulas.some(formula=>!allowed.some(part=>compact(part.formula)===formula))
           ||arrayValues(found.damageTypes).some(type=>!allowed.some(part=>normalizeDamageTypeFixed(part.type)===normalizeDamageTypeFixed(type)));
-        add(native?'ACTOR_CONDITIONAL_DAMAGE_DRIFT':'ACTOR_CONDITIONAL_DAMAGE_REQUIRES_GM',`${path}/damage/${damageIndex}`,
+        if(native||context.auditSource)add(native?'ACTOR_CONDITIONAL_DAMAGE_DRIFT':'ACTOR_CONDITIONAL_DAMAGE_REQUIRES_GM',`${path}/damage/${damageIndex}`,
           native?`${feature.name} projects conditional/replacement damage as unconditional native damage.`
             :`${feature.name} retains its complete conditional/replacement damage for GM adjudication; it is not unconditional native damage.`);
         continue;
@@ -1058,7 +1110,7 @@ function compareFeatureSections(
       if (!arrayValues(found.damageTypes).map(normalizeDamageTypeFixed).includes(normalizeDamageTypeFixed(damage.type))) add('ACTOR_DAMAGE_TYPE_DRIFT', `/creature/${section}/${index}/damage/${damageIndex}/type`, `${feature.name} lost damage type ${damage.type}.`);
     }
     if (feature.save) {
-      const zeroHp=/\.\s*((?:A|The) (?:creature|target) reduced to 0 Hit Points by this damage) must make a (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) Saving Throw:\s*DC\s*(\d+)\.\s*Failure:/iu.exec(sourceRuleText(feature.description));
+      const zeroHp=context.auditSource?/\.\s*((?:A|The) (?:creature|target) reduced to 0 Hit Points by this damage) must make a (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) Saving Throw:\s*DC\s*(\d+)\.\s*Failure:/iu.exec(sourceRuleText(feature.description)):undefined;
       const abilities:Record<string,string>={strength:'str',dexterity:'dex',constitution:'con',intelligence:'int',wisdom:'wis',charisma:'cha'};
       const conditional=fullLiteral&&feature.attack&&zeroHp&&Number(zeroHp[3])===feature.save.dc
         &&abilities[zeroHp[2]!.toLowerCase()]===feature.save.ability
@@ -1086,6 +1138,24 @@ function compareFeatureSections(
     for (const [conditionIndex, applied] of (feature.appliedConditions ?? []).entries()) {
       const expectedStatuses = applied.statuses.map(normalizeCondition);
       const conditionPath = `/creature/${section}/${index}/appliedConditions/${conditionIndex}`;
+      if (!context.auditSource) {
+        const manual = asRecord(found.conditionLifecycle);
+        const companion = hasConditionCompanionMarker(found, section, index, feature, 'manual')
+          || hasConditionCompanionMarker(found, section, index, feature, 'staged');
+        const definitions = Array.isArray(found.effectDefinitions) ? found.effectDefinitions.map(asRecord) : [];
+        const duration = simpleConditionDuration(applied.duration);
+        for (const status of expectedStatuses) {
+          const manualCarrier = manual.version === 1 && manual.mode === 'gm' && arrayValues(manual.statuses).includes(status)
+            && compact(String(manual.sourceText)) === compact(feature.description) && fullLiteral && description.includes('GM');
+          if (!actualStatuses.includes(status)) {
+            if (!companion && !manualCarrier) add('ACTOR_CONDITION_DRIFT', conditionPath, `${feature.name} lost the IR condition ${status} and its GM rule carrier.`);
+          } else if (duration && definitions.filter(effect => arrayValues(effect.statuses).map(normalizeCondition).includes(status)).some(effect => {
+            const actual = asRecord(effect.duration);
+            return actual.seconds !== (duration.seconds ?? null) || actual.rounds !== (duration.rounds ?? null) || actual.turns != null;
+          })) add('ACTOR_CONDITION_DURATION_DRIFT', conditionPath, 'The native duration does not preserve the duration explicitly declared in the AI IR.');
+        }
+        continue;
+      }
       // Check the complete parent, independently of the generated metadata.
       const conditionSource = completeSourceFeatureEvidence(context.source, context.ir, feature, `/creature/${section}/${index}`)?.quote ?? feature.description;
       const definitions = Array.isArray(found.effectDefinitions) ? found.effectDefinitions.map(asRecord) : [];
@@ -1127,7 +1197,7 @@ function compareFeatureSections(
       if (applied.staged && expectedStatuses.filter((status) => actualStatuses.includes(status)).length > 1) add('STAGED_CONDITIONS_SIMULTANEOUS', `/creature/${section}/${index}/appliedConditions/${conditionIndex}`, `${feature.name} applies staged conditions simultaneously.`);
     }
   }
-  const matched = expected.filter((feature) => items.some((item) => featureNamesMatch(item, feature))).length;
+  const matched = expected.filter((feature) => items.some((item) => featureNamesMatch(item, feature, context.auditSource))).length;
   if (matched < expected.length) add('ACTOR_FEATURE_COUNT_DRIFT', `/creature/${section}`, `${section} expected ${expected.length} separate entries but matched ${matched}.`);
 }
 
@@ -1159,8 +1229,10 @@ function featureDescriptions(ir: MonsterIntakeIR['creature']): string[] {
   return [...ir.traits, ...ir.actions, ...ir.bonusActions, ...ir.reactions, ...ir.legendaryActions, ...(ir.mythicActions ?? [])].map((feature) => feature.description);
 }
 
-function featureNamesMatch(projected: Record<string, unknown>, expected: CanonicalFeature): boolean {
+function featureNamesMatch(projected: Record<string, unknown>, expected: CanonicalFeature, auditSource = true): boolean {
   const projectedName = String(projected.name ?? '');
+  if (!auditSource) return expected.sourceFeatureId ? projected.sourceFeatureId === expected.sourceFeatureId
+    : projectedName.toLocaleLowerCase('en-US') === renderMonsterFeatureName(expected).toLocaleLowerCase('en-US');
   const usage = (value: string): string | undefined => value.normalize('NFKC')
     .match(/[\[［]\s*(\d+)\s*\/\s*(日|day)\s*[\]］]/iu)
     ?.slice(1).join('/');
@@ -1282,6 +1354,12 @@ function normalizeCreatureTypeFixed(value: unknown): string {
 function normalizeLanguageFixed(value: string): string {
   const normalized = value.trim();
   if(normalized.toLowerCase()==='deep speech')return'deep';
+  // Exact technical aliases already consumed by parser/yaml.ts and the
+  // V14 Actor language map. These do not inspect the original source text.
+  const nativeAlias = ({ 深潜语: 'deep', 深语: 'deep', 深渊语: 'abyssal', 深渊: 'abyssal', 深渊魔语: 'abyssal', 深渊魔: 'abyssal',
+    侏儒语: 'gnomish', 原初语: 'primordial', 通用手语: 'sign', 手语: 'sign', 盗贼黑话: 'cant', 德鲁伊语: 'druidic',
+    吉斯语: 'gith', 豺狼人语: 'gnoll', 鸟人语: 'aarakocra', dwarven: 'dwarvish' } as Record<string,string>)[normalized.toLowerCase()];
+  if(nativeAlias)return nativeAlias;
   const direct = ({
     '\u901a\u7528\u8bed': 'common',
     '\u77ee\u4eba\u8bed': 'dwarvish',

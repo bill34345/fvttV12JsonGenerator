@@ -106,7 +106,7 @@ export async function prepareForgeEncounter(text: string, signal?: AbortSignal):
 }
 
 export function assertPreparedForgeEncounter(value: PreparedForgeEncounter): void {
-  if (!preparedProofs.has(value) || encounterPackageHash(value.bundle) !== value.hash) throw new Error('战斗包必须在当前页面重新生成并审核。');
+  if (!preparedProofs.has(value) || encounterPackageHash(value.bundle) !== value.hash) throw new Error('生物导入文件必须在当前页面重新生成并审核。');
 }
 function freeze<T>(value: T): T {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {

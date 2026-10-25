@@ -223,9 +223,9 @@ export function buildCastActivitySource(input: BuildCastActivitySourceInput): Bu
       ...(restriction.value === undefined ? {} : { value: restriction.value }),
       status: 'literal-unsupported' as const,
     }));
-  // Unknown casting qualifiers must never become unrestricted executable
-  // Casts. The atomic hydration owner reports this error before any writes.
-  if(literalRestrictions.some(restriction=>restriction.kind==='casting'))throw new TypeError('Unsupported source casting restriction; retain the complete feature for GM review.');
+  // The AI's explicit ability, DC, uses and timing remain authoritative.
+  // An unmapped literal qualifier is reported for GM handling; it does not
+  // veto the other structured parameters or the Actor's complete spell list.
   if(input.activationType!==undefined&&!['action','bonus','reaction','legendary'].includes(input.activationType))throw new TypeError('Unsupported source casting activation.');
   const activationCost=input.activationCost??1;
   if(!Number.isSafeInteger(activationCost)||activationCost<1||input.activationType!=='legendary'&&activationCost!==1)throw new TypeError('Unsupported source casting cost.');

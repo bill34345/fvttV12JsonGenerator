@@ -1,4 +1,5 @@
 import type { ActionData, ActionTarget, StructuredActionData } from '@fvtt-json-generator/models/action';
+import {nativeAreaShape} from '@fvtt-json-generator/models/source-operations';
 import { ActivityGenerator } from './activity';
 import { extractExplicitlyInflictedStatuses, statusIconPath, simpleConditionDuration } from './actor-effects';
 import { buildConditionTemplateFlag, conditionParamsForText, isGeneratedConditionId } from './actor-effects';
@@ -210,7 +211,8 @@ export function structuredActionToActivityData(action: StructuredActionData): an
     if (saveCondition) base.save.condition = saveCondition;
     if (action.aoe) {
       base.save.dc = action.DC;
-      base.aoe = { type: action.aoe.shape, template: { distance: action.aoe.range, type: action.aoe.shape } };
+      const shape=nativeAreaShape(action.aoe.shape,action.aoe.range,action.nativeRuleText??action.describe??'');
+      base.aoe = { type: shape, template: { distance: action.aoe.range, type: shape } };
     }
   }
 

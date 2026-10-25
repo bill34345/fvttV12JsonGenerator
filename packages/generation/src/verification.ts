@@ -517,7 +517,9 @@ function verifyMechanicCoverage(
       const value = mechanic.value as { type?: string; duration?: string; sourceText?: string } | undefined;
       const statuses = value?.type ? extractExplicitlyInflictedStatuses(`The target is ${value.type}.`) : [];
       const source = value?.sourceText;
-      const applies = target === '14' && effectProfile === 'core' && statuses.length > 0 && typeof source === 'string' && activities.length > 0;
+      // Canonical AI mechanics already declare statuses/duration. Verify their projection,
+      // never classify their prose again as an alternative lifecycle.
+      const applies = document?.flags?.fvttJsonGenerator?.literalMechanics?.version !== 1 && target === '14' && effectProfile === 'core' && statuses.length > 0 && typeof source === 'string' && activities.length > 0;
       const marker = document?.flags?.fvttJsonGenerator?.conditionLifecycle;
       const effects = document?.effects ?? [];
       const lifecycle = statuses.map(status => sourceConditionLifecycle(source ?? '', status, value?.duration));

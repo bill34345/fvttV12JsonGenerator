@@ -4,6 +4,10 @@
 
 本目录把不规则 TXT/Markdown 交给可配置的 AI provider，生成可审阅的 Intake 中间结果；它不是绕过 parser/generator 直接制造最终 Actor JSON 的工具。
 
+## Monster默认责任边界
+
+AI负责理解内容；默认`validateMonsterIntakeIR`只检查闭合结构、支持的组合、来源身份和引用，`verifyMonsterIntake`检查IR到Markdown／Actor的投影保真。不得重新用原文语法、数字或覆盖率判断AI是否理解正确，不得从原文回填或覆盖机制。生物本体和关联召唤物统一复用完整IR入口；精确引文定位和技术ID整理不构成内容推断。旧来源检查仅在显式SourceAudit离线入口保留。AI声明的不确定及真实结构／转换错误保持原状态；Item和Species各自的契约不因此放宽。依据为[用户原话与当前状态](../../docs/plans/2026-10-20-forge-ab-current-state.md)。
+
 ## 状态边界
 
 - Item Intake is a parallel evidence IR, not a Monster compatibility mode. Its formal entry is `--intake-items`; raw TXT/irregular Item Markdown must never be routed through the legacy item AI normalizer.

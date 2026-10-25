@@ -2666,7 +2666,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
               return `<li><span><strong>${escapeHtml(entry.sourceLabel || '(未命名)')}</strong> · ${escapeHtml(entry.objectKind)} · ${escapeHtml(entry.mode)} · ${escapeHtml(job.status)} · attempt ${job.attemptCount}${job.applyResult?.uuid ? ` · ${escapeHtml(job.applyResult.uuid)}` : ''}</span>
                 ${job.lastError ? `<small>${escapeHtml(job.lastError)}</small>` : ''}
                 ${job.latestReview?renderBatchIssues(job.latestReview):''}
-                ${spellIssues.length?`<section class="forge-findings forge-diagnostics"><strong>角色已创建，施法解析尚未完成</strong><ul>${renderIssueList(spellIssues)}</ul></section>`:''}
+                ${spellIssues.length?`<section class="forge-findings forge-diagnostics"><strong>角色已创建，施法录入提示</strong><ul>${renderIssueList(spellIssues)}</ul></section>`:''}
                 ${job.applyResult?.readbackWarnings?.length?`<section class="forge-findings forge-diagnostics"><strong>已创建，录入值需要核对</strong><ul>${renderIssueList(job.applyResult.readbackWarnings.map((message,index)=>({code:'FOUNDRY_READBACK_DIFFERENCE',path:`/readback/${index}`,message})))}</ul></section>`:''}
                 <span class="forge-library-entry-actions"><button type="button" data-batch-open-job="${escapeHtml(job.id)}">${job.latestReview ? '打开只读 review' : '打开来源草稿'}</button>${lifecycleAction}</span></li>`;
             }).join('')}</ol>
@@ -3327,10 +3327,20 @@ function isCurrentRuntime(game: any): boolean { try { assertGm(game); assertExac
 type DisplayIssue={code:string;path?:string;message:string;evidence?:readonly {quote:string}[]};
 function spellResolutionIssues(actor:any):DisplayIssue[]{
   const resolution=actor?.flags?.['fvtt-json-generator-spell-resolver']?.spellResolution;
-  if(!resolution||!['failed','needs_review'].includes(resolution.status))return[];
+  if(!resolution)return[];
+  const manifest=actor?.flags?.['fvtt-json-generator-spell-resolver']?.spellManifest;
+  const restrictions=Array.isArray(resolution.report?.literalRestrictions)?resolution.report.literalRestrictions:[];
+  const notes:DisplayIssue[]=restrictions.map((restriction:any)=>{
+    const group=manifest?.spellcastingGroups?.find((g:any)=>g.groupId===restriction.groupId);
+    const ref=group?.spellRefs?.find((r:any)=>r.refId===restriction.refId);
+    const name=ref?.chineseName??ref?.englishName??ref?.originalName??restriction.refId;
+    return{code:'SPELL_RESTRICTION_MANUAL',path:`/spell-resolution/${restriction.groupId}/${restriction.refId}`,
+      message:`${name}：已按 AI 给出的参数录入施法活动；这项文字限定需要 GM 处理：${restriction.text}`};
+  });
+  if(!['failed','needs_review'].includes(resolution.status))return notes;
   const diagnostic=resolution.failureDiagnostic;
   const position=Number.isInteger(diagnostic?.selectionIndex)?`第 ${diagnostic.selectionIndex}/${diagnostic.selectionCount} 项`:'部分法术';
-  return[{code:'SPELL_RESOLUTION_INCOMPLETE',path:'/spell-resolution',
+  return[...notes,{code:'SPELL_RESOLUTION_INCOMPLETE',path:'/spell-resolution',
     message:`原生施法未完成，${position}未能解析。角色和完整施法文字已保留；请核对法术活动是否可用。`,
     evidence:typeof resolution.error==='string'?[{quote:resolution.error}]:[]}];
 }

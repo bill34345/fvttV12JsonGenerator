@@ -43,7 +43,7 @@ describe('encounter review navigation',()=>{
   test('maps only exact opaque field IDs and accepted actor titles; keeps package failures separate',()=>{
     const view=encounterReviewNavigation(report,progress,source,true,bundle);
     expect(view).toMatchObject({actorCount:2,automatic:1,manual:1,blocked:2});
-    expect(view.summary).toContain('2 个角色译文已通过，战斗包 2 个字段或规则待处理');
+    expect(view.summary).toContain('2 个角色译文已通过，整份资料 2 个字段或规则待处理');
     expect(view.actors[0]!.label).toBe(`已审核追猎者 ${firstName}`);
     const cards=encounterReviewCards(report,undefined,progress);
     expect(cards[0]).toMatchObject({actor:`已审核追猎者 ${firstName}`,feature:'已审手工 Manual'});
@@ -53,11 +53,11 @@ describe('encounter review navigation',()=>{
     expect(encounterReviewCards(report,undefined,legacy)[0]!.feature).toBe('已审手工（Manual）');
     expect(approvedDisplayTitle('旧译 Manual','新译',LOCALIZATION_POLICY)).toBe('新译 Manual');
     expect(view.issues.map(issue=>[issue.actor,issue.field,issue.source,issue.draft])).toEqual([
-      ['战斗包','战斗包名称',packageTitle,'中文 R'],['战斗包','控制宏说明',packageBody,'中文 configured']]);
+      ['整份资料','资料名称',packageTitle,'中文 R'],['整份资料','控制宏说明',packageBody,'中文 configured']]);
     expect(source.slice(view.issues[0]!.locateStart,view.issues[0]!.locateEnd)).toBe(packageTitle);
     const unknown={...progress.at(-1),findings:['text-000000000000000000000000：未知字段']};
     const unresolved=encounterReviewNavigation(report,[...progress.slice(0,-1),unknown],source,true,bundle).issues[0]!;
-    expect(unresolved).toMatchObject({actor:'战斗包',field:'字段归属待核',source:undefined,draft:undefined});
+    expect(unresolved).toMatchObject({actor:'整份资料',field:'字段归属待核',source:undefined,draft:undefined});
     expect(unresolved.locateStart).toBeUndefined();
     const otherActorField=localizationText('title',firstName);
     const wrongActor={...progress.at(-1),actorKey:'actor-unknown',request:{texts:[otherActorField]},findings:[`${otherActorField.id}：未知角色`]};
@@ -264,8 +264,8 @@ describe('encounter review navigation',()=>{
     expect(context.reviewNavigation).toMatchObject({actorCount:1,blocked:2});
     expect(context.canReviewCandidate).toBe(false);
     expect(context.modelReviewState).toContain('没有当前 Intake 来源与 IR 报告');
-    expect(context.reviewNavigation.summary).toContain('1 个角色中文草稿已通过本地校验（尚未批准），战斗包 2 个字段或规则待处理');
-    expect(context.reviewNavigation.visibleIssues.map((issue:any)=>issue.field)).toEqual(['战斗包名称','控制宏名称']);
+    expect(context.reviewNavigation.summary).toContain('1 个角色中文草稿已通过本地校验（尚未批准），整份资料 2 个字段或规则待处理');
+    expect(context.reviewNavigation.visibleIssues.map((issue:any)=>issue.field)).toEqual(['资料名称','控制宏名称']);
     expect(context.reviewNavigation.visibleIssues.every((issue:any)=>issue.canContinue)).toBe(true);
     expect(context.reviewNavigation.visibleIssues.every((issue:any)=>issue.canLocate===false)).toBe(true);
     expect(context.reviewNavigation.visibleIssues.every((issue:any)=>issue.locateStart===undefined)).toBe(true);

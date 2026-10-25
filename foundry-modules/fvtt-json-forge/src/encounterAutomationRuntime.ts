@@ -295,7 +295,7 @@ export async function installEncounterAutomation(
   installations.set(env.game, byPackage);
   const existing = byPackage.get(`${normalized.packageId}\u0000${normalized.packageHash}`);
   if (existing) {
-    if (existing.signature !== signature) throw new Error('同一战斗包已启动，但绑定或固定规则已经变化；请先停止旧控制器。');
+    if (existing.signature !== signature) throw new Error('同一生物导入文件已启动，但绑定或固定规则已经变化；请先停止旧控制器。');
     return existing.handle;
   }
 
@@ -1266,7 +1266,7 @@ function assertBoundActor(actor: any, key: string, uuid: string, options: Encoun
   if (!actor || actor.uuid !== uuid || !/^Actor\.[A-Za-z0-9]+$/u.test(uuid)) throw new Error(`绑定 ${key} 不是有效的 Actor UUID。`);
   const identity = actor.flags?.[ENCOUNTER_AUTOMATION_FLAG_SCOPE]?.encounter;
   if (identity?.version !== 1 || identity?.kind !== 'Actor' || identity?.key !== key || identity?.packageId !== options.packageId || identity?.packageHash !== options.packageHash) {
-    throw new Error(`绑定 ${key} 不属于当前战斗包，拒绝按名称或近似身份运行。`);
+    throw new Error(`绑定 ${key} 不属于当前生物导入文件，拒绝按名称或近似身份运行。`);
   }
 }
 

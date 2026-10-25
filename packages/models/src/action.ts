@@ -280,6 +280,8 @@ export interface SpecialEffect {
 }
 
 export interface StructuredActionData {
+  /** Program-owned canonical conversion boundary: never infer mechanics from prose. */
+  literalMechanics?: true;
   candidateReview?: import('./sourceOperationTypes').SourceCandidateReview;
   candidateCounters?: import('./sourceOperationTypes').SourceCandidateCounter[];
   sourceFeatureId?:string;

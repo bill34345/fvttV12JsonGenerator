@@ -7,7 +7,7 @@ export const CATEGORY_MD_ORDER = ['action', 'bonus', 'trait', 'reaction', 'legen
 export const CATEGORY_MD_LABELS: Record<IntakeSection, string> = {
   action: '动作', bonus: '附赠动作', trait: '特性', reaction: '反应', legendary: '传奇动作', mythic: '神话动作',
 };
-export const CATEGORY_MD_PROMPT_VERSION = 'forge-category-md-v1';
+export const CATEGORY_MD_PROMPT_VERSION = 'forge-category-md-v5-scalar-proof-types';
 
 export interface CategoryMdUnit {
   id: string;

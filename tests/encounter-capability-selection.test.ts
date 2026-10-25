@@ -1,6 +1,6 @@
 import {describe,test,expect} from 'bun:test';
 import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
-import {compileEncounterSelection,decodeEncounterAutomation,renderEncounterActorSource} from '@fvtt-json-generator/intake-ai/encounter-automation';
+import {compileEncounterSelection,compileEncounterSelectionSourceAudit,decodeEncounterAutomation,renderEncounterActorSource} from '@fvtt-json-generator/intake-ai/encounter-automation';
 import {decodeEncounterRuntimeConfiguration} from '@fvtt-json-generator/intake-ai/encounter-capabilities';
 import {convertMarkdownContentToJson} from '../src/core/workflow/singleFileConversion';
 import {buildValidLurkerIr,LURKER_SOURCE} from '../src/core/intake/__tests__/fixtures/lurker';
@@ -12,6 +12,7 @@ async function fixture(){
   const ir=buildValidLurkerIr();
   const quote='At its turn start, Pulse affects all other creatures within 15 feet. Each makes a DC 13 Dexterity save, taking 2d6 piercing on failure and no damage on success.';
   const source=LURKER_SOURCE+'\n'+quote,start=source.indexOf(quote);
+  ir.source={sha256:hashSource(source),length:source.length};
   ir.creature.actions=[{name:'Pulse',description:quote,activityType:'save',activationType:'special',save:{dc:13,ability:'dex'},aoe:{shape:'sphere',radius:15},damage:[{formula:'2d6',type:'piercing',relationship:'base'}],evidence:[{start,end:start+quote.length,quote}]}];
   const generated=await convertMarkdownContentToJson({content:renderEncounterActorSource(ir,[],source),fvttVersion:'14',effectProfile:'core',translationService:null});
   const request={source,actors:[{key:'creature',source,ir,artifact:generated.rawJson}]};
@@ -19,7 +20,7 @@ async function fixture(){
   return {request,selection};
 }
 describe('fixed capability selection and compilation',()=>{
-  test('binds a complete numbered source ray list and rejects a native but unrelated Save Item',async()=>{
+  test('explicit source audit binds a complete numbered ray list and rejects a source-unlisted Save Item',async()=>{
     const ir=buildValidLurkerIr();
     const baseSource=LURKER_SOURCE;
     const permission='While the creature is Bloodied, a creature that scores a Critical Hit against it can disable one of its eye rays of its choice.';
@@ -37,17 +38,17 @@ describe('fixed capability selection and compilation',()=>{
     const generated=await convertMarkdownContentToJson({content:rendered,fvttVersion:'14',effectProfile:'core',translationService:null});
     const request={source,actors:[{key:'one',source,ir,artifact:generated.rawJson}]};
     const selection={version:2,name:'Listed source lock',notes:'GM control only',manualSteps:[],legendaryRecovery:[],rules:[{id:'list',kind:'gm-activity-lock',actorKey:'one',featureName:'Lock Carrier',section:'trait',quote:`Lock Carrier. ${permission}`,gmSteps:['GM confirms Bloodied and Critical Hit, then selects the ray.'],parameters:{activityItemNames:rows.map((_,index)=>`Listed Ray ${index+1}`)}}]};
-    expect(compileEncounterSelection(selection,request).selection?.rules[0]?.parameters.activityItemNames).toHaveLength(10);
+    expect(compileEncounterSelectionSourceAudit(selection,request).selection?.rules[0]?.parameters.activityItemNames).toHaveLength(10);
     const wrong=structuredClone(selection);wrong.rules[0]!.parameters.activityItemNames[9]='Foreign Pulse';
-    expect(()=>compileEncounterSelection(wrong,request)).toThrow('absent from quoted source evidence');
+    expect(()=>compileEncounterSelectionSourceAudit(wrong,request)).toThrow('absent from quoted source evidence');
   });
   test('rejects misspelled or invalid resource fields instead of accepting lost source counters',()=>{
     const ir=buildValidLurkerIr();(ir.creature.traits[0] as any).use={max:2,period:'day'};
-    expect(validateMonsterIntakeIR(LURKER_SOURCE,ir).blocking).toContainEqual(expect.objectContaining({code:'INVALID_FEATURE_USES_FIELD'}));
+    expect(validateMonsterIntakeIR(LURKER_SOURCE,ir).blocking).toContainEqual(expect.objectContaining({code:'UNKNOWN_PROPERTY',path:'/creature/traits/0/use'}));
     delete (ir.creature.traits[0] as any).use;
-    for(const uses of [{max:0,period:'day'},{max:2.5,period:'day'},{max:2,period:'forever'},{max:2,period:'day',value:2}]){
+    for(const [uses,path] of [[{max:0,period:'day'},'max'],[{max:2.5,period:'day'},'max'],[{max:2,period:'forever'},'period'],[{max:2,period:'day',value:2},'value']] as const){
       ir.creature.traits[0]!.uses=uses as any;
-      expect(validateMonsterIntakeIR(LURKER_SOURCE,ir).blocking).toContainEqual(expect.objectContaining({code:'INVALID_FEATURE_USES'}));
+      expect(validateMonsterIntakeIR(LURKER_SOURCE,ir).blocking).toContainEqual(expect.objectContaining({path:`/creature/traits/0/uses/${path}`,origin:'schema'}));
     }
   });
   test('a supported bilingual source alias remains accepted and retains the actual candidate',async()=>{
@@ -98,6 +99,7 @@ describe('fixed capability selection and compilation',()=>{
       actor.ir.creature.identity.name='Eye';
       actor.ir.creature.actions[0]!.description=quote;
       actor.ir.creature.actions[0]!.evidence=[{start,end:start+quote.length,quote}];
+      actor.ir.source={sha256:hashSource(actor.source),length:actor.source.length};
       selection.rules[0]={...selection.rules[0],kind:'save-failure-effect',quote,gmSteps:['GM selects every legal target in the native area.'],parameters};
       expect(compileEncounterSelection(selection,request).command).toContain('save-failure-effect');
       const wrong=structuredClone(selection);wrong.rules[0].quote=cases.find(([text])=>text!==quote)![0];
@@ -109,7 +111,7 @@ describe('fixed capability selection and compilation',()=>{
         const at=wrongRequest.source.length+1;wrongRequest.source+=`\n${incorrect}`;wrongRequest.actors[0]!.source=wrongRequest.source;
         wrongRequest.actors[0]!.ir.creature.actions[0]!.evidence=[{start:at,end:at+incorrect.length,quote:incorrect}];
         wrongSelection.rules[0].quote=incorrect;
-        expect(()=>compileEncounterSelection(wrongSelection,wrongRequest)).toThrow('expiry');
+        expect(()=>compileEncounterSelectionSourceAudit(wrongSelection,wrongRequest)).toThrow('expiry');
       }
     }
   });
@@ -118,6 +120,7 @@ describe('fixed capability selection and compilation',()=>{
     const quote="While the eye is Bloodied, a creature that scores a Critical Hit against it can disable the eye's Glacial Ray or Paroxysm Ray.";
     const start=request.source.length+1;request.source+=`\n${quote}`;
     const actor=request.actors[0]!;actor.source=request.source;
+    actor.ir.source={sha256:hashSource(actor.source),length:actor.source.length};
     actor.ir.creature.traits.push({name:'Eyestalks',description:quote,activityType:'utility',evidence:[{start,end:start+quote.length,quote}]});
     (actor.artifact as any).items.push({name:'Eyestalks',system:{activities:{utility:{type:'utility'}}}});
     for(const name of ['Glacial Ray','Paroxysm Ray'])(actor.artifact as any).items.push({name,system:{activities:{save:{type:'save',save:{ability:['dex'],dc:{formula:'15'}}}}}});
@@ -125,6 +128,6 @@ describe('fixed capability selection and compilation',()=>{
       gmSteps:['GM confirms Bloodied and Critical Hit before selecting a ray.','Only GM explicitly restores it.'],parameters:{activityItemNames:['Glacial Ray','Paroxysm Ray']}}];
     expect(compileEncounterSelection(selection,request).command).toContain('gm-activity-lock');
     const bad=structuredClone(selection);bad.rules[0].gmSteps=['GM chooses a ray.'];
-    expect(()=>compileEncounterSelection(bad,request)).toThrow('GM confirmation');
+    expect(()=>compileEncounterSelectionSourceAudit(bad,request)).toThrow('GM confirmation');
   });
 });

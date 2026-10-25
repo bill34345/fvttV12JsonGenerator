@@ -321,7 +321,7 @@ describe('translated encounter report identity',()=>{
     await app.translatePrepared();
     expect(app.translationReport.map((entry:any)=>[entry.actorKey,entry.status])).toEqual([['guard','draft_ready'],['watcher','draft_ready'],[undefined,'needs_review']]);
     const context=await app._prepareContext();
-    expect(context.reviewNavigation.issues.some((issue:any)=>issue.actor==='战斗包')).toBe(true);
+    expect(context.reviewNavigation.issues.some((issue:any)=>issue.actor==='整份资料')).toBe(true);
     const dom=new JSDOM(Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(context));
     app.element=dom.window.document.querySelector('.forge-encounter-panel');app._onRender();
     (dom.window.document.querySelector('[data-action="encounter-report-view"]') as HTMLButtonElement).click();

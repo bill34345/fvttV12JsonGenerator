@@ -1,7 +1,7 @@
 import {afterEach,describe,expect,test} from 'bun:test';
 import captured from './fixtures/forge-gazer-config-intake.json';
 import type {MonsterIntakeIR} from '@fvtt-json-generator/intake-ai/types';
-import {compileEncounterSelection,createEncounterAutomationProvider,renderEncounterActorSource,sourceBoundManualSelection,
+import {compileEncounterSelection,createEncounterAutomationProvider,renderEncounterActorSource,
   EncounterAutomationSelectionNeedsReviewError,type EncounterAutomationRequest} from '@fvtt-json-generator/intake-ai/encounter-automation';
 import {encounterProposalContext,expandEncounterProposal,compactEncounterSelection} from '../packages/intake-ai/src/encounter-proposal';
 import {compilerRejectionEvidence} from '../packages/intake-ai/src/encounter-compiler-evidence';
@@ -33,35 +33,41 @@ function fake(replies:any[],seen:any[]=[]){globalThis.fetch=(async(_url:string|U
 }) as unknown as typeof fetch;}
 
 describe('compact source-bound configuration handoff',()=>{
-  test('the newly captured Gazer keeps its native data and compiles proved GM push with zero provider requests',async()=>{
+  test('the captured Gazer keeps its native data and compiles the AI-selected GM push after one provider request',async()=>{
     const request=await gazerRequest();const before=structuredClone(request);
-    let calls=0;globalThis.fetch=(async()=>{calls++;throw Error('No configuration model call is needed');}) as unknown as typeof fetch;
-    const selection=sourceBoundManualSelection(request);
-    expect(selection?.rules.map(rule=>rule.kind)).toEqual(['gm-manual']);
+    const context=encounterProposalContext(request,[]),value=proposal(context),seen:any[]=[];
+    fake([value],seen);
     const actual=await createEncounterAutomationProvider(options).generate(request);
-    expect(actual).toEqual(compileEncounterSelection(selection!,request));
-    expect(calls).toBe(0);expect(request).toEqual(before);
+    expect(actual).toEqual(compileEncounterSelection(expandEncounterProposal(value,context),request));
+    expect(seen).toHaveLength(1);expect(request).toEqual(before);
     expect(actual.rules[0]!.quote).toContain('STRENGTH SAVING THROW: DC 12');
     const item:any=(request.actors[0]!.artifact as any).items.find((item:any)=>item.name==='Force Ray');
     expect(Object.values(item.system.activities).filter((activity:any)=>activity.type==='save')).toHaveLength(1);
     expect(item.effects).toEqual([]);
   });
-  test('source conflicts, missing source text, other requirements and native drift cannot use the deterministic route',async()=>{
+  test('changed source phrasing and explicit AI findings still go through the actual capability request',async()=>{
     const request=await gazerRequest();
     for(const mutate of [
-      (value:any)=>{value.actors[0].ir.creature.actions[4].save.dc=13;},
       (value:any)=>{value.actors[0].source=value.actors[0].source.replace('25 (1d10 x 5)','25');},
       (value:any)=>{value.actors[0].ir.creature.actions[0].activationType='special';},
       (value:any)=>{value.actors[0].ir.creature.actions[0].uses={max:1,period:'day'};},
-      (value:any)=>{value.actors[0].ir.creature.spellcasting=[{featureName:'Other casting'}];},
-      (value:any)=>{const item=value.actors[0].artifact.items.find((item:any)=>item.name==='Force Ray');Object.values(item.system.activities).forEach((activity:any)=>{if(activity.type==='save')activity.save.ability=['wis'];});},
-    ]){const changed=structuredClone(request);mutate(changed);expect(sourceBoundManualSelection(changed)).toBeUndefined();}
-    expect(sourceBoundManualSelection({...request,findings:['An automatic trigger requires review.']})).toBeUndefined();
+      (value:any)=>{value.findings=['An automatic trigger requires AI review.'];},
+    ]){
+      const changed=structuredClone(request);mutate(changed);
+      const actor=changed.actors[0]!;actor.ir.source={sha256:hashSource(actor.source),length:actor.source.length};changed.source=actor.source;
+      const context=encounterProposalContext(changed,[]),value=proposal(context),seen:any[]=[];fake([value],seen);
+      const result=await createEncounterAutomationProvider(options).generate(changed);
+      expect(seen).toHaveLength(1);
+      const payload=JSON.parse(seen[0].messages[1].content);
+      expect(payload.source).toBe(changed.source);
+      expect(payload.findings).toEqual(changed.findings);
+      expect(result.selection?.rules[0]?.kind).toBe('gm-manual');
+    }
   });
   test.each([
     ['Repulsion','The creature must make a DC 12 Strength saving throw. FAILURE: The creature is pushed 10 feet away from the source.'],
     ['Gust','The target must make a\nSTRENGTH SAVING THROW: DC 12.\nFAILURE: The target is pushed 20 (2d4 x 5) feet away from the gazer.'],
-  ])('source-proved %s uses the same zero-request route with complete native semantics',async(name,description)=>{
+  ])('%s uses an actual AI capability request and retains complete native semantics',async(name,description)=>{
     const ir=structuredClone(captured.ir) as MonsterIntakeIR;
     const ref=ir.claims.find(claim=>claim.path==='/creature/actions/4')!.evidence[0]!;
     const start=ref.start,end=ref.end,quote=`4. ${name}. ${description}`;
@@ -75,13 +81,13 @@ describe('compact source-bound configuration handoff',()=>{
       if(claim.path==='/creature/actions/4/description')claim.value=description;
       if(['/creature/actions/4/name','/creature/actions/4/englishName'].includes(claim.path))claim.value=name;}
     ir.source={...ir.source,sha256:hashSource(source),length:source.length};
-    const request=await gazerRequest(source,ir);let calls=0;
-    globalThis.fetch=(async()=>{calls++;throw Error('Unexpected model call');}) as unknown as typeof fetch;
+    const request=await gazerRequest(source,ir),context=encounterProposalContext(request,[]),seen:any[]=[];
+    fake([proposal(context,name)],seen);
     const result=await createEncounterAutomationProvider(options).generate(request);
-    expect(calls).toBe(0);expect(result.rules[0]!.featureName).toBe(name);
+    expect(seen).toHaveLength(1);expect(result.rules[0]!.featureName).toBe(name);
     expect(result.rules[0]!.quote).toContain(description);expect(result.selection!.rules[0]!.kind).toBe('gm-manual');
   });
-  test('compact AI fallback sends the complete source and native summaries, then restores tool-owned full bindings',async()=>{
+  test('compact AI selection sends the complete source and native summaries, then restores tool-owned bindings',async()=>{
     const request=await gazerRequest();request.findings=['Verify this configuration against the complete source.'];
     const context=encounterProposalContext(request,[]),value=proposal(context),seen:any[]=[];
     fake([value],seen);
@@ -173,6 +179,7 @@ describe('compact source-bound configuration handoff',()=>{
     const quote=`Pulse. ${description}`,source=`${LURKER_SOURCE}\n\n${quote}`,start=source.indexOf(quote);
     ir.creature.actions=[{name:'Pulse',description,activityType:'save',activationType:'special',save:{dc:13,ability:'dex'},aoe:{shape:'sphere',radius:15},
       damage:[{formula:'2d6',type:'piercing',relationship:'base'}],evidence:[{start,end:start+quote.length,quote}]}];
+    ir.source={sha256:hashSource(source),length:source.length};
     const formal=await convertMarkdownContentToJson({content:renderEncounterActorSource(ir,[],source),fvttVersion:'14',effectProfile:'core',translationService:null});
     const request={source,actors:[{key:'one',source,ir,artifact:formal.rawJson}]},context=encounterProposalContext(request,[]);
     const value=proposal(context,'Pulse');value.rules[0].kind='turn-start-area';value.rules[0].parameters={radiusFeet:15,excludeSelf:true,aliveOnly:true};
@@ -214,6 +221,7 @@ describe('compact source-bound configuration handoff',()=>{
       const name=`Manual rule ${index}`,description='The GM resolves this unusual consequence from the source.',quote=`${name}. ${description}`,start=source.length+2;
       source+=`\n\n${quote}`;ir.creature.actions.push({name,description,activityType:'utility',evidence:[{start,end:start+quote.length,quote}]});
     }
+    ir.source={sha256:hashSource(source),length:source.length};
     const formal=await convertMarkdownContentToJson({content:renderEncounterActorSource(ir,[],source),fvttVersion:'14',effectProfile:'core',translationService:null});
     const request={source,actors:[{key:'one',source,ir,artifact:formal.rawJson}]},context=encounterProposalContext(request,[]);
     const values=context.bindings.filter(binding=>binding.feature.name.startsWith('Manual rule ')).map(binding=>({featureRef:binding.ref,kind:'gm-manual',parameters:{},gmSteps:['GM reads complete source.','GM manually resolves its consequence.']}));

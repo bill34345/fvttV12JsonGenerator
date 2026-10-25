@@ -127,8 +127,75 @@ export class EncounterAutomationSelectionNeedsReviewError extends Error {
   }
 }
 
-/** AI chooses capability data; this compiler is the only author of the executable entry. */
+/** Compile AI-owned mechanics as closed data. Source prose is retained for
+ * review and provenance; it is never reparsed to decide what the rule means. */
 export function compileEncounterSelection(value:unknown,request:EncounterAutomationRequest):EncounterAutomationIR{
+  assertRequest(request);
+  for(const actor of request.actors){
+    if(actor.ir.source?.sha256!==sha256(actor.source)||actor.ir.source.length!==actor.source.length)throw new TypeError('Encounter actor IR source identity differs from its bound source.');
+  }
+  scanUntrustedValue(value,'$selection');
+  const selection=decodeSelectionWithDiagnostic(bindConfiguredSelection(value,request));
+  const rules=selection.rules.map(({id:_,kind:__,parameters:___,sourceEvidence:____,...rule},index)=>decodeRuleStructure(rule,request,`$selection.rules[${index}]`));
+  if(new Set(rules.map(rule=>`${rule.actorKey}/${rule.section}/${rule.featureName}`)).size!==rules.length)throw new TypeError('Duplicate capability carrier.');
+  const runtimeRules=selection.rules.map((rule,index)=>{
+    try{
+      const actor=request.actors.find(candidate=>candidate.key===rule.actorKey)!;
+      const feature=findFeature(actor.ir,rule.section,rule.featureName)!;
+      const itemName=renderedFeatureName(actor.ir,rule.section,rule.featureName);
+      const items=((actor.artifact as any)?.items??[]).filter((item:any)=>item.name===itemName);
+      if(items.length!==1)throw new TypeError(`Capability carrier must match one formally generated Item: ${itemName}`);
+      const item=items[0],nativeFeature=feature as any;
+      const activities=Object.values(item.system?.activities??{}).filter((activity:any)=>!activity?.flags?.fvttJsonGenerator?.behaviorOperation) as any[];
+      if(feature.appliedConditions?.some(condition=>condition.staged)&&!['staged-corruption','gm-manual'].includes(rule.kind))throw new TypeError('Selected capability does not implement the staged condition declared by the AI IR.');
+      if(['save-summon','turn-start-area','staged-corruption','save-failure-effect'].includes(rule.kind)){
+        const saves=activities.filter(activity=>activity?.type==='save'&&activity.save);
+        if(nativeFeature.activityType!=='save'||!nativeFeature.save||saves.length!==1)throw new TypeError('Selected capability requires exactly one generated native Save Activity matching the AI IR.');
+        const save=saves[0].save;
+        if(Number(save.dc?.formula)!==nativeFeature.save.dc||!Array.isArray(save.ability)||save.ability.length!==1||save.ability[0]!==nativeFeature.save.ability)throw new TypeError('Generated Save Activity DC or ability differs from the AI IR.');
+      }
+      if(rule.kind==='turn-start-area'&&nativeFeature.aoe?.radius!==rule.parameters.radiusFeet)throw new TypeError('Area radius differs from the AI IR.');
+      if(rule.kind==='save-summon'&&!request.actors.some(candidate=>candidate.key===rule.parameters.summonedActorKey))throw new TypeError('Summon actor is absent from the package.');
+      if(rule.kind==='status-lifecycle'){
+        if(nativeFeature.activityType!=='attack'||!nativeFeature.attack||activities.filter(activity=>activity?.type==='attack'&&activity.attack).length!==1)throw new TypeError('Status lifecycle requires exactly one generated native Attack Activity matching the AI IR.');
+        const parameters=decodeStatusLifecycleParameters(rule.parameters);
+        const statuses=feature.appliedConditions?.flatMap(condition=>condition.statuses??[])??[];
+        const names=parameters.definition?[parameters.definition.id,parameters.definition.name,...parameters.definition.aliases]
+          :[parameters.status,...NATIVE_LIFECYCLE_STATUS_DEFINITIONS[parameters.status as keyof typeof NATIVE_LIFECYCLE_STATUS_DEFINITIONS].sourceNames];
+        if(statuses.length&&(statuses.length!==1||!names.some(name=>name.toLocaleLowerCase('en-US')===statuses[0]!.trim().toLocaleLowerCase('en-US'))))throw new TypeError('Status lifecycle condition differs from the AI IR.');
+        if(rule.sourceEvidence)for(const excerpt of Object.values(rule.sourceEvidence)){
+          if(!actor.source.includes(excerpt))throw new TypeError('Status lifecycle evidence must belong to its bound actor source.');
+        }
+      }
+      if(rule.kind==='gm-activity-lock')for(const name of rule.parameters.activityItemNames as string[]){
+        const matches=((actor.artifact as any)?.items??[]).filter((entry:any)=>entry.name===name);
+        if(matches.length!==1||Object.values(matches[0].system?.activities??{}).filter((activity:any)=>activity?.type==='save'&&activity.save).length!==1)throw new TypeError(`GM lock requires one native Save Activity: ${name}`);
+      }
+      if(rule.kind==='ward-break'){
+        const uses=item.system?.uses;
+        if(!nativeFeature.uses||nativeFeature.uses.period!=='day'||Number(uses?.max)!==nativeFeature.uses.max||!uses?.recovery?.some((recovery:any)=>recovery.period==='day')
+          ||!activities.some(activity=>activity.consumption?.targets?.some((target:any)=>target.type==='itemUses'&&String(target.value)==='1'&&target.target==='')))throw new TypeError('Ward-break requires AI IR daily uses and native one-use consumption on the formal Item.');
+      }
+      if(rule.kind==='gm-manual'&&rule.gmSteps.length<2)throw new TypeError('GM adjudication requires specific steps and an explicit non-automatic boundary.');
+      return {id:rule.id,kind:rule.kind,actorKey:rule.actorKey,itemName,parameters:rule.parameters};
+    }catch(error){
+      if(!(error instanceof TypeError))throw error;
+      throw new EncounterCompilationError(encounterCompilerDiagnostic(error,`/rules/${index}`),error);
+    }
+  });
+  const legendaryRecovery=selection.legendaryRecovery.map(entry=>{
+    const actor=request.actors.find(candidate=>candidate.key===entry.actorKey);
+    if(!actor||actor.ir.creature.legendary?.max!==entry.max||actor.ir.creature.legendary.recovery!==entry.when)throw new TypeError('Legendary resource differs from the AI IR.');
+    if(!actor.source.includes(entry.quote))throw new TypeError('Legendary recovery quote must belong to its bound actor source.');
+    return {actorKey:entry.actorKey,max:entry.max,when:entry.when};
+  });
+  const config=decodeEncounterRuntimeConfiguration({version:1,rules:runtimeRules,legendaryRecovery});
+  return {version:1,name:selection.name,notes:selection.notes,rules,manualSteps:selection.manualSteps,selection,command:fixedEncounterCommand(config)};
+}
+
+/** Explicit offline source audit of historical selections. Never used by the
+ * default compiler, provider, renderer or runtime acceptance path. */
+export function compileEncounterSelectionSourceAudit(value:unknown,request:EncounterAutomationRequest):EncounterAutomationIR{
   assertRequest(request);scanUntrustedValue(value,'$selection');
   const decoded=decodeSelectionWithDiagnostic(bindConfiguredSelection(value,request));
   const submittedRules=decoded.rules.map(({id:_,kind:__,parameters:___,sourceEvidence:____,...rule},index)=>{
@@ -442,16 +509,29 @@ function assertStatusLifecycleDamage(feature: EncounterFeatureReference, quote: 
 }
 
 /**
- * Decodes a proposed companion macro as data. The command is intentionally not
- * compiled or run here: Foundry executes its final wrapper only after the GM
- * explicitly starts an accepted encounter package.
+ * Decodes AI companion data by reproducing its fixed command from the closed
+ * selection. Foundry executes the wrapper only after the GM explicitly starts
+ * an accepted encounter package.
  */
 export function decodeEncounterAutomation(value: unknown, request: EncounterAutomationRequest): EncounterAutomationIR {
+  assertRequest(request);
+  scanUntrustedValue(value,'$automation');
+  const root=exactRecord(value,'$automation',ROOT_KEYS);
+  if(root.selection===undefined)throw new TypeError('AI automation must contain a closed capability selection.');
+  const compiled=compileEncounterSelection(root.selection,request);
+  for(const key of ['version','name','command','notes','rules','manualSteps'] as const){
+    if(JSON.stringify(root[key])!==JSON.stringify(compiled[key]))throw new TypeError('Compiled automation differs from its bound capability selection.');
+  }
+  return compiled;
+}
+
+/** Explicit offline decoder for historical source-audited automation. */
+export function decodeEncounterAutomationSourceAudit(value: unknown, request: EncounterAutomationRequest): EncounterAutomationIR {
   assertRequest(request);
   scanUntrustedValue(value, '$automation');
   const root = exactRecord(value, '$automation', isRecord(value)&&Object.hasOwn(value,'selection')?ROOT_KEYS:ROOT_KEYS.filter(key=>key!=='selection'));
   if(root.selection!==undefined){
-    const compiled=compileEncounterSelection(root.selection,request);
+    const compiled=compileEncounterSelectionSourceAudit(root.selection,request);
     for(const key of ['version','name','command','notes','rules','manualSteps'] as const){
       if(JSON.stringify(root[key])!==JSON.stringify(compiled[key]))throw new TypeError('Compiled automation differs from its source-bound capability selection.');
     }
@@ -489,8 +569,6 @@ export function createEncounterAutomationProvider(
     async generate(request): Promise<EncounterAutomationIR> {
       assertRequest(request);
       throwIfAborted(signal);
-      const sourceManual=sourceBoundManualSelection(request);
-      if(sourceManual)return compileEncounterSelection(sourceManual,request);
       const context=encounterProposalContext(request,configuredCatalog(request).map(({id,name,description,aliases,components})=>({id,name,description,aliases,components})));
       const externalPrior=request.prior?.selection?decodeEncounterCapabilitySelection(request.prior.selection):undefined;
       const payload={
@@ -559,7 +637,7 @@ export function createEncounterAutomationProvider(
 
 function safeCompilerFinding(error:TypeError):string{
   const diagnostic=encounterCompilerDiagnostic(error);
-  return `The proposed encounter capability data failed source-bound compilation [${diagnostic.code}] at ${diagnostic.path}: ${diagnostic.expected}.`;
+  return `The proposed encounter capability data failed closed-data compilation [${diagnostic.code}] at ${diagnostic.path}: ${diagnostic.expected}.`;
 }
 
 function sourceListedRayNames(actor:EncounterAutomationActor,permission:string):Set<string>{
@@ -590,14 +668,12 @@ export function renderEncounterActorSource(
 ): string {
   if (!Array.isArray(rules) || rules.length > MAX_RULES) throw new TypeError('Encounter automation rules exceed the supported limit.');
   const renderedSource = renderMonsterIntakeMarkdown(ir,actorSource);
-  const staged = encounterStagedConditionRequirements(ir, actorSource);
+  const staged = encounterStagedConditionRequirements(ir);
   const manual=encounterManualConditionRequirements(ir,rules);
-  const movement = actorSource === undefined ? [] : manualForcedMovementRequirements(ir, actorSource);
   // An encounter may need a companion panel but no additional Actor behavior.
   // Do not emit an empty behavior container: the supported behavior schema
   // correctly rejects a declared mechanic list with no mechanics.
   if (rules.length === 0 && staged.length === 0) return renderedSource;
-  if (rules.length > 0) assertStagedRulesForActor(staged, rules);
   const frontmatter = renderedSource.match(/^---\n([\s\S]*)---\n$/u);
   if (!frontmatter) throw new Error('Monster Intake renderer did not produce YAML frontmatter.');
   const document = yaml.load(frontmatter[1]!) as Record<string, unknown>;
@@ -605,24 +681,10 @@ export function renderEncounterActorSource(
   const seenMechanics = new Set<string>();
   for (const requirement of staged) removeStagedEmbeddedEffects(document, requirement);
   for (const requirement of manual) removeStagedEmbeddedEffects(document, requirement);
-  for (const requirement of movement) {
-    const bound = rules.filter(rule => rule.section === requirement.section && rule.featureName === requirement.featureName);
-    if (bound.length === 0) continue; // Unbound Save remains literal and blocked.
-    if (bound.length !== 1 || bound[0]!.capabilityKind !== 'gm-manual' || !isCompleteManualMovementQuote(requirement, bound[0]!.quote, actorSource!)) {
-      throw new TypeError('Forced movement requires one complete source-bound gm-manual rule.');
-    }
-    const entries = document[SECTION_NAMES[requirement.section]];
-    const carriers = Array.isArray(entries) ? entries.filter(entry => isRecord(entry) && entry['名称'] === renderedFeatureName(ir, requirement.section, requirement.featureName)) : [];
-    if (carriers.length !== 1) throw new TypeError('Forced movement carrier must be unique.');
-    // The failed branch has no damage or status. This descriptive SaveEffect
-    // preserves its source text and resolves only the native save outcome;
-    // the separately bound literal behavior remains mandatory for GM handling.
-    carriers[0]!['失败效果'] = [{ 描述: requirement.failure }];
-  }
   document['行为机制'] = {
     版本: 1,
     机制: [
-      ...staged.map(requirement=>renderStagedMechanic(requirement,'staged',rules.find(rule=>rule.featureName===requirement.featureName&&rule.section===requirement.section)?.capabilityKind==='gm-manual')),
+      ...staged.map(requirement=>renderStagedMechanic(requirement,'staged',!rules.some(rule=>rule.featureName===requirement.featureName&&rule.section===requirement.section&&rule.capabilityKind!=='gm-manual'))),
       ...manual.map(requirement=>renderStagedMechanic(requirement,'manual',true,
         rules.some(rule=>rule.capabilityKind==='status-lifecycle'&&rule.section===requirement.section&&rule.featureName===requirement.featureName))),
       ...rules.map((rule, index) => {
@@ -935,6 +997,23 @@ ${indentCommand(command)}
 })();`;
 }
 
+function decodeRuleStructure(value: unknown, request: EncounterAutomationRequest, path: string): EncounterAutomationRule {
+  const raw=exactRecord(value,path,RULE_KEYS);
+  const actorKey=boundedText(raw.actorKey,`${path}.actorKey`,128,true);
+  const actor=request.actors.find(entry=>entry.key===actorKey);
+  if(!actor)throw new TypeError(`${path}.actorKey does not reference an encounter actor.`);
+  if(typeof raw.section!=='string'||!SECTIONS.has(raw.section as EncounterAutomationRule['section']))throw new TypeError(`${path}.section is unsupported.`);
+  const section=raw.section as EncounterAutomationRule['section'];
+  const featureName=boundedText(raw.featureName,`${path}.featureName`,MAX_TEXT_BYTES,true);
+  const feature=findFeature(actor.ir,section,featureName);
+  if(!feature)throw new TypeError(`${path}.featureName does not reference a feature in the actor IR.`);
+  const quote=boundedText(raw.quote,`${path}.quote`,MAX_TEXT_BYTES,true);
+  // The feature reference supplies identity. A quote only locates retained
+  // source text; it does not prove the mechanism or require a prose template.
+  if(!actor.source.includes(quote))throw new TypeError(`${path}.quote must belong to its bound actor source.`);
+  return {actorKey,featureName,section,quote,gmSteps:strings(raw.gmSteps,`${path}.gmSteps`,1,MAX_GM_STEPS)};
+}
+
 function decodeRule(value: unknown, request: EncounterAutomationRequest, path: string): EncounterAutomationRule {
   const raw = exactRecord(value, path, RULE_KEYS);
   const actorKey = boundedText(raw.actorKey, `${path}.actorKey`, 128, true);
@@ -995,7 +1074,9 @@ function findFeature(
       : section === 'bonus' ? creature.bonusActions.map((entry, index) => ({ ...entry, claimPath: `/creature/bonusActions/${index}` }))
         : section === 'reaction' ? creature.reactions.map((entry, index) => ({ ...entry, claimPath: `/creature/reactions/${index}` }))
           : creature.legendaryActions.map((entry, index) => ({ ...entry, claimPath: `/creature/legendaryActions/${index}` }));
-  return features.find((feature) => feature.name === name);
+  const matches=features.filter(feature=>feature.name===name);
+  if(matches.length>1)throw new TypeError('Encounter feature reference must be unique in its actor section.');
+  return matches[0];
 }
 
 interface EncounterFeatureReference {
@@ -1227,20 +1308,25 @@ function scanUntrustedValue(value: unknown, path: string, depth = 0, seen = new 
   }
   if (Array.isArray(value)) {
     if (value.length > MAX_RULES) throw new TypeError(`${path} exceeds the supported array length.`);
-    for (const [index, entry] of value.entries()) {
-      if (!Object.hasOwn(value, index)) throw new TypeError(`${path} must not be sparse.`);
-      scanUntrustedValue(entry, `${path}[${index}]`, depth + 1, seen);
+    if(Object.getPrototypeOf(value)!==Array.prototype)throw new TypeError(`${path} must be a plain array.`);
+    const descriptors=Object.getOwnPropertyDescriptors(value);
+    if(Reflect.ownKeys(descriptors).some(key=>key!=='length'&&(typeof key!=='string'||!/^\d+$/u.test(key)||Number(key)>=value.length||!descriptors[key]?.enumerable||!('value' in descriptors[key]!))))throw new TypeError(`${path} must contain only array data properties.`);
+    for (let index=0;index<value.length;index++) {
+      const descriptor=descriptors[index];
+      if(!descriptor||!('value' in descriptor))throw new TypeError(`${path} must not be sparse or contain accessors.`);
+      scanUntrustedValue(descriptor.value, `${path}[${index}]`, depth + 1, seen);
     }
     return;
   }
   if (!isRecord(value) || seen.has(value)) throw new TypeError(`${path} must be a non-cyclic plain object.`);
   seen.add(value);
-  const keys = Object.keys(value);
+  const keys = Reflect.ownKeys(value);
   if (keys.length > 128) throw new TypeError(`${path} exceeds the supported object key limit.`);
   for (const key of keys) {
+    if(typeof key!=='string')throw new TypeError(`${path} must contain string data keys.`);
     if (FORBIDDEN_KEYS.has(key)) throw new TypeError(`${path} contains a forbidden prototype key.`);
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
-    if (!descriptor || descriptor.get || descriptor.set) throw new TypeError(`${path}.${key} must be a data property.`);
+    if (!descriptor || !descriptor.enumerable || descriptor.get || descriptor.set) throw new TypeError(`${path}.${key} must be a data property.`);
     scanUntrustedValue(value[key], `${path}.${key}`, depth + 1, seen);
   }
   seen.delete(value);

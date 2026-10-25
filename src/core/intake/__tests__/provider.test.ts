@@ -22,7 +22,7 @@ import type { HttpClient, HttpRequest, HttpResponse } from '../../translation/ty
 import { validateMonsterIntakeIR } from '../validator';
 import { buildRatWarlockIr, RAT_WARLOCK_SOURCE } from './fixtures/rat-warlock';
 import { buildValidLurkerIr, LURKER_SOURCE } from './fixtures/lurker';
-import {sourceLineCatalog,sourceProofCatalog,sourceGrantCatalog,materializeSourceLineReferences} from '../../../../packages/intake-ai/src/source-line-references';
+import {sourceLineCatalog,sourceProofCatalog,materializeSourceLineReferences} from '../../../../packages/intake-ai/src/source-line-references';
 import type {SOURCE_OPERATION_CONTRACT} from '../../../../packages/intake-ai/src/source-operation-contract';
 import type {SourceOperation} from '@fvtt-json-generator/models/source-operations';
 
@@ -191,7 +191,19 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v39-source-grant-references');
+    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v46-ai-owned-content-manual-array');
+    expect(prompt).toContain('proof:{attack?:string,save?:string,damage?:string[],healing?:string,range?:string,aoe?:string,target?:string}');
+    expect(prompt).toContain('Each proof string must quote the COMPLETE original sentence');
+    expect(prompt).toContain('use damage[].relationship:conditional');
+    expect(prompt).toContain('retain all three operations in source order');
+    expect(prompt).toContain('Never attach later recurring damage to the initial Save');
+    expect(prompt).toContain('an explicitly printed Emanation uses aoe.shape:radius');
+    expect(prompt).toContain('光环 means Emanation and uses radius; 球状 means Sphere and uses sphere');
+    expect(prompt).toContain('半径 alone is a dimension, not proof of an Emanation');
+    expect(prompt).toContain('Never infer an Emanation from an ability name containing Aura');
+    expect(prompt).toContain('ordinary-gear-out-of-scope');
+    expect(prompt).toContain('Keep ALL printed attacks and combat abilities as Features');
+    expect(prompt).toContain('Keep the printed final AC as a fixed numeric value');
     expect(prompt).toContain('feature.save is only for a source-explicit initial saving throw');
     expect(prompt).toContain('never copy the repeat-save DC into escapeDc');
     expect(prompt).toContain('biography is optional string prose, never an array or object');
@@ -269,7 +281,9 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v30-native-cast-reuse-contract');
+    expect(INTAKE_PROMPT_VERSIONS.review).toBe('monster-intake-review-v36-ai-owned-content');
+    expect(prompt).toContain('ordinary inventory omission under this scope is intentional');
+    expect(prompt).toContain('Never mark a magic weapon or its abilities as ordinary gear');
     expect(prompt).toContain('A saving throw repeated at the end of each target turn');
     expect(prompt).toContain('source explicitly says bonus action');
     expect(prompt).toContain('special, passive, or empty');
@@ -335,7 +349,8 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     const body = JSON.parse(requests[0]!.init.body) as { messages: Array<{ content: string }> };
     const prompt = body.messages[0]!.content;
-    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v33-neutral-source-operation-carrier');
+    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v39-ai-owned-content');
+    expect(prompt).toContain('ordinary inventory omission under this scope is intentional');
     expect(prompt).toContain('remove wrong save/escapeDc');
     expect(prompt).toContain('Never remove a required empty array in repair');
     expect(prompt).toContain('Standard NPC stat-block headings supply the default action economy');
@@ -589,7 +604,7 @@ describe('OpenAI-compatible monster intake provider', () => {
     }]);
   });
 
-  test('re-anchors exact extraction evidence and derives a stable missing spellcasting group id', async () => {
+  test('re-anchors exact extraction evidence without replacing an explicitly empty spellcasting group id', async () => {
     const source = 'prefix\nInnate Spellcasting. Its spellcasting ability is Charisma.\nAt will: mage armor\nsuffix';
     const quote = 'Innate Spellcasting. Its spellcasting ability is Charisma.';
     const grant = 'At will: mage armor';
@@ -632,7 +647,10 @@ describe('OpenAI-compatible monster intake provider', () => {
       candidate: { id: 'candidate', label: 'Candidate', start: 0, end: source.length, quote: source },
     });
     const group = result.creature.spellcasting![0]!;
-    expect(group.groupId).toBe(`innate-spellcasting-${source.indexOf(quote)}`);
+    expect(group.groupId).toBe('');
+    expect(validateMonsterIntakeIR(source, result).blocking).toContainEqual(expect.objectContaining({
+      code: 'INVALID_STRUCTURE', path: '/creature/spellcasting/0/groupId',
+    }));
     expect(group.evidence).toEqual([{
       start: source.indexOf(quote), end: source.indexOf(quote) + quote.length, quote,
     }]);
@@ -642,7 +660,7 @@ describe('OpenAI-compatible monster intake provider', () => {
     expect(result.coverage[0]).toMatchObject({ start: 0, end: source.length, quote: source });
   });
 
-  test('restores request-owned source identity and omits a meaningless empty spellcasting collection', async () => {
+  test('restores request-owned source identity and preserves the AI empty spellcasting collection', async () => {
     const source = 'Clockwork scout\nArmor Class 13';
     const provider = makeProvider(async () => response(200, JSON.stringify({
       schemaVersion: 1,
@@ -660,10 +678,10 @@ describe('OpenAI-compatible monster intake provider', () => {
     });
 
     expect(result.source).toEqual({ sha256: 'request-owned-sha256', length: source.length });
-    expect(result.creature).not.toHaveProperty('spellcasting');
+    expect(result.creature as unknown).toEqual({ spellcasting: [] });
   });
 
-  test('removes caster level drift from innate groups but preserves prepared caster level', async () => {
+  test('preserves AI caster levels in both innate and prepared groups without deriving them from prose', async () => {
     const source = [
       'Innate Spellcasting. At will: mage armor.',
       'Spellcasting. The mage is a 5th-level spellcaster. 1st level (4 slots): shield.',
@@ -694,12 +712,14 @@ describe('OpenAI-compatible monster intake provider', () => {
       candidate: { id: 'mage', label: 'Mage', start: 0, end: source.length, quote: source },
     });
 
-    expect(result.creature.spellcasting?.[0]).not.toHaveProperty('casterLevel');
-    expect(result.creature.spellcasting?.[0]).not.toHaveProperty('casterLevelEvidence');
+    expect(result.creature.spellcasting?.[0]).toMatchObject({ casterLevel: 9 });
+    expect(result.creature.spellcasting?.[0]!.casterLevelEvidence).toEqual([{
+      start: 0, end: 'Innate Spellcasting'.length, quote: 'Innate Spellcasting',
+    }]);
     expect(result.creature.spellcasting?.[1]).toMatchObject({ casterLevel: 5 });
   });
 
-  test('removes invented Multiattack attack automation while preserving explicit attacks', async () => {
+  test('preserves both AI-declared attack records without classifying Multiattack prose', async () => {
     const multiattack = 'Multiattack. The lurker makes two Claw attacks.';
     const claw = 'Claw. Melee Weapon Attack: +4 to hit, reach 5 ft., one target.';
     const source = `${multiattack}\n${claw}`;
@@ -731,21 +751,22 @@ describe('OpenAI-compatible monster intake provider', () => {
     });
 
     expect(result.creature.actions?.[0]).toMatchObject({
-      name: '多重攻击（Multiattack）', description: multiattack, activityType: 'utility', evidence: [evidence(multiattack)],
+      name: '多重攻击（Multiattack）', description: multiattack, activityType: 'attack', evidence: [evidence(multiattack)],
+      attack: { type: 'mwak', toHit: 0, reach: 5 },
     });
-    expect(result.creature.actions?.[0]).not.toHaveProperty('attack');
     expect(result.creature.actions?.[1]).toMatchObject({
       name: 'Claw', activityType: 'attack', attack: { type: 'mwak', toHit: 4, reach: 5 },
     });
   });
 
-  test('returns the real Lurker fixture to a fully valid IR after the observed provider drifts', async () => {
+  test('restores Lurker source identity while keeping every AI mechanic and optional collection', async () => {
     const ir = buildValidLurkerIr();
     ir.source = { sha256: 'provider-drift', length: LURKER_SOURCE.length + 77 };
     ir.creature.spellcasting = [];
     const multiattack = ir.creature.actions![0]!;
     multiattack.activityType = 'attack';
     multiattack.attack = { type: 'mwak', toHit: 0, reach: 5 };
+    const before = structuredClone(ir);
     const provider = makeProvider(async () => response(200, JSON.stringify(ir)));
     const candidate = {
       id: 'lurker', label: 'Lurker in the Dark', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE,
@@ -757,9 +778,10 @@ describe('OpenAI-compatible monster intake provider', () => {
       candidate,
     });
 
-    expect(normalized.creature.actions?.[0]).toMatchObject({ activityType: 'utility' });
-    expect(normalized.creature.actions?.[0]).not.toHaveProperty('attack');
-    expect(normalized.creature).not.toHaveProperty('spellcasting');
+    expect(normalized.source).toEqual({ sha256: buildValidLurkerIr().source.sha256, length: LURKER_SOURCE.length });
+    expect(normalized.creature).toEqual(before.creature);
+    expect(normalized.creature.spellcasting).toEqual([]);
+    expect(ir).toEqual(before);
     expect(validateMonsterIntakeIR(LURKER_SOURCE, normalized, { coverageRange: candidate }).blocking).toEqual([]);
   });
 
@@ -769,7 +791,7 @@ describe('OpenAI-compatible monster intake provider', () => {
     { label: 'empty string', legendary: '' },
     { label: 'empty object', legendary: {} },
     { label: 'invented zero object', legendary: { max: 0, preamble: '', evidence: [] } },
-  ])('omits provider legendary placeholder $label when the source has no legendary semantics', async ({ legendary }) => {
+  ])('preserves invalid AI legendary value $label and reports its structure regardless of prose', async ({ legendary }) => {
     const source = 'Claw. Melee Weapon Attack: +4 to hit.';
     const provider = makeProvider(async () => response(200, JSON.stringify({
       schemaVersion: 1,
@@ -782,10 +804,11 @@ describe('OpenAI-compatible monster intake provider', () => {
       candidate: { id: 'claw', label: 'Claw', start: 0, end: source.length, quote: source },
     });
 
-    expect(result.creature).not.toHaveProperty('legendary');
+    expect((result.creature as any).legendary).toEqual(legendary);
+    expect(validateMonsterIntakeIR(source, result).blocking.some(finding => finding.path.startsWith('/creature/legendary'))).toBe(true);
   });
 
-  test('keeps invalid legendary metadata blocking when the source really contains legendary semantics', async () => {
+  test('reports invalid legendary metadata as a shape error when the prose mentions legendary actions', async () => {
     const source = 'Legendary Actions. The dragon can take 3 legendary actions.';
     const provider = makeProvider(async () => response(200, JSON.stringify({
       schemaVersion: 1,
@@ -800,7 +823,7 @@ describe('OpenAI-compatible monster intake provider', () => {
 
     expect((result.creature as any).legendary).toBeNull();
     expect(validateMonsterIntakeIR(source, result).blocking).toContainEqual(expect.objectContaining({
-      code: 'INVALID_LEGENDARY_METADATA', path: '/creature/legendary',
+      code: 'INVALID_STRUCTURE', path: '/creature/legendary',
     }));
   });
 
@@ -845,7 +868,7 @@ describe('OpenAI-compatible monster intake provider', () => {
     expect(result.claims[0]!.evidence[0]).toEqual({ start: 7, end: 8, quote: 'same marker' });
   });
 
-  test('recovers the complete Rat Warlock IR from common provider normalization drift without weakening validation', async () => {
+  test('formats missing technical IDs, ability notation and evidence without filling omitted AI aliases', async () => {
     const ir = buildRatWarlockIr();
     const statblockStart = RAT_WARLOCK_SOURCE.indexOf('鼠神邪术师 Warlock of the Rat God', 1);
     const candidate = {
@@ -864,12 +887,14 @@ describe('OpenAI-compatible monster intake provider', () => {
         )),
       };
     });
-    ir.creature.spellcasting![0]!.groupId = '';
+    delete (ir.creature.spellcasting![0] as any).groupId;
+    delete (ir.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[0] as any).refId;
     (ir.creature.spellcasting![0] as any).ability = 'charisma';
     for (const usageGroup of ir.creature.spellcasting![0]!.usageGroups) {
       for (const spellRef of usageGroup.spellRefs) delete (spellRef as any).aliases;
     }
     driftEveryEvidenceRange(ir);
+    const before = structuredClone(ir);
     const provider = makeProvider(async () => response(200, JSON.stringify(ir)));
 
     const normalized = await provider.extract({
@@ -878,12 +903,18 @@ describe('OpenAI-compatible monster intake provider', () => {
       candidate,
     });
 
-    expect(normalized.creature.spellcasting![0]!.groupId).toStartWith('innate-spellcasting-');
+    expect(normalized.creature.spellcasting![0]!.groupId).toBe('casting-1');
+    expect(normalized.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[0]!.refId).toBe('spell-1-1-1');
+    expect(normalized.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[1]!.refId).toBe(before.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[1]!.refId);
     expect(normalized.creature.spellcasting![0]!.ability).toBe('cha');
     expect(normalized.creature.spellcasting![0]!.usageGroups.every((usageGroup) => (
-      usageGroup.spellRefs.every((spellRef) => Array.isArray(spellRef.aliases))
+      usageGroup.spellRefs.every((spellRef) => !Object.hasOwn(spellRef, 'aliases'))
     ))).toBe(true);
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, normalized, { coverageRange: candidate }).blocking).toEqual([]);
+    const findings = validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, normalized, { coverageRange: candidate }).blocking;
+    const refs = normalized.creature.spellcasting![0]!.usageGroups.flatMap(group => group.spellRefs);
+    expect(findings).toHaveLength(refs.length);
+    expect(findings.every(finding => finding.path.endsWith('/aliases') && finding.code === 'INVALID_STRUCTURE')).toBe(true);
+    expect(ir).toEqual(before);
   });
 
   test('rebinds a unique review evidence quote when only source whitespace was compressed', async () => {
@@ -1031,19 +1062,22 @@ function driftEveryEvidenceRange(value: unknown): void {
 }
 
 describe('ordinary model source line references (format checks, no live AI)',()=>{
-  test('a manual spell token keeps its full qualifier and excludes the next native spell on the same line',()=>{
+  test('the AI chooses the full manual grant with an exact line subquote, without a grant-token catalog',()=>{
     const token='Shapechange (Beast or Humanoid form only, no\nTemporary Hit Points gained from the spell)',source='At Will: '+token+', Speak with Animals\n';
-    const catalog=sourceGrantCatalog(source);
-    expect(catalog.map(row=>row.quote)).toEqual([token,'Speak with Animals']);
-    expect(materializeSourceLineReferences(source,{manualGrants:[{grantId:'G1'}]})).toEqual({manualGrants:[{start:9,end:9+token.length,quote:token}]});
-    for(const value of [{manualGrants:[{grantId:'G3'}]},{evidence:[{grantId:'G1'}]},{manualGrants:[{grantId:'G1',firstLineId:'L1'}]}])
+    const selected={firstLineId:'L1',lastLineId:'L2',quote:token};
+    const exact={start:9,end:9+token.length,quote:token};
+    expect(materializeSourceLineReferences(source,{manualGrants:[selected]})).toEqual({manualGrants:[exact]});
+    expect(materializeSourceLineReferences(source,{manualGrants:[exact]})).toEqual({manualGrants:[exact]});
+    expect(materializeSourceLineReferences(source,{manualGrants:[{grantId:'G1'}]})).toEqual({manualGrants:[{grantId:'G1'}]});
+    const invalid=buildRatWarlockIr();invalid.creature.spellcasting![0]!.manualGrants=[{grantId:'G1'}] as any;
+    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE,invalid).blocking.some(row=>row.path.includes('/manualGrants/0/'))).toBe(true);
+    for(const value of [{manualGrants:[{...selected,lastLineId:'L9'}]},{manualGrants:[{...selected,quote:'not in the source'}]},{manualGrants:[{...selected,start:9,end:99}]}])
       expect(()=>materializeSourceLineReferences(source,value)).toThrow();
-    expect(sourceGrantCatalog('0/Day: Unknown\n')).toEqual([]);
     expect(materializeSourceLineReferences('0/Day: Unknown\n',{description:{firstLineId:'L1',lastLineId:'L1'}}))
       .toEqual({description:'0/Day: Unknown\n'});
   });
-  test('copies an omitted spell identifier from the source name but preserves an explicit conflicting identity',async()=>{
-    const original=buildRatWarlockIr(),candidate={id:'source-identity',label:'Rat Warlock',start:RAT_WARLOCK_SOURCE.indexOf('鼠神邪术师 Warlock of the Rat God',1),end:RAT_WARLOCK_SOURCE.length,quote:''};
+  test('formats an omitted spell lookup from AI-declared names and preserves an explicit different identity',async()=>{
+    const original=buildRatWarlockIr(),candidate={id:'source-identity',label:'Rat Warlock',start:0,end:RAT_WARLOCK_SOURCE.length,quote:''};
     candidate.quote=RAT_WARLOCK_SOURCE.slice(candidate.start);
     for(const conflict of [false,true]){
       const reply:any=structuredClone(original);
@@ -1054,8 +1088,16 @@ describe('ordinary model source line references (format checks, no live AI)',()=
       const ref=normalized.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[0]!;
       expect(ref.identifier).toBe(conflict?'wrong-spell-identity':ref.englishName??ref.originalName);
       const errors=validateMonsterIntakeIR(RAT_WARLOCK_SOURCE,normalized,{coverageRange:candidate}).blocking;
-      if(conflict)expect(errors.some(row=>row.code==='SPELL_REF_EVIDENCE_MISMATCH')).toBe(true);else expect(errors).toEqual([]);
+      expect(errors).toEqual([]);
     }
+  });
+  test('still rejects evidence outside the selected candidate instead of hiding a scope mismatch during formatting',async()=>{
+    const original=buildRatWarlockIr(),start=RAT_WARLOCK_SOURCE.indexOf('鼠神邪术师 Warlock of the Rat God',1);
+    const candidate={id:'scope',label:'Rat Warlock',start,end:RAT_WARLOCK_SOURCE.length,quote:RAT_WARLOCK_SOURCE.slice(start)};
+    const provider=makeProvider(async()=>response(200,JSON.stringify(original)));
+    const normalized=await provider.extract({source:RAT_WARLOCK_SOURCE,sourceSha256:original.source.sha256,candidate});
+    expect(normalized.coverage[0]).toEqual(original.coverage[0]);
+    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE,normalized,{coverageRange:candidate}).blocking).toContainEqual(expect.objectContaining({code:'EVIDENCE_OUT_OF_RANGE',path:'/coverage/0'}));
   });
   test('selects the complete attack proof including the Hit clause after the ft abbreviation',()=>{
     const source='Rend. Melee Attack Roll: +11, reach 10 ft. Hit: 15 (2d8\n+ 6) Slashing damage plus 7 (2d6) Poison damage.\n';
@@ -1107,7 +1149,7 @@ describe('ordinary model source line references (format checks, no live AI)',()=
     const actual=await provider.extract({source:LURKER_SOURCE,sourceSha256:original.source.sha256,candidate:{id:'source-lines',label:'Lurker',start:0,end:LURKER_SOURCE.length,quote:LURKER_SOURCE}});
     expect(JSON.parse(requests[0]!.body).messages[1].content).toContain('sourceLines');
     expect(JSON.parse(requests[0]!.body).messages[1].content).toContain('sourceProofClauses');
-    expect(JSON.parse(requests[0]!.body).messages[1].content).toContain('sourceSpellGrants');
+    expect(JSON.parse(JSON.parse(requests[0]!.body).messages[1].content)).not.toHaveProperty('sourceSpellGrants');
     expect(actual.claims[0]!.evidence).toEqual(original.claims[0]!.evidence);
     expect(validateMonsterIntakeIR(LURKER_SOURCE,actual).blocking).toEqual([]);
   });

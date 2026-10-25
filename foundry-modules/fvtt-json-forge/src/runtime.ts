@@ -386,8 +386,15 @@ function sourceOperationActivityGroups(artifact:unknown):Array<{index:number;act
     for(const op of operations.filter((op:any)=>op?.type==='attack'&&(op.attack?.type==='melee'||op.attack?.type==='ranged'))){
       const roles=activities.filter(({activity})=>getRecord(getRecord(activity.flags).fvttJsonGenerator).sourceOperation?.id===op.id)
         .map(({activity})=>getRecord(getRecord(activity.flags).fvttJsonGenerator).sourceOperation.role);
-      if(roles.filter(role=>role==='attack-roll').length!==1||roles.filter(role=>role==='damage').length!==(op.damage?.length?1:0))
+      const dual=op.attack.reach!==undefined&&op.attack.range!==undefined;
+      if(roles.filter(role=>role==='attack-roll').length!==(dual?2:1)||roles.filter(role=>role==='damage').length!==(op.damage?.length?1:0))
         throw new Error('Unbound source-operation Activity roles cannot enter the independent-activity import adapter.');
+      if(dual){
+        const modes=activities.filter(({activity})=>getRecord(getRecord(activity.flags).fvttJsonGenerator).sourceOperation?.id===op.id)
+          .map(({activity})=>getRecord(getRecord(activity.flags).fvttJsonGenerator).sourceOperation)
+          .filter(marker=>marker.role==='attack-roll').map(marker=>marker.attackMode).sort();
+        if(JSON.stringify(modes)!==JSON.stringify(['melee','ranged']))throw new Error('Unbound source-operation attack modes cannot enter the independent-activity import adapter.');
+      }
     }
     groups.push({index,activities});
   }
