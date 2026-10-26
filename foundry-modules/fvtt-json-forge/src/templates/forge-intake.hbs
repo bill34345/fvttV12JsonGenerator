@@ -134,6 +134,7 @@
               </details>
               <details>
                 <summary>生成 JSON</summary>
+                {{#unless isItemDirectory}}<p>此处为完整 Actor JSON，与下载内容相同，可复制保存。</p>{{/unless}}
                 <pre data-json></pre>
               </details>
             </div>
@@ -224,8 +225,9 @@
         <p>完整 AI 候选在本机按世界和 GM 保留 7 天，总额度 8 MiB。刷新后本地重验，不自动请求模型，须重新确认。</p>
         <div class="forge-actions">
           <button type="button" data-action="restore-candidate" disabled>恢复上次单条候选</button>
-          <button type="button" data-action="clear-candidate-cache">清除本地恢复副本</button>
+          <button type="button" data-action="clear-candidate-cache">清除全部候选恢复记录</button>
         </div>
+        <p>仅清除当前浏览器、当前世界、当前 GM 的全部单条和批量候选恢复记录；当前页面结果、Actor、Item、来源库和队列均保留。</p>
         <div data-batch-list class="forge-library-list forge-batch-list"><p>暂无 Collection 或 queue job。</p></div>
       </details>
     </details>

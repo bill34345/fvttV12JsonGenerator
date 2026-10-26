@@ -275,6 +275,8 @@
     "test:forge-current-input-recovery": "bun run src/tools/runHermeticFoundryScript.ts test:forge-current-input-recovery:raw",
     "test:forge-generation-preservation": "bun run src/tools/runHermeticFoundryScript.ts test:forge-generation-preservation:raw",
     "test:forge-generation-preservation:raw": "bun test tests/forge-generation-preservation.test.ts tests/forge-candidate-output.test.ts tests/forge-current-input-recovery.test.ts tests/forge-shared-damage-proof.test.ts tests/forge-ai-review-disabled.test.ts --max-concurrency 1",
+    "test:forge-export-recovery-clear": "bun run src/tools/runHermeticFoundryScript.ts test:forge-export-recovery-clear:raw",
+    "test:forge-export-recovery-clear:raw": "bun test foundry-modules/fvtt-json-forge/tests/intake-application.test.ts --test-name-pattern 'export recovery scope:' --max-concurrency 1",
     "test:forge-generation-ui-preservation": "bun run src/tools/runHermeticFoundryScript.ts test:forge-generation-ui-preservation:raw",
     "test:forge-generation-ui-preservation:raw": "bun test foundry-modules/fvtt-json-forge/tests/intake-application.test.ts tests/forge-browser-runtime.test.ts --test-name-pattern 'same-attempt Actor candidate|restored input is checked|single ai-monster restores exact|v1 reproducible records|materializes omitted claim evidence quotes' --max-concurrency 1",
     "test:forge-component-waivers": "bun run src/tools/runHermeticFoundryScript.ts test:forge-component-waivers:raw",

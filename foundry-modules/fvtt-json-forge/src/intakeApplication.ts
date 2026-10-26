@@ -2254,10 +2254,10 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       this.recoveryBusy = true; this.renderRecovery(root);
       try {
         this.assertLibraryAuthority();
-        const confirm = foundryGlobal?.applications?.api?.DialogV2?.confirm;
-        if (!confirm || !await confirm({ window: { title: '清除候选恢复副本' }, content: '<p>清除当前世界、当前 GM 的单条及批量候选恢复副本？来源库、队列和世界文档仍保留。刷新后需显式重新准备。</p>' })) return;
+        const dialog = foundryGlobal?.applications?.api?.DialogV2;
+        if (typeof dialog?.confirm !== 'function' || await dialog.confirm({ window: { title: '清除全部候选恢复记录' }, content: '<p>清除当前浏览器、当前世界、当前 GM 的全部单条和批量候选恢复记录？当前页面结果、Actor、Item、来源库和队列均保留。清除后，刷新页面将无法从这些记录恢复候选。</p>' }) !== true) return;
         await this.loadCandidates(); await this.candidateStore.reset(() => this.assertLibraryAuthority()); this.savedCandidates = {};
-        this.notify('info', '本地候选恢复副本已清除。');
+        this.notify('info', '当前浏览器、当前世界、当前 GM 的全部单条和批量候选恢复记录已清除；当前页面结果仍保留。');
       } catch (error) { this.notify('error', safeLibraryMessage(error)); }
       finally { this.recoveryBusy = false; this.renderRecovery(root); }
     }

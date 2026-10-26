@@ -2322,6 +2322,60 @@ describe('explicit creature source routing and complete ordinary candidate refre
       createAcceptedForgeActor: create as any, createReviewedForgeActorCandidate: create as any, createAcceptedForgeItem: create as any } };
   }
 
+  test('export recovery scope: visible generated Actor JSON has exactly the normal download UTF8 bytes',async()=>{
+    const downloads:Array<{name:string;content:string}>=[];
+    const f=fixture('ai-monster'),x=makeApplication({...f.services,downloadReviewBundle:(name,content)=>downloads.push({name,content})});
+    try{
+      await settleBatch(x.application,x.root);setAiForm(x.application,x.root,'ai-monster',f.source);
+      await x.application.runAnalysis(x.root,false);await x.application.generate(x.root);
+      expect(x.application.generation.candidateResponse?.result?.artifact).toBeDefined();
+      expect(x.root.reviewStep.hidden).toBe(false);expect(x.root.previewSection.hidden).toBe(false);
+      expect(x.root.json.hidden).toBe(false);expect(x.root.json.textContent).not.toBe('');
+      expect(x.root.downloadActor.hidden).toBe(false);expect(x.root.downloadActor.disabled).toBe(false);
+      x.root.downloadActor.onclick();expect(downloads).toHaveLength(1);
+      expect(new TextEncoder().encode(x.root.json.textContent)).toEqual(new TextEncoder().encode(downloads[0]!.content));
+      expect(JSON.parse(x.root.json.textContent)).toEqual(x.application.generation.candidateResponse.result.artifact);
+      expect(downloads[0]!.name).toMatch(/^forge-actor-.*\.json$/u);
+    }finally{await x.application.close();}
+  });
+
+  test('export recovery scope: strict DialogV2 receiver preserves cancellation and clears only all current recovery records on confirmation',async()=>{
+    const f=fixture('ai-monster'),store=new MemoryIntakeCandidateStore(),decisions=[false,true],prompts:any[]=[];
+    const x=makeApplication(f.services,async config=>{prompts.push(config);return decisions.shift();},undefined,
+      async function(this:{wait:(config:any)=>Promise<boolean>},config:any){return this.wait(config);},undefined,{candidateStore:store});
+    try{
+      await settleBatch(x.application,x.root);setAiForm(x.application,x.root,'ai-monster',f.source);
+      await x.application.runAnalysis(x.root,false);await x.application.generate(x.root);
+      const record=(await store.load()).single!;expect(record).toBeDefined();
+      await x.sourceLibrary.saveSource({objectKind:'actor',mode:'plaintext-actor',sourceLabel:'Keep library source',rawSource:ACTOR_SOURCE});
+      const queued=await x.batchQueue.importCollection(createForgeBatchCollection({label:'Keep queue',entries:[
+        {objectKind:'actor',mode:'plaintext-actor',sourceLabel:'Keep job',rawSource:ACTOR_SOURCE}]}));
+      const jobKey=queued.jobs[0]!.id;await store.put(jobKey,record);
+      const otherScope=new MemoryIntakeCandidateStore({single:record}),otherBefore=await otherScope.load();
+      const actors=[{id:'existing-actor'}],items=[{id:'existing-item'}];
+      (x.game as any).actors={contents:actors};(x.game as any).items={contents:items};
+      const before={records:await store.load(),library:await x.sourceLibrary.load(),queue:await x.batchQueue.load(),
+        source:x.root.source.value,json:x.root.json.textContent,status:x.application.status,
+        analysis:structuredClone(x.application.analysis),generation:structuredClone(x.application.generation)};
+      expect(Object.keys(before.records).sort()).toEqual([jobKey,'single'].sort());
+      for(const confirmed of [false,true]){
+        x.root.clearCandidateCache.onclick();
+        for(let wait=0;wait<50&&x.application.recoveryBusy;wait++)await new Promise(resolve=>setTimeout(resolve,0));
+        expect(x.application.recoveryBusy).toBe(false);expect(prompts).toHaveLength(confirmed?2:1);
+        expect(await store.load()).toEqual(confirmed?{}:before.records);
+        expect(await otherScope.load()).toEqual(otherBefore);
+        expect(await x.sourceLibrary.load()).toEqual(before.library);expect(await x.batchQueue.load()).toEqual(before.queue);
+        expect((x.game as any).actors.contents).toEqual(actors);expect((x.game as any).items.contents).toEqual(items);
+        expect(x.root.source.value).toBe(before.source);expect(x.root.json.textContent).toBe(before.json);
+        expect(x.application.status).toBe(before.status);expect(x.application.analysis).toEqual(before.analysis);
+        expect(x.application.generation).toEqual(before.generation);expect(x.root.create.disabled).toBe(false);
+        expect(x.root.downloadActor.disabled).toBe(false);expect(x.notifications.errors).toEqual([]);
+      }
+      expect(prompts[0].content).toContain('当前浏览器');expect(prompts[0].content).toContain('全部单条和批量候选恢复记录');
+      expect(x.notifications.infos.at(-1)).toContain('已清除');expect(f.counts.create).toBe(0);
+    }finally{await x.application.close();}
+  });
+
   for(const outcome of ['returned failure','thrown failure'])test(`same-attempt Actor candidate remains complete after ${outcome}`,async()=>{
     const f=fixture('ai-monster'),store=new MemoryIntakeCandidateStore();
     const first=makeApplication(f.services,undefined,undefined,undefined,undefined,{candidateStore:store});
@@ -3071,7 +3125,7 @@ function primaryWorkspaceActions(root: FakeRoot): string[] {
 }
 
 class FakeRoot {
-  completionDiagnostics = control(''); completionIssues = control('');
+  completionDiagnostics = control(''); completionIssues = control(''); clearCandidateCache = control('');
   constructor(private readonly includeConnectionFields = true) {}
   dataset: Record<string, string> = {};
   mode = control('plaintext-actor', 'select'); source = control('', 'textarea'); displayName = control('');
@@ -3102,7 +3156,7 @@ class FakeRoot {
       '[data-ai-settings]': this.aiSettings, '[data-action="analyze"]': this.analyze, '[data-action="repair"]': this.repair, '[data-action="generate"]': this.generate, '[data-action="model-review"]': this.modelReview,
       '[data-action="regenerate"]': this.regenerate, '[data-action="reject"]': this.reject, '[data-action="cancel"]': this.cancel, '[data-action="clear"]': this.clear,
       '[data-action="export"]': this.export, '[data-action="create"]': this.create, '[data-action="clear-key"]': this.clearKey,
-      '[data-action="download-actor"]': this.downloadActor,
+      '[data-action="download-actor"]': this.downloadActor, '[data-action="clear-candidate-cache"]': this.clearCandidateCache,
       '[data-action="clear-all-keys"]': this.clearAllKeys,
       '[data-action="toggle-key"]': this.toggleKey, '[data-action="toggle-endpoint"]': this.toggleEndpoint,
       '[data-action="import"]': this.import, '[data-action="start-new-attempt"]': this.startNewAttempt,

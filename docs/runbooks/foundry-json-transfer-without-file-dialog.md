@@ -4,6 +4,19 @@ Use this runbook when Codex controls the user's existing Chrome through the
 ChatGPT/Codex extension and a Foundry import or export stalls at a Windows file
 picker or download dialog.
 
+## 当前 Forge 候选 JSON：免保存窗口导出
+
+已有导出授权时由工具完成取出、保存及核对，不要求用户处理下载或系统保存窗口。
+
+1. 在正常 Forge 工作台选择当前候选，展开“技术详情 → 生成 JSON”。该区域与“下载 Actor JSON 候选”使用同一份 `response.result.artifact` 和同一 `JSON.stringify(..., null, 2)`。
+2. 用当前官方 Chrome 连接器读取页面已展示的完整 `pre[data-json]` 文本。读取受单次长度限制时分段取得并按顺序拼接；确认未截断，不读取浏览器内部状态或注入页面脚本。
+3. 由本地文件工具将该原文以 UTF-8 写入本次证据目录或用户指定位置。记录对象／候选身份、文件名、字节数和 SHA-256；不重新生成、不改写字段或重新排版。
+4. 读回实际文件，与取得的完整文本比对；核对解析后的对象、候选身份和完整内容。读取失败只补取缺失内容，不重跑已完成的生成、创建或战斗验证。
+
+这条路线验证的是正式候选内容的无窗口导出。专门验收浏览器“下载”按钮时，另记真实按钮与文件落盘证据；不要将两者混写。下载事件超时本身不证明文件没有生成，也不自动转交用户代操作。
+
+本流程不依赖 `chrome://downloads`、原生保存窗口、CDP 注入或原型替换，不新建下载代理或服务。以下旧版原生 Document 导入说明保留其历史用途；其中的执行通道必须服从当前工具权限，不能仅因旧文档列过某方法就使用它。
+
 ## Why the Chrome permission is not a complete fix
 
 Chrome's **Allow access to file URLs** setting controls whether an extension may
@@ -73,46 +86,11 @@ the selected `File`. It bypasses only the operating-system picker.
 
 ### Export without a download or Save As dialog
 
-Call `document.exportToJSON()` unchanged. Immediately around that call, install
-a temporary `HTMLAnchorElement.prototype.dispatchEvent` wrapper that:
+历史上曾通过 `document.exportToJSON()` 取得其生成的 Blob，完成无需用户处理保存窗口的验收，见 [2026-07-16 记录](../remediation/2026-07-15-project-hardening/EXECPLAN.md)。当时临时拦截浏览器下载的脚本不作为当前执行入口，不能用它绕过现行 Chrome 工具限制。
 
-1. recognizes the detached JSON download anchor created by
-   `foundry.utils.saveDataToFile`;
-2. prevents the native download;
-3. fetches the generated `blob:` URL and returns its exact text and filename;
-4. restores the original prototype in `finally`.
+当前 Forge 候选采用本页顶部的可见完整 JSON 路线。其他原生 Document 导出须使用该应用现有且获准的导出接口，取得准确原文后由文件工具保存；不得把 `toObject()` 快照冒充包含迁移／导出来源信息的原生 `exportToJSON()` 结果。
 
-Equivalent page-side operation:
-
-```js
-let captured;
-const originalDispatch = HTMLAnchorElement.prototype.dispatchEvent;
-HTMLAnchorElement.prototype.dispatchEvent = function (event) {
-  if (this.download?.endsWith(".json") && this.href?.startsWith("blob:")) {
-    event.preventDefault();
-    captured = fetch(this.href).then(async response => ({
-      filename: this.download,
-      type: response.headers.get("content-type"),
-      data: await response.text()
-    }));
-    return true;
-  }
-  return originalDispatch.call(this, event);
-};
-try {
-  document.exportToJSON();
-  if (!captured) throw new Error("Foundry did not dispatch a JSON export");
-  return await captured;
-} finally {
-  HTMLAnchorElement.prototype.dispatchEvent = originalDispatch;
-}
-```
-
-Save the returned bytes to an ignored evidence or requested output path. The
-wrapper must be restored even when export fails. Verify that no native dialog
-appeared and that the prototype is back to its native implementation.
-
-## Acceptance and cleanup
+## Historical native import/export acceptance and cleanup
 
 An import/export round trip is complete only when all of the following hold:
 
