@@ -1028,7 +1028,7 @@ function readActorVerificationSummary(
 }
 
 function readActorSummary(value: unknown, path: string, issues: ForgeDecodeIssue[]): ForgeActorVerificationSummary['actor'] | undefined {
-  const record = readRecord(value, path, new Set(['name', 'type', 'creatureType', 'hp', 'ac', 'cr', 'senses']), issues);
+  const record = readRecord(value, path, new Set(['name', 'type', 'creatureType', 'hp', 'ac', 'cr', 'senses', 'damageVulnerability']), issues);
   if (!record) return undefined;
   const name = readNonEmptyString(record, 'name', path, issues);
   const type = readNonEmptyString(record, 'type', path, issues);
@@ -1036,6 +1036,11 @@ function readActorSummary(value: unknown, path: string, issues: ForgeDecodeIssue
   const hp = readOptionalHitPointSummary(record, 'hp', path, issues);
   const ac = readOptionalArmorClassSummary(record, 'ac', path, issues);
   const cr = readOptionalNumber(record, 'cr', path, issues);
+  let damageVulnerability:ForgeActorVerificationSummary['actor']['damageVulnerability'];
+  if(record.damageVulnerability!==undefined){
+    const entryPath=path+'/damageVulnerability',entry=readRecord(record.damageVulnerability,entryPath,new Set(['value','custom']),issues);
+    if(entry){const value=readNonEmptyStringArray(entry.value,entryPath+'/value',issues),custom=readString(entry,'custom',entryPath,issues);if(value&&custom!==undefined)damageVulnerability={value,custom};}
+  }
   const senses = readSensesSummary(record.senses, path + '/senses', issues);
   if (!name || !type || !senses) return undefined;
   return {
@@ -1045,6 +1050,7 @@ function readActorSummary(value: unknown, path: string, issues: ForgeDecodeIssue
     ...(hp ? { hp } : {}),
     ...(ac ? { ac } : {}),
     ...(cr !== undefined ? { cr } : {}),
+    ...(damageVulnerability?{damageVulnerability}:{}),
     senses,
   };
 }

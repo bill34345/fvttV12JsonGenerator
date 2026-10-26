@@ -224,6 +224,10 @@ function projectActorVerification(value: unknown): ForgeActorVerificationSummary
   const hp = optionalHitPointSummary(actorRecord.hp, 'actorVerification.actor.hp');
   const ac = optionalArmorClassSummary(actorRecord.ac, 'actorVerification.actor.ac');
   const cr = optionalNumber(actorRecord.cr, 'actorVerification.actor.cr');
+  if(actorRecord.damageVulnerability!==undefined){
+    const vulnerability=requireRecord(actorRecord.damageVulnerability,'actorVerification.actor.damageVulnerability');
+    actor.damageVulnerability={value:requireStringArray(vulnerability.value,'actorVerification.actor.damageVulnerability.value'),custom:requireString(vulnerability.custom,'actorVerification.actor.damageVulnerability.custom')};
+  }
   if (creatureType !== undefined) actor.creatureType = creatureType;
   if (hp !== undefined) actor.hp = hp;
   if (ac !== undefined) actor.ac = ac;

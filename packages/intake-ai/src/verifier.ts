@@ -163,6 +163,7 @@ function verifyMonsterIntakeProjection(
   compareSet(add, 'ACTOR_RESISTANCE_DRIFT', '/creature/defenses/resistances', expected.defenses.resistances, projection.resistances);
   compareSet(add, 'ACTOR_IMMUNITY_DRIFT', '/creature/defenses/immunities', expected.defenses.immunities, projection.immunities);
   compareSet(add, 'ACTOR_VULNERABILITY_DRIFT', '/creature/defenses/vulnerabilities', expected.defenses.vulnerabilities, projection.vulnerabilities);
+  if((expected.defenses.vulnerabilitiesCustom??'')!==projection.vulnerabilitiesCustom)add('ACTOR_VULNERABILITY_NOTE_DRIFT','/creature/defenses/vulnerabilitiesCustom','The complete literal vulnerability note must match the IR without changing its condition.');
   compareSet(add, 'ACTOR_CONDITION_IMMUNITY_DRIFT', '/creature/defenses/conditionImmunities', expected.defenses.conditionImmunities, projection.conditionImmunities, normalizeCondition);
   for (const [sense, value] of Object.entries(expected.senses)) compare(add, 'ACTOR_SENSE_DRIFT', `/creature/senses/${sense}`, value, (projection.senses as Record<string, unknown>)?.[sense]);
   compareSet(add, 'ACTOR_LANGUAGE_DRIFT', '/creature/languages/values', expected.languages.values, projection.languages, normalizeLanguageFixed);
@@ -597,6 +598,7 @@ export function projectActor(actor: unknown, options: { skillKeys?: string[]; sa
     resistances: arrayValues(asRecord(traits.dr).value),
     immunities: arrayValues(asRecord(traits.di).value),
     vulnerabilities: arrayValues(asRecord(traits.dv).value),
+    vulnerabilitiesCustom: asRecord(traits.dv).custom ?? '',
     conditionImmunities: arrayValues(asRecord(traits.ci).value),
     senses: {
       darkvision: numericSense(senseRanges.darkvision),

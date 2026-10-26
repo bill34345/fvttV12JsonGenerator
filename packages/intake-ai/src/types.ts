@@ -56,8 +56,11 @@ export interface IntakeUncertainty {
   candidates?: unknown[];
 }
 
+export const NORMALIZED_MONSTER_EMPTY_PATHS = ['/creature/saves','/creature/traits','/creature/actions','/creature/bonusActions','/creature/reactions','/creature/legendaryActions'] as const;
+
 export interface MonsterIntakeIR {
   schemaVersion: 1;
+  normalizedEmptyFields?: Array<typeof NORMALIZED_MONSTER_EMPTY_PATHS[number]>;
   source: { sha256: string; length: number };
   creature: CanonicalMonster;
   claims: IntakeClaim[];

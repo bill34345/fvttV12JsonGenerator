@@ -11,6 +11,7 @@ export interface BrowserActorVerificationSummary {
     ac?: unknown;
     cr?: unknown;
     senses: Record<string, unknown>;
+    damageVulnerability?: Record<string,unknown>;
   };
   items: Array<{
     name: string;
@@ -81,6 +82,7 @@ export function buildBrowserActorVerificationSummary(
       ...(attributes.ac === undefined ? {} : { ac: attributes.ac }),
       ...(details.cr === undefined ? {} : { cr: details.cr }),
       senses: getRecord(attributes.senses),
+      ...(getRecord(getRecord(system.traits).dv).custom?{damageVulnerability:getRecord(getRecord(system.traits).dv)}:{}),
     },
     items,
     warnings,

@@ -184,7 +184,7 @@ describe('OpenAI-compatible monster intake provider', () => {
     });
     await provider.extract({ source: 'monster', sourceSha256: 'hash', candidate: { id: 'monster', label: 'Monster', start: 0, end: 7, quote: 'monster' } });
     const body = JSON.parse(requests[0]!.body), prompt = body.messages[0].content as string;
-    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v48-consolidated-source-operations');
+    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v49-vulnerability-notes');
     expect(prompt).toContain(SOURCE_OPERATION_SCHEMA);
     for (const required of [
       'The program checks structure, references and faithful conversion/save',
@@ -258,7 +258,7 @@ describe('OpenAI-compatible monster intake provider', () => {
     });
     const repaired = await provider.repair({ stage: 'deterministic-validation', source: LURKER_SOURCE, candidate, ir, deterministicFindings: [] });
     const body = JSON.parse(requests[0]!.body), prompt = body.messages[0].content as string;
-    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v41-consolidated-source-operations');
+    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v42-vulnerability-notes');
     expect(prompt).toContain(SOURCE_OPERATION_SCHEMA);
     for (const required of [
       'Repair only the supplied IR problems',

@@ -627,6 +627,8 @@ export class EnglishBestiaryParser implements ParserStrategy {
       result.traits.bypasses = Array.from(new Set([...(result.traits.bypasses || []), ...dr.bypasses]));
     }
 
+    const dvCustom=this.getValue(raw,['damage_vulnerabilities_custom']);
+    if(dvCustom!==undefined){if(typeof dvCustom!=='string')throw Error('InvalidVulnerabilityCustom: expected literal text.');result.traits.dvCustom=dvCustom;}
     const dv = this.parseDamageTerms(this.getValue(raw, ['damage_vulnerabilities']));
     if (dv.terms.length > 0) result.traits.dv = dv.terms;
     if (dv.bypasses.length > 0) {

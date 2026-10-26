@@ -48,7 +48,7 @@ import {
   type ForgeIntakeApplicationServices,
 } from '../src/intakeApplication';
 import { claimForgeAiJob, releaseForgeAiJob } from '../src/aiJobGate';
-import { analyzeBrowserActorSourceWithAi, generateBrowserActorIntakeCandidate, approveBrowserActorIntakeCandidateForGm } from '@fvtt-json-generator/forge-browser-runtime/ai';
+import { analyzeBrowserActorIntakeDraft, analyzeBrowserActorSourceWithAi, generateBrowserActorIntakeCandidate, approveBrowserActorIntakeCandidateForGm } from '@fvtt-json-generator/forge-browser-runtime/ai';
 import { clearAllForgeSessionApiKeys, markForgeSessionConnectionTested, readForgeSessionSettings, saveForgeSessionSettings } from '../src/settings';
 
 const ACTOR_SOURCE = readFileSync('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md', 'utf8');
@@ -2321,6 +2321,21 @@ describe('explicit creature source routing and complete ordinary candidate refre
       }) as any,
       createAcceptedForgeActor: create as any, createReviewedForgeActorCandidate: create as any, createAcceptedForgeItem: create as any } };
   }
+
+  test('empty fields and vulnerability: full native note remains visible in the real Actor review preview',async()=>{
+    const f=fixture('ai-monster'),note='Piercing damage from weapons wielded by creatures under the effect of a Bless spell';
+    const x=makeApplication({...f.services,analyzeBrowserActorSourceWithAi:(async(input:any,provider:any)=>{
+      const ir=buildValidLurkerIr();ir.creature.defenses.vulnerabilities=[];ir.creature.defenses.vulnerabilitiesCustom=note;
+      return analyzeBrowserActorIntakeDraft(input,ir,provider);
+    }) as any});
+    try{
+      await settleBatch(x.application,x.root);setAiForm(x.application,x.root,'ai-monster',f.source);
+      await x.application.runAnalysis(x.root,false);await x.application.generate(x.root);
+      expect(x.application.generation.candidateAvailable).toBe(true);expect(x.root.humanPreview.innerHTML).toContain(note);
+      expect(x.root.humanPreview.innerHTML).toContain('伤害易伤备注');expect(x.root.create.disabled).toBe(false);
+      expect(f.counts).toEqual({discover:0,extract:0,create:0});
+    }finally{await x.application.close();}
+  });
 
   test('export recovery scope: visible generated Actor JSON has exactly the normal download UTF8 bytes',async()=>{
     const downloads:Array<{name:string;content:string}>=[];

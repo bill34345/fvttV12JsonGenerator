@@ -87,6 +87,7 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR, source?:string)
     技能: mapSkills(creature.skills),
     伤害抗性: mapList(creature.defenses.resistances, DAMAGE_ZH),
     伤害易伤: mapList(creature.defenses.vulnerabilities, DAMAGE_ZH),
+    伤害易伤备注: creature.defenses.vulnerabilitiesCustom,
     伤害免疫: mapList(creature.defenses.immunities, DAMAGE_ZH),
     状态免疫: mapList(creature.defenses.conditionImmunities, CONDITION_ZH),
     感官: renderSenses(creature),

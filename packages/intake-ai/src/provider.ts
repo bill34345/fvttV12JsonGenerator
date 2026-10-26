@@ -18,6 +18,7 @@ import type {
   RepairRequest,
   ReviewRequest,
 } from './types';
+import {NORMALIZED_MONSTER_EMPTY_PATHS} from './types';
 import type { MonsterIntakeConfig } from './config';
 import { sha256 } from '@fvtt-json-generator/contracts/hash';
 import { captureProviderResponse, failureEvidenceRecorder, type ProviderResponseEvidenceSink, type ProviderJsonFormatRecovery } from './provider-response-evidence';
@@ -35,9 +36,9 @@ export type { ProviderResponseEvidence, ProviderResponseEvidenceSink } from './p
 
 export const INTAKE_PROMPT_VERSIONS = {
   discover: 'monster-intake-discover-v2-source-lines',
-  extract: 'monster-intake-extract-v48-consolidated-source-operations',
+  extract: 'monster-intake-extract-v49-vulnerability-notes',
   review: 'monster-intake-review-v37-consolidated-full-ir',
-  repair: 'monster-intake-repair-v41-consolidated-source-operations',
+  repair: 'monster-intake-repair-v42-vulnerability-notes',
 } as const;
 
 export type MonsterIntakeProviderErrorCode =
@@ -589,6 +590,9 @@ function normalizeStageEvidence(stage: keyof typeof PROMPTS, value: unknown, pay
   // Proposed data must survive unchanged until its stage verifier rejects it;
   // legacy automation/optional-field normalization must not erase a conflict.
   if (evidenceOnly) return next;
+  // Fresh extraction cannot author the program's normalization history.
+  if(stage==='extract')delete next.normalizedEmptyFields;
+  normalizeEmptyMonsterFields(next);
   normalizeDeclaredSpellIdentities(next,source);
   bindProviderSourceContracts(source,next,bounds);
   return next;
@@ -598,10 +602,24 @@ function normalizeStageEvidence(stage: keyof typeof PROMPTS, value: unknown, pay
  * from the original document; only declared names/IDs and evidence bind. */
 export function normalizeMonsterIntakeProposal(source:string,ir:MonsterIntakeIR,bounds?:{start:number;end:number}):MonsterIntakeIR{
   const next=structuredClone(ir);
+  normalizeEmptyMonsterFields(next as unknown as Record<string,unknown>);
   materializeClaimEvidenceQuotes(source,next as unknown as Record<string,unknown>,bounds);
   normalizeDeclaredSpellIdentities(next as unknown as Record<string,unknown>,source);
   bindProviderSourceContracts(source,next as unknown as Record<string,unknown>,bounds);
   return next;
+}
+
+function normalizeEmptyMonsterFields(value:Record<string,unknown>):void{
+  const creature=asObject(value.creature);if(!creature)return;
+  const added:string[]=[];
+  for(const path of NORMALIZED_MONSTER_EMPTY_PATHS){
+    const key=path.slice('/creature/'.length);
+    if(creature[key]!==undefined)continue;
+    creature[key]=key==='saves'?{}:[];added.push(path);
+  }
+  if(!added.length)return;
+  if(value.normalizedEmptyFields===undefined)value.normalizedEmptyFields=added;
+  else if(Array.isArray(value.normalizedEmptyFields))value.normalizedEmptyFields=[...new Set([...value.normalizedEmptyFields,...added])];
 }
 
 function materializeClaimEvidenceQuotes(source:string,value:Record<string,unknown>,bounds={start:0,end:source.length}):void{

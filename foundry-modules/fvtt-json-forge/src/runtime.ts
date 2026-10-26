@@ -517,7 +517,7 @@ export function actorReadbackWarnings(artifact:JsonObject,readback:unknown):stri
       const item=match?(artifact.items as any[])?.[Number(match[1])]:undefined;
       const activity=match?.[2]!==undefined?Object.entries(item?.system?.activities??{}).sort(([a],[b])=>a.localeCompare(b))[Number(match[2])]?.[1] as any:undefined;
       const label=[String(artifact.name??'角色'),item?.name,activity?.name].filter(Boolean).join(' · ');
-      const names:Record<string,string>={'range.long':'远射程','range.value':'距离','hp.value':'当前生命值','hp.max':'最大生命值','hp.formula':'生命骰','damage.parts':'伤害','name':'名称','img':'图标'};
+      const names:Record<string,string>={'damageVulnerability.custom':'伤害易伤备注','damageVulnerability.value':'伤害易伤类别','range.long':'远射程','range.value':'距离','hp.value':'当前生命值','hp.max':'最大生命值','hp.formula':'生命骰','damage.parts':'伤害','name':'名称','img':'图标'};
       const field=Object.entries(names).find(([key])=>path.endsWith(key))?.[1]??path.replace(/^\$\.?/u,'');
       const display=(value:unknown)=>value===undefined?'未保留':value===null?'空值':JSON.stringify(value).slice(0,240);
       warnings.push(`${label}：${field}，生成值为 ${display(want)}，Foundry 保存值为 ${display(got)}。角色已保留，请核对。`);
@@ -614,6 +614,7 @@ function actorSemantics(value: unknown, effectSource: 'artifact' | 'readback'): 
     cr: details.cr,
     creatureType: details.type,
     size: traits.size,
+    damageVulnerability: traits.dv,
     senses: attributes.senses ?? traits.senses,
     abilities: system.abilities,
     items,

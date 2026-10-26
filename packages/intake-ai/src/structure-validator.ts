@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { CUSTOM_CONDITION_IDS } from '@fvtt-json-generator/contracts/conditions';
 import { isSourceCandidateReview, isSourceCandidateCounters, sourceOperationStructureErrors } from '@fvtt-json-generator/models/source-operations';
-import type { IntakeFinding, IntakeValidationResult } from './types';
+import {NORMALIZED_MONSTER_EMPTY_PATHS,type IntakeFinding,type IntakeValidationResult} from './types';
 
 type Data = Record<string, unknown>;
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
@@ -236,7 +236,14 @@ export function validateMonsterIntakeStructure(
     ancestors.delete(entry);
     return valid;
   };
-  if (!data(value, '', 0) || !shape(value, '', ['schemaVersion', 'source', 'creature', 'claims', 'coverage', 'uncertainties'])) return { findings, blocking: findings, warnings: [] };
+  if (!data(value, '', 0) || !shape(value, '', ['schemaVersion', 'source', 'creature', 'claims', 'coverage', 'uncertainties', 'normalizedEmptyFields'])) return { findings, blocking: findings, warnings: [] };
+  if(value.normalizedEmptyFields!==undefined){
+    array(value.normalizedEmptyFields,'/normalizedEmptyFields',(entry,path)=>enumeration(entry,path,NORMALIZED_MONSTER_EMPTY_PATHS),0,NORMALIZED_MONSTER_EMPTY_PATHS.length);
+    if(Array.isArray(value.normalizedEmptyFields))for(const path of new Set(value.normalizedEmptyFields))if(typeof path==='string'&&NORMALIZED_MONSTER_EMPTY_PATHS.includes(path as typeof NORMALIZED_MONSTER_EMPTY_PATHS[number])){
+      findings.push({id:'normalized-empty:'+path,code:'EMPTY_FIELD_NORMALIZED',path,
+        message:'提取结果未提供此栏，已按空容器继续；这不代表已确认原文没有此项，请核对来源。',blocking:false,origin:'schema'});
+    }
+  }
   if (value.schemaVersion !== 1) fail('UNSUPPORTED_SCHEMA_VERSION', '/schemaVersion', 'schemaVersion must be 1.');
   if (shape(value.source, '/source', ['sha256', 'length'])) {
     if (value.source.sha256 !== createHash('sha256').update(source).digest('hex')) fail('SOURCE_HASH_MISMATCH', '/source/sha256', 'IR identity does not match the submitted source.', 'evidence');
@@ -262,7 +269,10 @@ export function validateMonsterIntakeStructure(
     if (shape(creature.saves, '/creature/saves', ABILITIES)) for (const [key, entry] of Object.entries(creature.saves)) number(entry, `/creature/saves/${key}`);
     if (!object(creature.skills)) invalid('/creature/skills', 'Expected a skill bonus record.');
     else for (const [key, entry] of Object.entries(creature.skills)) { if (!text(key) || ['__proto__', 'prototype', 'constructor'].includes(key)) invalid(`/creature/skills/${escapePointer(key)}`, 'Invalid skill key.'); number(entry, `/creature/skills/${escapePointer(key)}`); }
-    if (shape(creature.defenses, '/creature/defenses', ['resistances', 'immunities', 'vulnerabilities', 'conditionImmunities'])) for (const key of ['resistances', 'immunities', 'vulnerabilities', 'conditionImmunities']) strings(creature.defenses[key], `/creature/defenses/${key}`);
+    if (shape(creature.defenses, '/creature/defenses', ['resistances', 'immunities', 'vulnerabilities', 'vulnerabilitiesCustom', 'conditionImmunities'])) {
+      for (const key of ['resistances', 'immunities', 'vulnerabilities', 'conditionImmunities']) strings(creature.defenses[key], `/creature/defenses/${key}`);
+      optional(creature.defenses,'vulnerabilitiesCustom','/creature/defenses',(entry,path)=>string(entry,path,false));
+    }
     if (shape(creature.senses, '/creature/senses', ['darkvision', 'blindsight', 'tremorsense', 'truesight', 'passivePerception', 'special'])) { for (const key of ['darkvision', 'blindsight', 'tremorsense', 'truesight', 'passivePerception']) optional(creature.senses, key, '/creature/senses', distance); optional(creature.senses, 'special', '/creature/senses', string); }
     if (shape(creature.languages, '/creature/languages', ['values', 'custom'])) { strings(creature.languages.values, '/creature/languages/values'); optional(creature.languages, 'custom', '/creature/languages', string); }
     optional(creature, 'biography', '/creature', (e, p) => string(e, p, false));

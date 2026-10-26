@@ -1,28 +1,28 @@
 {
   "web-workbench": {
-    "fingerprint": "b4916167a0b5df6377d5e8258f449fd119117398024c5f29b827e51cc879f553",
-    "reviewedOn": "2026-10-22",
-    "note": "已核对docs/web-deployment.md、docs/web-ai-connections.md与共享Forge响应契约：失败响应可保留Actor候选是可选扩展；本轮未改Web上传任务、下载产物推广或部署步骤，原条目保持。"
+    "fingerprint": "513f158843a0940be7518dd95baacc8fcf9d028824a772954c27cb95c23932bf",
+    "reviewedOn": "2026-10-26",
+    "note": "已核对共享parser/generation：新增显式易伤备注进入原生custom，普通易伤列表独立；入口/目标/输出推广规则不变，补充字段说明，不宣称Web实机新增接受。"
   },
   "markdown-convert": {
-    "fingerprint": "07a33ae853ada107a9c46759e85f7b42e75412a13212b8a9c752f2a5283e5cf6",
+    "fingerprint": "8fe29060a1693d9f30fed405a714b9c282645f0ad97335005347cf8d3444ce42",
     "reviewedOn": "2026-10-26",
-    "note": "已核对标准Markdown入口及共享生成器：parser仍检查外部操作结构，generator删除同一结构的重复检查；转换、目标版本和正式输出职责保持，四份冻结Actor完整相等。"
+    "note": "已核对共享parser/generation：新增显式易伤备注进入原生custom，普通易伤列表独立；入口/目标/输出推广规则不变，补充字段说明，不宣称Web实机新增接受。"
   },
   "monster-intake": {
-    "fingerprint": "a35a34e07f5c5076c419aa6041dc4d1f5ded14362bc8a868bc8e5c249daa77f8",
+    "fingerprint": "2e86f28e14c5dc5c8ad0b3fc2e19e8b3cc9a97e5b6c1dbbc3575c8fdce81506f",
     "reviewedOn": "2026-10-26",
-    "note": "已核对入口与对应说明：Monster已验证数据的renderer/输出比较不重做完整结构检查，外部CLI验证仍保留；Item与Species独立机制、版本、晋升和审核策略未改。"
+    "note": "已对照共同Monster入口、原答与正式草稿、官方MM自定义易伤字段、响应预览及保存检查；更新空栏记录和易伤备注说明。AI复核继续关闭，固定资料不证明新模型质量。"
   },
   "item-intake": {
-    "fingerprint": "efd34160622a0504f08ca8f3bf032bdd121d8f477b7165344954394ad9cf3aac",
+    "fingerprint": "edd86b91e64bad200af04f3644208899d67116bf326084d9d1f30944d95e6e01",
     "reviewedOn": "2026-10-26",
-    "note": "已核对入口与对应说明：Monster已验证数据的renderer/输出比较不重做完整结构检查，外部CLI验证仍保留；Item与Species独立机制、版本、晋升和审核策略未改。"
+    "note": "逐项核对：本次新增仅作用Monster creature空栏及易伤字段；Item/Species独立输入契约、生成推广、目标版本、使用步骤和限制保持。"
   },
   "species-intake": {
-    "fingerprint": "c433c29d1a16a489570eeab421100304719a6cd26120e1db4cea9d1ed6186cf5",
+    "fingerprint": "40d8919592435304efb85886c7c170bb09358980d30279f45e6b92ddcd044101",
     "reviewedOn": "2026-10-26",
-    "note": "已核对入口与对应说明：Monster已验证数据的renderer/输出比较不重做完整结构检查，外部CLI验证仍保留；Item与Species独立机制、版本、晋升和审核策略未改。"
+    "note": "逐项核对：本次新增仅作用Monster creature空栏及易伤字段；Item/Species独立输入契约、生成推广、目标版本、使用步骤和限制保持。"
   },
   "document-extraction": {
     "fingerprint": "1fadc1f19a0a8346a15306bb247d90ae4b2bbaf709177747d8aded524ec25bcc",
@@ -60,14 +60,14 @@
     "note": "逐项保留当前run/validationSelection/保留检查/Mirror及450秒门限；整合Selected Token首次安装白名单、去除自动合并重复目录项。历史测试仅显式只读复用已锁定输入，源码/lock/patch仍当前候选；本地整合与推送/实装/实机边界分开。"
   },
   "verification-development": {
-    "fingerprint": "b9461d83bf2b2a52a708ffb3ccdc7bdf055872889d33d0a5d60e71b93ab390da",
+    "fingerprint": "dbe4fc51123973b453c62e8789a8f5ae80b5622f9747552bb6265c0e5031b3ec",
     "reviewedOn": "2026-10-26",
-    "note": "对照同一完整JSON的显示/下载实现、免窗口导出操作及DialogV2.confirm绑定修复；更新清除全部单条/批量恢复记录范围和取消/保留说明，登记只跑两项的新检查。未扩大生成或战斗验收。"
+    "note": "已核对两个新增安全检查入口，说明对应空栏/备注/草稿及协议读回的实际范围，复用未变共同验收，不把固定回复当模型效果。"
   },
   "human-encounter-intake": {
-    "fingerprint": "f1d72ff87342ca76d3373d8a5eadada822beba9ed212f34d0f7b3b624a6a9027",
+    "fingerprint": "85b9a8b153a116a369b7b4a50a410b3d195a24e52d87efb1490aedac00f26ac9",
     "reviewedOn": "2026-10-26",
-    "note": "已对照实际入口：单只Actor待确认时新增无Key本地重新生成，失败保留原候选；重新分析仍请求AI。更新Forge用户步骤及真实按钮测试说明；生物与召唤物导入流程未新增此按钮，原生成/保留/GM确认说明保持。AI复核关闭，实机结果由本批验收单独记录。"
+    "note": "已对照共同Monster入口、原答与正式草稿、官方MM自定义易伤字段、响应预览及保存检查；更新空栏记录和易伤备注说明。AI复核继续关闭，固定资料不证明新模型质量。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -125,9 +125,9 @@
     "note": "已逐项核对本次纯命名调整：功能统一为生物生成，关联对象入口为生物与召唤物，JSON/ZIP为生物导入文件；召唤生物/物件属于生成本体的一部分。翻译工具仅引用新名称，Custom Conditions连接步骤与界面一致，验证入口补入既有导航/恢复测试；生成、GM确认、协议和权限边界保持。历史截图/PDF保留旧界面并作说明。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "24bf5d83a87192619c0f1f3d89c71164265850764845a534564a31f65495c981",
+    "fingerprint": "36e2cd82651b08015bcf9fa6a7cbfa2be7056cd5f87d7c1c028fe4ca0d1b9f7d",
     "reviewedOn": "2026-10-26",
-    "note": "对照同一完整JSON的显示/下载实现、免窗口导出操作及DialogV2.confirm绑定修复；更新清除全部单条/批量恢复记录范围和取消/保留说明，登记只跑两项的新检查。未扩大生成或战斗验收。"
+    "note": "已对照共同Monster入口、原答与正式草稿、官方MM自定义易伤字段、响应预览及保存检查；更新空栏记录和易伤备注说明。AI复核继续关闭，固定资料不证明新模型质量。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "2e22086b12b7f6d9730eadbd9e7951eb07dcb66beeff6a68a6e0dadf036c06d1",

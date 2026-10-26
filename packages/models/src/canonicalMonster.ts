@@ -186,6 +186,7 @@ export interface CanonicalMonster {
     resistances: string[];
     immunities: string[];
     vulnerabilities: string[];
+    vulnerabilitiesCustom?: string;
     conditionImmunities: string[];
   };
   senses: Partial<Record<'darkvision' | 'blindsight' | 'tremorsense' | 'truesight', number>> & {

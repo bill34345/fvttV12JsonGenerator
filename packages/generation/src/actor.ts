@@ -526,7 +526,7 @@ export class ActorGenerator {
       actor.system.traits.dr = { value: parsed.traits.dr || [], custom: '', bypasses };
       actor.system.traits.di = { value: parsed.traits.di || [], custom: '', bypasses };
       actor.system.traits.ci = { value: parsed.traits.ci || [], custom: '' };
-      actor.system.traits.dv = { value: parsed.traits.dv || [], custom: '', bypasses };
+      actor.system.traits.dv = { value: parsed.traits.dv || [], custom: parsed.traits.dvCustom ?? '', bypasses };
       if (parsed.traits.dm) actor.system.traits.dm = parsed.traits.dm;
       actor.system.traits.languages = {
         // schema-derived: dnd5e 5.3.3 prepareLanguages recognizes the special ALL key.

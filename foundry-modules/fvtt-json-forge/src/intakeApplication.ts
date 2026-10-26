@@ -3145,8 +3145,10 @@ function humanActorPreview(result: any): string {
   const hpText = hp?.max !== undefined || hp?.value !== undefined ? `${hp?.value ?? hp?.max ?? '—'} / ${hp?.max ?? '—'}` : '未提供';
   const acText = ac?.value ?? ac?.flat ?? '未提供';
   const crText = projection?.cr ?? details?.cr?.value ?? details?.cr ?? '未提供';
+  const vulnerability=projection?.damageVulnerability??system?.traits?.dv;
+  const vulnerabilityNote=typeof vulnerability?.custom==='string'&&vulnerability.custom?`<dt>伤害易伤备注</dt><dd>${escapeHtml(vulnerability.custom)}</dd>`:'';
   const itemNames = items.map((item: any) => item?.name).filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, 8);
-  return `<dl><dt>生物</dt><dd>${escapeHtml(String(name))}</dd><dt>HP</dt><dd>${escapeHtml(String(hpText))}</dd><dt>AC</dt><dd>${escapeHtml(String(acText))}</dd><dt>CR</dt><dd>${escapeHtml(String(crText))}</dd><dt>能力</dt><dd>${itemNames.length > 0 ? escapeHtml(itemNames.join('、')) : '已生成，展开来源依据查看详情'}</dd></dl>`;
+  return `<dl><dt>生物</dt><dd>${escapeHtml(String(name))}</dd><dt>HP</dt><dd>${escapeHtml(String(hpText))}</dd><dt>AC</dt><dd>${escapeHtml(String(acText))}</dd><dt>CR</dt><dd>${escapeHtml(String(crText))}</dd>${vulnerabilityNote}<dt>能力</dt><dd>${itemNames.length > 0 ? escapeHtml(itemNames.join('、')) : '已生成，展开来源依据查看详情'}</dd></dl>`;
 }
 
 function humanItemPreview(result: any): string {

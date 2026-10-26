@@ -268,6 +268,7 @@ export interface ForgeActorVerificationSummary {
     ac?: ForgeArmorClassSummary;
     cr?: number;
     senses: ForgeSensesSummary;
+    damageVulnerability?: {value:string[];custom:string};
   };
   items: ForgeItemVerificationSummary[];
   warnings: string[];

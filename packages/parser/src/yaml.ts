@@ -365,6 +365,9 @@ export class YamlParser {
         result.traits.size = sizeMap[processedValue] || processedValue;
       } else if (internalKey === 'dm') {
         result.traits.dm = this.parseDamageMod(processedValue);
+      } else if (internalKey === 'dvCustom') {
+        if(typeof processedValue!=='string')throw Error('InvalidVulnerabilityCustom: expected literal text.');
+        result.traits.dvCustom=processedValue;
       } else if (internalKey === 'languagesCustom') {
         result.traits.languagesCustom = String(processedValue ?? '').trim();
       } else {

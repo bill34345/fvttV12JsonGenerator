@@ -70,6 +70,7 @@ export const FIELD_MAPPING: Record<string, FieldDefinition> = {
   "技能": { key: "skills", path: "system.skills", type: "object" }, // { "ste": 1, ... }
   "伤害抗性": { key: "dr", path: "system.traits.dr", type: "array" },
   "伤害易伤": { key: "dv", path: "system.traits.dv", type: "array" },
+  "伤害易伤备注": { key: "dvCustom", path: "system.traits.dv.custom", type: "string" },
   "伤害免疫": { key: "di", path: "system.traits.di", type: "array" },
   "伤害调整": { key: "dm", path: "system.traits.dm", type: "object" },
   "状态免疫": { key: "ci", path: "system.traits.ci", type: "array" },
@@ -130,6 +131,7 @@ export interface ParsedNPC {
     size?: string;
     dr?: string[];
     dv?: string[];
+    dvCustom?: string;
     di?: string[];
     dm?: any;
     ci?: string[];

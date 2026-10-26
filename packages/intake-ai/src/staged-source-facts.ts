@@ -249,7 +249,7 @@ function staticEntries(source: string): Map<string, string> {
   return entries;
 }
 
-type DefenseKind = keyof CanonicalMonster['defenses'];
+type DefenseKind = Exclude<keyof CanonicalMonster['defenses'],'vulnerabilitiesCustom'>;
 const NATIVE_CONDITIONS = new Set(['blinded','charmed','deafened','frightened','grappled','incapacitated','invisible','paralyzed','petrified','poisoned','prone','restrained','stunned','unconscious','exhaustion']);
 /** Header text stays owned by the base unit. These exact nested references
  * additionally prove the complete GM Items compiled from unprojectable facts. */
