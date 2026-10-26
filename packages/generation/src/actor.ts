@@ -498,8 +498,9 @@ export class ActorGenerator {
       this.appendActionItems(newItems, parsed.bonus_actions, 'bonus', activityContext);
       this.appendActionItems(newItems, parsed.reactions, 'reaction', activityContext);
       this.appendActionItems(newItems, parsed.legendary_actions, 'legendary', activityContext);
-      this.appendActionItems(newItems, parsed.lair_actions, 'lair', activityContext);
     }
+    // Source-derived: lair actions are parsed separately from structured sections.
+    this.appendActionItems(newItems, parsed.lair_actions, 'lair', activityContext);
 
     // Regional Effects
     if (parsed.regional_effects) {

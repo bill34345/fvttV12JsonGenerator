@@ -198,6 +198,7 @@
       "CLI 省略版本默认 v12；本手册的示例不改变这个产品默认值。",
       "v14 锁定 Foundry 14.364 / dnd5e 5.3.3。core 不输出专属 modded 字段；不同模块组合的兼容性需单独核实。",
       "结构化来源的分区决定 Item 显示分区；动作分区中回合开始自动触发的 special Activity 仍显示在动作分区，特性分区中显式 action 也不迁移分区。",
+      "来源同时包含结构化动作和巢穴动作时，两部分都生成对应 Item；巢穴动作不会因普通动作采用结构化写法而遗漏。实际巢穴规则的运行仍需按目标 Foundry 环境另行验收。",
       "结构化目标的数量、类型和字面限制投影到Activity受影响目标，独立于范围模板；单一生物目标不自动生成AoE模板。",
       "Bleeding / Burning 模板从特性明确给出的骰式、伤害类型和时机取值，默认回合结束，重复施加统一采用较高值。19 种 Custom Conditions 的生成状态 ID 统一使用 fvtt-custom-conditions.<条件 ID>，与 dnd5e 的 bleeding/burning 及其他模块的 dazed 分开；flags 中的规则参数条件 ID 仍是 bleeding、burning 等语义 ID。自定义 Dazed / Shocked 模板采用本项目的移动、动作、附赠动作三选一说明；生成的文本和状态 ID 不代替 Foundry 内的实际回合限制。普通命中伤害和相邻其他状态不能代替缺失参数；在 FVTT 中自动执行需要 Custom Conditions 与 Trigger Engine，JSON 导入不等于状态自动命中或 E2E 通过。",
       "状态模板 Effect ID 使用稳定的来源动作身份；重复生成保持本地引用一致，同一 Item 内的独立动作也有不同身份。生成时间戳可变化，不保证整份 JSON 字节完全相同。",

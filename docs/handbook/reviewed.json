@@ -15,9 +15,9 @@
     "note": "对照 CLI 参数、Web 与 Intake 文档，区分文本和 OCR 链路、目标版本、来源验证与运行时边界"
   },
   "markdown-convert": {
-    "fingerprint": "96dcbfc1409e822c75683e86bb2f6c9211c3e8695e5e7975483aa6dffaec9d59",
-    "reviewedOn": "2026-10-25",
-    "note": "已核合并后的支持矩阵与实际入口：正式生成仍14.364/5.3.3/core，CLI默认V12，Forge/Intake目标不扩大；606模块限定代表接受及旧User/Calendar/归档缺口保留。新增Babele独立维护入口不改变生成行为。"
+    "fingerprint": "d7c132462da8ac123999d4c701d10c099533b66e11ee4b68fda684f16b6ab88d",
+    "reviewedOn": "2026-10-26",
+    "note": "已对照 YAML parser、ActorGenerator 和 V12/V13/V14 回归，补充结构化动作与独立巢穴动作同时保留的说明；命令、输入格式、目标版本及运行时边界不变。"
   },
   "monster-intake": {
     "fingerprint": "f759e63b775c1de0057d86ba566ea60ad9b313cd8a229481d9d0c3a50fbaacf2",
