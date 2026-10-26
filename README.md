@@ -22,7 +22,7 @@ Actor、Item、单文件、合集、Vault Sync、CLI 和 Web Job 共享 `parse �
 
 ## FVTT JSON Forge（Foundry 模块）
 
-`fvtt-json-forge` 是 A–E 统一交付的 GM-only 浏览器模块，锁定 Foundry `14.364` / dnd5e `5.3.3` / `core`。它提供 Actor、Item、证据优先 Intake、review bundle 恢复、当前浏览器/世界/GM scope 的 Source Library，以及 mixed Actor/Item Collection、标准 ZIP、concurrency-1 可恢复队列和 accepted-only 批量创建/readback。
+`fvtt-json-forge` 是面向 GM 的浏览器模块。当前候选支持 Foundry `14.364`／`14.368`、dnd5e `5.3.3`、`core`，提供生物及关联召唤物生成、独立 Item 生成、来源库、审核记录、完整候选恢复，以及顺序执行的可恢复批量队列。当前分支实现及限定验收见模块说明和唯一当前状态；本地候选通过不代表已发布或部署到生产。
 
 2026-10-17共用契约候选将同一能力的攻击、伤害、独立豁免与次数分别保留，完整特殊规则明确交GM；多个来源明确的共享法术池分别计次，真实施法继续交目标世界Resolver匹配。排版整理使用原文行身份，完整能力事实仍逐项核对来源，不能因后果复杂而整体变成文字占位。旧卡、旧失败原件和CLI默认版本保留，旧卡不自动迁移。本轮离线、正常DeepSeek与实机进度见[执行记录](docs/plans/2026-10-17-forge-common-contract-restoration.md)，未完成层级不算通过。
 
@@ -32,7 +32,7 @@ Actor、Item、单文件、合集、Vault Sync、CLI 和 Web Job 共享 `parse �
 https://raw.githubusercontent.com/bill34345/fvttV12JsonGenerator/master/foundry-modules/fvtt-json-forge/src/module.json
 ```
 
-模块不是任意 JSON 导入器：只有当前、完整、decoded 且 formal verification 与 review 均为 `accepted` 的结果可以写入世界。浏览器关闭或刷新会把运行中任务标记为 `interrupted`，不会在后台继续或自动重发可能计费的请求。详细安装、操作、数据与支持边界见 [`foundry-modules/fvtt-json-forge/README.zh-CN.md`](foundry-modules/fvtt-json-forge/README.zh-CN.md)。
+模块核对正式生成结果的来源、目标、完整性和GM权限。生物的可用候选与检查结论分别保留，GM可在阅读具体问题后确认采用；Item仍要求严格`accepted`。Forge额外AI内容复核暂时关闭，开发和测试均不启用；历史审核结果可查看，GM仍可对照来源确认候选。AI提取及独立的结构纠错政策保持。草稿恢复不自动请求模型、不继承旧GM确认；浏览器关闭或刷新也不会自动重发可能计费的请求。详细安装、操作、数据与支持边界见 [`foundry-modules/fvtt-json-forge/README.zh-CN.md`](foundry-modules/fvtt-json-forge/README.zh-CN.md)。
 
 ## 安装
 
@@ -217,9 +217,11 @@ MONSTER_INTAKE_CODEX_OAUTH_REASONING_EFFORT=xhigh
 
 这里的 `xhigh` 对应 Codex 界面里说的 `ultra`。不填写模型时，`codex-oauth` 模式也会默认使用 `gpt-5.6-luna`；这只是旧的本机兼容桥设置，不是网页的 Companion。Companion 留空时始终使用这台电脑当前 Codex CLI 的默认模型，不会偷偷填入 Luna。
 
-怪物Intake由AI理解内容并给出完整结构化数据；程序默认检查字段类型、支持的操作组合、来源身份与精确引用，以及IR到标准Markdown和Actor JSON的转换保真，不再按原文句式、数值或覆盖率重新判断AI理解、判遗漏或回填字段。完整描述供GM对照，AI自己声明的不确定保留原状态；CLI既有内容review／repair由AI负责，Forge额外AI审核仍为主动操作。生物本体和关联召唤物使用同一完整IR入口，攻击、能力和固定AC保留，普通装备不作为遗漏。旧SourceAudit及V2原文事实恢复仅作显式离线历史入口，Item／Species各自契约保持。
+怪物Intake由AI理解内容并给出完整结构化数据；程序默认检查字段类型、支持的操作组合、来源身份与精确引用，以及IR到标准Markdown和Actor JSON的转换保真，不再按原文句式、数值或覆盖率重新判断AI理解、判遗漏或回填字段。完整描述供GM对照，AI自己声明的不确定保留原状态；CLI既有内容review／repair由AI负责，Forge额外AI内容复核暂时关闭。生物本体和关联召唤物使用同一完整IR入口，攻击、能力和固定AC保留，普通装备不作为遗漏。旧SourceAudit及V2原文事实恢复仅作显式离线历史入口，Item／Species各自契约保持。
 
 默认完整IR提示词采用单一精确引文协议，程序按当前生物范围定位，历史行号／子句引用继续可读；不要求逐字段证明或空白覆盖账本。AI根据完整能力理解独立／共享法术次数，未自动支持的限定保留完整GM说明，实际不确定仍明确显示。
+
+Forge单条生物工作台直接提取一只生物的完整资料，不再先请求AI发现；无需把纯文本标题改成Markdown标题。多只生物资料在“生物与召唤物”入口先识别、划分，已划分出的每只直接提取。目录任务仍逐文件识别，含多只的文件不会静默选第一只。CLI既有识别流程保持。
 
 运行单只或合集：
 
