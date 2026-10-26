@@ -32,6 +32,7 @@
 | Foundry 模块 | `foundry-modules/AGENTS.md` 与模块自己的 AGENTS |
 | 中文 Babele 补丁维护、更新上游汉化、合并自有译文 | `docs/runbooks/babele-zh-maintenance.md`，实际维护项目为 `I:\OpenCode\fvtt-babele-zh-maintenance`；先读取该项目 AGENTS 与架构后在对应目录执行，继续使用当前 Codex 项目交流 |
 | Lab、资产和运维 | `tools/AGENTS.md`、`tools/foundry-ops/AGENTS.md` |
+| 需要通过本地 Mirror / Next MCP 开发或验收 | `docs/runbooks/foundry-mcp-readiness.md`：准备所选实例与任务专用 GM 页，实际读回世界后判定连接就绪 |
 | 新外部接口、跨模块/版本/客户端、迁移、重复失败 | `docs/runbooks/development-feedback-loop.md` |
 
 - 影响产品含义、验收出口、功能归属或写入授权的歧义先向用户澄清，之后才执行依赖该选择的工作；可查的技术事实先调查，可逆实现细节自行决定。已有明确授权不重复索取。

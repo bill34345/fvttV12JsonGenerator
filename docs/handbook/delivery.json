@@ -66,6 +66,10 @@
     {
       "entryId": "babele-zh-maintenance",
       "reason": "中文Babele汉化的上游更新和冲突处理由独立维护项目执行，在完整离线手册保留入口，不属于Foundry内日常用户工具。"
+    },
+    {
+      "entryId": "foundry-mcp-readiness",
+      "reason": "本地开发环境和MCP连接准备属于工程入口，保留在完整离线手册。"
     }
   ]
 }

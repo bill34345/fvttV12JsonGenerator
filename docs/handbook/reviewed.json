@@ -70,9 +70,9 @@
     "note": "已对照精确Core14.364/14.368配置与14.368纯parseArgs：CLI只消费小写nobackups；共用launcher修正/规范化并拒绝禁用，176项安全测试与tools类型通过。入口、路径、权限与无备份限制保持，新增仅新启动生效/需真实控件读回；原Setup失败保留，新34112真实控件0限定通过。 本次只纳入源码，不运行launcher/安装器，不操作Lab或生产。"
   },
   "verification-development": {
-    "fingerprint": "590f7f0484bca5aec80755d0d3a623b98ae14f4565cb56ce2425c5841e663ebc",
+    "fingerprint": "054512b0a6a3da0e2c54dfb41950a85880122dedeaf4d02a61b36ca36288e190",
     "reviewedOn": "2026-10-25",
-    "note": "已核workspace依赖、公开脚本、手册owner/共享包、模块构建与module-artifacts入口；完整手册37/Foundry28/offline9，保留master Babele说明。CI精确隔离旧Monitor真实Chrome重启并记录deferred，其余库存/阈值及CLI/build gate保留；生成目标和权限不扩大。 整合时仅清理新增文件末尾多余空行，共享视图/TE事件逻辑及用户步骤不变；已核差异，不扩大运行接受。 实测443文件到最后一文件时触发旧450秒上限，仅将完整单进程覆盖率门调整为600秒，阈值不变，原失败日志保留，已通过前序门复用。"
+    "note": "已人工对照新增本地MCP脚本、Ruler流程指针与手册目录：增加目标实例准备和真实读回入口，既有测试选择、来源语义验收及发布权限保持原约定。完整目录新增工程条目后38项、Foundry投影28项，维护说明同步。"
   },
   "human-encounter-intake": {
     "fingerprint": "b547a9a9b37125d162d137d004906a9deb98a1f1a3f791705ff568fef1a21972",
@@ -93,6 +93,11 @@
     "fingerprint": "50cac474be8a43b344935c71711756af196160703258f4c1e8536b3f8219ea3e",
     "reviewedOn": "2026-10-25",
     "note": "已核对CHM术语表入口、244核心英文和扩展来源索引；类别/版次/出处/多义保留，用户Force确认与派生短语分开，系统Force标签与AI正文翻译边界明确。"
+  },
+  "foundry-mcp-readiness": {
+    "fingerprint": "339bed9320925a8a0555671f6790e16dd0354bd07cfbbfcd031b47bc8facce1b",
+    "reviewedOn": "2026-10-26",
+    "note": "已对照Mirror新增实际接受：原自动重连false经正常UI改true、写权限保留、专用页/原生世界及既有角色读取、断线恢复和显式停止保持均通过。Next旧阶段记录按历史范围复用；CLI启动等待由45延长90秒，保留超时进程与日志，说明不宣称重复冷启验收。"
   },
   "chat-memory-guard": {
     "fingerprint": "778ebb668dd7af6a0a92cf198b10ccd4b0e8258a75cf2764535623938626a07d",
@@ -180,8 +185,8 @@
     "note": "已逐项核对只扩606 maximum及现有入口；Chat/Babele/Monitor仅局部非浏览器证据，Species正式accepted构建身份仍602，BloodHunter缺受保护来源只作manifest投影，Classpack只加载且迁移API仍拒绝606，既有ItemPiles602限制保留。不得覆盖packs/scripts或据此宣称玩法/会话/升级通过。 本次保留这份静态分发边界；Species/BH后续原生代表链另按各owner记录，不推广外部候选全玩法。"
   },
   "fvtt-suite-console": {
-    "fingerprint": "9361d4919485ca036b9726da48799b92a317513bc68b716e4b995c787603dd27",
+    "fingerprint": "6d510771fee36ddb07e1d6fc8621f64f3133accd1bdff1abbeb117fa5e6ffb93",
     "reviewedOn": "2026-10-25",
-    "note": "已核Core14.368/ABI1、只读权限与共享渲染依赖；完整离线目录37项，Foundry仍28项，master新增Babele维护入口进入offline9。新组合仅文档内容/打包身份改变；既有H2/H3/H4运行和视觉证据按旧精确构建保留，未重放或部署新包。 整合时仅清理新增文件末尾多余空行，共享视图/TE事件逻辑及用户步骤不变；已核差异，不扩大运行接受。"
+    "note": "已对照delivery策略与手册条目：新增MCP准备仅进入离线完整目录，完整目录38项、工程历史10项，Foundry用户投影仍28项。只同步数量说明，不改变模块交互或运行接受状态。"
   }
 }

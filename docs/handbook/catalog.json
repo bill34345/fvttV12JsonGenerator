@@ -1175,5 +1175,64 @@
     "watch": [
       "docs/runbooks/babele-zh-maintenance.md"
     ]
+  },
+  {
+    "id": "foundry-mcp-readiness",
+    "title": "本地 Foundry MCP 开发准备",
+    "category": "maintain",
+    "summary": "按需准备本地 Foundry 和专用 GM 页面，实际读取正确世界后再开始依赖 MCP 的工作。",
+    "when": "开发或验收需要通过 Mirror / ServerNext MCP 读取游戏资料，或出现模块未连接时使用。",
+    "requires": [
+      "Bun1.3.14、本地 Lab 路径与当前 worktree 的 .codex/config.toml 绝对路径。",
+      "正常登录的任务专用 GM 页面；与现有任务协调共享实例占用。"
+    ],
+    "steps": [
+      {
+        "title": "准备所选环境",
+        "text": "正确运行的服务复用；只在身份核对且端口、数据目录没有进程占用时启动缺失服务。替换为当前工作树的配置路径。",
+        "command": "bun run foundry:mcp prepare --instance next --lab-root F:\\FoundryLab\\foundry-v14 --config I:\\OpenCode\\fvttV12JsonGenerator\\.codex\\config.toml --apply"
+      },
+      {
+        "title": "接续专用 GM 页面",
+        "text": "输出 browserAction 时，由官方 Chrome 执行代理进入自己的 Next GM 页面 localhost:30002/game；保持 Bridge 和页面在线，保留原有写入权限设置。CLI 本身不登录浏览器。"
+      },
+      {
+        "title": "实际读取确认",
+        "text": "检查成功后再由当前聊天的对应原生 MCP 读取世界；首次接入或恢复验收再读取既有角色或合集。",
+        "command": "bun run foundry:mcp check --instance next --lab-root F:\\FoundryLab\\foundry-v14 --config I:\\OpenCode\\fvttV12JsonGenerator\\.codex\\config.toml --apply"
+      },
+      {
+        "title": "必要时安装恢复适配器",
+        "text": "只接受已核实的 Bridge0.8.4 字节；先移除 --apply 看计划，安装后仅重载本任务页面。",
+        "command": "bun run foundry:mcp:install-recovery --instance next --lab-root F:\\FoundryLab\\foundry-v14 --apply"
+      }
+    ],
+    "outputs": [
+      "明确的服务、后台、GM连接、身份或读取状态，以及正确世界的最小身份信息。",
+      "每个实例自己的 readiness.jsonl 与 current-readiness.json；GM页可读取最多64条客户端连接事件。"
+    ],
+    "limits": [
+      "Mirror与Next分别保留安装及运行验收，按各自记录确认可用；一套的通过不能替代另一套。",
+      "后台与Foundry进程在线不足以接通；GM页面关闭后需要重新准备。",
+      "--apply才允许本地启动和审计写入；不停止或重启已有服务，不处理生产。",
+      "日志记录实际观察，不是持续在线率监控；恢复适配器尊重显式停止和自动重连偏好。"
+    ],
+    "keywords": [
+      "MCP",
+      "Next",
+      "Mirror",
+      "GM",
+      "连接",
+      "自动重连",
+      "日志"
+    ],
+    "sources": [
+      "docs/runbooks/foundry-mcp-readiness.md",
+      "tools/foundry-mcp/README.md"
+    ],
+    "watch": [
+      "tools/foundry-mcp/",
+      "docs/runbooks/foundry-mcp-readiness.md"
+    ]
   }
 ]

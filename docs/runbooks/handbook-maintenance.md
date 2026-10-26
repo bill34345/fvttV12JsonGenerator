@@ -24,7 +24,7 @@
 
 静态HTML与Foundry窗口复用`mountHandbook(root, content, host)`。共享包返回`navigate(entryIdOrRoute, section?)`与`dispose()`；默认宿主使用局部按钮和内存状态。只有standalone adapter负责浏览器URL、标题和主题保存。命令是文字，只能经明确点击复制；阅读/导航不启动工具。
 
-内容只在catalog、尚未迁移的modules条目或owner的manual.json维护，不另建Foundry正文。构建使用`schemaVersion: 1`；完整HTML保留全部37个稳定ID与来源，Foundry根据delivery策略选28个用户条目，并只带它们引用的sources/reviews。9个工程/历史入口仍在完整离线手册。内部模块ID读取实际manifest（支持src或根module.json）；Midi-QOL显式映射上游ID，外部候选没有单一runtime ID。缺失的内部manifest不猜目录名。
+内容只在catalog、尚未迁移的modules条目或owner的manual.json维护，不另建Foundry正文。构建使用`schemaVersion: 1`；完整HTML保留全部38个稳定ID与来源，Foundry根据delivery策略选28个用户条目，并只带它们引用的sources/reviews。10个工程/历史入口仍在完整离线手册。内部模块ID读取实际manifest（支持src或根module.json）；Midi-QOL显式映射上游ID，外部候选没有单一runtime ID。缺失的内部manifest不猜目录名。
 
 Foundry更新页显示工具用途摘要和说明核对日期，适用版本/实际接受仍由具体条目说明。详细作者review note只进入完整离线投影；Foundry导出将其替换为同条目的用户摘要，保留原核对日期和fingerprint，不把工程过程塞进用户更新卡片，也不改写原始review记录。
 
@@ -41,7 +41,7 @@ H1完成共享包和静态宿主；H2在`foundry-modules/fvtt-suite-console/`接
 
 H4通过`release:suite-console`准备本地交付：模块ZIP仅5个白名单文件，独立同字节manifest、完整HTML、SHA256SUMS和release-candidate.json位于本模块dist/release。完整HTML不进入模块ZIP或安装目录。真实build先检查review与根HTML同步，再编译Foundry投影；`verify-release:suite-console`做实际档案/CRC/逐文件字节/hash/两次确定性检查。路径链接/硬链接或未知输出拒绝，不清空目录。正式品牌/授权/渠道/下载地址未定时，只能称本地候选，不能编造在线安装地址或宣称公开发行。
 
-共享视图的`surface`区分静态与Foundry重开/更新说明；默认静态行为保持。Foundry host只提供根内滚动、内存主题与剪贴板，不提供URL/title/全局shortcut订阅或持久设置写入。新模块必须新增独立目录条目；本次整合合计37项，保留master新增的中文Babele维护入口及原有稳定ID。
+共享视图的`surface`区分静态与Foundry重开/更新说明；默认静态行为保持。Foundry host只提供根内滚动、内存主题与剪贴板，不提供URL/title/全局shortcut订阅或持久设置写入。新模块必须新增独立目录条目；当前目录合计38项，保留master新增的中文Babele维护入口及原有稳定ID。
 
 ## 按实际变化同步手册
 
