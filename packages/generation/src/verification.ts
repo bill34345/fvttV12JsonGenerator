@@ -2,7 +2,7 @@ import type { EffectProfile } from './effectProfileApplier';
 import { resolveLockedDnd5eV14Spell } from './v14SpellCatalog';
 import { getFoundryTarget, type FvttTargetVersion } from './target';
 import { isFoundryHtmlDescription } from './item-description';
-import { sourceConditionLifecycle, extractExplicitlyInflictedStatuses } from './actor-effects';
+import { sourceConditionLifecycle, extractExplicitlyInflictedStatuses, simpleConditionDuration } from './actor-effects';
 import { readConditionInstance } from '@fvtt-json-generator/contracts/conditions';
 import {RESOLVER_MODULE_ID,validatePortableSpellManifestStructure,hashManifest} from '@fvtt-json-generator/spell-manifest-contracts';
 import {
@@ -514,7 +514,7 @@ function verifyMechanicCoverage(
       outputPaths.push(`documents/${documentIndex}/system/damage/base`);
     }
     if (mechanic.kind === 'effect') {
-      const value = mechanic.value as { type?: string; duration?: string; sourceText?: string } | undefined;
+      const value = mechanic.value as { type?: string; duration?: string; sourceText?: string; condition?:string; escapeDc?:number; staged?:boolean } | undefined;
       const statuses = value?.type ? extractExplicitlyInflictedStatuses(`The target is ${value.type}.`) : [];
       const source = value?.sourceText;
       // Canonical AI mechanics already declare statuses/duration. Verify their projection,
@@ -523,7 +523,27 @@ function verifyMechanicCoverage(
       const marker = document?.flags?.fvttJsonGenerator?.conditionLifecycle;
       const effects = document?.effects ?? [];
       const lifecycle = statuses.map(status => sourceConditionLifecycle(source ?? '', status, value?.duration));
-      if (applies && lifecycle.some(entry => entry.mode === 'gm') && !effects.some((effect: any) => statuses.includes(readConditionInstance(effect)?.conditionId ?? ''))) {
+      const literal = document?.flags?.fvttJsonGenerator?.literalMechanics?.version === 1;
+      const declaredManual = value?.escapeDc !== undefined || value?.staged === true || Boolean(value?.condition?.trim())
+        || Boolean(value?.duration?.trim() && !simpleConditionDuration(value.duration));
+      if (literal && activities.length>0 && statuses.length && (declaredManual || statuses.some(status => marker?.statuses?.includes(status)))) {
+        const exact = statuses.every(status => {
+          const expected = { status, ...(value?.condition !== undefined ? {condition:value.condition} : {}),
+            ...(value?.escapeDc !== undefined ? {escapeDc:value.escapeDc} : {}),
+            ...(value?.duration !== undefined ? {duration:value.duration} : {}),
+            ...(value?.staged !== undefined ? {staged:value.staged} : {}) };
+          return Array.isArray(marker?.conditions) && marker.conditions.filter((condition:any) => condition && typeof condition==='object'
+            && Object.keys(condition).length===Object.keys(expected).length && Object.entries(expected).every(([key,entry]) => condition[key]===entry)).length===1;
+        });
+        const retained = exact && activities.length>0 && marker?.version===1 && marker.mode==='gm' && marker.sourceText===source
+          && statuses.every(status => marker.statuses?.includes(status))
+          && !effects.some((effect:any) => effect.statuses?.some((status:string) => statuses.includes(status)))
+          && !activities.some(activity => activity.effects?.some((link:any) => !effects.some((effect:any) => effect._id===link._id)))
+          && String(document.system?.description?.value).includes('GM')
+          && String(document.system?.description?.value).replace(/<[^>]*>/gu,'').replace(/\s/gu,'').includes(String(source??'').replace(/\s/gu,''));
+        if (retained) outputPaths.push(`documents/${documentIndex}/system/activities/${allActivities.indexOf(activities[0])}`);
+        else diagnostics.push(error('GEN_CONDITION_LIFECYCLE_INVALID','semantic',mechanic.path,'The explicit condition metadata requires its exact GM ledger and no automatic status or dangling link.'));
+      } else if (applies && lifecycle.some(entry => entry.mode === 'gm') && !effects.some((effect: any) => statuses.includes(readConditionInstance(effect)?.conditionId ?? ''))) {
         const retained = marker?.version === 1 && marker.mode === 'gm'
           && String(marker.sourceText).replace(/\s/gu, '') === source.replace(/\s/gu, '')
           && statuses.every(status => marker.statuses?.includes(status))

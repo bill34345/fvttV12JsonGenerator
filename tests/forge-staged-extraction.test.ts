@@ -9,7 +9,7 @@ import { splitStagedMonsterSource, stagedSourceBiography } from '../packages/int
 import { stagedSpellcastingGroups } from '../packages/intake-ai/src/staged-spellcasting';
 import { stagedFeatureMechanics } from '../packages/intake-ai/src/staged-feature-mechanics';
 import type { MonsterIntakeIR } from '../packages/intake-ai/src/types';
-import { validateMonsterIntakeIR } from '../packages/intake-ai/src/validator';
+import { validateMonsterIntakeIR, auditMonsterIntakeSource } from '../packages/intake-ai/src/validator';
 import companyRecorded from './fixtures/forge-company-pdf-recorded-base.json';
 
 describe('independent Chinese riders and Save introductions',()=>{
@@ -684,7 +684,7 @@ describe('program-owned base evidence and source features', () => {
     expect(result.creature.actions[2]!.legendaryCost).toBe(2);
     expect(validateMonsterIntakeIR(source, result).blocking).toEqual([]);
   });
-  test('a source-only legacy manual reply keeps context but cannot promote a missing basic attack', async () => {
+  test('explicit SourceAudit catches the basic attack omitted by a source-only legacy manual reply', async () => {
     const context = 'The sentinel can take 2 legendary actions only while bloodied. It regains them at the start of its turn.';
     const source = `${HEADER}Legendary Actions\n${context}\n${SLAM}\n`;
     const result = await provider({ baseMode: 'facts', featureMode: 'source' }).extract(request(source));
@@ -693,7 +693,8 @@ describe('program-owned base evidence and source features', () => {
     expect(result.creature.legendaryActions[0]!.description).toBe(SLAM);
     expect(result.creature.biography).toContain(context);
     expect(result.coverage.map(entry => entry.quote).join('')).toBe(source);
-    expect(validateMonsterIntakeIR(source, result).blocking.map(finding=>finding.code)).toEqual(['SOURCE_BASIC_OPERATION_OMITTED']);
+    expect(validateMonsterIntakeIR(source, result).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(source, result).blocking.map(finding=>finding.code)).toEqual(['SOURCE_BASIC_OPERATION_OMITTED']);
   });
   for (const [name, attack] of [
     ['generic 2024 type', SLAM.replace('Melee Weapon Attack:', 'Melee Attack Roll:')],

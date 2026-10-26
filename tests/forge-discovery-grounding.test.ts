@@ -106,19 +106,35 @@ describe('saved first discovery failure and source ownership',()=>{
     for(const input of [source.replace('### Traits','### Treasure'),source.replace('### Lore','### Lair Actions')])
       expect(()=>splitStagedMonsterSource({source:input,sourceSha256:hash(input),candidate:{id:'unsafe',label:'Gate Sentinel',start:0,end:input.length,quote:input}})).toThrow('UNKNOWN_HEADING');
   });
-  test('actual public provider entry reports a local source error with code and path before any request',async()=>{
+  test('explicit legacy staged provider reports its local source error with code and path before any request',async()=>{
     const input=source.replace('### Traits','### Unresolved Combat Options');
-    const previousFetch=globalThis.fetch;let calls=0;
-    globalThis.fetch=Object.assign(async()=>{calls++;throw Error('A source error must not reach the network');},{preconnect:previousFetch.preconnect});
+    const env=localProvider(()=>{throw Error('A legacy source error must not reach HTTP');},true);
+    const output=await generateEncounterFromHumanMarkdown({source:input,label:'Gate Sentinel',provider:env.provider,
+      automationProvider:{generate:forbidden,review:forbidden},reviewPolicy:'deferred',outputLanguage:'source'});
+    expect(env.calls).toHaveLength(0);expect(output.prepared).toBeUndefined();
+    expect(output.report.actors[0]!.analysis.errorCode).toBe('invalid_source');
+    expect(output.report.actors[0]!.analysis.findings[0]!.path).toMatch(/^\/source\/\d+$/u);
+    expect(output.report.findings.join(' ')).toContain('UNKNOWN_HEADING');
+    expect(output.report.findings.join(' ')).toContain('/source/');
+    expect(output.report.findings.join(' ')).not.toContain('AI provider');
+  });
+  test('current default sends an unknown body heading unchanged to one full-IR extraction and retains a malformed-reply failure',async()=>{
+    const input=source.replace('### Traits','### Unresolved Combat Options');
+    const previousFetch=globalThis.fetch,requests:any[]=[];
+    globalThis.fetch=Object.assign(async(_url:any,init?:RequestInit)=>{
+      const body=JSON.parse(String(init?.body));requests.push(JSON.parse(body.messages.find((entry:any)=>entry.role==='user').content));
+      return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify({schemaVersion:0})}}]}),{headers:{'Content-Type':'application/json'}});
+    },{preconnect:previousFetch.preconnect});
     try{
       const providers=createEncounterIntakeProviders({apiKey:'offline-only',baseUrl:'https://offline.invalid/v1',model:'offline-only'});
       const output=await generateEncounterFromHumanMarkdown({source:input,label:'Gate Sentinel',...providers,reviewPolicy:'deferred',outputLanguage:'source'});
-      expect(calls).toBe(0);expect(output.prepared).toBeUndefined();
-      expect(output.report.actors[0]!.analysis.errorCode).toBe('invalid_source');
-      expect(output.report.actors[0]!.analysis.findings[0]!.path).toMatch(/^\/source\/\d+$/u);
-      expect(output.report.findings.join(' ')).toContain('UNKNOWN_HEADING');
-      expect(output.report.findings.join(' ')).toContain('/source/');
-      expect(output.report.findings.join(' ')).not.toContain('AI provider');
+      expect(requests).toHaveLength(1);expect(requests[0].source).toBe(input);expect(requests[0].sourceSha256).toBe(hash(input));
+      expect(requests[0].candidate).toMatchObject({start:0,end:input.length});expect(requests[0].template).toBeUndefined();
+      expect(output.report.discovery).toEqual({mode:'single-statblock',providerCalls:0});
+      expect(output.prepared).toBeUndefined();expect(output.report.actors[0]!.analysis.errorCode).toBe('invalid_response');
+      expect(output.report.findings.join(' ')).not.toContain('UNKNOWN_HEADING');
+      // A source-envelope/control test does not claim that a model understood
+      // the changed heading or that the fixture has a valid complete IR reply.
     }finally{globalThis.fetch=previousFetch;}
   });
   test('staged diagnostic metadata excludes arbitrary source text and unsafe paths',()=>{

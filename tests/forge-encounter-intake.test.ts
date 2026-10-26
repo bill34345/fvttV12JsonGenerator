@@ -54,17 +54,17 @@ describe('human Markdown multi-actor encounter intake',()=>{
     expect(()=>createEncounterIntakeProviders({...config,baseUrl:'https://secret@example.test/v1'})).toThrow('凭据');
     expect(()=>createEncounterIntakeProviders({...config,baseUrl:'https://example.test/v1?key=secret'})).toThrow('凭据');
   });
-  test('two separately verified Actors form a current reviewed package',async()=>{
+  test('two locally verified Actors form a current GM-pending package without review [review disabled]',async()=>{
     const env=fixture();const result=await generateEncounterFromHumanMarkdown({source,label:'test',...env,onReport:report=>assertEncounterSecretsAbsent(JSON.stringify(report),['secret-value'])});
     if(result.report.status!=='ready_for_gm_review')console.log(result.report.findings);
     expect(result.report.status).toBe('ready_for_gm_review');expect(result.prepared?.actors).toHaveLength(2);
     expect(result.report.actors.map(a=>a.source)).toEqual([RAT_WARLOCK_SOURCE,LURKER_SOURCE]);
     expect(env.automationCalls,JSON.stringify(result.report.findings)).toBe(1);
-    expect(env.actorReviewCalls).toBe(2);
-    expect(env.automationReviewCalls).toBe(1);
-    expect(result.report.actors.map(actor=>actor.generation?.calls.review)).toEqual([1,1]);
+    expect(env.actorReviewCalls).toBe(0);
+    expect(env.automationReviewCalls).toBe(0);
+    expect(result.report.actors.map(actor=>actor.generation?.calls.review)).toEqual([0,0]);
   });
-  test('deferred encounter prepares both Actors with zero paid reviews; explicit audit only reviews the current package',async()=>{
+  test('encounter prepares both Actors and direct audit stays disabled with the package unchanged [review disabled]',async()=>{
     const env=fixture();
     const generated=await generateEncounterFromHumanMarkdown({source,label:'test',...env,reviewPolicy:'deferred'});
     expect(generated.report.status).toBe('ready_for_gm_review');
@@ -75,83 +75,34 @@ describe('human Markdown multi-actor encounter intake',()=>{
     expect(env.actorReviewCalls).toBe(0);
     expect(env.automationReviewCalls).toBe(0);
     expect(env.automationCalls).toBe(1);
-    const stale=structuredClone(generated.report);
-    stale.actors[1]!.source+=' changed';
-    await expect(reviewForgeEncounterCandidate({source,report:stale,prepared:generated.prepared!,
-      provider:env.provider,automationProvider:env.automationProvider})).rejects.toThrow(/不一致/u);
-    expect(env.actorReviewCalls).toBe(0);
-    const audited=await reviewForgeEncounterCandidate({source,report:generated.report,prepared:generated.prepared!,
-      provider:env.provider,automationProvider:env.automationProvider});
-    expect(audited.report.status).toBe('ready_for_gm_review');
-    expect(audited.prepared?.hash).toBe(generated.prepared?.hash);
-    expect(audited.report.actors.map(actor=>actor.generation?.calls.review)).toEqual([1,1]);
-    expect(audited.report.automationReview).toEqual({verdict:'accepted',findings:[]});
-    expect(env.actorReviewCalls).toBe(2);
-    expect(env.automationReviewCalls).toBe(1);
-    expect(env.automationCalls).toBe(1);
-    await expect(reviewForgeEncounterCandidate({source:`${source}changed`,report:generated.report,prepared:generated.prepared!,
-      provider:env.provider,automationProvider:env.automationProvider})).rejects.toThrow(/变化/u);
+    const before=structuredClone(generated);
+    await expect(reviewForgeEncounterCandidate({source,report:generated.report,prepared:generated.prepared!,provider:env.provider,automationProvider:env.automationProvider})).rejects.toThrow('AI 内容复核已暂时关闭');
+    expect(generated).toEqual(before);expect(env.actorReviewCalls).toBe(0);expect(env.automationReviewCalls).toBe(0);expect(env.automationCalls).toBe(1);
   });
-  test('an explicit negative package model opinion stays visible while local-valid GM preview remains',async()=>{
-    const env=fixture();
-    const generated=await generateEncounterFromHumanMarkdown({source,label:'test',...env,reviewPolicy:'deferred'});
-    let packageReviews=0;
-    env.automationProvider.review=async()=>{packageReviews++;return {verdict:'needs_review',findings:['请由GM核对这条来源限定。']};};
-    const audited=await reviewForgeEncounterCandidate({source,report:generated.report,prepared:generated.prepared!,
-      provider:env.provider,automationProvider:env.automationProvider});
-    expect(audited.report.status).toBe('ready_for_gm_review');
-    expect(audited.prepared?.hash).toBe(generated.prepared?.hash);
-    expect(audited.report.automationReview).toEqual({verdict:'needs_review',findings:['请由GM核对这条来源限定。']});
-    expect(audited.report.findings).toContain('请由GM核对这条来源限定。');
-    expect(env.actorReviewCalls).toBe(2);
-    expect(packageReviews).toBe(1);
-    expect(env.automationCalls).toBe(1);
-  });
-  test('a failed Chinese translation retains the independently reviewed source-language package',async()=>{
+  test('failed Chinese draft translation retains the locally verified source-language package [review disabled]',async()=>{
     const env=fixture();let translations=0;
     const result=await generateEncounterFromHumanMarkdown({source,label:'translation failure',...env,outputLanguage:'zh-CN',
       translationService:{translate:async()=>{translations++;throw new Error('Translation review unavailable');},review:async()=>({verdict:'accepted',findings:[]})} as any});
     expect(translations).toBe(1);
     expect(result.report.status).toBe('ready_for_gm_review');
     expect(result.report.outputLanguage).toBe('source');
-    expect(result.report.findings.join(' ')).toContain('中文候选未通过');
+    expect(result.report.findings.join(' ')).toContain('中文草稿未完成');
     expect(result.prepared?.bundle.localization).toBeUndefined();
     expect(result.prepared?.hash).toBe(result.report.packageHash);
     expect(result.prepared?.actors).toHaveLength(2);
   });
-  test('a negative automation review keeps the full candidate with zero default corrections',async()=>{
-    const env=fixture();env.automationProvider.review=async()=>({verdict:'needs_review',findings:['Source rule was omitted.']});
-    const result=await generateEncounterFromHumanMarkdown({source,label:'test',...env});
-    expect(result.report.status).toBe('ready_for_gm_review');expect(result.prepared?.actors).toHaveLength(2);expect(env.automationCalls).toBe(1);
-    expect(result.report.automationReview).toEqual({verdict:'needs_review',findings:['Source rule was omitted.']});
-    expect(result.report.findings).toContain('Source rule was omitted.');
-    const withoutIdentity=(text:string)=>text.replace(/^forge-source-id:.*\r?\n/mu,'');
-    expect(result.prepared?.bundle.actors.map(actor=>withoutIdentity(actor.source))).toEqual(result.report.actors.map(actor=>withoutIdentity(actor.generation!.finalSource!)));
-    expect(result.report.actors.map(actor=>actor.source)).toEqual([RAT_WARLOCK_SOURCE,LURKER_SOURCE]);
-  });
-  test('an explicitly enabled automation correction stays bounded and retains the strict negative report and candidate',async()=>{
-    const env=fixture();let reviews=0;
-    env.automationProvider.review=async()=>{reviews++;return{verdict:'needs_review',findings:['The same source concern remains.']};};
-    const result=await generateEncounterFromHumanMarkdown({source,label:'one correction',...env,
-      requestedOptions:{protocol:'openai-chat',reasoning:'auto',autoCorrect:true}});
-    expect(env.automationCalls).toBe(2);expect(reviews).toBe(2);
-    expect(result.report.status).toBe('ready_for_gm_review');expect(result.prepared?.actors).toHaveLength(2);
-    expect(result.report.automationReview).toEqual({verdict:'needs_review',findings:['The same source concern remains.']});
-    expect(result.report.findings).toContain('The same source concern remains.');
-    expect(result.report.actors.every(actor=>actor.generation?.candidateAvailable)).toBe(true);
-  });
-  test('prior proposals skip extraction and retain candidates when explicit fresh reviews fail',async()=>{
+  test('prior proposals skip extraction and retain locally checked candidates without fresh reviews [review disabled]',async()=>{
     const env=fixture();let extracts=0,reviews=0;
     env.provider.extract=async()=>{extracts++;throw new Error('must use proposal');};
     env.provider.review=async()=>{reviews++;throw new Error('Fresh review is unavailable');};
     const result=await generateEncounterFromHumanMarkdown({source,label:'draft',...env,draftParentHash:'a'.repeat(64),
       drafts:[{key:'actor-1',source:RAT_WARLOCK_SOURCE,ir:buildRatWarlockIr()},
         {key:'actor-2',source:LURKER_SOURCE,ir:buildValidLurkerIr()}]});
-    expect(extracts).toBe(0);expect(reviews).toBe(2);expect(result.prepared?.actors).toHaveLength(2);
+    expect(extracts).toBe(0);expect(reviews).toBe(0);expect(result.prepared?.actors).toHaveLength(2);
     expect(result.report.status).toBe('ready_for_gm_review');
-    expect(result.report.actors.map(actor=>actor.generation?.modelReviewStatus)).toEqual(['failed','failed']);
+    expect(result.report.actors.map(actor=>actor.generation?.modelReviewStatus)).toEqual(['not_requested','not_requested']);
     expect(result.report.actors.map(actor=>actor.generation?.calls.repair)).toEqual([0,0]);
-    expect(result.report.actors.every(actor=>actor.generation?.modelReviewError?.length)).toBe(true);
+    expect(result.report.actors.every(actor=>!actor.generation?.modelReviewError)).toBe(true);
     expect(result.report.actors[0]?.origin).toBe('prior-proposal');
     expect(result.report.actors[0]?.analysis.calls.extraction).toBe(0);
     expect(result.report.recovery?.mode).toBe('fresh-validation-and-review');
@@ -173,14 +124,14 @@ describe('human Markdown multi-actor encounter intake',()=>{
     const items=result.prepared?.actors[0]?.artifact.items;
     expect(Array.isArray(items)).toBe(true);expect((items as unknown[]).length).toBeGreaterThan(0);
   });
-  test('source review feedback enters actual repair and never skips independent review',async()=>{
+  test('explicit source feedback enters Analysis repair without enabling content review [review disabled]',async()=>{
     const env=fixture();let repairs=0,reviews=0;
     env.provider.repair=async r=>{repairs++;expect(r.deterministicFindings).toContainEqual(expect.objectContaining({code:'SOURCE_REVIEW_FEEDBACK',blocking:true}));return r.ir;};
     env.provider.review=async()=>{reviews++;throw new Error('Review unavailable');};
     const result=await generateEncounterFromHumanMarkdown({source,label:'feedback',...env,requestedOptions:{protocol:'openai-chat',reasoning:'auto',autoCorrect:true},draftParentHash:'a'.repeat(64),drafts:[{key:'actor-1',source:RAT_WARLOCK_SOURCE,ir:buildRatWarlockIr()}],sourceFeedback:[{actorKey:'actor-1',path:'/creature/identity/size',message:'Recheck this source-backed size.'}]});
-    expect(repairs).toBe(1);expect(reviews).toBe(2);expect(result.prepared?.actors).toHaveLength(2);expect(result.report.sourceFeedback).toHaveLength(1);
+    expect(repairs).toBe(1);expect(reviews).toBe(0);expect(result.prepared?.actors).toHaveLength(2);expect(result.report.sourceFeedback).toHaveLength(1);
     expect(result.report.sourceFeedback![0]).toMatchObject({actorKey:'actor-1',path:'/creature/identity/size',message:'Recheck this source-backed size.'});
     expect(result.report.actors[0]!.analysis.repairCount).toBe(1);
-    expect(result.report.actors[0]!.generation?.modelReviewStatus).toBe('failed');
+    expect(result.report.actors[0]!.generation?.modelReviewStatus).toBe('not_requested');
   });
 });

@@ -430,7 +430,7 @@ test('frozen 2024 Mage accepts Gear boundary and native Common plus full languag
 
 test('unchanged frozen 2024 Dragon assembles complete source and reuses one base3/lair4 ledger',async()=>{
  const {entry,plan,base,decode}=frozenPilot('P3'),decoded=decode();
- const ir=assembleStagedMonsterIntake(plan,base,adaptCategoryFormV2(plan,base,decoded),{sourceProvenSelfArea:true});
+ const ir=completeCategoryFormSpellcasting(plan,assembleStagedMonsterIntake(plan,base,adaptCategoryFormV2(plan,base,decoded),{sourceProvenSelfArea:true}),decoded);
  const markdown=renderMonsterIntakeMarkdown(ir),parsed=new YamlParser().parse(markdown);
  const actor=await new ActorGenerator({fvttVersion:'14',effectProfile:'core',iconMode:'off'}).generate(parsed) as any;
  expect(actor.system.resources.legact).toEqual({max:3,spent:0});expect(actor.system.resources.legres).toEqual({max:3,spent:0});

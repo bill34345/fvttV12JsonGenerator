@@ -1,0 +1,658 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-25",
+  "source": "# **Adult Brass Dragon**\nHuge Dragon (Metallic), Chaotic Good\nAC 18 Initiative +10 (20)\nHP 172 (15d12 + 75)\nSpeed 40 ft., Burrow 30 ft., Fly 80 ft.\nMOD SAVE MOD SAVE MOD SAVE\nStr 23 +6 +6 Dex 10 +0 +5 Con 21 +5 +5\nInt 14 +2 +2 WIS 13 +1 +6 Cha 17 +3 +3\nSkills History +7, Perception +11, Persuasion +8, Stealth +5\nImmunities Fire\nSenses Blindsight 60 ft., Darkvision 120 ft.;\nPassive Perception 21\nLanguages Common, Draconic\nCR 13 (XP 10,000, or 11,500 in lair; PB +5)\nTraits\nLegendary Resistance (3/Day, or 4/Day in Lair). If\nthe dragon fails a saving throw, it can choose to succeed instead.\nActions\nMultiattack. The dragon makes three Rend attacks. It\ncan replace one attack with a use of (A) Sleep Breath or\n(B) Spellcasting to cast Scorching Ray.\nRend. Melee Attack Roll: +11, reach 10 ft. Hit: 17 (2d10\n+ 6) Slashing damage plus 4 (1d8) Fire damage.\nFire Breath (Recharge 5–6). Dexterity Saving Throw:\nDC 18, each creature in a 60-foot-long, 5-footwide Line. Failure: 45 (10d8) Fire damage. Success:\nHalf damage.\nSleep Breath. Constitution Saving Throw: DC 18, each\ncreature in a 60-foot Cone. Failure: The target has the\nIncapacitated condition until the end of its next turn, at\nwhich point it repeats the save. Second Failure: The target has the Unconscious condition for 10 minutes. This\neffect ends for the target if it takes damage or a creature\nwithin 5 feet of it takes an action to wake it.\nSpellcasting. The dragon casts one of the following\nspells, requiring no Material components and using\nCharisma as the spellcasting ability (spell save DC 16):\nAt Will: Detect Magic, Minor Illusion, Scorching Ray,\nShapechange (Beast or Humanoid form only, no\nTemporary Hit Points gained from the spell, and no\nConcentration or Temporary Hit Points required to\nmaintain the spell), Speak with Animals\n1/Day Each: Detect Thoughts, Control Weather\nLegendary Actions\nLegendary Action Uses: 3 (4 in Lair). Immediately after\nanother creature’s turn, the dragon can expend a use to\ntake one of the following actions. The dragon regains all\nexpended uses at the start of each of its turns.\nBlazing Light. The dragon uses Spellcasting to cast\nScorching Ray.\nPounce. The dragon moves up to half its Speed, and it\nmakes one Rend attack.\nScorching Sands. Dexterity Saving Throw: DC 16, one\ncreature the dragon can see within 120 feet. Failure:\n27 (6d8) Fire damage, and the target’s Speed is halved\nuntil the end of its next turn. Failure or Success: The\ndragon can’t take this action again until the start of its\nnext turn.\n",
+  "sourceSha256": "1fcb66a559662653b4815564761955d549fd7a423bb424f5ff395ffa93757ffe",
+  "rawReply": "{\"schemaVersion\":1,\"source\":{\"sha256\":\"1fcb66a559662653b4815564761955d549fd7a423bb424f5ff395ffa93757ffe\",\"length\":2519},\"creature\":{\"identity\":{\"name\":\"Adult Brass Dragon\",\"size\":\"huge\",\"creatureType\":\"dragon\",\"alignment\":\"Chaotic Good\"},\"abilities\":{\"str\":23,\"dex\":10,\"con\":21,\"int\":14,\"wis\":13,\"cha\":17},\"attributes\":{\"ac\":18,\"initiative\":10,\"hp\":{\"value\":172,\"formula\":\"15d12 + 75\"},\"movement\":{\"walk\":40,\"burrow\":30,\"fly\":80},\"cr\":13,\"xp\":10000,\"proficiencyBonus\":5},\"saves\":{\"str\":6,\"dex\":5,\"con\":5,\"int\":2,\"wis\":6,\"cha\":3},\"skills\":{\"history\":7,\"perception\":11,\"persuasion\":8,\"stealth\":5},\"defenses\":{\"resistances\":[],\"immunities\":[\"fire\"],\"vulnerabilities\":[],\"conditionImmunities\":[]},\"senses\":{\"blindsight\":60,\"darkvision\":120,\"passivePerception\":21},\"languages\":{\"values\":[\"Common\",\"Draconic\"]},\"biography\":\"Huge Dragon (Metallic), Chaotic Good\\nCR 13 (XP 10,000, or 11,500 in lair; PB +5)\",\"legendary\":{\"max\":3,\"lairMax\":4,\"preamble\":\"Legendary Action Uses: 3 (4 in Lair). Immediately after\\nanother creature’s turn, the dragon can expend a use to\\ntake one of the following actions. The dragon regains all\\nexpended uses at the start of each of its turns.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Legendary Action Uses: 3 (4 in Lair). Immediately after\\nanother creature’s turn, the dragon can expend a use to\\ntake one of the following actions. The dragon regains all\\nexpended uses at the start of each of its turns.\"},{\"start\":-1,\"end\":-1,\"quote\":\"Legendary Resistance (3/Day, or 4/Day in Lair).\"}],\"recovery\":\"own-turn-start\",\"resistanceMax\":3,\"resistanceLairMax\":4},\"spellcasting\":[{\"groupId\":\"spellcasting\",\"featureName\":\"Spellcasting\",\"description\":\"The dragon casts one of the following\\nspells, requiring no Material components and using\\nCharisma as the spellcasting ability (spell save DC 16):\\nAt Will: Detect Magic, Minor Illusion, Scorching Ray,\\nShapechange (Beast or Humanoid form only, no\\nTemporary Hit Points gained from the spell, and no\\nConcentration or Temporary Hit Points required to\\nmaintain the spell), Speak with Animals\\n1/Day Each: Detect Thoughts, Control Weather\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Spellcasting. The dragon casts one of the following\\nspells, requiring no Material components and using\\nCharisma as the spellcasting ability (spell save DC 16):\\nAt Will: Detect Magic, Minor Illusion, Scorching Ray,\\nShapechange (Beast or Humanoid form only, no\\nTemporary Hit Points gained from the spell, and no\\nConcentration or Temporary Hit Points required to\\nmaintain the spell), Speak with Animals\\n1/Day Each: Detect Thoughts, Control Weather\"}],\"ability\":\"cha\",\"abilityEvidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"using\\nCharisma as the spellcasting ability\"}],\"saveDc\":16,\"saveDcEvidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"spell save DC 16\"}],\"componentWaivers\":[{\"component\":\"material\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no Material components\"}]}],\"usageGroups\":[{\"usage\":\"at-will\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"At Will: Detect Magic, Minor Illusion, Scorching Ray,\\nShapechange (Beast or Humanoid form only, no\\nTemporary Hit Points gained from the spell, and no\\nConcentration or Temporary Hit Points required to\\nmaintain the spell), Speak with Animals\"}],\"spellRefs\":[{\"refId\":\"detect-magic\",\"originalName\":\"Detect Magic\",\"aliases\":[],\"restrictions\":[],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"At Will: Detect Magic, Minor Illusion, Scorching Ray,\\nShapechange (Beast or Humanoid form only, no\\nTemporary Hit Points gained from the spell, and no\\nConcentration or Temporary Hit Points required to\\nmaintain the spell), Speak with Animals\"}]},{\"refId\":\"minor-illusion\",\"originalName\":\"Minor Illusion\",\"aliases\":[],\"restrictions\":[],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"At Will: Detect Magic, Minor Illusion, Scorching Ray,\\nShapechange (Beast or Humanoid form only, no\\nTemporary Hit Points gained from the spell, and no\\nConcentration or Temporary Hit Points required to\\nmaintain the spell), Speak with Animals\"}]},{\"refId\":\"scorching-ray\",\"originalName\":\"Scorching Ray\",\"aliases\":[],\"restrictions\":[],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"At Will: Detect Magic, Minor Illusion, Scorching Ray,\\nShapechange (Beast or Humanoid form only, no\\nTemporary Hit Points gained from the spell, and no\\nConcentration or Temporary Hit Points required to\\nmaintain the spell), Speak with Animals\"}]},{\"refId\":\"shapechange\",\"originalName\":\"Shapechange\",\"aliases\":[],\"restrictions\":[{\"kind\":\"target\",\"text\":\"Beast or Humanoid form only\",\"value\":\"Beast or Humanoid\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Beast or Humanoid form only\"}]},{\"kind\":\"casting\",\"text\":\"no\\nTemporary Hit Points gained from the spell, and no\\nConcentration or Temporary Hit Points required to\\nmaintain the spell\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"no\\nTemporary Hit Points gained from the spell, and no\\nConcentration or Temporary Hit Points required to\\nmaintain the spell\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"At Will: Detect Magic, Minor Illusion, Scorching Ray,\\nShapechange (Beast or Humanoid form only, no\\nTemporary Hit Points gained from the spell, and no\\nConcentration or Temporary Hit Points required to\\nmaintain the spell), Speak with Animals\"}]},{\"refId\":\"speak-with-animals\",\"originalName\":\"Speak with Animals\",\"aliases\":[],\"restrictions\":[],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"At Will: Detect Magic, Minor Illusion, Scorching Ray,\\nShapechange (Beast or Humanoid form only, no\\nTemporary Hit Points gained from the spell, and no\\nConcentration or Temporary Hit Points required to\\nmaintain the spell), Speak with Animals\"}]}]},{\"usage\":\"1/day-each\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"1/Day Each: Detect Thoughts, Control Weather\"}],\"spellRefs\":[{\"refId\":\"detect-thoughts\",\"originalName\":\"Detect Thoughts\",\"aliases\":[],\"restrictions\":[],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"1/Day Each: Detect Thoughts, Control Weather\"}]},{\"refId\":\"control-weather\",\"originalName\":\"Control Weather\",\"aliases\":[],\"restrictions\":[],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"1/Day Each: Detect Thoughts, Control Weather\"}]}]}],\"activationType\":\"action\"},{\"groupId\":\"blazing-light\",\"featureName\":\"Blazing Light\",\"description\":\"The dragon uses Spellcasting to cast\\nScorching Ray.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Blazing Light. The dragon uses Spellcasting to cast\\nScorching Ray.\"}],\"ability\":\"cha\",\"abilityEvidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"using\\nCharisma as the spellcasting ability\"}],\"saveDc\":16,\"saveDcEvidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"spell save DC 16\"}],\"componentWaivers\":[{\"component\":\"material\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no Material components\"}]}],\"usageGroups\":[{\"usage\":\"at-will\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"At Will: Detect Magic, Minor Illusion, Scorching Ray,\\nShapechange (Beast or Humanoid form only, no\\nTemporary Hit Points gained from the spell, and no\\nConcentration or Temporary Hit Points required to\\nmaintain the spell), Speak with Animals\"}],\"spellRefs\":[{\"refId\":\"blazing-light-scorching-ray\",\"originalName\":\"Scorching Ray\",\"aliases\":[],\"restrictions\":[],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Blazing Light. The dragon uses Spellcasting to cast\\nScorching Ray.\"}],\"reuseOf\":{\"groupId\":\"spellcasting\",\"refId\":\"scorching-ray\"}}]}],\"activationType\":\"legendary\",\"legendaryCost\":1}],\"traits\":[{\"name\":\"Legendary Resistance\",\"sourceQualifier\":\"3/Day, or 4/Day in Lair\",\"description\":\"If\\nthe dragon fails a saving throw, it can choose to succeed instead.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Legendary Resistance (3/Day, or 4/Day in Lair). If\\nthe dragon fails a saving throw, it can choose to succeed instead.\"}],\"activationType\":\"special\",\"activationCondition\":\"If the dragon fails a saving throw\",\"activityType\":\"utility\",\"executionMode\":\"gm-manual\"}],\"actions\":[{\"name\":\"Multiattack\",\"description\":\"The dragon makes three Rend attacks. It\\ncan replace one attack with a use of (A) Sleep Breath or\\n(B) Spellcasting to cast Scorching Ray.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Multiattack. The dragon makes three Rend attacks. It\\ncan replace one attack with a use of (A) Sleep Breath or\\n(B) Spellcasting to cast Scorching Ray.\"}],\"activationType\":\"action\",\"activityType\":\"utility\",\"executionMode\":\"gm-manual\"},{\"name\":\"Rend\",\"description\":\"Melee Attack Roll: +11, reach 10 ft. Hit: 17 (2d10\\n+ 6) Slashing damage plus 4 (1d8) Fire damage.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Rend. Melee Attack Roll: +11, reach 10 ft. Hit: 17 (2d10\\n+ 6) Slashing damage plus 4 (1d8) Fire damage.\"}],\"activationType\":\"action\",\"sourceOperations\":[{\"id\":\"rend-attack\",\"name\":\"Rend\",\"type\":\"attack\",\"relationship\":\"primary\",\"attack\":{\"type\":\"melee\",\"toHit\":11,\"reach\":10},\"damage\":[{\"formula\":\"2d10 + 6\",\"type\":\"slashing\",\"relationship\":\"base\"},{\"formula\":\"1d8\",\"type\":\"fire\",\"relationship\":\"additional\"}],\"proof\":{\"attack\":\"Melee Attack Roll: +11, reach 10 ft.\",\"damage\":[\"Hit: 17 (2d10\\n+ 6) Slashing damage plus 4 (1d8) Fire damage.\",\"Hit: 17 (2d10\\n+ 6) Slashing damage plus 4 (1d8) Fire damage.\"]}}]},{\"name\":\"Fire Breath\",\"sourceQualifier\":\"Recharge 5–6\",\"description\":\"Dexterity Saving Throw:\\nDC 18, each creature in a 60-foot-long, 5-footwide Line. Failure: 45 (10d8) Fire damage. Success:\\nHalf damage.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Fire Breath (Recharge 5–6). Dexterity Saving Throw:\\nDC 18, each creature in a 60-foot-long, 5-footwide Line. Failure: 45 (10d8) Fire damage. Success:\\nHalf damage.\"}],\"activationType\":\"action\",\"recharge\":[5,6],\"sourceOperations\":[{\"id\":\"fire-breath-save\",\"name\":\"Fire Breath\",\"type\":\"save\",\"relationship\":\"primary\",\"save\":{\"dc\":18,\"abilities\":[\"dex\"],\"choice\":\"single\",\"outcome\":\"half\"},\"damage\":[{\"formula\":\"10d8\",\"type\":\"fire\",\"relationship\":\"base\"}],\"aoe\":{\"shape\":\"line\",\"radius\":60,\"width\":5},\"proof\":{\"save\":\"Dexterity Saving Throw:\\nDC 18, each creature in a 60-foot-long, 5-footwide Line.\",\"damage\":[\"Failure: 45 (10d8) Fire damage. Success:\\nHalf damage.\"],\"aoe\":\"Dexterity Saving Throw:\\nDC 18, each creature in a 60-foot-long, 5-footwide Line.\"}}]},{\"name\":\"Sleep Breath\",\"description\":\"Constitution Saving Throw: DC 18, each\\ncreature in a 60-foot Cone. Failure: The target has the\\nIncapacitated condition until the end of its next turn, at\\nwhich point it repeats the save. Second Failure: The target has the Unconscious condition for 10 minutes. This\\neffect ends for the target if it takes damage or a creature\\nwithin 5 feet of it takes an action to wake it.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Sleep Breath. Constitution Saving Throw: DC 18, each\\ncreature in a 60-foot Cone. Failure: The target has the\\nIncapacitated condition until the end of its next turn, at\\nwhich point it repeats the save. Second Failure: The target has the Unconscious condition for 10 minutes. This\\neffect ends for the target if it takes damage or a creature\\nwithin 5 feet of it takes an action to wake it.\"}],\"activationType\":\"action\",\"sourceOperations\":[{\"id\":\"sleep-breath-save\",\"name\":\"Sleep Breath\",\"type\":\"save\",\"relationship\":\"primary\",\"save\":{\"dc\":18,\"abilities\":[\"con\"],\"choice\":\"single\",\"outcome\":\"none\"},\"aoe\":{\"shape\":\"cone\",\"radius\":60},\"proof\":{\"save\":\"Constitution Saving Throw: DC 18, each\\ncreature in a 60-foot Cone.\",\"aoe\":\"Constitution Saving Throw: DC 18, each\\ncreature in a 60-foot Cone.\"}}]}],\"bonusActions\":[],\"reactions\":[],\"legendaryActions\":[{\"name\":\"Pounce\",\"description\":\"The dragon moves up to half its Speed, and it\\nmakes one Rend attack.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Pounce. The dragon moves up to half its Speed, and it\\nmakes one Rend attack.\"}],\"activationType\":\"legendary\",\"legendaryCost\":1,\"activityType\":\"utility\",\"executionMode\":\"gm-manual\"},{\"name\":\"Scorching Sands\",\"description\":\"Dexterity Saving Throw: DC 16, one\\ncreature the dragon can see within 120 feet. Failure:\\n27 (6d8) Fire damage, and the target’s Speed is halved\\nuntil the end of its next turn. Failure or Success: The\\ndragon can’t take this action again until the start of its\\nnext turn.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Scorching Sands. Dexterity Saving Throw: DC 16, one\\ncreature the dragon can see within 120 feet. Failure:\\n27 (6d8) Fire damage, and the target’s Speed is halved\\nuntil the end of its next turn. Failure or Success: The\\ndragon can’t take this action again until the start of its\\nnext turn.\"}],\"activationType\":\"legendary\",\"legendaryCost\":1,\"sourceOperations\":[{\"id\":\"scorching-sands-save\",\"name\":\"Scorching Sands\",\"type\":\"save\",\"relationship\":\"primary\",\"save\":{\"dc\":16,\"abilities\":[\"dex\"],\"choice\":\"single\",\"outcome\":\"none\"},\"damage\":[{\"formula\":\"6d8\",\"type\":\"fire\",\"relationship\":\"base\"}],\"range\":120,\"targetSpecial\":\"one creature the dragon can see within 120 feet\",\"proof\":{\"save\":\"Dexterity Saving Throw: DC 16, one\\ncreature the dragon can see within 120 feet.\",\"damage\":[\"Failure:\\n27 (6d8) Fire damage, and the target’s Speed is halved\\nuntil the end of its next turn.\"],\"range\":\"Dexterity Saving Throw: DC 16, one\\ncreature the dragon can see within 120 feet.\",\"target\":\"Dexterity Saving Throw: DC 16, one\\ncreature the dragon can see within 120 feet.\"}}]}]},\"claims\":[],\"coverage\":[],\"uncertainties\":[]}",
+  "rawReplySha256": "89cf8b4743bb4ac3fe056ca7f5934ead2afcff290078a33d1ccb5f23dd28fd72",
+  "ir": {
+    "schemaVersion": 1,
+    "source": {
+      "sha256": "1fcb66a559662653b4815564761955d549fd7a423bb424f5ff395ffa93757ffe",
+      "length": 2519
+    },
+    "creature": {
+      "identity": {
+        "name": "Adult Brass Dragon",
+        "size": "huge",
+        "creatureType": "dragon",
+        "alignment": "Chaotic Good"
+      },
+      "abilities": {
+        "str": 23,
+        "dex": 10,
+        "con": 21,
+        "int": 14,
+        "wis": 13,
+        "cha": 17
+      },
+      "attributes": {
+        "ac": 18,
+        "initiative": 10,
+        "hp": {
+          "value": 172,
+          "formula": "15d12 + 75"
+        },
+        "movement": {
+          "walk": 40,
+          "burrow": 30,
+          "fly": 80
+        },
+        "cr": 13,
+        "xp": 10000,
+        "proficiencyBonus": 5
+      },
+      "saves": {
+        "str": 6,
+        "dex": 5,
+        "con": 5,
+        "int": 2,
+        "wis": 6,
+        "cha": 3
+      },
+      "skills": {
+        "history": 7,
+        "perception": 11,
+        "persuasion": 8,
+        "stealth": 5
+      },
+      "defenses": {
+        "resistances": [],
+        "immunities": [
+          "fire"
+        ],
+        "vulnerabilities": [],
+        "conditionImmunities": []
+      },
+      "senses": {
+        "blindsight": 60,
+        "darkvision": 120,
+        "passivePerception": 21
+      },
+      "languages": {
+        "values": [
+          "Common",
+          "Draconic"
+        ]
+      },
+      "biography": "Huge Dragon (Metallic), Chaotic Good\nCR 13 (XP 10,000, or 11,500 in lair; PB +5)",
+      "legendary": {
+        "max": 3,
+        "lairMax": 4,
+        "preamble": "Legendary Action Uses: 3 (4 in Lair). Immediately after\nanother creature’s turn, the dragon can expend a use to\ntake one of the following actions. The dragon regains all\nexpended uses at the start of each of its turns.",
+        "evidence": [
+          {
+            "start": 1869,
+            "end": 2087,
+            "quote": "Legendary Action Uses: 3 (4 in Lair). Immediately after\nanother creature’s turn, the dragon can expend a use to\ntake one of the following actions. The dragon regains all\nexpended uses at the start of each of its turns."
+          },
+          {
+            "start": 476,
+            "end": 523,
+            "quote": "Legendary Resistance (3/Day, or 4/Day in Lair)."
+          }
+        ],
+        "recovery": "own-turn-start",
+        "resistanceMax": 3,
+        "resistanceLairMax": 4
+      },
+      "spellcasting": [
+        {
+          "groupId": "spellcasting",
+          "featureName": "Spellcasting",
+          "description": "The dragon casts one of the following\nspells, requiring no Material components and using\nCharisma as the spellcasting ability (spell save DC 16):\nAt Will: Detect Magic, Minor Illusion, Scorching Ray,\nShapechange (Beast or Humanoid form only, no\nTemporary Hit Points gained from the spell, and no\nConcentration or Temporary Hit Points required to\nmaintain the spell), Speak with Animals\n1/Day Each: Detect Thoughts, Control Weather",
+          "evidence": [
+            {
+              "start": 1406,
+              "end": 1850,
+              "quote": "Spellcasting. The dragon casts one of the following\nspells, requiring no Material components and using\nCharisma as the spellcasting ability (spell save DC 16):\nAt Will: Detect Magic, Minor Illusion, Scorching Ray,\nShapechange (Beast or Humanoid form only, no\nTemporary Hit Points gained from the spell, and no\nConcentration or Temporary Hit Points required to\nmaintain the spell), Speak with Animals\n1/Day Each: Detect Thoughts, Control Weather"
+            }
+          ],
+          "ability": "cha",
+          "abilityEvidence": [
+            {
+              "start": 1503,
+              "end": 1545,
+              "quote": "using\nCharisma as the spellcasting ability"
+            }
+          ],
+          "saveDc": 16,
+          "saveDcEvidence": [
+            {
+              "start": 1547,
+              "end": 1563,
+              "quote": "spell save DC 16"
+            }
+          ],
+          "componentWaivers": [
+            {
+              "component": "material",
+              "evidence": [
+                {
+                  "start": 1466,
+                  "end": 1498,
+                  "quote": "requiring no Material components"
+                }
+              ]
+            }
+          ],
+          "usageGroups": [
+            {
+              "usage": "at-will",
+              "evidence": [
+                {
+                  "start": 1566,
+                  "end": 1805,
+                  "quote": "At Will: Detect Magic, Minor Illusion, Scorching Ray,\nShapechange (Beast or Humanoid form only, no\nTemporary Hit Points gained from the spell, and no\nConcentration or Temporary Hit Points required to\nmaintain the spell), Speak with Animals"
+                }
+              ],
+              "spellRefs": [
+                {
+                  "refId": "detect-magic",
+                  "originalName": "Detect Magic",
+                  "aliases": [],
+                  "restrictions": [],
+                  "evidence": [
+                    {
+                      "start": 1566,
+                      "end": 1805,
+                      "quote": "At Will: Detect Magic, Minor Illusion, Scorching Ray,\nShapechange (Beast or Humanoid form only, no\nTemporary Hit Points gained from the spell, and no\nConcentration or Temporary Hit Points required to\nmaintain the spell), Speak with Animals"
+                    }
+                  ],
+                  "identifier": "Detect Magic"
+                },
+                {
+                  "refId": "minor-illusion",
+                  "originalName": "Minor Illusion",
+                  "aliases": [],
+                  "restrictions": [],
+                  "evidence": [
+                    {
+                      "start": 1566,
+                      "end": 1805,
+                      "quote": "At Will: Detect Magic, Minor Illusion, Scorching Ray,\nShapechange (Beast or Humanoid form only, no\nTemporary Hit Points gained from the spell, and no\nConcentration or Temporary Hit Points required to\nmaintain the spell), Speak with Animals"
+                    }
+                  ],
+                  "identifier": "Minor Illusion"
+                },
+                {
+                  "refId": "scorching-ray",
+                  "originalName": "Scorching Ray",
+                  "aliases": [],
+                  "restrictions": [],
+                  "evidence": [
+                    {
+                      "start": 1566,
+                      "end": 1805,
+                      "quote": "At Will: Detect Magic, Minor Illusion, Scorching Ray,\nShapechange (Beast or Humanoid form only, no\nTemporary Hit Points gained from the spell, and no\nConcentration or Temporary Hit Points required to\nmaintain the spell), Speak with Animals"
+                    }
+                  ],
+                  "identifier": "Scorching Ray"
+                },
+                {
+                  "refId": "shapechange",
+                  "originalName": "Shapechange",
+                  "aliases": [],
+                  "restrictions": [
+                    {
+                      "kind": "target",
+                      "text": "Beast or Humanoid form only",
+                      "value": "Beast or Humanoid",
+                      "evidence": [
+                        {
+                          "start": 1633,
+                          "end": 1660,
+                          "quote": "Beast or Humanoid form only"
+                        }
+                      ]
+                    },
+                    {
+                      "kind": "casting",
+                      "text": "no\nTemporary Hit Points gained from the spell, and no\nConcentration or Temporary Hit Points required to\nmaintain the spell",
+                      "evidence": [
+                        {
+                          "start": 1662,
+                          "end": 1784,
+                          "quote": "no\nTemporary Hit Points gained from the spell, and no\nConcentration or Temporary Hit Points required to\nmaintain the spell"
+                        }
+                      ]
+                    }
+                  ],
+                  "evidence": [
+                    {
+                      "start": 1566,
+                      "end": 1805,
+                      "quote": "At Will: Detect Magic, Minor Illusion, Scorching Ray,\nShapechange (Beast or Humanoid form only, no\nTemporary Hit Points gained from the spell, and no\nConcentration or Temporary Hit Points required to\nmaintain the spell), Speak with Animals"
+                    }
+                  ],
+                  "identifier": "Shapechange"
+                },
+                {
+                  "refId": "speak-with-animals",
+                  "originalName": "Speak with Animals",
+                  "aliases": [],
+                  "restrictions": [],
+                  "evidence": [
+                    {
+                      "start": 1566,
+                      "end": 1805,
+                      "quote": "At Will: Detect Magic, Minor Illusion, Scorching Ray,\nShapechange (Beast or Humanoid form only, no\nTemporary Hit Points gained from the spell, and no\nConcentration or Temporary Hit Points required to\nmaintain the spell), Speak with Animals"
+                    }
+                  ],
+                  "identifier": "Speak with Animals"
+                }
+              ]
+            },
+            {
+              "usage": "1/day-each",
+              "evidence": [
+                {
+                  "start": 1806,
+                  "end": 1850,
+                  "quote": "1/Day Each: Detect Thoughts, Control Weather"
+                }
+              ],
+              "spellRefs": [
+                {
+                  "refId": "detect-thoughts",
+                  "originalName": "Detect Thoughts",
+                  "aliases": [],
+                  "restrictions": [],
+                  "evidence": [
+                    {
+                      "start": 1806,
+                      "end": 1850,
+                      "quote": "1/Day Each: Detect Thoughts, Control Weather"
+                    }
+                  ],
+                  "identifier": "Detect Thoughts"
+                },
+                {
+                  "refId": "control-weather",
+                  "originalName": "Control Weather",
+                  "aliases": [],
+                  "restrictions": [],
+                  "evidence": [
+                    {
+                      "start": 1806,
+                      "end": 1850,
+                      "quote": "1/Day Each: Detect Thoughts, Control Weather"
+                    }
+                  ],
+                  "identifier": "Control Weather"
+                }
+              ]
+            }
+          ],
+          "activationType": "action"
+        },
+        {
+          "groupId": "blazing-light",
+          "featureName": "Blazing Light",
+          "description": "The dragon uses Spellcasting to cast\nScorching Ray.",
+          "evidence": [
+            {
+              "start": 2088,
+              "end": 2154,
+              "quote": "Blazing Light. The dragon uses Spellcasting to cast\nScorching Ray."
+            }
+          ],
+          "ability": "cha",
+          "abilityEvidence": [
+            {
+              "start": 1503,
+              "end": 1545,
+              "quote": "using\nCharisma as the spellcasting ability"
+            }
+          ],
+          "saveDc": 16,
+          "saveDcEvidence": [
+            {
+              "start": 1547,
+              "end": 1563,
+              "quote": "spell save DC 16"
+            }
+          ],
+          "componentWaivers": [
+            {
+              "component": "material",
+              "evidence": [
+                {
+                  "start": 1466,
+                  "end": 1498,
+                  "quote": "requiring no Material components"
+                }
+              ]
+            }
+          ],
+          "usageGroups": [
+            {
+              "usage": "at-will",
+              "evidence": [
+                {
+                  "start": 1566,
+                  "end": 1805,
+                  "quote": "At Will: Detect Magic, Minor Illusion, Scorching Ray,\nShapechange (Beast or Humanoid form only, no\nTemporary Hit Points gained from the spell, and no\nConcentration or Temporary Hit Points required to\nmaintain the spell), Speak with Animals"
+                }
+              ],
+              "spellRefs": [
+                {
+                  "refId": "blazing-light-scorching-ray",
+                  "originalName": "Scorching Ray",
+                  "aliases": [],
+                  "restrictions": [],
+                  "evidence": [
+                    {
+                      "start": 2088,
+                      "end": 2154,
+                      "quote": "Blazing Light. The dragon uses Spellcasting to cast\nScorching Ray."
+                    }
+                  ],
+                  "reuseOf": {
+                    "groupId": "spellcasting",
+                    "refId": "scorching-ray"
+                  },
+                  "identifier": "Scorching Ray"
+                }
+              ]
+            }
+          ],
+          "activationType": "legendary",
+          "legendaryCost": 1
+        }
+      ],
+      "traits": [
+        {
+          "name": "Legendary Resistance",
+          "sourceQualifier": "3/Day, or 4/Day in Lair",
+          "description": "If\nthe dragon fails a saving throw, it can choose to succeed instead.",
+          "evidence": [
+            {
+              "start": 476,
+              "end": 593,
+              "quote": "Legendary Resistance (3/Day, or 4/Day in Lair). If\nthe dragon fails a saving throw, it can choose to succeed instead."
+            }
+          ],
+          "activationType": "special",
+          "activationCondition": "If the dragon fails a saving throw",
+          "activityType": "utility",
+          "executionMode": "gm-manual"
+        }
+      ],
+      "actions": [
+        {
+          "name": "Multiattack",
+          "description": "The dragon makes three Rend attacks. It\ncan replace one attack with a use of (A) Sleep Breath or\n(B) Spellcasting to cast Scorching Ray.",
+          "evidence": [
+            {
+              "start": 602,
+              "end": 751,
+              "quote": "Multiattack. The dragon makes three Rend attacks. It\ncan replace one attack with a use of (A) Sleep Breath or\n(B) Spellcasting to cast Scorching Ray."
+            }
+          ],
+          "activationType": "action",
+          "activityType": "utility",
+          "executionMode": "gm-manual"
+        },
+        {
+          "name": "Rend",
+          "description": "Melee Attack Roll: +11, reach 10 ft. Hit: 17 (2d10\n+ 6) Slashing damage plus 4 (1d8) Fire damage.",
+          "evidence": [
+            {
+              "start": 752,
+              "end": 855,
+              "quote": "Rend. Melee Attack Roll: +11, reach 10 ft. Hit: 17 (2d10\n+ 6) Slashing damage plus 4 (1d8) Fire damage."
+            }
+          ],
+          "activationType": "action",
+          "sourceOperations": [
+            {
+              "id": "rend-attack",
+              "name": "Rend",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "melee",
+                "toHit": 11,
+                "reach": 10
+              },
+              "damage": [
+                {
+                  "formula": "2d10 + 6",
+                  "type": "slashing",
+                  "relationship": "base"
+                },
+                {
+                  "formula": "1d8",
+                  "type": "fire",
+                  "relationship": "additional"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Attack Roll: +11, reach 10 ft.",
+                "damage": [
+                  "Hit: 17 (2d10\n+ 6) Slashing damage plus 4 (1d8) Fire damage.",
+                  "Hit: 17 (2d10\n+ 6) Slashing damage plus 4 (1d8) Fire damage."
+                ]
+              },
+              "sourceText": "Melee Attack Roll: +11, reach 10 ft. Hit: 17 (2d10\n+ 6) Slashing damage plus 4 (1d8) Fire damage.",
+              "evidence": {
+                "start": 758,
+                "end": 855,
+                "quote": "Melee Attack Roll: +11, reach 10 ft. Hit: 17 (2d10\n+ 6) Slashing damage plus 4 (1d8) Fire damage."
+              }
+            }
+          ],
+          "executionMode": "native-with-gm",
+          "activityType": "utility",
+          "nativeRuleText": "Melee Attack Roll: +11, reach 10 ft. Hit: 17 (2d10\n+ 6) Slashing damage plus 4 (1d8) Fire damage.",
+          "manualRemainder": "Melee Attack Roll: +11, reach 10 ft. Hit: 17 (2d10\n+ 6) Slashing damage plus 4 (1d8) Fire damage."
+        },
+        {
+          "name": "Fire Breath",
+          "sourceQualifier": "Recharge 5–6",
+          "description": "Dexterity Saving Throw:\nDC 18, each creature in a 60-foot-long, 5-footwide Line. Failure: 45 (10d8) Fire damage. Success:\nHalf damage.",
+          "evidence": [
+            {
+              "start": 856,
+              "end": 1018,
+              "quote": "Fire Breath (Recharge 5–6). Dexterity Saving Throw:\nDC 18, each creature in a 60-foot-long, 5-footwide Line. Failure: 45 (10d8) Fire damage. Success:\nHalf damage."
+            }
+          ],
+          "activationType": "action",
+          "recharge": [
+            5,
+            6
+          ],
+          "sourceOperations": [
+            {
+              "id": "fire-breath-save",
+              "name": "Fire Breath",
+              "type": "save",
+              "relationship": "primary",
+              "save": {
+                "dc": 18,
+                "abilities": [
+                  "dex"
+                ],
+                "choice": "single",
+                "outcome": "half"
+              },
+              "damage": [
+                {
+                  "formula": "10d8",
+                  "type": "fire",
+                  "relationship": "base"
+                }
+              ],
+              "aoe": {
+                "shape": "line",
+                "radius": 60,
+                "width": 5
+              },
+              "proof": {
+                "save": "Dexterity Saving Throw:\nDC 18, each creature in a 60-foot-long, 5-footwide Line.",
+                "damage": [
+                  "Failure: 45 (10d8) Fire damage. Success:\nHalf damage."
+                ],
+                "aoe": "Dexterity Saving Throw:\nDC 18, each creature in a 60-foot-long, 5-footwide Line."
+              },
+              "sourceText": "Dexterity Saving Throw:\nDC 18, each creature in a 60-foot-long, 5-footwide Line. Failure: 45 (10d8) Fire damage. Success:\nHalf damage.",
+              "evidence": {
+                "start": 884,
+                "end": 1018,
+                "quote": "Dexterity Saving Throw:\nDC 18, each creature in a 60-foot-long, 5-footwide Line. Failure: 45 (10d8) Fire damage. Success:\nHalf damage."
+              }
+            }
+          ],
+          "executionMode": "native-with-gm",
+          "activityType": "utility",
+          "nativeRuleText": "Dexterity Saving Throw:\nDC 18, each creature in a 60-foot-long, 5-footwide Line. Failure: 45 (10d8) Fire damage. Success:\nHalf damage.",
+          "manualRemainder": "Dexterity Saving Throw:\nDC 18, each creature in a 60-foot-long, 5-footwide Line. Failure: 45 (10d8) Fire damage. Success:\nHalf damage."
+        },
+        {
+          "name": "Sleep Breath",
+          "description": "Constitution Saving Throw: DC 18, each\ncreature in a 60-foot Cone. Failure: The target has the\nIncapacitated condition until the end of its next turn, at\nwhich point it repeats the save. Second Failure: The target has the Unconscious condition for 10 minutes. This\neffect ends for the target if it takes damage or a creature\nwithin 5 feet of it takes an action to wake it.",
+          "evidence": [
+            {
+              "start": 1019,
+              "end": 1405,
+              "quote": "Sleep Breath. Constitution Saving Throw: DC 18, each\ncreature in a 60-foot Cone. Failure: The target has the\nIncapacitated condition until the end of its next turn, at\nwhich point it repeats the save. Second Failure: The target has the Unconscious condition for 10 minutes. This\neffect ends for the target if it takes damage or a creature\nwithin 5 feet of it takes an action to wake it."
+            }
+          ],
+          "activationType": "action",
+          "sourceOperations": [
+            {
+              "id": "sleep-breath-save",
+              "name": "Sleep Breath",
+              "type": "save",
+              "relationship": "primary",
+              "save": {
+                "dc": 18,
+                "abilities": [
+                  "con"
+                ],
+                "choice": "single",
+                "outcome": "none"
+              },
+              "aoe": {
+                "shape": "cone",
+                "radius": 60
+              },
+              "proof": {
+                "save": "Constitution Saving Throw: DC 18, each\ncreature in a 60-foot Cone.",
+                "aoe": "Constitution Saving Throw: DC 18, each\ncreature in a 60-foot Cone."
+              },
+              "sourceText": "Constitution Saving Throw: DC 18, each\ncreature in a 60-foot Cone. Failure: The target has the\nIncapacitated condition until the end of its next turn, at\nwhich point it repeats the save. Second Failure: The target has the Unconscious condition for 10 minutes. This\neffect ends for the target if it takes damage or a creature\nwithin 5 feet of it takes an action to wake it.",
+              "evidence": {
+                "start": 1033,
+                "end": 1405,
+                "quote": "Constitution Saving Throw: DC 18, each\ncreature in a 60-foot Cone. Failure: The target has the\nIncapacitated condition until the end of its next turn, at\nwhich point it repeats the save. Second Failure: The target has the Unconscious condition for 10 minutes. This\neffect ends for the target if it takes damage or a creature\nwithin 5 feet of it takes an action to wake it."
+              }
+            }
+          ],
+          "executionMode": "native-with-gm",
+          "activityType": "utility",
+          "nativeRuleText": "Constitution Saving Throw: DC 18, each\ncreature in a 60-foot Cone. Failure: The target has the\nIncapacitated condition until the end of its next turn, at\nwhich point it repeats the save. Second Failure: The target has the Unconscious condition for 10 minutes. This\neffect ends for the target if it takes damage or a creature\nwithin 5 feet of it takes an action to wake it.",
+          "manualRemainder": "Constitution Saving Throw: DC 18, each\ncreature in a 60-foot Cone. Failure: The target has the\nIncapacitated condition until the end of its next turn, at\nwhich point it repeats the save. Second Failure: The target has the Unconscious condition for 10 minutes. This\neffect ends for the target if it takes damage or a creature\nwithin 5 feet of it takes an action to wake it."
+        }
+      ],
+      "bonusActions": [],
+      "reactions": [],
+      "legendaryActions": [
+        {
+          "name": "Pounce",
+          "description": "The dragon moves up to half its Speed, and it\nmakes one Rend attack.",
+          "evidence": [
+            {
+              "start": 2155,
+              "end": 2231,
+              "quote": "Pounce. The dragon moves up to half its Speed, and it\nmakes one Rend attack."
+            }
+          ],
+          "activationType": "legendary",
+          "legendaryCost": 1,
+          "activityType": "utility",
+          "executionMode": "gm-manual"
+        },
+        {
+          "name": "Scorching Sands",
+          "description": "Dexterity Saving Throw: DC 16, one\ncreature the dragon can see within 120 feet. Failure:\n27 (6d8) Fire damage, and the target’s Speed is halved\nuntil the end of its next turn. Failure or Success: The\ndragon can’t take this action again until the start of its\nnext turn.",
+          "evidence": [
+            {
+              "start": 2232,
+              "end": 2518,
+              "quote": "Scorching Sands. Dexterity Saving Throw: DC 16, one\ncreature the dragon can see within 120 feet. Failure:\n27 (6d8) Fire damage, and the target’s Speed is halved\nuntil the end of its next turn. Failure or Success: The\ndragon can’t take this action again until the start of its\nnext turn."
+            }
+          ],
+          "activationType": "legendary",
+          "legendaryCost": 1,
+          "sourceOperations": [
+            {
+              "id": "scorching-sands-save",
+              "name": "Scorching Sands",
+              "type": "save",
+              "relationship": "primary",
+              "save": {
+                "dc": 16,
+                "abilities": [
+                  "dex"
+                ],
+                "choice": "single",
+                "outcome": "none"
+              },
+              "damage": [
+                {
+                  "formula": "6d8",
+                  "type": "fire",
+                  "relationship": "base"
+                }
+              ],
+              "range": 120,
+              "targetSpecial": "one creature the dragon can see within 120 feet",
+              "proof": {
+                "save": "Dexterity Saving Throw: DC 16, one\ncreature the dragon can see within 120 feet.",
+                "damage": [
+                  "Failure:\n27 (6d8) Fire damage, and the target’s Speed is halved\nuntil the end of its next turn."
+                ],
+                "range": "Dexterity Saving Throw: DC 16, one\ncreature the dragon can see within 120 feet.",
+                "target": "Dexterity Saving Throw: DC 16, one\ncreature the dragon can see within 120 feet."
+              },
+              "sourceText": "Dexterity Saving Throw: DC 16, one\ncreature the dragon can see within 120 feet. Failure:\n27 (6d8) Fire damage, and the target’s Speed is halved\nuntil the end of its next turn. Failure or Success: The\ndragon can’t take this action again until the start of its\nnext turn.",
+              "evidence": {
+                "start": 2249,
+                "end": 2518,
+                "quote": "Dexterity Saving Throw: DC 16, one\ncreature the dragon can see within 120 feet. Failure:\n27 (6d8) Fire damage, and the target’s Speed is halved\nuntil the end of its next turn. Failure or Success: The\ndragon can’t take this action again until the start of its\nnext turn."
+              }
+            }
+          ],
+          "executionMode": "native-with-gm",
+          "activityType": "utility",
+          "nativeRuleText": "Dexterity Saving Throw: DC 16, one\ncreature the dragon can see within 120 feet. Failure:\n27 (6d8) Fire damage, and the target’s Speed is halved\nuntil the end of its next turn. Failure or Success: The\ndragon can’t take this action again until the start of its\nnext turn.",
+          "manualRemainder": "Dexterity Saving Throw: DC 16, one\ncreature the dragon can see within 120 feet. Failure:\n27 (6d8) Fire damage, and the target’s Speed is halved\nuntil the end of its next turn. Failure or Success: The\ndragon can’t take this action again until the start of its\nnext turn."
+        }
+      ]
+    },
+    "claims": [],
+    "coverage": [],
+    "uncertainties": []
+  },
+  "irSha256": "47e669b81de43e62a37d78260916d1c9b7b4b4a3a5df0fc71e09f5cfabc9a36c",
+  "provenance": {
+    "captureSha256": "ffad5aa0969e7df6c2270c6542ab823b9e2013f850f39345ca635d10f3653c80",
+    "provider": "deepseek",
+    "extractionModel": "deepseek-flash",
+    "promptVersions": {
+      "discover": "monster-intake-discover-v2-source-lines",
+      "extract": "monster-intake-extract-v48-consolidated-source-operations",
+      "review": "monster-intake-review-v37-consolidated-full-ir",
+      "repair": "monster-intake-repair-v41-consolidated-source-operations"
+    },
+    "calls": {
+      "discovery": 0,
+      "extraction": 1,
+      "review": 0,
+      "repair": 0
+    }
+  }
+}

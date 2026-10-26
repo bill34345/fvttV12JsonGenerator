@@ -572,7 +572,7 @@ function spellcasting(row: V2Row, unit: StagedSourceUnit, plan: StagedMonsterSou
 /** BW-only completion of the already existing spell group attack-bonus field.
  * Staged's ordinary source assembler is unchanged. The filled value is checked
  * before assembly and rebound to the same full source clause here. */
-export function completeCategoryFormSpellcasting(plan: StagedMonsterSource, ir: MonsterIntakeIR, decoded: DecodedCategoryFormV2): MonsterIntakeIR {
+function completeCategoryFormSpellAttackBonus(plan: StagedMonsterSource, ir: MonsterIntakeIR, decoded: DecodedCategoryFormV2): MonsterIntakeIR {
   assertStagedSourcePartition(plan);
   if (ir.source.sha256 !== plan.sourceSha256 || ir.source.length !== plan.source.length) fail('V2_SOURCE_IDENTITY', '/source');
   const result = structuredClone(ir);
@@ -597,6 +597,62 @@ export function completeCategoryFormSpellcasting(plan: StagedMonsterSource, ir: 
     }
   }
   return result;
+}
+
+/** The historical V2 form stored this resource in its named trait row. Read
+ * only the model-filled slots; titles and source prose never supply numbers. */
+function completeCategoryFormResistance(plan: StagedMonsterSource, ir: MonsterIntakeIR, decoded: DecodedCategoryFormV2): void {
+  const ledger = ir.creature.legendary;
+  if (!ledger?.lairMax) return;
+  const rows = decoded.rows.filter(row => /^(?:Legendary Resistance|传奇抗性)(?:\s*\([^()]*\))?$/iu.test(visible(row.名称)));
+  if (!rows.length) return;
+  const incomplete = (message: string, evidence: EvidenceRef[]) => {
+    const code = 'V2_LEGENDARY_RESISTANCE_REEXTRACTION_REQUIRED', path = '/creature/legendary/resistanceMax';
+    if (!ir.uncertainties.some(issue => issue.code === code && issue.path === path)) ir.uncertainties.push({
+      id: 'v2-legendary-resistance-reextraction', code, path, message, blocking: true, evidence,
+    });
+  };
+  if (rows.length !== 1) {
+    incomplete('早期表格有多个传奇抗性条目，无法唯一迁移独立计数；请重新提取。原始条目保留。', []);
+    return;
+  }
+  const row = rows[0]!, unit = one(plan.features.filter(unit => unit.id === row.编号), '/features/identity');
+  if (unit.section !== 'trait' || row.category !== '特性' || unit.name !== row.名称 || unit.quote !== row.source
+    || !ir.creature.traits.some(feature => feature.name === unit.name && feature.evidence?.some(ref =>
+      ref.start === unit.start && ref.end === unit.end && ref.quote === unit.quote))) fail('V2_SOURCE_IDENTITY', '/features/' + unit.id);
+  const evidence = [{ start: unit.start, end: unit.end, quote: unit.quote }];
+  const recovery = visible(row.恢复方式 ?? '').replace(/\s+/gu, '');
+  const chinese = /^(?:每天|每日)[;(,]?(?:在)?巢穴(?:内|中)(?:为|是|时)?(?:每天|每日)?(\d+)次[)]?$/iu.exec(recovery);
+  const english = /^(?:daily|day|eachday|perday)[;(,]?(?:(\d+)\/dayinlair|inlair(\d+)\/day|inlair(\d+)(?:uses|times)(?:perday)?)[)]?$/iu.exec(recovery);
+  const max = row.使用次数, lairMax = Number(chinese?.[1] ?? english?.[1] ?? english?.[2] ?? english?.[3]);
+  if (!Number.isSafeInteger(max) || max === null || max < 1 || !Number.isSafeInteger(lairMax) || lairMax !== max + 1
+    || ledger.recovery !== 'own-turn-start') {
+    incomplete('早期表格未明确保存可迁移的传奇抗性普通／巢穴次数，当前版本无法无损重建；请重新提取。原始条目保留。', evidence);
+    return;
+  }
+  if (ledger.resistanceMax !== undefined && ledger.resistanceMax !== max
+    || ledger.resistanceLairMax !== undefined && ledger.resistanceLairMax !== lairMax) {
+    fail('V2_LEGENDARY_RESISTANCE_CONFLICT', '/creature/legendary');
+  }
+  ledger.resistanceMax = max; ledger.resistanceLairMax = lairMax;
+  for (const [key, value] of [['resistanceMax', max], ['resistanceLairMax', lairMax]] as const) {
+    const path = '/creature/legendary/' + key;
+    if (!ir.claims.some(claim => claim.path === path)) ir.claims.push({ path, value, valueKind: 'explicit', confidence: 'high', evidence });
+    for (const coverage of ir.coverage) if (coverage.start === unit.start && coverage.end === unit.end && !coverage.claimPaths.includes(path)) coverage.claimPaths.push(path);
+  }
+}
+
+/** Complete the historical form's explicit model-owned values after ordinary
+ * staged assembly. This migration never runs on the default full-IR path. */
+export function completeCategoryFormV2(plan: StagedMonsterSource, ir: MonsterIntakeIR, decoded: DecodedCategoryFormV2): MonsterIntakeIR {
+  const result = completeCategoryFormSpellAttackBonus(plan, ir, decoded);
+  completeCategoryFormResistance(plan, result, decoded);
+  return result;
+}
+
+/** Compatibility entry for existing V2 callers. */
+export function completeCategoryFormSpellcasting(plan: StagedMonsterSource, ir: MonsterIntakeIR, decoded: DecodedCategoryFormV2): MonsterIntakeIR {
+  return completeCategoryFormV2(plan, ir, decoded);
 }
 
 /** Adapt actual filled values to the established staged proposal contract.

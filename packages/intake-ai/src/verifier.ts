@@ -14,6 +14,7 @@ import type {
   AbilityKey,
   CanonicalFeature,
   IntakeFinding,
+  IntakeValidationResult,
   MonsterIntakeIR,
   PortableSpellResolutionStatus,
 } from './types';
@@ -45,7 +46,16 @@ export function verifyMonsterIntake(
   actor: unknown,
   coverageRange?: { start: number; end: number },
 ): IntakeVerificationReport {
-  return verifyMonsterIntakeProjection(source, ir, markdown, actor, coverageRange, false);
+  return compareMonsterIntakeProjection(source, ir, markdown, actor, validateMonsterIntakeIR(source,ir,{coverageRange}), coverageRange);
+}
+
+/** Compare an already validated Intake proposal with its generated output.
+ * Browser generation reuses the boundary report instead of validating again. */
+export function compareMonsterIntakeProjection(
+  source:string, ir:MonsterIntakeIR, markdown:string, actor:unknown,
+  validation:IntakeValidationResult, coverageRange?:{start:number;end:number},
+):IntakeVerificationReport{
+  return verifyMonsterIntakeProjection(source,ir,markdown,actor,coverageRange,false,validation);
 }
 
 /** Optional offline source audit. The normal import path never calls this. */
@@ -56,7 +66,7 @@ export function auditMonsterIntakeSourceProjection(
   actor: unknown,
   coverageRange?: { start: number; end: number },
 ): IntakeVerificationReport {
-  return verifyMonsterIntakeProjection(source, ir, markdown, actor, coverageRange, true);
+  return verifyMonsterIntakeProjection(source, ir, markdown, actor, coverageRange, true,auditMonsterIntakeSource(source,ir,{coverageRange}));
 }
 
 function verifyMonsterIntakeProjection(
@@ -66,9 +76,8 @@ function verifyMonsterIntakeProjection(
   actor: unknown,
   coverageRange: { start: number; end: number } | undefined,
   auditSource: boolean,
+  validation:IntakeValidationResult,
 ): IntakeVerificationReport {
-  const validation = auditSource ? auditMonsterIntakeSource(source, ir, { coverageRange })
-    : validateMonsterIntakeIR(source, ir, { coverageRange });
   const findings = [...validation.findings];
   // A malformed IR has no safe projection to inspect. Retain the actual
   // structural findings rather than throwing while reading required fields.
@@ -118,12 +127,22 @@ function verifyMonsterIntakeProjection(
     const marker=asRecord(asRecord(asRecord(asRecord(actor).flags).fvttJsonGenerator).sourceLegendaryLedger);
     if(lair.value!==true||lair.inside!==false||marker.version!==1||marker.max!==expected.legendary.max||marker.lairMax!==expected.legendary.lairMax||marker.recovery!==expected.legendary.recovery)
       add('ACTOR_LEGENDARY_LAIR_DRIFT','/creature/legendary','Both native lair choices and source recovery boundary must survive into the Actor.');
-    const resistance=expected.legendary.resistanceMax!==undefined?{max:expected.legendary.resistanceMax,lairMax:expected.legendary.resistanceLairMax}
+    const resistance=expected.legendary.resistanceLairMax!==undefined?{max:expected.legendary.resistanceMax,lairMax:expected.legendary.resistanceLairMax}
       :auditSource?expected.traits.flatMap(feature=>{const value=sourceLegendaryLairResistance(feature.name,feature.description,[expected.identity.name,expected.identity.englishName].filter((name):name is string=>!!name));return value?[value]:[];})[0]:undefined;
     if(resistance&&(numeric(asRecord(resources.legres).max)!==resistance.max
       ||expected.legendary.resistanceMax!==undefined&&numericOrUndefined(asRecord(resources.legres).spent)!==0
       ||marker.resistanceMax!==resistance.max||marker.resistanceLairMax!==resistance.lairMax))
       add('ACTOR_LEGENDARY_RESISTANCE_DRIFT','/creature/legendary','Conditional resistance counter must retain the same native base/lair choices.');
+  }
+  if(expected.legendary?.resistanceMax!==undefined&&expected.legendary.resistanceLairMax===undefined){
+    const resources=asRecord(asRecord(asRecord(actor).system).resources),resistance=asRecord(resources.legres);
+    const marker=asRecord(asRecord(asRecord(asRecord(actor).flags).fvttJsonGenerator).sourceLegendaryLedger);
+    const v14=/^14(?:\.|$)/u.test(String(asRecord(asRecord(actor)._stats).coreVersion??''));
+    if(resistance.max!==expected.legendary.resistanceMax
+      ||(v14?resistance.spent!==0||Object.hasOwn(resistance,'value'):resistance.value!==expected.legendary.resistanceMax)
+      ||asRecord(resources.lair).value===true||marker.lairMax!==undefined
+      ||marker.resistanceLairMax!==undefined)
+      add('ACTOR_LEGENDARY_RESISTANCE_DRIFT','/creature/legendary/resistanceMax','The explicit base-only resistance counter must retain its native capacity and unspent state without inventing a lair mode.');
   }
   compare(add, 'ACTOR_TYPE_DRIFT', '/creature/identity/creatureType', normalizeCreatureTypeFixed(expected.identity.creatureType), normalizeCreatureTypeFixed(projection.creatureType));
   compare(add, 'ACTOR_CREATURE_TYPE_CUSTOM_DRIFT', '/creature/identity/creatureTypeCustom', compact(expected.identity.creatureTypeCustom), compact(projection.creatureTypeCustom));
@@ -1147,6 +1166,21 @@ function compareFeatureSections(
         for (const status of expectedStatuses) {
           const manualCarrier = manual.version === 1 && manual.mode === 'gm' && arrayValues(manual.statuses).includes(status)
             && compact(String(manual.sourceText)) === compact(feature.description) && fullLiteral && description.includes('GM');
+          const requiresManual = (feature.appliedConditions ?? []).some(branch => branch.statuses.map(normalizeCondition).includes(status)
+            && (branch.escapeDc !== undefined || branch.staged === true || Boolean(branch.condition?.trim())
+              || Boolean(branch.duration?.trim() && !simpleConditionDuration(branch.duration))));
+          if (requiresManual && !companion) {
+            const expected = { status, ...(applied.condition !== undefined ? { condition: applied.condition } : {}),
+              ...(applied.escapeDc !== undefined ? { escapeDc: applied.escapeDc } : {}),
+              ...(applied.duration !== undefined ? { duration: applied.duration } : {}),
+              ...(applied.staged !== undefined ? { staged: applied.staged } : {}) };
+            const matching = (Array.isArray(manual.conditions) ? manual.conditions.map(asRecord) : []).filter(condition => Object.keys(condition).length === Object.keys(expected).length
+              && Object.entries(expected).every(([key, value]) => condition[key] === value));
+            if (!manualCarrier || matching.length !== 1) add('ACTOR_CONDITION_GM_METADATA_DRIFT', conditionPath,
+              'The GM condition ledger must preserve each explicit status, qualifier, escape DC, stage and duration.');
+            if (actualStatuses.includes(status)) add('ACTOR_CONDITION_AUTOMATION_DRIFT', conditionPath,
+              'A condition with an explicit GM-only lifecycle cannot remain an automatic native status.');
+          }
           if (!actualStatuses.includes(status)) {
             if (!companion && !manualCarrier) add('ACTOR_CONDITION_DRIFT', conditionPath, `${feature.name} lost the IR condition ${status} and its GM rule carrier.`);
           } else if (duration && definitions.filter(effect => arrayValues(effect.statuses).map(normalizeCondition).includes(status)).some(effect => {
@@ -1154,6 +1188,9 @@ function compareFeatureSections(
             return actual.seconds !== (duration.seconds ?? null) || actual.rounds !== (duration.rounds ?? null) || actual.turns != null;
           })) add('ACTOR_CONDITION_DURATION_DRIFT', conditionPath, 'The native duration does not preserve the duration explicitly declared in the AI IR.');
         }
+        const conditionActivities = Array.isArray(found.activities) ? found.activities.map(asRecord) : [];
+        if (conditionActivities.some(activity => arrayValues(activity.effectIds).some(id => !definitions.some(effect => effect._id === id))))
+          add('ACTOR_CONDITION_LINK_DRIFT', conditionPath, 'An Activity references a condition Effect that is absent from the Item.');
         continue;
       }
       // Check the complete parent, independently of the generated metadata.

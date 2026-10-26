@@ -4,7 +4,6 @@ export {prepareMonsterCandidateDelivery} from './candidate-delivery';
 import {sizeChoiceProgramNote} from './source-size';
 import {nativeAreaShape} from '@fvtt-json-generator/models/source-operations';
 import { composeSourceTextPresentation, sourceTextPresentationBoundary, type SourceTextPresentation } from '@fvtt-json-generator/models/source-text-presentation';
-import {validateMonsterIntakeIR} from './validator';
 import type {SourceCandidateReview} from '@fvtt-json-generator/models/source-operations';
 import type {
   AbilityKey,
@@ -51,8 +50,7 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR, source?:string)
   let cursor=0;
   const complete=refs.every(ref=>ref.start===cursor&&(cursor=ref.end)>=ref.start)&&cursor===ir.source.length;
   const rawSource=source??(complete?refs.map(ref=>ref.quote).join(''):undefined);
-  const local=rawSource===undefined?[]:validateMonsterIntakeIR(rawSource,ir).blocking;
-  const unresolved=[...local,...ir.uncertainties.filter(f=>f.blocking)];
+  const unresolved=ir.uncertainties.filter(f=>f.blocking);
   const reviewFindings=[...new Map(unresolved.map(f=>[f.code+'\0'+f.path,{code:f.code,path:f.path,message:f.message}])).values()];
   const candidateReview:SourceCandidateReview|undefined=reviewFindings.length?{version:1,findings:reviewFindings,
     proposal:{sourceSha256:ir.source.sha256,source:rawSource??null,uncertainties:structuredClone(ir.uncertainties),prior:creature.candidateReview??null}}:creature.candidateReview;
@@ -96,9 +94,11 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR, source?:string)
     语言备注: creature.languages.custom,
     传记: biography ? composeSourceTextPresentation(biography) : undefined,
     传奇动作次数: creature.legendary?.max,
+    ...(creature.legendary?.resistanceMax!==undefined&&creature.legendary.resistanceLairMax===undefined
+      ?{'传奇抗性次数':creature.legendary.resistanceMax}:{}),
     ...(creature.legendary?.lairMax?{'intake-legendary-ledger':{
       max:creature.legendary.max,lairMax:creature.legendary.lairMax,recovery:creature.legendary.recovery,
-      ...(creature.legendary.resistanceMax===undefined?{}:{resistanceMax:creature.legendary.resistanceMax,resistanceLairMax:creature.legendary.resistanceLairMax}),
+      ...(creature.legendary.resistanceLairMax===undefined?{}:{resistanceMax:creature.legendary.resistanceMax,resistanceLairMax:creature.legendary.resistanceLairMax}),
     }}:{}),
     施法属性: prepared?.ability??(castingAbilities.length===1?castingAbilities[0]:undefined),
     施法者等级: prepared?.casterLevel,
@@ -323,6 +323,7 @@ function renderFeature(feature: CanonicalFeature, section: string,sharedPool=fal
       return types.map((type) => ({
         类型: type,
         描述: feature.description,
+        条件: applied.condition,
         持续: applied.duration,
         逃脱DC: applied.escapeDc,
         阶段: applied.staged,

@@ -63,6 +63,7 @@ export const FIELD_MAPPING: Record<string, FieldDefinition> = {
   "施法者等级": { key: "spellLevel", path: "system.details.spellLevel", type: "number" },
   "法术位": { key: "spellSlots", path: "system.spells", type: "object" },
   "传奇动作次数": { key: "legact", path: "system.attributes.legact", type: "number" },
+  "传奇抗性次数": { key: "legres", path: "system.attributes.legres", type: "number" },
 
   // Lists / Traits
   "豁免熟练": { key: "saves", path: "system.abilities", type: "array" }, // Special handling in parser
@@ -102,6 +103,7 @@ export interface ParsedNPC {
     init?: number;
     prof?: number;
     legact?: { value: number; max: number };
+    legres?: { value: number; max: number };
     spellcasting?: keyof ParsedNPC['abilities'];
   };
 

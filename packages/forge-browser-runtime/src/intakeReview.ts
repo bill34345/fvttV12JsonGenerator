@@ -37,6 +37,8 @@ export type ForgeIntakeReviewEvent =
   | 'repair_ready'
   | 'repair_needs_review'
   | 'repair_failed'
+  | 'repair_candidate_ready'
+  | 'repair_candidate_kept'
   | 'regenerate'
   | 'regeneration_started'
   | 'reject'
@@ -60,12 +62,14 @@ const REVIEW_TRANSITIONS: Readonly<Record<ForgeIntakeReviewStatus, Partial<Recor
     generation_failed: 'failed',
     clear: 'empty',
   },
-  ready_for_gm_review: { gm_approve: 'accepted',gm_approve_candidate:'reviewed_candidate', regenerate: 'regenerating', reject: 'rejected', clear: 'empty' },
+  ready_for_gm_review: { generate:'generating_and_reviewing',gm_approve: 'accepted',gm_approve_candidate:'reviewed_candidate', repair:'repairing', regenerate: 'regenerating', reject: 'rejected', clear: 'empty' },
   reviewed_candidate:{commit:'committing_and_reading_back',clear:'empty'},
   repairing: {
     repair_ready: 'ready_to_generate',
     repair_needs_review: 'needs_review',
     repair_failed: 'failed',
+    repair_candidate_ready: 'ready_for_gm_review',
+    repair_candidate_kept: 'ready_for_gm_review',
     clear: 'empty',
   },
   regenerating: { regeneration_started: 'analyzing', clear: 'empty' },

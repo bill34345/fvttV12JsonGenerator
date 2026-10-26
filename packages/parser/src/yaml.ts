@@ -106,6 +106,8 @@ export class YamlParser {
         ||!positive(ledger.max)||ledger.lairMax!==ledger.max+1||ledger.recovery!=='own-turn-start'
         ||result.attributes.legact?.max!==ledger.max
         ||(ledger.resistanceMax!==undefined||ledger.resistanceLairMax!==undefined)&&(!positive(ledger.resistanceMax)||ledger.resistanceLairMax!==ledger.resistanceMax+1))throw Error('InvalidSourceLegendaryLedger');
+      if(result.attributes.legres&&(ledger.resistanceMax===undefined||result.attributes.legres.max!==ledger.resistanceMax))
+        throw Error('InvalidLegendaryResistanceConflict: a native lair mode requires matching explicit base/lair resistance capacities.');
       result.sourceLegendaryLedger=structuredClone(ledger);
     }
 
@@ -248,6 +250,14 @@ export class YamlParser {
         const count = parseInt(processedValue);
         if (!Number.isInteger(count) || count < 1) throw new Error('InvalidLegendaryActionCount: expected a positive integer.');
         result.attributes.legact = { value: count, max: count };
+      } else if (internalKey === 'legres') {
+        // Schema-derived explicit counter: never read a capacity from a trait
+        // title, recovery sentence, expression or another numeric field.
+        const literal=typeof value==='string'?value.trim():value;
+        const count=typeof literal==='number'?literal:typeof literal==='string'&&/^[1-9]\d*$/u.test(literal)?Number(literal):Number.NaN;
+        if(!Number.isSafeInteger(count)||count<1)throw Error('InvalidLegendaryResistanceCount: expected a literal positive integer.');
+        if(result.attributes.legres&&result.attributes.legres.max!==count)throw Error('InvalidLegendaryResistanceConflict: explicit counts disagree.');
+        result.attributes.legres={value:count,max:count};
       }
     } else if (path.startsWith('system.details')) {
       if (internalKey === 'cr') result.details.cr = this.parseChallengeRating(processedValue);

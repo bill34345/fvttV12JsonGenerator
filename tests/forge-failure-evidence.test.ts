@@ -14,7 +14,6 @@ import {buildValidLurkerIr,LURKER_SOURCE} from '../src/core/intake/__tests__/fix
 const originalFetch=globalThis.fetch,encoder=new TextEncoder();
 const connection={baseUrl:'https://evidence.invalid/v1',apiKey:'fixture-private-key',model:'offline-model'};
 const source='Proof CR 1\nMedium construct\nArmor Class 15\nHit Points 20\nSpeed 30 ft.\nSTR 10 DEX 10 CON 10 INT 10 WIS 10 CHA 10\nChallenge 1\nActions\nSlam. One target takes 3 damage.\n';
-const baseSource=source.slice(0,source.indexOf('Actions\n'));
 let evidenceRoot:string;
 beforeAll(async()=>{
   const configured=process.env.FVTT_FAILURE_EVIDENCE_TEST_ROOT;
@@ -66,7 +65,9 @@ describe('real private evidence files from failed formal Forge calls, zero netwo
     expect(saved.kind).toBe('transport-failure');expect(saved.content).toContain(scenario.find);
     expect(saved.transportFailure).toMatchObject({reason:scenario.reason,bodyComplete:scenario.complete});
     expect(saved.transportFailure?.elapsedMs).toBeNumber();
-    expect(saved.sourceHash).toBe(sha256(factory==='actor'?source:baseSource));
+    // Both current entry points send the entire source; only explicit legacy
+    // staged extraction splits a base request from the feature request.
+    expect(saved.sourceHash).toBe(sha256(source));
     expect(saved.requestHash).toMatch(/^[a-f0-9]{64}$/u);expect(saved.attempt).toBe(1);
     if(scenario.status)expect(saved.transportFailure?.httpStatus).toBe(scenario.status);
     if(scenario.name==='http200-error-after-keepalive')expect(saved.transportFailure).toMatchObject({providerCode:'server_busy',providerType:'server_error'});

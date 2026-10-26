@@ -26,7 +26,7 @@
       <section class="forge-step forge-input-step" data-step="input" aria-labelledby="forge-input-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}">
         <header class="forge-step-heading">
           <h3 id="forge-input-heading-{{#if isItemDirectory}}item{{else}}actor{{/if}}">来源编辑器</h3>
-          <p>粘贴完整规则或读取文件。分析和预览不会创建目录条目。</p>
+          <p>{{#if isItemDirectory}}粘贴完整物品规则或读取文件。{{else}}一次提供一只生物的完整资料；多只生物资料请使用“生物与召唤物”。{{/if}}分析和预览不会创建目录条目。</p>
         </header>
 
         <div class="forge-source-layout" data-source-editor>
@@ -237,7 +237,6 @@
       <button type="button" data-action="edit-source" data-workspace-action data-primary="false" hidden>返回编辑</button>
       <button type="button" data-action="resume-review" data-workspace-action data-primary="false" hidden>继续查看结果</button>
       <button type="button" data-action="generate" data-workspace-action data-primary="false" hidden>生成候选并本地校验</button>
-      <button type="button" data-action="model-review" data-workspace-action data-primary="false" hidden>AI审核当前候选（额外API费用）</button>
       <button type="button" data-action="create" data-workspace-action data-primary="false" hidden>GM确认创建</button>
       <button type="button" data-action="repair" data-workspace-action data-primary="false" hidden>修正问题</button>
       <button type="button" data-action="regenerate" data-workspace-action data-primary="false" hidden>重新分析</button>

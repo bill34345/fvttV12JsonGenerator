@@ -1,3 +1,4 @@
+import {assertForgeAiReviewAvailable,rejectForgeAiReview} from './aiReviewPolicy';
 import {
   hashArtifact,
   hashSource,
@@ -162,6 +163,7 @@ export async function reviewBrowserItemIntakeCandidate(
   provider: ItemIntakeAiProvider,
   signal?: AbortSignal,
 ): Promise<BrowserItemGenerationResult> {
+  assertForgeAiReviewAvailable();
   const response = assertCurrentItemCandidate(input, candidate);
   if (!['not_requested', 'failed'].includes(candidate.modelReviewStatus??'') || candidate.gmApproval)
     throw new TypeError('该 Item 候选已处理模型审核或 GM 确认。');
@@ -266,6 +268,7 @@ export function createBrowserItemAiProvider(
     onActivity: options.onActivity,
     httpClient: (url, init) => fetchWithCallerAbort(url, init, signal),
   });
+  provider.review=rejectForgeAiReview;
   if (!options.providerId) return provider;
   return {
     providerName: options.providerId,
@@ -276,7 +279,7 @@ export function createBrowserItemAiProvider(
     ...(options.structuredOutput ? { structuredOutput: options.structuredOutput } : {}),
     discover: (request) => provider.discover(request),
     extract: (request) => provider.extract(request),
-    review: (request) => provider.review(request),
+    review: rejectForgeAiReview,
     repair: (request) => provider.repair(request),
   };
 }
@@ -347,6 +350,8 @@ export async function repairBrowserItemIntake(
   provider: ItemIntakeAiProvider,
   signal?: AbortSignal,
 ): Promise<BrowserItemIntakeAnalysis> {
+  if (isGeneration(current) && (current.review !== undefined || current.modelReviewFindings?.length
+    || ['accepted','needs_review','failed'].includes(current.modelReviewStatus ?? ''))) assertForgeAiReviewAvailable();
   const prior = isGeneration(current) ? current.analysis : current;
   const stages = structuredClone(current.stages);
   const calls = structuredClone(current.calls);
@@ -399,7 +404,7 @@ export async function generateAndReviewBrowserItemIntake(
   provider: ItemIntakeAiProvider,
   signal?: AbortSignal,
 ): Promise<BrowserItemGenerationResult> {
-  return generateBrowserItemIntake(input, analysis, provider, signal, true);
+  return generateBrowserItemIntake(input, analysis, provider, signal, false);
 }
 
 export async function generateBrowserItemIntakeCandidate(

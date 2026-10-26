@@ -31,7 +31,7 @@ const SHIELD_SOURCE = readFileSync(resolve('obsidian/dnd数据转fvttjson/input/
 const JEWEL_SOURCE = readFileSync(resolve('obsidian/dnd数据转fvttjson/input/items/三祷之坠.md'), 'utf8');
 
 describe('browser Forge Item runtime', () => {
-  test('holds a local-valid Item for GM approval and treats optional AI findings as advice', async () => {
+  test('disabled Item review preserves a strict local candidate for GM approval [review disabled]', async () => {
     const source = JEWEL_OF_THREE_PRAYERS_SOURCE;
     const input = { source, sourceName: 'Jewel', displayName: 'Jewel', requestId: 'item-optional-review',
       fvttVersion: '14.364', systemVersion: '5.3.3' };
@@ -53,20 +53,10 @@ describe('browser Forge Item runtime', () => {
     const manual = approveBrowserItemIntakeCandidateForGm(input, candidate, 'gm');
     expect(manual.status).toBe('accepted');
     expect(manual.gmApproval?.modelReviewStatus).toBe('not_requested');
-    const checked = await reviewBrowserItemIntakeCandidate(input, candidate, provider);
-    expect(reviews).toBe(1);
-    expect(checked.calls.review).toBe(1);
-    expect(checked.calls.extraction).toBe(candidate.calls.extraction);
-    expect(checked.calls.repair).toBe(candidate.calls.repair);
-    expect(checked.finalSourceHash).toBe(candidate.finalSourceHash);
-    expect(checked.modelReviewStatus).toBe('needs_review');
-    expect(checked.status).toBe('ready_for_gm_review');
-    expect(checked.modelReviewFindings).toHaveLength(1);
-    const approved = approveBrowserItemIntakeCandidateForGm(input, checked, 'gm');
-    expect(approved.gmApproval?.modelReviewStatus).toBe('needs_review');
-    expect(approved.response).toEqual(candidate.candidateResponse);
-    expect(() => approveBrowserItemIntakeCandidateForGm(input,
-      { ...candidate, candidateHash: '0'.repeat(64) as any }, 'gm')).toThrow(/变化/u);
+    const saved=structuredClone(candidate);
+    await expect(reviewBrowserItemIntakeCandidate(input,candidate,provider)).rejects.toThrow('AI 内容复核已暂时关闭');
+    expect(reviews).toBe(0);expect(candidate).toEqual(saved);expect(manual.response).toEqual(candidate.candidateResponse);
+    expect(()=>approveBrowserItemIntakeCandidateForGm(input,{...candidate,candidateHash:'0'.repeat(64) as any},'gm')).toThrow(/变化/u);
   });
   test.each(['', ' \t '])('falls back from blank Item display name %j before formal generation', async (displayName) => {
     const input = { source: JEWEL_OF_THREE_PRAYERS_SOURCE, sourceName: 'Jewel', displayName,

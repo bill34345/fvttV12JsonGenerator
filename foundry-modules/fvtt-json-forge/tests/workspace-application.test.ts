@@ -14,7 +14,7 @@ const itemSource = readFileSync('obsidian/dnd数据转fvttjson/input/items/骑�
 const template = (name: string, context: object) => Handlebars.compile(readFileSync(`foundry-modules/fvtt-json-forge/src/templates/${name}.hbs`, 'utf8'))(context);
 
 describe('unified Forge workspace using its actual templates', () => {
-  test('normal shared key clearing preserves local GM creation in both Actor and Item AI panes', async () => {
+  test('normal shared key clearing preserves local GM creation in both Actor and Item AI panes [review disabled]', async () => {
     for (const kind of ['Actor', 'Item'] as const) {
       saveForgeSessionSettings({ providerId: 'custom', endpoint: 'https://provider.example/v1', protocol: 'openai-chat',
         model: 'extract', apiKey: 'session-key', persistApiKey: false });
@@ -71,7 +71,7 @@ describe('unified Forge workspace using its actual templates', () => {
         else clearAllForgeSessionApiKeys();
         expect(c.app.intake.status).toBe('ready_for_gm_review');
         expect(c.button(c.intake(), 'create').disabled).toBe(false);
-        expect(c.button(c.intake(), 'model-review').disabled).toBe(true);
+        expect(c.intake().querySelector('[data-action="model-review"]')).toBeNull();
         saveForgeSessionSettings({ apiKey: 'session-key' }); markForgeSessionConnectionTested();
         await c.app.intake.reviewCandidate(c.intake());
         if (kind === 'Item') {

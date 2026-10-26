@@ -1,4 +1,5 @@
 import { hashSource, hashArtifact, type JsonObject, isUsableActorCandidateArtifact } from '@fvtt-json-generator/forge-gateway-protocol';
+import {assertForgeAiReviewAvailable,rejectForgeAiReview} from './aiReviewPolicy';
 import { decodeConfiguredConditionCatalog, type ConfiguredConditionDefinition } from '@fvtt-json-generator/contracts/configured-conditions';
 import { normalizeDiscovery, partitionDiscoveryCandidates, singleCreatureSourceCandidate } from '@fvtt-json-generator/intake-ai/discovery';
 import { OpenAICompatibleMonsterIntakeProvider, MonsterIntakeProviderError } from '@fvtt-json-generator/intake-ai/provider';
@@ -110,7 +111,7 @@ export function encounterActorCandidate(report:EncounterIntakeReport,key:string)
 
 function encounterActorInput(report:EncounterIntakeReport,actor:EncounterIntakeActor){
   return{source:actor.source,sourceName:actor.analysis.candidate?.label??actor.key,displayName:actor.analysis.candidate?.label??actor.key,
-    requestId:`encounter-ai-${report.sourceHash.slice(0,12)}-${actor.key}`,fvttVersion:'14.364',systemVersion:'5.3.3'};
+    sourceScope:'single' as const,requestId:`encounter-ai-${report.sourceHash.slice(0,12)}-${actor.key}`,fvttVersion:'14.364',systemVersion:'5.3.3'};
 }
 function continuationOptions(options:EncounterIntakeReport['requestedOptions']){
   return JSON.stringify({protocol:options?.protocol,reasoning:options?.reasoning,maxAttempts:options?.maxAttempts});
@@ -144,15 +145,17 @@ export function createEncounterIntakeProviders(options:BrowserAiProviderOptions 
   const retry=localBridge&&options.waitPolicy?{signal,budgetMs:options.encounterRetryBudgetMs,onRetry:options.onRetry}:undefined;
   const providerTimeoutMs=retry?600000:options.timeoutMs??600000;
   const providerRepairTimeoutMs=retry?600000:options.repairTimeoutMs??600000;
-  const createActorProvider=(attemptSignal?:AbortSignal)=>new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',apiKey:options.apiKey,baseUrl:options.baseUrl,signal:combineEncounterSignals(signal,attemptSignal),maxAttempts:1,
+  const createActorProvider=(attemptSignal?:AbortSignal)=>{const provider=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',apiKey:options.apiKey,baseUrl:options.baseUrl,signal:combineEncounterSignals(signal,attemptSignal),maxAttempts:1,
     model:options.model,reviewModel:options.model,timeoutMs:providerTimeoutMs,repairTimeoutMs:providerRepairTimeoutMs,
     reviewFocus:'forge-brief',
     evidenceAnchoring:'exact-quotes',
     responseEvidence:options.responseEvidence,
     waitPolicy,onActivity:options.onActivity,
     transport,httpClient:(requestUrl,init)=>fetch(requestUrl,{...init,signal:combineEncounterSignals(signal,attemptSignal,init?.signal)})});
+    provider.review=rejectForgeAiReview;return provider;};
   const baseActorProvider=createActorProvider();
-  const createAutomationProvider=(attemptSignal?:AbortSignal)=>createEncounterAutomationProvider({...options,waitPolicy,reviewModel:options.model,reviewFocus:'forge-brief',timeoutMs:providerTimeoutMs},combineEncounterSignals(signal,attemptSignal));
+  const createAutomationProvider=(attemptSignal?:AbortSignal)=>{const provider=createEncounterAutomationProvider({...options,waitPolicy,reviewModel:options.model,reviewFocus:'forge-brief',timeoutMs:providerTimeoutMs},combineEncounterSignals(signal,attemptSignal));
+    provider.review=rejectForgeAiReview;return provider;};
   const baseAutomationProvider=createAutomationProvider();
   const actorProvider=retry?retryingMonsterProvider(baseActorProvider,createActorProvider,retry):baseActorProvider;
   const automationProvider=retry?retryingAutomationProvider(baseAutomationProvider,createAutomationProvider,retry):baseAutomationProvider;
@@ -160,6 +163,7 @@ export function createEncounterIntakeProviders(options:BrowserAiProviderOptions 
     structuredOutput: transport.structuredOutput, stream: options.protocol === 'openai-responses',
     httpClient: (url, init) => fetch(url, { ...init, signal: combineEncounterSignals(signal, init?.signal) }),
   });
+  translationService.review=rejectForgeAiReview;
   return {provider:actorProvider,automationProvider,translationService,evidenceMode:'exact-quotes-v1' as const,requestedOptions:{protocol:transport.protocol,reasoning:options.reasoning,autoCorrect:options.autoCorrect===true,...(retry?{maxAttempts:2 as const}:{})}};
 }
 
@@ -187,7 +191,7 @@ export function retryingMonsterProvider(
         throw error;
       }finally{correctionCounts.set(request,provider.getExtractionCorrectionCount?.(request)??0);}
     }),
-    review:request=>call('review',provider=>provider.review(request)),
+    review:rejectForgeAiReview,
     repair:request=>call('repair',provider=>provider.repair(request)),
   };
 }
@@ -199,14 +203,15 @@ export function retryingAutomationProvider(
 ):EncounterAutomationPort{
   return {
     generate:request=>retryEncounterStage('automation-generate',retry,signal=>createAttempt(signal).generate(request)),
-    review:request=>retryEncounterStage('automation-review',retry,signal=>createAttempt(signal).review(request)),
+    review:rejectForgeAiReview,
   };
 }
 
 /** All entities pass the existing single-source IR gates before a new package is constructed. */
 export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeInput):Promise<EncounterIntakeResult>{
   const {source,provider,automationProvider,signal}=input;
-  const deferred=input.reviewPolicy==='deferred';
+  // Historical automatic/deferred flags cannot reopen the disabled AI review.
+  const deferred=true;
   let conditionCatalog:ConfiguredConditionDefinition[]=[];
   const report:EncounterIntakeReport={version:1,source,sourceHash:hashSource(source),model:provider.extractionModel,
     reviewModel:provider.reviewModel,evidenceMode:input.evidenceMode??'standard',requestedOptions:input.requestedOptions,status:'running',actors:[],findings:[]};
@@ -295,17 +300,13 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
         continue;
       }
       member.status='running';publish();
-      const fixed:MonsterIntakeAiProvider={providerName:provider.providerName,extractionModel:provider.extractionModel,reviewModel:provider.reviewModel,
-        getExtractionCorrectionCount:r=>provider.getExtractionCorrectionCount?.(r)??0,
-        discover:async()=>({schemaVersion:1,candidates:[{id:key,label:candidate.label,start:0,end:actorSource.length,quote:actorSource}]}),
-        extract:r=>provider.extract(r),review:r=>provider.review(r),repair:r=>provider.repair(r)};
       let pendingManualRules: Array<EncounterAutomationRule & {mechanicId:string;capabilityKind:'gm-manual'}>=[];
-      const actorInput={source:actorSource,sourceName:candidate.label,displayName:candidate.label,
+      const actorInput={source:actorSource,sourceName:candidate.label,displayName:candidate.label,sourceScope:'single' as const,
         requestId:`encounter-ai-${report.sourceHash.slice(0,12)}-${key}`,fvttVersion:'14.364',systemVersion:'5.3.3',
         renderMarkdown:(ir:MonsterIntakeIR)=>renderEncounterActorSource(ir,pendingManualRules,actorSource),
         onStage:(stage:{stage:string;status:string})=>input.onProgress?.(`生物${index+1}/${candidates.length}：${candidate.label} · ${actorStageLabel(stage.stage)} ${actorStageStatus(stage.status)}`)};
       const existingIr=draft?.ir??prior?.analysis.ir;
-      let analysis=existingIr?analyzeBrowserActorIntakeDraft(actorInput,existingIr,fixed):await analyzeBrowserActorSourceWithAi(actorInput,fixed,signal);
+      let analysis=existingIr?analyzeBrowserActorIntakeDraft(actorInput,existingIr,provider):await analyzeBrowserActorSourceWithAi(actorInput,provider,signal);
       const feedback=input.sourceFeedback?.filter(f=>f.actorKey===key).map((f,i)=>({id:`source-feedback-${i+1}`,code:'SOURCE_REVIEW_FEEDBACK',path:f.path,message:f.message,blocking:true,origin:'semantic' as const}))??[];
       if(feedback.length){
         const ir=analysis.ir?structuredClone(analysis.ir):undefined;
@@ -314,12 +315,11 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
         analysis={...analysis,...(ir?{ir}:{}),status:'needs_review',findings:[...analysis.findings,...feedback],validation:{...analysis.validation!,findings:[...analysis.validation!.findings,...feedback],blocking:[...analysis.validation!.blocking,...feedback]}};
         progress(`生物${index+1}/${candidates.length}：来源审阅反馈已保留为待核对问题；仅明确开启纠错才会请求修改。`);
       }
-      analysis.calls.discovery=0; // The actor partition is already known; its local boundary step makes no provider call.
       signal?.throwIfAborted();
       const actor:EncounterIntakeActor={key,start:candidate.start,end:candidate.end,source:actorSource,origin:existingIr?'prior-proposal':'fresh-extraction',analysis};report.actors.push(actor);publish();
       if(input.requestedOptions?.autoCorrect===true&&analysis.status==='needs_review'&&analysis.ir&&analysis.candidate&&analysis.repairCount===0){
         const original=analysis;
-        analysis=await repairBrowserActorIntake(actorInput,analysis,fixed,signal);
+        analysis=await repairBrowserActorIntake(actorInput,analysis,provider,signal);
         if(analysis.status==='failed'&&original.ir)analysis={...original,repairCount:analysis.repairCount,calls:analysis.calls,
           findings:[...original.findings,...analysis.findings],stages:analysis.stages};
         actor.analysis=analysis;publish();
@@ -329,13 +329,13 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
         return pending(member.findings.map(f=>`${candidate.label}：${f}`));
       }
       pendingManualRules=manualPreparationRules(analysis.ir!,actorSource,key);
-      let generation=await (deferred?generateBrowserActorIntakeCandidate:generateAndReviewBrowserActorIntake)(actorInput,analysis,fixed,signal);
+      let generation=await (deferred?generateBrowserActorIntakeCandidate:generateAndReviewBrowserActorIntake)(actorInput,analysis,provider,signal);
       actor.generation=generation;publish();
       if(input.requestedOptions?.autoCorrect===true&&!deferred&&generation.status==='needs_review'&&generation.review?.verdict==='revise'&&analysis.repairCount===0){
-        analysis=await repairBrowserActorIntake(actorInput,generation,fixed,signal);actor.analysis=analysis;publish();
+        analysis=await repairBrowserActorIntake(actorInput,generation,provider,signal);actor.analysis=analysis;publish();
         if(analysis.status==='ready_to_generate'){
           pendingManualRules=manualPreparationRules(analysis.ir!,actorSource,key);
-          generation=await generateAndReviewBrowserActorIntake(actorInput,analysis,fixed,signal);
+          generation=await generateAndReviewBrowserActorIntake(actorInput,analysis,provider,signal);
         }
       }
       actor.generation=generation;
@@ -478,6 +478,7 @@ export async function reviewForgeEncounterCandidate(input:{
   translationService?:ReviewedTranslationServicePort;
   signal?:AbortSignal;onReport?:(report:EncounterIntakeReport)=>void;
 }):Promise<EncounterIntakeResult>{
+  assertForgeAiReviewAvailable();
   const {source,prepared,provider,automationProvider,signal}=input;
   const conditionCatalog=decodeConfiguredConditionCatalog(input.conditionCatalog??[]);
   assertPreparedForgeEncounter(prepared);

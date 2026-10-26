@@ -5,9 +5,9 @@
   <label>卡片语言<select name="outputLanguage" {{#if busy}}disabled{{/if}}><option value="source" {{#unless chineseSelected}}selected{{/unless}}>保留来源语言</option><option value="zh-CN" {{#if chineseSelected}}selected{{/if}}>中文正文 · 中文标题保留英文对照</option></select></label>
   <label>读取原始MD或TXT<input name="humanSourceFile" type="file" accept=".md,.txt,text/plain,text/markdown" {{#if busy}}disabled{{/if}}></label>
   <label>原始生物资料<textarea name="humanSource" rows="10" maxlength="24000" {{#if busy}}disabled{{/if}}>{{humanSource}}</textarea></label>
-  <p>使用“Forge · AI 连接”中保存的当前 Provider、模型与凭据。原始资料最多24000字符，支持1至6种生物；单只生物也可携带需 GM 裁定的规则。付费模型审核须另行点击，不会随生成、翻译或恢复自动执行。</p>
+  <p>使用“Forge · AI 连接”中保存的当前 Provider、模型与凭据。原始资料最多24000字符，支持1至6种生物；单只生物也可携带需 GM 裁定的规则。AI 内容复核已暂时关闭，生成、翻译和恢复均不会请求该复核。</p>
   <p>明确的单只完整生物数据可在本地识别，省略模型发现请求。单只生物通过结构与转换检查且没有声明配套机制时，不请求控制配置、不创建空宏；复杂规则继续走配套审核与GM处理。</p>
-  <p>AI负责理解内容并提供完整字段；程序只检查结构、引用，以及转换和保存时的数据保真。需要内容复核时，可主动请求AI审核或由GM对照原文。AI选择已实现的能力与参数，控制代码由工具提供。</p>
+  <p>AI负责理解内容并提供完整字段；程序只检查结构、引用，以及转换和保存时的数据保真。请由 GM 对照完整原文核对内容。AI选择已实现的能力与参数，控制代码由工具提供。</p>
   <section class="forge-configured-conditions">
     <h3>可连接的自定义状态</h3>
     <p>先在 Custom Conditions 配置状态名称、原文别名和效果机制，再生成怪物。Forge 会读取已保存的目录，按原文连接；定义改变后需重新生成并核对对应能力。</p>
@@ -84,8 +84,7 @@
     <h3>{{label}}</h3>
     {{#if iconReviewText}}<details class="forge-encounter-macro"><summary>Icon 选图依据与近似程度</summary><pre>{{iconReviewText}}</pre></details>{{/if}}
     {{#if modelReviewState}}<p class="forge-encounter-review-state" role="status">{{modelReviewState}}</p>{{/if}}
-    {{#if aiReviewFindings}}<section class="forge-encounter-review-concerns"><h4>AI 审核提示，供 GM 核对</h4><ul>{{#each aiReviewFindings}}<li>{{this}}</li>{{/each}}</ul></section>{{/if}}
-    {{#if canReviewCandidate}}<button type="button" data-action="encounter-review-candidate">AI 审核当前候选（额外 API 费用）</button><p>只复核当前已生成的角色、规则和已存在的中文草稿；不会重新调用模型生成、翻译或自动修正。</p>{{/if}}
+    {{#if aiReviewFindings}}<section class="forge-encounter-review-concerns"><h4>历史 AI 审核提示，供 GM 核对</h4><ul>{{#each aiReviewFindings}}<li>{{this}}</li>{{/each}}</ul></section>{{/if}}
     {{#if recoveredReview}}<p>以下来源审核记录来自本地保存的任务，仅供核对。候选已经重新通过正式预览；请自行确认完整原文、规则和导入边界。</p>{{/if}}
     {{#if reviewCards}}<h3>逐项核对来源与规则</h3><p>原句与参数来自本次来源审核记录；请同时核对完整原文中的限制和例外。导入仍需 GM 明确确认。</p>
       {{#each reviewCards}}<article class="forge-encounter-macro"><h4>{{actor}}：{{feature}}</h4>

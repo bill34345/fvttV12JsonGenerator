@@ -430,7 +430,7 @@ function embeddedEffectDuration(source: string | undefined): Record<string, numb
   return { ...duration, ...simpleConditionDuration(source) };
 }
 
-function normalizeEmbeddedEffectStatus(type: string): string | undefined {
+export function normalizeEmbeddedEffectStatus(type: string): string | undefined {
   const normalized = type.trim().toLowerCase();
   const aliases: Record<string, string> = {
     grappled: 'grappled',

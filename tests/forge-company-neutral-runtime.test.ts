@@ -1,8 +1,9 @@
-import {test,expect} from 'bun:test';
+import {describe,test,expect} from 'bun:test';
 import yaml from 'js-yaml';
 import company from './fixtures/forge-company-pdf-recorded-base.json';
 import {splitStagedMonsterSource} from '@fvtt-json-generator/intake-ai/staged-source';
-import {createEncounterIntakeProviders,generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
+import {generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
+import {legacyWholeFormProvider,assertDefaultFullIrReplay} from './helpers/forge-legacy-provider';
 import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
 import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
 import srd from './fixtures/forge-template-repeat-v2-srd.json';
@@ -43,7 +44,7 @@ async function runFixedSource<T>(source:string,base:any,fill:(form:any,units:any
     return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify(answer)}}]}),{status:200,headers:{'Content-Type':'application/json'}});
   },{preconnect:priorFetch.preconnect});
   try{
-    const actual=createEncounterIntakeProviders({baseUrl:'https://offline.invalid/v1',apiKey:'fixture-only',model:'fixed-source-fixture',protocol:'openai-chat',timeoutMs:10000}).provider;
+    const actual=legacyWholeFormProvider({model:'fixed-source-fixture'});
     const provider={providerName:actual.providerName,extractionModel:actual.extractionModel,reviewModel:actual.reviewModel,
       discover:async()=>({schemaVersion:1 as const,candidates:[candidate]}),extract:actual.extract.bind(actual),review:actual.review.bind(actual),repair:actual.repair.bind(actual)};
     return await run(provider,requests);
@@ -51,7 +52,8 @@ async function runFixedSource<T>(source:string,base:any,fill:(form:any,units:any
 }
 const runCompany=<T>(run:(provider:any,requests:any[])=>Promise<T>,mutate?:(form:any)=>void)=>runFixedSource(company.source,company.recordedBase,fillCompany,run,mutate);
 
-test('complete real Company source reaches the actual mod encounter chain with neutral attack and explicit outgoing half',async()=>runCompany(async(provider,requests)=>{
+describe('explicit legacy whole-form compatibility; current full-IR controls compare projection only',()=>{
+test('Company and current full-IR replay retain neutral attack and explicit outgoing half through the formal chain',async()=>runCompany(async(provider,requests)=>{
   const result=await generateEncounterFromHumanMarkdown({source:company.source,label:'Forge AB Runtime Company 20261020',provider,reviewPolicy:'deferred',
     automationProvider:{generate:async()=>{throw Error('GM source rules must not manufacture a controller');},review:async()=>({verdict:'accepted',findings:[]})}});
   expect(result.report.findings).toEqual([]);expect(result.report.status).toBe('ready_for_gm_review');expect(result.prepared?.actors).toHaveLength(1);expect(requests).toHaveLength(2);
@@ -65,6 +67,7 @@ test('complete real Company source reaches the actual mod encounter chain with n
   expect(damage.activation.type).toBe('special');expect(damage.consumption.targets).toEqual([]);
   const gate=actor.items.find((item:any)=>item.name.includes('Strike-Gate'));expect(gate.system.uses.max).toBe('1');
   const entry=result.report.actors[0]!,generation=entry.generation!,ir=entry.analysis.ir!;
+  await assertDefaultFullIrReplay(company.source,ir,{actor,markdown:generation.markdown!});
   const corrupt=structuredClone(actor),changed=corrupt.items[actor.items.indexOf(shred)];Object.values<any>(changed.system.activities).find(a=>a.roll)!.roll.formula='1d20+99';
   expect(verifyMonsterIntake(company.source,ir,generation.markdown!,corrupt,{start:0,end:company.source.length}).findings.some(f=>f.blocking)).toBe(true);
   const midi={modules:{get:(id:string)=>id==='midi-qol'?{active:true,version:'14.0.11'}:undefined}};
@@ -126,7 +129,7 @@ function fillBite(form:any,units:any[],reference:'id'|'name'){
     伤害:[{公式:'1d6+4',伤害类型:'piercing',生效条件:null,倍率:1,成功时倍率:null},{公式:'3d6',伤害类型:'necrotic',生效条件:null,倍率:1,成功时倍率:null}],
     治疗:[{公式:null,取值依据:`等于目标因该次[${ref}]所受死灵伤害的实际数值`,类型:'治疗',目标:'self',生效条件:`[${ref}]命中并造成死灵伤害时`}],特殊规则:unit.quote});
 }
-for(const reference of ['id','name'] as const)test('complete original Vampire Bite uses stable '+reference+' and self without a fabricated Heal',async()=>runFixedSource(biteSource,bases.R4,(form,units)=>fillBite(form,units,reference),async(provider,requests)=>{
+for(const reference of ['id','name'] as const)test('historical SRD 5.1 Vampire Bite uses stable '+reference+' and self without a fabricated Heal',async()=>runFixedSource(biteSource,bases.R4,(form,units)=>fillBite(form,units,reference),async(provider,requests)=>{
   const result=await generateEncounterFromHumanMarkdown({source:biteSource,label:'Vampire Bite capability',provider,reviewPolicy:'deferred',
     automationProvider:{generate:async()=>{throw Error('Dynamic HP rules remain explicit GM work');},review:async()=>({verdict:'accepted',findings:[]})}});
   expect(result.report.findings).toEqual([]);expect(result.report.status).toBe('ready_for_gm_review');expect(requests).toHaveLength(2);
@@ -139,7 +142,7 @@ for(const reference of ['id','name'] as const)test('complete original Vampire Bi
   expect(verifyMonsterIntake(biteSource,ir,generation.markdown!,corrupt,{start:0,end:biteSource.length}).findings.some(f=>f.blocking)).toBe(true);
 }));
 
-for(const change of ['unbound-owner','wrong-reference','missing-target'])test('Vampire identity findings survive in a useful unaccepted candidate: '+change,async()=>runFixedSource(biteSource,bases.R4,(form,units)=>fillBite(form,units,'id'),async provider=>{
+for(const change of ['unbound-owner','wrong-reference','missing-target'])test('historical SRD 5.1 Vampire identity findings survive in a useful unaccepted candidate: '+change,async()=>runFixedSource(biteSource,bases.R4,(form,units)=>fillBite(form,units,'id'),async provider=>{
   const candidate={id:'bite',label:'Bite',start:0,end:biteSource.length,quote:biteSource};
   const ir=await provider.extract({source:biteSource,sourceSha256:hashSource(biteSource),candidate});
   expect(ir.uncertainties.some(f=>f.blocking)).toBe(true);
@@ -150,3 +153,4 @@ for(const change of ['unbound-owner','wrong-reference','missing-target'])test('V
   if(change==='wrong-reference')row.治疗[0].取值依据='等于目标因该次[Children of the Night]所受死灵伤害的实际数值';
   if(change==='missing-target')row.攻击.目标限制=null;
 }));
+});

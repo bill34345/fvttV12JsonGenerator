@@ -13,7 +13,7 @@ import {sourceSpellcastingAbility,assessSourceSpellcastingAbility} from '../pack
 import {stagedSpellcastingGroups,isSourceSpellcastingFeature,bindSourceGroupComponents,sourceSpellcastingIntroduction} from '../packages/intake-ai/src/staged-spellcasting';
 import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
 import {sourceSpellGrantTokens,sourceManualSpellGrant} from '../packages/intake-ai/src/spell-grant-tokens';
-import {officialDragonSeeds} from './fixtures/forge-2024-dragon-seeds';
+import {legacyOfficialDragonSeeds as officialDragonSeeds} from './fixtures/forge-2024-dragon-seeds';
 import type {MonsterIntakeIR} from '../packages/intake-ai/src/types';
 import {validateStagedStaticSourceFacts} from '../packages/intake-ai/src/staged-source-facts';
 import {buildValidLurkerIr} from '../src/core/intake/__tests__/fixtures/lurker';

@@ -1,0 +1,1151 @@
+{
+  "kind": "mechanical-public-source-and-first-reply-selection",
+  "cases": [
+    {
+      "id": "unicorn",
+      "source": "## Unicorn\nLarge Celestial, Lawful Good\nAC 12 Initiative +8 (18)\nHP 97 (13d10 + 26)\nSpeed 50 ft.\nMOD SAVE MOD SAVE MOD SAVE\nStr 18 +4 +4 Dex 14 +2 +2 Con 15 +2 +2\nInt 11 +0 +0 WIS 17 +3 +3 Cha 16 +3 +3\nImmunities Poison; Charmed, Paralyzed, Poisoned\nSenses Darkvision 60 ft.; Passive Perception 13\nLanguages Celestial, Elvish, Sylvan; telepathy 120 ft.\nCR 5 (XP 1,800; PB +3)\nTraits\nLegendary Resistance (3/Day). If the unicorn fails a saving throw, it can choose to succeed instead.\nMagic Resistance. The unicorn has Advantage on saving throws against spells and other magical effects.\nActions\nMultiattack. The unicorn makes one Hooves attack and\none Radiant Horn attack.\nHooves. Melee Attack Roll: +7, reach 5 ft. Hit: 11 (2d6\n+ 4) Bludgeoning damage.\nRadiant Horn. Melee Attack Roll: +7, reach 5 ft. Hit: 9\n(1d10 + 4) Radiant damage.\nSpellcasting. The unicorn casts one of the following\nspells, requiring no spell components and using Charisma as the spellcasting ability (spell save DC 14):\nAt Will: Detect Evil and Good, Druidcraft\n1/Day Each: Calm Emotions, Dispel Evil and Good, Entangle, Pass without Trace, Word of Recall\nBonus Actions\nUnicorn’s Blessing (3/Day). The unicorn touches another creature with its horn and casts Cure Wounds\nor Lesser Restoration on that creature, using the same\nspellcasting ability as Spellcasting.\nLegendary Actions\nLegendary Action Uses: 3. Immediately after another\ncreature’s turn, the unicorn can expend a use to take one\nof the following actions. The unicorn regains all expended\nuses at the start of each of its turns.\nCharging Horn. The unicorn moves up to half its Speed\nwithout provoking Opportunity Attacks, and it makes\none Radiant Horn attack.\nShimmering Shield. The unicorn targets itself or one\ncreature it can see within 60 feet of itself. The target\ngains 10 (3d6) Temporary Hit Points, and its AC increases by 2 until the end of the unicorn’s next turn.\nThe unicorn can’t take this action again until the start of\nits next turn.\n",
+      "sourceSha256": "65a06fcb62ffe0946b85073fb0edbc8e8aeb9a4bf02fc2c5b9466dc5ccdb6d17",
+      "rawReply": "{\"schemaVersion\":1,\"source\":{\"sha256\":\"65a06fcb62ffe0946b85073fb0edbc8e8aeb9a4bf02fc2c5b9466dc5ccdb6d17\",\"length\":1987},\"creature\":{\"identity\":{\"name\":\"Unicorn\",\"size\":\"large\",\"creatureType\":\"celestial\",\"alignment\":\"Lawful Good\"},\"abilities\":{\"str\":18,\"dex\":14,\"con\":15,\"int\":11,\"wis\":17,\"cha\":16},\"attributes\":{\"ac\":12,\"initiative\":8,\"hp\":{\"value\":97,\"formula\":\"13d10 + 26\"},\"movement\":{\"walk\":50},\"cr\":5,\"xp\":1800,\"proficiencyBonus\":3},\"saves\":{\"str\":4,\"dex\":2,\"con\":2,\"int\":0,\"wis\":3,\"cha\":3},\"skills\":{},\"defenses\":{\"resistances\":[],\"immunities\":[\"poison\"],\"vulnerabilities\":[],\"conditionImmunities\":[\"charmed\",\"paralyzed\",\"poisoned\"]},\"senses\":{\"darkvision\":60,\"passivePerception\":13},\"languages\":{\"values\":[\"Celestial\",\"Elvish\",\"Sylvan\"],\"custom\":\"telepathy 120 ft.\"},\"legendary\":{\"max\":3,\"preamble\":\"Immediately after another creature’s turn, the unicorn can expend a use to take one of the following actions. The unicorn regains all expended uses at the start of each of its turns.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Legendary Action Uses: 3. Immediately after another\\ncreature’s turn, the unicorn can expend a use to take one\\nof the following actions. The unicorn regains all expended\\nuses at the start of each of its turns.\"}],\"recovery\":\"own-turn-start\",\"resistanceMax\":3},\"spellcasting\":[{\"groupId\":\"spellcasting\",\"featureName\":\"Spellcasting\",\"description\":\"The unicorn casts one of the following\\nspells, requiring no spell components and using Charisma as the spellcasting ability (spell save DC 14):\\nAt Will: Detect Evil and Good, Druidcraft\\n1/Day Each: Calm Emotions, Dispel Evil and Good, Entangle, Pass without Trace, Word of Recall\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Spellcasting. The unicorn casts one of the following\\nspells, requiring no spell components and using Charisma as the spellcasting ability (spell save DC 14):\\nAt Will: Detect Evil and Good, Druidcraft\\n1/Day Each: Calm Emotions, Dispel Evil and Good, Entangle, Pass without Trace, Word of Recall\"}],\"ability\":\"cha\",\"abilityEvidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"using Charisma as the spellcasting ability (spell save DC 14)\"}],\"saveDc\":14,\"saveDcEvidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"spell save DC 14\"}],\"componentWaivers\":[{\"component\":\"material\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no spell components\"}]}],\"usageGroups\":[{\"usage\":\"at-will\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"At Will: Detect Evil and Good, Druidcraft\"}],\"spellRefs\":[{\"refId\":\"spellcasting-detect-evil-and-good\",\"originalName\":\"Detect Evil and Good\",\"aliases\":[],\"restrictions\":[{\"kind\":\"casting\",\"text\":\"requiring no spell components\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no spell components\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Detect Evil and Good\"}]},{\"refId\":\"spellcasting-druidcraft\",\"originalName\":\"Druidcraft\",\"aliases\":[],\"restrictions\":[{\"kind\":\"casting\",\"text\":\"requiring no spell components\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no spell components\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Druidcraft\"}]}]},{\"usage\":\"daily-each\",\"count\":1,\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"1/Day Each: Calm Emotions, Dispel Evil and Good, Entangle, Pass without Trace, Word of Recall\"}],\"spellRefs\":[{\"refId\":\"spellcasting-calm-emotions\",\"originalName\":\"Calm Emotions\",\"aliases\":[],\"restrictions\":[{\"kind\":\"casting\",\"text\":\"requiring no spell components\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no spell components\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Calm Emotions\"}]},{\"refId\":\"spellcasting-dispel-evil-and-good\",\"originalName\":\"Dispel Evil and Good\",\"aliases\":[],\"restrictions\":[{\"kind\":\"casting\",\"text\":\"requiring no spell components\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no spell components\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Dispel Evil and Good\"}]},{\"refId\":\"spellcasting-entangle\",\"originalName\":\"Entangle\",\"aliases\":[],\"restrictions\":[{\"kind\":\"casting\",\"text\":\"requiring no spell components\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no spell components\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Entangle\"}]},{\"refId\":\"spellcasting-pass-without-trace\",\"originalName\":\"Pass without Trace\",\"aliases\":[],\"restrictions\":[{\"kind\":\"casting\",\"text\":\"requiring no spell components\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no spell components\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Pass without Trace\"}]},{\"refId\":\"spellcasting-word-of-recall\",\"originalName\":\"Word of Recall\",\"aliases\":[],\"restrictions\":[{\"kind\":\"casting\",\"text\":\"requiring no spell components\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no spell components\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Word of Recall\"}]}]}],\"activationType\":\"action\"},{\"groupId\":\"unicorns-blessing\",\"featureName\":\"Unicorn’s Blessing (3/Day)\",\"description\":\"The unicorn touches another creature with its horn and casts Cure Wounds\\nor Lesser Restoration on that creature, using the same\\nspellcasting ability as Spellcasting.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Unicorn’s Blessing (3/Day). The unicorn touches another creature with its horn and casts Cure Wounds\\nor Lesser Restoration on that creature, using the same\\nspellcasting ability as Spellcasting.\"}],\"ability\":\"cha\",\"abilityEvidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"using the same\\nspellcasting ability as Spellcasting\"}],\"usageGroups\":[{\"usage\":\"daily-shared\",\"count\":3,\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Unicorn’s Blessing (3/Day)\"}],\"spellRefs\":[{\"refId\":\"unicorns-blessing-cure-wounds\",\"originalName\":\"Cure Wounds\",\"aliases\":[],\"restrictions\":[{\"kind\":\"target\",\"text\":\"another creature\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"The unicorn touches another creature with its horn and casts Cure Wounds\\nor Lesser Restoration on that creature\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Cure Wounds\"}]},{\"refId\":\"unicorns-blessing-lesser-restoration\",\"originalName\":\"Lesser Restoration\",\"aliases\":[],\"restrictions\":[{\"kind\":\"target\",\"text\":\"another creature\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"The unicorn touches another creature with its horn and casts Cure Wounds\\nor Lesser Restoration on that creature\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Lesser Restoration\"}]}]}],\"activationType\":\"bonus\"}],\"traits\":[{\"name\":\"Legendary Resistance (3/Day)\",\"description\":\"If the unicorn fails a saving throw, it can choose to succeed instead.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Legendary Resistance (3/Day). If the unicorn fails a saving throw, it can choose to succeed instead.\"}]},{\"name\":\"Magic Resistance\",\"description\":\"The unicorn has Advantage on saving throws against spells and other magical effects.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Magic Resistance. The unicorn has Advantage on saving throws against spells and other magical effects.\"}]}],\"actions\":[{\"name\":\"Multiattack\",\"description\":\"The unicorn makes one Hooves attack and\\none Radiant Horn attack.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Multiattack. The unicorn makes one Hooves attack and\\none Radiant Horn attack.\"}],\"activationType\":\"action\",\"activityType\":\"utility\",\"executionMode\":\"gm-manual\"},{\"name\":\"Hooves\",\"description\":\"Melee Attack Roll: +7, reach 5 ft. Hit: 11 (2d6\\n+ 4) Bludgeoning damage.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Hooves. Melee Attack Roll: +7, reach 5 ft. Hit: 11 (2d6\\n+ 4) Bludgeoning damage.\"}],\"activationType\":\"action\",\"sourceOperations\":[{\"id\":\"hooves-attack\",\"name\":\"Hooves\",\"type\":\"attack\",\"relationship\":\"primary\",\"attack\":{\"type\":\"melee\",\"toHit\":7,\"reach\":5},\"damage\":[{\"formula\":\"2d6 + 4\",\"type\":\"bludgeoning\",\"relationship\":\"base\"}],\"proof\":{\"attack\":\"Hooves. Melee Attack Roll: +7, reach 5 ft.\",\"damage\":[\"Hit: 11 (2d6\\n+ 4) Bludgeoning damage.\"]}}]},{\"name\":\"Radiant Horn\",\"description\":\"Melee Attack Roll: +7, reach 5 ft. Hit: 9\\n(1d10 + 4) Radiant damage.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Radiant Horn. Melee Attack Roll: +7, reach 5 ft. Hit: 9\\n(1d10 + 4) Radiant damage.\"}],\"activationType\":\"action\",\"sourceOperations\":[{\"id\":\"radiant-horn-attack\",\"name\":\"Radiant Horn\",\"type\":\"attack\",\"relationship\":\"primary\",\"attack\":{\"type\":\"melee\",\"toHit\":7,\"reach\":5},\"damage\":[{\"formula\":\"1d10 + 4\",\"type\":\"radiant\",\"relationship\":\"base\"}],\"proof\":{\"attack\":\"Radiant Horn. Melee Attack Roll: +7, reach 5 ft.\",\"damage\":[\"Hit: 9\\n(1d10 + 4) Radiant damage.\"]}}]}],\"bonusActions\":[],\"reactions\":[],\"legendaryActions\":[{\"name\":\"Charging Horn\",\"description\":\"The unicorn moves up to half its Speed\\nwithout provoking Opportunity Attacks, and it makes\\none Radiant Horn attack.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Charging Horn. The unicorn moves up to half its Speed\\nwithout provoking Opportunity Attacks, and it makes\\none Radiant Horn attack.\"}],\"activationType\":\"legendary\",\"legendaryCost\":1,\"activityType\":\"utility\",\"executionMode\":\"gm-manual\"},{\"name\":\"Shimmering Shield\",\"description\":\"The unicorn targets itself or one\\ncreature it can see within 60 feet of itself. The target\\ngains 10 (3d6) Temporary Hit Points, and its AC increases by 2 until the end of the unicorn’s next turn.\\nThe unicorn can’t take this action again until the start of\\nits next turn.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Shimmering Shield. The unicorn targets itself or one\\ncreature it can see within 60 feet of itself. The target\\ngains 10 (3d6) Temporary Hit Points, and its AC increases by 2 until the end of the unicorn’s next turn.\\nThe unicorn can’t take this action again until the start of\\nits next turn.\"}],\"activationType\":\"legendary\",\"legendaryCost\":1,\"sourceOperations\":[{\"id\":\"shimmering-shield-temp-hp\",\"name\":\"Shimmering Shield\",\"type\":\"heal\",\"relationship\":\"primary\",\"healing\":{\"formula\":\"3d6\",\"type\":\"temphp\",\"target\":{\"type\":\"creature\",\"count\":1,\"special\":\"itself or one creature it can see within 60 feet of itself\"}},\"range\":60,\"targetSpecial\":\"itself or one creature it can see within 60 feet of itself\",\"proof\":{\"healing\":\"The target\\ngains 10 (3d6) Temporary Hit Points, and its AC increases by 2 until the end of the unicorn’s next turn.\",\"target\":\"The unicorn targets itself or one\\ncreature it can see within 60 feet of itself.\"}}]}]},\"claims\":[],\"coverage\":[],\"uncertainties\":[]}",
+      "rawReplySha256": "aa7774f4cd292676c25db23ae576846bfbeaad446df7ba14f5bd7850a12392e6",
+      "ir": {
+        "schemaVersion": 1,
+        "source": {
+          "sha256": "65a06fcb62ffe0946b85073fb0edbc8e8aeb9a4bf02fc2c5b9466dc5ccdb6d17",
+          "length": 1987
+        },
+        "creature": {
+          "identity": {
+            "name": "Unicorn",
+            "size": "large",
+            "creatureType": "celestial",
+            "alignment": "Lawful Good"
+          },
+          "abilities": {
+            "str": 18,
+            "dex": 14,
+            "con": 15,
+            "int": 11,
+            "wis": 17,
+            "cha": 16
+          },
+          "attributes": {
+            "ac": 12,
+            "initiative": 8,
+            "hp": {
+              "value": 97,
+              "formula": "13d10 + 26"
+            },
+            "movement": {
+              "walk": 50
+            },
+            "cr": 5,
+            "xp": 1800,
+            "proficiencyBonus": 3
+          },
+          "saves": {
+            "str": 4,
+            "dex": 2,
+            "con": 2,
+            "int": 0,
+            "wis": 3,
+            "cha": 3
+          },
+          "skills": {},
+          "defenses": {
+            "resistances": [],
+            "immunities": [
+              "poison"
+            ],
+            "vulnerabilities": [],
+            "conditionImmunities": [
+              "charmed",
+              "paralyzed",
+              "poisoned"
+            ]
+          },
+          "senses": {
+            "darkvision": 60,
+            "passivePerception": 13
+          },
+          "languages": {
+            "values": [
+              "Celestial",
+              "Elvish",
+              "Sylvan"
+            ],
+            "custom": "telepathy 120 ft."
+          },
+          "legendary": {
+            "max": 3,
+            "preamble": "Immediately after another creature’s turn, the unicorn can expend a use to take one of the following actions. The unicorn regains all expended uses at the start of each of its turns.",
+            "evidence": [
+              {
+                "start": 1357,
+                "end": 1565,
+                "quote": "Legendary Action Uses: 3. Immediately after another\ncreature’s turn, the unicorn can expend a use to take one\nof the following actions. The unicorn regains all expended\nuses at the start of each of its turns."
+              }
+            ],
+            "recovery": "own-turn-start",
+            "resistanceMax": 3
+          },
+          "spellcasting": [
+            {
+              "groupId": "spellcasting",
+              "featureName": "Spellcasting",
+              "description": "The unicorn casts one of the following\nspells, requiring no spell components and using Charisma as the spellcasting ability (spell save DC 14):\nAt Will: Detect Evil and Good, Druidcraft\n1/Day Each: Calm Emotions, Dispel Evil and Good, Entangle, Pass without Trace, Word of Recall",
+              "evidence": [
+                {
+                  "start": 837,
+                  "end": 1130,
+                  "quote": "Spellcasting. The unicorn casts one of the following\nspells, requiring no spell components and using Charisma as the spellcasting ability (spell save DC 14):\nAt Will: Detect Evil and Good, Druidcraft\n1/Day Each: Calm Emotions, Dispel Evil and Good, Entangle, Pass without Trace, Word of Recall"
+                }
+              ],
+              "ability": "cha",
+              "abilityEvidence": [
+                {
+                  "start": 932,
+                  "end": 993,
+                  "quote": "using Charisma as the spellcasting ability (spell save DC 14)"
+                }
+              ],
+              "saveDc": 14,
+              "saveDcEvidence": [
+                {
+                  "start": 976,
+                  "end": 992,
+                  "quote": "spell save DC 14"
+                }
+              ],
+              "componentWaivers": [
+                {
+                  "component": "material",
+                  "evidence": [
+                    {
+                      "start": 898,
+                      "end": 927,
+                      "quote": "requiring no spell components"
+                    }
+                  ]
+                }
+              ],
+              "usageGroups": [
+                {
+                  "usage": "at-will",
+                  "evidence": [
+                    {
+                      "start": 995,
+                      "end": 1036,
+                      "quote": "At Will: Detect Evil and Good, Druidcraft"
+                    }
+                  ],
+                  "spellRefs": [
+                    {
+                      "refId": "spellcasting-detect-evil-and-good",
+                      "originalName": "Detect Evil and Good",
+                      "aliases": [],
+                      "restrictions": [
+                        {
+                          "kind": "casting",
+                          "text": "requiring no spell components",
+                          "evidence": [
+                            {
+                              "start": 898,
+                              "end": 927,
+                              "quote": "requiring no spell components"
+                            }
+                          ]
+                        }
+                      ],
+                      "evidence": [
+                        {
+                          "start": 1004,
+                          "end": 1024,
+                          "quote": "Detect Evil and Good"
+                        }
+                      ],
+                      "identifier": "Detect Evil and Good"
+                    },
+                    {
+                      "refId": "spellcasting-druidcraft",
+                      "originalName": "Druidcraft",
+                      "aliases": [],
+                      "restrictions": [
+                        {
+                          "kind": "casting",
+                          "text": "requiring no spell components",
+                          "evidence": [
+                            {
+                              "start": 898,
+                              "end": 927,
+                              "quote": "requiring no spell components"
+                            }
+                          ]
+                        }
+                      ],
+                      "evidence": [
+                        {
+                          "start": 1026,
+                          "end": 1036,
+                          "quote": "Druidcraft"
+                        }
+                      ],
+                      "identifier": "Druidcraft"
+                    }
+                  ]
+                },
+                {
+                  "usage": "daily-each",
+                  "count": 1,
+                  "evidence": [
+                    {
+                      "start": 1037,
+                      "end": 1130,
+                      "quote": "1/Day Each: Calm Emotions, Dispel Evil and Good, Entangle, Pass without Trace, Word of Recall"
+                    }
+                  ],
+                  "spellRefs": [
+                    {
+                      "refId": "spellcasting-calm-emotions",
+                      "originalName": "Calm Emotions",
+                      "aliases": [],
+                      "restrictions": [
+                        {
+                          "kind": "casting",
+                          "text": "requiring no spell components",
+                          "evidence": [
+                            {
+                              "start": 898,
+                              "end": 927,
+                              "quote": "requiring no spell components"
+                            }
+                          ]
+                        }
+                      ],
+                      "evidence": [
+                        {
+                          "start": 1049,
+                          "end": 1062,
+                          "quote": "Calm Emotions"
+                        }
+                      ],
+                      "identifier": "Calm Emotions"
+                    },
+                    {
+                      "refId": "spellcasting-dispel-evil-and-good",
+                      "originalName": "Dispel Evil and Good",
+                      "aliases": [],
+                      "restrictions": [
+                        {
+                          "kind": "casting",
+                          "text": "requiring no spell components",
+                          "evidence": [
+                            {
+                              "start": 898,
+                              "end": 927,
+                              "quote": "requiring no spell components"
+                            }
+                          ]
+                        }
+                      ],
+                      "evidence": [
+                        {
+                          "start": 1064,
+                          "end": 1084,
+                          "quote": "Dispel Evil and Good"
+                        }
+                      ],
+                      "identifier": "Dispel Evil and Good"
+                    },
+                    {
+                      "refId": "spellcasting-entangle",
+                      "originalName": "Entangle",
+                      "aliases": [],
+                      "restrictions": [
+                        {
+                          "kind": "casting",
+                          "text": "requiring no spell components",
+                          "evidence": [
+                            {
+                              "start": 898,
+                              "end": 927,
+                              "quote": "requiring no spell components"
+                            }
+                          ]
+                        }
+                      ],
+                      "evidence": [
+                        {
+                          "start": 1086,
+                          "end": 1094,
+                          "quote": "Entangle"
+                        }
+                      ],
+                      "identifier": "Entangle"
+                    },
+                    {
+                      "refId": "spellcasting-pass-without-trace",
+                      "originalName": "Pass without Trace",
+                      "aliases": [],
+                      "restrictions": [
+                        {
+                          "kind": "casting",
+                          "text": "requiring no spell components",
+                          "evidence": [
+                            {
+                              "start": 898,
+                              "end": 927,
+                              "quote": "requiring no spell components"
+                            }
+                          ]
+                        }
+                      ],
+                      "evidence": [
+                        {
+                          "start": 1096,
+                          "end": 1114,
+                          "quote": "Pass without Trace"
+                        }
+                      ],
+                      "identifier": "Pass without Trace"
+                    },
+                    {
+                      "refId": "spellcasting-word-of-recall",
+                      "originalName": "Word of Recall",
+                      "aliases": [],
+                      "restrictions": [
+                        {
+                          "kind": "casting",
+                          "text": "requiring no spell components",
+                          "evidence": [
+                            {
+                              "start": 898,
+                              "end": 927,
+                              "quote": "requiring no spell components"
+                            }
+                          ]
+                        }
+                      ],
+                      "evidence": [
+                        {
+                          "start": 1116,
+                          "end": 1130,
+                          "quote": "Word of Recall"
+                        }
+                      ],
+                      "identifier": "Word of Recall"
+                    }
+                  ]
+                }
+              ],
+              "activationType": "action"
+            },
+            {
+              "groupId": "unicorns-blessing",
+              "featureName": "Unicorn’s Blessing (3/Day)",
+              "description": "The unicorn touches another creature with its horn and casts Cure Wounds\nor Lesser Restoration on that creature, using the same\nspellcasting ability as Spellcasting.",
+              "evidence": [
+                {
+                  "start": 1145,
+                  "end": 1338,
+                  "quote": "Unicorn’s Blessing (3/Day). The unicorn touches another creature with its horn and casts Cure Wounds\nor Lesser Restoration on that creature, using the same\nspellcasting ability as Spellcasting."
+                }
+              ],
+              "ability": "cha",
+              "abilityEvidence": [
+                {
+                  "start": 1286,
+                  "end": 1337,
+                  "quote": "using the same\nspellcasting ability as Spellcasting"
+                }
+              ],
+              "usageGroups": [
+                {
+                  "usage": "daily-shared",
+                  "count": 3,
+                  "evidence": [
+                    {
+                      "start": 1145,
+                      "end": 1171,
+                      "quote": "Unicorn’s Blessing (3/Day)"
+                    }
+                  ],
+                  "spellRefs": [
+                    {
+                      "refId": "unicorns-blessing-cure-wounds",
+                      "originalName": "Cure Wounds",
+                      "aliases": [],
+                      "restrictions": [
+                        {
+                          "kind": "target",
+                          "text": "another creature",
+                          "evidence": [
+                            {
+                              "start": 1173,
+                              "end": 1284,
+                              "quote": "The unicorn touches another creature with its horn and casts Cure Wounds\nor Lesser Restoration on that creature"
+                            }
+                          ]
+                        }
+                      ],
+                      "evidence": [
+                        {
+                          "start": 1234,
+                          "end": 1245,
+                          "quote": "Cure Wounds"
+                        }
+                      ],
+                      "identifier": "Cure Wounds"
+                    },
+                    {
+                      "refId": "unicorns-blessing-lesser-restoration",
+                      "originalName": "Lesser Restoration",
+                      "aliases": [],
+                      "restrictions": [
+                        {
+                          "kind": "target",
+                          "text": "another creature",
+                          "evidence": [
+                            {
+                              "start": 1173,
+                              "end": 1284,
+                              "quote": "The unicorn touches another creature with its horn and casts Cure Wounds\nor Lesser Restoration on that creature"
+                            }
+                          ]
+                        }
+                      ],
+                      "evidence": [
+                        {
+                          "start": 1249,
+                          "end": 1267,
+                          "quote": "Lesser Restoration"
+                        }
+                      ],
+                      "identifier": "Lesser Restoration"
+                    }
+                  ]
+                }
+              ],
+              "activationType": "bonus"
+            }
+          ],
+          "traits": [
+            {
+              "name": "Legendary Resistance (3/Day)",
+              "description": "If the unicorn fails a saving throw, it can choose to succeed instead.",
+              "evidence": [
+                {
+                  "start": 383,
+                  "end": 483,
+                  "quote": "Legendary Resistance (3/Day). If the unicorn fails a saving throw, it can choose to succeed instead."
+                }
+              ]
+            },
+            {
+              "name": "Magic Resistance",
+              "description": "The unicorn has Advantage on saving throws against spells and other magical effects.",
+              "evidence": [
+                {
+                  "start": 484,
+                  "end": 586,
+                  "quote": "Magic Resistance. The unicorn has Advantage on saving throws against spells and other magical effects."
+                }
+              ]
+            }
+          ],
+          "actions": [
+            {
+              "name": "Multiattack",
+              "description": "The unicorn makes one Hooves attack and\none Radiant Horn attack.",
+              "evidence": [
+                {
+                  "start": 595,
+                  "end": 672,
+                  "quote": "Multiattack. The unicorn makes one Hooves attack and\none Radiant Horn attack."
+                }
+              ],
+              "activationType": "action",
+              "activityType": "utility",
+              "executionMode": "gm-manual"
+            },
+            {
+              "name": "Hooves",
+              "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 11 (2d6\n+ 4) Bludgeoning damage.",
+              "evidence": [
+                {
+                  "start": 673,
+                  "end": 753,
+                  "quote": "Hooves. Melee Attack Roll: +7, reach 5 ft. Hit: 11 (2d6\n+ 4) Bludgeoning damage."
+                }
+              ],
+              "activationType": "action",
+              "sourceOperations": [
+                {
+                  "id": "hooves-attack",
+                  "name": "Hooves",
+                  "type": "attack",
+                  "relationship": "primary",
+                  "attack": {
+                    "type": "melee",
+                    "toHit": 7,
+                    "reach": 5
+                  },
+                  "damage": [
+                    {
+                      "formula": "2d6 + 4",
+                      "type": "bludgeoning",
+                      "relationship": "base"
+                    }
+                  ],
+                  "proof": {
+                    "attack": "Hooves. Melee Attack Roll: +7, reach 5 ft.",
+                    "damage": [
+                      "Hit: 11 (2d6\n+ 4) Bludgeoning damage."
+                    ]
+                  },
+                  "sourceText": "Melee Attack Roll: +7, reach 5 ft. Hit: 11 (2d6\n+ 4) Bludgeoning damage.",
+                  "evidence": {
+                    "start": 681,
+                    "end": 753,
+                    "quote": "Melee Attack Roll: +7, reach 5 ft. Hit: 11 (2d6\n+ 4) Bludgeoning damage."
+                  }
+                }
+              ],
+              "executionMode": "native-with-gm",
+              "activityType": "utility",
+              "nativeRuleText": "Melee Attack Roll: +7, reach 5 ft. Hit: 11 (2d6\n+ 4) Bludgeoning damage.",
+              "manualRemainder": "Melee Attack Roll: +7, reach 5 ft. Hit: 11 (2d6\n+ 4) Bludgeoning damage."
+            },
+            {
+              "name": "Radiant Horn",
+              "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 9\n(1d10 + 4) Radiant damage.",
+              "evidence": [
+                {
+                  "start": 754,
+                  "end": 836,
+                  "quote": "Radiant Horn. Melee Attack Roll: +7, reach 5 ft. Hit: 9\n(1d10 + 4) Radiant damage."
+                }
+              ],
+              "activationType": "action",
+              "sourceOperations": [
+                {
+                  "id": "radiant-horn-attack",
+                  "name": "Radiant Horn",
+                  "type": "attack",
+                  "relationship": "primary",
+                  "attack": {
+                    "type": "melee",
+                    "toHit": 7,
+                    "reach": 5
+                  },
+                  "damage": [
+                    {
+                      "formula": "1d10 + 4",
+                      "type": "radiant",
+                      "relationship": "base"
+                    }
+                  ],
+                  "proof": {
+                    "attack": "Radiant Horn. Melee Attack Roll: +7, reach 5 ft.",
+                    "damage": [
+                      "Hit: 9\n(1d10 + 4) Radiant damage."
+                    ]
+                  },
+                  "sourceText": "Melee Attack Roll: +7, reach 5 ft. Hit: 9\n(1d10 + 4) Radiant damage.",
+                  "evidence": {
+                    "start": 768,
+                    "end": 836,
+                    "quote": "Melee Attack Roll: +7, reach 5 ft. Hit: 9\n(1d10 + 4) Radiant damage."
+                  }
+                }
+              ],
+              "executionMode": "native-with-gm",
+              "activityType": "utility",
+              "nativeRuleText": "Melee Attack Roll: +7, reach 5 ft. Hit: 9\n(1d10 + 4) Radiant damage.",
+              "manualRemainder": "Melee Attack Roll: +7, reach 5 ft. Hit: 9\n(1d10 + 4) Radiant damage."
+            }
+          ],
+          "bonusActions": [],
+          "reactions": [],
+          "legendaryActions": [
+            {
+              "name": "Charging Horn",
+              "description": "The unicorn moves up to half its Speed\nwithout provoking Opportunity Attacks, and it makes\none Radiant Horn attack.",
+              "evidence": [
+                {
+                  "start": 1566,
+                  "end": 1696,
+                  "quote": "Charging Horn. The unicorn moves up to half its Speed\nwithout provoking Opportunity Attacks, and it makes\none Radiant Horn attack."
+                }
+              ],
+              "activationType": "legendary",
+              "legendaryCost": 1,
+              "activityType": "utility",
+              "executionMode": "gm-manual"
+            },
+            {
+              "name": "Shimmering Shield",
+              "description": "The unicorn targets itself or one\ncreature it can see within 60 feet of itself. The target\ngains 10 (3d6) Temporary Hit Points, and its AC increases by 2 until the end of the unicorn’s next turn.\nThe unicorn can’t take this action again until the start of\nits next turn.",
+              "evidence": [
+                {
+                  "start": 1697,
+                  "end": 1986,
+                  "quote": "Shimmering Shield. The unicorn targets itself or one\ncreature it can see within 60 feet of itself. The target\ngains 10 (3d6) Temporary Hit Points, and its AC increases by 2 until the end of the unicorn’s next turn.\nThe unicorn can’t take this action again until the start of\nits next turn."
+                }
+              ],
+              "activationType": "legendary",
+              "legendaryCost": 1,
+              "sourceOperations": [
+                {
+                  "id": "shimmering-shield-temp-hp",
+                  "name": "Shimmering Shield",
+                  "type": "heal",
+                  "relationship": "primary",
+                  "healing": {
+                    "formula": "3d6",
+                    "type": "temphp",
+                    "target": {
+                      "type": "creature",
+                      "count": 1,
+                      "special": "itself or one creature it can see within 60 feet of itself"
+                    }
+                  },
+                  "range": 60,
+                  "targetSpecial": "itself or one creature it can see within 60 feet of itself",
+                  "proof": {
+                    "healing": "The target\ngains 10 (3d6) Temporary Hit Points, and its AC increases by 2 until the end of the unicorn’s next turn.",
+                    "target": "The unicorn targets itself or one\ncreature it can see within 60 feet of itself."
+                  },
+                  "sourceText": "The unicorn targets itself or one\ncreature it can see within 60 feet of itself. The target\ngains 10 (3d6) Temporary Hit Points, and its AC increases by 2 until the end of the unicorn’s next turn.\nThe unicorn can’t take this action again until the start of\nits next turn.",
+                  "evidence": {
+                    "start": 1716,
+                    "end": 1986,
+                    "quote": "The unicorn targets itself or one\ncreature it can see within 60 feet of itself. The target\ngains 10 (3d6) Temporary Hit Points, and its AC increases by 2 until the end of the unicorn’s next turn.\nThe unicorn can’t take this action again until the start of\nits next turn."
+                  }
+                }
+              ],
+              "executionMode": "native-with-gm",
+              "activityType": "utility",
+              "nativeRuleText": "The unicorn targets itself or one\ncreature it can see within 60 feet of itself. The target\ngains 10 (3d6) Temporary Hit Points, and its AC increases by 2 until the end of the unicorn’s next turn.\nThe unicorn can’t take this action again until the start of\nits next turn.",
+              "manualRemainder": "The unicorn targets itself or one\ncreature it can see within 60 feet of itself. The target\ngains 10 (3d6) Temporary Hit Points, and its AC increases by 2 until the end of the unicorn’s next turn.\nThe unicorn can’t take this action again until the start of\nits next turn."
+            }
+          ]
+        },
+        "claims": [],
+        "coverage": [],
+        "uncertainties": []
+      },
+      "irSha256": "587f253f76fcf74326a8342e44f51dfc37c0ab902601d8eab9ee9db4c3c3ede9",
+      "provenance": {
+        "captureFile": "unicorn-capture.json",
+        "captureFileSha256": "ea800c7624c6e18cdff1fe5f6d45c863ca3b0325a0baee40a8ad2ebf647fe8c4",
+        "firstReply": true,
+        "reviewRequested": false
+      }
+    },
+    {
+      "id": "spirit-naga",
+      "source": "## Spirit Naga\nLarge Fiend, Chaotic Evil\nAC 17 Initiative +3 (13)\nHP 135 (18d10 + 36)\nSpeed 40 ft.\nMOD SAVE MOD SAVE MOD SAVE\nStr 18 +4 +4 Dex 17 +3 +6 Con 14 +2 +5\nInt 16 +3 +3 WIS 15 +2 +5 Cha 16 +3 +6\nImmunities Poison; Charmed, Poisoned\nSenses Darkvision 60 ft.; Passive Perception 12\nLanguages Abyssal, Common\nCR 8 (XP 3,900; PB +3)\nTraits\nFiendish Restoration. If it dies, the naga returns to life\nin 1d6 days and regains all its Hit Points. Only a Wish\nspell can prevent this trait from functioning.\nActions\nMultiattack. The naga makes three attacks, using Bite\nor Necrotic Ray in any combination.\nBite. Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4)\nPiercing damage plus 14 (4d6) Poison damage.\nNecrotic Ray. Ranged Attack Roll: +6, range 60 ft. Hit:\n21 (6d6) Necrotic damage.\nSpellcasting. The naga casts one of the following\nspells, requiring no Somatic or Material components\nand using Intelligence as the spellcasting ability (spell\nsave DC 14):\nAt Will: Detect Magic, Mage Hand, Minor Illusion, Water Breathing\n2/Day Each: Detect Thoughts, Dimension Door,\nHold Person (level 3 version), Lightning Bolt (level\n4 version)\n",
+      "sourceSha256": "55304b4c315ee7684dae06b44a1330c95f63f93552b5d6ddb701edc9a637398d",
+      "rawReply": "{\"schemaVersion\":1,\"source\":{\"sha256\":\"55304b4c315ee7684dae06b44a1330c95f63f93552b5d6ddb701edc9a637398d\",\"length\":1139},\"creature\":{\"identity\":{\"name\":\"Spirit Naga\",\"size\":\"large\",\"creatureType\":\"fiend\",\"alignment\":\"Chaotic Evil\"},\"abilities\":{\"str\":18,\"dex\":17,\"con\":14,\"int\":16,\"wis\":15,\"cha\":16},\"attributes\":{\"ac\":17,\"acKind\":\"flat\",\"initiative\":3,\"hp\":{\"value\":135,\"formula\":\"18d10 + 36\"},\"movement\":{\"walk\":40},\"cr\":8,\"xp\":3900,\"proficiencyBonus\":3},\"saves\":{\"str\":4,\"dex\":6,\"con\":5,\"int\":3,\"wis\":5,\"cha\":6},\"skills\":{},\"defenses\":{\"resistances\":[],\"immunities\":[\"poison\"],\"vulnerabilities\":[],\"conditionImmunities\":[\"charmed\",\"poisoned\"]},\"senses\":{\"darkvision\":60,\"passivePerception\":12},\"languages\":{\"values\":[\"Abyssal\",\"Common\"]},\"traits\":[{\"name\":\"Fiendish Restoration\",\"description\":\"If it dies, the naga returns to life in 1d6 days and regains all its Hit Points. Only a Wish spell can prevent this trait from functioning.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Fiendish Restoration. If it dies, the naga returns to life\\nin 1d6 days and regains all its Hit Points. Only a Wish\\nspell can prevent this trait from functioning.\"}],\"activityType\":\"utility\",\"executionMode\":\"gm-manual\"}],\"actions\":[{\"name\":\"Multiattack\",\"description\":\"The naga makes three attacks, using Bite or Necrotic Ray in any combination.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Multiattack. The naga makes three attacks, using Bite\\nor Necrotic Ray in any combination.\"}],\"activationType\":\"action\",\"activityType\":\"utility\",\"executionMode\":\"gm-manual\"},{\"name\":\"Bite\",\"description\":\"Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4) Piercing damage plus 14 (4d6) Poison damage.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Bite. Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4)\\nPiercing damage plus 14 (4d6) Poison damage.\"}],\"activationType\":\"action\",\"sourceOperations\":[{\"id\":\"bite-attack\",\"name\":\"Bite\",\"type\":\"attack\",\"relationship\":\"primary\",\"attack\":{\"type\":\"melee\",\"toHit\":7,\"reach\":10},\"damage\":[{\"formula\":\"1d6 + 4\",\"type\":\"piercing\",\"relationship\":\"base\"},{\"formula\":\"4d6\",\"type\":\"poison\",\"relationship\":\"additional\"}],\"proof\":{\"attack\":\"Bite. Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4)\\nPiercing damage plus 14 (4d6) Poison damage.\",\"damage\":[\"Bite. Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4)\\nPiercing damage plus 14 (4d6) Poison damage.\",\"Bite. Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4)\\nPiercing damage plus 14 (4d6) Poison damage.\"],\"range\":\"Bite. Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4)\\nPiercing damage plus 14 (4d6) Poison damage.\"}}]},{\"name\":\"Necrotic Ray\",\"description\":\"Ranged Attack Roll: +6, range 60 ft. Hit: 21 (6d6) Necrotic damage.\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Necrotic Ray. Ranged Attack Roll: +6, range 60 ft. Hit:\\n21 (6d6) Necrotic damage.\"}],\"activationType\":\"action\",\"sourceOperations\":[{\"id\":\"necrotic-ray-attack\",\"name\":\"Necrotic Ray\",\"type\":\"attack\",\"relationship\":\"primary\",\"attack\":{\"type\":\"ranged\",\"toHit\":6,\"range\":60},\"damage\":[{\"formula\":\"6d6\",\"type\":\"necrotic\",\"relationship\":\"base\"}],\"proof\":{\"attack\":\"Necrotic Ray. Ranged Attack Roll: +6, range 60 ft. Hit:\\n21 (6d6) Necrotic damage.\",\"damage\":[\"Necrotic Ray. Ranged Attack Roll: +6, range 60 ft. Hit:\\n21 (6d6) Necrotic damage.\"],\"range\":\"Necrotic Ray. Ranged Attack Roll: +6, range 60 ft. Hit:\\n21 (6d6) Necrotic damage.\"}}]}],\"bonusActions\":[],\"reactions\":[],\"legendaryActions\":[],\"spellcasting\":{\"groupId\":\"spellcasting\",\"featureName\":\"Spellcasting\",\"description\":\"The naga casts one of the following\\nspells, requiring no Somatic or Material components\\nand using Intelligence as the spellcasting ability (spell\\nsave DC 14):\\nAt Will: Detect Magic, Mage Hand, Minor Illusion, Water Breathing\\n2/Day Each: Detect Thoughts, Dimension Door,\\nHold Person (level 3 version), Lightning Bolt (level\\n4 version)\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Spellcasting. The naga casts one of the following\\nspells, requiring no Somatic or Material components\\nand using Intelligence as the spellcasting ability (spell\\nsave DC 14):\"}],\"ability\":\"int\",\"abilityEvidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"using Intelligence as the spellcasting ability\"}],\"saveDc\":14,\"saveDcEvidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"and using Intelligence as the spellcasting ability (spell\\nsave DC 14):\"}],\"componentWaivers\":[{\"component\":\"material\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no Somatic or Material components\"}]}],\"usageGroups\":[{\"usage\":\"at-will\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"At Will: Detect Magic, Mage Hand, Minor Illusion, Water Breathing\"}],\"spellRefs\":[{\"refId\":\"detect-magic\",\"originalName\":\"Detect Magic\",\"aliases\":[],\"restrictions\":[{\"kind\":\"casting\",\"text\":\"requiring no Somatic or Material components\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no Somatic or Material components\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Detect Magic\"}]},{\"refId\":\"mage-hand\",\"originalName\":\"Mage Hand\",\"aliases\":[],\"restrictions\":[{\"kind\":\"casting\",\"text\":\"requiring no Somatic or Material components\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no Somatic or Material components\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Mage Hand\"}]},{\"refId\":\"minor-illusion\",\"originalName\":\"Minor Illusion\",\"aliases\":[],\"restrictions\":[{\"kind\":\"casting\",\"text\":\"requiring no Somatic or Material components\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no Somatic or Material components\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Minor Illusion\"}]},{\"refId\":\"water-breathing\",\"originalName\":\"Water Breathing\",\"aliases\":[],\"restrictions\":[{\"kind\":\"casting\",\"text\":\"requiring no Somatic or Material components\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no Somatic or Material components\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Water Breathing\"}]}]},{\"usage\":\"daily-each\",\"count\":2,\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"2/Day Each: Detect Thoughts, Dimension Door,\\nHold Person (level 3 version), Lightning Bolt (level\\n4 version)\"}],\"spellRefs\":[{\"refId\":\"detect-thoughts\",\"originalName\":\"Detect Thoughts\",\"aliases\":[],\"restrictions\":[{\"kind\":\"casting\",\"text\":\"requiring no Somatic or Material components\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no Somatic or Material components\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Detect Thoughts\"}]},{\"refId\":\"dimension-door\",\"originalName\":\"Dimension Door\",\"aliases\":[],\"restrictions\":[{\"kind\":\"casting\",\"text\":\"requiring no Somatic or Material components\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no Somatic or Material components\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Dimension Door\"}]},{\"refId\":\"hold-person\",\"originalName\":\"Hold Person\",\"aliases\":[],\"restrictions\":[{\"kind\":\"casting\",\"text\":\"requiring no Somatic or Material components\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no Somatic or Material components\"}]},{\"kind\":\"casting\",\"text\":\"level 3 version\",\"value\":3,\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Hold Person (level 3 version)\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Hold Person (level 3 version)\"}]},{\"refId\":\"lightning-bolt\",\"originalName\":\"Lightning Bolt\",\"aliases\":[],\"restrictions\":[{\"kind\":\"casting\",\"text\":\"requiring no Somatic or Material components\",\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"requiring no Somatic or Material components\"}]},{\"kind\":\"casting\",\"text\":\"level 4 version\",\"value\":4,\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Lightning Bolt (level\\n4 version)\"}]}],\"evidence\":[{\"start\":-1,\"end\":-1,\"quote\":\"Lightning Bolt (level\\n4 version)\"}]}]}],\"activationType\":\"action\"}},\"claims\":[],\"coverage\":[],\"uncertainties\":[]}",
+      "rawReplySha256": "1bf7ed1e73f806655dea12fd312a6b2af933182807bc6afcee4807c240055ba9",
+      "ir": {
+        "schemaVersion": 1,
+        "source": {
+          "sha256": "55304b4c315ee7684dae06b44a1330c95f63f93552b5d6ddb701edc9a637398d",
+          "length": 1139
+        },
+        "creature": {
+          "identity": {
+            "name": "Spirit Naga",
+            "size": "large",
+            "creatureType": "fiend",
+            "alignment": "Chaotic Evil"
+          },
+          "abilities": {
+            "str": 18,
+            "dex": 17,
+            "con": 14,
+            "int": 16,
+            "wis": 15,
+            "cha": 16
+          },
+          "attributes": {
+            "ac": 17,
+            "acKind": "flat",
+            "initiative": 3,
+            "hp": {
+              "value": 135,
+              "formula": "18d10 + 36"
+            },
+            "movement": {
+              "walk": 40
+            },
+            "cr": 8,
+            "xp": 3900,
+            "proficiencyBonus": 3
+          },
+          "saves": {
+            "str": 4,
+            "dex": 6,
+            "con": 5,
+            "int": 3,
+            "wis": 5,
+            "cha": 6
+          },
+          "skills": {},
+          "defenses": {
+            "resistances": [],
+            "immunities": [
+              "poison"
+            ],
+            "vulnerabilities": [],
+            "conditionImmunities": [
+              "charmed",
+              "poisoned"
+            ]
+          },
+          "senses": {
+            "darkvision": 60,
+            "passivePerception": 12
+          },
+          "languages": {
+            "values": [
+              "Abyssal",
+              "Common"
+            ]
+          },
+          "traits": [
+            {
+              "name": "Fiendish Restoration",
+              "description": "If it dies, the naga returns to life in 1d6 days and regains all its Hit Points. Only a Wish spell can prevent this trait from functioning.",
+              "evidence": [
+                {
+                  "start": 345,
+                  "end": 506,
+                  "quote": "Fiendish Restoration. If it dies, the naga returns to life\nin 1d6 days and regains all its Hit Points. Only a Wish\nspell can prevent this trait from functioning."
+                }
+              ],
+              "activityType": "utility",
+              "executionMode": "gm-manual"
+            }
+          ],
+          "actions": [
+            {
+              "name": "Multiattack",
+              "description": "The naga makes three attacks, using Bite or Necrotic Ray in any combination.",
+              "evidence": [
+                {
+                  "start": 515,
+                  "end": 604,
+                  "quote": "Multiattack. The naga makes three attacks, using Bite\nor Necrotic Ray in any combination."
+                }
+              ],
+              "activationType": "action",
+              "activityType": "utility",
+              "executionMode": "gm-manual"
+            },
+            {
+              "name": "Bite",
+              "description": "Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4) Piercing damage plus 14 (4d6) Poison damage.",
+              "evidence": [
+                {
+                  "start": 605,
+                  "end": 708,
+                  "quote": "Bite. Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4)\nPiercing damage plus 14 (4d6) Poison damage."
+                }
+              ],
+              "activationType": "action",
+              "sourceOperations": [
+                {
+                  "id": "bite-attack",
+                  "name": "Bite",
+                  "type": "attack",
+                  "relationship": "primary",
+                  "attack": {
+                    "type": "melee",
+                    "toHit": 7,
+                    "reach": 10
+                  },
+                  "damage": [
+                    {
+                      "formula": "1d6 + 4",
+                      "type": "piercing",
+                      "relationship": "base"
+                    },
+                    {
+                      "formula": "4d6",
+                      "type": "poison",
+                      "relationship": "additional"
+                    }
+                  ],
+                  "proof": {
+                    "attack": "Bite. Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4)\nPiercing damage plus 14 (4d6) Poison damage.",
+                    "damage": [
+                      "Bite. Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4)\nPiercing damage plus 14 (4d6) Poison damage.",
+                      "Bite. Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4)\nPiercing damage plus 14 (4d6) Poison damage."
+                    ],
+                    "range": "Bite. Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4)\nPiercing damage plus 14 (4d6) Poison damage."
+                  },
+                  "sourceText": "Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4) Piercing damage plus 14 (4d6) Poison damage."
+                }
+              ],
+              "executionMode": "native-with-gm",
+              "activityType": "utility",
+              "nativeRuleText": "Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4) Piercing damage plus 14 (4d6) Poison damage.",
+              "manualRemainder": "Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4) Piercing damage plus 14 (4d6) Poison damage."
+            },
+            {
+              "name": "Necrotic Ray",
+              "description": "Ranged Attack Roll: +6, range 60 ft. Hit: 21 (6d6) Necrotic damage.",
+              "evidence": [
+                {
+                  "start": 709,
+                  "end": 790,
+                  "quote": "Necrotic Ray. Ranged Attack Roll: +6, range 60 ft. Hit:\n21 (6d6) Necrotic damage."
+                }
+              ],
+              "activationType": "action",
+              "sourceOperations": [
+                {
+                  "id": "necrotic-ray-attack",
+                  "name": "Necrotic Ray",
+                  "type": "attack",
+                  "relationship": "primary",
+                  "attack": {
+                    "type": "ranged",
+                    "toHit": 6,
+                    "range": 60
+                  },
+                  "damage": [
+                    {
+                      "formula": "6d6",
+                      "type": "necrotic",
+                      "relationship": "base"
+                    }
+                  ],
+                  "proof": {
+                    "attack": "Necrotic Ray. Ranged Attack Roll: +6, range 60 ft. Hit:\n21 (6d6) Necrotic damage.",
+                    "damage": [
+                      "Necrotic Ray. Ranged Attack Roll: +6, range 60 ft. Hit:\n21 (6d6) Necrotic damage."
+                    ],
+                    "range": "Necrotic Ray. Ranged Attack Roll: +6, range 60 ft. Hit:\n21 (6d6) Necrotic damage."
+                  },
+                  "sourceText": "Ranged Attack Roll: +6, range 60 ft. Hit: 21 (6d6) Necrotic damage."
+                }
+              ],
+              "executionMode": "native-with-gm",
+              "activityType": "utility",
+              "nativeRuleText": "Ranged Attack Roll: +6, range 60 ft. Hit: 21 (6d6) Necrotic damage.",
+              "manualRemainder": "Ranged Attack Roll: +6, range 60 ft. Hit: 21 (6d6) Necrotic damage."
+            }
+          ],
+          "bonusActions": [],
+          "reactions": [],
+          "legendaryActions": [],
+          "spellcasting": {
+            "groupId": "spellcasting",
+            "featureName": "Spellcasting",
+            "description": "The naga casts one of the following\nspells, requiring no Somatic or Material components\nand using Intelligence as the spellcasting ability (spell\nsave DC 14):\nAt Will: Detect Magic, Mage Hand, Minor Illusion, Water Breathing\n2/Day Each: Detect Thoughts, Dimension Door,\nHold Person (level 3 version), Lightning Bolt (level\n4 version)",
+            "evidence": [
+              {
+                "start": 791,
+                "end": 963,
+                "quote": "Spellcasting. The naga casts one of the following\nspells, requiring no Somatic or Material components\nand using Intelligence as the spellcasting ability (spell\nsave DC 14):"
+              }
+            ],
+            "ability": "int",
+            "abilityEvidence": [
+              {
+                "start": 897,
+                "end": 943,
+                "quote": "using Intelligence as the spellcasting ability"
+              }
+            ],
+            "saveDc": 14,
+            "saveDcEvidence": [
+              {
+                "start": 893,
+                "end": 963,
+                "quote": "and using Intelligence as the spellcasting ability (spell\nsave DC 14):"
+              }
+            ],
+            "componentWaivers": [
+              {
+                "component": "material",
+                "evidence": [
+                  {
+                    "start": 849,
+                    "end": 892,
+                    "quote": "requiring no Somatic or Material components"
+                  }
+                ]
+              }
+            ],
+            "usageGroups": [
+              {
+                "usage": "at-will",
+                "evidence": [
+                  {
+                    "start": 964,
+                    "end": 1029,
+                    "quote": "At Will: Detect Magic, Mage Hand, Minor Illusion, Water Breathing"
+                  }
+                ],
+                "spellRefs": [
+                  {
+                    "refId": "detect-magic",
+                    "originalName": "Detect Magic",
+                    "aliases": [],
+                    "restrictions": [
+                      {
+                        "kind": "casting",
+                        "text": "requiring no Somatic or Material components",
+                        "evidence": [
+                          {
+                            "start": 849,
+                            "end": 892,
+                            "quote": "requiring no Somatic or Material components"
+                          }
+                        ]
+                      }
+                    ],
+                    "evidence": [
+                      {
+                        "start": 973,
+                        "end": 985,
+                        "quote": "Detect Magic"
+                      }
+                    ]
+                  },
+                  {
+                    "refId": "mage-hand",
+                    "originalName": "Mage Hand",
+                    "aliases": [],
+                    "restrictions": [
+                      {
+                        "kind": "casting",
+                        "text": "requiring no Somatic or Material components",
+                        "evidence": [
+                          {
+                            "start": 849,
+                            "end": 892,
+                            "quote": "requiring no Somatic or Material components"
+                          }
+                        ]
+                      }
+                    ],
+                    "evidence": [
+                      {
+                        "start": 987,
+                        "end": 996,
+                        "quote": "Mage Hand"
+                      }
+                    ]
+                  },
+                  {
+                    "refId": "minor-illusion",
+                    "originalName": "Minor Illusion",
+                    "aliases": [],
+                    "restrictions": [
+                      {
+                        "kind": "casting",
+                        "text": "requiring no Somatic or Material components",
+                        "evidence": [
+                          {
+                            "start": 849,
+                            "end": 892,
+                            "quote": "requiring no Somatic or Material components"
+                          }
+                        ]
+                      }
+                    ],
+                    "evidence": [
+                      {
+                        "start": 998,
+                        "end": 1012,
+                        "quote": "Minor Illusion"
+                      }
+                    ]
+                  },
+                  {
+                    "refId": "water-breathing",
+                    "originalName": "Water Breathing",
+                    "aliases": [],
+                    "restrictions": [
+                      {
+                        "kind": "casting",
+                        "text": "requiring no Somatic or Material components",
+                        "evidence": [
+                          {
+                            "start": 849,
+                            "end": 892,
+                            "quote": "requiring no Somatic or Material components"
+                          }
+                        ]
+                      }
+                    ],
+                    "evidence": [
+                      {
+                        "start": 1014,
+                        "end": 1029,
+                        "quote": "Water Breathing"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "usage": "daily-each",
+                "count": 2,
+                "evidence": [
+                  {
+                    "start": 1030,
+                    "end": 1138,
+                    "quote": "2/Day Each: Detect Thoughts, Dimension Door,\nHold Person (level 3 version), Lightning Bolt (level\n4 version)"
+                  }
+                ],
+                "spellRefs": [
+                  {
+                    "refId": "detect-thoughts",
+                    "originalName": "Detect Thoughts",
+                    "aliases": [],
+                    "restrictions": [
+                      {
+                        "kind": "casting",
+                        "text": "requiring no Somatic or Material components",
+                        "evidence": [
+                          {
+                            "start": 849,
+                            "end": 892,
+                            "quote": "requiring no Somatic or Material components"
+                          }
+                        ]
+                      }
+                    ],
+                    "evidence": [
+                      {
+                        "start": 1042,
+                        "end": 1057,
+                        "quote": "Detect Thoughts"
+                      }
+                    ]
+                  },
+                  {
+                    "refId": "dimension-door",
+                    "originalName": "Dimension Door",
+                    "aliases": [],
+                    "restrictions": [
+                      {
+                        "kind": "casting",
+                        "text": "requiring no Somatic or Material components",
+                        "evidence": [
+                          {
+                            "start": 849,
+                            "end": 892,
+                            "quote": "requiring no Somatic or Material components"
+                          }
+                        ]
+                      }
+                    ],
+                    "evidence": [
+                      {
+                        "start": 1059,
+                        "end": 1073,
+                        "quote": "Dimension Door"
+                      }
+                    ]
+                  },
+                  {
+                    "refId": "hold-person",
+                    "originalName": "Hold Person",
+                    "aliases": [],
+                    "restrictions": [
+                      {
+                        "kind": "casting",
+                        "text": "requiring no Somatic or Material components",
+                        "evidence": [
+                          {
+                            "start": 849,
+                            "end": 892,
+                            "quote": "requiring no Somatic or Material components"
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "casting",
+                        "text": "level 3 version",
+                        "value": 3,
+                        "evidence": [
+                          {
+                            "start": 1075,
+                            "end": 1104,
+                            "quote": "Hold Person (level 3 version)"
+                          }
+                        ]
+                      }
+                    ],
+                    "evidence": [
+                      {
+                        "start": 1075,
+                        "end": 1104,
+                        "quote": "Hold Person (level 3 version)"
+                      }
+                    ]
+                  },
+                  {
+                    "refId": "lightning-bolt",
+                    "originalName": "Lightning Bolt",
+                    "aliases": [],
+                    "restrictions": [
+                      {
+                        "kind": "casting",
+                        "text": "requiring no Somatic or Material components",
+                        "evidence": [
+                          {
+                            "start": 849,
+                            "end": 892,
+                            "quote": "requiring no Somatic or Material components"
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "casting",
+                        "text": "level 4 version",
+                        "value": 4,
+                        "evidence": [
+                          {
+                            "start": 1106,
+                            "end": 1138,
+                            "quote": "Lightning Bolt (level\n4 version)"
+                          }
+                        ]
+                      }
+                    ],
+                    "evidence": [
+                      {
+                        "start": 1106,
+                        "end": 1138,
+                        "quote": "Lightning Bolt (level\n4 version)"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "activationType": "action"
+          }
+        },
+        "claims": [],
+        "coverage": [],
+        "uncertainties": []
+      },
+      "irSha256": "7dcebebfea34a023b1087975a8a72da0ea264afc9338c2d34adf499559a91547",
+      "provenance": {
+        "captureFile": "spirit-naga-capture.json",
+        "captureFileSha256": "6ac7a869a37dc6b176fc95cba801945d178c1ec78fff42edd727f5d8619d8d49",
+        "firstReply": true,
+        "reviewRequested": false
+      }
+    }
+  ]
+}

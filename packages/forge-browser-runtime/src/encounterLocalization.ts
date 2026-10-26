@@ -1,3 +1,4 @@
+import {assertForgeAiReviewAvailable} from './aiReviewPolicy';
 import {
   FACT_LOCALIZATION_POLICY, LOCALIZATION_POLICY, acceptLocalization, approveLocalizationByGm, assertReviewedLocalization, localizationHash, validateLocalizationDraft,localizationMeaningFindings,normalizeLocalizationBodyProse,
   type ReviewedLocalization, type LocalizationRequest, type LocalizationDraft, type EncounterLocalization, type LocalizationPolicy,
@@ -216,6 +217,7 @@ export async function reviewForgeEncounterLocalizationDraft(input: {
   service: ReviewedTranslationServicePort; signal?: AbortSignal;
   onReview?: (progress: EncounterLocalizationProgress) => void;
 }): Promise<PreparedForgeEncounter> {
+  assertForgeAiReviewAvailable();
   input.signal?.throwIfAborted();
   assertForgeEncounterLocalizationDraft(input.prepared, input.draft);
   const review = async (part: ForgeLocalizationDraftPart, actorKey?: string) => {
@@ -309,6 +311,9 @@ export async function localizeForgeEncounter(input: {
   onReview?: (progress: EncounterLocalizationProgress) => void;
   priorReviews?: readonly EncounterLocalizationProgress[];
 }): Promise<PreparedForgeEncounter> {
+  // This historical combined entry requires AI review. Draft translation and
+  // explicit GM approval remain available through their separate entry points.
+  assertForgeAiReviewAvailable();
   if (input.bundle.localization) throw new TypeError('本包已有译文；重新翻译须从其保留的原始包开始。');
   const original = await prepareForgeEncounter(serializeForgeEncounterPackage(input.bundle), input.signal);
   const translate = async (request: LocalizationRequest, actorKey?: string) => {

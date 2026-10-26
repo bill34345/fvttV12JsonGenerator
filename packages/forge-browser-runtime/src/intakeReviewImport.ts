@@ -456,9 +456,14 @@ function decodeRecoveryLineage(value: unknown, path: string): ForgeIntakeReviewR
 }
 
 function assertAcceptedImportConsistency(input: ForgeIntakeReviewBundleInput): void {
+  // Call totals describe the attempt, including reviews of a pre-repair
+  // candidate. Review metadata below describes only this candidate.
+  if (input.modelReviewStatus === 'not_requested' && (input.reviewVerdict || input.aiReviewFindings?.length)) {
+    throw new TypeError('未请求模型审核的候选不能声明模型审核结果。');
+  }
   if (input.status === 'ready_for_gm_review') {
     if (!input.candidateHash || !input.modelReviewStatus || !input.canonicalSource || !input.sourceIdentity || !input.target
-      || input.gmApproval || (input.modelReviewStatus === 'not_requested' && (input.calls?.review ?? 0) !== 0)) {
+      || input.gmApproval) {
       throw new TypeError('Forge Intake GM候选需要真实未批准的来源、产物与模型审核状态。');
     }
   }
@@ -482,9 +487,6 @@ function assertAcceptedImportConsistency(input: ForgeIntakeReviewBundleInput): v
     || input.gmApproval.targetHash !== forgeGmTargetHash(input.target!)
     || input.gmApproval.modelFindingsHash !== forgeGmModelFindingsHash(input.aiReviewFindings ?? []))) {
     throw new TypeError('GM确认与当前来源、候选或正式产物不一致。');
-  }
-  if (input.modelReviewStatus === 'not_requested' && ((input.calls?.review ?? 0) !== 0 || input.reviewVerdict || input.aiReviewFindings?.length)) {
-    throw new TypeError('未请求模型审核的候选不能声明模型审核结果。');
   }
   if (input.modelReviewStatus === 'accepted' && input.reviewVerdict !== 'accepted') {
     throw new TypeError('模型审核状态与实际结果不一致。');

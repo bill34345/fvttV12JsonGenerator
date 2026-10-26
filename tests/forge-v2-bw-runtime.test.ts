@@ -1,6 +1,6 @@
-import {test,expect} from 'bun:test';
+import {describe,test,expect} from 'bun:test';
 import yaml from 'js-yaml';
-import {createEncounterIntakeProviders,generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
+import {generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import {analyzeBrowserActorSourceWithAi,analyzeBrowserActorIntakeDraft,generateBrowserActorIntakeCandidate,repairBrowserActorIntake} from '@fvtt-json-generator/forge-browser-runtime/ai';
 import {prepareForgeEncounter} from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
 import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
@@ -11,12 +11,13 @@ import srd from './fixtures/forge-template-repeat-v2-srd.json';
 import {runStagedMonsterExtraction} from '@fvtt-json-generator/intake-ai/staged-extraction';
 import {sourceOperationFeatureErrors} from '../packages/intake-ai/src/staged-feature-mechanics';
 import {MonsterIntakeProviderError} from '@fvtt-json-generator/intake-ai/provider';
-import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
+import {verifyMonsterIntake,auditMonsterIntakeSourceProjection} from '@fvtt-json-generator/intake-ai/verifier';
+import {legacyWholeFormProvider,assertDefaultFullIrReplay} from './helpers/forge-legacy-provider';
 
 const source=damageUpgrade.case.units[0]!.text+'Actions\nNeedle. Melee Weapon Attack: +6 to hit, reach 5 ft., one creature. Hit: 7 (1d8+3) piercing damage.\n';
 const candidate={id:'single',label:'single',start:0,end:source.length,quote:source};
 const plan=splitStagedMonsterSource({source,sourceSha256:hashSource(source),candidate});
-async function fixture<T>(run:(env:{provider:ReturnType<typeof createEncounterIntakeProviders>['provider'];stages:any[];requests:any[];sink:any[];controller:AbortController})=>Promise<T>,mutate?:(form:any)=>void,abortBase=false){
+async function fixture<T>(run:(env:{provider:ReturnType<typeof legacyWholeFormProvider>;stages:any[];requests:any[];sink:any[];controller:AbortController})=>Promise<T>,mutate?:(form:any)=>void,abortBase=false){
   const originalFetch=globalThis.fetch,requests:any[]=[],stages:any[]=[],sink:any[]=[],controller=new AbortController();
   globalThis.fetch=Object.assign(async(_url:any,init?:RequestInit)=>{
     const body=JSON.parse(String(init?.body)),payload=JSON.parse(body.messages[1].content);requests.push(payload);
@@ -34,13 +35,14 @@ async function fixture<T>(run:(env:{provider:ReturnType<typeof createEncounterIn
     return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify(answer)}}]}),{status:200,headers:{'Content-Type':'application/json'}});
   },{preconnect:originalFetch.preconnect});
   try{
-    const {provider}=createEncounterIntakeProviders({baseUrl:'https://offline.invalid/v1',apiKey:'test-only',model:'fixture',protocol:'openai-chat',timeoutMs:10000,
-      onExtractionStage:entry=>{stages.push(entry);},responseEvidence:{record:entry=>{sink.push(entry);}}},controller.signal);
+    const provider=legacyWholeFormProvider({signal:controller.signal,stagedExtraction:{signal:controller.signal,onStage:entry=>{stages.push(entry);}},
+      responseEvidence:{record:entry=>{sink.push(entry);}}});
     return await run({provider,requests,stages,sink,controller});
   }finally{globalThis.fetch=originalFetch;}
 }
 
-test('actual encounter provider uses base + ONE whole form and reaches browser workflow and package preparation',async()=>fixture(async({provider,requests,stages,sink})=>{
+describe('explicit legacy base/whole-form extraction and correction compatibility',()=>{
+test('base + ONE whole form and current full-IR replay retain the formal Actor',async()=>fixture(async({provider,requests,stages,sink})=>{
   const fixed={providerName:provider.providerName,extractionModel:provider.extractionModel,reviewModel:provider.reviewModel,
     discover:async()=>({schemaVersion:1 as const,candidates:[candidate]}),extract:provider.extract.bind(provider),review:provider.review.bind(provider),repair:provider.repair.bind(provider)};
   const input={source,sourceName:'Needle',requestId:'bw-browser-chain',fvttVersion:'14.364',systemVersion:'5.3.3'};
@@ -56,6 +58,7 @@ test('actual encounter provider uses base + ONE whole form and reaches browser w
   const bundle={schema:'fvtt-json-forge-encounter',version:1,id:'bw-browser-chain',label:'Needle',target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},
     primaryActorKey:'main',actors:[{key:'main',label:'Needle',source:generation.markdown,sourceHash:hashSource(generation.markdown!)}],macros:[],assets:[]};
   const prepared=await prepareForgeEncounter(JSON.stringify(bundle));expect(prepared.actors).toHaveLength(1);
+  await assertDefaultFullIrReplay(source,analysis.ir!,{actor:generation.actorProjection,markdown:generation.markdown!});
 }));
 test('wrong whole-form number remains a review finding and a usable candidate; raw response remains captured',async()=>fixture(async({provider,requests,sink})=>{
   const ir=await provider.extract({source,sourceSha256:hashSource(source),candidate});
@@ -173,13 +176,19 @@ for(const shape of [
       const corrupt=structuredClone(actor);mutate(corrupt);expect(verifyMonsterIntake(text,ir,generated.markdown!,corrupt,request.candidate).findings.some(f=>f.blocking)).toBe(true);
     }
     if(neutral){const corrupt=structuredClone(actor),roll=corrupt.items.flatMap((i:any)=>Object.values<any>(i.system.activities)).find((a:any)=>a.roll);roll.roll.formula='1d20+99';expect(verifyMonsterIntake(text,ir,generated.markdown!,corrupt,request.candidate).findings.some(f=>f.blocking)).toBe(true);}
-    if(neutral)for(const mutate of [
-      (a:any)=>{a.consumption.spellSlot=true;},(a:any)=>{a.consumption.scaling.allowed=true;},
-      (a:any)=>{a.target.template={type:'sphere',size:'30',units:'ft'};},(a:any)=>{a.target.affects.count='99';},
-      (a:any)=>{a.target.override=false;},(a:any)=>{a.flags.fvttJsonGenerator.sourceOperation.attackClassification='weapon';},
-    ]){
+    if(neutral)for(const [check,mutate] of [
+      ['spell-slot',(a:any)=>{a.consumption.spellSlot=true;}],['scaling',(a:any)=>{a.consumption.scaling.allowed=true;}],
+      ['area',(a:any)=>{a.target.template={type:'sphere',size:'30',units:'ft'};}],['source-target-count',(a:any)=>{a.target.affects.count='99';}],
+      ['override',(a:any)=>{a.target.override=false;}],['classification',(a:any)=>{a.flags.fvttJsonGenerator.sourceOperation.attackClassification='weapon';}],
+    ] as Array<[string,(activity:any)=>void]>){
       const corrupt=structuredClone(actor),damage=corrupt.items.flatMap((i:any)=>Object.values<any>(i.system.activities)).find((a:any)=>a.type==='damage');mutate(damage);
-      expect(verifyMonsterIntake(text,ir,generated.markdown!,corrupt,request.candidate).findings.some(f=>f.blocking)).toBe(true);
+      // A quantity inferred from prose belongs to the explicit source audit;
+      // the remaining mutations violate the default structural projection.
+      if(check==='source-target-count'){
+        expect(Object.hasOwn(op,'targetCount')).toBe(false);expect(Object.hasOwn(op.attack!,'targetCount')).toBe(false);
+        expect(auditMonsterIntakeSourceProjection(text,ir,generated.markdown!,actor,request.candidate).findings.filter(f=>f.code==='ACTOR_SOURCE_OPERATION_TARGET_DRIFT')).toEqual([]);
+        expect(auditMonsterIntakeSourceProjection(text,ir,generated.markdown!,corrupt,request.candidate).findings.some(f=>f.blocking&&f.code==='ACTOR_SOURCE_OPERATION_TARGET_DRIFT')).toBe(true);
+      }else expect(verifyMonsterIntake(text,ir,generated.markdown!,corrupt,request.candidate).findings.some(f=>f.blocking),'neutral damage follow-up mutation '+check).toBe(true);
     }
   },form=>Object.assign(form.动作[0],{...('uses'in shape?{使用次数:shape.uses,恢复方式:'day'}:{}),攻击:{类型:shape.type,命中加值:6,触及尺:shape.reach,射程尺:shape.range,远射程尺:shape.long,目标数量:1,目标限制:shape.target},
     伤害:[{公式:'1d8+3',伤害类型:'piercing',生效条件:'自身未处于Bloodied时',倍率:1,成功时倍率:null},{公式:'1d8+3',伤害类型:'piercing',生效条件:'自身处于Bloodied时',倍率:0.5,成功时倍率:null}],特殊规则:'自身处于Bloodied时本次造成的伤害减半；目标被擒抱，逃脱DC18。'}));
@@ -204,7 +213,7 @@ test('BW fills only absent schema-derived proficiency from source-checked CR, ne
 
 
 async function correctionFixture<T>(answers:(stage:'base'|'feature',attempt:number,payload:any)=>unknown,
-  run:(env:{provider:ReturnType<typeof createEncounterIntakeProviders>['provider'];fixed:any;requests:any[];stages:any[];sink:any[]})=>Promise<T>,text=source){
+  run:(env:{provider:ReturnType<typeof legacyWholeFormProvider>;fixed:any;requests:any[];stages:any[];sink:any[]})=>Promise<T>,text=source){
   const originalFetch=globalThis.fetch,requests:any[]=[],stages:any[]=[],sink:any[]=[],counts={base:0,feature:0};
   globalThis.fetch=Object.assign(async(_url:any,init?:RequestInit)=>{
     const body=JSON.parse(String(init?.body)),payload=JSON.parse(body.messages[1].content);requests.push(payload);
@@ -214,8 +223,8 @@ async function correctionFixture<T>(answers:(stage:'base'|'feature',attempt:numb
     return new Response(JSON.stringify({choices:[{message:{content:typeof answer==='string'?answer:JSON.stringify(answer)}}]}),{status:200,headers:{'Content-Type':'application/json'}});
   },{preconnect:originalFetch.preconnect});
   try{
-    const {provider}=createEncounterIntakeProviders({baseUrl:'https://offline.invalid/v1',apiKey:'test-only',model:'fixture',protocol:'openai-chat',timeoutMs:10000,autoCorrect:true,
-      onExtractionStage:entry=>{stages.push(entry);},responseEvidence:{record:entry=>{sink.push(entry);}}});
+    const provider=legacyWholeFormProvider({stagedExtraction:{maxCorrections:1,onStage:entry=>{stages.push(entry);}},
+      responseEvidence:{record:entry=>{sink.push(entry);}}});
     const fixed={providerName:provider.providerName,extractionModel:provider.extractionModel,reviewModel:provider.reviewModel,
       getExtractionCorrectionCount:provider.getExtractionCorrectionCount!.bind(provider),
       discover:async()=>({schemaVersion:1 as const,candidates:[{...candidate,end:text.length,quote:text}]}),
@@ -335,3 +344,4 @@ test('concurrent extraction requests retain independent correction budgets on th
     expect(provider.getExtractionCorrectionCount?.(second)).toBe(0);
     expect(requests.filter(r=>r.correction)).toHaveLength(1);expect(requests).toHaveLength(5);
   }));
+});

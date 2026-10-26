@@ -236,7 +236,7 @@ test.each([[3,2],[7,3],[0.25,2]])('verifies derived NPC proficiency for CR %s wh
   expect((projectActor({...actor,system:{...actor.system,attributes:{prof:4}}}) as any).proficiencyBonus).toBe(4);
 });
 
-test('fully native single Actor omits controller model calls and keeps GM review deferred',async()=>{
+test('fully native single Actor omits controller model calls and keeps GM review deferred [review disabled]',async()=>{
   let automation=0,review=0;
   const provider={providerName:'fixture',extractionModel:'fixture',reviewModel:'fixture',
     discover:async()=>({schemaVersion:1 as const,candidates:[{id:'rat',label:'Rat Warlock',start:0,end:RAT_WARLOCK_SOURCE.length,quote:RAT_WARLOCK_SOURCE}]}),
@@ -247,7 +247,8 @@ test('fully native single Actor omits controller model calls and keeps GM review
   expect(result.report.status).toBe('ready_for_gm_review');
   expect(result.report.generationRoute).toBe('single-actor-native');
   expect(result.prepared?.bundle.macros).toEqual([]);expect(automation).toBe(0);expect(review).toBe(0);
-  const audited=await reviewForgeEncounterCandidate({source:RAT_WARLOCK_SOURCE,report:result.report,prepared:result.prepared!,provider,
-    automationProvider:{generate:async()=>{throw new Error('No generation during review.');},review:async()=>{automation++;throw new Error('No empty controller review.');}}});
-  expect(audited.report.status).toBe('ready_for_gm_review');expect(review).toBe(1);expect(automation).toBe(0);
+  const before=structuredClone(result);
+  await expect(reviewForgeEncounterCandidate({source:RAT_WARLOCK_SOURCE,report:result.report,prepared:result.prepared!,provider,
+    automationProvider:{generate:async()=>{throw Error('No controller generation');},review:async()=>{automation++;throw Error('No controller review');}}})).rejects.toThrow('AI 内容复核已暂时关闭');
+  expect(result).toEqual(before);expect(review).toBe(0);expect(automation).toBe(0);
 });

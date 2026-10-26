@@ -1444,7 +1444,7 @@ export function materializeSourceOperationEvidence(source:string,value:unknown,o
 
 /** Default AI binding owns only representation and evidence coordinates.
  * The model owns mechanics, branches, conditions and declared statuses. */
-export function materializeStructuredSourceOperations(source:string,value:unknown,offset?:number):unknown{
+export function materializeStructuredSourceOperations(source:string,value:unknown,offset?:number,proofSource?:string):unknown{
   if(!Array.isArray(value))return value;
   const clauses=sourceOperationClauses(source),key=(quote:string)=>text(quote).replace(/[。.!?！？]$/u,'');
   const complete=(quote:unknown):unknown=>{
@@ -1466,6 +1466,27 @@ export function materializeStructuredSourceOperations(source:string,value:unknow
     if(bound.evidence===undefined&&offset!==undefined&&typeof bound.sourceText==='string'){
       const start=source.indexOf(bound.sourceText);
       if(start>=0&&source.indexOf(bound.sourceText,start+1)<0)bound.evidence={start:offset+start,end:offset+start+bound.sourceText.length,quote:bound.sourceText};
+    }
+    // A single complete, source-bound citation may be shared by the declared
+    // unconditional parts of ONE primary roll. This expands references only;
+    // it does not prove, infer or repair any damage value from the sentence.
+    if(typeof proofSource==='string'&&object(proof)&&Array.isArray(proof.damage)&&proof.damage.length===1
+      &&typeof proof.damage[0]==='string'&&proof.damage[0].trim()
+      &&['attack','save'].includes(bound.type)&&bound.relationship==='primary'&&bound.condition===undefined
+      &&bound.damageAdjustment===undefined&&proof.upgrade===undefined
+      &&Array.isArray(bound.damage)&&bound.damage.length>1&&bound.damage.length<=12
+      &&bound.damage.every((part:unknown)=>object(part)&&['base','additional'].includes(part.relationship)&&part.condition===undefined)){
+      const whitespace=(value:string)=>value.replace(/\s+/gu,' ').trim();
+      const quote=proof.damage[0];
+      const owner=whitespace(proofSource),citation=whitespace(quote),at=owner.indexOf(citation);
+      // Check literal occurrence and sentence boundaries, not the legacy
+      // attack/result clause grouper or damage-word/number interpretation.
+      const before=at>=0?owner.slice(0,at).trimEnd():'';
+      if(at>=0&&owner.indexOf(citation,at+1)<0&&(!before||/[.!?。！？]$/u.test(before))
+        &&/[.!?。！？]$/u.test(citation)&&(at+citation.length===owner.length||owner[at+citation.length]===' ')){
+        const expanded={...bound,proof:{...proof,damage:Array.from({length:bound.damage.length},()=>quote)}};
+        if(sourceOperationStructureErrors([expanded]).length===0)bound.proof=expanded.proof;
+      }
     }
     return bound;
   });

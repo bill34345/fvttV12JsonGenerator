@@ -270,7 +270,15 @@ export function validateMonsterIntakeStructure(
       if (!shape(entry, path, ['max', 'lairMax', 'recovery', 'resistanceMax', 'resistanceLairMax', 'preamble', 'evidence'])) return;
       positive(entry.max, `${path}/max`); optional(entry, 'lairMax', path, positive); optional(entry, 'recovery', path, (e, p) => enumeration(e, p, ['own-turn-start'])); string(entry.preamble, `${path}/preamble`); evidenceList(entry.evidence, `${path}/evidence`);
       if (entry.lairMax !== undefined && entry.lairMax !== (entry.max as number) + 1) invalid(`${path}/lairMax`, 'Native lair capacity is the base capacity plus one.');
-      if(entry.resistanceMax!==undefined||entry.resistanceLairMax!==undefined){positive(entry.resistanceMax,`${path}/resistanceMax`);positive(entry.resistanceLairMax,`${path}/resistanceLairMax`);if(entry.lairMax===undefined||entry.recovery!=='own-turn-start'||entry.resistanceLairMax!==(entry.resistanceMax as number)+1)invalid(`${path}/resistanceLairMax`,'The native resistance lair ledger requires both explicit capacities and the existing lair mode.');}
+      optional(entry,'resistanceMax',path,positive);
+      if(entry.lairMax!==undefined&&entry.resistanceMax!==undefined&&entry.resistanceLairMax===undefined)
+        invalid(`${path}/resistanceLairMax`,'Native lair mode increases both legendary action and resistance capacities; an explicit resistance lair capacity is required.');
+      if(entry.resistanceLairMax!==undefined){
+        if(entry.resistanceMax===undefined)positive(entry.resistanceMax,`${path}/resistanceMax`);
+        positive(entry.resistanceLairMax,`${path}/resistanceLairMax`);
+        if(entry.lairMax===undefined||entry.recovery!=='own-turn-start'||entry.resistanceLairMax!==(entry.resistanceMax as number)+1)
+          invalid(`${path}/resistanceLairMax`,'The native resistance lair ledger requires both explicit capacities and the existing lair mode.');
+      }
     });
     for (const collection of COLLECTIONS) if (collection !== 'mythicActions' || creature[collection] !== undefined) array(creature[collection], `/creature/${collection}`, feature);
     optional(creature, 'spellcasting', '/creature', (e, p) => array(e, p, spellGroup));

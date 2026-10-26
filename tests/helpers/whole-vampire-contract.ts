@@ -3,10 +3,12 @@ import srd from '../fixtures/forge-template-repeat-v2-srd.json';
 import bases from '../fixtures/forge-v2-bw-base-facts.json';
 import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
 import {assembleStagedLinePartition,splitStagedMonsterSource,stagedSourceLines} from '@fvtt-json-generator/intake-ai/staged-source';
-import {createEncounterIntakeProviders,generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
+import {generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
+import {legacyWholeFormProvider} from './forge-legacy-provider';
 
-/** Independently authored, source-owned NEW CONTRACT input. Never reads a model
- * reply or a rubric, and never repairs or re-scores the frozen R4 answers. */
+/** Independently authored legacy form controls over the unchanged historical
+ * SRD 5.1 / 2014 source. Transport/projection compatibility only, not current
+ * 2024 model-quality acceptance; never edits or re-scores frozen R4 answers. */
 export const wholeVampireSource=srd.cases.find(value=>value.id==='R4')!;
 export const wholeVampireCandidate={id:'whole-vampire-new-contract',label:'Vampire',start:0,end:wholeVampireSource.source.length,quote:wholeVampireSource.source};
 const sourceRequest={source:wholeVampireSource.source,sourceSha256:hashSource(wholeVampireSource.source),candidate:wholeVampireCandidate};
@@ -76,10 +78,10 @@ export async function runWholeVampireContract(reference:VampireReference,mutate?
     return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify(answer)}}]}),{status:200,headers:{'Content-Type':'application/json'}});
   },{preconnect:priorFetch.preconnect});
   try{
-    const actual=createEncounterIntakeProviders({baseUrl:'https://offline.invalid/v1',apiKey:'fixture-only',model:'whole-vampire-new-contract',protocol:'openai-chat',timeoutMs:10000}).provider;
+    const actual=legacyWholeFormProvider({model:'whole-vampire-new-contract'});
     const provider={providerName:actual.providerName,extractionModel:actual.extractionModel,reviewModel:actual.reviewModel,
       discover:async()=>({schemaVersion:1 as const,candidates:[wholeVampireCandidate]}),extract:actual.extract.bind(actual),review:actual.review.bind(actual),repair:actual.repair.bind(actual)};
-    const result=await generateEncounterFromHumanMarkdown({source:wholeVampireSource.source,label:'Full original Vampire / new contract '+reference,provider,reviewPolicy:'deferred',
+    const result=await generateEncounterFromHumanMarkdown({source:wholeVampireSource.source,label:'Historical SRD 5.1 Vampire / legacy projection '+reference,provider,reviewPolicy:'deferred',
       automationProvider:{generate:async()=>{throw Error('Source-owned GM rules must not manufacture a controller');},review:async()=>({verdict:'accepted',findings:[]})}});
     return {result,plan,partition,requests,forms,modelHttp:0 as const};
   }finally{globalThis.fetch=priorFetch;}

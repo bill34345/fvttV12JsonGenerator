@@ -140,28 +140,16 @@ describe('independent Actor candidates in incomplete encounters',()=>{
 });
 
 describe('explicit audit of actors-only candidates',()=>{
-  test.each([true,false])('audits bound single=%s candidates without regeneration and retains their strict concerns',async single=>{
+  test.each([true,false])('disabled review keeps bound single=%s candidates and their strict concerns without regeneration [review disabled]',async single=>{
     const env=fixture({single,uncertainty:true}),result=await generate(env),extractions=env.calls.extract.length;
     expect(result.prepared?.bundle.macros).toEqual([]);expect(result.report.generationRoute).toBe('actors-only');
-    const audited=await reviewForgeEncounterCandidate({source:env.source,report:result.report,prepared:result.prepared!,provider:env.provider,automationProvider:env.automationProvider});
-    expect(env.calls.review).toBe(single?1:2);expect(env.calls.extract).toHaveLength(extractions);expect(env.calls.repair).toBe(0);expect(env.calls.automation).toBe(0);
-    expect(audited.prepared?.hash).toBe(result.prepared?.hash);expect(audited.report.status).toBe('ready_for_gm_review');
-    expect(audited.report.actors.every(actor=>actor.generation!.findings.some(finding=>finding.code==='PROBE_REVIEW'&&finding.blocking))).toBe(true);
-    expect(audited.prepared?.actors.every(actor=>actor.status!=='accepted')).toBe(true);
-    class Base{element:any={querySelector:()=>null,querySelectorAll:()=>[]};render(){return this;}async close(){return this;}}
-    const game:any={version:'14.368',world:{id:'audit-world'},system:{id:'dnd5e',version:'5.3.3'},user:{id:'audit-gm',isGM:true},macros:{contents:[]}};
-    const App=createForgeEncounterApplicationClass({game,foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}},
-      recoveryStore:{load:async()=>undefined,save:async()=>{},clear:async()=>{}},getRecoverySecrets:()=>({apiKey:'',baseUrl:''})});
-    const app:any=new App();app.humanSource=env.source;app.aiReport=audited.report;app.prepared=audited.prepared;
-    app.generationReviewBinding={sessionRevision:0,optionsHash:'offline',sourceHash:audited.report.sourceHash,packageHash:audited.prepared!.hash};
-    const context=await app._prepareContext();
-    expect(context.canReviewCandidate).toBe(false);expect(context.modelReviewState).toContain('全部角色已完成显式 AI 审核');
-    expect(context.modelReviewState).not.toContain('审核未请求');
-    expect(audited.report.automationReview).toEqual({status:'not_requested'});
-    await app.close();
+    const before=structuredClone(result);
+    await expect(reviewForgeEncounterCandidate({source:env.source,report:result.report,prepared:result.prepared!,provider:env.provider,automationProvider:env.automationProvider})).rejects.toThrow('AI 内容复核已暂时关闭');
+    expect(result).toEqual(before);expect(env.calls.review).toBe(0);expect(env.calls.extract).toHaveLength(extractions);expect(env.calls.repair).toBe(0);expect(env.calls.automation).toBe(0);
+    expect(result.prepared?.actors.every(actor=>actor.status!=='accepted')).toBe(true);
   });
 
-  test('rejects source/candidate/roster/model tampering before the first extra audit request',async()=>{
+  test('rejects source/candidate/roster/model tampering before the first extra audit request [review disabled]',async()=>{
     const env=fixture({uncertainty:true}),result=await generate(env);
     for(const change of ['source','range','final-source','candidate-hash','member','missing-actor','model','catalog','second-provider','second-review-state','second-gm-approval'] as const){
       const report=structuredClone(result.report);
@@ -183,7 +171,7 @@ describe('explicit audit of actors-only candidates',()=>{
     changedBundle.actors[0].source+='\n';changedBundle.actors[0].sourceHash=hashSource(changedBundle.actors[0].source);
     const changedPrepared=await prepareForgeEncounter(serializeForgeEncounterPackage(changedBundle));
     const reboundReport={...structuredClone(result.report),packageHash:changedPrepared.hash};
-    await expect(reviewForgeEncounterCandidate({source:env.source,report:reboundReport,prepared:changedPrepared,provider:env.provider,automationProvider:env.automationProvider})).rejects.toThrow(/最终来源/u);
+    await expect(reviewForgeEncounterCandidate({source:env.source,report:reboundReport,prepared:changedPrepared,provider:env.provider,automationProvider:env.automationProvider})).rejects.toThrow('AI 内容复核已暂时关闭');
     expect(env.calls.review).toBe(0);
   });
 });

@@ -112,17 +112,17 @@ describe('Forge candidate delivery is separate from verification',()=>{
     expect(approved.findings).toEqual(result.findings);
     expect(decodeForgeActorResponse(result.candidateResponse).ok).toBe(true);
   });
-  test('failed optional AI review leaves the exact candidate and all local findings available',async()=>{
+  test('disabled direct review leaves the exact candidate and all local findings available [review disabled]',async()=>{
     const {ir,provider}=fixture(),analysis=analyzeBrowserActorIntakeDraft(input,ir,provider);
     const candidate=await generateBrowserActorIntakeCandidate(input,analysis,provider);
-    const reviewed=await reviewBrowserActorIntakeCandidate(input,candidate,provider);
-    expect(reviewed.modelReviewStatus).toBe('failed');expect(reviewed.candidateHash).toBe(candidate.candidateHash);
-    expect(reviewed.candidateResponse).toEqual(candidate.candidateResponse);expect(reviewed.findings).toEqual(candidate.findings);
+    const before=structuredClone(candidate);
+    await expect(reviewBrowserActorIntakeCandidate(input,candidate,provider)).rejects.toThrow('AI 内容复核已暂时关闭');
+    expect(candidate).toEqual(before);expect(candidate.calls.review).toBe(0);
   });
-  test('combined generation and optional review retains a generated candidate when that review fails',async()=>{
+  test('legacy combined generation retains a GM-pending candidate without review [review disabled]',async()=>{
     const {ir,provider}=fixture(),analysis=analyzeBrowserActorIntakeDraft(input,ir,provider);
     const generated=await generateAndReviewBrowserActorIntake(input,analysis,provider);
-    expect(generated.candidateAvailable).toBe(true);expect(generated.modelReviewStatus).toBe('failed');
+    expect(generated.candidateAvailable).toBe(true);expect(generated.modelReviewStatus).toBe('not_requested');expect(generated.calls.review).toBe(0);
     expect(generated.candidateResponse).toBeDefined();expect(generated.actorProjection).toBeDefined();
     expect(generated.finalSource).toContain('intake-candidate-review');expect(generated.findings.some(f=>f.blocking)).toBe(true);
   });
@@ -290,18 +290,16 @@ for(const caseId of ['gladiator','priest','medusa'])test.skipIf(!officialCapture
   expect(result.calls.review).toBe(0);expect(result.calls.repair).toBe(0);
 });
 
-test('a projection error still delivers literal actions and reports missing automation outside the Actor',async()=>{
+test('a projection error fails without replacing the proposal with literal actions',async()=>{
   const {ir,provider}=fixture();
-  const current={...input,renderMarkdown:()=>{throw Error('projection unavailable');}};
+  const original=structuredClone(ir);let renderCalls=0;
+  const current={...input,renderMarkdown:()=>{renderCalls++;throw Error('projection unavailable');}};
   const result=await generateBrowserActorIntakeCandidate(current,analyzeBrowserActorIntakeDraft(current,ir,provider),provider);
-  expect(result.candidateAvailable).toBe(true);
-  expect(result.findings.some(f=>f.code==='ACTOR_LITERAL_DELIVERY')).toBe(true);
-  const actor=result.actorProjection as any;
-  expect(actor.system.attributes.hp.max).toBe(999);
-  expect(actor.items.some((item:any)=>item.name.startsWith(ir.creature.actions[0]!.name))).toBe(true);
-  expect(JSON.stringify(actor)).not.toContain('candidateReview');
-  expect(JSON.stringify(actor)).not.toContain('ACTOR_LITERAL_DELIVERY');
-  expect(result.formalStatus).not.toBe('accepted');
+  expect(result.status).toBe('failed');expect(result.candidateAvailable).toBe(false);
+  expect(result.candidateResponse).toBeUndefined();expect(result.actorProjection).toBeUndefined();
+  expect(result.analysis.ir).toEqual(original);expect(ir).toEqual(original);
+  expect(result.findings.some(f=>f.message.includes('规范资料转换失败：projection unavailable'))).toBe(true);
+  expect(renderCalls).toBe(1);expect(result.calls.review).toBe(0);expect(result.calls.repair).toBe(0);
 });
 
 // Private captures are optional for clean checkouts. The current worktree runs

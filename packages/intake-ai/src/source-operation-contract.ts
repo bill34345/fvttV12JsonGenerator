@@ -88,6 +88,24 @@ function foldRedundantOperationPlacement(source:string,ir:MonsterIntakeIR,featur
 /** Source normalization is not semantic repair: program-owned spans, stable
  * IDs and claims are materialized; only independently proven redundant
  * placement metadata is folded. Conflicting proposals remain for validation. */
+function boundOperationProofSource(source:string,feature:Record<string,any>,range:{start:number;end:number}):string|undefined{
+  if(typeof feature.description!=='string'||!feature.description.trim())return;
+  const pattern=feature.description.split(/(\s+)/u).filter(Boolean)
+    .map(part=>/\s/u.test(part)?'\\s+':part.replace(/[.*+?^${}()|[\]\\]/gu,'\\$&')).join('');
+  const refs=feature.evidence;
+  const owners=refs===undefined?[{start:range.start,end:range.end,quote:source.slice(range.start,range.end)}]
+    :Array.isArray(refs)&&refs.length?refs:[];
+  const matches=new Map<string,string>();
+  for(const ref of owners){
+    if(!object(ref)||!Number.isSafeInteger(ref.start)||!Number.isSafeInteger(ref.end)||ref.start<range.start||ref.end>range.end
+      ||ref.end<=ref.start||typeof ref.quote!=='string'||source.slice(ref.start,ref.end)!==ref.quote)return;
+    for(const match of ref.quote.matchAll(new RegExp(pattern,'gu'))){
+      const start=ref.start+match.index!;matches.set(`${start}:${start+match[0].length}`,match[0]);
+    }
+  }
+  return matches.size===1?[...matches.values()][0]:undefined;
+}
+
 export function bindProviderSourceContracts(source:string,value:Record<string,unknown>,range={start:0,end:source.length}):void{
   const ir=value as unknown as MonsterIntakeIR,creature=ir.creature;
   if(!object(creature))return;
@@ -97,7 +115,8 @@ export function bindProviderSourceContracts(source:string,value:Record<string,un
       if(!object(feature)||!Array.isArray(feature.sourceOperations)||typeof feature.description!=='string')continue;
       const parent=Array.isArray(feature.evidence)?feature.evidence.find(ref=>object(ref)&&Number.isSafeInteger(ref.start)&&source.slice(ref.start,ref.end)===ref.quote&&ref.quote.includes(feature.description)):undefined;
       const offset=parent?parent.start+parent.quote.indexOf(feature.description):undefined;
-      feature.sourceOperations=materializeStructuredSourceOperations(feature.description,feature.sourceOperations,offset) as typeof feature.sourceOperations;
+      feature.sourceOperations=materializeStructuredSourceOperations(feature.description,feature.sourceOperations,offset,
+        boundOperationProofSource(source,feature,range)) as typeof feature.sourceOperations;
       feature.executionMode??='native-with-gm';feature.activityType??='utility';
       feature.nativeRuleText??=feature.description;feature.manualRemainder??=feature.description;
     }

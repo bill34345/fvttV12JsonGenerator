@@ -2,6 +2,42 @@ import {sha256} from '@fvtt-json-generator/contracts/hash';
 import {findForbiddenTargetWorldIdentifiers} from '@fvtt-json-generator/spell-manifest-contracts';
 
 const object=(value:unknown):value is Record<string,any>=>!!value&&typeof value==='object'&&!Array.isArray(value);
+
+/** Inline a model-authored per-parent catalogue only when every definition is
+ * used exactly once by an explicit ID in that same parent's usage groups.
+ * No source text, spell names or mechanical values participate in the join. */
+export function inlineDeclaredSpellCatalogs(value:unknown):void{
+  if(!object(value)||!object(value.creature)||!Array.isArray(value.creature.spellcasting))return;
+  const plans:Array<{group:Record<string,any>;usages:Array<{usage:Record<string,any>;refs:Record<string,any>[]}>}>=[];
+  for(const group of value.creature.spellcasting){
+    if(!object(group)||!Object.hasOwn(group,'spellRefs'))continue;
+    if(!Array.isArray(group.spellRefs)||!group.spellRefs.length||!Array.isArray(group.usageGroups)||!group.usageGroups.length)return;
+    const definitions=new Map<string,Record<string,any>>(),used=new Set<string>(),usages=[];
+    for(const ref of group.spellRefs){
+      if(!object(ref)||typeof ref.refId!=='string'||!ref.refId.trim()||definitions.has(ref.refId))return;
+      definitions.set(ref.refId,ref);
+    }
+    for(const usage of group.usageGroups){
+      if(!object(usage)||!Array.isArray(usage.spellRefs)||!usage.spellRefs.length)return;
+      const refs:Record<string,any>[]=[];
+      for(const id of usage.spellRefs){
+        if(typeof id!=='string'||!definitions.has(id)||used.has(id))return;
+        used.add(id);refs.push(structuredClone(definitions.get(id)!));
+      }
+      usages.push({usage,refs});
+    }
+    if(used.size!==definitions.size)return;
+    plans.push({group,usages});
+  }
+  for(const {group,usages}of plans){
+    for(const {usage,refs}of usages)usage.spellRefs=refs;
+    delete group.spellRefs;
+    // Missing additional overrides are an empty collection, not a component waiver.
+    if(group.componentWaivers===undefined)group.componentWaivers=[];
+  }
+  if(plans.length)namespaceDuplicateSpellRefIds(value);
+}
+
 /** Provider keys are scoped by group in reuseOf. Preserve unambiguous links
  * while satisfying the portable manifest's globally unique key contract.
  * Missing/duplicate groups and within-group duplicate refs remain errors. */

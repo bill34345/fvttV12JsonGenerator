@@ -445,15 +445,22 @@ export class StructuredActionParser {
 
   private parseEmbeddedEffects(emb: unknown): EmbeddedEffect[] {
     if (!emb || !Array.isArray(emb)) return [];
-    return emb.map((e: unknown) => ({
-      type: String((e as Record<string, unknown>)['类型'] ?? (e as Record<string, unknown>)['type'] ?? ''),
-      describe: String((e as Record<string, unknown>)['描述'] ?? (e as Record<string, unknown>)['describe'] ?? ''),
-      duration: (e as Record<string, unknown>)['持续'] ? String((e as Record<string, unknown>)['持续']) : undefined,
-      damageType: (e as Record<string, unknown>)['伤害类型'] ? String((e as Record<string, unknown>)['伤害类型']) : undefined,
-      damageFormula: (e as Record<string, unknown>)['伤害公式'] ? String((e as Record<string, unknown>)['伤害公式']) : undefined,
-      escapeDc: (e as Record<string, unknown>)['逃脱DC'] === undefined
-        ? undefined : this.parseNumber((e as Record<string, unknown>)['逃脱DC']),
-      staged: (e as Record<string, unknown>)['阶段'] === true ? true : undefined,
-    }));
+    return emb.map((e: unknown) => {
+      const localized = (e as Record<string, unknown>)['条件'], literal = (e as Record<string, unknown>)['condition'];
+      if (localized !== undefined && literal !== undefined && localized !== literal) throw new Error('InvalidEmbeddedCondition: conflicting literal fields.');
+      const condition = localized !== undefined ? localized : literal;
+      if (condition !== undefined && typeof condition !== 'string') throw new Error('InvalidEmbeddedCondition: expected a literal string.');
+      return {
+        type: String((e as Record<string, unknown>)['类型'] ?? (e as Record<string, unknown>)['type'] ?? ''),
+        describe: String((e as Record<string, unknown>)['描述'] ?? (e as Record<string, unknown>)['describe'] ?? ''),
+        ...(condition !== undefined ? { condition } : {}),
+        duration: (e as Record<string, unknown>)['持续'] ? String((e as Record<string, unknown>)['持续']) : undefined,
+        damageType: (e as Record<string, unknown>)['伤害类型'] ? String((e as Record<string, unknown>)['伤害类型']) : undefined,
+        damageFormula: (e as Record<string, unknown>)['伤害公式'] ? String((e as Record<string, unknown>)['伤害公式']) : undefined,
+        escapeDc: (e as Record<string, unknown>)['逃脱DC'] === undefined
+          ? undefined : this.parseNumber((e as Record<string, unknown>)['逃脱DC']),
+        staged: typeof (e as Record<string, unknown>)['阶段'] === 'boolean' ? (e as Record<string, unknown>)['阶段'] as boolean : undefined,
+      };
+    });
   }
 }

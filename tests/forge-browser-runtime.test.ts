@@ -47,6 +47,8 @@ import type {
   MonsterIntakeAiProvider,
   MonsterIntakeIR,
 } from '@fvtt-json-generator/intake-ai/types';
+import { auditMonsterIntakeSource } from '@fvtt-json-generator/intake-ai/validator';
+import { OpenAICompatibleMonsterIntakeProvider } from '@fvtt-json-generator/intake-ai/provider';
 import { conversionApplication } from '../src/core/application/conversion';
 import { RAT_WARLOCK_SOURCE, buildRatWarlockIr } from '../src/core/intake/__tests__/fixtures/rat-warlock';
 import { LURKER_SOURCE, buildValidLurkerIr } from '../src/core/intake/__tests__/fixtures/lurker';
@@ -463,7 +465,7 @@ describe('browser Forge Actor runtime', () => {
     expect(JSON.stringify(analysis)).not.toMatch(/artifactHash|api-key|authorization/iu);
   });
 
-  test('keeps an Actor candidate unreviewed until an explicit model check or current GM approval', async () => {
+  test('disabled Actor review preserves the candidate for explicit current GM approval [review disabled]', async () => {
     let reviews = 0;
     const provider = ratWarlockProvider({ review: async () => {
       reviews += 1;
@@ -484,33 +486,26 @@ describe('browser Forge Actor runtime', () => {
     expect(reviews).toBe(0);
     expect(() => approveBrowserActorIntakeCandidateForGm(input,
       { ...candidate, finalSource: `${candidate.finalSource}changed` }, 'gm')).toThrow(/变化/u);
-    const checked = await reviewBrowserActorIntakeCandidate(input, candidate, provider);
-    expect(reviews).toBe(1);
-    expect(checked.calls.review).toBe(1);
-    expect(checked.calls.extraction).toBe(candidate.calls.extraction);
-    expect(checked.calls.repair).toBe(candidate.calls.repair);
-    expect(checked.finalSourceHash).toBe(candidate.finalSourceHash);
-    expect(checked.modelReviewStatus).toBe('accepted');
-    expect(checked.status).toBe('ready_for_gm_review');
-    const approved = approveBrowserActorIntakeCandidateForGm(input, checked, 'gm');
-    expect(approved.status).toBe('accepted');
-    expect(approved.gmApproval).toMatchObject({ gmId: 'gm', sourceHash: hashSource(input.source),
-      candidateHash: candidate.candidateHash, modelReviewStatus: 'accepted' });
-    expect(approved.response).toEqual(candidate.candidateResponse);
+    const saved=structuredClone(candidate);
+    await expect(reviewBrowserActorIntakeCandidate(input,candidate,provider)).rejects.toThrow('AI 内容复核已暂时关闭');
+    expect(reviews).toBe(0);expect(candidate).toEqual(saved);
+    expect(manual.status).toBe('accepted');expect(manual.response).toEqual(candidate.candidateResponse);
   });
 
-  test('materializes omitted claim evidence quotes before browser validation and after bounded repair', async () => {
+  test('materializes omitted claim evidence quotes before browser validation and after bounded repair [review disabled]', async () => {
     const withoutClaimQuotes = (): MonsterIntakeIR => {
-      const ir = buildRatWarlockIr();
+      const ir = buildValidLurkerIr();
       for (const claim of ir.claims) {
         for (const evidence of claim.evidence) delete (evidence as Partial<typeof evidence>).quote;
       }
       return ir;
     };
     let reviewCalls = 0;
+    const actual=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://offline.invalid/v1',apiKey:'fake-only',model:'frozen',reviewModel:'disabled',maxAttempts:1,timeoutMs:1000,repairTimeoutMs:1000,
+      httpClient:async()=>new Response(JSON.stringify({choices:[{message:{content:JSON.stringify(withoutClaimQuotes())}}]}))});
     const provider = ratWarlockProvider({
-      extract: async () => withoutClaimQuotes(),
-      repair: async () => withoutClaimQuotes(),
+      extract: request => actual.extract(request),
+      repair: request => actual.repair(request),
       review: async () => {
         reviewCalls += 1;
         return reviewCalls === 1
@@ -525,26 +520,26 @@ describe('browser Forge Actor runtime', () => {
           : { schemaVersion: 1, verdict: 'accepted', findings: [] };
       },
     });
-    const input = actorAiInput('omitted-claim-quotes');
+    const input = {...actorAiInput('omitted-claim-quotes'),source:LURKER_SOURCE,sourceScope:'single' as const};
     const analysis = await analyzeBrowserActorSourceWithAi(input, provider);
 
-    expect(analysis.status).toBe('ready_to_generate');
+    expect(analysis.status,JSON.stringify(analysis.findings)).toBe('ready_to_generate');
     expect(analysis.findings).not.toContainEqual(expect.objectContaining({ code: 'EVIDENCE_MISMATCH' }));
     expect(analysis.ir?.claims.every((claim) => claim.evidence.every((ref) => (
-      RAT_WARLOCK_SOURCE.slice(ref.start, ref.end) === ref.quote
+      input.source.slice(ref.start, ref.end) === ref.quote
     )))).toBe(true);
 
     const first = await generateAndReviewBrowserActorIntake(input, analysis, provider);
-    expect(first.status).toBe('needs_review');
-    const repaired = await repairBrowserActorIntake(input, first, provider);
+    expect(first.status).toBe('ready_for_gm_review');expect(first.calls.review).toBe(0);expect(reviewCalls).toBe(0);
+    const repaired = await repairBrowserActorIntake(input, analysis, provider);
     expect(repaired.status).toBe('ready_to_generate');
     expect(repaired.repairCount).toBe(1);
     expect(repaired.ir?.claims.every((claim) => claim.evidence.every((ref) => (
-      RAT_WARLOCK_SOURCE.slice(ref.start, ref.end) === ref.quote
+      input.source.slice(ref.start, ref.end) === ref.quote
     )))).toBe(true);
   });
 
-  test('normalizes only source-absent optional feature arrays and expands exact feature coverage parents', async () => {
+  test('requires explicit feature arrays and preserves the model coverage instead of inferring absent source sections', async () => {
     const drifted = buildRatWarlockIr();
     delete (drifted.creature as Partial<typeof drifted.creature>).reactions;
     delete (drifted.creature as Partial<typeof drifted.creature>).legendaryActions;
@@ -559,15 +554,17 @@ describe('browser Forge Actor runtime', () => {
       ratWarlockProvider({ extract: async () => drifted }),
     );
 
-    expect(analysis.status).toBe('ready_to_generate');
-    expect(analysis.ir?.creature.reactions).toEqual([]);
-    expect(analysis.ir?.creature.legendaryActions).toEqual([]);
-    expect(analysis.findings).not.toContainEqual(expect.objectContaining({ code: 'INVALID_FEATURE_SECTION' }));
-    expect(analysis.findings).not.toContainEqual(expect.objectContaining({ code: 'UNKNOWN_COVERAGE_CLAIM' }));
-    expect(analysis.ir?.coverage.flatMap((entry) => entry.claimPaths)).not.toContain('/creature/actions');
+    expect(analysis.status).toBe('needs_review');
+    expect(analysis.ir?.creature.reactions).toBeUndefined();
+    expect(analysis.ir?.creature.legendaryActions).toBeUndefined();
+    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'INVALID_STRUCTURE', path: '/creature/reactions', blocking: true }));
+    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'INVALID_STRUCTURE', path: '/creature/legendaryActions', blocking: true }));
+    expect(analysis.ir?.coverage).toEqual(drifted.coverage);
+    expect(analysis.ir?.creature.actions).toEqual(drifted.creature.actions);
+    expect(analysis.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
   });
 
-  test('classifies a source-exact bare section heading without another provider call', async () => {
+  test('preserves the historical bare heading while reporting its unrelated empty custom type without another call', async () => {
     const calls = { repair: 0, review: 0 };
     const provider = ratWarlockProvider({
       discover: async () => ({ schemaVersion: 1, candidates: [{
@@ -582,25 +579,28 @@ describe('browser Forge Actor runtime', () => {
     }, provider);
 
     expect(GUARD_HEADING_IR.source.sha256).toBe(hashSource(GUARD_HEADING_SOURCE));
-    expect(analysis.status).toBe('ready_to_generate');
+    expect(analysis.status).toBe('needs_review');
+    expect(analysis.findings).toContainEqual(expect.objectContaining({code:'INVALID_STRUCTURE',path:'/creature/identity/creatureTypeCustom'}));
     expect(analysis.findings).not.toContainEqual(expect.objectContaining({ code: 'UNCLAIMED_MECHANICAL_COVERAGE' }));
     expect(analysis.ir?.coverage.find(entry => entry.start === 277)).toMatchObject({
-      end: 285, quote: 'Actions\n', classification: 'narrative', claimPaths: [],
+      end: 285, quote: 'Actions\n', classification: 'mechanical', claimPaths: [],
     });
+    expect(analysis.ir?.coverage).toEqual(GUARD_HEADING_IR.coverage);
     expect(analysis.calls).toEqual({ discovery: 0, extraction: 1, repair: 0, review: 0 });
     expect(calls).toEqual({ repair: 0, review: 0 });
   });
 
   test.each(['Reactions\n', 'Bonus Actions\n', '### Actions\n', '传奇动作\n'])(
-    'recognizes a standalone %s section label with exact shifted evidence', async (heading) => {
+    'preserves a standalone %s section label and its exact shifted model evidence', async (heading) => {
       const { source, ir } = guardWithHeading(heading);
       const analysis = await analyzeBrowserActorSourceWithAi({
         ...actorAiInput('other-bare-heading'), source,
       }, guardHeadingProvider(source, ir));
       expect(analysis.findings).not.toContainEqual(expect.objectContaining({ code: 'UNCLAIMED_MECHANICAL_COVERAGE' }));
       expect(analysis.ir?.coverage.find(entry => entry.start === 277)).toMatchObject({
-        quote: heading, classification: 'narrative', claimPaths: [],
+        quote: heading, classification: 'mechanical', claimPaths: [],
       });
+      expect(analysis.ir?.coverage).toEqual(ir.coverage);
       expect(analysis.calls).toEqual({ discovery: 0, extraction: 1, repair: 0, review: 0 });
     },
   );
@@ -608,14 +608,19 @@ describe('browser Forge Actor runtime', () => {
   test.each([
     ['numbered heading', 'Actions 3/Day\n'],
     ['mechanical text on heading line', 'Actions. Recharge 5–6\n'],
-  ])('does not dismiss unclaimed mechanics in a %s', async (_label, heading) => {
+  ])('retains unclaimed mechanics in a %s for explicit SourceAudit without a default grammar verdict', async (_label, heading) => {
     const { source, ir } = guardWithHeading(heading);
     const analysis = await analyzeBrowserActorSourceWithAi({
       ...actorAiInput('mechanical-heading'), source,
     }, guardHeadingProvider(source, ir));
-    expect(analysis.status).toBe('needs_review');
-    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'UNCLAIMED_MECHANICAL_COVERAGE', blocking: true }));
+    expect(analysis.status).toBe('ready_to_generate');
+    expect(analysis.findings).not.toContainEqual(expect.objectContaining({ code: 'UNCLAIMED_MECHANICAL_COVERAGE' }));
     expect(analysis.ir?.coverage.find(entry => entry.start === 277)?.classification).toBe('mechanical');
+    expect(analysis.ir?.coverage).toEqual(ir.coverage);
+    expect(auditMonsterIntakeSource(source, analysis.ir).findings).toContainEqual(
+      expect.objectContaining({ code: 'UNCLAIMED_MECHANICAL_COVERAGE', blocking: true }),
+    );
+    expect(analysis.calls).toEqual({ discovery: 0, extraction: 1, repair: 0, review: 0 });
   });
 
   test('does not normalize a heading with a stale source range', async () => {
@@ -626,8 +631,9 @@ describe('browser Forge Actor runtime', () => {
       ...actorAiInput('stale-heading-range'), source: GUARD_HEADING_SOURCE,
     }, guardHeadingProvider(GUARD_HEADING_SOURCE, ir));
     expect(analysis.status).toBe('needs_review');
-    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'UNCLAIMED_MECHANICAL_COVERAGE', blocking: true }));
+    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'EVIDENCE_MISMATCH', blocking: true }));
     expect(analysis.ir?.coverage.find(entry => entry.end === 285)?.classification).toBe('mechanical');
+    expect(analysis.ir?.coverage).toEqual(ir.coverage);
   });
 
   test.each(['', ' \t '])('takes the saved R2 Guard IR with blank display name %j through local Generate and GM confirmation', async (displayName) => {
@@ -715,8 +721,11 @@ describe('browser Forge Actor runtime', () => {
     );
 
     expect(analysis.status).toBe('needs_review');
-    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'INVALID_FEATURE_SECTION', path: '/creature/reactions' }));
-    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'UNKNOWN_COVERAGE_CLAIM' }));
+    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'INVALID_STRUCTURE', path: '/creature/reactions', blocking: true }));
+    const audit = auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, invalid);
+    expect(audit.findings).toContainEqual(expect.objectContaining({ code: 'INVALID_FEATURE_SECTION', path: '/creature/reactions' }));
+    expect(audit.findings).toContainEqual(expect.objectContaining({ code: 'UNKNOWN_COVERAGE_CLAIM' }));
+    expect(analysis.ir?.coverage).toEqual(invalid.coverage);
   });
 
   test.each([
@@ -746,50 +755,6 @@ describe('browser Forge Actor runtime', () => {
     expect(analysis.status).toBe('needs_review');
     expect(analysis.findings).toContainEqual(expect.objectContaining({ code, blocking: true }));
     expect(analysis.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
-  });
-
-  test('retains a revised candidate without marking it accepted, permits one explicit repair and preserves attempt identity', async () => {
-    let reviewCalls = 0;
-    const provider = ratWarlockProvider({
-      review: async () => {
-        reviewCalls += 1;
-        return reviewCalls === 1
-          ? {
-              schemaVersion: 1,
-              verdict: 'revise',
-              findings: [{
-                id: 'semantic-revise', code: 'SEMANTIC_REVISE', path: '/creature',
-                message: 'Regenerate after one bounded semantic repair.', blocking: true, origin: 'ai-review',
-              }],
-            }
-          : { schemaVersion: 1, verdict: 'accepted', findings: [] };
-      },
-    });
-    const input = actorAiInput('staged-regenerate');
-    const analysis = await analyzeBrowserActorSourceWithAi(input, provider, undefined, 'stable-attempt');
-    const first = await generateAndReviewBrowserActorIntake(input, analysis, provider);
-    expect(first.status).toBe('needs_review');
-    expect(first.response).toBeUndefined();
-    expect(first.candidateAvailable).toBe(true);
-    expect(first.candidateResponse&&'result'in first.candidateResponse?first.candidateResponse.result.status:undefined).toBe('accepted');
-    expect(first.candidateHash).toMatch(/^[a-f0-9]{64}$/u);
-    expect(first.findings).toContainEqual(expect.objectContaining({code:'SEMANTIC_REVISE',blocking:true}));
-    expect(first.calls).toEqual({discovery:1,extraction:1,repair:0,review:1});
-
-    const repaired = await repairBrowserActorIntake(input, first, provider);
-    expect(repaired.status).toBe('ready_to_generate');
-    expect(repaired.repairCount).toBe(1);
-    expect(repaired.attemptId).toBe('stable-attempt');
-    const exhausted = await repairBrowserActorIntake(input, repaired, provider);
-    expect(exhausted.status).toBe('needs_review');
-    expect(exhausted.findings).toContainEqual(expect.objectContaining({ code: 'REPAIR_BUDGET_EXHAUSTED' }));
-    expect(exhausted.calls.repair).toBe(1);
-
-    const accepted = await generateAndReviewBrowserActorIntake(input, repaired, provider);
-    expect(accepted.status).toBe('accepted');
-    expect(accepted.analysis.attemptId).toBe('stable-attempt');
-    expect(accepted.calls).toEqual({ discovery: 1, extraction: 1, repair: 1, review: 2 });
-    expect(accepted.response && 'result' in accepted.response ? accepted.response.result.status : 'failed').toBe('accepted');
   });
 
   test('pauses evidence drift before generation and never fabricates a creatable response', async () => {
@@ -879,107 +844,7 @@ describe('browser Forge Actor runtime', () => {
     expect(result.errorCode).not.toBe('multiple_entities');
   });
 
-  test('discards an AI-only empty legendary placeholder finding disproved by source and normalized IR', async () => {
-    const provider = ratWarlockProvider({
-      review: async () => ({
-        schemaVersion: 1,
-        verdict: 'revise',
-        findings: [{
-          id: 'legendary-placeholder',
-          code: 'optional-field-empty-placeholder',
-          path: '/creature/legendary',
-          message: 'The optional legendary field must be omitted instead of emitted as an empty placeholder.',
-          blocking: true,
-          origin: 'ai-review',
-        }],
-      }),
-    });
-    const input = actorAiInput('disproved-legendary-placeholder');
-    const analysis = await analyzeBrowserActorSourceWithAi(input, provider);
-    expect(analysis.ir?.creature.legendary).toBeUndefined();
-    expect(RAT_WARLOCK_SOURCE).not.toMatch(/(?:\blegendary\s+actions?\b|传奇动作)/iu);
-
-    const result = await generateAndReviewBrowserActorIntake(input, analysis, provider);
-
-    expect(result.status).toBe('accepted');
-    expect(result.review).toEqual({ schemaVersion: 1, verdict: 'accepted', findings: [] });
-    expect(result.findings).not.toContainEqual(expect.objectContaining({ code: 'optional-field-empty-placeholder' }));
-  });
-
-  test('keeps the canonical Foundry creature type and discards review claims disproved by v14 Actor semantics', async () => {
-    const provider: MonsterIntakeAiProvider = {
-      providerName: 'fake-lurker-review-provider',
-      extractionModel: 'fake-extract',
-      reviewModel: 'fake-review',
-      discover: async () => ({
-        schemaVersion: 1,
-        candidates: [{ id: 'lurker', label: '暗影潜妖', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE }],
-      }),
-      extract: async () => buildValidLurkerIr(),
-      repair: async () => buildValidLurkerIr(),
-      review: async () => ({
-        schemaVersion: 1,
-        verdict: 'revise',
-        findings: [
-          {
-            id: 'lost-damage-bonus', code: 'lost-damage-bonus',
-            path: '/actorProjection/items/4/system/damage/base/bonus',
-            message: 'actorProjection damage.base.bonus is empty, so the structural formula rolls without +4.',
-            blocking: true, origin: 'ai-review',
-          },
-          {
-            id: 'creature-type-enum-drift', code: 'creature-type-enum-drift',
-            path: '/actorProjection/system/details/type/value',
-            message: 'Use the Foundry creature type identifier fey.',
-            blocking: true, origin: 'ai-review',
-          },
-          {
-            id: 'unwanted-legendary-placeholder', code: 'unwanted-legendary-placeholder',
-            path: '/actorProjection/system/resources',
-            message: 'Source has no Legendary Actions, but zero-valued legact/legres placeholders are present.',
-            blocking: true, origin: 'ai-review',
-          },
-          {
-            id: 'absent-sense-zero', code: 'absent-sense-zero',
-            path: '/actorProjection/system/attributes/senses/ranges',
-            message: 'Absent blindsight, tremorsense, and truesight are numeric 0.',
-            blocking: true, origin: 'ai-review',
-          },
-        ],
-      }),
-    };
-    const input: BrowserActorIntakeInput = {
-      source: LURKER_SOURCE,
-      sourceName: 'lurker.raw.txt',
-      displayName: '暗影潜妖 Lurker in the Dark',
-      requestId: 'disproved-v14-review-findings',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
-      sourceId: SOURCE_ID,
-    };
-    const analysis = await analyzeBrowserActorSourceWithAi(input, provider);
-    const result = await generateAndReviewBrowserActorIntake(input, analysis, provider);
-
-    expect(result.status).toBe('accepted');
-    expect(result.review).toEqual({ schemaVersion: 1, verdict: 'accepted', findings: [] });
-    expect(result.findings).toEqual([]);
-    const actor = result.response && 'result' in result.response && result.response.result.status === 'accepted'
-      ? result.response.result.artifact as any
-      : undefined;
-    expect(actor?.system.details.type.value).toBe('fey');
-    const claw = actor?.items.find((item: any) => String(item.name).includes('爪击'));
-    expect(claw?.type).toBe('weapon');
-    expect(Object.values(claw?.system.activities ?? {})).toHaveLength(1);
-    expect(Object.values(claw.system.activities)[0]).toMatchObject({
-      type:'attack',attack: { ability: '',bonus:'6',flat:true,type:{value:'melee',classification:'weapon'} },
-      damage: { includeBase: true,parts:[{number:1,denomination:10,bonus:'4',types:['slashing']}] },
-      range:{reach:10,units:'ft'},
-    });
-    expect(claw.flags.fvttJsonGenerator.conditionLifecycle).toMatchObject({mode:'gm',statuses:expect.arrayContaining(['grappled','restrained'])});
-    expect(claw.flags.fvttJsonGenerator.conditionLifecycle.sourceText).toContain('逃脱DC 14');
-  });
-
-  test('reports empty legendary metadata while delivering a literal candidate for the requested review', async () => {
+  test('empty legendary metadata keeps its blocking finding beside a GM-pending literal candidate [review disabled]', async () => {
     let reviewCalls = 0;
     const provider = ratWarlockProvider({
       review: async () => {
@@ -994,55 +859,15 @@ describe('browser Forge Actor runtime', () => {
 
     const result = await generateAndReviewBrowserActorIntake(input, analysis, provider);
 
-    expect(result.status).toBe('needs_review');
+    expect(result.status).toBe('ready_for_gm_review');
     expect(result.candidateAvailable).toBe(true);
     expect(result.actorProjection).toBeDefined();
     expect(result.findings).toContainEqual(expect.objectContaining({
-      code: 'INVALID_LEGENDARY_METADATA',
+      code: 'INVALID_STRUCTURE',
       path: '/creature/legendary',
       blocking: true,
     }));
-    expect(reviewCalls).toBe(1);
-  });
-
-  test('never reports accepted when the final AI review still carries a blocking finding', async () => {
-    const provider: MonsterIntakeAiProvider = {
-      providerName: 'fake-blocking-review-provider',
-      extractionModel: 'fake',
-      reviewModel: 'fake',
-      discover: async () => ({
-        schemaVersion: 1,
-        candidates: [{ id: 'rat-warlock', label: '鼠神邪术师', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE }],
-      }),
-      extract: async () => buildRatWarlockIr(),
-      repair: async () => buildRatWarlockIr(),
-      review: async () => ({
-        schemaVersion: 1,
-        verdict: 'accepted',
-        findings: [{
-          id: 'blocking-review',
-          code: 'AI_REVIEW_BLOCKING',
-          path: '/actor',
-          message: 'Review still found a blocking mismatch.',
-          blocking: true,
-          origin: 'ai-review',
-        }],
-      }),
-    };
-
-    const input = {
-      source: RAT_WARLOCK_SOURCE,
-      sourceName: 'blocking-review',
-      requestId: 'blocking-review',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
-      sourceId: SOURCE_ID,
-    };
-    const analysis = await analyzeBrowserActorSourceWithAi(input, provider);
-    const result = await generateAndReviewBrowserActorIntake(input, analysis, provider);
-
-    expect(result.status).toBe('needs_review');
-    expect(result.findings).toContainEqual(expect.objectContaining({ id: 'blocking-review', blocking: true }));
+    expect(reviewCalls).toBe(0);expect(result.modelReviewStatus).toBe('not_requested');
   });
 
   test('fails closed when any discovered Actor candidate does not match the exact source', async () => {
@@ -1370,6 +1195,9 @@ function guardWithHeading(heading: string): { source: string; ir: MonsterIntakeI
   const source = GUARD_HEADING_SOURCE.slice(0, start) + heading + GUARD_HEADING_SOURCE.slice(end);
   const offset = heading.length - originalHeading.length;
   const ir = structuredClone(GUARD_HEADING_IR);
+  // Keep the frozen original (tested above) intact; this authored variation
+  // isolates heading responsibility from its unrelated empty optional string.
+  delete ir.creature.identity.creatureTypeCustom;
   ir.source = { sha256: hashSource(source), length: source.length };
   const refs = [...ir.claims.flatMap(claim => claim.evidence), ...ir.coverage];
   for (const ref of refs) {

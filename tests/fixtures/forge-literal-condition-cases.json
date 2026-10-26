@@ -1,0 +1,7 @@
+[
+  {"id":"escape","rule":"The target is Grappled and Restrained (escape DC 14) until the grapple ends.","conditions":[{"statuses":["grappled","restrained"],"escapeDc":14,"condition":"until the grapple ends"}],"manual":true},
+  {"id":"staged","rule":"The target is Poisoned on the first failure and Stunned on the second failure.","conditions":[{"statuses":["poisoned"],"staged":true,"condition":"first failure"},{"statuses":["stunned"],"staged":true,"condition":"second failure"}],"manual":true},
+  {"id":"relative-duration","rule":"The target is Blinded until the end of its next turn.","conditions":[{"statuses":["blinded"],"duration":"until the end of its next turn"}],"manual":true},
+  {"id":"qualifier","rule":"The target is Frightened while the beacon is visible.","conditions":[{"statuses":["frightened"],"condition":"while the beacon is visible","staged":false}],"manual":true},
+  {"id":"fixed-duration","rule":"The target is Poisoned for 2 rounds.","conditions":[{"statuses":["poisoned"],"duration":"2 rounds"}],"manual":false}
+]

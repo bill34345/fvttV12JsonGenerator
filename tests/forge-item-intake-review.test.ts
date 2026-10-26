@@ -15,7 +15,7 @@ import type {
 import {
   analyzeBrowserItemSourceWithAi,
   createBrowserItemAiProvider,
-  generateAndReviewBrowserItemIntake,
+  generateAndReviewBrowserItemIntake, approveBrowserItemIntakeCandidateForGm,
   repairBrowserItemIntake,
   type BrowserItemIntakeAnalysis,
   type BrowserItemIntakeInput,
@@ -318,10 +318,12 @@ describe('Forge browser AI Item Intake review stages', () => {
     ));
   });
 
-  test('accepts the single Dormant Jewel through the formal Item runtime with exact lifecycle mechanics', async () => {
+  test('accepts the single Dormant Jewel through the formal Item runtime with exact lifecycle mechanics [review disabled]', async () => {
     const input = itemInput('item-accepted');
     const analysis = await analyzeBrowserItemSourceWithAi(input, jewelProvider());
-    const result = await generateAndReviewBrowserItemIntake(input, analysis, jewelProvider());
+    const candidate = await generateAndReviewBrowserItemIntake(input, analysis, jewelProvider());
+    expect(candidate.status).toBe('ready_for_gm_review');expect(candidate.calls.review).toBe(0);
+    const result=approveBrowserItemIntakeCandidateForGm(input,candidate,'gm');
     expect(result.status).toBe('accepted');
     expect(result.finalSourceHash).toBe(hashSource(result.finalSource!));
     expect(result.response && 'result' in result.response ? result.response.result.status : 'failed').toBe('accepted');
@@ -347,43 +349,7 @@ describe('Forge browser AI Item Intake review stages', () => {
     expect(changes).toContainEqual(expect.objectContaining({ key: 'token.light.dim', value: 30 }));
   });
 
-  test('keeps revise non-creatable and allows only one repair before accepted regenerate', async () => {
-    let reviewCalls = 0;
-    const provider = jewelProvider({
-      review: async (): Promise<ItemAiReviewResult> => {
-        reviewCalls += 1;
-        return reviewCalls === 1
-          ? {
-              schemaVersion: 1,
-              verdict: 'revise',
-              findings: [{
-                id: 'item-revise', code: 'ITEM_REVISE', path: '/item', message: 'Repair once.',
-                blocking: true, origin: 'ai-review',
-              }],
-            }
-          : { schemaVersion: 1, verdict: 'accepted', findings: [] };
-      },
-    });
-    const input = itemInput('item-regenerate');
-    const analysis = await analyzeBrowserItemSourceWithAi(input, provider, undefined, 'stable-item-attempt');
-    const first = await generateAndReviewBrowserItemIntake(input, analysis, provider);
-    expect(first.status).toBe('needs_review');
-    expect(first.response).toBeUndefined();
-    expect(JSON.stringify(first)).not.toContain('artifactHash');
-    const repaired = await repairBrowserItemIntake(input, first, provider);
-    expect(repaired.status).toBe('ready_to_generate');
-    expect(repaired.repairCount).toBe(1);
-    expect(repaired.attemptId).toBe('stable-item-attempt');
-    const exhausted = await repairBrowserItemIntake(input, repaired, provider);
-    expect(exhausted.status).toBe('needs_review');
-    expect(exhausted.findings).toContainEqual(expect.objectContaining({ code: 'REPAIR_BUDGET_EXHAUSTED' }));
-    expect(exhausted.calls.repair).toBe(1);
-    const accepted = await generateAndReviewBrowserItemIntake(input, repaired, provider);
-    expect(accepted.status).toBe('accepted');
-    expect(accepted.calls).toEqual({ discovery: 1, extraction: 1, repair: 1, review: 2 });
-  });
-
-  test('blocks multiple candidates, multiple stages, and unresolved spells without a response or artifact hash', async () => {
+  test('blocks multiple candidates, multiple stages, and unresolved spells without a response or artifact hash [review disabled]', async () => {
     const multipleProvider = jewelProvider({
       discover: async () => ({
         schemaVersion: 1,

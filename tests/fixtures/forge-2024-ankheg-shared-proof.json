@@ -1,0 +1,201 @@
+{
+  "provenance": {
+    "rules": "2024",
+    "publication": "SRD5.2.1",
+    "page": 259,
+    "url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+    "attribution": "Wizards of the Coast LLC, SRD5.2.1, CC-BY-4.0",
+    "kind": "unmodified normalized IR from the first real Forge extraction; original final response retained externally",
+    "responseHash": "f02a8074bd27d260a29c967843e982cb90a0a995ec528e7423009bad662ee208"
+  },
+  "source": "## Ankheg\nLarge Monstrosity, Unaligned\nAC 14 Initiative +0 (10)\nHP 45 (6d10 + 12)\nSpeed 30 ft., Burrow 10 ft.\nMOD SAVE MOD SAVE MOD SAVE\nStr 17 +3 +3 Dex 11 +0 +0 Con 14 +2 +2\nInt 1 -5 -5 WIS 13 +1 +1 Cha 6 -2 -2\nSenses Darkvision 60 ft., Tremorsense 60 ft.;\nPassive Perception 11\nLanguages None\nCR 2 (XP 450; PB +2)\nTraits\nTunneler. The ankheg can burrow through solid rock\nat half its Burrow Speed and leaves a 10-foot-diameter\ntunnel in its wake.\nActions\nBite. Melee Attack Roll: +5 (with Advantage if the target\nis Grappled by the ankheg), reach 5 ft. Hit: 10 (2d6 + 3)\nSlashing damage plus 3 (1d6) Acid damage. If the target\nis a Large or smaller creature, it has the Grappled condition (escape DC 13).\nAcid Spray (Recharge 6). Dexterity Saving Throw: DC\n12, each creature in a 30-foot-long, 5-foot-wide Line.\nFailure: 14 (4d6) Acid damage. Success: Half damage.\n",
+  "ir": {
+    "schemaVersion": 1,
+    "source": {
+      "sha256": "1be3fbf0e553f4776b8559ef9b2d9a47c39c497cd3b6b16bf4843691dc755daf",
+      "length": 868
+    },
+    "creature": {
+      "identity": {
+        "name": "Ankheg",
+        "size": "large",
+        "creatureType": "monstrosity",
+        "alignment": "unaligned"
+      },
+      "abilities": {
+        "str": 17,
+        "dex": 11,
+        "con": 14,
+        "int": 1,
+        "wis": 13,
+        "cha": 6
+      },
+      "attributes": {
+        "ac": 14,
+        "initiative": 0,
+        "hp": {
+          "value": 45,
+          "formula": "6d10 + 12"
+        },
+        "movement": {
+          "walk": 30,
+          "burrow": 10
+        },
+        "cr": 2,
+        "xp": 450,
+        "proficiencyBonus": 2
+      },
+      "saves": {
+        "str": 3,
+        "dex": 0,
+        "con": 2,
+        "int": -5,
+        "wis": 1,
+        "cha": -2
+      },
+      "skills": {},
+      "defenses": {
+        "resistances": [],
+        "immunities": [],
+        "vulnerabilities": [],
+        "conditionImmunities": []
+      },
+      "senses": {
+        "darkvision": 60,
+        "tremorsense": 60,
+        "passivePerception": 11
+      },
+      "languages": {
+        "values": []
+      },
+      "traits": [
+        {
+          "name": "Tunneler",
+          "description": "The ankheg can burrow through solid rock at half its Burrow Speed and leaves a 10-foot-diameter tunnel in its wake.",
+          "activityType": "utility",
+          "executionMode": "gm-manual",
+          "evidence": [
+            {
+              "start": 324,
+              "end": 449,
+              "quote": "Tunneler. The ankheg can burrow through solid rock\nat half its Burrow Speed and leaves a 10-foot-diameter\ntunnel in its wake."
+            }
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "name": "Bite",
+          "description": "Melee Attack Roll: +5 (with Advantage if the target is Grappled by the ankheg), reach 5 ft. Hit: 10 (2d6 + 3) Slashing damage plus 3 (1d6) Acid damage. If the target is a Large or smaller creature, it has the Grappled condition (escape DC 13).",
+          "activationType": "action",
+          "sourceOperations": [
+            {
+              "id": "bite-attack",
+              "name": "Bite",
+              "type": "attack",
+              "relationship": "primary",
+              "attack": {
+                "type": "melee",
+                "toHit": 5,
+                "reach": 5
+              },
+              "damage": [
+                {
+                  "formula": "2d6 + 3",
+                  "type": "slashing",
+                  "relationship": "base"
+                },
+                {
+                  "formula": "1d6",
+                  "type": "acid",
+                  "relationship": "additional"
+                }
+              ],
+              "proof": {
+                "attack": "Melee Attack Roll: +5 (with Advantage if the target\nis Grappled by the ankheg), reach 5 ft.",
+                "damage": [
+                  "Hit: 10 (2d6 + 3)\nSlashing damage plus 3 (1d6) Acid damage."
+                ]
+              },
+              "sourceText": "Melee Attack Roll: +5 (with Advantage if the target is Grappled by the ankheg), reach 5 ft. Hit: 10 (2d6 + 3) Slashing damage plus 3 (1d6) Acid damage. If the target is a Large or smaller creature, it has the Grappled condition (escape DC 13)."
+            }
+          ],
+          "evidence": [
+            {
+              "start": 458,
+              "end": 707,
+              "quote": "Bite. Melee Attack Roll: +5 (with Advantage if the target\nis Grappled by the ankheg), reach 5 ft. Hit: 10 (2d6 + 3)\nSlashing damage plus 3 (1d6) Acid damage. If the target\nis a Large or smaller creature, it has the Grappled condition (escape DC 13)."
+            }
+          ],
+          "executionMode": "native-with-gm",
+          "activityType": "utility",
+          "nativeRuleText": "Melee Attack Roll: +5 (with Advantage if the target is Grappled by the ankheg), reach 5 ft. Hit: 10 (2d6 + 3) Slashing damage plus 3 (1d6) Acid damage. If the target is a Large or smaller creature, it has the Grappled condition (escape DC 13).",
+          "manualRemainder": "Melee Attack Roll: +5 (with Advantage if the target is Grappled by the ankheg), reach 5 ft. Hit: 10 (2d6 + 3) Slashing damage plus 3 (1d6) Acid damage. If the target is a Large or smaller creature, it has the Grappled condition (escape DC 13)."
+        },
+        {
+          "name": "Acid Spray",
+          "sourceQualifier": "Recharge 6",
+          "description": "Dexterity Saving Throw: DC 12, each creature in a 30-foot-long, 5-foot-wide Line. Failure: 14 (4d6) Acid damage. Success: Half damage.",
+          "activationType": "action",
+          "recharge": [
+            6,
+            6
+          ],
+          "sourceOperations": [
+            {
+              "id": "acid-spray-save",
+              "name": "Acid Spray",
+              "type": "save",
+              "relationship": "primary",
+              "save": {
+                "dc": 12,
+                "abilities": [
+                  "dex"
+                ],
+                "choice": "single",
+                "outcome": "half"
+              },
+              "damage": [
+                {
+                  "formula": "4d6",
+                  "type": "acid",
+                  "relationship": "base"
+                }
+              ],
+              "aoe": {
+                "shape": "line",
+                "radius": 30,
+                "width": 5
+              },
+              "proof": {
+                "save": "Dexterity Saving Throw: DC 12, each creature in a 30-foot-long, 5-foot-wide Line.",
+                "damage": [
+                  "Failure: 14 (4d6) Acid damage. Success: Half damage."
+                ],
+                "aoe": "Dexterity Saving Throw: DC 12, each creature in a 30-foot-long, 5-foot-wide Line."
+              },
+              "sourceText": "Dexterity Saving Throw: DC 12, each creature in a 30-foot-long, 5-foot-wide Line. Failure: 14 (4d6) Acid damage. Success: Half damage."
+            }
+          ],
+          "evidence": [
+            {
+              "start": 708,
+              "end": 867,
+              "quote": "Acid Spray (Recharge 6). Dexterity Saving Throw: DC\n12, each creature in a 30-foot-long, 5-foot-wide Line.\nFailure: 14 (4d6) Acid damage. Success: Half damage."
+            }
+          ],
+          "executionMode": "native-with-gm",
+          "activityType": "utility",
+          "nativeRuleText": "Dexterity Saving Throw: DC 12, each creature in a 30-foot-long, 5-foot-wide Line. Failure: 14 (4d6) Acid damage. Success: Half damage.",
+          "manualRemainder": "Dexterity Saving Throw: DC 12, each creature in a 30-foot-long, 5-foot-wide Line. Failure: 14 (4d6) Acid damage. Success: Half damage."
+        }
+      ],
+      "bonusActions": [],
+      "reactions": [],
+      "legendaryActions": []
+    },
+    "claims": [],
+    "coverage": [],
+    "uncertainties": []
+  }
+}

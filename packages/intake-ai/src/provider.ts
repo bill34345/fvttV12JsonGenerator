@@ -28,8 +28,9 @@ import {completeSourceFeatureEvidence,completeSourceSpellcastingEvidence} from '
 import { StagedExtractionError } from './staged-source';
 import { discoveryLinePayload, materializeDiscoveryLines } from './discovery';
 import {materializeSourceLineReferences} from './source-line-references';
-import {namespaceDuplicateSpellRefIds} from './spell-ref-identities';
+import {inlineDeclaredSpellCatalogs} from './spell-ref-identities';
 import {MONSTER_GEAR_POLICY} from './monster-gear-policy';
+import {validateMonsterIntakeStructure} from './structure-validator';
 export type { ProviderResponseEvidence, ProviderResponseEvidenceSink } from './provider-response-evidence';
 
 export const INTAKE_PROMPT_VERSIONS = {
@@ -583,11 +584,12 @@ function normalizeStageEvidence(stage: keyof typeof PROMPTS, value: unknown, pay
   }
   next.source = sourceIdentity;
   normalizeProviderEvidenceTree(source, next, bounds);
+  materializeClaimEvidenceQuotes(source,next,bounds);
   // Staged extraction owns only the evidence coordinates and source identity.
   // Proposed data must survive unchanged until its stage verifier rejects it;
   // legacy automation/optional-field normalization must not erase a conflict.
   if (evidenceOnly) return next;
-  normalizeDeclaredSpellIdentities(next);
+  normalizeDeclaredSpellIdentities(next,source);
   bindProviderSourceContracts(source,next,bounds);
   return next;
 }
@@ -596,19 +598,50 @@ function normalizeStageEvidence(stage: keyof typeof PROMPTS, value: unknown, pay
  * from the original document; only declared names/IDs and evidence bind. */
 export function normalizeMonsterIntakeProposal(source:string,ir:MonsterIntakeIR,bounds?:{start:number;end:number}):MonsterIntakeIR{
   const next=structuredClone(ir);
-  normalizeDeclaredSpellIdentities(next as unknown as Record<string,unknown>);
+  materializeClaimEvidenceQuotes(source,next as unknown as Record<string,unknown>,bounds);
+  normalizeDeclaredSpellIdentities(next as unknown as Record<string,unknown>,source);
   bindProviderSourceContracts(source,next as unknown as Record<string,unknown>,bounds);
   return next;
 }
 
-function normalizeDeclaredSpellIdentities(value:Record<string,unknown>):void{
-  const creature=asObject(value.creature);if(!Array.isArray(creature?.spellcasting))return;
+function materializeClaimEvidenceQuotes(source:string,value:Record<string,unknown>,bounds={start:0,end:source.length}):void{
+  for(const claim of Array.isArray(value.claims)?value.claims:[]){
+    const record=asObject(claim);
+    for(const item of Array.isArray(record?.evidence)?record.evidence:[]){
+      const ref=asObject(item);if(!ref)continue;
+      if(typeof ref.quote==='string')continue;
+      const start=ref.start,end=ref.end;
+      if(typeof start==='number'&&typeof end==='number'&&Number.isInteger(start)&&Number.isInteger(end)
+        &&start>=bounds.start&&end>start&&end<=bounds.end&&end<=source.length)ref.quote=source.slice(start,end);
+    }
+  }
+}
+
+function normalizeDeclaredSpellIdentities(value:Record<string,unknown>,source:string):void{
+  const creature=asObject(value.creature),singleton=asObject(creature?.spellcasting);
+  // Explicit singleton notation only. The existing closed group validator owns
+  // nested support/field checks; a name map, incomplete object or invalid group
+  // stays untouched and is rejected rather than guessed into an array.
+  if(creature&&singleton
+    &&['groupId','featureName','description','ability'].every(key=>typeof singleton[key]==='string'&&(singleton[key] as string).trim())
+    &&Array.isArray(singleton.evidence)&&Array.isArray(singleton.abilityEvidence)&&Array.isArray(singleton.usageGroups)){
+    const probe=structuredClone(value),probeCreature=asObject(probe.creature)!;
+    probeCreature.spellcasting=[structuredClone(singleton)];
+    normalizeDeclaredSpellIdentities(probe,source);
+    if(!validateMonsterIntakeStructure(source,probe).blocking.some(finding=>finding.path==='/creature/spellcasting'||finding.path.startsWith('/creature/spellcasting/')))
+      creature.spellcasting=[singleton];
+  }
+  inlineDeclaredSpellCatalogs(value);
+  if(!Array.isArray(creature?.spellcasting))return;
   const groups=creature.spellcasting.map(asObject).filter((group):group is Record<string,unknown>=>!!group);
   const groupIds=new Set(groups.flatMap(group=>typeof group.groupId==='string'?[group.groupId]:[]));
   const refs=groups.flatMap(group=>Array.isArray(group.usageGroups)?group.usageGroups.flatMap(usage=>Array.isArray(asObject(usage)?.spellRefs)?asObject(usage)!.spellRefs as unknown[]:[]):[]).map(asObject).filter((ref):ref is Record<string,unknown>=>!!ref);
   const refIds=new Set(refs.flatMap(ref=>typeof ref.refId==='string'?[ref.refId]:[]));
   const unique=(base:string,ids:Set<string>)=>{let id=base,suffix=1;while(ids.has(id))id=`${base}-${++suffix}`;ids.add(id);return id;};
   for(const [index,group]of groups.entries()){
+    // An omitted list explicitly declares no group waivers. Preserve provided
+    // arrays and invalid null/object values; never infer V/S/M from prose here.
+    if(!Object.hasOwn(group,'componentWaivers'))group.componentWaivers=[];
     if(group.groupId===undefined)group.groupId=unique(`casting-${index+1}`,groupIds);
     if(typeof group.ability==='string'){const ability=normalizeProviderAbility(group.ability);if(ability)group.ability=ability;}
     // Empty-list notation only: the model has already explicitly selected manual grants.

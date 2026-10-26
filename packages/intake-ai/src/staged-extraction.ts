@@ -12,7 +12,7 @@ import {sourceSharedUseDeclarations} from '@fvtt-json-generator/models/source-re
 import {SOURCE_OPERATION_CONTRACT} from './source-operation-contract';
 import {MONSTER_GEAR_POLICY} from './monster-gear-policy';
 import {makeWholeCategoryForm,decodeCategoryFormV2} from './category-form-v2';
-import {adaptCategoryFormV2,completeCategoryFormSpellcasting} from './category-form-v2-adapter';
+import {adaptCategoryFormV2,completeCategoryFormV2} from './category-form-v2-adapter';
 import { normalizeStagedHeaderFacts, completeStagedBaseSubtype, completeSourceHeaderIdentity, stagedManualHeaderFeatures, validateStagedStaticSourceFacts, unmarkStagedHeader, stagedRecharge } from './staged-source-facts';
 import { assertStagedSourcePartition, splitStagedMonsterSource, stagedSourceBiography, stagedLegendaryBudget,stagedLegendaryActionCost, StagedExtractionError,stagedSourceLines,assembleStagedLinePartition,
   type StagedMonsterSource, type StagedSourceUnit } from './staged-source';
@@ -733,7 +733,7 @@ export async function runStagedMonsterExtraction(request: ExtractionRequest,
       }
       stage='assembly';unitId=undefined;processor='program';
       let ir:MonsterIntakeIR;
-      try{const assembled=assembleStagedMonsterIntake(plan,base,values,{sourceProvenSelfArea:true});ir=decoded?completeCategoryFormSpellcasting(plan,assembled,decoded):assembled;}
+      try{const assembled=assembleStagedMonsterIntake(plan,base,values,{sourceProvenSelfArea:true});ir=decoded?completeCategoryFormV2(plan,assembled,decoded):assembled;}
       catch(error){
         if(!options.preserveCandidates||!decoded)throw error;
         ir=preserveWhole(decoded,error instanceof StagedExtractionError?[{code:error.code,path:error.path},...error.related]:[{code:'CANDIDATE_ASSEMBLY_REVIEW',path:'/assembly'}]);

@@ -3,7 +3,7 @@ import yaml from 'js-yaml';
 import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
 import type {MonsterIntakeIR} from '@fvtt-json-generator/intake-ai/types';
 import {normalizeMonsterSourceFacts} from '@fvtt-json-generator/intake-ai/source-facts';
-import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
+import {validateMonsterIntakeIR,auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
 import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
 import {normalizeDiscovery} from '@fvtt-json-generator/intake-ai/discovery';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
@@ -145,6 +145,10 @@ describe('complete manual rules reach the formal Actor without native inference'
     expect(actor.system.details.biography.value).toContain(biography.replace(/&/gu,'&amp;').replace(/</gu,'&lt;').replace(/>/gu,'&gt;').replace(/\n/gu,'<br>'));
     expect(actor.effects).toEqual([]);expect(actor.items.every((item:any)=>item.effects.length===0)).toBe(true);
     const legacyDocument=yaml.load(markdown.slice(4,-4)) as Record<string,unknown>;
+    // An explicit parser negative control; default structural validation no
+    // longer invents source-review metadata for this otherwise valid fixture.
+    legacyDocument['intake-candidate-review']={version:1,findings:[{code:'CONTROL_REVIEW',path:'/creature',message:'Explicit parser control'}],proposal:null};
+    expect(()=>new YamlParser().parse(yaml.dump(legacyDocument))).not.toThrow();
     delete legacyDocument['intake-biography-mode'];delete legacyDocument['intake-biography-presentation'];
     // Candidate review belongs to the literal Intake contract. A legacy
     // comparison must remove that metadata too, without weakening its guard.
@@ -184,31 +188,33 @@ describe('complete manual rules reach the formal Actor without native inference'
     const tampered=structuredClone(actor);tampered.items[0].effects=[{statuses:['restrained']}];
     expect(verifyMonsterIntake(data.source,data.ir,source,tampered).findings.some(f=>f.code==='ACTOR_MANUAL_RULE_EXECUTION_DRIFT'||f.code==='ACTOR_SOURCE_OPERATION_COUNT_DRIFT')).toBe(true);
   });
-  test('same-feature paragraph coverage assembles but deleted text and foreign carriers fail',async()=>{
+  test('explicit SourceAudit rejects deleted paragraphs and foreign carriers while default validation stays structural',async()=>{
     const data=fixture('Whole Rule. Choose a visible target.\nThe target cannot regain hit points until the end of its next turn.',true);
     expect(validateMonsterIntakeIR(data.source,data.ir).blocking).toEqual([]);
     const truncated=structuredClone(data);truncated.ir.creature.actions[0]!.description='Whole Rule. Choose a visible target.';
-    expect(validateMonsterIntakeIR(truncated.source,truncated.ir).blocking.some(f=>f.code==='MANUAL_FEATURE_INCOMPLETE_SOURCE')).toBe(true);
+    expect(validateMonsterIntakeIR(truncated.source,truncated.ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(truncated.source,truncated.ir).blocking.some(f=>f.code==='MANUAL_FEATURE_INCOMPLETE_SOURCE')).toBe(true);
     const crossed=structuredClone(data);crossed.ir.coverage[2]!.claimPaths=['/creature/actions/1'];
-    expect(validateMonsterIntakeIR(crossed.source,crossed.ir).blocking.some(f=>f.code==='MANUAL_FEATURE_INCOMPLETE_SOURCE')).toBe(true);
+    expect(auditMonsterIntakeSource(crossed.source,crossed.ir).blocking.some(f=>f.code==='MANUAL_FEATURE_INCOMPLETE_SOURCE')).toBe(true);
   });
   test('manual marker never hides an inconsistent proposed native field',async()=>{
     const data=fixture('Unsafe Rule. One target takes 7 (2d6) Fire damage.');
     data.ir.creature.actions[0]!.damage=[{formula:'9d6',type:'fire',relationship:'base'}];
-    expect(validateMonsterIntakeIR(data.source,data.ir).blocking.some(f=>f.code==='MANUAL_FEATURE_EXECUTABLE_FIELDS')).toBe(true);
+    expect(validateMonsterIntakeIR(data.source,data.ir).blocking.some(f=>f.code==='INVALID_STRUCTURE'&&f.path==='/creature/actions/0')).toBe(true);
+    expect(auditMonsterIntakeSource(data.source,data.ir).blocking.some(f=>f.code==='MANUAL_FEATURE_EXECUTABLE_FIELDS')).toBe(true);
     const original=structuredClone(data);
     const {result,calls}=await run(data);
     expect(result.prepared).toBeDefined();expect(calls).toBe(0);
-    expect(result.report.findings.some(f=>f.includes('MANUAL_FEATURE_EXECUTABLE_FIELDS'))).toBe(true);
+    expect(result.report.findings.some(f=>f.includes('INVALID_STRUCTURE'))).toBe(true);
     const generation=result.report.actors[0]!.generation!;
     expect(generation.candidateAvailable).toBe(true);
     expect(generation.intakeVerificationStatus).not.toBe('accepted');
-    expect(generation.findings.some(f=>f.code==='MANUAL_FEATURE_EXECUTABLE_FIELDS'&&f.blocking)).toBe(true);
+    expect(generation.findings.some(f=>f.code==='INVALID_STRUCTURE'&&f.blocking)).toBe(true);
     expect(data).toEqual(original);
   });
-  test('a complete manual span cannot swallow a second independent named ability',()=>{
+  test('explicit SourceAudit rejects a manual span swallowing a second independent named ability',()=>{
     const data=fixture('Whole Rule. Choose a visible target.\nSecond Rule. The target cannot regain hit points.');
-    expect(validateMonsterIntakeIR(data.source,data.ir).blocking.some(f=>f.code==='SOURCE_FEATURE_OMITTED')).toBe(true);
+    expect(auditMonsterIntakeSource(data.source,data.ir).blocking.some(f=>f.code==='SOURCE_FEATURE_OMITTED')).toBe(true);
   });
   for(const [name,max,period] of [['Passage (1/Day)',1,'day'],['Rest Ward (2/Long Rest)',2,'longRest'],['Brief Ward (3/Short Rest)',3,'shortRest']] as const)
     test(name+' preserves its counter without automatic consumption',async()=>{

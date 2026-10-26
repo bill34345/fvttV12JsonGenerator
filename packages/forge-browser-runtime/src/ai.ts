@@ -1,3 +1,4 @@
+import {assertForgeAiReviewAvailable,rejectForgeAiReview} from './aiReviewPolicy';
 import {
   attachForgeSourceId,
   hashArtifact,
@@ -24,14 +25,15 @@ import type {
 export type { IntakeProviderActivity, IntakeRequestWaitStatus } from '@fvtt-json-generator/intake-ai/transport';
 import { createContinuousIntakeWaitPolicy } from '@fvtt-json-generator/intake-ai/transport';
 import {
+  INTAKE_LIMITS,
   chunkSource,
   normalizeDiscovery,
   partitionDiscoveryCandidates,
   singleCreatureSourceCandidate,
 } from '@fvtt-json-generator/intake-ai/discovery';
-import { renderMonsterIntakeMarkdown, prepareMonsterCandidateDelivery } from '@fvtt-json-generator/intake-ai/renderer';
+import { renderMonsterIntakeMarkdown } from '@fvtt-json-generator/intake-ai/renderer';
 import { validateMonsterIntakeIR } from '@fvtt-json-generator/intake-ai/validator';
-import { verifyMonsterIntake } from '@fvtt-json-generator/intake-ai/verifier';
+import { compareMonsterIntakeProjection } from '@fvtt-json-generator/intake-ai/verifier';
 import {
   BROWSER_AI_REPAIR_TIMEOUT_MS,
   BROWSER_AI_STAGE_TIMEOUT_MS,
@@ -53,7 +55,6 @@ import {
   convertFinalActorSource,
 } from './index';
 import { combineAbortSignals, guardResponseBodyForCallerAbort } from './abortSignal';
-import { resolveActorIntakeStatus } from './status';
 import { forgeGmTargetHash, forgeGmModelFindingsHash } from './intakeReview';
 import type { EncounterRetryMetadata } from './encounterStageRetry';
 
@@ -84,6 +85,8 @@ export interface BrowserActorIntakeStageResult {
 
 export interface BrowserActorIntakeInput {
   autoCorrect?: boolean;
+  /** Caller-owned input scope. Omitted retains the historical discovery path. */
+  sourceScope?: 'single' | 'discover';
   source: string;
   sourceName: string;
   displayName?: string;
@@ -162,6 +165,7 @@ export interface BrowserActorIntakeProviderIdentity {
 
 export interface BrowserActorIntakeAnalysis {
   status: 'ready_to_generate' | 'needs_review' | 'failed';
+  sourceScope?: BrowserActorIntakeInput['sourceScope'];
   attemptId: string;
   rawSourceHash?: Sha256;
   candidates: DiscoveryCandidate[];
@@ -249,7 +253,7 @@ export function createBrowserAiProvider(
     ...(options.structuredOutput ? { structuredOutput: options.structuredOutput } : {}),
     discover: (request) => classifyBrowserProviderCall(provider.discover(request), signal),
     extract: (request) => classifyBrowserProviderCall(provider.extract(request), signal),
-    review: (request) => classifyBrowserProviderCall(provider.review(request), signal),
+    review: rejectForgeAiReview,
     repair: (request) => classifyBrowserProviderCall(provider.repair(request), signal),
   };
 }
@@ -296,17 +300,25 @@ export async function analyzeBrowserActorSourceWithAi(
   const calls = freshCalls();
   const identity = providerIdentity(provider);
   const report = stageReporter(stages, input.onStage);
+  const sourceScope=input.sourceScope==='single'||input.sourceScope==='discover'?input.sourceScope:undefined;
   let rawSourceHash: Sha256 | undefined;
   let repairCount:0|1=0;
   try {
     assertInput(input.source);
+    if(input.sourceScope!==undefined&&input.sourceScope!=='single'&&input.sourceScope!=='discover')throw new Error('Unsupported creature source scope.');
+    if(input.sourceScope==='single'&&input.source.length>INTAKE_LIMITS.maxCandidateLength)throw new Error(`Single creature source exceeds the ${INTAKE_LIMITS.maxCandidateLength} UTF-16 character limit.`);
     rawSourceHash = hashSource(input.source);
     throwIfAborted(signal);
     const counted = countProviderCalls(provider, calls);
-    const candidates = await runDiscovery(input.source, rawSourceHash, counted, report, signal);
+    const candidates = input.sourceScope==='single'
+      ? partitionDiscoveryCandidates(input.source,[{id:'single-creature',label:input.displayName?.trim()||input.sourceName,
+          start:0,end:input.source.length,quote:input.source}])
+      : await runDiscovery(input.source, rawSourceHash, counted, report, signal);
+    if(input.sourceScope==='single')report('discover','skipped','单只生物资料直接提取；保留完整来源，不调用AI发现。');
     if (candidates.length === 0) {
       return {
         status: 'needs_review', attemptId, rawSourceHash, candidates,
+        ...(sourceScope?{sourceScope}:{}),
         findings: [boundedFinding('NO_ACTOR_ENTITY', 'AI discovery did not identify exactly one Actor entity.')], stages,
         provider: identity, calls, repairCount: 0, errorCode: 'no_entities',
       };
@@ -314,6 +326,7 @@ export async function analyzeBrowserActorSourceWithAi(
     if (candidates.length !== 1) {
       return {
         status: 'needs_review', attemptId, rawSourceHash, candidates,
+        ...(sourceScope?{sourceScope}:{}),
         findings: [boundedFinding('MULTIPLE_ACTOR_ENTITIES', `AI discovery identified ${candidates.length} Actor entities; Forge Intake does not select the first.`)], stages,
         provider: identity, calls, repairCount: 0, errorCode: 'multiple_entities',
       };
@@ -329,13 +342,14 @@ export async function analyzeBrowserActorSourceWithAi(
       if(repairCount){const resolved=extractionSucceeded&&!extracted!.uncertainties.some(f=>f.blocking);
         report('repair',resolved?'completed':'failed',resolved?'已使用本生物唯一一次阶段纠错；后续不再追加纠错。':'唯一一次纠错未消除问题；保留可用候选与原诊断，不再追加请求。');}
     }
-    const ir = normalizeBrowserMonsterIr(input.source,candidate,extracted);
+    const ir = extracted;
     report('extract', 'completed');
     report('validate', 'running');
     const validation = validateMonsterIntakeIR(input.source, ir, { coverageRange: candidate });
     report('validate', validation.blocking.length === 0 ? 'completed' : 'failed');
     const analysisResult:BrowserActorIntakeAnalysis = {
       status: validation.blocking.length === 0 ? 'ready_to_generate' : 'needs_review',
+      ...(sourceScope?{sourceScope}:{}),
       attemptId,
       rawSourceHash,
       candidates,
@@ -360,6 +374,7 @@ export async function analyzeBrowserActorSourceWithAi(
     report('finalize', errorCode === 'cancelled' ? 'skipped' : 'failed', message);
     return {
       status: 'failed', attemptId, rawSourceHash, candidates: [],
+      ...(sourceScope?{sourceScope}:{}),
       findings: [boundedFinding(`ANALYSIS_${String(errorCode ?? 'provider_failure').toUpperCase()}`, message,
         error instanceof MonsterIntakeProviderError ? error.stagedDiagnostic?.path : undefined),
         ...(error instanceof MonsterIntakeProviderError?error.stagedDiagnostic?.related??[]:[]).map(entry=>
@@ -397,35 +412,14 @@ export function analyzeBrowserActorIntakeDraft(
   const rawSourceHash=hashSource(input.source);
   if(proposal.source?.sha256!==rawSourceHash||proposal.source?.length!==input.source.length)throw new Error('提取草稿与当前来源身份不符。');
   const candidate:DiscoveryCandidate={id:'resumed-proposal',label:input.displayName??input.sourceName,start:0,end:input.source.length,quote:input.source};
-  const ir=normalizeBrowserMonsterIr(input.source,candidate,proposal);
+  const ir=normalizeMonsterIntakeProposal(input.source,proposal,candidate);
   const validation=validateMonsterIntakeIR(input.source,ir,{coverageRange:candidate});
   const stages=freshStages();
   markStage(stages,input.onStage,'validate',validation.blocking.length?'failed':'completed','重新校验原始提取草稿；尚未重新进行AI审阅。');
   return {status:validation.blocking.length?'needs_review':'ready_to_generate',attemptId:`draft-attempt:${globalThis.crypto.randomUUID()}`,
+    ...(input.sourceScope?{sourceScope:input.sourceScope}:{}),
     rawSourceHash,candidates:[candidate],candidate,ir,validation,evidence:projectEvidence(ir,candidate),findings:validation.findings,stages,
     provider:providerIdentity(provider),calls:freshCalls(),repairCount:0};
-}
-
-function normalizeBrowserMonsterIr(
-  source: string,
-  candidate: DiscoveryCandidate,
-  ir: MonsterIntakeIR,
-): MonsterIntakeIR {
-  const next = normalizeMonsterIntakeProposal(source,ir,candidate);
-  for (const claim of Array.isArray(next.claims) ? next.claims : []) {
-    for (const ref of Array.isArray(claim?.evidence) ? claim.evidence : []) {
-      if (typeof ref.quote === 'string') continue;
-      const rangeIsExact = Number.isInteger(ref.start)
-        && Number.isInteger(ref.end)
-        && ref.start >= candidate.start
-        && ref.end > ref.start
-        && ref.end <= candidate.end
-        && ref.end <= source.length;
-      if (rangeIsExact) ref.quote = source.slice(ref.start, ref.end);
-    }
-  }
-
-  return next;
 }
 
 export async function repairBrowserActorIntake(
@@ -434,6 +428,8 @@ export async function repairBrowserActorIntake(
   provider: MonsterIntakeAiProvider,
   signal?: AbortSignal,
 ): Promise<BrowserActorIntakeAnalysis> {
+  if (isGenerationResult(current) && (current.review !== undefined || current.modelReviewFindings?.length
+    || ['accepted','needs_review','failed'].includes(current.modelReviewStatus ?? ''))) assertForgeAiReviewAvailable();
   const prior = isGenerationResult(current) ? current.analysis : current;
   const stages = structuredClone(current.stages);
   const calls = structuredClone(current.calls);
@@ -471,7 +467,7 @@ export async function repairBrowserActorIntake(
           ir: prior.ir,
           deterministicFindings: prior.validation?.findings ?? prior.findings,
         }), signal);
-    const repaired = normalizeBrowserMonsterIr(input.source, prior.candidate, rawRepaired);
+    const repaired = rawRepaired;
     report('repair', 'completed');
     report('validate', 'running');
     const validation = validateMonsterIntakeIR(input.source, repaired, { coverageRange: prior.candidate });
@@ -506,7 +502,9 @@ export async function generateAndReviewBrowserActorIntake(
   provider: MonsterIntakeAiProvider,
   signal?: AbortSignal,
 ): Promise<BrowserActorGenerationResult> {
-  return generateBrowserActorIntake(input, analysis, provider, signal, true);
+  // Compatibility name retained; Forge currently permits local generation and
+  // explicit GM confirmation only, regardless of the historical entry name.
+  return generateBrowserActorIntake(input, analysis, provider, signal);
 }
 
 export async function generateBrowserActorIntakeCandidate(
@@ -515,7 +513,7 @@ export async function generateBrowserActorIntakeCandidate(
   provider: MonsterIntakeAiProvider,
   signal?: AbortSignal,
 ): Promise<BrowserActorGenerationResult> {
-  return generateBrowserActorIntake(input, analysis, provider, signal, false);
+  return generateBrowserActorIntake(input, analysis, provider, signal);
 }
 
 async function generateBrowserActorIntake(
@@ -523,147 +521,71 @@ async function generateBrowserActorIntake(
   analysis: BrowserActorIntakeAnalysis,
   provider: MonsterIntakeAiProvider,
   signal: AbortSignal | undefined,
-  reviewRequested: boolean,
 ): Promise<BrowserActorGenerationResult> {
   const stages = structuredClone(analysis.stages);
   const calls = structuredClone(analysis.calls);
   const report = stageReporter(stages, input.onStage);
   const failClosed = (findings: IntakeFinding[], code?: BrowserActorIntakeResult['errorCode']): BrowserActorGenerationResult => ({
-    status: 'needs_review', analysis: { ...structuredClone(analysis), stages, calls }, rawSourceHash: analysis.rawSourceHash,
+    status: 'failed', candidateAvailable:false, analysis: { ...structuredClone(analysis), stages, calls }, rawSourceHash: analysis.rawSourceHash,
     evidence: analysis.evidence, findings:dedupeFindings([...analysis.findings,...findings]), stages, provider: providerIdentity(provider), calls, ...(code ? { errorCode: code } : {}),
   });
-  if (!analysis.ir || !analysis.candidate || !analysis.rawSourceHash) {
+  if (!analysis.ir || !analysis.candidate || !analysis.rawSourceHash || !analysis.validation) {
     return failClosed(dedupeFindings([...analysis.findings, boundedFinding('ANALYSIS_NOT_READY', 'Analysis is not ready to generate one Actor candidate.')]));
   }
   if (hashSource(input.source) !== analysis.rawSourceHash) {
     return failClosed(dedupeFindings([...analysis.findings, boundedFinding('STALE_SOURCE', 'Source identity changed after analysis.') ]));
   }
-  const validation = validateMonsterIntakeIR(input.source, analysis.ir, { coverageRange: analysis.candidate });
+  const validation = analysis.validation;
   if (analysis.ir.source.sha256 !== analysis.rawSourceHash || analysis.ir.source.length !== input.source.length) {
     return failClosed([boundedFinding('STALE_SOURCE', 'IR source identity does not match the current source.')]);
   }
-  const counted = countProviderCalls(provider, calls);
   let deliverable: BrowserActorGenerationResult | undefined;
+  let rendered:Awaited<ReturnType<typeof renderAndAttach>>|undefined;
+  let generationStep='规范资料转换';
   try {
     report('generate', 'running');
-    const prepared=prepareMonsterCandidateDelivery(analysis.ir,input.source);
-    const sourceFindings=dedupeFindings([...analysis.findings,...validation.findings,...prepared.findings]);
-    let annotatedIr=withCandidateFindings(prepared.ir,sourceFindings);
-    let rendered: Awaited<ReturnType<typeof renderAndAttach>>;
-    let response: ForgeActorResponse;
-    let renderMarkdown=input.renderMarkdown;
-    try{
-      rendered=await renderAndAttach(annotatedIr,input.sourceId,input.renderMarkdown,input.source);
-      response=await convertRenderedActor(input,rendered.content,rendered.sourceId);
-      if(!('result'in response)||!response.result.artifact)throw Error('result'in response?response.result.diagnostics.map(d=>d.message).join('；'):response.error.message);
-    }catch(error){
-      throwIfAborted(signal);
-      const fallback=prepareMonsterCandidateDelivery(analysis.ir,input.source,true);
-      sourceFindings.push(...fallback.findings,boundedFinding('ACTOR_PROJECTION_INCOMPLETE',`活动转换错误：${safeProviderMessage(error)}`));
-      annotatedIr=withCandidateFindings(fallback.ir,sourceFindings);
-      renderMarkdown=undefined;
-      rendered=await renderAndAttach(annotatedIr,input.sourceId,undefined,input.source);
-      response=await convertRenderedActor(input,rendered.content,rendered.sourceId);
-    }
-    throwIfAborted(signal);
+    const sourceFindings=dedupeFindings([...analysis.findings,...validation.findings]);
+    const annotatedIr=withCandidateFindings(analysis.ir,sourceFindings);
+    rendered=await renderAndAttach(annotatedIr,input.sourceId,input.renderMarkdown,input.source);
+    generationStep='Actor JSON 转换';
+    const response=await convertRenderedActor(input,rendered.content,rendered.sourceId);
     if(!('result' in response) || !response.result.artifact){
-      const diagnostics='result' in response?response.result.diagnostics:[];
+      const diagnostics='result' in response?response.result.diagnostics:[response.error];
       const findings=diagnostics.map(d=>boundedFinding(d.code,d.message));
-      report('generate','failed','正式生成未完成，保留真实诊断；没有将空对象交给AI审阅。');
+      report('generate','failed','Actor JSON 未生成；原始提取数据和转换诊断已保留。');
       return {...failClosed([...validation.findings,...(findings.length?findings:[boundedFinding('FORMAL_GENERATION_FAILED','Formal Actor generation failed.')])]),
         formalStatus:'failed',finalSource:rendered.content,finalSourceHash:hashSource(rendered.content),markdown:rendered.content};
     }
-    report('generate', 'completed');
-    let intakeVerification = verifyRenderedActor(input.source, analysis.ir, rendered.content, response, analysis.candidate);
-    const additional=intakeVerification.findings.filter(f=>f.blocking&&!sourceFindings.some(prior=>prior.code===f.code&&prior.path===f.path));
-    if(additional.length){
-      // Persist post-generation source checks through the same renderer and
-      // formal workflow. This is metadata, never a model retry or JSON repair.
-      annotatedIr=withCandidateFindings(annotatedIr,additional);
-      rendered=await renderAndAttach(annotatedIr,rendered.sourceId,renderMarkdown,input.source);
-      response=await convertRenderedActor(input,rendered.content,rendered.sourceId);
-      intakeVerification=verifyRenderedActor(input.source,analysis.ir,rendered.content,response,analysis.candidate);
-    }
     const actorProjection = actorFromResponse(response);
-    const deterministicFindings = dedupeFindings([...sourceFindings,...additional,...intakeVerification.findings,
-      ...('result' in response ? response.result.diagnostics.map(d => ({...boundedFinding(d.code,d.message,d.path),blocking:d.severity==='error'})) : [])]);
     const formalStatus = responseStatus(response);
+    const formalFindings=response.result.diagnostics.map(d=>({...boundedFinding(d.code,d.message,d.path),blocking:d.severity==='error'}));
+    const initialFindings=dedupeFindings([...sourceFindings,...formalFindings]);
     deliverable={status:'ready_for_gm_review',candidateAvailable:true,analysis:{...structuredClone(analysis),stages,calls},
       rawSourceHash:analysis.rawSourceHash,finalSourceHash:hashSource(rendered.content),finalSource:rendered.content,markdown:rendered.content,
-      evidence:projectEvidence(analysis.ir,analysis.candidate),actorProjection,formalStatus,intakeVerificationStatus:intakeVerification.status,
+      evidence:analysis.evidence,actorProjection,formalStatus,intakeVerificationStatus:'needs_review',
       candidateResponse:response,candidateHash:actorCandidateHash(analysis,rendered.content,response),modelReviewStatus:'not_requested',
-      deterministicFindings,findings:deterministicFindings,stages,provider:providerIdentity(provider),calls};
-    if (!reviewRequested) {
-      const ready = 'result' in response && !!response.result.artifact;
-      report('finalize', ready ? 'completed' : 'failed');
-      return {
-        status: ready ? 'ready_for_gm_review' : 'needs_review',
-        candidateAvailable: ready,
-        analysis: { ...structuredClone(analysis), stages, calls },
-        rawSourceHash: analysis.rawSourceHash,
-        finalSourceHash: hashSource(rendered.content), finalSource: rendered.content, markdown: rendered.content,
-        evidence: projectEvidence(analysis.ir, analysis.candidate), actorProjection,
-        formalStatus, intakeVerificationStatus: intakeVerification.status,
-        candidateResponse: response, candidateHash: actorCandidateHash(analysis, rendered.content, response),
-        modelReviewStatus: 'not_requested',
-        deterministicFindings,
-        findings: deterministicFindings, stages, provider: providerIdentity(provider), calls,
-      };
-    }
-    report('review', 'running');
-    const rawReview = await withAbort(counted.review({
-      source: input.source,
-      candidate: analysis.candidate,
-      ir: analysis.ir,
-      markdown: rendered.content,
-      actorProjection,
-      deterministicFindings,
-    }), signal);
-    const review = adjudicateBrowserActorReview(
-      input.source,
-      analysis.ir,
-      actorProjection,
-      deterministicFindings,
-      rawReview,
-    );
-    report('review', 'completed');
-    const findings = dedupeFindings([...deterministicFindings, ...review.findings]);
-    const resolved = resolveActorIntakeStatus(formalStatus, review.verdict, intakeVerification.status);
-    const status = resolved === 'accepted' && findings.some((finding) => finding.blocking)
-      ? 'needs_review'
-      : resolved;
-    report('finalize', status === 'accepted' ? 'completed' : 'failed');
-    return {
-      status,
-      analysis: { ...structuredClone(analysis), stages, calls },
-      rawSourceHash: analysis.rawSourceHash,
-      finalSourceHash: hashSource(rendered.content),
-      finalSource: rendered.content,
-      markdown: rendered.content,
-      evidence: projectEvidence(analysis.ir, analysis.candidate),
-      ...(status === 'accepted' ? { response } : {}),
-      candidateAvailable: true, candidateResponse: response,
-      candidateHash: actorCandidateHash(analysis, rendered.content, response),
-      modelReviewStatus: review.verdict === 'accepted' ? 'accepted' : 'needs_review',
-      actorProjection,
-      formalStatus,
-      intakeVerificationStatus: intakeVerification.status,
-      review,
-      findings,
-      stages,
-      provider: providerIdentity(provider),
-      calls,
-    };
+      deterministicFindings:initialFindings,findings:initialFindings,stages,provider:providerIdentity(provider),calls};
+    generationStep='生成结果核对';
+    throwIfAborted(signal);
+    report('generate', 'completed');
+    const intakeVerification = verifyRenderedActor(input.source, analysis.ir, rendered.content, response, analysis.candidate,validation);
+    const deterministicFindings = dedupeFindings([...initialFindings,...intakeVerification.findings]);
+    deliverable={...deliverable,intakeVerificationStatus:intakeVerification.status,deterministicFindings,findings:deterministicFindings};
+    report('finalize','completed');
+    return deliverable;
   } catch (error) {
     const errorCode = isAbortError(error) || signal?.aborted ? 'cancelled' : providerErrorCode(error);
-    const message = safeProviderMessage(error);
-    report('finalize', errorCode === 'cancelled' ? 'skipped' : 'failed', message);
-    if(deliverable)return{...deliverable,modelReviewStatus:'failed',modelReviewError:message,calls,stages,
-      ...(errorCode?{errorCode}:{})};
+    const message = isAbortError(error)?'本次操作已取消。':`${generationStep}失败：${error instanceof Error?error.message.slice(0,1000):String(error).slice(0,1000)}`;
+    try{report('finalize', errorCode === 'cancelled' ? 'skipped' : 'failed', message);}catch{}
+    if(deliverable){
+      const findings=dedupeFindings([...deliverable.findings,boundedFinding('GENERATION_CHECK_INCOMPLETE',`${message} 已生成的 Actor JSON 保留，请核对。`)]);
+      return{...deliverable,intakeVerificationStatus:'needs_review',findings,calls,stages,...(errorCode?{errorCode}:{})};
+    }
     return {
-      status: 'failed', analysis: { ...structuredClone(analysis), stages, calls }, rawSourceHash: analysis.rawSourceHash,
+      status: 'failed',candidateAvailable:false, analysis: { ...structuredClone(analysis), stages, calls }, rawSourceHash: analysis.rawSourceHash,
+      ...(rendered?{finalSource:rendered.content,finalSourceHash:hashSource(rendered.content),markdown:rendered.content}:{}),
       evidence: analysis.evidence,
-      findings: dedupeFindings([...analysis.findings,...validation.findings, boundedFinding(`GENERATION_${String(errorCode ?? 'provider_failure').toUpperCase()}`, message)]),
+      findings: dedupeFindings([...analysis.findings,...validation.findings, boundedFinding(errorCode==='cancelled'?'GENERATION_CANCELLED':generationStep==='规范资料转换'?'CANONICAL_RENDER_FAILED':'ACTOR_CONVERSION_FAILED', message)]),
       stages, provider: providerIdentity(provider), calls,
       ...(errorCode ? { errorCode } : {}),
     };
@@ -716,6 +638,7 @@ export async function reviewBrowserActorIntakeCandidate(
   provider: MonsterIntakeAiProvider,
   signal?: AbortSignal,
 ): Promise<BrowserActorGenerationResult> {
+  assertForgeAiReviewAvailable();
   const response = assertBrowserActorIntakeReviewContext(input, candidate, provider);
   signal?.throwIfAborted();
   const calls = { ...candidate.calls, review: candidate.calls.review + 1 };
@@ -750,7 +673,10 @@ export function approveBrowserActorIntakeCandidateForGm(
   if (typeof gmId !== 'string' || !gmId.trim() || gmId.length > 128) throw new TypeError('GM身份无效。');
   if (candidate.status !== 'ready_for_gm_review' || !response.result.artifact
     || (['accepted','needs_review'].includes(candidate.modelReviewStatus??'') && !candidate.modelReviewFindingsHash)
-    || (candidate.modelReviewStatus==='not_requested' && (candidate.calls.review!==0 || candidate.modelReviewFindings?.length))
+    // Calls belong to the whole attempt. An explicitly repaired candidate can
+    // be new and unreviewed while preserving the prior candidate's review cost.
+    || (candidate.modelReviewStatus==='not_requested' && (candidate.review!==undefined || candidate.modelReviewFindings?.length
+      || candidate.modelReviewFindingsHash!==undefined || candidate.modelReviewError!==undefined))
     || (candidate.modelReviewFindingsHash && candidate.modelReviewFindingsHash
       !== forgeGmModelFindingsHash(candidate.modelReviewFindings ?? []))) {
     throw new TypeError('Actor 正式生成或来源参数未通过本地校验，不能由 GM 确认。');
@@ -1054,9 +980,10 @@ function verifyRenderedActor(
   markdown: string,
   response: ForgeActorResponse,
   candidate: DiscoveryCandidate,
+  validation:IntakeValidationResult,
 ) {
   const actor = actorFromResponse(response);
-  try{return verifyMonsterIntake(source, ir, markdown, actor, candidate);}
+  try{return compareMonsterIntakeProjection(source, ir, markdown, actor,validation,candidate);}
   catch{return{status:'needs_review' as const,findings:[boundedFinding('INTAKE_VERIFICATION_UNAVAILABLE','程序未能完成结构与转换保真检查；已有候选保留，请核对具体生成结果。')]};}
 }
 
@@ -1098,10 +1025,12 @@ function assertInput(source: string): void {
   if (new TextEncoder().encode(source).byteLength > 200_000) throw new Error('Source text exceeds the 200000 UTF-8 byte limit.');
 }
 
-function inputErrorCode(error: unknown): 'input_empty' | 'input_too_large' | undefined {
+function inputErrorCode(error: unknown): 'input_empty' | 'input_too_large' | 'invalid_source' | undefined {
   const message = error instanceof Error ? error.message : String(error);
   if (message === 'Source text must not be empty.') return 'input_empty';
   if (message === 'Source text exceeds the 200000 UTF-8 byte limit.') return 'input_too_large';
+  if (message === `Single creature source exceeds the ${INTAKE_LIMITS.maxCandidateLength} UTF-16 character limit.`) return 'input_too_large';
+  if (message === 'Unsupported creature source scope.') return 'invalid_source';
   return undefined;
 }
 
@@ -1165,7 +1094,7 @@ function safeProviderMessage(error: unknown): string {
   }
   const inputCode = inputErrorCode(error);
   if (inputCode === 'input_empty') return 'Source text must not be empty.';
-  if (inputCode === 'input_too_large') return 'Source text exceeds the 200000 UTF-8 byte limit.';
+  if (inputCode === 'input_too_large' || inputCode==='invalid_source') return (error as Error).message;
   if (isAbortError(error)) return 'AI intake was cancelled.';
   return 'AI intake failed before an accepted result.';
 }

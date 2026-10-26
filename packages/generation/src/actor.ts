@@ -1,5 +1,5 @@
 import { displayName } from '@fvtt-json-generator/models/display-name';
-import {sourceOperationStructureErrors,isSourceCandidateReview,sourceOperationTargetType,sourceOperationTargetCount,sourceOperationSelfTarget,sourceOperationSelfArea,isNeutralSourceAttack,sourceActorNameMatches} from '@fvtt-json-generator/models/source-operations';
+import {isSourceCandidateReview,sourceOperationTargetType,sourceOperationTargetCount,sourceOperationSelfTarget,sourceOperationSelfArea,isNeutralSourceAttack,sourceActorNameMatches} from '@fvtt-json-generator/models/source-operations';
 import {generateGmAttackActivities,sourceAttackActivityRange} from './gm-attack-activities';
 import {applySourceAttackDamageModes} from './source-attack-modes';
 import { ActionParser } from '@fvtt-json-generator/parser/action';
@@ -73,6 +73,7 @@ import {
   statusIconPath,
   suppressEncounterStagedInferredEffects,
   enforceCoreConditionLifecycles,
+  simpleConditionDuration,
 } from './actor-effects';
 import { buildBleedingFlag, extractBleedingSpec, hasDelayedBleedingFormula } from './bleeding';
 import {
@@ -86,6 +87,7 @@ import {
   structuredActionToActivityData as structuredActionToActivityDataExt,
   attachSubActivities as attachSubActivitiesExt,
   attachEmbeddedEffects as attachEmbeddedEffectsExt,
+  normalizeEmbeddedEffectStatus,
   resolveActivationType as resolveActivationTypeExt,
 } from './actor-item-builder';
 import {
@@ -439,6 +441,9 @@ export class ActorGenerator {
       }
       if (parsed.attributes.legact) {
         this.setResourceCounter(actor.system.resources.legact, parsed.attributes.legact.value, parsed.attributes.legact.max);
+      }
+      if (parsed.attributes.legres) {
+        this.setResourceCounter(actor.system.resources.legres, parsed.attributes.legres.value, parsed.attributes.legres.max);
       }
       if (typeof parsed.attributes.prof === 'number' && Number.isFinite(parsed.attributes.prof)) {
         actor.system.attributes.prof = parsed.attributes.prof;
@@ -1073,10 +1078,18 @@ export class ActorGenerator {
     if (action.literalMechanics && !action.executionMode) {
       // explicit-exception: canonical Intake owns its typed mechanics. Hide
       // prose (including nested effect prose) from every legacy fallback.
+      const embedded = action.embeddedEffects ?? [];
+      const statusOf = (effect: typeof embedded[number]) => normalizeEmbeddedEffectStatus(effect.type) ?? effect.type;
+      const manualStatuses = new Set(embedded.filter(effect => effect.escapeDc !== undefined || effect.staged === true
+        || Boolean(effect.condition?.trim()) || Boolean(effect.duration?.trim() && !simpleConditionDuration(effect.duration))).map(statusOf));
+      // If two explicit branches share a status, a conditional branch cannot
+      // be bypassed by a second unconditional Effect of the same status.
+      const manualEffects = embedded.filter(effect => manualStatuses.has(statusOf(effect)));
+      const nativeEffects = embedded.filter(effect => !manualStatuses.has(statusOf(effect)));
       const safe: StructuredActionData = {
         ...action, literalMechanics: undefined, name: '', englishName: undefined,
         describe: '', nativeRuleText: undefined, manualRemainder: undefined, sourceRuleFacts: [],
-        embeddedEffects: action.embeddedEffects?.map(effect => ({ ...effect, describe: '' })),
+        embeddedEffects: nativeEffects.map(effect => ({ ...effect, describe: '' })),
         failEffects: action.failEffects?.map(effect => ({ ...effect, describe: undefined })),
         successEffects: action.successEffects?.map(effect => ({ ...effect, describe: undefined })),
         subActions: action.subActions?.map(sub => ({ ...sub, describe: '' })),
@@ -1089,8 +1102,8 @@ export class ActorGenerator {
         if (!activity.name) activity.name = item.name;
         activity.description = { chatFlavor: formatLiteralHtml(action.describe ?? '') };
       }
-      for (const [index, embedded] of (action.embeddedEffects ?? []).entries()) {
-        if (item.effects[index]) item.effects[index].description = embedded.describe;
+      for (const [index, effect] of nativeEffects.entries()) {
+        if (item.effects[index]) item.effects[index].description = effect.describe;
       }
       const conditionalParts = (action.sourceDamageParts ?? []).flatMap((part, index) =>
         (part.relationship === 'base' || part.relationship === 'additional') && !part.condition ? [] : [{ part, index }]);
@@ -1115,12 +1128,25 @@ export class ActorGenerator {
       item.flags ??= {}; item.flags.fvttJsonGenerator ??= {};
       item.flags.fvttJsonGenerator.literalMechanics = { version: 1, description: action.describe ?? '', logicalPath,
         ...(action.sourceDamageParts ? { sourceDamageParts: structuredClone(action.sourceDamageParts) } : {}) };
+      if (manualEffects.length) {
+        const labels = [...manualStatuses].map(status => Object.hasOwn(SOURCE_NATIVE_FAILURE_LABELS,status)
+          ? `${SOURCE_NATIVE_FAILURE_LABELS[status as keyof typeof SOURCE_NATIVE_FAILURE_LABELS]} ${status}` : status);
+        const note = formatLiteralHtml(`GM：${labels.join('、')}的适用条件、期限、逃脱与解除依完整原文手动处理；这些状态不会由活动自动施加。`);
+        item.flags.fvttJsonGenerator.conditionLifecycle = { version: 1, mode: 'gm', sourceText: action.describe ?? '',
+          statuses: [...manualStatuses], conditions: manualEffects.map(effect => ({ status: statusOf(effect),
+            ...(effect.condition !== undefined ? { condition: effect.condition } : {}),
+            ...(effect.escapeDc !== undefined ? { escapeDc: effect.escapeDc } : {}),
+            ...(effect.duration !== undefined ? { duration: effect.duration } : {}),
+            ...(effect.staged !== undefined ? { staged: effect.staged } : {}) })) };
+        item.system.description.value += note;
+        for (const activity of Object.values(item.system.activities ?? {}) as any[]) activity.description.chatFlavor += note;
+      }
       // Retain the sanitized consumed record: later lifecycle and presentation
       // passes must not turn the restored display prose back into mechanics.
       return;
     }
     if(action.sourceOperations){
-      if(!this.isV14()||action.executionMode!=='native-with-gm'||sourceOperationStructureErrors(action.sourceOperations).length)throw new Error('InvalidSourceOperations');
+      if(!this.isV14()||action.executionMode!=='native-with-gm')throw new Error('InvalidSourceOperations');
       if(action.attackType||action.DC!==undefined||action.damage?.length||action.embeddedEffects?.length||action.subActions?.length||action.gmTriggeredSave||action.nativeFailureStatuses)throw new Error('ConflictingSourceOperations');
       // Build the existing resource/section carrier without feeding any rule
       // prose into legacy inference. Each child is an explicit clickable roll.
@@ -1180,7 +1206,9 @@ export class ActorGenerator {
             activity.range={override:true,units:self?'self':'spec',special:self?'':'GM 按原文目标或效应位置确定范围。'};
           }
           if(op.healing){
-            activity.range={override:true,units:op.healing.target.type==='self'?'self':'spec',special:op.healing.target.type==='self'?'':'GM 按原文目标或效应位置确定范围。'};
+            // An explicit AI distance also applies to Heal/temporary HP. Only
+            // an omitted distance uses the typed self/manual default.
+            if(op.range===undefined)activity.range={override:true,units:op.healing.target.type==='self'?'self':'spec',special:op.healing.target.type==='self'?'':'GM 按原文目标或效应位置确定范围。'};
             activity.target.override=true;
           }
           if(neutral)activity.target={override:true,prompt:true,template:{type:'',units:'ft'},affects:{count:'',type:recipientType,choice:false,special:op.targetSpecial??''}};

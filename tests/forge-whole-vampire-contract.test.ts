@@ -1,10 +1,11 @@
-import {test,expect} from 'bun:test';
+import {describe,test,expect} from 'bun:test';
 import {readFileSync,writeFileSync,existsSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {runWholeVampireContract,wholeVampireSource,wholeVampireCandidate} from './helpers/whole-vampire-contract';
 import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
-import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
+import {validateMonsterIntakeIR,auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
+import {assertDefaultFullIrReplay} from './helpers/forge-legacy-provider';
 import {serializeForgeEncounterPackage} from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 
 const hash=(value:string|Uint8Array)=>createHash('sha256').update(value).digest('hex');
@@ -22,7 +23,7 @@ function assertFrozenEvidence(){
 function recordEvidence(reference:string,run:Awaited<ReturnType<typeof runWholeVampireContract>>,coverage:any[],tamperChecks:any[]){
   if(process.env.FORGE_WHOLE_VAMPIRE_EVIDENCE!=='1')return;
   const directory=resolve('.local/forge-v2-bw-integration-20261020');if(!existsSync(directory))throw Error('Task evidence directory must already exist');
-  const prefix='whole-vampire-new-contract-'+reference+'-'+new Date().toISOString().replace(/[:.]/gu,'-'),entry=run.result.report.actors[0]!,prepared=run.result.prepared!;
+  const prefix='historical-srd51-vampire-projection-'+reference+'-'+new Date().toISOString().replace(/[:.]/gu,'-'),entry=run.result.report.actors[0]!,prepared=run.result.prepared!;
   const content:Record<string,string>={
     'source.md':wholeVampireSource.source,'ir.json':JSON.stringify(entry.analysis.ir,null,2)+'\n','form.json':JSON.stringify(run.forms[0],null,2)+'\n',
     'rendered.md':prepared.bundle.actors[0]!.source,'actor.json':JSON.stringify(prepared.actors[0]!.artifact,null,2)+'\n',
@@ -34,7 +35,7 @@ function recordEvidence(reference:string,run:Awaited<ReturnType<typeof runWholeV
     'packages/intake-ai/src/category-form-v2-adapter.ts','packages/intake-ai/src/category-form-v2-healing.ts','packages/intake-ai/src/staged-extraction.ts','packages/intake-ai/src/staged-source.ts',
     'packages/intake-ai/src/validator.ts','packages/intake-ai/src/verifier.ts','packages/intake-ai/src/renderer.ts','packages/generation/src/actor.ts',
     'packages/forge-browser-runtime/src/encounterIntake.ts','packages/forge-browser-runtime/src/encounterPreparation.ts'];
-  const receipt={scope:'independently-authored-new-contract-not-a-repaired-frozen-answer',reference,status:run.result.report.status,packageStatus:'prepared',
+  const receipt={scope:'historical-srd51-2014-legacy-transport-and-projection-not-2024-quality-acceptance',reference,status:run.result.report.status,packageStatus:'prepared',
     sourceSha256:hash(wholeVampireSource.source),sourceUrl:wholeVampireSource.sourceUrl,sourcePdfPages:wholeVampireSource.pdfPages,sourceUnitCoverage:coverage,expectedOriginalUnits:14,qualifiedHeaderPreserved:true,
     modelHttp:run.modelHttp,fakeTransportCalls:run.requests.length,transportStages:run.requests.map(payload=>payload.lines?'source':payload.template?'whole-feature':'base'),
     packageHash:prepared.hash,artifactHash:prepared.actors[0]!.artifactHash,tamperChecks,originalFrozenFiles:assertFrozenEvidence(),
@@ -44,7 +45,8 @@ function recordEvidence(reference:string,run:Awaited<ReturnType<typeof runWholeV
   const receiptPath=join(directory,prefix+'.receipt.json');writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n',{flag:'wx'});console.log('Whole Vampire evidence: '+receiptPath);
 }
 
-for(const reference of ['id','name'] as const)test('full original Vampire '+reference+' new-contract input reaches the actual mod formal chain',async()=>{
+describe('historical SRD 5.1 / 2014 Vampire legacy transport and projection compatibility; not 2024 quality acceptance',()=>{
+for(const reference of ['id','name'] as const)test('legacy whole-form '+reference+' and current fixed full-IR replay retain the formal projection',async()=>{
   const run=await runWholeVampireContract(reference),{result,plan,requests}=run;
   expect(plan.features).toHaveLength(14);
   expect(plan.features.map(unit=>({name:unit.name,quote:unit.quote.trim(),section:String(unit.section)}))).toEqual(wholeVampireSource.units.map(unit=>({name:unit.name,quote:unit.quote.trim(),section:unit.section})));
@@ -55,6 +57,8 @@ for(const reference of ['id','name'] as const)test('full original Vampire '+refe
   expect(ir.source).toEqual({sha256:wholeVampireSource.sourceSha256,length:wholeVampireSource.source.length});
   expect(generation.formalStatus).toBe('accepted');expect(generation.intakeVerificationStatus).toBe('accepted');
   expect(generation.modelReviewStatus).toBe('not_requested');expect(generation.calls.review).toBe(0);
+  expect(auditMonsterIntakeSource(wholeVampireSource.source,ir).blocking).toEqual([]);
+  await assertDefaultFullIrReplay(wholeVampireSource.source,ir,{actor,markdown:prepared.bundle.actors[0]!.source,discoveryCalls:1});
   expect(actor.name).toBe('Vampire');expect(actor.system.attributes.hp.max).toBe(144);expect(actor.system.attributes.ac.flat).toBe(16);expect(actor.system.abilities.str.value).toBe(18);
   const coverage=plan.features.map(unit=>{
     const candidates=allFeatures(ir).filter(({feature})=>feature.name===unit.name&&feature.description===unit.quote.trim());expect(candidates).toHaveLength(1);
@@ -129,7 +133,10 @@ for(const reference of ['id','name'] as const)test('full original Vampire '+refe
     ['IR-legendary-default-cost',(bad:any)=>{bad.creature.legendaryActions.find((feature:any)=>feature.name==='Move').legendaryCost=2;}],
     ['stale-source',(bad:any)=>{bad.source.sha256='0'.repeat(64);}],
   ] as Array<[string,(bad:any)=>void]>){
-    const bad=structuredClone(ir);mutate(bad);const validation=validateMonsterIntakeIR(wholeVampireSource.source,bad,{coverageRange:{start:0,end:wholeVampireSource.source.length}});
+    const bad=structuredClone(ir);mutate(bad);
+    // Content comparisons are an explicit source audit. Stale identity remains
+    // a default structural rejection; no source judge is reintroduced there.
+    const validation=(name==='stale-source'?validateMonsterIntakeIR:auditMonsterIntakeSource)(wholeVampireSource.source,bad,{coverageRange:{start:0,end:wholeVampireSource.source.length}});
     if(['truncated-header','wrong-header-qualifier','body-header-borrowing','missing-qualified-header'].includes(name))expect(validation.blocking.some(finding=>finding.code==='SOURCE_HEADER_RULE_OMITTED')).toBe(true);
     tamperChecks.push({name,rejected:validation.blocking.length>0,codes:validation.blocking.map(finding=>finding.code)});
   }
@@ -161,4 +168,5 @@ for(const [change,code]of [
     expect(run.result.report.actors[0]!.analysis.ir!.uncertainties.some(f=>f.blocking)).toBe(true);
   }
   expect(run.result.report.findings.join('\n')).toContain(code);expect(run.modelHttp).toBe(0);
+});
 });

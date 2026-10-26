@@ -267,6 +267,8 @@ export interface SubAction {
 export interface EmbeddedEffect {
   type: string;
   describe: string;
+  /** Explicit applicability/ending rule; retained for GM handling, never parsed from prose. */
+  condition?: string;
   duration?: string;
   damageType?: string;
   damageFormula?: string;

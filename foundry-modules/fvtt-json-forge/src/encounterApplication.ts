@@ -238,10 +238,7 @@ export function createForgeEncounterApplicationClass(environment: {
         draftPreview,draftPreviewError,translationReviewed:this.translationReviewed,
         iconReviewText:this.prepared?iconReviewPresentation(this.prepared.actors.map(actor=>actor.iconReview)):undefined,
         canApproveTranslation:!!currentDraft&&this.translationReviewed&&!this.busy&&!this.result,
-        canReviewCandidate:needsPaidReview&&!this.prepared?.bundle.localization&&!this.busy&&!this.result
-          &&!!this.generationReviewBinding&&this.generationReviewBinding.sessionRevision===this.sessionRevision
-          &&this.generationReviewBinding.sourceHash===currentReport?.sourceHash
-          &&this.generationReviewBinding.packageHash===this.prepared?.hash,
+        canReviewCandidate:false,
         aiConcerns,aiReviewFindings:aiConcerns?currentReport?.findings??[]:[],
         localizationApprovalState:this.prepared?.bundle.localization
           ?'approval'in this.prepared.bundle.localization.packageText?'中文译文由 GM 人工核对并批准；中文译文的 AI 审核未请求。'
@@ -256,7 +253,7 @@ export function createForgeEncounterApplicationClass(environment: {
             ||this.generationReviewBinding.sourceHash!==currentReport.sourceHash
             ||this.generationReviewBinding.packageHash!==this.prepared.hash
           ?'当前候选没有本会话生成连接的有效证明，不能继承付费审核权限；仍可由 GM 依据本地校验人工确认。'
-          :!actorAuditsComplete?'角色 AI 审核尚未完成；可另行请求，或由 GM 依据完整来源核对候选。'
+          :!actorAuditsComplete?'AI 内容复核已暂时关闭；请由 GM 依据完整来源核对候选。'
           :!automationAuditComplete?'角色 AI 审核已完成；配套控制 AI 审核尚未完成。'
           :'当前记录没有 AI 审核结论；请由 GM 核对来源和规则。',
         importLabel:this.prepared?.reviewFindings?.length?'我已核对问题，导入待审候选':aiConcerns?'GM 确认导入（仍有 AI 提示）':currentDraft?'导入原语言包（中文草稿尚未确认）':this.prepared?.macros.length?'一起导入角色与宏':'导入完整角色',
@@ -346,7 +343,6 @@ export function createForgeEncounterApplicationClass(environment: {
       bind('encounter-preview',()=>this.preview());
       bind('encounter-localize',()=>this.translatePrepared());
       bind('encounter-approve-localization',()=>this.approveLocalization());
-      bind('encounter-review-candidate',()=>this.reviewCurrentCandidate());
       bind('encounter-ai',()=>this.generateFromHuman());
       bind('encounter-resume',()=>this.generateFromHuman(true));
       bind('encounter-recover-preview',()=>this.previewRecovered());
@@ -599,71 +595,8 @@ export function createForgeEncounterApplicationClass(environment: {
       finally{this.busy=false;if(!this.closed)void this.render();}
     }
     private async reviewCurrentCandidate():Promise<void>{
-      if(this.busy||this.closed||!this.prepared||this.prepared.bundle.localization||!this.aiReport||this.result)return;
-      const prepared=this.prepared,report=this.aiReport,source=this.humanSource,revision=this.fileRevision;
-      if(report.source!==source||report.sourceHash!==hashSource(source)||report.packageHash!==prepared.hash){
-        this.error='当前候选与来源报告不一致，不能发起 AI 审核。';void this.render();return;
-      }
-      const binding=this.generationReviewBinding;
-      if(!binding||binding.sessionRevision!==this.sessionRevision||binding.sourceHash!==report.sourceHash
-        ||binding.packageHash!==prepared.hash){
-        this.error='当前候选没有本会话生成连接的有效证明，不能发起付费审核；GM 仍可本地确认。';void this.render();return;
-      }
-      if(!claimForgeAiJob(this)){this.error='已有 Forge AI 任务运行，请等待完成。';void this.render();return;}
-      const controller=new AbortController();this.controller=controller;
-      this.busy=true;this.aiRunning=true;this.reviewingCandidate=true;this.reviewed=false;this.translationReviewed=false;this.error='';
-      this.status='正在显式审核当前候选；只复核现有内容，不重新生成、翻译或修正。';void this.render();
-      try{
-        assertGm(game);assertExactRuntime(game);
-        const options=environment.getAiOptions?.(controller);
-        if(!options)throw new Error('请先在 Forge · AI 连接中配置并测试当前模型。');
-        this.rememberSecrets(options);
-        if(connectionOptionsHash(options)!==binding.optionsHash||binding.sessionRevision!==this.sessionRevision)
-          throw new Error('当前完整 AI 连接配置与生成候选时不同；旧候选不能发起付费审核。');
-        const sameConnection=()=>{
-          try{const current=environment.getAiOptions?.(controller);
-            return !!current&&binding.sessionRevision===this.sessionRevision
-              &&connectionOptionsHash(current)===binding.optionsHash;}catch{return false;}
-        };
-        const catalog=configuredConditionsCatalog(game),catalogHash=hashSource(JSON.stringify(catalog));
-        const stillCurrent=()=>!this.closed&&this.controller===controller&&revision===this.fileRevision
-          &&source===this.humanSource&&this.prepared===prepared&&sameConnection()
-          &&hashSource(JSON.stringify(configuredConditionsCatalog(game)))===catalogHash;
-        const providers=(environment.createEncounterIntakeProviders??createEncounterIntakeProviders)(options,controller.signal);
-        if(providers.provider.extractionModel!==report.model||providers.provider.reviewModel!==report.reviewModel
-          ||report.conditionCatalogHash!==catalogHash)throw new Error('模型或状态目录已改变，旧候选不能发起 AI 审核。');
-        const output=await (environment.reviewForgeEncounterCandidate??reviewForgeEncounterCandidate)({
-          source,report,prepared,provider:providers.provider,automationProvider:providers.automationProvider,
-          translationService:providers.translationService,conditionCatalog:catalog,signal:controller.signal,
-          onReport:next=>{assertEncounterSecretsAbsent(JSON.stringify(next),this.forbiddenValues);
-            if(!stillCurrent())return;
-            this.aiReport=next;this.recoveryReport=next;
-            if(next.packageHash===prepared.hash)this.queueRecoverySave();},
-        });
-        controller.signal.throwIfAborted();
-        if(!stillCurrent())throw new Error('来源、候选、连接或状态目录已改变；旧 AI 审核不适用。');
-        assertGm(game);assertExactRuntime(game);
-        this.aiReport=output.report;this.recoveryReport=output.report;
-        this.translationReport=output.report.localization??this.translationReport;
-        this.localizationDraft=output.localizationDraft??output.report.localizationDraft;
-        if(output.prepared){
-          if(output.report.packageHash!==output.prepared.hash)throw new Error('AI 审核结果与当前候选身份不一致。');
-          assertEncounterSecretsAbsent(serializeForgeEncounterPackage(output.prepared.bundle),this.forbiddenValues);
-          this.prepared=output.prepared;
-          if(output.prepared.bundle.localization)this.generationReviewBinding=undefined;
-          this.recoveryPackage=serializeForgeEncounterPackage(output.prepared.bundle);
-        }else{this.prepared=undefined;this.recoveryPackage=undefined;}
-        this.queueRecoverySave();
-        const concerns=output.report.automationReview&&'verdict'in output.report.automationReview
-          &&output.report.automationReview.verdict==='needs_review'
-          ||output.report.actors.some(actor=>['needs_review','failed'].includes(actor.generation?.modelReviewStatus??''));
-        this.status=output.prepared
-          ?concerns?'AI 审核提出提示；请逐项核对。本地校验通过时仍可由 GM 明确人工确认导入。'
-            :'当前候选已完成显式 AI 审核；仍须由 GM 核对并最终确认。'
-          :'本地校验发现阻断问题；当前候选不可导入。';
-      }catch(error){this.error=controller.signal.aborted?'AI 审核已取消。':message(error);
-        this.status='AI 审核未完成；本地有效候选仍可由 GM 人工核对，不能把本次请求记作通过。';this.queueRecoverySave();}
-      finally{releaseForgeAiJob(this);this.busy=false;this.aiRunning=false;this.reviewingCandidate=false;if(!this.closed)void this.render();}
+      this.error='AI 内容复核已暂时关闭。请由 GM 核对来源和候选后确认。';
+      if(!this.closed)void this.render();
     }
     private async preview() {
       if(this.busy||!this.file)return;
