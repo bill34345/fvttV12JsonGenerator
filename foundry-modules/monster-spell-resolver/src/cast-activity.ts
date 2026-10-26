@@ -185,6 +185,7 @@ export function buildCastActivitySource(input: BuildCastActivitySourceInput): Bu
   let duration:NativeCastActivitySource['duration'];
   let castingLevel=prepared?input.ref.castingLevel:undefined;
   const sourceNotes:PreservedSpellRestriction[]=[];
+  const componentNotes:PreservedSpellRestriction[]=[];
   const ignored=new Set(input.ref.ignoresMaterialComponents?['material']:[]);
   for(const restriction of input.ref.restrictions){
     if(restriction.kind!=='casting')continue;
@@ -209,7 +210,15 @@ export function buildCastActivitySource(input: BuildCastActivitySourceInput): Bu
       if(duration&&JSON.stringify(duration)!==JSON.stringify(next))throw Error('Conflicting source spell duration overrides');
       duration=next;handled.add(restriction);
     }else if(/^(?:(?:无需|无须|不需要|不需)\s*(?:任何|所有|全部)?\s*法术成分|(?:without|requires? no|requiring no)\s+(?:any\s+)?spell components?)$/iu.test(text)){
+      assertComponentWaiverValue(restriction);
       for(const component of ['vocal','somatic','material'])ignored.add(component);handled.add(restriction);
+    }else{
+      const components=decodeEnumeratedComponentWaivers(text);
+      if(components){
+        assertComponentWaiverValue(restriction);
+        for(const component of components)ignored.add(component);
+        componentNotes.push(restriction);handled.add(restriction);
+      }
     }
   }
   const literalRestrictions = input.ref.restrictions
@@ -235,6 +244,8 @@ export function buildCastActivitySource(input: BuildCastActivitySourceInput): Bu
     ...(input.group.attackBonus === undefined ? {} : { attack: String(input.group.attackBonus) }),
     ...(input.group.saveDc === undefined ? {} : { save: String(input.group.saveDc) }),
   };
+  const sourceFlavor=literalRestrictionChatFlavor([...literalRestrictions,...sourceNotes.map(r=>({manifestId:input.manifestId,groupId:input.group.groupId,refId:input.ref.refId,kind:r.kind,text:r.text,status:'literal-unsupported' as const}))])
+    +(componentNotes.length?'<p>Component waivers applied from the source:</p>'+restrictionParagraphs(componentNotes):'');
   const activity: NativeCastActivitySource = {
     _id: activityId,
     type: 'cast',
@@ -243,7 +254,7 @@ export function buildCastActivitySource(input: BuildCastActivitySourceInput): Bu
     // spell's normal casting time. Inherit it, including 1+ minute spells.
     // Explicit bonus/reaction/legendary carriers still supply their timing.
     ...(input.activationType&&input.activationType!=='action'?{activation:{type:input.activationType,value:activationCost,override:true}}:{}),
-    ...(literalRestrictions.length||sourceNotes.length?{description:{chatFlavor:literalRestrictionChatFlavor([...literalRestrictions,...sourceNotes.map(r=>({manifestId:input.manifestId,groupId:input.group.groupId,refId:input.ref.refId,kind:r.kind,text:r.text,status:'literal-unsupported' as const}))])}}:{}),
+    ...(sourceFlavor?{description:{chatFlavor:sourceFlavor}}:{}),
     consumption,
     ...(uses === undefined ? {} : { uses }),
     ...(duration?{duration}:{}),
@@ -279,7 +290,26 @@ export function computeManagedSourceHash(source: unknown): string {
 /** Complete inert source notes, shared by the parent and its owned usage
  * Activities. Core Cast does not inherit parent chatFlavor to the Spell. */
 export function literalRestrictionChatFlavor(restrictions:ReadonlyArray<{text:string}>):string{
-  return restrictions.length?'<p>GM adjudication: the following complete source restrictions are not automatic.</p>'+restrictions.map(rule=>'<p>'+rule.text.replace(/&/gu,'&amp;').replace(/</gu,'&lt;').replace(/>/gu,'&gt;').replace(/\r?\n/gu,'<br>')+'</p>').join(''):'';
+  return restrictions.length?'<p>GM adjudication: the following complete source restrictions are not automatic.</p>'+restrictionParagraphs(restrictions):'';
+}
+
+function restrictionParagraphs(restrictions:ReadonlyArray<{text:string}>):string{
+  return restrictions.map(rule=>'<p>'+rule.text.replace(/&/gu,'&amp;').replace(/</gu,'&lt;').replace(/>/gu,'&gt;').replace(/\r?\n/gu,'<br>')+'</p>').join('');
+}
+
+/** Closed decoding of an already declared casting-restriction field. Never
+ * inspect an Actor ability body, spell description or external source text.
+ * 5.3.3 Cast properties is an ignored-component set: verbal maps to vocal. */
+function decodeEnumeratedComponentWaivers(text:string):string[]|undefined{
+  const clause=/^(?:without|requires? no|requiring no)\s+(.+?)\s+components?$/iu.exec(text);
+  if(!clause)return undefined;
+  const list=clause[1]!.toLocaleLowerCase('en-US');
+  if(!/^(?:verbal|somatic|material)(?:\s*,\s*(?:verbal|somatic|material))*(?:(?:\s*,\s*|\s+)(?:and|or)\s+(?:verbal|somatic|material))?$/u.test(list))return undefined;
+  return [...new Set(list.match(/\b(?:verbal|somatic|material)\b/gu)!.map(component=>component==='verbal'?'vocal':component))];
+}
+
+function assertComponentWaiverValue(restriction:PreservedSpellRestriction):void{
+  if(restriction.value!==undefined&&restriction.value!==true)throw new TypeError('Source component waiver value contradicts its complete casting restriction.');
 }
 
 function isExactSelfTarget(restriction: PreservedSpellRestriction): boolean {

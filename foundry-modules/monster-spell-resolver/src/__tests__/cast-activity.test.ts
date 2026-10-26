@@ -3,6 +3,8 @@ import { renderMonsterIntakeMarkdown } from '../../../../src/core/intake/rendere
 import { buildRatWarlockIr } from '../../../../src/core/intake/__tests__/fixtures/rat-warlock';
 import { YamlParser } from '../../../../src/core/parser/yaml';
 import type { PortableSpellRef } from '../../../../src/core/spell-resolution';
+import {hashManifest,type PortableSpellManifest} from '@fvtt-json-generator/spell-manifest-contracts';
+import currentNaga from './fixtures/current-spirit-naga-manifest.json';
 import {
   buildCastActivitySource,
   computeManagedSourceHash,
@@ -35,6 +37,66 @@ function ratCases() {
 }
 
 describe('native dnd5e 5.3.3 Cast Activity source', () => {
+  const componentControl=(text:string,kind:'casting'|'target'='casting',value?:string|number|boolean)=>{
+    const ref:PortableSpellRef={...structuredClone(ratCases()[0]!.ref),refId:'component-control',method:'at-will',uses:undefined,
+      ignoresMaterialComponents:false,restrictions:[{kind,text,...(value===undefined?{}:{value}),evidence:[]}]};
+    return{ref,built:buildCastActivitySource({manifestId:'component-control',featureId:'ComponentField01',group:{groupId:'components',featureItemKey:'components',spellRefs:[ref]},ref,
+      selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'})};
+  };
+  for(const[text,expected]of [
+    ['requiring no Somatic or Material components',['somatic','material']],
+    ['requires no verbal component',['vocal']],
+    ['require no material components',['material']],
+    ['without verbal and somatic components',['vocal','somatic']],
+    ['without verbal, somatic, and material components',['vocal','somatic','material']],
+  ] as const)test('an exact declared component enumeration configures only its listed native properties: '+text,()=>{
+    const {built,ref}=componentControl(text);expect(built.activity.spell.properties).toEqual([...expected]);expect(built.literalRestrictions).toEqual([]);
+    expect(built.activity.description?.chatFlavor).toContain(ref.restrictions[0]!.text);expect(built.activity.flags['fvtt-json-generator-spell-resolver'].generatedContentHash).toBe(computeManagedSourceHash(built.activity));
+  });
+  for(const text of [
+    'requiring Somatic or Material components','requires Somatic or Material components','requiring no Somatic or Material components while invisible',
+    'requiring no Somatic or Material components except costly materials','If blessed, without somatic or material components',
+    'The caster casts without somatic or material components','not requiring no somatic or material components','without some somatic or material components',
+    'without verbal, somatic, or focus components','without non-somatic components','without material component costs',
+  ])test('component requirements/conditions/unknown words remain complete literal notes: '+text,()=>{
+    const {built}=componentControl(text);expect(built.activity.spell.properties).toEqual([]);
+    expect(built.literalRestrictions).toEqual([expect.objectContaining({kind:'casting',text,status:'literal-unsupported'})]);expect(built.activity.description?.chatFlavor).toContain(text);
+  });
+  test('a component-looking non-casting restriction cannot grant waivers',()=>{
+    const {built}=componentControl('requiring no somatic or material components','target');expect(built.activity.spell.properties).toEqual([]);expect(built.literalRestrictions).toHaveLength(1);
+  });
+  test('component declaration values must agree; existing generic all-components and material flag behavior remain',()=>{
+    for(const text of ['requiring no somatic or material components','requiring no spell components']){
+      for(const value of [false,0,'somatic'])expect(()=>componentControl(text,'casting',value)).toThrow('component');
+      expect(componentControl(text,'casting',true).built.activity.spell.properties).toEqual(text.includes('spell')?['vocal','somatic','material']:['somatic','material']);
+    }
+    const ref:PortableSpellRef={...structuredClone(ratCases()[0]!.ref),method:'at-will',uses:undefined,ignoresMaterialComponents:true,restrictions:[]};
+    const built=buildCastActivitySource({manifestId:'material-flag',featureId:'ComponentField01',group:{groupId:'material',featureItemKey:'material',spellRefs:[ref]},ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'});
+    expect(built.activity.spell.properties).toEqual(['material']);expect(built.activity.description).toBeUndefined();
+  });
+  test('the current native Spirit Naga manifest keeps vocal requirements and every other Cast parameter for all eight refs',()=>{
+    const manifest=structuredClone(currentNaga.manifest) as PortableSpellManifest,before=structuredClone(manifest);
+    expect(hashManifest(manifest)).toBe('6777894a908291f448f39b6b7a70d0879e58dc2261d98927c69bd4d5483b172f');
+    expect(currentNaga.provenance.map(entry=>entry.manifestHash)).toEqual([hashManifest(manifest),hashManifest(manifest)]);
+    const group=manifest.spellcastingGroups[0]!;expect(group.spellRefs).toHaveLength(8);
+    for(const ref of group.spellRefs){
+      const component=ref.restrictions.find(entry=>entry.kind==='casting'&&entry.text==='requiring no Somatic or Material components');expect(component).toBeDefined();
+      const input={manifestId:manifest.manifestId,featureId:'NagaFeature00001',group,ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'};
+      const built=buildCastActivitySource(input);expect(built.activity.spell.properties).toEqual(['somatic','material']);expect(built.activity.spell.properties).not.toContain('vocal');
+      expect(built.activity.description?.chatFlavor).toContain(component!.text);expect(built.activity.spell.ability).toBe('int');expect(built.activity.spell.challenge).toEqual({override:true,save:'14'});
+      if(ref.uses){expect(built.activity.uses).toEqual({spent:0,max:'2',recovery:[{period:'day',type:'recoverAll'}]});expect(built.activity.consumption.targets).toEqual([{type:'activityUses',value:'1'}]);}
+      else{expect(built.activity.uses).toBeUndefined();expect(built.activity.consumption.targets).toEqual([]);}
+      if(ref.originalName==='Hold Person')expect(built.activity.spell.level).toBe(3);if(ref.originalName==='Lightning Bolt')expect(built.activity.spell.level).toBe(4);
+      // Every other field, including identity, uses, level, DC and timing,
+      // equals a control with only this one component restriction absent.
+      const control=buildCastActivitySource({...input,ref:{...ref,restrictions:ref.restrictions.filter(entry=>entry!==component)}});
+      const unchanged=structuredClone(built.activity);unchanged.spell.properties=control.activity.spell.properties;
+      if(control.activity.description)unchanged.description=control.activity.description;else delete unchanged.description;
+      unchanged.flags['fvtt-json-generator-spell-resolver'].generatedContentHash=control.activity.flags['fvtt-json-generator-spell-resolver'].generatedContentHash;
+      expect(unchanged).toEqual(control.activity);expect(built.identity).toEqual(control.identity);
+    }
+    expect(manifest).toEqual(before);
+  });
   test('the complete original manifest retains its ray-limited spell and reports its manual restriction',()=>{
     const parsed=new YamlParser().parse(renderMonsterIntakeMarkdown(buildRatWarlockIr())),manifest=parsed.spellManifest!,group=manifest.spellcastingGroups[0]!;
     expect(group.spellRefs).toHaveLength(10);

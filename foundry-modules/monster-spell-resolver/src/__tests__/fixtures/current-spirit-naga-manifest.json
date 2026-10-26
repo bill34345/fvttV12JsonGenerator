@@ -1,0 +1,315 @@
+{
+  "kind": "mechanical-portable-manifest-selection-no-world-identifiers",
+  "provenance": [
+    {
+      "captureFile": "native-after-import.json",
+      "captureSha256": "7995e68caad52b274396cb360e0bfb0433afbb09eb9e356547fb94f615cde889",
+      "manifestHash": "6777894a908291f448f39b6b7a70d0879e58dc2261d98927c69bd4d5483b172f"
+    },
+    {
+      "captureFile": "native-after-reload.json",
+      "captureSha256": "dbbe1af47579c8417aeaaa30c28d242ff0d33cfea880ff23dda4009f7d2a75ed",
+      "manifestHash": "6777894a908291f448f39b6b7a70d0879e58dc2261d98927c69bd4d5483b172f"
+    }
+  ],
+  "manifest": {
+    "schemaVersion": 1,
+    "manifestId": "intake-55304b4c315ee768-spirit-naga-spellcasting-791",
+    "sourceSha256": "55304b4c315ee7684dae06b44a1330c95f63f93552b5d6ddb701edc9a637398d",
+    "rulesPreference": "2024",
+    "spellcastingGroups": [
+      {
+        "groupId": "spellcasting",
+        "featureItemKey": "spellcasting",
+        "ability": "int",
+        "saveDc": 14,
+        "spellRefs": [
+          {
+            "refId": "detect-magic",
+            "identifier": "Detect Magic",
+            "originalName": "Detect Magic",
+            "englishName": "Detect Magic",
+            "chineseName": "侦测魔法",
+            "aliases": [],
+            "method": "at-will",
+            "ignoresMaterialComponents": true,
+            "restrictions": [
+              {
+                "kind": "casting",
+                "text": "requiring no Somatic or Material components",
+                "evidence": [
+                  {
+                    "start": 849,
+                    "end": 892,
+                    "quote": "requiring no Somatic or Material components"
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "start": 973,
+                "end": 985,
+                "quote": "Detect Magic"
+              }
+            ]
+          },
+          {
+            "refId": "mage-hand",
+            "identifier": "Mage Hand",
+            "originalName": "Mage Hand",
+            "englishName": "Mage Hand",
+            "chineseName": "法师之手",
+            "aliases": [],
+            "method": "at-will",
+            "ignoresMaterialComponents": true,
+            "restrictions": [
+              {
+                "kind": "casting",
+                "text": "requiring no Somatic or Material components",
+                "evidence": [
+                  {
+                    "start": 849,
+                    "end": 892,
+                    "quote": "requiring no Somatic or Material components"
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "start": 987,
+                "end": 996,
+                "quote": "Mage Hand"
+              }
+            ]
+          },
+          {
+            "refId": "minor-illusion",
+            "identifier": "Minor Illusion",
+            "originalName": "Minor Illusion",
+            "englishName": "Minor Illusion",
+            "chineseName": "次级幻象",
+            "aliases": [],
+            "method": "at-will",
+            "ignoresMaterialComponents": true,
+            "restrictions": [
+              {
+                "kind": "casting",
+                "text": "requiring no Somatic or Material components",
+                "evidence": [
+                  {
+                    "start": 849,
+                    "end": 892,
+                    "quote": "requiring no Somatic or Material components"
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "start": 998,
+                "end": 1012,
+                "quote": "Minor Illusion"
+              }
+            ]
+          },
+          {
+            "refId": "water-breathing",
+            "identifier": "Water Breathing",
+            "originalName": "Water Breathing",
+            "englishName": "Water Breathing",
+            "chineseName": "水下呼吸",
+            "aliases": [],
+            "method": "at-will",
+            "ignoresMaterialComponents": true,
+            "restrictions": [
+              {
+                "kind": "casting",
+                "text": "requiring no Somatic or Material components",
+                "evidence": [
+                  {
+                    "start": 849,
+                    "end": 892,
+                    "quote": "requiring no Somatic or Material components"
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "start": 1014,
+                "end": 1029,
+                "quote": "Water Breathing"
+              }
+            ]
+          },
+          {
+            "refId": "detect-thoughts",
+            "identifier": "Detect Thoughts",
+            "originalName": "Detect Thoughts",
+            "englishName": "Detect Thoughts",
+            "chineseName": "侦测思想",
+            "aliases": [],
+            "method": "innate",
+            "uses": {
+              "value": 2,
+              "recovery": "day",
+              "shared": false
+            },
+            "ignoresMaterialComponents": true,
+            "restrictions": [
+              {
+                "kind": "casting",
+                "text": "requiring no Somatic or Material components",
+                "evidence": [
+                  {
+                    "start": 849,
+                    "end": 892,
+                    "quote": "requiring no Somatic or Material components"
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "start": 1042,
+                "end": 1057,
+                "quote": "Detect Thoughts"
+              }
+            ]
+          },
+          {
+            "refId": "dimension-door",
+            "identifier": "Dimension Door",
+            "originalName": "Dimension Door",
+            "englishName": "Dimension Door",
+            "chineseName": "任意门",
+            "aliases": [],
+            "method": "innate",
+            "uses": {
+              "value": 2,
+              "recovery": "day",
+              "shared": false
+            },
+            "ignoresMaterialComponents": true,
+            "restrictions": [
+              {
+                "kind": "casting",
+                "text": "requiring no Somatic or Material components",
+                "evidence": [
+                  {
+                    "start": 849,
+                    "end": 892,
+                    "quote": "requiring no Somatic or Material components"
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "start": 1059,
+                "end": 1073,
+                "quote": "Dimension Door"
+              }
+            ]
+          },
+          {
+            "refId": "hold-person",
+            "identifier": "Hold Person",
+            "originalName": "Hold Person",
+            "englishName": "Hold Person",
+            "chineseName": "定身类人",
+            "aliases": [],
+            "method": "innate",
+            "uses": {
+              "value": 2,
+              "recovery": "day",
+              "shared": false
+            },
+            "ignoresMaterialComponents": true,
+            "restrictions": [
+              {
+                "kind": "casting",
+                "text": "requiring no Somatic or Material components",
+                "evidence": [
+                  {
+                    "start": 849,
+                    "end": 892,
+                    "quote": "requiring no Somatic or Material components"
+                  }
+                ]
+              },
+              {
+                "kind": "casting",
+                "text": "level 3 version",
+                "value": 3,
+                "evidence": [
+                  {
+                    "start": 1075,
+                    "end": 1104,
+                    "quote": "Hold Person (level 3 version)"
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "start": 1075,
+                "end": 1104,
+                "quote": "Hold Person (level 3 version)"
+              }
+            ]
+          },
+          {
+            "refId": "lightning-bolt",
+            "identifier": "Lightning Bolt",
+            "originalName": "Lightning Bolt",
+            "englishName": "Lightning Bolt",
+            "chineseName": "闪电束",
+            "aliases": [],
+            "method": "innate",
+            "uses": {
+              "value": 2,
+              "recovery": "day",
+              "shared": false
+            },
+            "ignoresMaterialComponents": true,
+            "restrictions": [
+              {
+                "kind": "casting",
+                "text": "requiring no Somatic or Material components",
+                "evidence": [
+                  {
+                    "start": 849,
+                    "end": 892,
+                    "quote": "requiring no Somatic or Material components"
+                  }
+                ]
+              },
+              {
+                "kind": "casting",
+                "text": "level 4 version",
+                "value": 4,
+                "evidence": [
+                  {
+                    "start": 1106,
+                    "end": 1138,
+                    "quote": "Lightning Bolt (level\n4 version)"
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "start": 1106,
+                "end": 1138,
+                "quote": "Lightning Bolt (level\n4 version)"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
