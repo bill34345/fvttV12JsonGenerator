@@ -674,13 +674,13 @@ describe('current encounter review download',()=>{
     viewButton.onclick();expect((await app._prepareContext()).reportViewText).toBeUndefined();
     reportButton.onclick();expect(blobs).toHaveLength(0);expect(app.error).not.toContain(key);
   });
-  for(const name of ['humanSource','humanLabel','outputLanguage','encounterFile'])test(`changing ${name} revokes the prior candidate review link`,async()=>{
+  for(const name of ['humanSource','humanLabel','outputLanguage'])test(`changing ${name} retains the prior candidate and download bound to its snapshot`,async()=>{
     const {app,blobs,revoked,reportButton,viewButton,controls}=downloadHarness();reportButton.onclick();viewButton.onclick();
     expect((await app._prepareContext()).reportViewText).toBeTruthy();
     const control=controls.get(name);if(name==='outputLanguage'||name==='encounterFile')control.onchange();else control.oninput();
-    expect(app.reportDownload).toBeUndefined();expect(app.prepared).toBeUndefined();
-    expect((await app._prepareContext()).reportViewText).toBeUndefined();
-    expect(revoked).toEqual(['blob:http://127.0.0.1:30001/review-1']);reportButton.onclick();expect(blobs).toHaveLength(1);
+    expect(app.reportDownload).toBeDefined();expect(app.prepared).toBeDefined();
+    expect((await app._prepareContext()).reportViewText).toBeTruthy();
+    expect(revoked).toEqual([]);expect(blobs).toHaveLength(1);expect(app.reviewed).toBe(false);
   });
   test('secret rejection removes a prior safe link and shows an error without preparing another file',()=>{
     const {app,bundle,blobs,revoked,requests,reportButton}=downloadHarness();reportButton.onclick();

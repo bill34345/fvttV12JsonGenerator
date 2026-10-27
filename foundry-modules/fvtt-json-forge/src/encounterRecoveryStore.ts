@@ -5,6 +5,7 @@ import type { EncounterLocalizationProgress, ForgeEncounterLocalizationDraft } f
 
 export interface SourceEncounterRecoverySnapshot {
   version: 1;
+  recoveryWarnings?:string[];
   source: string;
   sourceHash: string;
   label: string;
@@ -21,6 +22,7 @@ export interface SourceEncounterRecoverySnapshot {
 /** A formally serialized upload has no human Markdown or Intake report to restore. */
 export interface UploadedEncounterRecoverySnapshot {
   version: 2;
+  recoveryWarnings?:string[];
   kind: 'uploaded-package';
   target: string;
   catalogHash: string;
@@ -143,14 +145,15 @@ export function decodeEncounterRecovery(value: string): EncounterRecoverySnapsho
   const data: unknown = JSON.parse(value);
   scanSecrets(data);
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new TypeError('无效的生物生成任务记录。');
-  const record = data as Record<string, unknown>;
+  const record=data as Record<string,unknown>;
+  const warnings:string[]=Array.isArray(record.recoveryWarnings)?record.recoveryWarnings.filter((entry):entry is string=>typeof entry==='string'):[];
   if(record.version===2){
     if(record.kind!=='uploaded-package'||typeof record.target!=='string'
       ||!/^14\.(?:364|368)\/dnd5e\/5\.3\.3\/core$/.test(record.target)
       ||typeof record.catalogHash!=='string'||!/^[a-f0-9]{64}$/.test(record.catalogHash)
       ||typeof record.package!=='string'||!record.package.length||record.package.length>MAX_BYTES
       ||typeof record.packageHash!=='string'||!/^[a-f0-9]{64}$/.test(record.packageHash)
-      ||typeof record.packageSha256!=='string'||record.packageSha256!==hashSource(record.package)
+      ||typeof record.packageSha256!=='string'
       ||!Array.isArray(record.translationReport)||record.translationReport.length>8
       ||record.translationReport.some(entry=>!entry||typeof entry!=='object'
         ||!['translating','draft_ready','needs_review'].includes(String(entry.status))
@@ -163,23 +166,26 @@ export function decodeEncounterRecovery(value: string): EncounterRecoverySnapsho
         ||!(record.localizationDraft as Record<string,unknown>).packageText))
       ||['source','sourceHash','label','outputLanguage','report','reviewed','accepted'].some(key=>key in record))
       throw new TypeError('上传的生物导入文件恢复记录与包、目标或译文进度不符。');
+    if(record.packageSha256!==hashSource(record.package as string))warnings.push('保存包的内容指纹不一致；可读 Actor 保留，历史确认不继承。');
+    if(warnings.length)record.recoveryWarnings=[...new Set(warnings)];
     return record as unknown as UploadedEncounterRecoverySnapshot;
   }
-  if (record.version !== 1 || typeof record.source !== 'string' || !record.source.trim() || record.source.length > 24000
-    || typeof record.label !== 'string' || !record.label.trim() || record.label.length > 160
+  if (record.version !== 1 || typeof record.source !== 'string' || !record.source.trim()
+    || typeof record.label !== 'string' || !record.label.trim()
     || (record.outputLanguage !== 'source' && record.outputLanguage !== 'zh-CN')
-    || typeof record.sourceHash !== 'string' || record.sourceHash !== hashSource(record.source)
+    || typeof record.sourceHash !== 'string'
     || typeof record.catalogHash !== 'string' || !/^[a-f0-9]{64}$/.test(record.catalogHash)
     || typeof record.target !== 'string' || !/^14\.(?:364|368)\/dnd5e\/5\.3\.3\/core$/.test(record.target))
     throw new TypeError('生物生成任务记录与来源或目标不符。');
+  if(record.sourceHash!==hashSource(record.source as string))warnings.push('保存来源的指纹与正文不同；已保存内容保留。');
   if (record.report !== undefined) {
     const report = record.report as Partial<EncounterIntakeReport>;
-    const sourceText = record.source as string;
-    if (!report || report.version !== 1 || report.source !== record.source || report.sourceHash !== record.sourceHash
+    const sourceText=typeof report.source==='string'?report.source:record.source as string;
+    if (!report || report.version !== 1 || typeof report.source!=='string'
       || !['running','ready_for_gm_review','needs_review','failed'].includes(String(report.status))
-      || !Array.isArray(report.actors) || report.actors.length > 6 || !Array.isArray(report.findings)
+      || !Array.isArray(report.actors) || !Array.isArray(report.findings)
       || report.findings.some(finding=>typeof finding!=='string')
-      || report.actors.some((actor,index)=>!actor||typeof actor!=='object'||actor.key!==`actor-${index+1}`
+      || report.actors.some((actor,index)=>!actor||typeof actor!=='object'||typeof actor.key!=='string'||!/^actor-\d+$/.test(actor.key)
         ||typeof actor.source!=='string'||!Number.isSafeInteger(actor.start)||!Number.isSafeInteger(actor.end)
         ||actor.start<0||actor.end>sourceText.length||actor.start>=actor.end
         ||sourceText.slice(actor.start,actor.end)!==actor.source
@@ -187,26 +193,27 @@ export function decodeEncounterRecovery(value: string): EncounterRecoverySnapsho
       ||(report.packageHash!==undefined&&!/^[a-f0-9]{64}$/.test(report.packageHash)))
       throw new TypeError('生物导入文件来源报告与保存的任务不符。');
     const actors=report.actors;
-    if(report.members!==undefined&&(!Array.isArray(report.members)||report.members.length<1||report.members.length>6
+    if(report.members!==undefined&&(!Array.isArray(report.members)||report.members.length<1
       ||report.members.length<actors.length||report.members.some((member,index)=>!member||member.key!==`actor-${index+1}`
-        ||typeof member.label!=='string'||!member.label.trim()||member.label.length>500
+        ||typeof member.label!=='string'||!member.label.trim()
         ||!Number.isSafeInteger(member.start)||!Number.isSafeInteger(member.end)||member.start<0||member.end>sourceText.length||member.start>=member.end
         ||(index>0&&member.start<report.members![index-1]!.end)
         ||!['pending','running','available','failed','cancelled'].includes(member.status)
         ||!Array.isArray(member.findings)||member.findings.some(finding=>typeof finding!=='string')
-        ||(actors[index]&&(actors[index]!.start!==member.start||actors[index]!.end!==member.end))
+        ||actors.some(actor=>actor.key===member.key&&(actor.start!==member.start||actor.end!==member.end))
         ||(member.status==='available'&&!actors.some(actor=>actor.key===member.key&&actor.generation?.candidateAvailable)))))
       throw new TypeError('保存的逐个生物状态与完整来源清单不符。');
   }
   if (record.package !== undefined) {
     const expected = (record.report as EncounterIntakeReport | undefined)?.packageHash;
     try {
-      if (typeof record.package !== 'string' || record.package.length > MAX_BYTES || !expected
-        || encounterPackageHash(decodeForgeEncounterPackageText(record.package)) !== expected) throw new TypeError();
+      if(typeof record.package!=='string'||record.package.length>MAX_BYTES)throw new TypeError();
+      if(!expected||encounterPackageHash(decodeForgeEncounterPackageText(record.package))!==expected)warnings.push('保存包与历史报告指纹不同；可读 Actor 保留，历史确认不继承。');
     } catch { throw new TypeError('保存的生物导入文件与来源报告不符。'); }
   }
   if (record.translationReport !== undefined && (!Array.isArray(record.translationReport) || record.translationReport.length > 8))
     throw new TypeError('无效的中文审核进度。');
+  if(warnings.length)record.recoveryWarnings=[...new Set(warnings)];
   return record as unknown as EncounterRecoverySnapshot;
 }
 

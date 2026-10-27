@@ -60,15 +60,15 @@ describe('saved first discovery failure and source ownership',()=>{
     candidates[0]!.quote=variant==='number'?candidates[0]!.quote.replace('5,900','5,901')
       :variant==='negation'?candidates[0]!.quote.replace('is not destroyed','is destroyed')
       :candidates[0]!.quote.replace('The spell ends if the book is opened or destroyed.','The spell ends.');
-    expect(()=>normalizeDiscovery(source,candidates)).toThrow();
+    expect(normalizeDiscovery(source,candidates)).toEqual([]);
   });
   test('whitespace equivalence must still have one unique occurrence',()=>{
-    expect(()=>normalizeDiscovery('Hit  17 damage.\nHit   17 damage.',[
+    expect(normalizeDiscovery('Hit  17 damage.\nHit   17 damage.',[
       {id:'x',label:'x',start:-1,end:-1,quote:'Hit    17 damage.'},
-    ])).toThrow();
+    ])).toEqual([]);
   });
   test('whitespace matching does not join separate number tokens',()=>{
-    expect(()=>normalizeDiscovery('Damage 1 7.',[{id:'x',label:'x',start:-1,end:-1,quote:'Damage 17.'}])).toThrow();
+    expect(normalizeDiscovery('Damage 1 7.',[{id:'x',label:'x',start:-1,end:-1,quote:'Damage 17.'}])).toEqual([]);
   });
 
   test('real Forge entry skips discovery and supplies the entire seven-ability source to extraction',async()=>{
@@ -172,14 +172,20 @@ describe('provider chooses program-owned source lines',()=>{
     const result=await env.provider.discover(request(raw));
     expect(result.candidates.map(c=>c.quote)).toEqual(['One\nAC 10\n','Two\r\nAC 17']);
   });
-  test.each(['unknown','reverse','missing','legacy-coordinates'])('rejects %s selection without another request',async variant=>{
+  test.each(['unknown','reverse','missing','legacy-coordinates'])('retains the %s selection result without another request',async variant=>{
     const selection:any={id:'m',label:'Monster',firstLineId:'L1',lastLineId:'L2'};
     if(variant==='unknown')selection.lastLineId='L99';
     if(variant==='reverse'){selection.firstLineId='L2';selection.lastLineId='L1';}
     if(variant==='missing')delete selection.firstLineId;
     if(variant==='legacy-coordinates'){selection.start=0;selection.end=10;selection.quote='made up';}
     const env=localProvider(()=>({schemaVersion:1,candidates:[selection]}));
-    await expect(env.provider.discover(request('Monster\nAC 14'))).rejects.toThrow();
+    const result=await env.provider.discover(request('Monster\nAC 14'));
+    if(variant==='legacy-coordinates'){
+      expect(result.candidates).toEqual([{id:'m',label:'Monster',start:0,end:13,quote:'Monster\nAC 14'}]);
+    }else{
+      expect(result.candidates).toEqual([]);
+      expect(result.findings).toContainEqual(expect.objectContaining({code:'DISCOVERY_SOURCE_LINES_UNLOCATED',blocking:false}));
+    }
     expect(env.calls).toHaveLength(1);
   });
 });

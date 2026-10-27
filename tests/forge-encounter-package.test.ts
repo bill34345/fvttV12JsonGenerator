@@ -7,6 +7,7 @@ import {
   decodeForgeEncounterPackageZip,
   encodeForgeEncounterPackageZip,
   encounterPackageHash,
+  encounterPackageFindings,
   hashEncounterBytes,
   serializeForgeEncounterPackage,
   type ForgeEncounterPackage,
@@ -16,10 +17,12 @@ const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a
 const PNG_BASE64 = btoa(String.fromCharCode(...PNG_BYTES));
 
 describe('Forge encounter package contract', () => {
-  test('rejects URL-significant image names and MIME-extension disagreement',()=>{
+  test('invalid image names or MIME disagreement only remove the failed optional asset',()=>{
     for(const fileName of ['a%2fb.png','a%5cb.png','a#b.png','a.webp','a.png?x']){
       const raw:any=JSON.parse(serializeForgeEncounterPackage(validBundle()));raw.assets[0].fileName=fileName;
-      expect(()=>decodeForgeEncounterPackageText(JSON.stringify(raw))).toThrow();
+      const decoded=decodeForgeEncounterPackageText(JSON.stringify(raw));
+      expect(decoded.actors).toEqual(raw.actors);expect(decoded.assets).toEqual([]);
+      expect(encounterPackageFindings(decoded).join(' ')).toContain('Actor 保留');
     }
   });
   test('round-trips normalized JSON, stored ZIP, deflated ZIP, and asset bytes', async () => {
@@ -40,27 +43,24 @@ describe('Forge encounter package contract', () => {
     await expect(decodeForgeEncounterPackageZip(await deflateSingleEntryZip(zip))).resolves.toEqual(decoded);
   });
 
-  test('rejects unknown keys, duplicate keys, broken references, and source, command, or asset hash drift', () => {
-    const raw = JSON.parse(serializeForgeEncounterPackage(validBundle()));
-    expect(() => decodeForgeEncounterPackageText(JSON.stringify({ ...raw, unexpected: true }))).toThrow(/exactly/u);
-    expect(() => decodeForgeEncounterPackageText(JSON.stringify({ ...raw, actors: [raw.actors[0], { ...raw.actors[0], label: 'Duplicate' }] }))).toThrow(/Duplicate actor keys/u);
-    expect(() => decodeForgeEncounterPackageText(JSON.stringify({ ...raw, primaryActorKey: 'absent' }))).toThrow(/reference/u);
-    expect(() => decodeForgeEncounterPackageText(JSON.stringify({
-      ...raw,
-      macros: [{ ...raw.macros[0], bindings: { primary: 'absent' } }],
-    }))).toThrow(/reference/u);
-    expect(() => decodeForgeEncounterPackageText(JSON.stringify({
-      ...raw,
-      actors: [{ ...raw.actors[0], sourceHash: '0'.repeat(64) }],
-    }))).toThrow(/sourceHash/u);
-    expect(() => decodeForgeEncounterPackageText(JSON.stringify({
-      ...raw,
-      macros: [{ ...raw.macros[0], commandHash: '0'.repeat(64) }],
-    }))).toThrow(/commandHash/u);
-    expect(() => decodeForgeEncounterPackageText(JSON.stringify({
-      ...raw,
-      assets: [{ ...raw.assets[0], base64: PNG_BASE64.slice(0, -1) + 'B' }],
-    }))).toThrow(/sha256/u);
+  test('retains Actor entries when technical references or optional macro and asset records have problems',()=>{
+    const raw=JSON.parse(serializeForgeEncounterPackage(validBundle()));
+    expect(()=>decodeForgeEncounterPackageText(JSON.stringify({...raw,unexpected:true}))).toThrow(/exactly/u);
+    const duplicate=decodeForgeEncounterPackageText(JSON.stringify({...raw,actors:[raw.actors[0],{...raw.actors[0],label:'Duplicate'}]}));
+    expect(duplicate.actors).toHaveLength(2);expect(new Set(duplicate.actors.map(actor=>actor.key)).size).toBe(2);
+    const primary=decodeForgeEncounterPackageText(JSON.stringify({...raw,primaryActorKey:'absent'}));
+    expect(primary.actors).toEqual(raw.actors);expect(encounterPackageFindings(primary).join(' ')).toContain('主要角色');
+    const sourceDrift=decodeForgeEncounterPackageText(JSON.stringify({...raw,actors:[{...raw.actors[0],sourceHash:'0'.repeat(64)}]}));
+    expect(sourceDrift.actors[0]!.source).toBe(raw.actors[0].source);expect(encounterPackageFindings(sourceDrift).join(' ')).toContain('sourceHash');
+    for(const malformed of [
+      {...raw,macros:[{...raw.macros[0],bindings:{primary:'absent'}}]},
+      {...raw,macros:[{...raw.macros[0],commandHash:'0'.repeat(64)}]},
+      {...raw,assets:[{...raw.assets[0],base64:PNG_BASE64.slice(0,-1)+'B'}]},
+    ]){
+      const decoded=decodeForgeEncounterPackageText(JSON.stringify(malformed));
+      expect(decoded.actors).toEqual(raw.actors);expect(encounterPackageFindings(decoded).length).toBeGreaterThan(0);
+      expect(decoded.macros.length===0||decoded.assets.length===0).toBe(true);
+    }
   });
 
   test('treats macro commands as inert data', () => {

@@ -13,8 +13,9 @@ import type {MonsterIntakeAiProvider} from '@fvtt-json-generator/intake-ai/types
 import {prepareMonsterCandidateDelivery} from '../packages/intake-ai/src/candidate-delivery';
 import {ORDINARY_GEAR_IGNORE_REASON} from '../packages/intake-ai/src/monster-gear-policy';
 import {validateMonsterIntakeIR,auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
-import {OpenAICompatibleMonsterIntakeProvider} from '@fvtt-json-generator/intake-ai/provider';
+import {OpenAICompatibleMonsterIntakeProvider,parseStrictJson} from '@fvtt-json-generator/intake-ai/provider';
 import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
+import {runStagedMonsterExtraction} from '@fvtt-json-generator/intake-ai/staged-extraction';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
 
 const input={source:LURKER_SOURCE,sourceName:'candidate fixture',requestId:'candidate-output',fvttVersion:'14.364',systemVersion:'5.3.3'};
@@ -176,7 +177,7 @@ describe('Forge candidate delivery is separate from verification',()=>{
     const saved=decodeForgeIntakeReviewBundleText(serializeForgeIntakeReviewBundleV2(adopted)).bundle;
     expect(saved.status).toBe('reviewed_candidate');expect(saved.candidateResponse!.status).not.toBe('accepted');
     expect(saved.deterministicFindings.some(f=>f.blocking)).toBe(true);expect(saved.gmApproval!.gmId).toBe('gm');
-    expect(()=>buildForgeIntakeReviewBundleV2({...base,status:'accepted',gmApproval:approved.gmApproval})).toThrow();
+    expect(buildForgeIntakeReviewBundleV2({...base,status:'accepted',gmApproval:approved.gmApproval}).status).toBe('reviewed_candidate');
   });
 });
 
@@ -290,15 +291,15 @@ for(const caseId of ['gladiator','priest','medusa'])test.skipIf(!officialCapture
   expect(result.calls.review).toBe(0);expect(result.calls.repair).toBe(0);
 });
 
-test('a projection error fails without replacing the proposal with literal actions',async()=>{
+test('a companion projection error retains basic Actor generation and the original proposal',async()=>{
   const {ir,provider}=fixture();
   const original=structuredClone(ir);let renderCalls=0;
   const current={...input,renderMarkdown:()=>{renderCalls++;throw Error('projection unavailable');}};
   const result=await generateBrowserActorIntakeCandidate(current,analyzeBrowserActorIntakeDraft(current,ir,provider),provider);
-  expect(result.status).toBe('failed');expect(result.candidateAvailable).toBe(false);
-  expect(result.candidateResponse).toBeUndefined();expect(result.actorProjection).toBeUndefined();
+  expect(result.status).toBe('ready_for_gm_review');expect(result.candidateAvailable).toBe(true);
+  expect(result.candidateResponse).toBeDefined();expect((result.actorProjection as any).items.length).toBeGreaterThan(0);
   expect(result.analysis.ir).toEqual(original);expect(ir).toEqual(original);
-  expect(result.findings.some(f=>f.message.includes('规范资料转换失败：projection unavailable'))).toBe(true);
+  expect(result.findings.some(f=>f.code==='CUSTOM_RENDER_INCOMPLETE'&&f.message.includes('projection unavailable'))).toBe(true);
   expect(renderCalls).toBe(1);expect(result.calls.review).toBe(0);expect(result.calls.repair).toBe(0);
 });
 
@@ -322,14 +323,15 @@ for(const {caseId,captureRoot,meterPath} of [
     // Build an offline canonical fixture from the original two-stage replies.
     // Only this explicitly selected historical helper uses V2; the current
     // public provider below must consume one complete IR reply.
-    const historical=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://offline.invalid/v1',apiKey:'fixture-only',model:'frozen',reviewModel:'frozen',timeoutMs:1000,repairTimeoutMs:1000,maxAttempts:1,evidenceAnchoring:'exact-quotes',stagedExtraction:{baseMode:'facts',featureMode:'whole-v2',preserveCandidates:true,maxCorrections:0}});
-    const ir=await historical.extract({source,sourceSha256:hashSource(source),candidate:{id:caseId,label:caseId,start:0,end:source.length,quote:source}});
+    const ir=await runStagedMonsterExtraction({source,sourceSha256:hashSource(source),candidate:{id:caseId,label:caseId,start:0,end:source.length,quote:source}},async stage=>{
+      await stage.onAttempt(1);return parseStrictJson(answers[count++]!);
+    },{baseMode:'facts',featureMode:'whole-v2',preserveCandidates:true,maxCorrections:0});
     expect(count).toBe(2);answers.splice(0,answers.length,JSON.stringify(ir));count=0;
     const providers=createEncounterIntakeProviders({baseUrl:'https://offline.invalid/v1',apiKey:'fixture-only',model:'frozen',protocol:'openai-chat',timeoutMs:1000,autoCorrect:false});
     const output=await generateEncounterFromHumanMarkdown({source,label:caseId,...providers,reviewPolicy:'deferred'});
     expect(count).toBe(1);expect(output.prepared?.actors).toHaveLength(1);
     expect(output.report.findings).toEqual([]);
-    expect(output.prepared!.actors[0]!.status).toBe('accepted');
+    expect(output.prepared!.actors[0]!.artifact).toBeDefined();
     const actor=output.prepared!.actors[0]!.artifact as any;
     if(caseId==='N3')expect(actor.items.length).toBeGreaterThan(5);
     else{

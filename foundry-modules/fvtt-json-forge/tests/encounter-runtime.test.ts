@@ -9,9 +9,9 @@ function runtime() {
   let executions=0;
   function collection(kind:string) {
     const docs=new Map<string,any>();
-    const api:any={get:(id:string)=>docs.get(id),get contents(){return [...docs.values()];},fail:false,cancel:false,cancelDelete:false,deleteAttempts:0,overrideId:null,createCount:0,
+    const api:any={get:(id:string)=>docs.get(id),get contents(){return [...docs.values()];},fail:false,cancel:false,cancelDelete:false,deleteAttempts:0,overrideId:null,createCount:0,failUpdate:false,
       documentClass:{async create(data:any){api.createCount++;if(api.fail)throw Error('fixture create failure');if(api.cancel)return undefined;data={...data,_id:api.overrideId??data._id};if(docs.has(data._id))throw Error('duplicate');
-        const doc:any={id:data._id,uuid:`${kind}.${data._id}`,name:data.name,data:structuredClone(data),toObject(){return structuredClone(this.data);},async delete(){api.deleteAttempts++;if(api.cancelDelete)return undefined;docs.delete(this.id);return this;},async execute(){executions++;}};docs.set(doc.id,doc);return doc;}}};return api;
+        const doc:any={id:data._id,uuid:`${kind}.${data._id}`,name:data.name,data:structuredClone(data),toObject(){return structuredClone(this.data);},async update(changes:any){if(api.failUpdate)throw Error('fixture phase update failure');for(const [path,value]of Object.entries(changes)){const keys=path.split('.');let owner=this.data;for(const key of keys.slice(0,-1))owner=owner[key]??={};owner[keys.at(-1)!]=value;}return this;},async delete(){api.deleteAttempts++;if(api.cancelDelete)return undefined;docs.delete(this.id);return this;},async execute(){executions++;}};docs.set(doc.id,doc);return doc;}}};return api;
   }
   const game:any={version:'14.364',system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro')};
   return {game:game as EncounterGame,get executions(){return executions;},assets:{async ensure(){throw Error('Unexpected asset upload');}}};
@@ -68,22 +68,25 @@ describe('reviewed encounter import and explicit macro startup',()=>{
     expect(result.documents).toHaveLength(3);expect(JSON.stringify(prepared)).toBe(original);
     expect(env.executions).toBe(0);
   });
-  test('reports exact remaining UUIDs and attempts every cleanup when preDelete cancels',async()=>{
+  test('retains successful Actors when Macro creation fails without attempting Actor cleanup',async()=>{
     const env=runtime(),prepared=await ready();(env.game.macros as any).fail=true;(env.game.actors as any).cancelDelete=true;
-    let failure='';try{await importForgeEncounter({...env,prepared,reviewed:true});}catch(error){failure=(error as Error).message;}
-    expect(env.game.actors.contents).toHaveLength(2);expect((env.game.actors as any).deleteAttempts).toBe(2);
-    for(const actor of env.game.actors.contents!)expect(failure).toContain(actor.uuid);expect(failure).toContain('无法清理');
+    const result=await importForgeEncounter({...env,prepared,reviewed:true});
+    expect(env.game.actors.contents).toHaveLength(2);expect((env.game.actors as any).deleteAttempts).toBe(0);
+    expect(result.documents.filter(row=>row.kind==='Actor')).toHaveLength(2);
+    expect(result.failures).toContainEqual(expect.objectContaining({key:prepared.macros[0]!.key,kind:'Macro',message:'fixture create failure'}));
   });
-  test('cleans the exact newly returned document if Foundry does not preserve its requested ID',async()=>{
+  test('cleans only a newly returned wrong-identity document and retains unrelated documents',async()=>{
     const env=runtime(),prepared=await ready();await env.game.actors.documentClass.create({_id:'2222222222222222',name:'Unrelated existing Actor'});
     (env.game.actors as any).overrideId='1111111111111111';
-    await expect(importForgeEncounter({...env,prepared,reviewed:true})).rejects.toThrow('冲突');
+    const result=await importForgeEncounter({...env,prepared,reviewed:true});
+    expect(result.failures.some(row=>row.message.includes('冲突'))).toBe(true);
     expect(env.game.actors.contents?.map(d=>d.id)).toEqual(['2222222222222222']);expect(env.game.macros.contents).toHaveLength(0);
   });
-  test('handles cancelled Actor or Macro creation without leaving undefined rollback entries',async()=>{
+  test('settles cancelled Actor and Macro writes independently',async()=>{
     for(const kind of ['actors','macros'] as const){const env=runtime(),prepared=await ready();(env.game[kind] as any).cancel=true;
-      await expect(importForgeEncounter({...env,prepared,reviewed:true})).rejects.toThrow('取消');
-      expect(env.game.actors.contents).toHaveLength(0);expect(env.game.macros.contents).toHaveLength(0);
+      const result=await importForgeEncounter({...env,prepared,reviewed:true});
+      expect(result.failures.some(row=>row.message.includes('取消'))).toBe(true);
+      expect(env.game.actors.contents).toHaveLength(kind==='actors'?0:2);expect(env.game.macros.contents).toHaveLength(0);
     }
   });
   test('checks declared coverage and exact actor ownership again before starting a macro',async()=>{
@@ -158,16 +161,25 @@ describe('reviewed encounter import and explicit macro startup',()=>{
     env.game.user.isGM=true;env.game.version='12.331';await expect(importForgeEncounter({...env,prepared,reviewed:true})).rejects.toThrow();
     expect(env.game.actors.contents).toHaveLength(0);expect(env.executions).toBe(0);
   });
-  test('preflights foreign conflicts without writing or overwriting other documents',async()=>{
+  test('settles foreign conflicts per Actor without overwriting or cancelling other Actors',async()=>{
     const env=runtime(),prepared=await ready();const id=encounterDocumentId(prepared.bundle.id,'Actor','summon');
-    await env.game.actors.documentClass.create({_id:id,name:'Existing unrelated Actor',type:'npc'});
-    await expect(importForgeEncounter({...env,prepared,reviewed:true})).rejects.toThrow('冲突');
-    expect(env.game.actors.contents).toHaveLength(1);expect(env.game.macros.contents).toHaveLength(0);
+    const foreign=await env.game.actors.documentClass.create({_id:id,name:'Existing unrelated Actor',type:'npc'});
+    const before=JSON.stringify(foreign!.toObject());
+    const result=await importForgeEncounter({...env,prepared,reviewed:true});
+    expect(result.documents.filter(row=>row.kind==='Actor')).toHaveLength(1);
+    expect(result.failures.some(row=>row.key==='summon'&&row.message.includes('冲突'))).toBe(true);
+    expect(env.game.actors.contents).toHaveLength(2);expect(env.game.macros.contents).toHaveLength(0);
+    expect(JSON.stringify(foreign!.toObject())).toBe(before);
   });
-  test('cleans up only newly created documents on macro creation failure',async()=>{
+  test('retains Actors on macro failure and reuses them when retrying only the failed Macro',async()=>{
     const env=runtime(),prepared=await ready();(env.game.macros as any).fail=true;
-    await expect(importForgeEncounter({...env,prepared,reviewed:true})).rejects.toThrow('fixture create failure');
-    expect(env.game.actors.contents).toHaveLength(0);expect(env.game.macros.contents).toHaveLength(0);
+    const result=await importForgeEncounter({...env,prepared,reviewed:true});
+    expect(result.failures.some(row=>row.message==='fixture create failure')).toBe(true);
+    expect(env.game.actors.contents).toHaveLength(2);expect(env.game.macros.contents).toHaveLength(0);
+    (env.game.macros as any).fail=false;
+    const retry=await importForgeEncounter({...env,prepared,reviewed:true});
+    expect(retry.failures).toEqual([]);expect(retry.documents.map(row=>row.status)).toEqual(['existing','existing','created']);
+    expect((env.game.actors as any).createCount).toBe(2);
   });
   test('rejects modified macro code and missing actor bindings before startup',async()=>{
     const env=runtime(),prepared=await ready();const result=await importForgeEncounter({...env,prepared,reviewed:true});
@@ -176,4 +188,31 @@ describe('reviewed encounter import and explicit macro startup',()=>{
     macro.data.command=command;await env.game.actors.get(result.documents[1]!.id)!.delete();
     await expect(startForgeEncounterMacro(env.game,macro.id)).rejects.toThrow('缺失');expect(env.executions).toBe(0);
   });
+  test('a macro failure keeps each successful Actor spell import phase verified',async()=>{
+    const env=runtime(),bundle:any=encounterFixture(),original=await ready();
+    bundle.actors[0].artifact=structuredClone(original.actors[0]!.artifact);
+    bundle.actors[0].artifact.flags??={};bundle.actors[0].artifact.flags['fvtt-json-generator-spell-resolver']={spellManifest:{schemaVersion:1,entries:[]}};
+    const prepared=await prepareForgeEncounter(JSON.stringify(bundle));(env.game.macros as any).fail=true;
+    const result=await importForgeEncounter({...env,prepared,reviewed:true});
+    const actor=env.game.actors.get(result.documents.find(row=>row.kind==='Actor'&&row.key==='main')!.id)!;
+    expect(actor.toObject().flags['fvtt-json-forge'].spellImportPhase).toBe('verified');
+    expect(result.failures.filter(row=>row.kind==='Macro')).toHaveLength(1);
+    expect((env.game.actors as any).deleteAttempts).toBe(0);
+  });
+  test('a phase update failure retains the Actor and retries that metadata without duplicate creation',async()=>{
+    const env=runtime(),bundle:any=encounterFixture(),original=await ready();
+    bundle.actors[0].artifact=structuredClone(original.actors[0]!.artifact);
+    bundle.actors[0].artifact.flags??={};bundle.actors[0].artifact.flags['fvtt-json-generator-spell-resolver']={spellManifest:{schemaVersion:1,entries:[]}};
+    const prepared=await prepareForgeEncounter(JSON.stringify(bundle));(env.game.actors as any).failUpdate=true;
+    const first=await importForgeEncounter({...env,prepared,reviewed:true});
+    expect(first.documents.filter(row=>row.kind==='Actor')).toHaveLength(2);
+    expect(first.failures.some(row=>row.kind==='Actor'&&row.uuid&&row.message.includes('spell-resolution'))).toBe(true);
+    const main=env.game.actors.get(first.documents.find(row=>row.key==='main')!.id)!;
+    expect(main.toObject().flags['fvtt-json-forge'].spellImportPhase).toBe('pending');
+    (env.game.actors as any).failUpdate=false;
+    const retried=await importForgeEncounter({...env,prepared,reviewed:true});
+    expect(retried.failures).toEqual([]);expect(main.toObject().flags['fvtt-json-forge'].spellImportPhase).toBe('verified');
+    expect((env.game.actors as any).createCount).toBe(2);
+  });
+
 });

@@ -1,3 +1,4 @@
+import type {RulePresentationPlan} from '@fvtt-json-generator/generation/rule-presentation';
 import { sha256 } from '@fvtt-json-generator/contracts/hash';
 import { decodeEncounterLocalization, type EncounterLocalization } from '@fvtt-json-generator/contracts/localization';
 import { hashArtifact, hashSource, type JsonObject, type Sha256 } from '@fvtt-json-generator/forge-gateway-protocol';
@@ -20,7 +21,7 @@ const BASE64_PATTERN = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/
 const DANGEROUS_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 const ROOT_KEYS = ['schema', 'version', 'id', 'label', 'target', 'primaryActorKey', 'actors', 'macros', 'assets'] as const;
 const TARGET_KEYS = ['foundry', 'system', 'systemVersion', 'effectProfile'] as const;
-const ACTOR_KEYS = ['key', 'label', 'source', 'sourceHash'] as const;
+const ACTOR_KEYS = ['key', 'label', 'source', 'sourceHash', 'artifact', 'artifactHash', 'reviewFindings', 'rulePresentation'] as const;
 const MACRO_KEYS = ['key', 'name', 'command', 'commandHash', 'bindings', 'covers', 'notes'] as const;
 const COVER_KEYS = ['actorKey', 'mechanicId'] as const;
 const ASSET_KEYS = ['key', 'fileName', 'mime', 'base64', 'sha256', 'targets'] as const;
@@ -38,12 +39,10 @@ const MAX_SOURCE_BYTES = 200_000;
 const MAX_COMMAND_BYTES = 200_000;
 const MAX_FILE_NAME_BYTES = 255;
 const MAX_ASSET_BASE64_LENGTH = 4 * Math.ceil(FORGE_ENCOUNTER_PACKAGE_MAX_ASSET_BYTES / 3);
-const MAX_DEPTH = 32;
-const MAX_NODES = 10_000;
 const MAX_ARRAY_LENGTH = 1_024;
-const MAX_OBJECT_KEYS = 1_024;
 const MAX_ZIP_ENTRIES = 2;
 const ZIP_PATH = 'encounter.json';
+export function encounterPackageFindings(bundle:Readonly<ForgeEncounterPackage>):readonly string[]{return bundle.reviewFindings??[];}
 
 export interface ForgeEncounterPackageTarget {
   readonly foundry: '14.364';
@@ -57,6 +56,10 @@ export interface ForgeEncounterPackageActor {
   readonly label: string;
   readonly source: string;
   readonly sourceHash: Sha256;
+  readonly artifact?: JsonObject;
+  readonly artifactHash?: Sha256;
+  readonly reviewFindings?:readonly string[];
+  readonly rulePresentation?:RulePresentationPlan;
 }
 
 export interface ForgeEncounterPackageMacroCover {
@@ -89,6 +92,7 @@ export interface ForgeEncounterPackageAsset {
 }
 
 export interface ForgeEncounterPackage {
+  readonly reviewFindings?:readonly string[];
   readonly localization?: EncounterLocalization;
   readonly schema: typeof FORGE_ENCOUNTER_PACKAGE_SCHEMA;
   readonly version: typeof FORGE_ENCOUNTER_PACKAGE_VERSION;
@@ -171,24 +175,41 @@ export function encounterPackageHash(bundle: ForgeEncounterPackage): string {
 
 function normalizeEncounterPackage(value: unknown): Readonly<ForgeEncounterPackage> {
   scanUntrustedJson(value);
-  const root = exactRecord(value, '$', Object.hasOwn(value as object, 'localization') ? [...ROOT_KEYS, 'localization'] : ROOT_KEYS);
+  const root=exactRecord(value,'$',[...ROOT_KEYS,...(Object.hasOwn(value as object,'localization')?['localization']:[]),...(Object.hasOwn(value as object,'reviewFindings')?['reviewFindings']:[])]);
   literal(root.schema, FORGE_ENCOUNTER_PACKAGE_SCHEMA, '$.schema');
   literalNumber(root.version, FORGE_ENCOUNTER_PACKAGE_VERSION, '$.version');
   const id = slug(root.id, '$.id');
-  const label = boundedString(root.label, '$.label', MAX_LABEL_LENGTH, true);
+  const label = boundedString(root.label, '$.label', Number.MAX_SAFE_INTEGER, true);
   const target = decodeTarget(root.target, '$.target');
-  const primaryActorKey = slug(root.primaryActorKey, '$.primaryActorKey');
-  const rawActors = boundedArray(root.actors, '$.actors', 1, MAX_ACTORS);
-  const actors = rawActors.map((entry, index) => decodeActor(entry, `$.actors[${index}]`));
-  assertUnique(actors.map((actor) => actor.key), 'actor keys');
+  let primaryActorKey = slug(root.primaryActorKey, '$.primaryActorKey');
+  const rawActors = boundedArray(root.actors, '$.actors', 1, Number.MAX_SAFE_INTEGER);
+  const findings:string[]=Array.isArray(root.reviewFindings)?root.reviewFindings.filter((entry):entry is string=>typeof entry==='string'):[];
+  const usedKeys=new Set<string>();
+  const actors=rawActors.map((entry,index)=>{
+    const actor=decodeActor(entry,`$.actors[${index}]`,findings);
+    let key=actor.key;while(usedKeys.has(key))key+=`-${index+1}`;
+    if(key!==actor.key)findings.push(`${actor.label}：重复技术 key 已改为 ${key}；Actor 保留。`);
+    usedKeys.add(key);return key===actor.key?actor:{...actor,key};
+  });
   const actorKeys = new Set(actors.map((actor) => actor.key));
-  if (!actorKeys.has(primaryActorKey)) throw new TypeError('$.primaryActorKey must reference an actor key.');
-  const rawMacros = boundedArray(root.macros, '$.macros', 0, MAX_MACROS);
-  const macros = rawMacros.map((entry, index) => decodeMacro(entry, `$.macros[${index}]`, actorKeys));
-  assertUnique(macros.map((macro) => macro.key), 'macro keys');
-  const rawAssets = boundedArray(root.assets, '$.assets', 0, MAX_ASSETS);
-  const assets = rawAssets.map((entry, index) => decodeAsset(entry, `$.assets[${index}]`, actorKeys));
-  assertUnique(assets.map((asset) => asset.key), 'asset keys');
+  if(!actorKeys.has(primaryActorKey)){primaryActorKey=actors[0]!.key;findings.push('主要角色 key 未匹配；已保留全部 Actor 并使用首个条目作为列表入口。');}
+  const macros:ForgeEncounterPackageMacro[]=[];
+  for(const [index,entry] of (Array.isArray(root.macros)?root.macros:[]).entries()){
+    try{const macro=decodeMacro(entry,`$.macros[${index}]`,actorKeys);
+      if(macros.some(prior=>prior.key===macro.key))throw new TypeError('重复宏 key。');macros.push(macro);}
+    catch(error){findings.push(`宏 ${index+1} 未准备：${error instanceof Error?error.message:String(error)}；Actor 保留。`);}
+  }
+  const assets:ForgeEncounterPackageAsset[]=[];
+  for(const [index,entry] of (Array.isArray(root.assets)?root.assets:[]).entries()){
+    try{const asset=decodeAsset(entry,`$.assets[${index}]`,actorKeys);
+      if(assets.some(prior=>prior.key===asset.key))throw new TypeError('重复素材 key。');assets.push(asset);}
+    catch(error){findings.push(`素材 ${index+1} 未准备：${error instanceof Error?error.message:String(error)}；Actor 保留。`);}
+  }
+  let localization:EncounterLocalization|undefined;
+  if(Object.hasOwn(root,'localization')){
+    try{localization=decodeEncounterLocalization(root.localization);}
+    catch(error){findings.push(`翻译记录未准备：${error instanceof Error?error.message:String(error)}；原语言 Actor 保留。`);}
+  }
   const normalized: ForgeEncounterPackage = {
     schema: FORGE_ENCOUNTER_PACKAGE_SCHEMA,
     version: FORGE_ENCOUNTER_PACKAGE_VERSION,
@@ -199,10 +220,12 @@ function normalizeEncounterPackage(value: unknown): Readonly<ForgeEncounterPacka
     actors,
     macros,
     assets,
-    ...(Object.hasOwn(root, 'localization') ? { localization: decodeEncounterLocalization(root.localization) } : {}),
+    ...(localization?{localization}:{}),
+    ...(findings.length?{reviewFindings:[...new Set(findings)]}:{}),
   };
   assertTextSize(stableStringify(normalized), 'Encounter package JSON');
-  return deepFreeze(normalized);
+  const result=deepFreeze(normalized);
+  return result;
 }
 
 function decodeTarget(value: unknown, path: string): ForgeEncounterPackageTarget {
@@ -214,14 +237,17 @@ function decodeTarget(value: unknown, path: string): ForgeEncounterPackageTarget
   return { ...TARGET };
 }
 
-function decodeActor(value: unknown, path: string): ForgeEncounterPackageActor {
-  const record = exactRecord(value, path, ACTOR_KEYS);
+function decodeActor(value:unknown,path:string,findings:string[]):ForgeEncounterPackageActor{
+  const record = plainRecord(value, path);
+  if(Object.keys(record).some(key=>!ACTOR_KEYS.includes(key as typeof ACTOR_KEYS[number])))findings.push(`${path} 含额外记录；Actor 内容保留。`);
   const key = slug(record.key, `${path}.key`);
-  const label = boundedString(record.label, `${path}.label`, MAX_LABEL_LENGTH, true);
-  const source = boundedUtf8String(record.source, `${path}.source`, MAX_SOURCE_BYTES, true);
-  const sourceHash = sha256Digest(record.sourceHash, `${path}.sourceHash`);
-  if (hashSource(source) !== sourceHash) throw new TypeError(`${path}.sourceHash does not match source bytes.`);
-  return { key, label, source, sourceHash };
+  const label = boundedString(record.label, `${path}.label`, Number.MAX_SAFE_INTEGER, true);
+  const source = boundedUtf8String(record.source, `${path}.source`, Number.MAX_SAFE_INTEGER, true);
+  const sourceHash=hashSource(source);
+  if(record.sourceHash!==sourceHash)findings.push(`${label}：sourceHash 与保存来源不一致；正文与 Actor 保留。`);
+  const artifact = record.artifact === undefined ? undefined : plainRecord(record.artifact, `${path}.artifact`) as JsonObject;
+  const reviewFindings=Array.isArray(record.reviewFindings)?record.reviewFindings.filter((entry):entry is string=>typeof entry==='string'):undefined;
+  return { key, label, source, sourceHash, ...(reviewFindings?{reviewFindings}:{}), ...(record.rulePresentation?{rulePresentation:record.rulePresentation as RulePresentationPlan}:{}), ...(artifact ? { artifact, artifactHash: typeof record.artifactHash==='string'?record.artifactHash as Sha256:hashArtifact(artifact) } : {}) };
 }
 
 function decodeMacro(value: unknown, path: string, actorKeys: ReadonlySet<string>): ForgeEncounterPackageMacro {
@@ -241,7 +267,6 @@ function decodeMacro(value: unknown, path: string, actorKeys: ReadonlySet<string
 function decodeBindings(value: unknown, path: string, actorKeys: ReadonlySet<string>): Readonly<Record<string, string>> {
   const record = plainRecord(value, path);
   const keys = Object.keys(record);
-  if (keys.length > MAX_ACTORS) throw new TypeError(`${path} exceeds the binding limit.`);
   const output: Record<string, string> = {};
   for (const bindingKey of keys.sort()) {
     if (DANGEROUS_KEYS.has(bindingKey)) throw new TypeError(`${path} contains a forbidden prototype key.`);
@@ -312,14 +337,9 @@ function asciiAt(bytes: Uint8Array, start: number, text: string): boolean {
 }
 
 function scanUntrustedJson(root: unknown): void {
-  let nodes = 0;
   const visit = (value: unknown, path: string, depth: number): void => {
-    nodes += 1;
-    if (nodes > MAX_NODES) throw new TypeError('Encounter package exceeds the total value limit.');
-    if (depth > MAX_DEPTH) throw new TypeError('Encounter package exceeds the nesting depth limit.');
     if (value === null || typeof value === 'boolean') return;
     if (typeof value === 'string') {
-      if (value.length > MAX_ASSET_BASE64_LENGTH) throw new TypeError(`${path} exceeds the untrusted string limit.`);
       return;
     }
     if (typeof value === 'number') {
@@ -327,7 +347,6 @@ function scanUntrustedJson(root: unknown): void {
       return;
     }
     if (Array.isArray(value)) {
-      if (value.length > MAX_ARRAY_LENGTH) throw new TypeError(`${path} exceeds the array length limit.`);
       for (let index = 0; index < value.length; index += 1) {
         if (!Object.hasOwn(value, index)) throw new TypeError(`${path} contains a sparse array.`);
         visit(value[index], `${path}[${index}]`, depth + 1);
@@ -336,7 +355,6 @@ function scanUntrustedJson(root: unknown): void {
     }
     const record = plainRecord(value, path);
     const keys = Object.keys(record);
-    if (keys.length > MAX_OBJECT_KEYS) throw new TypeError(`${path} exceeds the object key limit.`);
     for (const key of keys) {
       if (DANGEROUS_KEYS.has(key)) throw new TypeError(`${path} contains a forbidden prototype key.`);
       visit(record[key], `${path}.${key}`, depth + 1);

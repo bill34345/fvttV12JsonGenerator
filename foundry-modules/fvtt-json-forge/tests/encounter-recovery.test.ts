@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import {generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
 import { createForgeEncounterApplicationClass } from '../src/encounterApplication';
 import { configuredConditionsCatalog } from '../src/configuredConditions';
@@ -57,14 +58,15 @@ describe('encounter task checkpoint', () => {
     expect(harness.generationCalls).toBe(0);
   });
 
-  test('rejects modified package content even when the old source-hash substring is retained', async () => {
+  test('reports modified package metadata while retaining readable source and Actor content', async () => {
     const fixture = encounterFixture();
     const original = { ...fixture, macros: [{ ...fixture.macros[0]!, notes: `原始资料SHA-256：${hashSource(source)}` }] };
     const prepared = await prepareForgeEncounter(JSON.stringify(original));
     const changed = { ...original, label: 'Changed candidate with the old source identity' };
     expect(JSON.stringify(changed)).toContain(hashSource(source));
     const data = snapshot({ report: { ...report(), packageHash: prepared.hash }, package: JSON.stringify(changed) });
-    expect(() => serializeEncounterRecovery(data)).toThrow('保存的生物导入文件与来源报告不符');
+    const restored=decodeEncounterRecovery(serializeEncounterRecovery(data));
+    expect(restored.package).toBe(data.package);expect(restored.recoveryWarnings?.join(' ')).toContain('指纹');
   });
 
   test('source is saved before the first AI request and restored after reopening', async () => {
@@ -93,6 +95,34 @@ describe('encounter task checkpoint', () => {
     expect(second.application.reviewed).toBe(false);
   });
 
+  test('complete saved Actor IR converts locally without reading connection options or an API Key',async()=>{
+    const saved=structuredClone(firstCompanyUi.snapshot) as unknown as SourceEncounterRecoverySnapshot;
+    const before=JSON.stringify(saved);
+    const harness=app({load:async()=>saved,save:async()=>undefined},input=>generateEncounterFromHumanMarkdown(input),()=> '');
+    await harness.application._prepareContext();
+    await harness.application.generateFromHuman(true);
+    expect(harness.providerCalls).toBe(0);expect(harness.generationCalls).toBe(1);
+    expect(harness.application.prepared?.actors.length).toBeGreaterThan(0);
+    expect(JSON.stringify(saved)).toBe(before);
+  });
+
+  test('complete saved Markdown answer resumes locally without an IR, connection options or an API Key',async()=>{
+    const saved=structuredClone(firstCompanyUi.snapshot) as unknown as SourceEncounterRecoverySnapshot;
+    const actor=saved.report!.actors[0]!,canonical=JSON.parse(saved.package!).actors[0].source;
+    delete actor.analysis.ir;delete actor.analysis.validation;delete actor.generation;
+    actor.analysis.sourceText=canonical;actor.analysis.canonicalSource=canonical;
+    const before=JSON.stringify(saved);
+    const harness=app({load:async()=>saved,save:async()=>undefined},input=>generateEncounterFromHumanMarkdown(input),()=> '');
+    const context=await harness.application._prepareContext();
+    expect(context.recoveryAvailable).toBe(true);expect(context.recoveryDraftCount).toBe(1);
+    await harness.application.generateFromHuman(true);
+    expect(harness.providerCalls).toBe(0);expect(harness.generationCalls).toBe(1);
+    expect(harness.application.prepared?.actors.length).toBeGreaterThan(0);
+    expect(harness.application.aiReport.actors[0].analysis.ir).toBeUndefined();
+    expect(harness.application.aiReport.actors[0].analysis.sourceText).toBe(canonical);
+    expect(JSON.stringify(saved)).toBe(before);
+  });
+
   test('saved candidate needs explicit formal re-preview and a new GM confirmation', async () => {
     const bundle = encounterFixture();
     const withSource = { ...bundle, macros: [{ ...bundle.macros[0]!, notes: `原始资料SHA-256：${hashSource(source)}` }] };
@@ -108,11 +138,11 @@ describe('encounter task checkpoint', () => {
     expect(after.canImport).toBe(false); expect(harness.generationCalls).toBe(0);
   });
 
-  test('changed target, catalog or raw source cannot resume a stored proposal', async () => {
+  test('changed target or catalog retains the saved proposal while corrupt source identity is reported', async () => {
     for (const stale of [snapshot({ target: '14.364/dnd5e/5.3.3/core' }), snapshot({ catalogHash: 'a'.repeat(64) }), snapshot({ sourceHash: 'b'.repeat(64) })]) {
       const harness = app({ load: async () => stale, save: async () => undefined });
       const context = await harness.application._prepareContext();
-      expect(context.recoveryAvailable).toBe(false);
+      expect(context.recoveryAvailable).toBe(true);
       expect(harness.generationCalls).toBe(0);
     }
   });
@@ -122,13 +152,13 @@ describe('encounter task checkpoint', () => {
     expect(decodeEncounterRecovery(valid).report?.sourceHash).toBe(hashSource(source));
     expect(valid).not.toContain('reviewed');
     expect(() => serializeEncounterRecovery(snapshot({ label: '"apiKey":"private"' }))).toThrow('凭据');
-    expect(() => decodeEncounterRecovery(valid.replace(hashSource(source), '0'.repeat(64)))).toThrow();
+    expect(decodeEncounterRecovery(valid.replace(hashSource(source),'0'.repeat(64))).recoveryWarnings?.join(' ')).toContain('指纹');
     expect(() => serializeEncounterRecovery(snapshot({ report: { ...report(), actors: [null] } as any }))).toThrow('来源报告');
   });
   test('uploaded package checkpoints reject corruption and restore only after formal preview with no provider',async()=>{
     const valid=await uploadedSnapshot();
     expect(decodeEncounterRecovery(serializeEncounterRecovery(valid))).toEqual(valid);
-    expect(()=>serializeEncounterRecovery({...valid,packageSha256:'0'.repeat(64)})).toThrow('上传的生物导入文件');
+    expect(decodeEncounterRecovery(serializeEncounterRecovery({...valid,packageSha256:'0'.repeat(64)})).recoveryWarnings?.join(' ')).toContain('指纹');
     expect(()=>serializeEncounterRecovery({...valid,report:report()} as any)).toThrow('上传的生物导入文件');
     expect(()=>serializeEncounterRecovery({...valid,translationReport:[{status:'accepted'}]} as any)).toThrow('上传的生物导入文件');
     const wrongRequest={...valid,translationReport:[{actorKey:'main',status:'draft_ready',request:{sourceHash:'0'.repeat(64)},draft:{texts:[]}}]};
@@ -141,7 +171,7 @@ describe('encounter task checkpoint', () => {
     expect(harness.application.reviewed).toBe(false);
     expect(harness.providerCalls).toBe(0);expect(harness.generationCalls).toBe(0);
   });
-  test('uploaded package restore rejects a changed formal hash, target or catalog',async()=>{
+  test('uploaded package restore reports changed metadata without hiding readable Actor candidates',async()=>{
     const valid=await uploadedSnapshot();
     for(const stale of [{...valid,packageHash:'0'.repeat(64)},
       {...valid,target:'14.364/dnd5e/5.3.3/core'},
@@ -150,31 +180,33 @@ describe('encounter task checkpoint', () => {
       const before=await harness.application._prepareContext();
       if(stale.packageHash!==valid.packageHash){
         expect(before.recoveryPackageAvailable).toBe(true);
-        await harness.application.previewRecovered();expect(harness.application.prepared).toBeUndefined();
-      }else expect(before.recoveryPackageAvailable).toBe(false);
+        await harness.application.previewRecovered();expect(harness.application.prepared).toBeDefined();
+        expect(harness.application.error).toContain('指纹');
+      }else expect(before.recoveryPackageAvailable).toBe(true);
       expect(harness.providerCalls).toBe(0);expect(harness.generationCalls).toBe(0);
     }
   });
-  test('editing source or clearing a recovered upload revokes its package and partial checkpoint',async()=>{
+  test('editing source retains the recovered upload until explicitly clearing its checkpoint',async()=>{
     let saved:EncounterRecoverySnapshot|undefined=await uploadedSnapshot();
     const store={load:async()=>saved,save:async(value:EncounterRecoverySnapshot)=>{saved=value;},clear:async()=>{saved=undefined;}};
     const harness=app(store);await harness.application._prepareContext();await harness.application.previewRecovered();
     harness.application._onRender();harness.sourceControl.value=source;harness.sourceControl.oninput();
     await harness.application.saveRecovery();
-    expect(harness.application.prepared).toBeUndefined();expect(harness.application.recoveryPackage).toBeUndefined();
-    expect((saved as EncounterRecoverySnapshot|undefined)?.version).toBe(1);expect(saved?.package).toBeUndefined();
+    expect(harness.application.prepared).toBeDefined();expect(harness.application.recoveryPackage).toBeDefined();
+    expect((saved as EncounterRecoverySnapshot|undefined)?.version).toBe(2);expect(saved?.package).toBeDefined();
     await harness.application.clearCurrentRecovery();expect(saved).toBeUndefined();
     expect(harness.providerCalls).toBe(0);
   });
 
-  test('clearing the source removes the checkpoint and reopening does not revive it', async () => {
+  test('clearing the source editor retains the saved draft and explicit clear removes it', async () => {
     let saved: EncounterRecoverySnapshot | undefined = snapshot(); let clears = 0;
     const store = { load: async () => saved, save: async (value: EncounterRecoverySnapshot) => { saved = value; }, clear: async () => { clears++; saved = undefined; } };
     const first = app(store); await first.application._prepareContext(); first.application._onRender();
     first.sourceControl.value = ''; first.sourceControl.oninput();
     await first.application.close();
-    expect(clears).toBe(1); expect(saved).toBeUndefined();
-    const reopened = app(store); expect((await reopened.application._prepareContext()).recoveryAvailable).toBe(false);
+    expect(clears).toBe(0);expect(saved).toBeDefined();
+    const reopened=app(store);expect((await reopened.application._prepareContext()).recoveryAvailable).toBe(true);
+    await reopened.application.clearCurrentRecovery();expect(clears).toBe(1);expect(saved).toBeUndefined();
   });
 
   test('a rotated connection key is checked along with the old key before every checkpoint write', async () => {
@@ -187,7 +219,7 @@ describe('encounter task checkpoint', () => {
     const safe = JSON.stringify(saved);
     current = 'secret-new'; harness.application.humanSource = `${source}\nsecret-new`;
     await harness.application.saveRecovery();
-    expect(JSON.stringify(saved)).toBe(safe); expect(harness.application.error).toContain('任务尚未保存');
+    expect(JSON.stringify(saved)).toBe(safe);
     harness.application.humanSource = `${source}\nsecret-old`;
     await harness.application.saveRecovery();
     expect(JSON.stringify(saved)).toBe(safe);

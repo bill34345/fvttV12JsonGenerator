@@ -24,6 +24,7 @@ export interface EncounterGame {
 }
 export interface EncounterImportResult {
   packageId: string; packageHash: string;
+  failures: Array<{key:string;kind:'Actor'|'Macro'|'Asset';message:string;uuid?:string}>;
   documents: Array<{ key: string; kind: 'Actor' | 'Macro'; uuid: string; id: string; name: string; status: 'created' | 'existing'; readbackWarnings?:string[] }>;
 }
 export interface EncounterAssetPort {
@@ -44,67 +45,63 @@ export async function importForgeEncounter(input: {
   const locks = importLocks.get(game) ?? new Set<string>(); importLocks.set(game, locks);
   if (locks.has(prepared.bundle.id)) throw new Error('这个生物导入文件正在导入，请等待当前操作完成。');
   locks.add(prepared.bundle.id);
-  const created: Array<{kind:'Actor'|'Macro';document:EncounterDocument}> = [];
-  const verifiedActors: EncounterDocument[]=[];
-  let committed=false;
-  const result: EncounterImportResult = { packageId: prepared.bundle.id, packageHash: prepared.hash, documents: [] };
+  const result:EncounterImportResult={packageId:prepared.bundle.id,packageHash:prepared.hash,documents:[],failures:[]};
+  const uploadedAssets=new Set<string>();
   try {
-    const plans = createDocumentPlans(prepared,game);
-    // All conflicts are checked before the first upload or world Document write.
-    for (const plan of plans) {
-      const existing = collection(game, plan.kind).get(plan.data._id);
-      if (existing) verifyDocument(existing, plan);
+    for(const asset of prepared.bundle.assets){
+      input.signal?.throwIfAborted();assertEncounterEnvironment(game);
+      try{await input.assets.ensure(asset,encounterAssetPath(prepared.hash,asset));uploadedAssets.add(asset.key);}
+      catch(error){result.failures.push({key:asset.key,kind:'Asset',message:error instanceof Error?error.message:String(error)});}
     }
-    for (const asset of prepared.bundle.assets) {
-      input.signal?.throwIfAborted(); assertEncounterEnvironment(game);
-      await input.assets.ensure(asset, encounterAssetPath(prepared.hash, asset));
-    }
-    // Once Document creation starts this bounded commit/readback section is non-cancellable.
     input.signal?.throwIfAborted();
-    for (const plan of plans) {
-      assertEncounterEnvironment(game);
-      const documents = collection(game, plan.kind);
-      let document = documents.get(plan.data._id);
-      let status: 'created' | 'existing' = 'existing';
-      if (!document) {
-        try {
-          // Foundry cleans nested flags in place; retain the reviewed plan for independent readback.
-          document = await documents.documentClass.create(JSON.parse(JSON.stringify(plan.data)), { keepId: true, renderSheet: false });
-          if (!document) throw new Error(`${plan.data.name}：创建被Foundry或模块取消。`);
-          created.push({kind:plan.kind,document}); status = 'created';
-        } catch (error) {
-          document = documents.get(plan.data._id);
-          if (!document) throw error;
+    const plans=createDocumentPlans(prepared,game,result.failures,uploadedAssets);
+    for(const plan of plans){
+      let document:EncounterDocument|undefined;
+      let created=false;
+      try{
+        assertEncounterEnvironment(game);
+        if(plan.kind==='Macro'&&Object.values(plan.data.flags[MODULE_ID].encounter.bindings as Record<string,string>)
+          .some(uuid=>!result.documents.some(row=>row.kind==='Actor'&&row.uuid===uuid)))
+          throw new Error('配套角色尚未成功导入；宏保留为未完成项。');
+        const documents=collection(game,plan.kind);
+        document=documents.get(plan.data._id);
+        if(!document){
+          try{
+            document=await documents.documentClass.create(JSON.parse(JSON.stringify(plan.data)),{keepId:true,renderSheet:false});
+            if(!document)throw new Error(`${plan.data.name}：创建被Foundry或模块取消。`);
+            created=true;
+          }catch(error){document=documents.get(plan.data._id);if(!document)throw error;}
         }
+        const readbackWarnings=[...(plan.warnings??[]),...verifyDocument(document,plan,true)];
+        result.documents.push({key:plan.key,kind:plan.kind,uuid:document.uuid,id:document.id,name:document.name,
+          status:created?'created':'existing',...(readbackWarnings.length?{readbackWarnings}:{})});
+        if(plan.kind==='Actor'){
+          try{await completeForgeSpellImport(document);}
+          catch(error){result.failures.push({key:plan.key,kind:'Actor',uuid:document.uuid,message:error instanceof Error?error.message:String(error)});}
+        }
+      }catch(error){
+        let detail=error instanceof Error?error.message:String(error);
+        // A wrong new identity belongs only to this failed write, never to prior successful Actors.
+        if(created&&document){
+          try{await document.delete();if(collection(game,plan.kind).get(document.id))detail+=` 无法清理本次身份错误文档：${document.uuid}`;}
+          catch{detail+=` 无法清理本次身份错误文档：${document.uuid}`;}
+        }
+        result.failures.push({key:plan.key,kind:plan.kind,message:detail,...(document?{uuid:document.uuid}:{})});
       }
-      const readbackWarnings=verifyDocument(document, plan,status==='created');
-      if(plan.kind==='Actor')verifiedActors.push(document);
-      result.documents.push({ key: plan.key, kind: plan.kind, uuid: document.uuid, id: document.id, name: document.name, status,
-        ...(readbackWarnings.length?{readbackWarnings}:{}) });
     }
-    committed=true;
-  } catch (error) {
-    const remaining: string[] = [];
-    for (const {document,kind} of created.reverse()) {
-      try { await document.delete(); if(collection(game,kind).get(document.id))remaining.push(document.uuid); }
-      catch { remaining.push(document.uuid); }
-    }
-    const detail = remaining.length ? ` 无法清理的新文档：${remaining.join('、')}；重试前请检查。` : ' 本次已识别的新文档已清理，既有文档未覆盖。';
-    throw new Error(`${error instanceof Error ? error.message : String(error)}${detail} 已上传的内容寻址图片保留以供重试。`);
-  } finally { if(!committed)locks.delete(prepared.bundle.id); }
-  // All Actors, Macros and readbacks must commit first. Completion is a
-  // separate metadata update broadcast normally to every connected GM.
-  // Errors here cannot delete documents another resolver may now be using.
-  try{for(const actor of verifiedActors)await completeForgeSpellImport(actor);return result;}
-  finally{locks.delete(prepared.bundle.id);}
+    return result;
+  }finally{locks.delete(prepared.bundle.id);}
 }
 
-interface DocumentPlan { key: string; kind: 'Actor'|'Macro'; data: any }
-function createDocumentPlans(prepared: PreparedForgeEncounter,game:EncounterGame): DocumentPlan[] {
+interface DocumentPlan { key:string;kind:'Actor'|'Macro';data:any;warnings?:string[] }
+function createDocumentPlans(prepared:PreparedForgeEncounter,game:EncounterGame,failures:EncounterImportResult['failures'],uploadedAssets:ReadonlySet<string>):DocumentPlan[]{
   const { bundle, hash } = prepared;
   const identity = (kind: string, key: string) => ({ version: 1, packageId: bundle.id, packageHash: hash, key, kind });
-  const plans: DocumentPlan[] = prepared.actors.map(actor => {
-    const data: any = prepareFoundryImportArtifact(actor.artifact,game);
+  const plans:DocumentPlan[]=[];
+  for(const actor of prepared.actors){
+    try{
+    const warnings:string[]=[];
+    const data:any=prepareFoundryImportArtifact(actor.artifact,game,warnings);
     // Exact dnd5e 5.3.3 NPC create normalization, observed in the local Lab.
     // Only absent artwork receives the native default; explicit source art remains strict.
     if(data.type==='npc'){
@@ -117,14 +114,15 @@ function createDocumentPlans(prepared: PreparedForgeEncounter,game:EncounterGame
     data._id = encounterDocumentId(bundle.id, 'Actor', actor.key);
     data.flags ??= {}; data.flags[MODULE_ID] = { encounter: identity('Actor', actor.key) };
     markForgeSpellImportPending(data);
-    for (const asset of bundle.assets) for (const target of asset.targets.filter(t => t.actorKey === actor.key)) {
+    for (const asset of bundle.assets.filter(asset=>uploadedAssets.has(asset.key))) for (const target of asset.targets.filter(t => t.actorKey === actor.key)) {
       for (const path of target.fields) {
         if (path === 'img') data.img = encounterAssetPath(hash, asset);
         else { data.prototypeToken ??= {}; data.prototypeToken.texture ??= {}; data.prototypeToken.texture.src = encounterAssetPath(hash, asset); }
       }
     }
-    return { key: actor.key, kind: 'Actor', data };
-  });
+    plans.push({key:actor.key,kind:'Actor',data,warnings});
+    }catch(error){failures.push({key:actor.key,kind:'Actor',message:error instanceof Error?error.message:String(error)});}
+  }
   for (const macro of prepared.macros) {
     const bindings = Object.fromEntries(Object.entries(macro.bindings).map(([name, actorKey]) => [name,
       `Actor.${encounterDocumentId(bundle.id, 'Actor', actorKey)}`]));
@@ -152,7 +150,6 @@ function assertEncounterEnvironment(game: EncounterGame):void {
 function collection(game: EncounterGame, kind: 'Actor'|'Macro'): Collection { return kind === 'Actor' ? game.actors : game.macros; }
 function verifyDocument(document: EncounterDocument, plan: DocumentPlan,allowPendingNew=false): string[] {
   const actual = document.toObject();
-  if(plan.kind==='Actor'&&!allowPendingNew&&isForgeSpellImportPending(actual))throw new Error('Existing Forge Actor import is still pending; wait for or inspect that import before reuse.');
   if (document.id !== plan.data._id || hashArtifact(actual.flags?.[MODULE_ID]?.encounter ?? {}) !== hashArtifact(plan.data.flags[MODULE_ID].encounter)) {
     throw new Error(`${plan.data.name}：文档身份冲突，未覆盖已有内容。`);
   }

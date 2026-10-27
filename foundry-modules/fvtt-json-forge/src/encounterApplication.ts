@@ -114,7 +114,7 @@ export function createForgeEncounterApplicationClass(environment: {
       const selectedActor=this.actorFilter && candidateActors.some(actor=>actor.key===this.actorFilter)?this.actorFilter:'';
       const issueItems=navigation.issues.map((issue,index)=>{
         const canContinue=issue.action==='translate'?!!this.prepared&&!this.prepared.bundle.localization
-          :issue.action==='resume'&&!!this.recoveryReport?.actors.some(actor=>actor.analysis?.ir)&&!this.prepared;
+          :issue.action==='resume'&&!!this.recoveryReport?.actors.some(hasRetainedActorSource)&&!this.prepared;
         return {...issue,index,canLocate:issue.locateStart!==undefined,canContinue,
           continueLabel:issue.action==='translate'?'继续翻译':'继续任务',canInspect:!canContinue};
       });
@@ -229,10 +229,10 @@ export function createForgeEncounterApplicationClass(environment: {
         hasReport:!!this.aiReport||this.translationReport.length>0||!!this.prepared?.bundle.localization,hasPackage:!!this.prepared,aiFindings:[...(this.aiReport?.findings??[]),...(this.prepared?.reviewFindings??[])],
         reportDownload:this.reportDownload,
         textView:this.textView,reportViewText:this.textView?.kind==='report'?this.textView.text:undefined,
-        recoveryAvailable:!!this.recoveryReport?.actors.some(actor=>actor.analysis?.ir) && !this.busy && !this.prepared,
+        recoveryAvailable:!!this.recoveryReport?.actors.some(hasRetainedActorSource) && !this.busy && !this.prepared,
         recoveryPackageAvailable:!!this.recoveryPackage&&!this.prepared&&!this.busy,
         hasLocalRecovery:!!this.recoveryStore&&(!!this.humanSource||!!this.recoveryReport||!!this.recoveryPackage||this.status.startsWith('本地任务恢复不可用')||this.status.startsWith('此前任务')),
-        recoveryDraftCount:this.recoveryReport?.actors.filter(actor=>actor.analysis?.ir).length??0,
+        recoveryDraftCount:this.recoveryReport?.actors.filter(hasRetainedActorSource).length??0,
         recoveredReview:this.recoveredReview,
         progressDetail:this.progressDetail,
         draftPreview,draftPreviewError,translationReviewed:this.translationReviewed,
@@ -256,7 +256,7 @@ export function createForgeEncounterApplicationClass(environment: {
           :!actorAuditsComplete?'AI 内容复核已暂时关闭；请由 GM 依据完整来源核对候选。'
           :!automationAuditComplete?'角色 AI 审核已完成；配套控制 AI 审核尚未完成。'
           :'当前记录没有 AI 审核结论；请由 GM 核对来源和规则。',
-        importLabel:this.prepared?.reviewFindings?.length?'我已核对问题，导入待审候选':aiConcerns?'GM 确认导入（仍有 AI 提示）':currentDraft?'导入原语言包（中文草稿尚未确认）':this.prepared?.macros.length?'一起导入角色与宏':'导入完整角色',
+        importLabel:this.result?.failures?.length?'重试未完成项':this.prepared?.reviewFindings?.length?'我已核对问题，导入待审候选':aiConcerns?'GM 确认导入（仍有 AI 提示）':currentDraft?'导入原语言包（中文草稿尚未确认）':this.prepared?.macros.length?'一起导入角色与宏':'导入完整角色',
         showReviewNavigation:candidateActors.length>0||navigation.issues.length>0,
         reviewNavigation:{...navigation,actorCount:candidateActors.length,hasRuleCounts:!!this.aiReport?.automation?.selection||candidateRules.length>0||manualSourceRules.length>0,
           gmMechanisms:this.prepared?.requirements.length??0,
@@ -291,24 +291,20 @@ export function createForgeEncounterApplicationClass(environment: {
         })),assetCount:this.prepared?.bundle.assets.length ?? 0,
         assets:this.prepared?.bundle.assets.map(a=>({fileName:a.fileName,sha256:a.sha256,
           targetsText:a.targets.map(t=>`${t.actorKey}：${t.fields.map(f=>f==='img'?'角色头像':'Token图片').join('、')}`).join('；')})),
-        documents:this.result?.documents.map(d=>({...d,isActor:d.kind==='Actor'})),installed,
-        canImport:!!this.prepared && this.reviewed && !this.busy && !this.result,
+        documents:this.result?.documents.map(d=>({...d,isActor:d.kind==='Actor'})),importFailures:this.result?.failures,installed,
+        canImport:!!this.prepared && this.prepared.actors.length>0 && this.reviewed && !this.busy && (!this.result||!!this.result.failures?.length),
       };
     }
     _onRender() {
       this.observeConnectionSession();
       const root=this.element as HTMLElement;
-      const invalidate=(keepDraft=false)=>{this.clearReportPresentation();this.prepared=undefined;this.result=undefined;this.aiReport=undefined;this.recoveryPackage=undefined;this.recoveryUploadedHash=undefined;this.recoveryUploadedProgress=undefined;this.recoveryUploadedDraft=undefined;this.generationReviewBinding=undefined;this.recoveredReview=false;if(!keepDraft)this.recoveryReport=undefined;this.translationReport=[];this.localizationDraft=undefined;this.translationReviewed=false;this.reviewFilter='all';this.actorFilter='';this.reviewed=false;this.file=undefined;this.fileRevision++;this.error='';this.progressDetail='';this.status='资料已改变，旧候选与审核记录已撤下；请重新生成或预览。';this.queueRecoverySave();
-        root.querySelector('[data-encounter-current-result]')?.replaceChildren();
-        root.querySelector('[data-encounter-report-controls]')?.replaceChildren();
-        root.querySelector('[data-encounter-recovery-controls]')?.replaceChildren();
-        const clearControl=root.querySelector<HTMLElement>('[data-encounter-clear-control]');
-        if(clearControl)clearControl.hidden=!(this.recoveryStore&&this.humanSource);
-        root.querySelector('[data-encounter-progress]')?.remove();
-        root.querySelector('.forge-error')?.remove();
-        const fileName=root.querySelector('[data-encounter-file-name]');if(fileName)fileName.textContent='';
+      const invalidate=(_keepDraft=false)=>{
+        this.generationReviewBinding=undefined;this.reviewed=false;this.error='';this.progressDetail='';
+        this.status=this.prepared||this.aiReport?'输入已改变；已有候选继续绑定原来源快照，可查看或下载。':'资料已改变，请生成或预览。';
+        if(!this.prepared&&!this.aiReport)this.queueRecoverySave();
         for(const status of root.querySelectorAll('[data-encounter-status], [data-encounter-secondary-status]'))status.textContent=this.status;
-        const button=root.querySelector<HTMLButtonElement>('[data-action="encounter-import"]');if(button)button.disabled=true;};
+        const button=root.querySelector<HTMLButtonElement>('[data-action="encounter-import"]');if(button)button.disabled=true;
+      };
       const source=root.querySelector<HTMLTextAreaElement>('[name="humanSource"]');
       if(source)source.oninput=()=>{if(this.busy)return;this.humanSource=source.value;invalidate();};
       const label=root.querySelector<HTMLInputElement>('[name="humanLabel"]');
@@ -319,7 +315,6 @@ export function createForgeEncounterApplicationClass(environment: {
       if(sourceFile)sourceFile.onchange=()=>{if(this.busy)return;const chosen=sourceFile.files?.[0];if(!chosen)return;
         invalidate();const revision=this.fileRevision;
         this.humanSource='';if(source)source.value='';
-        if(chosen.size>96000){this.error='原始MD文件过大。';void this.render();return;}
         this.busy=true;this.readingSource=true;this.status='正在读取原始MD文件。';void this.render();
         void chosen.text().then(text=>{if(this.closed||revision!==this.fileRevision)return;this.humanSource=text;this.humanLabel=chosen.name.replace(/\.(md|txt)$/i,'');this.status='原始资料已读取，可以开始AI生成。';this.queueRecoverySave();})
           .catch(()=>{if(revision===this.fileRevision)this.error='无法读取原始MD文件。';})
@@ -327,7 +322,7 @@ export function createForgeEncounterApplicationClass(environment: {
       const file=root.querySelector<HTMLInputElement>('[name="encounterFile"]');
       if(file)file.onchange=()=>{if(this.busy)return;this.clearReportPresentation();this.file=file.files?.[0];this.fileRevision++;this.prepared=undefined;this.generationReviewBinding=undefined;this.result=undefined;this.aiReport=undefined;this.recoveryReport=undefined;this.recoveryPackage=undefined;this.recoveryUploadedHash=undefined;this.recoveryUploadedProgress=undefined;this.recoveryUploadedDraft=undefined;this.translationReport=[];this.localizationDraft=undefined;this.translationReviewed=false;this.reviewFilter='all';this.actorFilter='';this.reviewed=false;this.error='';this.queueRecoverySave();void this.render();};
       const reviewed=root.querySelector<HTMLInputElement>('[name="encounterReviewed"]');
-      if(reviewed)reviewed.onchange=()=>{this.reviewed=reviewed.checked;const button=root.querySelector<HTMLButtonElement>('[data-action="encounter-import"]');if(button)button.disabled=!this.reviewed||this.busy||!!this.result;};
+      if(reviewed)reviewed.onchange=()=>{this.reviewed=reviewed.checked;const button=root.querySelector<HTMLButtonElement>('[data-action="encounter-import"]');if(button)button.disabled=!this.reviewed||this.busy||!!this.result&&!this.result.failures?.length;};
       const translationReviewed=root.querySelector<HTMLInputElement>('[name="encounterTranslationReviewed"]');
       if(translationReviewed)translationReviewed.onchange=()=>{this.translationReviewed=translationReviewed.checked;
         const button=root.querySelector<HTMLButtonElement>('[data-action="encounter-approve-localization"]');
@@ -379,7 +374,7 @@ export function createForgeEncounterApplicationClass(environment: {
         const issue=encounterReviewNavigation(this.aiReport,current,this.humanSource,!!this.prepared,this.prepared?.bundle,this.prepared?.actors).issues[Number(button.dataset.reviewIssueAction)];
         if(!issue)return;
         if(issue.action==='translate'&&this.prepared&&!this.prepared.bundle.localization)void this.translatePrepared();
-        else if(issue.action==='resume'&&this.recoveryReport?.actors.some(actor=>actor.analysis?.ir)&&!this.prepared)void this.generateFromHuman(true);
+        else if(issue.action==='resume'&&this.recoveryReport?.actors.some(hasRetainedActorSource)&&!this.prepared)void this.generateFromHuman(true);
         else this.viewReport();
       };
       bind('encounter-export',async()=>{if(this.prepared)download(`${this.prepared.bundle.id}.forge-encounter.zip`,await encodeForgeEncounterPackageZip(this.prepared.bundle),'application/zip');});
@@ -418,17 +413,19 @@ export function createForgeEncounterApplicationClass(environment: {
       const source=this.humanSource;const label=this.humanLabel;const revision=this.fileRevision;
       const prior=this.recoveryReport;
       const priorPresentation={prepared:this.prepared,recoveryPackage:this.recoveryPackage,translationReport:this.translationReport,
-        localizationDraft:this.localizationDraft,recoveredReview:this.recoveredReview};
+        localizationDraft:this.localizationDraft,recoveredReview:this.recoveredReview,aiReport:this.aiReport,recoveryReport:this.recoveryReport,result:this.result};
       let continuationPublished=false;
       this.clearReportPresentation();this.busy=true;this.aiRunning=true;this.error='';this.prepared=undefined;this.generationReviewBinding=undefined;this.recoveryPackage=undefined;this.recoveryUploadedHash=undefined;this.recoveryUploadedProgress=undefined;this.recoveryUploadedDraft=undefined;this.recoveredReview=false;this.result=undefined;this.reviewed=false;this.aiReport=undefined;this.translationReport=[];this.localizationDraft=undefined;this.translationReviewed=false;this.file=undefined;
-      this.progressDetail=resume?'正在核对保存的草稿身份；有效 IR 将重新验证并做本地校验。':'准备识别生物与生成规则。';
+      this.progressDetail=resume?'正在读取保存的完整提取资料并继续本地生成。':'准备识别生物与生成规则。';
       this.status='正在从原始资料生成并本地校验生物导入文件；不会创建世界文档。';void this.render();
       try{
         assertGm(game);assertExactRuntime(game);
-        const options=environment.getAiOptions?.(controller);
-        if(!options)throw new Error('请先在Intake连接页配置AI服务。');
-        const generatedOptionsHash=connectionOptionsHash(options),generationSessionRevision=this.sessionRevision;
-        this.rememberSecrets(options);
+        const localResume=resume&&!!prior?.actors.length&&prior.actors.every(hasRetainedActorSource)
+          &&(!prior.members||prior.members.every(member=>prior.actors.some(actor=>actor.key===member.key&&hasRetainedActorSource(actor))));
+        const options=localResume?undefined:environment.getAiOptions?.(controller);
+        if(!options&&!localResume)throw new Error('请先在Intake连接页配置AI服务。');
+        const generatedOptionsHash=options?connectionOptionsHash(options):'',generationSessionRevision=this.sessionRevision;
+        if(options)this.rememberSecrets(options);
         assertEncounterSecretsAbsent(source,this.forbiddenValues);
         assertEncounterSecretsAbsent(label,this.forbiddenValues);
         this.checkpointEnabled=true;
@@ -438,20 +435,26 @@ export function createForgeEncounterApplicationClass(environment: {
         let drafts:NonNullable<Parameters<typeof generateEncounterFromHumanMarkdown>[0]['drafts']>|undefined;
         let draftParentHash:string|undefined;
         if(resume){
-          if(!prior || prior.source!==source || prior.sourceHash!==hashSource(source) || this.recoveryCatalogHash!==catalogHash)
+          if(!prior || prior.source!==source || prior.sourceHash!==hashSource(source))
             throw new Error('来源或自定义状态目录已改变，旧草稿不能继续；请重新生成。');
-          drafts=prior.actors.filter(actor=>actor.analysis?.ir).map(actor=>({key:actor.key,source:actor.source,ir:actor.analysis.ir!}));
-          if(!drafts.length)throw new Error('保存的任务尚无可继续的 IR 草稿。');
+          drafts=prior.actors.filter(actor=>actor.analysis.ir||actor.analysis.sourceText||actor.analysis.canonicalSource)
+            .map(actor=>({key:actor.key,source:actor.source,...(actor.analysis.ir?{ir:actor.analysis.ir}:{sourceText:actor.analysis.sourceText??actor.analysis.canonicalSource})}));
+          if(!drafts.length&&!prior.actors.some(actor=>actor.generation?.candidateAvailable))throw new Error('保存的任务尚无可继续的提取资料。');
           draftParentHash=hashSource(JSON.stringify(prior));
         }
         this.recoveryCatalogHash=catalogHash;
-        const providerOptions=options.waitPolicy?{...options,onRetry:(retry:Parameters<NonNullable<typeof options.onRetry>>[0])=>{
+        const providerOptions=options&&(options.waitPolicy?{...options,onRetry:(retry:Parameters<NonNullable<typeof options.onRetry>>[0])=>{
           options.onRetry?.(retry);
           if(this.closed||this.controller!==controller)return;
           this.progressDetail=`${encounterRetryLabel(retry.stage)}请求第 ${retry.attempt} 次尝试（${retry.code}）；只重试当前请求。`;
           void this.render();
-        }}:options;
-        const providers=(environment.createEncounterIntakeProviders??createEncounterIntakeProviders)(providerOptions,controller.signal);
+        }}:options);
+        const localUnavailable=async()=>{throw new Error('本次从保存资料进行本地转换，没有发起 AI 请求。');};
+        const providers=providerOptions?(environment.createEncounterIntakeProviders??createEncounterIntakeProviders)(providerOptions,controller.signal):{
+          provider:{providerName:'saved-intake',extractionModel:prior!.model,reviewModel:prior!.reviewModel,
+            discover:localUnavailable,extract:localUnavailable,repair:localUnavailable,review:localUnavailable},
+          automationProvider:{generate:localUnavailable,review:localUnavailable},requestedOptions:{...prior!.requestedOptions,
+            protocol:prior!.requestedOptions?.protocol,reasoning:prior!.requestedOptions?.reasoning,autoCorrect:false}};
         const output=await (environment.generateEncounterFromHumanMarkdown??generateEncounterFromHumanMarkdown)({source,label,...providers,conditionCatalog,outputLanguage:this.outputLanguage,reviewPolicy:'deferred',drafts,draftParentHash,previousReport:resume?prior:undefined,signal:controller.signal,
           onProgress:message=>{if(this.closed||this.controller!==controller||revision!==this.fileRevision||source!==this.humanSource)return;this.status=message;this.progressDetail=message;const status=(this.element as HTMLElement)?.querySelector('[data-encounter-status]');if(status)status.textContent=message;const detail=(this.element as HTMLElement)?.querySelector('[data-encounter-progress]');if(detail)detail.textContent=message;},
           onReport:report=>{assertEncounterSecretsAbsent(JSON.stringify(report),this.forbiddenValues);if(!this.closed&&this.controller===controller&&revision===this.fileRevision&&source===this.humanSource){continuationPublished=true;this.aiReport=report;this.recoveryReport=report;this.queueRecoverySave();}}});
@@ -463,7 +466,9 @@ export function createForgeEncounterApplicationClass(environment: {
           const count=output.report.actors.filter(actor=>actor.generation?.candidateAvailable).length;
           this.status=count?`已有 ${count} 个生物候选可逐个查看和下载；完整生物导入文件尚未完成，失败及未处理成员仍保留。`
             :'本轮尚无可获取的 Actor 候选；失败与未处理成员及来源仍保留。';
-          this.error=output.report.findings.join('\n');return;
+          this.error=output.report.findings.join('\n');
+          if(priorPresentation.prepared){Object.assign(this,priorPresentation);this.status+=' 上次完整角色产物仍保留。';}
+          return;
         }
         assertEncounterSecretsAbsent(serializeForgeEncounterPackage(output.prepared.bundle),this.forbiddenValues);
         this.prepared=output.prepared;
@@ -471,7 +476,7 @@ export function createForgeEncounterApplicationClass(environment: {
         this.localizationDraft=output.localizationDraft??output.report.localizationDraft;
         this.translationReviewed=false;
         this.recoveryPackage=serializeForgeEncounterPackage(output.prepared.bundle);
-        if(generationSessionRevision===this.sessionRevision&&output.report.status==='ready_for_gm_review'
+        if(options&&generationSessionRevision===this.sessionRevision&&output.report.status==='ready_for_gm_review'
           &&output.report.packageHash===output.prepared.hash&&output.report.conditionCatalogHash===catalogHash
           &&output.report.model===providers.provider.extractionModel&&output.report.reviewModel===providers.provider.reviewModel)
           this.generationReviewBinding={optionsHash:generatedOptionsHash,sessionRevision:generationSessionRevision,
@@ -486,11 +491,11 @@ export function createForgeEncounterApplicationClass(environment: {
           : `已生成${output.prepared.actors.length}个生物${output.prepared.bundle.macros.length?'与固定控制入口':''}，本地校验已完成；AI 审核未请求，请由 GM 核对来源和规则后最终确认。`;
         this.error=output.report.findings.join('\n');
       }catch(error){
-        const retainPrior=resume&&prior&&!continuationPublished&&source===this.humanSource&&revision===this.fileRevision;
-        if(retainPrior){this.aiReport=prior;this.recoveryReport=prior;Object.assign(this,priorPresentation);}
+        const retainPrior=!!priorPresentation.prepared||!!priorPresentation.aiReport||resume&&!!prior&&!continuationPublished;
+        if(retainPrior){Object.assign(this,priorPresentation);if(!this.aiReport&&prior)this.aiReport=prior;if(!this.recoveryReport&&prior)this.recoveryReport=prior;}
         else if(!this.recoveryReport&&prior&&resume)this.recoveryReport=prior;
         this.error=controller.signal.aborted?'已取消AI生成，没有创建世界文档。':message(error);
-        this.status=retainPrior?'续跑未开始；原候选和保存记录已保留，请核对当前连接与来源。':'生成未完成；已保存的有效草稿可继续。';
+        this.status=retainPrior?'本次生成未完成；原候选和保存记录已保留，可继续查看和下载。':'生成未完成；已保存的有效草稿可继续。';
         if(!retainPrior)this.queueRecoverySave();
       }
       finally{releaseForgeAiJob(this);this.busy=false;this.aiRunning=false;if(!this.closed)void this.render();}
@@ -630,11 +635,11 @@ export function createForgeEncounterApplicationClass(environment: {
       try {
         const binding=this.recoveryBinding();
         if(this.recoveryCatalogHash!==binding.catalogHash||(report&&(report.source!==this.humanSource||report.sourceHash!==hashSource(this.humanSource))))
-          throw new Error('来源或自定义状态目录已改变，保存的候选不能预览。');
+          this.error='当前输入或状态目录与保存快照不同；正在读取原保存产物。';
         assertEncounterSecretsAbsent(serialized,this.forbiddenValues);
         const prepared=await prepareForgeEncounter(serialized,controller.signal);
-        if(this.closed||revision!==this.fileRevision||this.controller!==controller||prepared.hash!==(report?.packageHash??uploadedHash))
-          throw new Error('保存的候选身份已改变，请重新生成。');
+        if(this.closed||revision!==this.fileRevision||this.controller!==controller)throw new Error('预览已取消或输入已改变；原保存记录保留。');
+        if(prepared.hash!==(report?.packageHash??uploadedHash))this.error='保存记录的包指纹与当前可读内容不同；Actor 已保留，请核对来源快照。';
         assertGm(game);assertExactRuntime(game);
         let verifiedProgress=this.translationReport;
         if(uploadedHash){const saved=this.recoveryUploadedProgress??this.translationReport;
@@ -671,9 +676,9 @@ export function createForgeEncounterApplicationClass(environment: {
         this.checkpointEnabled=true;
         if(!loaded||this.closed||this.fileRevision!==0||this.humanSource)return;
         const binding=this.recoveryBinding();
-        if(loaded.target!==binding.target||loaded.catalogHash!==binding.catalogHash){
-          this.status='此前任务的目标版本或状态目录已改变，旧草稿未恢复。';return;
-        }
+        if(loaded.recoveryWarnings?.length)this.error=loaded.recoveryWarnings.join('\n');
+        if(loaded.target!==binding.target||loaded.catalogHash!==binding.catalogHash)
+          this.error='保存任务的目标版本或状态目录与当前不同；已保存内容仍可查看，创建时使用当前明确选择的目标。';
         if(loaded.version===2){
           this.recoveryPackage=loaded.package;this.recoveryUploadedHash=loaded.packageHash;
           this.recoveryUploadedProgress=loaded.translationReport;this.recoveryUploadedDraft=loaded.localizationDraft;
@@ -694,8 +699,8 @@ export function createForgeEncounterApplicationClass(environment: {
         this.checkpointEnabled=true;
         this.status=loaded.package
           ? '已恢复本地来源和候选记录；点击“重新预览”正式校验，之后仍须 GM 重新确认。'
-          : loaded.report?.actors.some(actor=>actor.analysis?.ir)
-          ? '已恢复本地来源与草稿；点击“继续任务”重新验证并做本地校验，不会自动请求付费审核或导入。'
+          : loaded.report?.actors.some(hasRetainedActorSource)
+          ? '已恢复本地来源与完整提取资料；点击“继续任务”进行本地转换，不会自动请求付费审核或导入。'
           : '已恢复本地来源；请确认资料后开始生成。';
       } catch(error){this.status=`本地任务恢复不可用：${message(error)}。可清除当前任务记录后重新生成。`;}
     }
@@ -721,7 +726,9 @@ export function createForgeEncounterApplicationClass(environment: {
           assertEncounterSecretsAbsent(JSON.stringify(snapshot),this.forbiddenValues);
           this.pendingSave=this.recoveryStore.save(snapshot);await this.pendingSave;return;
         }
+        if(this.recoveryReport&&this.recoveryReport.source!==this.humanSource)return;
         if(!this.humanSource.trim()||!this.humanLabel.trim()){
+          if(this.recoveryReport||this.recoveryPackage)return;
           this.pendingSave=this.recoveryStore.clear();await this.pendingSave;return;
         }
         // Read the live page session, including an unpersisted key, even before AI is configured.
@@ -867,18 +874,22 @@ export function createForgeEncounterApplicationClass(environment: {
       finally{if(!this.closed)void this.render();}
     }
     private async apply() {
-      if(this.busy||!this.prepared||!this.reviewed||this.result)return;
+      if(this.busy||!this.prepared||!this.reviewed||this.result&&!this.result.failures?.length)return;
       this.busy=true;this.importing=true;this.error='';this.status='正在导入并回读核对，请保持页面打开。';void this.render();
       try {
+        const configurationWarnings:string[]=[];
         for(const macro of this.prepared.macros){
           const config=readFixedEncounterConfiguration(macro.command);
           for(const rule of config?.rules??[])if(rule.kind==='status-lifecycle'){
             const parameters=decodeStatusLifecycleParameters(rule.parameters);
-            if(parameters.definition)configuredConditionsApi(game,parameters.definition);
+            if(parameters.definition)try{configuredConditionsApi(game,parameters.definition);}
+            catch(error){configurationWarnings.push(`${macro.name}：${message(error)}；角色继续导入。`);}
           }
         }
         this.result=await importForgeEncounter({game,prepared:this.prepared,reviewed:this.reviewed,assets:createEncounterAssetPort(foundry,game)});
-        this.status=this.prepared.bundle.macros.length?'角色和宏已导入。配套宏尚未运行，请点击下方“启动战斗控制”。':'角色已导入。本包没有配套宏。';
+        this.error=[...configurationWarnings,...this.result.failures.map(failure=>`${failure.key}：${failure.message}`)].join('\n');
+        this.status=this.result.failures.length?`已保留 ${this.result.documents.filter(row=>row.kind==='Actor').length} 个成功角色；未完成项可重试，不重复创建成功文档。`
+          :this.prepared.macros.length?'角色和宏已导入。配套宏尚未运行，请点击下方“启动战斗控制”。':'角色已导入。本包没有配套宏。';
       }catch(error){this.error=message(error);this.status='导入未完成，请根据错误检查后重试。';}
       finally{this.busy=false;this.importing=false;void this.render();}
     }
@@ -899,6 +910,10 @@ export function createForgeEncounterApplicationClass(environment: {
     }
   };
 }
+function hasRetainedActorSource(actor:EncounterIntakeReport['actors'][number]):boolean{
+  return !!(actor.analysis?.ir||actor.analysis?.sourceText||actor.analysis?.canonicalSource||actor.generation?.candidateAvailable);
+}
+
 function message(error:unknown):string{return error instanceof Error?error.message:String(error);}
 function connectionOptionsHash(options:BrowserAiProviderOptions):string{
   return hashSource(JSON.stringify({apiKey:options.apiKey,baseUrl:options.baseUrl,providerId:options.providerId,

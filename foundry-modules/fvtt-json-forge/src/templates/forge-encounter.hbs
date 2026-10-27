@@ -185,6 +185,7 @@
   {{#if documents}}<h3>导入结果</h3><ul>{{#each documents}}<li>{{name}} — {{status}} — {{uuid}} {{#if isActor}}<button type="button" data-open-actor="{{id}}">打开角色</button>{{/if}}
     {{#if readbackWarnings}}<section class="forge-findings"><strong>已创建，录入值需要核对</strong><ul>{{#each readbackWarnings}}<li>{{this}}</li>{{/each}}</ul></section>{{/if}}
   </li>{{/each}}</ul>{{/if}}
+  {{#if importFailures}}<section class="forge-findings"><strong>未完成项，成功角色已保留</strong><ul>{{#each importFailures}}<li>{{key}} — {{message}}</li>{{/each}}</ul></section>{{/if}}
   </div>
   <h3>已导入的战斗控制</h3>
   <p>固定自动化首次明确启动后，会在刷新世界时恢复；可在控制面板停用。旧式专用宏仍需手动重新启动。运行时只使用已导入角色的绑定。</p>

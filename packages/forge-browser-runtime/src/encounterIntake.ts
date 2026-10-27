@@ -1,7 +1,8 @@
 import { hashSource, hashArtifact, type JsonObject, isUsableActorCandidateArtifact } from '@fvtt-json-generator/forge-gateway-protocol';
+import {actorRulePresentation} from './actorRulePresentationContext';
 import {assertForgeAiReviewAvailable,rejectForgeAiReview} from './aiReviewPolicy';
 import { decodeConfiguredConditionCatalog, type ConfiguredConditionDefinition } from '@fvtt-json-generator/contracts/configured-conditions';
-import { normalizeDiscovery, partitionDiscoveryCandidates, singleCreatureSourceCandidate } from '@fvtt-json-generator/intake-ai/discovery';
+import { normalizeDiscovery, partitionDiscoveryCandidates, resolveDiscoveryCandidates, singleCreatureSourceCandidate } from '@fvtt-json-generator/intake-ai/discovery';
 import { OpenAICompatibleMonsterIntakeProvider, MonsterIntakeProviderError } from '@fvtt-json-generator/intake-ai/provider';
 import { createEncounterAutomationProvider, EncounterAutomationSelectionNeedsReviewError } from '@fvtt-json-generator/intake-ai/encounter-automation';
 import type { BrowserAiProviderOptions } from './ai';
@@ -9,11 +10,12 @@ import { createReviewedTranslationService } from '@fvtt-json-generator/intake-ai
 import { createContinuousIntakeWaitPolicy } from '@fvtt-json-generator/intake-ai/transport';
 import { verifyMonsterIntake } from '@fvtt-json-generator/intake-ai/verifier';
 import { extractExplicitlyInflictedStatuses } from '@fvtt-json-generator/generation/actor-effects';
+import type {RulePresentationPlan} from '@fvtt-json-generator/generation/rule-presentation';
 import type { ReviewedTranslationServicePort } from '@fvtt-json-generator/generation/ports';
 import { draftForgeEncounterLocalization, localizeForgeEncounter,
   reviewForgeEncounterLocalizationDraft, assertForgeEncounterLocalizationDraft,
   type EncounterLocalizationProgress, type ForgeEncounterLocalizationDraft } from './encounterLocalization';
-import type { MonsterIntakeAiProvider, DiscoveryCandidate, MonsterIntakeIR } from '@fvtt-json-generator/intake-ai/types';
+import type { MonsterIntakeAiProvider, DiscoveryCandidate, MonsterIntakeIR, EvidenceRef } from '@fvtt-json-generator/intake-ai/types';
 import {
   buildEncounterMacroCommand, renderEncounterActorSource, decodeEncounterAutomation, compileEncounterSelection, encounterStagedConditionRequirements,encounterManualConditionRequirements,
   type EncounterAutomationIR, type EncounterAutomationRequest, type EncounterAutomationRule, type EncounterCompilerRejection,
@@ -22,7 +24,7 @@ import {
   analyzeBrowserActorSourceWithAi, generateAndReviewBrowserActorIntake, generateBrowserActorIntakeCandidate,
   reviewBrowserActorIntakeCandidate, assertCurrentBrowserActorIntakeCandidate, repairBrowserActorIntake,
   assertBrowserActorIntakeReviewContext,
-  analyzeBrowserActorIntakeDraft,
+  analyzeBrowserActorIntakeDraft,analyzeBrowserActorSourceTextDraft,
   type BrowserActorIntakeAnalysis, type BrowserActorGenerationResult,
 } from './ai';
 import { serializeForgeEncounterPackage, type ForgeEncounterPackage } from './encounterPackage';
@@ -35,6 +37,7 @@ export interface EncounterIntakeActor {
   key:string;start:number;end:number;source:string;
   origin?:'fresh-extraction'|'prior-proposal';
   analysis:BrowserActorIntakeAnalysis;generation?:BrowserActorGenerationResult;
+  rulePresentation?:RulePresentationPlan;
   reusedCandidate?:true;
 }
 export interface EncounterIntakeMember {
@@ -58,6 +61,7 @@ export interface EncounterIntakeReport {
   actors:EncounterIntakeActor[];automation?:EncounterAutomationIR;
   /** Complete discovery roster, including failed and not-yet-processed members. */
   members?:EncounterIntakeMember[];
+  unassigned?:EvidenceRef[];
   automationReview?:{status:'not_requested'|'failed';message?:string}|{verdict:'accepted'|'needs_review';findings:string[]};findings:string[];
   packageHash?:string;
 }
@@ -73,7 +77,7 @@ export interface EncounterIntakeInput {
   conditionCatalog?:ConfiguredConditionDefinition[];
   evidenceMode?:'standard'|'exact-quotes-v1';
   requestedOptions?:EncounterIntakeReport['requestedOptions'];
-  drafts?:Array<{key:string;source:string;ir:MonsterIntakeIR}>;
+  drafts?:Array<{key:string;source:string;ir?:MonsterIntakeIR;sourceText?:string}>;
   draftParentHash?:string;
   /** Current-source continuation; complete candidates are identity-checked and reused. */
   previousReport?:EncounterIntakeReport;
@@ -90,29 +94,35 @@ export function encounterActorCandidate(report:EncounterIntakeReport,key:string)
   key:string;label:string;source:string;finalSource:string;artifact:JsonObject;artifactHash:string;
   strictStatus:'accepted'|'needs_review'|'failed';findings:string[];
 }{
-  if(report.sourceHash!==hashSource(report.source))throw new TypeError('生物候选的完整来源身份已改变。');
-  const matches=report.actors.filter(actor=>actor.key===key);
-  if(matches.length!==1)throw new TypeError('未找到唯一的当前生物候选。');
-  const actor=matches[0]!,generation=actor.generation;
-  if(report.members){
-    const members=report.members.filter(member=>member.key===key);
-    if(members.length!==1||members[0]!.start!==actor.start||members[0]!.end!==actor.end)
-      throw new TypeError('生物候选与完整来源清单不一致。');
-  }
-  if(actor.source!==report.source.slice(actor.start,actor.end)||!generation||!generation.candidateAvailable
-    ||!actor.analysis.ir||JSON.stringify(actor.analysis.ir)!==JSON.stringify(generation.analysis.ir))
-    throw new TypeError('生物候选分段或生成身份已改变。');
-  const response=assertCurrentBrowserActorIntakeCandidate(encounterActorInput(report,actor),generation);
-  if(!isUsableActorCandidateArtifact(response.result.artifact))throw new TypeError('当前生物没有可读取的 Actor 候选。');
-  return{key,label:actor.analysis.candidate?.label??key,source:actor.source,finalSource:generation.finalSource!,
-    artifact:response.result.artifact,artifactHash:hashArtifact(response.result.artifact),strictStatus:response.result.status,
-    findings:generation.findings.map(finding=>`${finding.code}：${finding.message}`)};
+  const actor=report.actors.find(actor=>actor.key===key);
+  const generation=actor?.generation;
+  const response=generation?.candidateResponse??generation?.response;
+  if(!actor||!generation||!response||!('result' in response)||!response.result.artifact)
+    throw new TypeError('当前生物没有可读取的 Actor 候选。');
+  const findings=generation.findings.map(finding=>`${finding.code}：${finding.message}`);
+  if(report.sourceHash!==hashSource(report.source)||actor.source!==report.source.slice(actor.start,actor.end))
+    findings.push('保存候选的来源快照与当前资料不同；已保存的 Actor 保留。');
+  return{key,label:actor.analysis.candidate?.label??String(response.result.artifact.name??key),source:actor.source,
+    finalSource:generation.finalSource??generation.markdown??actor.source,artifact:response.result.artifact,
+    artifactHash:hashArtifact(response.result.artifact),strictStatus:response.result.status,findings};
 }
 
 function encounterActorInput(report:EncounterIntakeReport,actor:EncounterIntakeActor){
   return{source:actor.source,sourceName:actor.analysis.candidate?.label??actor.key,displayName:actor.analysis.candidate?.label??actor.key,
     sourceScope:'single' as const,requestId:`encounter-ai-${report.sourceHash.slice(0,12)}-${actor.key}`,fvttVersion:'14.364',systemVersion:'5.3.3'};
 }
+function retainEncounterArtifacts(bundle:ForgeEncounterPackage,report:EncounterIntakeReport):ForgeEncounterPackage{
+  return {...bundle,actors:bundle.actors.map(input=>{
+    const actor=report.actors.find(actor=>actor.key===input.key),generation=actor?.generation;
+    const response=generation?.candidateResponse;
+    if(generation?.finalSource!==input.source||!response||!('result' in response)||!response.result.artifact)return input;
+    const presentation=actor?.rulePresentation??actorRulePresentation(response);
+    return {...input,artifact:response.result.artifact,artifactHash:hashArtifact(response.result.artifact),
+      reviewFindings:generation.findings.map(finding=>`${finding.code}：${finding.message}`),
+      ...(presentation?{rulePresentation:presentation}:{})};
+  })};
+}
+
 function continuationOptions(options:EncounterIntakeReport['requestedOptions']){
   return JSON.stringify({protocol:options?.protocol,reasoning:options?.reasoning,maxAttempts:options?.maxAttempts});
 }
@@ -175,12 +185,8 @@ export function retryingMonsterProvider(
   const call=<T>(stage:Extract<EncounterRetryStage,'discover'|'extract'|'review'|'repair'>,invoke:(provider:MonsterIntakeAiProvider)=>Promise<T>)=>
     retryEncounterStage(stage,retry,signal=>invoke(createAttempt(signal)));
   const correctionCounts=new WeakMap<Parameters<MonsterIntakeAiProvider['extract']>[0],0|1>();
-  return {
-    providerName:identity.providerName,extractionModel:identity.extractionModel,reviewModel:identity.reviewModel,
-    getExtractionCorrectionCount:request=>correctionCounts.get(request)??0,
-    discover:request=>call('discover',provider=>provider.discover(request)),
-    extract:request=>call('extract',async provider=>{
-      try{return await provider.extract(request);}
+  const extract=<T>(request:Parameters<MonsterIntakeAiProvider['extract']>[0],invoke:(provider:MonsterIntakeAiProvider)=>Promise<T>)=>call('extract',async provider=>{
+      try{return await invoke(provider);}
       catch(error){
         // Once this creature spent its model correction, a fresh transport
         // attempt must not recreate a provider with a fresh correction budget.
@@ -190,7 +196,14 @@ export function retryingMonsterProvider(
         }
         throw error;
       }finally{correctionCounts.set(request,provider.getExtractionCorrectionCount?.(request)??0);}
-    }),
+    });
+  return {
+    providerName:identity.providerName,extractionModel:identity.extractionModel,reviewModel:identity.reviewModel,
+    getExtractionCorrectionCount:request=>correctionCounts.get(request)??0,
+    discover:request=>call('discover',provider=>provider.discover(request)),
+    extract:request=>extract(request,provider=>provider.extract(request)),
+    ...(identity.extractAnswer?{extractAnswer:(request:Parameters<MonsterIntakeAiProvider['extract']>[0])=>
+      extract(request,provider=>provider.extractAnswer?provider.extractAnswer(request):provider.extract(request))}:{}),
     review:rejectForgeAiReview,
     repair:request=>call('repair',provider=>provider.repair(request)),
   };
@@ -216,18 +229,20 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
   const report:EncounterIntakeReport={version:1,source,sourceHash:hashSource(source),model:provider.extractionModel,
     reviewModel:provider.reviewModel,evidenceMode:input.evidenceMode??'standard',requestedOptions:input.requestedOptions,status:'running',actors:[],findings:[]};
   let continuationValidated=!input.previousReport;
-  const progress=(message:string)=>{signal?.throwIfAborted();input.onProgress?.(message);};
-  const publish=()=>input.onReport?.(structuredClone(report));
+  const progress=(message:string)=>{signal?.throwIfAborted();try{input.onProgress?.(message);}
+    catch{report.findings.push('进度显示未完成；生成资料与 Actor 保留。');}};
+  const publish=()=>{try{input.onReport?.(structuredClone(report));}
+    catch{report.findings.push('报告回传未完成；生成资料与 Actor 保留。');}};
   const pending=(findings:string[]):EncounterIntakeResult=>{report.status=signal?.aborted?'failed':'needs_review';report.findings=[...new Set([...report.findings,...findings])];
     if(!continuationValidated)return{report,continuationRejected:report.findings.join('\n')};
     publish();return {report};};
   const prepareRetainedActors=async():Promise<PreparedForgeEncounter|undefined>=>{
-    if(!report.members?.length||report.members.length!==report.actors.length||report.members.some(member=>member.status!=='available')
-      ||report.actors.some(actor=>!actor.generation?.finalSource||!actor.generation.candidateAvailable))return;
+    const available=report.actors.filter(actor=>actor.generation?.finalSource&&actor.generation.candidateResponse&&'result' in actor.generation.candidateResponse&&actor.generation.candidateResponse.result.artifact);
+    if(!available.length)return;
     const bundle:ForgeEncounterPackage={schema:'fvtt-json-forge-encounter',version:1,id:`intake-${report.sourceHash.slice(0,20)}`,
-      label:input.label,target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:report.actors[0]!.key,
-      actors:report.actors.map(actor=>({key:actor.key,label:actor.analysis.candidate!.label,source:actor.generation!.finalSource!,sourceHash:hashSource(actor.generation!.finalSource!)})),macros:[],assets:[]};
-    return prepareForgeEncounter(serializeForgeEncounterPackage(bundle),signal);
+      label:input.label.trim()||'生物资料',target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:available[0]!.key,
+      actors:available.map(actor=>({key:actor.key,label:actor.analysis.candidate!.label,source:actor.generation!.finalSource!,sourceHash:hashSource(actor.generation!.finalSource!)})),macros:[],assets:[]};
+    return prepareForgeEncounter(serializeForgeEncounterPackage(retainEncounterArtifacts(bundle,report)),signal);
   };
   const finishDeferred=async(prepared:PreparedForgeEncounter):Promise<EncounterIntakeResult>=>{
     report.automationReview={status:'not_requested'};report.outputLanguage='source';
@@ -245,16 +260,14 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
     return {report,prepared};
   };
   try{
-    conditionCatalog=decodeConfiguredConditionCatalog(input.conditionCatalog??[]);
+    try{conditionCatalog=decodeConfiguredConditionCatalog(input.conditionCatalog??[]);}
+    catch(error){report.findings.push(`配套状态目录未能读取：${safeFailure(error)}；基本角色继续生成。`);}
     report.conditionCatalogHash=hashSource(JSON.stringify(conditionCatalog));
-    if(!source.trim()||source.length>24000)throw new Error('原始战斗资料须为1至24000个字符。');
-    if(!input.label.trim()||input.label.length>160)throw new Error('请填写不超过160字符的资料名称。');
+    if(!source.trim())throw new Error('请提供生物原始资料。');
     if(input.drafts?.length||input.previousReport){if(!/^[a-f0-9]{64}$/.test(input.draftParentHash??''))throw new Error('缺少草稿来源报告指纹。');report.recovery={parentReportHash:input.draftParentHash!,mode:'fresh-validation-and-review'};}
     const previous=input.previousReport;
     if(previous&&(previous.source!==source||previous.sourceHash!==report.sourceHash
-      ||hashSource(JSON.stringify(previous))!==input.draftParentHash||previous.conditionCatalogHash!==report.conditionCatalogHash
-      ||previous.model!==provider.extractionModel||previous.reviewModel!==provider.reviewModel
-      ||continuationOptions(previous.requestedOptions)!==continuationOptions(input.requestedOptions)))
+      ||hashSource(JSON.stringify(previous))!==input.draftParentHash))
       throw new TypeError('继续任务的来源、报告、状态目录或模型／生成选项已改变。');
     if(previous)for(const actor of previous.actors)if(actor.generation?.candidateAvailable)encounterActorCandidate(previous,actor.key);
     progress('正在识别资料中的全部生物。');
@@ -265,9 +278,12 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
     report.discovery={mode:explicit.length>=2?'ordinary-headings':single?'single-statblock':'ai-discovery',providerCalls:local?0:1};
     const discovery=local?{candidates:local}:await provider.discover({source,sourceSha256:report.sourceHash,chunkStart:0,chunkEnd:source.length});
     signal?.throwIfAborted();
-    const raw=normalizeDiscovery(source,discovery.candidates);
-    if(raw.length<1||raw.length>6)return pending(['生物与召唤物入口需要识别1至6种生物；不会自动选取第一种或忽略其余生物。']);
-    const candidates=partitionDiscoveryCandidates(source,raw);
+    const resolved=resolveDiscoveryCandidates(source,discovery.candidates,(discovery as any).findings);
+    report.findings.push(...resolved.findings.map(finding=>`${finding.code}：${finding.message}`));
+    report.unassigned=resolved.unassigned;
+    if(resolved.unassigned.some(part=>part.quote.trim()))report.findings.push('部分原文尚未定位到生物；原文已保留，其他成员继续处理。');
+    const candidates=resolved.candidates;
+    if(!candidates.length)return pending(['尚未定位到可处理生物，原始回答和完整来源保留。']);
     if(previous?.members&&(previous.members.length!==candidates.length||previous.members.some((member,index)=>
       member.key!==`actor-${index+1}`||member.start!==candidates[index]!.start||member.end!==candidates[index]!.end)))
       throw new TypeError('继续任务的完整生物清单与当前来源不符。');
@@ -276,7 +292,7 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
       ||input.drafts.some(d=>!candidates.some((_,index)=>d.key===`actor-${index+1}`))))throw new Error('草稿生物清单与当前资料不符。');
     if(input.sourceFeedback?.length){
       if(input.sourceFeedback.length>32||input.sourceFeedback.some(f=>(!input.drafts?.some(d=>d.key===f.actorKey)
-        &&!previous?.actors.some(actor=>actor.key===f.actorKey&&actor.analysis.ir))
+        &&!previous?.actors.some(actor=>actor.key===f.actorKey&&(actor.analysis.ir||actor.analysis.canonicalSource||actor.analysis.sourceText)))
         ||!/^\/(?:creature|claims|coverage|uncertainties)(?:\/|$)/.test(f.path)||f.path.length>240||!f.message.trim()||f.message.length>2000))throw new Error('来源审阅反馈必须对应当前草稿和明确IR字段。');
       report.sourceFeedback=structuredClone(input.sourceFeedback);
     }
@@ -284,6 +300,7 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
     for(const [index,candidate] of candidates.entries()){
       const key=`actor-${index+1}`;
       const member=report.members[index]!;
+      try{
       const actorSource=source.slice(candidate.start,candidate.end);
       const prior=previous?.actors.find(actor=>actor.key===key);
       const draft=input.drafts?.find(d=>d.key===key);
@@ -293,6 +310,8 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
         const candidate=encounterActorCandidate(previous!,key);
         if(prior.start!==member.start||prior.end!==member.end||candidate.source!==actorSource)throw new TypeError('保留候选与当前生物分段不一致。');
         const retained=structuredClone(prior);
+        const presentation=prior.rulePresentation??(prior.generation?.candidateResponse?actorRulePresentation(prior.generation.candidateResponse):undefined);
+        if(presentation)retained.rulePresentation=structuredClone(presentation);
         if(retained.generation?.gmApproval){retained.generation={...retained.generation,status:'ready_for_gm_review',gmApproval:undefined,response:undefined};}
         report.actors.push({...retained,origin:'prior-proposal',reusedCandidate:true});
         member.status='available';member.findings=candidate.findings;publish();
@@ -304,19 +323,22 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
       const actorInput={source:actorSource,sourceName:candidate.label,displayName:candidate.label,sourceScope:'single' as const,
         requestId:`encounter-ai-${report.sourceHash.slice(0,12)}-${key}`,fvttVersion:'14.364',systemVersion:'5.3.3',
         renderMarkdown:(ir:MonsterIntakeIR)=>renderEncounterActorSource(ir,pendingManualRules,actorSource),
-        onStage:(stage:{stage:string;status:string})=>input.onProgress?.(`生物${index+1}/${candidates.length}：${candidate.label} · ${actorStageLabel(stage.stage)} ${actorStageStatus(stage.status)}`)};
+        onStage:(stage:{stage:string;status:string})=>progress(`生物${index+1}/${candidates.length}：${candidate.label} · ${actorStageLabel(stage.stage)} ${actorStageStatus(stage.status)}`)};
       const existingIr=draft?.ir??prior?.analysis.ir;
-      let analysis=existingIr?analyzeBrowserActorIntakeDraft(actorInput,existingIr,provider):await analyzeBrowserActorSourceWithAi(actorInput,provider,signal);
+      const existingSourceText=draft?.sourceText??prior?.analysis.sourceText??prior?.analysis.canonicalSource;
+      let analysis=existingIr?analyzeBrowserActorIntakeDraft(actorInput,existingIr,provider)
+        :existingSourceText?analyzeBrowserActorSourceTextDraft(actorInput,existingSourceText,provider)
+        :await analyzeBrowserActorSourceWithAi(actorInput,provider,signal);
       const feedback=input.sourceFeedback?.filter(f=>f.actorKey===key).map((f,i)=>({id:`source-feedback-${i+1}`,code:'SOURCE_REVIEW_FEEDBACK',path:f.path,message:f.message,blocking:true,origin:'semantic' as const}))??[];
       if(feedback.length){
         const ir=analysis.ir?structuredClone(analysis.ir):undefined;
         if(ir)ir.uncertainties=[...ir.uncertainties.filter(entry=>!feedback.some(finding=>finding.id===entry.id)),
           ...feedback.map(({origin:_origin,...finding})=>({...finding,evidence:[]}))];
-        analysis={...analysis,...(ir?{ir}:{}),status:'needs_review',findings:[...analysis.findings,...feedback],validation:{...analysis.validation!,findings:[...analysis.validation!.findings,...feedback],blocking:[...analysis.validation!.blocking,...feedback]}};
+        analysis={...analysis,...(ir?{ir}:{}),status:'needs_review',findings:[...analysis.findings,...feedback],...(analysis.validation?{validation:{...analysis.validation,findings:[...analysis.validation.findings,...feedback],blocking:[...analysis.validation.blocking,...feedback]}}:{})};
         progress(`生物${index+1}/${candidates.length}：来源审阅反馈已保留为待核对问题；仅明确开启纠错才会请求修改。`);
       }
       signal?.throwIfAborted();
-      const actor:EncounterIntakeActor={key,start:candidate.start,end:candidate.end,source:actorSource,origin:existingIr?'prior-proposal':'fresh-extraction',analysis};report.actors.push(actor);publish();
+      const actor:EncounterIntakeActor={key,start:candidate.start,end:candidate.end,source:actorSource,origin:existingIr||existingSourceText?'prior-proposal':'fresh-extraction',analysis};report.actors.push(actor);publish();
       if(input.requestedOptions?.autoCorrect===true&&analysis.status==='needs_review'&&analysis.ir&&analysis.candidate&&analysis.repairCount===0){
         const original=analysis;
         analysis=await repairBrowserActorIntake(actorInput,analysis,provider,signal);
@@ -324,13 +346,16 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
           findings:[...original.findings,...analysis.findings],stages:analysis.stages};
         actor.analysis=analysis;publish();
       }
-      if(!analysis.ir||!analysis.candidate){
+      if((!analysis.ir&&!analysis.canonicalSource)||!analysis.candidate){
         member.status=signal?.aborted?'cancelled':'failed';member.findings=analysis.findings.map(f=>`${f.code}：${f.message}`);
-        return pending(member.findings.map(f=>`${candidate.label}：${f}`));
+        report.findings.push(...member.findings.map(f=>`${candidate.label}：${f}`));publish();continue;
       }
-      pendingManualRules=manualPreparationRules(analysis.ir!,actorSource,key);
+      try{if(analysis.ir)pendingManualRules=manualPreparationRules(analysis.ir,actorSource,key);}
+      catch(error){report.findings.push(`${candidate.label} 的配套手工规则未准备：${safeFailure(error)}；基本操作继续生成。`);}
       let generation=await (deferred?generateBrowserActorIntakeCandidate:generateAndReviewBrowserActorIntake)(actorInput,analysis,provider,signal);
-      actor.generation=generation;publish();
+      actor.generation=generation;
+      actor.rulePresentation=generation.candidateResponse?actorRulePresentation(generation.candidateResponse):undefined;
+      publish();
       if(input.requestedOptions?.autoCorrect===true&&!deferred&&generation.status==='needs_review'&&generation.review?.verdict==='revise'&&analysis.repairCount===0){
         analysis=await repairBrowserActorIntake(actorInput,generation,provider,signal);actor.analysis=analysis;publish();
         if(analysis.status==='ready_to_generate'){
@@ -339,19 +364,34 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
         }
       }
       actor.generation=generation;
+      actor.rulePresentation=generation.candidateResponse?actorRulePresentation(generation.candidateResponse):undefined;
       if(!generation.candidateResponse||!('result' in generation.candidateResponse)||!generation.candidateResponse.result.artifact){
         member.status=signal?.aborted?'cancelled':'failed';member.findings=generation.findings.map(f=>`${f.code}：${f.message}`);
-        return pending(member.findings.map(f=>`${candidate.label}：${f}`).concat([`${candidate.label}尚无可读取的 Actor 候选。`]));
+        report.findings.push(...member.findings.map(f=>`${candidate.label}：${f}`),`${candidate.label}尚无可读取的 Actor 候选；其他成员继续。`);publish();continue;
       }
       member.status='available';member.findings=generation.findings.map(f=>`${f.code}：${f.message}`);publish();signal?.throwIfAborted();
-      if(!hasManualPreparationEvidence(generation.findings,analysis.ir!,pendingManualRules,actorSource))
+      if(analysis.ir&&!hasManualPreparationEvidence(generation.findings,analysis.ir,pendingManualRules,actorSource))
         report.findings.push(`${candidate.label} 的手工条件准备仍需 GM 核对，完整来源与候选保留。`);
+      }catch(error){
+        signal?.throwIfAborted();member.status='failed';member.findings.push(safeFailure(error));
+        report.findings.push(`${member.label}：${safeFailure(error)}；其他成员继续处理。`);publish();
+      }
     }
-    const concerns=report.actors.flatMap(actor=>actor.generation!.findings.filter(f=>f.blocking).map(f=>`${actor.analysis.candidate!.label}：${f.code} ${f.message}`));
-    if(concerns.length||report.actors.some(actor=>actor.generation?.formalStatus==='failed')){
+    const textMembers=report.actors.filter(actor=>!actor.analysis.ir&&(actor.analysis.canonicalSource||actor.analysis.sourceText));
+    if(textMembers.length){
+      report.generationRoute='actors-only';
+      report.findings.push(...textMembers.map(actor=>actor.generation?.candidateAvailable
+        ?`${actor.analysis.candidate?.label??actor.key} 已使用完整文本生成原生 Actor；未提供结构化 IR，配套控制未生成，复杂规则由 GM 按完整原文处理。`
+        :`${actor.analysis.candidate?.label??actor.key} 的完整文本已保留，本地转换尚未完成；未生成配套控制，其他可用角色继续交付。`));
+      const retained=await prepareRetainedActors();
+      return retained?await finishDeferred(retained):pending(report.findings);
+    }
+    const concerns=report.actors.flatMap(actor=>(actor.generation?.findings??[]).filter(f=>f.blocking).map(f=>`${actor.analysis.candidate!.label}：${f.code} ${f.message}`));
+    if(concerns.length||report.members.some(member=>member.status!=='available')||report.actors.some(actor=>actor.generation?.formalStatus==='failed')){
       report.findings.push(...concerns);report.generationRoute='actors-only';
       report.findings.push('候选含待核对问题；检查结论未提升为通过。完整规则保留，缺少的配套控制由 GM 按原文处理。');
-      return await finishDeferred((await prepareRetainedActors())!);
+      const retained=await prepareRetainedActors();
+      return retained?await finishDeferred(retained):pending(report.findings);
     }
     const native=report.actors.length===1?report.actors[0]:undefined;
     const needsCompanion=(native?.generation?.actorProjection as any)?.items?.some((item:any)=>
@@ -371,9 +411,9 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
       progress('唯一生物已通过原生生成与转换保真检查，省略配套控制配置请求；仍需GM确认。');
       const actorSource=sourceRecovery?renderEncounterActorSource(native.analysis.ir!,[],native.source):native.generation.finalSource!;
       const bundle:ForgeEncounterPackage={schema:'fvtt-json-forge-encounter',version:1,id:`intake-${report.sourceHash.slice(0,20)}`,
-        label:input.label,target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:native.key,
+        label:input.label.trim()||'生物资料',target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:native.key,
         actors:[{key:native.key,label:native.analysis.candidate!.label,source:actorSource,sourceHash:hashSource(actorSource)}],macros:sourceRecovery?(()=>{const command=buildEncounterMacroCommand(sourceRecovery);return[{key:'battle-control',name:sourceRecovery.name,command,commandHash:hashSource(command),bindings:{[native.key]:native.key},covers:[],notes:[sourceRecovery.notes,...sourceRecovery.manualSteps,`原始资料SHA-256：${report.sourceHash}`].join('\n')}];})():[],assets:[]};
-      return await finishDeferred(await prepareForgeEncounter(serializeForgeEncounterPackage(bundle),signal));
+      return await finishDeferred(await prepareForgeEncounter(serializeForgeEncounterPackage(retainEncounterArtifacts(bundle,report)),signal));
     }
     report.generationRoute='encounter-with-controller';
     const request:EncounterAutomationRequest={source,conditionCatalog,actors:report.actors.map(a=>({key:a.key,ir:a.analysis.ir!,source:a.source,artifact:a.generation!.actorProjection}))};
@@ -391,19 +431,22 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
           if(rules.filter(rule=>rule.actorKey===actor.key&&rule.section===required.section
             &&rule.featureName===required.featureName
             && ['gm-manual','status-lifecycle'].includes(rule.capabilityKind??'')).length!==1){
-            return pending([`${actor.key} 的 ${required.section}/${required.featureName} 缺少来源绑定的 GM 手工条件覆盖。`]);
+            report.findings.push(`${actor.key} 的 ${required.section}/${required.featureName} 缺少配套手工条件控制；Actor 与完整规则保留。`);
+            report.generationRoute='actors-only';
+            const retained=await prepareRetainedActors();
+            return retained?await finishDeferred(retained):pending(report.findings);
           }
         }
       }
       const command=buildEncounterMacroCommand(automation);
       const bundle:ForgeEncounterPackage={schema:'fvtt-json-forge-encounter',version:1,id:`intake-${report.sourceHash.slice(0,20)}`,
-        label:input.label,target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:report.actors[0]!.key,
+        label:input.label.trim()||'生物资料',target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:report.actors[0]!.key,
         actors:report.actors.map(a=>{const rendered=renderEncounterActorSource(a.analysis.ir!,rules.filter(r=>r.actorKey===a.key),a.source);return {key:a.key,label:a.generation!.analysis.candidate!.label,source:rendered,sourceHash:hashSource(rendered)};}),
         macros:[{key:'battle-control',name:automation.name,command,commandHash:hashSource(command),
           bindings:Object.fromEntries(report.actors.map(a=>[a.key,a.key])),covers:[...rules.map(r=>({actorKey:r.actorKey,mechanicId:r.mechanicId})),...stagedCovers,...manualCovers],
           notes:[automation.notes,...automation.manualSteps,`原始资料SHA-256：${report.sourceHash}`].join('\n')}],assets:[]};
       progress('工具已生成固定控制入口，正在核对导入文件结构和固定能力配置。');
-      const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(bundle),signal);
+      const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(retainEncounterArtifacts(bundle,report)),signal);
       for(const actor of report.actors){
         const pendingRules=manualPreparationRules(actor.analysis.ir!,actor.source,actor.key);
         if(pendingRules.length===0)continue;
@@ -411,7 +454,7 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
         const finalSource=bundle.actors.find(item=>item.key===actor.key)?.source;
         if(!final||!finalSource||!hasManualPreparationEvidence(
           verifyMonsterIntake(actor.source,actor.analysis.ir!,finalSource,final.artifact).findings,actor.analysis.ir!,pendingRules,actor.source)){
-          return pending([`${actor.key} 的最终 Actor 未证明特殊后果只由 GM 处理。`]);
+          report.findings.push(`${actor.key} 的特殊后果仍需 GM 核对；Actor 保留。`);
         }
       }
       if(deferred){

@@ -111,19 +111,13 @@ describe('encounter automation Intake', () => {
     expect(seen).toHaveLength(2);
   });
 
-  test('Forge automation self-check ignores an old reviewer model without skipping the request', async () => {
-    const input = request();
-    const seen: Array<{ url: string; body: any }> = [];
-    installFakeTransport([{ verdict: 'needs_review', findings: ['A source limit is missing.'] }], seen);
-    const { automationProvider } = createEncounterIntakeProviders({
-      baseUrl: 'https://provider.example/v1', apiKey: 'test-key', model: 'generator',
-      reviewModel: 'old-reviewer', protocol: 'openai-chat', structuredOutput: 'json_object',
-    });
-    const review = await automationProvider.review({ ...input, automation: automation(input) });
-    expect(review).toEqual({ verdict: 'needs_review', findings: ['A source limit is missing.'] });
-    expect(seen).toHaveLength(1);
-    expect(seen[0]!.body.model).toBe('generator');
-    expect(seen[0]!.body.messages[0].content).toContain('Forge self-check with the selected generation model');
+  test('Forge automation self-check stays disabled without issuing an extra model request',async()=>{
+    const input=request(),seen:Array<{url:string;body:any}>=[];
+    installFakeTransport([{verdict:'needs_review',findings:['A source limit is missing.']}],seen);
+    const {automationProvider}=createEncounterIntakeProviders({baseUrl:'https://provider.example/v1',apiKey:'test-key',model:'generator',
+      reviewModel:'old-reviewer',protocol:'openai-chat',structuredOutput:'json_object'});
+    await expect(automationProvider.review({...input,automation:automation(input)})).rejects.toThrow('AI 内容复核已暂时关闭');
+    expect(seen).toHaveLength(0);
   });
 
   test('the AI provider rejects a returned executable command even when legacy manual packages can carry reviewed scripts',async()=>{
@@ -162,6 +156,15 @@ describe('encounter automation Intake', () => {
     }
   });
 
+  test('configuration compilation failure does not issue automatic correction by default',async()=>{
+    const input=request(),seen:Array<{url:string;body:any}>=[];
+    const malformed={version:3,rules:[{featureRef:'absent',kind:'gm-manual',parameters:{},gmSteps:[]}],legendaryRecovery:[],unresolved:[]};
+    installFakeTransport([malformed,malformed],seen);
+    const provider=createEncounterAutomationProvider({baseUrl:'https://provider.example/v1',apiKey:'test-key',model:'test',structuredOutput:'json_object'});
+    await expect(provider.generate(input)).rejects.toBeInstanceOf(EncounterAutomationSelectionNeedsReviewError);
+    expect(seen).toHaveLength(1);
+  });
+
   test('one structural compiler failure gets one data-only correction with unchanged actor evidence',async()=>{
     const input=request();
     const feature=input.actors[0]!.ir.creature.actions[0]!;
@@ -171,7 +174,7 @@ describe('encounter automation Intake', () => {
     const corrected={...proposed,rules:[]};
     const seen:Array<{url:string;body:any}>=[];
     installFakeTransport([proposed,corrected],seen);
-    const provider=createEncounterAutomationProvider({baseUrl:'https://provider.example/v1',apiKey:'test-key',model:'test',structuredOutput:'json_object'});
+    const provider=createEncounterAutomationProvider({baseUrl:'https://provider.example/v1',apiKey:'test-key',model:'test',autoCorrect:true,structuredOutput:'json_object'});
     const result=await provider.generate(input);
     expect(result.selection?.rules).toEqual([]);
     expect(seen).toHaveLength(2);
@@ -189,7 +192,7 @@ describe('encounter automation Intake', () => {
     const malicious={version:2,name:'Unsafe',notes:'',manualSteps:[],legendaryRecovery:[],rules:[],command:'return eval("code")'};
     const seen:Array<{url:string;body:any}>=[];
     installFakeTransport([malicious,malicious],seen);
-    const provider=createEncounterAutomationProvider({baseUrl:'https://provider.example/v1',apiKey:'test-key',model:'test',structuredOutput:'json_object'});
+    const provider=createEncounterAutomationProvider({baseUrl:'https://provider.example/v1',apiKey:'test-key',model:'test',autoCorrect:true,structuredOutput:'json_object'});
     let caught:unknown;
     try{await provider.generate(input);}catch(error){caught=error;}
     expect(caught).toBeInstanceOf(EncounterAutomationSelectionNeedsReviewError);

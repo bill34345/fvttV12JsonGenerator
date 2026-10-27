@@ -93,6 +93,7 @@ export interface EncounterStagedConditionRequirement {
 }
 
 export interface EncounterAutomationProviderOptions {
+  autoCorrect?:boolean;
   /** Explicit private diagnostic sink, disabled by default. */
   responseEvidence?: ProviderResponseEvidenceSink;
   /** Optional data-only rejection capture. No request headers or raw envelopes. */
@@ -558,7 +559,7 @@ export function decodeEncounterAutomationSourceAudit(value: unknown, request: En
 /**
  * Creates the narrowly-scoped provider used after actor IRs have already been
  * produced. It reads only the supplied configuration. A source-bound compiler
- * rejection permits one data-only correction request; transport failures do not.
+ * rejection permits one data-only correction only when explicitly enabled.
  */
 export function createEncounterAutomationProvider(
   options: EncounterAutomationProviderOptions,
@@ -601,7 +602,7 @@ export function createEncounterAutomationProvider(
       try{return compile(content);}
       catch(error){if(!(error instanceof TypeError))throw error;failure=error;}
       const finding=reject(content,failure,1);
-      if(failure instanceof EncounterProposalError&&failure.code==='UNRESOLVED_SOURCE_RULE')throw new EncounterAutomationSelectionNeedsReviewError(finding,rejections);
+      if(configured.autoCorrect!==true||failure instanceof EncounterProposalError&&failure.code==='UNRESOLVED_SOURCE_RULE')throw new EncounterAutomationSelectionNeedsReviewError(finding,rejections);
       let compactPrior:unknown;
       try{if(!sensitive(content))compactPrior=compactEncounterSelection(
         decodeEncounterCapabilitySelection(bindConfiguredSelection(expandEncounterProposal(content,context),request)),context);
@@ -1169,7 +1170,7 @@ function decodeReview(value: unknown): { verdict: 'accepted' | 'needs_review'; f
   return { verdict: raw.verdict, findings: strings(raw.findings, '$review.findings', 0, MAX_MANUAL_STEPS) };
 }
 
-function normalizeProviderOptions(options: EncounterAutomationProviderOptions): Required<Pick<EncounterAutomationProviderOptions, 'baseUrl' | 'apiKey' | 'model' | 'protocol' | 'authScheme' | 'timeoutMs'>> & Pick<EncounterAutomationProviderOptions, 'reviewModel' | 'reviewFocus' | 'reasoning' | 'structuredOutput'|'waitPolicy'|'onCompilationRejected'|'responseEvidence'> {
+function normalizeProviderOptions(options: EncounterAutomationProviderOptions): Required<Pick<EncounterAutomationProviderOptions, 'baseUrl' | 'apiKey' | 'model' | 'protocol' | 'authScheme' | 'timeoutMs'>> & Pick<EncounterAutomationProviderOptions, 'reviewModel' | 'reviewFocus' | 'reasoning' | 'structuredOutput'|'waitPolicy'|'onCompilationRejected'|'responseEvidence'|'autoCorrect'> {
   if (!isRecord(options)) throw new TypeError('Encounter automation provider options must be an object.');
   const baseUrl = boundedText(options.baseUrl, '$provider.baseUrl', 2_048, true).replace(/\/+$/u, '');
   assertProviderUrl(baseUrl);
@@ -1180,7 +1181,7 @@ function normalizeProviderOptions(options: EncounterAutomationProviderOptions): 
   const reviewModel = options.reviewModel === undefined ? undefined : boundedText(options.reviewModel, '$provider.reviewModel', 512, true);
   const timeoutMs = options.timeoutMs ?? 60_000;
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1_000 || timeoutMs > 600_000) throw new TypeError('$provider.timeoutMs must be an integer from 1000 to 600000.');
-  return { baseUrl, apiKey, model, reviewModel, reviewFocus:options.reviewFocus, protocol, authScheme, timeoutMs, reasoning: options.reasoning, structuredOutput: options.structuredOutput,waitPolicy:options.waitPolicy,onCompilationRejected:options.onCompilationRejected,responseEvidence:options.responseEvidence };
+  return { baseUrl, apiKey, model, reviewModel, autoCorrect:options.autoCorrect===true, reviewFocus:options.reviewFocus, protocol, authScheme, timeoutMs, reasoning: options.reasoning, structuredOutput: options.structuredOutput,waitPolicy:options.waitPolicy,onCompilationRejected:options.onCompilationRejected,responseEvidence:options.responseEvidence };
 }
 
 function assertProviderUrl(value: string): void {

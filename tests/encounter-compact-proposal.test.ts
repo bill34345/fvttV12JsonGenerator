@@ -118,7 +118,7 @@ describe('compact source-bound configuration handoff',()=>{
       [(value:any)=>{value.unresolved=[{featureRef:value.rules[0].featureRef,reason:'Unknown source branch'}];},'UNRESOLVED_SOURCE_RULE','/unresolved'],
     ] as const){
       const value=proposal(context);edit(value);const seen:any[]=[],rejected:any[]=[];fake([value,value],seen);
-      let caught:unknown;try{await createEncounterAutomationProvider({...options,onCompilationRejected:e=>rejected.push(e)}).generate(request);}catch(error){caught=error;}
+      let caught:unknown;try{await createEncounterAutomationProvider({...options,autoCorrect:true,onCompilationRejected:e=>rejected.push(e)}).generate(request);}catch(error){caught=error;}
       expect(caught).toBeInstanceOf(EncounterAutomationSelectionNeedsReviewError);
       expect(rejected[0].diagnostic).toEqual(expect.objectContaining({code,path}));
       expect(rejected[0].proposal).toEqual(value);
@@ -129,7 +129,7 @@ describe('compact source-bound configuration handoff',()=>{
     const request=await gazerRequest();request.findings=['Review configuration'];const context=encounterProposalContext(request,[]);
     const value=proposal(context);value.rules[0].gmSteps[0]=options.apiKey;
     const seen:any[]=[],records:any[]=[];fake([value,value],seen);
-    await expect(createEncounterAutomationProvider({...options,onCompilationRejected:e=>records.push(e)}).generate(request)).rejects.toBeInstanceOf(EncounterAutomationSelectionNeedsReviewError);
+    await expect(createEncounterAutomationProvider({...options,autoCorrect:true,onCompilationRejected:e=>records.push(e)}).generate(request)).rejects.toBeInstanceOf(EncounterAutomationSelectionNeedsReviewError);
     expect(records).toHaveLength(2);expect(records[0].diagnostic.code).toBe('SENSITIVE_PROPOSAL');
     expect(JSON.stringify(records)).not.toContain(options.apiKey);
     expect(JSON.parse(seen[1].messages[1].content).prior).toBeUndefined();
@@ -139,7 +139,7 @@ describe('compact source-bound configuration handoff',()=>{
   test('malformed configuration JSON retains bounded redacted data without a second request',async()=>{
     const request=await gazerRequest();request.findings=['Review configuration'];let calls=0;const records:any[]=[];
     globalThis.fetch=(async()=>{calls++;return new Response(JSON.stringify({choices:[{message:{content:'{"version":3,"apiKey":"another-secret","rules":['}}]}),{status:200});}) as unknown as typeof fetch;
-    await expect(createEncounterAutomationProvider({...options,onCompilationRejected:e=>records.push(e)}).generate(request)).rejects.toBeInstanceOf(EncounterAutomationSelectionNeedsReviewError);
+    await expect(createEncounterAutomationProvider({...options,autoCorrect:true,onCompilationRejected:e=>records.push(e)}).generate(request)).rejects.toBeInstanceOf(EncounterAutomationSelectionNeedsReviewError);
     expect(calls).toBe(1);expect(records).toHaveLength(1);
     expect(records[0].proposal).toContain('"version":3');
     expect(records[0].proposal).not.toContain('another-secret');
@@ -167,7 +167,7 @@ describe('compact source-bound configuration handoff',()=>{
     const request=await gazerRequest();request.findings=['Review configuration'];const context=encounterProposalContext(request,[]);
     const correct=proposal(context),legacy:any=expandEncounterProposal(correct,context);legacy.rules[0].featureName='Missing carrier';
     const seen:any[]=[],records:any[]=[];fake([legacy,correct],seen);
-    const result=await createEncounterAutomationProvider({...options,onCompilationRejected:e=>records.push(e)}).generate(request);
+    const result=await createEncounterAutomationProvider({...options,autoCorrect:true,onCompilationRejected:e=>records.push(e)}).generate(request);
     expect(seen).toHaveLength(2);expect(records).toHaveLength(1);
     expect(records[0].diagnostic.path).toBe('/rules/0/featureName');
     expect(JSON.parse(seen[1].messages[1].content).prior).toBeUndefined();
