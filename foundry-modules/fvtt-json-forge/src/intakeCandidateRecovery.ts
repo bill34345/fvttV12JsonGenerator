@@ -1,5 +1,5 @@
 import { hashSource, hashArtifact, decodeForgeActorResponse, decodeForgeItemResponse } from '@fvtt-json-generator/forge-gateway-protocol';
-import { assertCurrentBrowserActorIntakeCandidate, analyzeBrowserActorIntakeDraft, generateBrowserActorIntakeCandidate, type BrowserActorGenerationResult, type BrowserActorIntakeInput } from '@fvtt-json-generator/forge-browser-runtime/ai';
+import { type BrowserActorGenerationResult, type BrowserActorIntakeInput } from '@fvtt-json-generator/forge-browser-runtime/ai';
 import { assertCurrentBrowserItemIntakeCandidate, generateBrowserItemIntakeCandidate, type BrowserItemGenerationResult } from '@fvtt-json-generator/forge-browser-runtime/item-intake';
 import { decodeForgeIntakeReviewBundleText, serializeForgeIntakeReviewBundleV2, type ForgeIntakeReviewBundleV2 } from '@fvtt-json-generator/forge-browser-runtime/intake-review-import';
 
@@ -75,6 +75,7 @@ export function captureIntakeCandidate(input: Input, mode: IntakeCandidateRecord
 
 function assertRecord(record: IntakeCandidateRecord, target: Pick<Input, 'fvttVersion' | 'systemVersion'>, now: number) {
   assertSize(serialized(record)); assertSecretsAbsent(serialized(record),[]);
+  if(record?.mode==='ai-monster')return savedActorResult(record);
   const allowed=['version','savedAt','queueAttempt','mode','input','bundle','candidate','checksum',
     ...(record?.version===2?['generationContract','repairOrigin']:[])];
   if (!record || ![1,2].includes(record.version) || Object.keys(record).some(k => !allowed.includes(k))
@@ -89,7 +90,7 @@ function assertRecord(record: IntakeCandidateRecord, target: Pick<Input, 'fvttVe
   const age = now - Date.parse(record.savedAt);
   if (!Number.isFinite(age) || age < -300_000 || age > INTAKE_CANDIDATE_MAX_AGE_MS) throw Error('保存候选已过期（保留7天）；请显式重新准备。');
   const {input,candidate}=record;
-  if(input.sourceScope!==undefined&&(!['single','discover'].includes(input.sourceScope)||record.mode!=='ai-monster'))throw Error('保存候选的生物来源范围无效。');
+  if(input.sourceScope!==undefined)throw Error('保存候选的物品来源范围无效。');
   const bundle=decodeForgeIntakeReviewBundleText(serializeForgeIntakeReviewBundleV2(record.bundle)).bundle;
   if (input.fvttVersion !== target.fvttVersion || input.systemVersion !== target.systemVersion
     || bundle.mode !== record.mode || bundle.status !== 'ready_for_gm_review' || bundle.gmApproval || candidate.gmApproval
@@ -101,61 +102,44 @@ function assertRecord(record: IntakeCandidateRecord, target: Pick<Input, 'fvttVe
   const result=decoded.value.result;
   if (bundle.candidateResponse?.artifactHash !== jsonHash(result.artifact) || bundle.candidateResponse.status !== result.status
     || bundle.sourceIdentity?.sourceId !== result.sourceIdentity.sourceId || bundle.sourceIdentity.finalSourceHash !== result.sourceIdentity.sourceHash) throw Error('保存候选的来源或产物指纹不一致。');
-  if(record.mode==='ai-monster')assertCurrentBrowserActorIntakeCandidate(input,candidate as BrowserActorGenerationResult);
-  else assertCurrentBrowserItemIntakeCandidate(input,candidate as BrowserItemGenerationResult);
-  const resistance=(result.artifact as any)?.system?.resources?.legres?.max;
-  if(record.version===2&&record.mode==='ai-monster'&&Number.isSafeInteger(resistance)&&resistance>0
-    &&(candidate as BrowserActorGenerationResult).analysis.ir?.creature.legendary?.resistanceMax===undefined){
-    throw Error(`这份候选的角色数据是${resistance}次传奇抗性，但同时保存的提取数据没有对应的独立计数，无法核对恢复是否完整；原记录保留。`);
-  }
-  if(record.repairOrigin!==undefined){
-    const origin=record.repairOrigin;
-    if(!origin||typeof origin!=='object'||Array.isArray(origin))throw Error('修正前候选格式不受支持。');
-    const candidateKeys=['candidateAvailable','status','analysis','rawSourceHash','finalSourceHash','finalSource','markdown','evidence',
-      'candidateResponse','candidateHash','modelReviewStatus','modelReviewError','deterministicFindings','modelReviewFindings',
-      'modelReviewFindingsHash','actorProjection','formalStatus','intakeVerificationStatus','review','findings','stages','provider','calls','errorCode'];
-    const analysisKeys=['status','sourceScope','attemptId','rawSourceHash','candidates','candidate','ir','validation','evidence','findings','stages','provider','calls','repairCount','errorCode'];
-    if(record.mode!=='ai-monster'||Object.keys(origin).some(key=>!['candidate','bundle'].includes(key))
-      ||!origin.candidate||!origin.bundle||origin.bundle.attemptId!==bundle.attemptId
-      ||Object.keys(origin.candidate).some(key=>!candidateKeys.includes(key))||Object.hasOwn(origin.bundle,'repairOrigin')
-      ||!origin.candidate.analysis||Object.keys(origin.candidate.analysis).some(key=>!analysisKeys.includes(key))
-      ||origin.candidate.analysis?.attemptId!==candidate.analysis.attemptId
-      ||origin.candidate.analysis?.repairCount!==0||candidate.analysis.repairCount!==1
-      ||JSON.stringify(origin.candidate.provider)!==JSON.stringify(candidate.provider))throw Error('修正前候选的身份或次数不一致。');
-    const originBody={version:1 as const,savedAt:record.savedAt,mode:record.mode,input,bundle:origin.bundle,candidate:origin.candidate};
-    assertRecord({...originBody,checksum:hashSource(serialized(originBody))},target,now);
-  }
+  assertCurrentBrowserItemIntakeCandidate(input,candidate as BrowserItemGenerationResult);
+  if(record.repairOrigin!==undefined)throw Error('修正前候选格式不受支持。');
   return result;
 }
 
-/** No network provider is constructed. Current validators/renderers/workflows
- * must reproduce the saved formal response before any candidate is restored. */
+function savedActorResult(record:IntakeCandidateRecord){
+  const response=record.candidate?.candidateResponse;
+  if(![1,2].includes(record.version)||!response||!('result'in response)||!('artifact'in response.result)||!response.result.artifact){
+    throw Error('保存记录没有 Actor 产物；原记录保留。');
+  }
+  return response.result;
+}
+
+/** Actor recovery reads the saved artifact. Item recovery retains its own
+ * generation contract and local reproducibility checks. */
 export async function revalidateIntakeCandidate(record: IntakeCandidateRecord,
   target: Pick<Input,'fvttVersion'|'systemVersion'>, now = Date.now()): Promise<IntakeCandidateRecord> {
-  const result=assertRecord(record,target,now), saved=record.candidate;
+  if(record.mode==='ai-monster'){
+    savedActorResult(record);
+    const restored=JSON.parse(serialized(record)) as IntakeCandidateRecord;
+    const candidate=restored.candidate as BrowserActorGenerationResult;
+    delete candidate.gmApproval;delete candidate.response;
+    delete restored.bundle.gmApproval;
+    candidate.status='ready_for_gm_review';candidate.candidateAvailable=true;
+    restored.bundle.status='ready_for_gm_review';
+    if(record.checksum!==hashSource(serialized(body(record)))){
+      const issue={id:'saved-candidate-checksum',code:'SAVED_CANDIDATE_CHECKSUM_MISMATCH',path:'/recovery',
+        message:'保存记录与原指纹不同；已读取其中的 Actor，未继承原采用记录。原文件未改写。',blocking:false,origin:'schema' as const};
+      candidate.findings=[...(candidate.findings??[]),issue];
+      candidate.deterministicFindings=[...(candidate.deterministicFindings??[]),issue];
+    }
+    return restored;
+  }
+  const result=assertRecord(record,target,now),saved=record.candidate as BrowserItemGenerationResult;
   const forbidden=async()=>{throw Error('候选本地重验不得请求模型。');};
   const provider={...saved.provider,discover:forbidden,extract:forbidden,review:forbidden,repair:forbidden} as any;
   const input={...record.input,sourceId:result.sourceIdentity.sourceId,autoCorrect:false};
-  const analysis=record.mode==='ai-monster'
-    ? {...(saved as BrowserActorGenerationResult).analysis,...analyzeBrowserActorIntakeDraft(input as BrowserActorIntakeInput,(saved as BrowserActorGenerationResult).analysis.ir!,provider),
-      attemptId:saved.analysis.attemptId,calls:saved.analysis.calls,repairCount:saved.analysis.repairCount,stages:saved.analysis.stages}
-    :saved.analysis;
-  const fresh=record.mode==='ai-item'
-    ? await generateBrowserItemIntakeCandidate(input as any,saved.analysis as any,provider)
-    : await generateBrowserActorIntakeCandidate(input as any,analysis as any,provider);
-  if(record.mode==='ai-monster'){
-    const ir=(saved as BrowserActorGenerationResult).analysis.ir;
-    const savedCapacity=(result.artifact as any)?.system?.resources?.legres?.max;
-    const freshResponse=fresh.candidateResponse;
-    const freshArtifact=freshResponse&&'result'in freshResponse&&'artifact'in freshResponse.result?freshResponse.result.artifact:undefined;
-    const freshCapacity=(freshArtifact as any)?.system?.resources?.legres?.max;
-    // A saved native value is evidence of a historical representation gap,
-    // never a source from which to fill or overwrite the current model IR.
-    if(ir?.creature.legendary?.resistanceMax===undefined&&Number.isSafeInteger(savedCapacity)&&savedCapacity>0
-      &&freshCapacity!==undefined&&freshCapacity!==savedCapacity){
-      throw Error(`保存候选的传奇抗性为${savedCapacity}次，但其旧中间数据未保存独立计数，当前版本无法无损重建；请重新提取。原记录保留。`);
-    }
-  }
+  const fresh=await generateBrowserItemIntakeCandidate(input as any,saved.analysis,provider);
   if(fresh.status!=='ready_for_gm_review' || fresh.finalSource!==saved.finalSource
     || jsonHash(fresh.candidateResponse)!==jsonHash(saved.candidateResponse)
     || jsonHash(fresh.deterministicFindings??fresh.findings)!==jsonHash(saved.deterministicFindings??saved.findings)) {
@@ -167,10 +151,10 @@ export async function revalidateIntakeCandidate(record: IntakeCandidateRecord,
 type Envelope={version:1;revision:number;entries:Record<string,IntakeCandidateRecord>};
 function decode(raw:string|null):Envelope {
   if(raw===null)return{version:1,revision:0,entries:{}};
-  assertSize(raw);const value=JSON.parse(raw);
+  const value=JSON.parse(raw);
   if(!value||value.version!==1||!Number.isSafeInteger(value.revision)||value.revision<0
     ||Object.keys(value).some(k=>!['version','revision','entries'].includes(k))||!value.entries||typeof value.entries!=='object'||Array.isArray(value.entries)
-    ||Object.keys(value.entries).length>2001||Object.keys(value.entries).some(k=>!keyAllowed(k)))throw Error('本地候选存储格式损坏。');
+    ||Object.keys(value.entries).some(k=>!keyAllowed(k)))throw Error('本地候选存储格式损坏。');
   return value;
 }
 export class MemoryIntakeCandidateStore implements IntakeCandidateStore {

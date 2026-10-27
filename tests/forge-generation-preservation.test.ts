@@ -23,24 +23,25 @@ test('the former delivery fallback preserves every original field even for inval
   }
 });
 
-test('invalid operation conversion reports no Actor and retains complete source, attack, damage and other abilities',async()=>{
+test('an unprojectable formula retains its Actor, source, attack, other damage and abilities',async()=>{
   const ir=structuredClone(ankheg.ir);ir.creature.actions[0]!.sourceOperations![0]!.damage![0]!.formula='not a die';
   const current={...input,source:ankheg.source},analysis=analyzeBrowserActorIntakeDraft(current,ir as any,provider),before=structuredClone(analysis);
   const result=await generateBrowserActorIntakeCandidate(current,analysis,provider);
-  expect(result.status).toBe('failed');expect(result.candidateAvailable).toBe(false);expect(result.candidateResponse).toBeUndefined();
+  expect(result.status).toBe('ready_for_gm_review');expect(result.candidateAvailable).toBe(true);expect(result.candidateResponse).toBeDefined();
   expect(result.analysis.ir).toEqual(before.ir);expect(result.analysis.evidence).toEqual(before.evidence);
   expect(result.analysis.candidate?.quote).toBe(ankheg.source);expect(analysis).toEqual(before);
-  expect(result.findings.some(f=>f.code==='FORGE_WORKFLOW_FAILED')).toBe(true);
+  expect(result.findings.some(f=>f.code==='INVALID_STRUCTURE')).toBe(true);
+  expect(JSON.stringify(result.actorProjection)).toContain('not a die');
   expect(result.findings.some(f=>/LITERAL_DELIVERY/u.test(f.code))).toBe(false);
 });
 
-test('malformed canonical Markdown reports its rendering failure without retrying or rewriting the source',async()=>{
+test('malformed optional Markdown retains normal Actor generation and reports its display failure',async()=>{
   let renders=0;const malformed='---\n名称: [unterminated\n---\n';
   const current={...input,renderMarkdown:()=>{renders++;return malformed;}},analysis=analyze(current),before=structuredClone(analysis.ir);
   const result=await generateBrowserActorIntakeCandidate(current,analysis,provider);
-  expect(result.status).toBe('failed');expect(result.candidateAvailable).toBe(false);expect(result.candidateResponse).toBeUndefined();
+  expect(result.status).toBe('ready_for_gm_review');expect(result.candidateAvailable).toBe(true);expect(result.candidateResponse).toBeDefined();
   expect(result.analysis.ir).toEqual(before);expect(result.analysis.candidate?.quote).toBe(LURKER_SOURCE);expect(renders).toBe(1);
-  expect(result.findings.some(f=>f.code==='CANONICAL_RENDER_FAILED'&&f.message.includes('规范资料转换失败'))).toBe(true);
+  expect(result.findings.some(f=>f.code==='CUSTOM_RENDER_INCOMPLETE')).toBe(true);
 });
 
 test('new projection findings remain outside the Actor and do not cause a second render or conversion',async()=>{

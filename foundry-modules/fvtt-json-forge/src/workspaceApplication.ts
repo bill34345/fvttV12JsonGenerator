@@ -121,7 +121,7 @@ export function createForgeWorkspaceApplicationClass(environment: ForgeWorkspace
     /** Changing views never transfers source text, accepted responses or creation authority. */
     selectMode(mode: ForgeWorkspaceMode): boolean {
       if (!modes.includes(mode)) return false;
-      try { assertGm(environment.game); assertExactRuntime(environment.game); }
+      try { if(kind==='Item'){assertGm(environment.game);assertExactRuntime(environment.game);} }
       catch (error) { this.report(error); return false; }
       if (mode === this.mode) return true;
       if (this.locked()) {

@@ -45,6 +45,8 @@ const ACTIVATION_LABELS: Record<string, string> = {
 };
 
 const ATTACK_TYPE_LABELS: Record<string, string> = {
+  melee: 'Melee Attack Roll 近战攻击检定',
+  ranged: 'Ranged Attack Roll 远程攻击检定',
   mwak: 'Melee Attack Roll 近战攻击检定',
   rwak: 'Ranged Attack Roll 远程攻击检定',
   msak: 'Melee Spell Attack Roll 近战法术攻击检定',
@@ -444,11 +446,15 @@ function formatAttackConfig(value: unknown): string {
   const attack = asRecord(value);
   const attackType = asRecord(attack.type);
   const type = scalarText(attackType.value);
+  const classification = scalarText(attackType.classification);
+  const labelType = classification === 'spell' && (type === 'melee' || type === 'ranged')
+    ? type === 'melee' ? 'msak' : 'rsak'
+    : type;
   const ability = scalarText(attack.ability);
   const bonus = scalarText(attack.bonus);
   const flat = attack.flat;
   const parts = [
-    type ? (ATTACK_TYPE_LABELS[type] ?? `Attack Roll 攻击检定（${type}）`) : 'Attack Roll 攻击检定',
+    labelType ? (ATTACK_TYPE_LABELS[labelType] ?? `Attack Roll 攻击检定（${labelType}）`) : 'Attack Roll 攻击检定',
     `能力：${ability ? (ABILITY_LABELS[ability] ?? ability) : UNKNOWN}`,
   ];
   if (flat === true) {

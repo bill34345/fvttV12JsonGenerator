@@ -27,6 +27,23 @@ const TIMES = [
 ];
 
 describe('Forge browser-local batch queue core', () => {
+  test('actor delivery: an Actor with findings can apply directly while preserving its report status',async()=>{
+    const queue=manager(new MemoryForgeBatchQueueStore());
+    let state=await queue.importCollection(createForgeBatchCollection({label:'Direct Actor',entries:[
+      {objectKind:'actor',mode:'ai-monster',rawSource:'Actor source',sourceLabel:'Actor'}]}));
+    const id=state.jobs[0]!.id;await queue.startJob(id);
+    state=await queue.settleJob(id,gmActorReview('ready_for_gm_review'));
+    const proof=state.jobs[0]!.latestReview!,sourceId=proof.sourceIdentity!.sourceId;
+    state=await queue.beginApply(id);expect(state.jobs[0]!.status).toBe('applying');
+    state=await queue.finishApply(id,{status:'created',objectKind:'actor',sourceId,
+      sourceHash:proof.sourceIdentity!.finalSourceHash,artifactHash:proof.candidateResponse!.artifactHash!,
+      uuid:`Actor.${hashArtifact({sourceId}).slice(0,16)}`});
+    expect(state.jobs[0]!.status).toBe('applied');
+    expect(state.jobs[0]!.latestReview?.status).toBe('ready_for_gm_review');
+    expect(state.jobs[0]!.latestReview?.candidateResponse?.status).toBe('needs_review');
+    expect(state.jobs[0]!.latestReview?.gmApproval).toBeUndefined();
+  });
+
   test('keeps reviewed Actor adoption distinct from accepted through manifest, apply, and reload', async () => {
     const queue = manager(new MemoryForgeBatchQueueStore());
     let state = await queue.importCollection(createForgeBatchCollection({ label: 'Actor candidate', entries: [
@@ -35,7 +52,7 @@ describe('Forge browser-local batch queue core', () => {
     const id = state.jobs[0]!.id;
     await queue.startJob(id);
     await queue.settleJob(id, gmActorReview('ready_for_gm_review'));
-    await expect(queue.beginApply(id)).rejects.toThrow(/accepted proof/u);
+    expect((await queue.load()).jobs[0]!.status).toBe('ready_for_gm_review');
     const adopted = gmActorReview('reviewed_candidate');
     const altered = structuredClone(adopted.bundle);
     altered.deterministicFindings[0]!.message = 'Silently changed prior finding';

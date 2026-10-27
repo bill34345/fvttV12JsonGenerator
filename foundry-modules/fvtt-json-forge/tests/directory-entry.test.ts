@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { mountForgeDirectoryButton, openForgeConnectionSettings } from '../src/index';
+import { mountForgeDirectoryButton, openForgeConnectionSettings,openForgeWorkspace } from '../src/index';
 
 function directory() {
   const buttons: any[] = [];
@@ -24,14 +24,23 @@ describe('Forge directory entry', () => {
     expect(buttons[0].dataset.forgeDirectoryEntry).toBe('Item');
     expect(buttons[0].children[1].textContent).toBe('Forge 物品');
   });
-  test('does not expose GM controls to players or unsupported runtime and removes a stale entry', () => {
+  test('does not expose Item GM controls to players or unsupported runtime and removes a stale entry', () => {
     const { root, buttons } = directory();
-    mountForgeDirectoryButton('Actor', root, environment(false));
-    mountForgeDirectoryButton('Actor', root, environment(true, '14.365'));
+    mountForgeDirectoryButton('Item', root, environment(false));
+    mountForgeDirectoryButton('Item', root, environment(true, '14.365'));
     expect(buttons).toHaveLength(0);
-    mountForgeDirectoryButton('Actor', root, environment());
-    mountForgeDirectoryButton('Actor', root, environment(false));
+    mountForgeDirectoryButton('Item', root, environment());
+    mountForgeDirectoryButton('Item', root, environment(false));
     expect(buttons).toHaveLength(0);
+  });
+  test('actor read access: Actor entry can open local saved output outside the write runtime or GM role',()=>{
+    const{root,buttons}=directory();mountForgeDirectoryButton('Actor',root,environment(false,'14.999'));
+    expect(buttons).toHaveLength(1);expect(buttons[0].dataset.forgeDirectoryEntry).toBe('Actor');
+    class Application{rendered=false;render(){this.rendered=true;return this;}async close(){}}
+    const env={...environment(false,'14.999'),game:{...environment(false,'14.999').game,user:{id:'owner',isGM:false},world:{id:'saved-output-world'}},
+      foundry:{applications:{api:{ApplicationV2:Application,HandlebarsApplicationMixin:(Base:any)=>class extends Base{}}}}};
+    expect(()=>openForgeWorkspace('Actor',env,'ai')).not.toThrow();
+    expect(()=>openForgeWorkspace('Item',env,'ai')).toThrow('GM');
   });
 });
 

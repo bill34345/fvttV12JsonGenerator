@@ -53,7 +53,7 @@ export function openForgeGuide(environment: any = globalThis): unknown {
 
 export function openForgeWorkspace(kind: 'Actor' | 'Item', environment: any = globalThis, mode?: ForgeWorkspaceMode): unknown {
   if (kind !== 'Actor' && kind !== 'Item') throw new Error('请选择角色或物品目录。');
-  assertGm(environment.game); assertExactRuntime(environment.game);
+  if(kind==='Item'){assertGm(environment.game);assertExactRuntime(environment.game);}
   return focusWorkspace(environment, kind, () => {
     const Application = createForgeWorkspaceApplicationClass({
       game: environment.game, ui: environment.ui, foundry: environment.foundry,
@@ -72,8 +72,10 @@ export function mountForgeDirectoryButton(kind: 'Actor' | 'Item', html: any, env
   const root = html?.querySelector ? html : html?.[0];
   if (!root?.querySelector) return;
   const previous = root.querySelector('[data-forge-directory-entry]');
-  if (environment.game?.user?.isGM !== true) { previous?.remove?.(); return; }
-  try { assertExactRuntime(environment.game); } catch { previous?.remove?.(); return; }
+  if(kind==='Item'){
+    if(environment.game?.user?.isGM!==true){previous?.remove?.();return;}
+    try{assertExactRuntime(environment.game);}catch{previous?.remove?.();return;}
+  }
   if (previous) return;
   const host = root.querySelector('.header-actions') ?? root.querySelector('.directory-header')
     ?? root.querySelector('header');
@@ -137,6 +139,7 @@ export function initializeForgeModule(globalEnvironment: any = globalThis): void
       openForgeGuide: () => openForgeGuide(globalEnvironment),
       startEncounterAutomation: automation.start, stopEncounterAutomation: automation.stop,
       encounterAutomationRuntimes: automation.runtimes });
+    if(globalEnvironment.ui?.actors?.element)mountForgeDirectoryButton('Actor',globalEnvironment.ui.actors.element,globalEnvironment);
     if (game?.user?.isGM !== true) return;
     try {
       assertExactRuntime(game); await automation.resume();

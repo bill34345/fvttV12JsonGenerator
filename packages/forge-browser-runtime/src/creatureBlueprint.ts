@@ -165,10 +165,6 @@ const LINEAGE_KEYS = ['parentSourceId', 'parentSourceHash', 'changes'] as const;
 const CHANGE_KEYS = ['path', 'before', 'after'] as const;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const DICE_PATTERN = /^([1-9][0-9]*)d(4|6|8|10|12|20|100)(?:([+-])(0|[1-9][0-9]*))?$/u;
-const MAX_COMPONENTS = 8;
-const MAX_SOURCE_UTF8_BYTES = 256 * 1024;
-const MAX_NAME_LENGTH = 100;
-const MAX_FIELD_CHANGE_COUNT = 32;
 
 const CREATURE_SIZE_LABELS: Record<CreatureBlueprintSize, string> = {
   tiny: '微型',
@@ -355,10 +351,6 @@ export function parseCreatureBlueprintSource(content: string): CreatureBlueprint
     throw new TypeError('Creature blueprint source must be a string.');
   }
   const normalized = normalizeSource(content);
-  if (new TextEncoder().encode(normalized).byteLength > MAX_SOURCE_UTF8_BYTES) {
-    throw new TypeError(`Creature blueprint source must be at most ${MAX_SOURCE_UTF8_BYTES} UTF-8 bytes.`);
-  }
-
   const frontmatter = readFrontmatter(normalized);
   const metadataLines = frontmatter.split('\n').filter((line) => line.startsWith(CREATURE_BLUEPRINT_COMMENT_PREFIX));
   if (metadataLines.length !== 1) {
@@ -451,10 +443,6 @@ export function diffCreatureBlueprintFields(
 
 function decodeComponents(value: unknown): CreatureBlueprintComponent[] {
   if (!Array.isArray(value)) throw new TypeError('blueprint.components must be an array.');
-  if (value.length > MAX_COMPONENTS) {
-    throw new TypeError(`blueprint.components must contain at most ${MAX_COMPONENTS} components.`);
-  }
-
   return value.map((entry, index) => {
     const path = `blueprint.components[${index}]`;
     const component = asPlainRecord(entry, path);
@@ -526,9 +514,7 @@ function decodeLineage(value: unknown): CreatureBlueprintLineage {
   assertKeys(lineage, LINEAGE_KEYS, 'blueprint.lineage');
   const parentSourceId = decodeSourceId(lineage.parentSourceId, 'blueprint.lineage.parentSourceId');
   const parentSourceHash = decodeHash(lineage.parentSourceHash, 'blueprint.lineage.parentSourceHash');
-  if (!Array.isArray(lineage.changes) || lineage.changes.length > MAX_FIELD_CHANGE_COUNT) {
-    throw new TypeError(`blueprint.lineage.changes must contain at most ${MAX_FIELD_CHANGE_COUNT} entries.`);
-  }
+  if (!Array.isArray(lineage.changes)) throw new TypeError('blueprint.lineage.changes must be an array.');
   const changes = lineage.changes.map((entry, index) => {
     const path = `blueprint.lineage.changes[${index}]`;
     const change = asPlainRecord(entry, path);
@@ -548,7 +534,7 @@ function decodeLineage(value: unknown): CreatureBlueprintLineage {
 function decodeJsonValue(value: unknown, path: string, depth = 0, stack = new Set<object>()): JsonValue {
   if (depth > 8) throw new TypeError(`${path} is too deeply nested.`);
   if (value === null || typeof value === 'string' || typeof value === 'boolean') {
-    if (typeof value === 'string' && (value.length > 512 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/u.test(value))) {
+    if (typeof value === 'string' && /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/u.test(value)) {
       throw new TypeError(`${path} contains unsafe text.`);
     }
     return value;
@@ -560,7 +546,6 @@ function decodeJsonValue(value: unknown, path: string, depth = 0, stack = new Se
     return value;
   }
   if (Array.isArray(value)) {
-    if (value.length > 32) throw new TypeError(`${path} array is too large.`);
     if (stack.has(value)) throw new TypeError(`${path} must not be cyclic.`);
     stack.add(value);
     const result = value.map((entry, index) => decodeJsonValue(entry, `${path}[${index}]`, depth + 1, stack));
@@ -571,7 +556,6 @@ function decodeJsonValue(value: unknown, path: string, depth = 0, stack = new Se
     throw new TypeError(`${path} must be JSON data.`);
   }
   const record = asPlainRecord(value, path);
-  if (Object.keys(record).length > 32) throw new TypeError(`${path} object is too large.`);
   if (stack.has(record)) throw new TypeError(`${path} must not be cyclic.`);
   stack.add(record);
   const result: Record<string, JsonValue> = {};
@@ -590,8 +574,8 @@ function decodeJsonValue(value: unknown, path: string, depth = 0, stack = new Se
 }
 
 function decodeName(value: unknown, path: string): string {
-  if (typeof value !== 'string' || value.trim() !== value || value.length < 1 || value.length > MAX_NAME_LENGTH) {
-    throw new TypeError(`${path} must be a trimmed non-empty name of at most ${MAX_NAME_LENGTH} characters.`);
+  if (typeof value !== 'string' || value.trim() !== value || value.length < 1) {
+    throw new TypeError(`${path} must be a trimmed non-empty name.`);
   }
   if (/\r|\n|[\u2028\u2029]/u.test(value) || /[\u0000-\u001f\u007f]/u.test(value)) {
     throw new TypeError(`${path} must be a single-line safe name.`);
@@ -735,7 +719,7 @@ function isAllowedChangePath(path: string): boolean {
     return true;
   }
   if (/^\/abilities\/(?:str|dex|con|int|wis|cha)$/u.test(path)) return true;
-  return /^\/components\/(?:[0-7])(?:\/(?:type|name|mode|hitBonus|range|ability|dc|success|damage|damage\/(?:formula|type)))?$/u.test(path);
+  return /^\/components\/(?:0|[1-9]\d*)(?:\/(?:type|name|mode|hitBonus|range|ability|dc|success|damage|damage\/(?:formula|type)))?$/u.test(path);
 }
 
 function stableJsonStringify(value: JsonValue): string {
@@ -753,7 +737,6 @@ function compareJsonValues(
   changes: CreatureBlueprintFieldChange[],
 ): void {
   if (stableJsonStringify(before) === stableJsonStringify(after)) return;
-  if (changes.length >= MAX_FIELD_CHANGE_COUNT) throw new TypeError(`At most ${MAX_FIELD_CHANGE_COUNT} blueprint field changes are supported.`);
 
   if (Array.isArray(before) && Array.isArray(after) && before.length === after.length) {
     for (let index = 0; index < before.length; index += 1) {
@@ -765,7 +748,7 @@ function compareJsonValues(
     // Attack and save are distinct component shapes. Preserve the complete
     // old shape when replacing one with the other, so lineage remains
     // reversible without treating absent properties as authored null values.
-    if (/^\/components\/[0-7]$/u.test(path) && before.type !== after.type) {
+    if (/^\/components\/(?:0|[1-9]\d*)$/u.test(path) && before.type !== after.type) {
       changes.push({ path, before, after });
       return;
     }

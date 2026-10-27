@@ -45,8 +45,6 @@ export interface BlueprintDraft {
   diff?: string;
 }
 
-export const BLUEPRINT_COMPONENT_LIMIT = 8;
-
 const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 const ABILITY_LABELS: Record<(typeof ABILITY_KEYS)[number], string> = {
   str: '力量',
@@ -179,7 +177,7 @@ export function componentMarkup(component: BlueprintComponentDraft, index: numbe
   return `<article class="forge-blueprint-component" data-blueprint-component="${escapeAttribute(component.id)}" aria-labelledby="forge-blueprint-component-${escapeAttribute(component.id)}">
     <header><h4 id="forge-blueprint-component-${escapeAttribute(component.id)}">${escapeHtml(label)} ${index + 1}</h4><button type="button" data-blueprint-remove="${escapeAttribute(component.id)}" aria-label="移除${label}组件">移除</button></header>
     <div class="forge-blueprint-component-grid">
-      <label>名称<input data-blueprint-field="name" value="${escapeAttribute(component.name)}" maxlength="120" autocomplete="off"></label>
+      <label>名称<input data-blueprint-field="name" value="${escapeAttribute(component.name)}" autocomplete="off"></label>
       <label>范围（尺）<input data-blueprint-field="range" value="${escapeAttribute(component.range)}" maxlength="4" inputmode="numeric"></label>
       ${kindFields}
       <label>伤害公式<input data-blueprint-field="damageFormula" value="${escapeAttribute(component.damageFormula)}" maxlength="80" autocomplete="off" placeholder="1d6+2"></label>

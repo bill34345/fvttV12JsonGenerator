@@ -6,14 +6,199 @@ import { convertFinalActorSource } from '@fvtt-json-generator/forge-browser-runt
 import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
 import { ManagedForgeSourceLibrary, MemoryForgeSourceLibraryStore } from '@fvtt-json-generator/forge-browser-runtime/source-library';
 import { ManagedForgeBatchQueue, MemoryForgeBatchQueueStore } from '@fvtt-json-generator/forge-browser-runtime/batch-queue';
+import {createForgeBatchCollection} from '@fvtt-json-generator/forge-browser-runtime/batch-collection';
+import {splitCollection} from '@fvtt-json-generator/ingest-plaintext/plaintext-core';
 import { createForgeWorkspaceApplicationClass, type ForgeWorkspaceEnvironment } from '../src/workspaceApplication';
 import { clearAllForgeSessionApiKeys, markForgeSessionConnectionTested, saveForgeSessionSettings } from '../src/settings';
+import {MemoryIntakeCandidateStore} from '../src/intakeCandidateRecovery';
+import {LURKER_SOURCE,buildValidLurkerIr} from '../../../src/core/intake/__tests__/fixtures/lurker';
 
 const source = readFileSync('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md', 'utf8');
 const itemSource = readFileSync('obsidian/dnd数据转fvttjson/input/items/骑士之盾.md', 'utf8');
 const template = (name: string, context: object) => Handlebars.compile(readFileSync(`foundry-modules/fvtt-json-forge/src/templates/${name}.hbs`, 'utf8'))(context);
 
 describe('unified Forge workspace using its actual templates', () => {
+  test('actor source limits: the actual file input reads and formally generates an Actor source larger than 200KB',async()=>{
+    const biography='Long source biography remains available. '.repeat(6000);
+    const largeSource=source.replace(/^(?:\uFEFF)?---\r?\n/u,'---\n传记: '+JSON.stringify(biography)+'\n');
+    const bytes=new TextEncoder().encode(largeSource).byteLength;expect(bytes).toBeGreaterThan(200_000);
+    let reads=0,aiCalls=0;
+    const c=await makeWorkspace({initialMode:'structured',actor:{services:{convertRawActorSourceWithAi:(async()=>{aiCalls++;throw Error('Standard source must remain local.');}) as any}}});
+    try{
+      c.edit(c.formal(),'source',source);await c.app.formal.generate(c.formal());
+      const original=structuredClone(c.app.formal.response.result.artifact);
+      const input=c.formal().querySelector<HTMLInputElement>('[name="sourceFile"]')!;
+      Object.defineProperty(input,'files',{value:[{name:'large-actor-source.md',type:'text/markdown',size:bytes,text:async()=>{reads++;return largeSource;}}],configurable:true});
+      input.dispatchEvent(new input.ownerDocument.defaultView!.Event('change',{bubbles:true}));
+      for(let count=0;count<100&&c.app.formal.readingFile;count++)await new Promise(resolve=>setTimeout(resolve,0));
+      expect(reads).toBe(1);expect(c.value(c.formal(),'source')).toBe(largeSource);
+      c.button(c.formal(),'generate').click();
+      for(let count=0;count<100&&c.app.formal.controller;count++)await new Promise(resolve=>setTimeout(resolve,0));
+      const actor=c.app.formal.response.result.artifact;
+      expect(actor.system.attributes.hp).toEqual(original.system.attributes.hp);expect(actor.items).toEqual(original.items);
+      expect(actor.system.details.biography.value).toContain(biography.trim());expect(aiCalls).toBe(0);
+      expect(c.notifications).toEqual([]);
+    }finally{await c.cleanup();}
+  });
+  test('actor source limits: adding, generating and reloading more than eight blueprint components keeps every ability',async()=>{
+    const c=await makeWorkspace({initialMode:'blueprint'});
+    try{
+      c.edit(c.formal(),'displayName','Many abilities');
+      const initial=c.app.formal.blueprintDraft.components.length;
+      for(let count=0;count<9;count++)c.button(c.formal(),'blueprint-add-attack').click();
+      const total=initial+9;expect(c.app.formal.blueprintDraft.components).toHaveLength(total);
+      const rows=c.formal().querySelectorAll<HTMLElement>('[data-blueprint-component]');expect(rows).toHaveLength(total);
+      const names=Array.from({length:total},(_,index)=>index===total-1?'Long ability name '.repeat(40).trim():`Attack ${index+1}`);
+      rows.forEach((row,index)=>{
+        for(const[field,value]of Object.entries({name:names[index]!,attackBonus:'5',range:'5',damageFormula:'1d6+2',damageType:'slashing'})){
+          const input=row.querySelector<HTMLInputElement>(`[data-blueprint-field="${field}"]`)!;
+          if(field==='name')expect(input.hasAttribute('maxlength')).toBe(false);
+          input.value=value;input.dispatchEvent(new input.ownerDocument.defaultView!.Event('input',{bubbles:true}));
+        }
+      });
+      c.button(c.formal(),'generate').click();
+      for(let count=0;count<100&&c.app.formal.controller;count++)await new Promise(resolve=>setTimeout(resolve,0));
+      const actor=c.app.formal.response.result.artifact;
+      expect(actor.items.map((item:any)=>item.name)).toEqual(names);
+      c.button(c.formal(),'blueprint-library-save').click();
+      for(let count=0;count<100&&c.app.formal.blueprintLibraryMutation;count++)await new Promise(resolve=>setTimeout(resolve,0));
+      const saved=c.app.formal.blueprintLibraryState.sources[0];expect(saved).toBeDefined();
+      c.button(c.formal(),'clear').click();
+      const select=c.formal().querySelector<HTMLSelectElement>('[name="blueprintLibrarySelect"]')!;
+      select.value=saved.id;select.dispatchEvent(new select.ownerDocument.defaultView!.Event('change',{bubbles:true}));
+      c.button(c.formal(),'blueprint-library-load').click();
+      for(let count=0;count<100&&c.app.formal.blueprintDraft.components.length!==total;count++)await new Promise(resolve=>setTimeout(resolve,0));
+      expect(c.app.formal.blueprintDraft.components).toHaveLength(total);expect(c.app.formal.blueprintSource).toBe(saved.rawSource);
+      expect(c.notifications).toEqual([]);
+    }finally{await c.cleanup();}
+  },20_000);
+  test('actor text answer: the actual batch button generates a complete text answer with local warnings without correction requests',async()=>{
+    const queue=new ManagedForgeBatchQueue(new MemoryForgeBatchQueueStore()),store=new MemoryIntakeCandidateStore();
+    const rawInput='A single creature source for a batch entry.';
+    const plain=splitCollection(readFileSync('tests/fixtures/plaintext/月蚀矿腐化生物数据.md','utf8'))[0]!.quote;
+    const answer='Here is the complete creature.\n\n'+plain;
+    const calls={discovery:0,extraction:0,review:0,repair:0};
+    const provider={providerName:'frozen-warning-text',extractionModel:'fixed',reviewModel:'disabled',
+      discover:async()=>{calls.discovery++;return{schemaVersion:1,candidates:[{id:'one',label:'Batch text',start:0,end:rawInput.length,quote:rawInput}]};},
+      extract:async()=>{throw Error('The complete text answer must not be replaced by an IR request.');},
+      extractAnswer:async()=>{calls.extraction++;return{kind:'source-text' as const,sourceText:answer};},
+      review:async()=>{calls.review++;throw Error('No review request is allowed.');},
+      repair:async()=>{calls.repair++;throw Error('No correction request is allowed.');}};
+    await queue.importCollection(createForgeBatchCollection({label:'Warning text batch',entries:[
+      {objectKind:'actor',mode:'ai-monster',sourceLabel:'Batch text',rawSource:rawInput}]}));
+    saveForgeSessionSettings({providerId:'custom',endpoint:'https://provider.example/v1',protocol:'openai-chat',model:'fixed',apiKey:'fixture-key'});
+    markForgeSessionConnectionTested();
+    const c=await makeWorkspace({initialMode:'ai',intake:{batchQueue:queue,candidateStore:store,services:{createBrowserAiProvider:(()=>provider) as any}}});
+    try{
+      const run=c.button(c.intake(),'batch-run');expect(run.disabled).toBe(false);run.click();
+      for(let count=0;count<100&&c.app.intake.batchRunning;count++)await new Promise(resolve=>setTimeout(resolve,0));
+      expect(c.app.intake.batchRunning).toBe(false);
+      const job=(await queue.load()).jobs[0]!,current=c.app.intake.batchResponses.get(job.id);
+      expect(current,JSON.stringify(c.notifications)).toBeDefined();
+      expect(current.candidate.analysis.ir).toBeUndefined();expect(current.candidate.analysis.status).toBe('needs_review');
+      expect(current.candidate.analysis.canonicalSource).toBeTruthy();expect(current.candidate.analysis.sourceText).toBe(answer);
+      expect(current.candidate.findings).toContainEqual(expect.objectContaining({code:'PLAINTEXT_SOURCE_COVERAGE_GAP'}));
+      expect(current.candidate.candidateAvailable).toBe(true);expect(current.candidate.candidateResponse.result.artifact.items.length).toBeGreaterThan(0);
+      expect(job.status).toBe('ready_for_gm_review');expect(job.latestReview?.sourceText).toBe(answer);
+      expect((await store.load())[job.id]!.candidate.candidateResponse).toEqual(current.candidate.candidateResponse);
+      expect(calls).toEqual({discovery:1,extraction:1,review:0,repair:0});expect(c.notifications).toEqual([]);
+    }finally{await c.cleanup();queue.close();}
+  });
+  test('actor text answer: the same AI workspace generates, downloads and restores a complete Markdown answer without a fabricated IR',async()=>{
+    const store=new MemoryIntakeCandidateStore(),downloads:string[]=[],rawInput='Original user source awaiting AI formatting.';
+    let answers=0,factories=0;
+    const forbidden=async()=>{throw Error('A complete Markdown answer must not trigger another model stage.');};
+    const provider={providerName:'frozen-full-markdown',extractionModel:'fixed',reviewModel:'disabled',
+      discover:forbidden,extract:forbidden,extractAnswer:async()=>{answers++;return{kind:'source-text' as const,sourceText:source};},
+      review:forbidden,repair:forbidden};
+    saveForgeSessionSettings({providerId:'custom',endpoint:'https://provider.example/v1',protocol:'openai-chat',model:'fixed',apiKey:'fixture-key'});
+    markForgeSessionConnectionTested();
+    const first=await makeWorkspace({initialMode:'ai',intake:{candidateStore:store,services:{
+      createBrowserAiProvider:(()=>{factories++;return provider;}) as any,downloadReviewBundle:(_name,content)=>downloads.push(content),
+    }}});
+    let savedArtifact:any;
+    try{
+      first.edit(first.intake(),'source',rawInput);first.edit(first.intake(),'displayName','Text answer');
+      await first.app.intake.analyze(first.intake());
+      expect(first.app.intake.analysis.ir).toBeUndefined();expect(first.app.intake.analysis.sourceText).toBe(source);
+      expect(first.app.intake.analysis.canonicalSource).toBe(source);expect(first.button(first.intake(),'generate').disabled).toBe(false);
+      first.button(first.intake(),'generate').click();
+      for(let count=0;count<50&&first.app.intake.controller;count++)await new Promise(resolve=>setTimeout(resolve,0));
+      expect(first.app.intake.generation.candidateAvailable).toBe(true);
+      savedArtifact=structuredClone(first.app.intake.generation.candidateResponse.result.artifact);
+      expect(savedArtifact.items.length).toBeGreaterThan(0);
+      expect(first.intake().querySelector('[data-raw-source]')!.textContent).toBe(rawInput);
+      expect(first.intake().querySelector('[data-evidence]')!.textContent).toContain('sourceText');
+      first.button(first.intake(),'download-actor').click();expect(JSON.parse(downloads[0]!)).toEqual(savedArtifact);
+      expect(first.button(first.intake(),'repair').disabled).toBe(true);await first.app.intake.repair(first.intake());
+      expect({answers,factories}).toEqual({answers:1,factories:1});
+      const record=(await store.load()).single!;
+      expect((record.candidate.analysis as any).ir).toBeUndefined();expect((record.candidate.analysis as any).sourceText).toBe(source);
+      expect((record.bundle as any).sourceText).toBe(source);
+      expect(record.input.source).toBe(rawInput);
+    }finally{await first.cleanup();}
+    saveForgeSessionSettings({apiKey:'',persistApiKey:false});
+    const second=await makeWorkspace({initialMode:'ai',intake:{candidateStore:store,services:{
+      createBrowserAiProvider:(()=>{throw Error('Text candidate restore constructed a provider.');}) as any,
+      downloadReviewBundle:(_name,content)=>downloads.push(content),
+    }}});
+    try{
+      second.button(second.intake(),'restore-candidate').click();
+      for(let count=0;count<50&&second.app.intake.recoveryBusy;count++)await new Promise(resolve=>setTimeout(resolve,0));
+      expect(second.app.intake.generation.analysis.ir).toBeUndefined();expect(second.app.intake.generation.analysis.sourceText).toBe(source);
+      expect(second.app.intake.generation.candidateResponse.result.artifact).toEqual(savedArtifact);
+      second.button(second.intake(),'download-actor').click();expect(JSON.parse(downloads[1]!)).toEqual(savedArtifact);
+      expect(second.button(second.intake(),'generate').disabled).toBe(false);second.button(second.intake(),'generate').click();
+      for(let count=0;count<50&&second.app.intake.controller;count++)await new Promise(resolve=>setTimeout(resolve,0));
+      expect(second.app.intake.generation.candidateResponse.result.artifact).toEqual(savedArtifact);
+      expect({answers,factories}).toEqual({answers:1,factories:1});
+    }finally{await second.cleanup();}
+  });
+  test('actor read access: saved Actor restore and download work after runtime and GM changes, while create still checks the world',async()=>{
+    const store=new MemoryIntakeCandidateStore(),downloads:string[]=[];
+    let modelCalls=0;
+    const forbidden=async()=>{throw Error('Reading a saved Actor must not request a model.');};
+    const provider={providerName:'frozen-read-access',extractionModel:'fixed',reviewModel:'disabled',
+      discover:forbidden,extract:async()=>{modelCalls++;return buildValidLurkerIr();},review:forbidden,repair:forbidden};
+    saveForgeSessionSettings({providerId:'custom',endpoint:'https://provider.example/v1',protocol:'openai-chat',model:'fixed',apiKey:'fixture-key'});
+    markForgeSessionConnectionTested();
+    const first=await makeWorkspace({initialMode:'ai',intake:{candidateStore:store,services:{createBrowserAiProvider:(()=>provider) as any}}});
+    try{
+      first.edit(first.intake(),'source',LURKER_SOURCE);
+      await first.app.intake.analyze(first.intake());await first.app.intake.generate(first.intake());
+      expect((await store.load()).single).toBeDefined();
+    }finally{await first.cleanup();}
+    const record=(await store.load()).single!,before=JSON.stringify(record);
+    const game={version:'14.999',system:{id:'dnd5e',version:'6.5.0'},user:{id:'gm',isGM:false},world:{id:'fixture-world'}};
+    const second=await makeWorkspace({game,initialMode:'ai',intake:{candidateStore:store,services:{
+      createBrowserAiProvider:(()=>{throw Error('Recovery constructed a network provider.');}) as any,
+      downloadReviewBundle:(_name,content)=>downloads.push(content),
+    }}});
+    try{
+      expect(second.app.selectMode('structured')).toBe(true);expect(second.app.selectMode('ai')).toBe(true);
+      const restore=second.button(second.intake(),'restore-candidate');expect(restore.disabled).toBe(false);restore.click();
+      for(let count=0;count<50&&second.app.intake.recoveryBusy;count++)await new Promise(resolve=>setTimeout(resolve,0));
+      expect(second.app.intake.generation.candidateResponse).toEqual(record.candidate.candidateResponse);
+      expect(second.app.intake.snapshot.target.fvttVersion).toBe(record.input.fvttVersion);
+      expect(second.button(second.intake(),'download-actor').disabled).toBe(false);
+      second.button(second.intake(),'download-actor').click();
+      expect(JSON.parse(downloads[0]!)).toEqual((record.candidate.candidateResponse as any).result.artifact);
+      expect(second.button(second.intake(),'create').disabled).toBe(true);
+      await second.app.intake.create(second.intake());expect(second.app.intake.createdDocument).toBeUndefined();
+      game.user.isGM=true;game.version='14.364';game.system.version='5.3.3';second.app.intake.renderResult(second.intake());
+      expect(second.button(second.intake(),'create').disabled).toBe(false);second.button(second.intake(),'create').click();
+      for(let count=0;count<50&&second.app.intake.creating;count++)await new Promise(resolve=>setTimeout(resolve,0));
+      expect(second.notifications.some(message=>message.includes('response target'))).toBe(true);
+      expect(second.app.intake.createdDocument).toBeUndefined();expect(modelCalls).toBe(1);
+      expect(JSON.stringify((await store.load()).single)).toBe(before);
+    }finally{await second.cleanup();}
+  });
+  test('actor read access: Item workspace keeps its existing GM and runtime checks',async()=>{
+    const game={version:'14.999',system:{id:'dnd5e',version:'6.5.0'},user:{id:'gm',isGM:false},world:{id:'fixture-world'}};
+    const c=await makeWorkspace({game,directoryKind:'Item'});
+    try{expect(c.app.selectMode('structured')).toBe(false);expect(c.app.mode).toBe('ai');}
+    finally{await c.cleanup();}
+  });
   test('normal shared key clearing preserves local GM creation in both Actor and Item AI panes [review disabled]', async () => {
     for (const kind of ['Actor', 'Item'] as const) {
       saveForgeSessionSettings({ providerId: 'custom', endpoint: 'https://provider.example/v1', protocol: 'openai-chat',
@@ -83,7 +268,7 @@ describe('unified Forge workspace using its actual templates', () => {
           await creating;
         } else await c.app.intake.create(c.intake());
         expect({ providerCalls, beforeClear, reviews, approvals, creates, probes }).toEqual({
-          providerCalls: beforeClear, beforeClear, reviews: 0, approvals: 1, creates: 1, probes: 0,
+          providerCalls: beforeClear, beforeClear, reviews: 0, approvals: kind==='Item'?1:0, creates: 1, probes: 0,
         });
       } finally { await c.cleanup(); }
     }
@@ -141,7 +326,7 @@ describe('unified Forge workspace using its actual templates', () => {
     } finally { await c.cleanup(); }
   });
 
-  test('revokes a generated candidate on mode switch and rejects silent source changes', async () => {
+  test('retains a generated Actor across source edits and mode switches', async () => {
     let creates = 0;
     const c = await makeWorkspace({ actor: { services: { createAcceptedForgeActor: async () => {
       creates++; return { status: 'created', uuid: 'Actor.test' } as any;
@@ -153,11 +338,11 @@ describe('unified Forge workspace using its actual templates', () => {
       const input = c.formal().querySelector('[name="source"]') as HTMLTextAreaElement;
       input.value += '\n# additional source';
       await c.app.formal.create();
-      expect(creates).toBe(0);
-      expect(c.button(c.formal(), 'create').disabled).toBe(true);
+      expect(creates).toBe(1);
+      expect(c.button(c.formal(), 'create').disabled).toBe(false);
       c.edit(c.formal(), 'source', source); await c.app.formal.generate(c.formal());
       c.app.selectMode('ai'); c.app.selectMode('structured');
-      expect(c.button(c.formal(), 'create').disabled).toBe(true);
+      expect(c.button(c.formal(), 'create').disabled).toBe(false);
       expect(c.value(c.formal(), 'source')).toBe(source);
     } finally { await c.cleanup(); }
   });
@@ -214,7 +399,7 @@ describe('unified Forge workspace using its actual templates', () => {
       expect(c.value(c.formal(), 'displayName')).toBe('重绘来源');
       expect(c.button(c.formal(), 'create').disabled).toBe(false);
       saveForgeSessionSettings({ model: 'different-test-model' });
-      expect(c.button(c.formal(), 'create').disabled).toBe(true);
+      expect(c.button(c.formal(), 'create').disabled).toBe(false);
     } finally { await c.cleanup(); }
     expect(c.hooks.size).toBe(0);
   });

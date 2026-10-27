@@ -9,6 +9,21 @@ import { CLIENT_STORAGE_KEY, markForgeSessionConnectionTested, saveForgeSessionS
 const NIGHTGAUNT_SOURCE = readFileSync('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md', 'utf8');
 
 describe('Forge Actor Application lifecycle', () => {
+  test('actor delivery: legacy structured preview remains creatable with findings and after editing the next source',async()=>{
+    const response:any=await makeAcceptedResponse();delete response.result.artifactHash;
+    response.result.status='needs_review';response.result.verification.status='needs_review';
+    response.result.diagnostics=[{code:'CONTENT_ISSUE',severity:'warning',stage:'semantic',path:'actor',message:'A field needs attention.'}];
+    let creates=0;const x=makeApplication({createAcceptedForgeActor:(async({response:current}:any)=>{
+      creates++;expect(current).toEqual(response);return {status:'created',actor:{} as any,uuid:'Actor.saved',sourceId:current.result!.sourceIdentity.sourceId,artifactHash:'a'.repeat(64)};
+    }) as any});
+    try{
+      x.application.response=response;x.application.renderResult(x.root);expect(x.root.create.disabled).toBe(false);
+      x.root.source.value='next source';x.application.invalidateWorkspaceCandidate();
+      expect(x.application.response).toEqual(response);expect(x.root.create.disabled).toBe(false);
+      await x.application.create();expect(creates).toBe(1);
+    }finally{await x.application.close();}
+  });
+
   test('shared credential and probe notifications preserve the current structured preview', async () => {
     saveForgeSessionSettings({ providerId: 'custom', endpoint: 'https://provider.example/v1', protocol: 'openai-chat',
       model: 'extract', apiKey: 'page-key' });
@@ -21,8 +36,8 @@ describe('Forge Actor Application lifecycle', () => {
     expect((application as any).response).toBeDefined();
     expect(root.create.disabled).toBe(false);
     saveForgeSessionSettings({ model: 'changed-model' });
-    expect((application as any).response).toBeUndefined();
-    expect(root.create.disabled).toBe(true);
+    expect((application as any).response).toBeDefined();
+    expect(root.create.disabled).toBe(false);
     await application.close();
   });
   test('does not let a stale generation repopulate the preview after source input changes', async () => {
@@ -51,7 +66,7 @@ describe('Forge Actor Application lifecycle', () => {
     expect(root.cancel.disabled).toBe(true);
   });
 
-  test('loads Markdown or TXT into the source and invalidates an existing preview', async () => {
+  test('loads Markdown or TXT into the source and retains the existing preview', async () => {
     const accepted = await makeAcceptedResponse();
     const { application, root } = makeApplication();
     (application as any).response = accepted;
@@ -64,13 +79,13 @@ describe('Forge Actor Application lifecycle', () => {
 
     expect(root.source.value).toBe(NIGHTGAUNT_SOURCE);
     expect(root.displayName.value).toBe('nightgaunt');
-    expect((application as any).response).toBeUndefined();
-    expect(root.preview.hidden).toBe(true);
+    expect((application as any).response).toBeDefined();
+    expect(root.preview.hidden).toBe(false);
     expect(root.status.textContent).toMatch(/已读取 nightgaunt\.md/u);
     expect(root.error.hidden).toBe(true);
   });
 
-  test('reports an unsupported source file without retaining a stale preview', async () => {
+  test('reports an unsupported source file while retaining the existing Actor', async () => {
     const accepted = await makeAcceptedResponse();
     const { application, root, notifications } = makeApplication();
     (application as any).response = accepted;
@@ -78,8 +93,8 @@ describe('Forge Actor Application lifecycle', () => {
     root.sourceFile.files = [sourceFile('not-a-source.json', '{}', 'application/json')];
     await root.sourceFile.onchange?.();
 
-    expect((application as any).response).toBeUndefined();
-    expect(root.preview.hidden).toBe(true);
+    expect((application as any).response).toBeDefined();
+    expect(root.preview.hidden).toBe(false);
     expect(root.status.textContent).toBe('状态：文件读取失败，请重新选择来源文件。');
     expect(root.error.hidden).toBe(false);
     expect(notifications.errors).toContainEqual(expect.stringMatching(/Markdown.*TXT/u));
@@ -108,7 +123,7 @@ describe('Forge Actor Application lifecycle', () => {
 
     expect(root.source.value).toBe('old source');
     expect(root.displayName.value).toBe('Manual name');
-    expect((application as any).response).toBeUndefined();
+    expect((application as any).response).toBeDefined();
   });
 
   test('redirects legacy AI mode before any Provider request', async () => {

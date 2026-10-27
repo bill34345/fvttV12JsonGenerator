@@ -44,7 +44,7 @@ describe('Forge blueprint edge cases', () => {
     }
   });
 
-  test('keeps the 2024 preview independent of editor tabs and clears a stale formal candidate', async () => {
+  test('keeps the 2024 preview independent of editor tabs and retains the generated candidate while editing', async () => {
     const context = makeApplication({ convertFinalActorSource: async () => acceptedResponse() });
     try {
       const { root, dom, application } = context;
@@ -75,11 +75,15 @@ describe('Forge blueprint edge cases', () => {
       expect(statblock.querySelector('.forge-statblock--draft')).toBeNull();
       expect((root.querySelector('[data-preview-badge]') as HTMLElement).textContent).toBe('验证通过');
       expect((root.querySelector('[data-action="create"]') as HTMLButtonElement).disabled).toBe(false);
+      const response = (application as any).response;
+      const generatedPreview = statblock.innerHTML;
       setValue(context, '[name="blueprintHitPoints"]', '42', 'input');
-      expect(statblock.querySelector('.forge-statblock--draft')).not.toBeNull();
-      expect(statblock.textContent).toContain('42');
-      expect((root.querySelector('[data-preview-badge]') as HTMLElement).textContent).toBe('尚未验证');
-      expect((root.querySelector('[data-action="create"]') as HTMLButtonElement).disabled).toBe(true);
+      expect((root.querySelector('[name="blueprintHitPoints"]') as HTMLInputElement).value).toBe('42');
+      expect((application as any).response).toBe(response);
+      expect(statblock.querySelector('.forge-statblock--draft')).toBeNull();
+      expect(statblock.innerHTML).toBe(generatedPreview);
+      expect((root.querySelector('[data-preview-badge]') as HTMLElement).textContent).toBe('验证通过');
+      expect((root.querySelector('[data-action="create"]') as HTMLButtonElement).disabled).toBe(false);
     } finally {
       context.cleanup();
     }
@@ -115,13 +119,15 @@ describe('Forge blueprint edge cases', () => {
     }
   });
 
-  test('rejects a direct DOM edit before create even when no input event fired', async () => {
+  test('creates the selected generated artifact after an unrelated DOM edit without changing that artifact', async () => {
     let createCalls = 0;
+    let createdResponse: ForgeActorResponse | undefined;
     const context = makeApplication({
       convertFinalActorSource: async () => acceptedResponse(),
-      createAcceptedForgeActor: async () => {
+      createAcceptedForgeActor: async ({ response }) => {
         createCalls += 1;
-        throw new Error('stale blueprint reached world creation');
+        createdResponse = response;
+        return { status: 'created', uuid: 'Actor.selected-candidate' } as any;
       },
     });
     try {
@@ -129,6 +135,9 @@ describe('Forge blueprint edge cases', () => {
       setValue(context, '[name="mode"]', 'blueprint', 'change');
       await (application as any).generate(root);
       expect((application as any).response).toBeDefined();
+      const selectedResponse = (application as any).response as ForgeActorResponse;
+      if (!('result' in selectedResponse)) throw new Error('Missing selected Actor result.');
+      const selectedArtifact = structuredClone(selectedResponse.result.artifact);
       expect((root.querySelector('[data-action="create"]') as HTMLButtonElement).disabled).toBe(false);
 
       // Simulate a browser or automation write that changes the control but
@@ -136,10 +145,13 @@ describe('Forge blueprint edge cases', () => {
       (root.querySelector('[name="blueprintHitPoints"]') as HTMLInputElement).value = '77';
       await (application as any).create();
 
-      expect(createCalls).toBe(0);
-      expect((application as any).response).toBeUndefined();
-      expect((root.querySelector('[data-action="create"]') as HTMLButtonElement).disabled).toBe(true);
-      expect(context.notifications.errors).toContain('蓝图内容已变化，请重新生成预览后再创建。');
+      expect(createCalls).toBe(1);
+      expect(createdResponse).toBe(selectedResponse);
+      if (!createdResponse || !('result' in createdResponse)) throw new Error('Missing created Actor result.');
+      expect(createdResponse.result.artifact).toEqual(selectedArtifact);
+      expect((application as any).response).toBe(selectedResponse);
+      expect((root.querySelector('[name="blueprintHitPoints"]') as HTMLInputElement).value).toBe('77');
+      expect(context.notifications.errors).toEqual([]);
     } finally {
       context.cleanup();
     }

@@ -50,6 +50,48 @@ function authoredBlueprint(): CreatureBlueprintV1 {
 }
 
 describe('Forge creature blueprint model', () => {
+  test('actor source limits: nine components and a ninth-component shape change survive the formal workflow',async()=>{
+    const original=authoredBlueprint();
+    const longName='Long ability name '.repeat(40).trim();expect(longName.length).toBeGreaterThan(512);
+    const parent=decodeCreatureBlueprint({...original,name:longName,components:Array.from({length:9},(_,index)=>({
+      ...original.components[0],name:index===8?longName:`Attack ${index+1}`}))});
+    const child=deriveCreatureBlueprint(parent,`${longName} variant`,DERIVED_SOURCE_ID);
+    child.components[8]={type:'save',name:`${longName} save`,ability:'dex',dc:15,range:60,damage:{formula:'4d6',type:'fire'},success:'half'};
+    child.lineage!.changes=diffCreatureBlueprintFields(parent,child);
+    expect(child.lineage!.changes.some(change=>change.path==='/components/8')).toBe(true);
+    const source=renderCreatureBlueprintSource(child);expect(parseCreatureBlueprintSource(source)).toEqual(child);
+    const response=await convertFinalActorSource(buildForgeActorRequest({content:source,displayName:child.name,
+      requestId:'nine-component-source',fvttVersion:'14.364',systemVersion:'5.3.3',sourceId:child.sourceId}));
+    if(!('result'in response)||!response.result.artifact)throw Error('The complete blueprint must generate an Actor.');
+    const items=response.result.artifact.items as any[];
+    expect(response.result.artifact.name).toBe(child.name);
+    expect(items.map(item=>item.name)).toEqual(child.components.map(component=>component.name));
+    expect(Object.values(items[8]!.system.activities)[0]).toMatchObject({type:'save',save:{dc:{formula:'15'}}});
+  });
+  test('actor source limits: a blueprint larger than 256KiB preserves all components through rendering, reading and generation',async()=>{
+    const original=authoredBlueprint(),blueprint=decodeCreatureBlueprint({...original,components:Array.from({length:600},(_,index)=>({
+      ...original.components[0],name:`Attack-${String(index).padStart(4,'0')}-${'x'.repeat(80)}`}))});
+    const source=renderCreatureBlueprintSource(blueprint);expect(new TextEncoder().encode(source).byteLength).toBeGreaterThan(256*1024);
+    expect(parseCreatureBlueprintSource(source)).toEqual(blueprint);
+    const response=await convertFinalActorSource(buildForgeActorRequest({content:source,displayName:blueprint.name,
+      requestId:'large-blueprint-source',fvttVersion:'14.364',systemVersion:'5.3.3',sourceId:blueprint.sourceId}));
+    if(!('result'in response)||!response.result.artifact)throw Error('The large blueprint must generate an Actor.');
+    const items=response.result.artifact.items as any[];
+    expect(items.map(item=>item.name)).toEqual(blueprint.components.map(component=>component.name));
+    expect(items.every(item=>Object.values(item.system.activities).some((activity:any)=>activity.type==='attack'))).toBe(true);
+  });
+  test('actor source limits: lineage retains complete component arrays and more than thirty-two changes',()=>{
+    const original=authoredBlueprint(),extended=deriveCreatureBlueprint(original,'Extended abilities',DERIVED_SOURCE_ID);
+    extended.components=Array.from({length:40},(_,index)=>({...original.components[0],name:`Attack ${index+1}`}));
+    extended.lineage!.changes=diffCreatureBlueprintFields(original,extended);
+    expect(parseCreatureBlueprintSource(renderCreatureBlueprintSource(extended))).toEqual(extended);
+    const changed=deriveCreatureBlueprint(extended,'Renamed abilities');
+    for(const component of changed.components)component.name+=' changed';
+    changed.lineage!.changes=diffCreatureBlueprintFields(extended,changed);
+    expect(changed.lineage!.changes.length).toBeGreaterThan(32);
+    expect(changed.lineage!.changes.some(change=>change.path==='/components/39/name')).toBe(true);
+    expect(parseCreatureBlueprintSource(renderCreatureBlueprintSource(changed))).toEqual(changed);
+  });
   test('records attack-to-save replacement as one reversible component change', () => {
     const parent = createCreatureBlueprint(SOURCE_ID);
     const child = deriveCreatureBlueprint(parent, '替换能力', DERIVED_SOURCE_ID);
@@ -168,10 +210,10 @@ describe('Forge creature blueprint model', () => {
     const base = createCreatureBlueprint(SOURCE_ID);
     expect(() => decodeCreatureBlueprint({ ...base, unexpected: true })).toThrow(/unknown key/u);
     expect(() => decodeCreatureBlueprint({ ...base, ac: 101 })).toThrow(/blueprint\.ac/u);
-    expect(() => decodeCreatureBlueprint({
+    expect(decodeCreatureBlueprint({
       ...base,
       components: Array.from({ length: 9 }, () => base.components[0]),
-    })).toThrow(/components/u);
+    }).components).toHaveLength(9);
     expect(() => decodeCreatureBlueprint({
       ...base,
       components: [{ ...base.components[0], type: 'spell' }],

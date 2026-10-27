@@ -26,7 +26,6 @@ import { claimForgeAiJob, releaseForgeAiJob } from './aiJobGate';
 import { createForgePaneBase, type ForgePaneBinding, type ForgePaneState } from './workspacePane';
 import { renderActorStatblock, renderBlueprintDraftStatblock } from './actorStatblock';
 import {
-  BLUEPRINT_COMPONENT_LIMIT,
   createBlueprintComponent,
   createEmptyBlueprintDraft,
   describeBlueprintDiff,
@@ -94,7 +93,6 @@ const DEFAULT_SERVICES: ForgeApplicationServices = {
 };
 
 const activeGenerationOwners = new Set<object>();
-const MAX_SOURCE_FILE_BYTES = 200_000;
 
 export function createForgeActorApplicationClass(environment: ForgeApplicationEnvironment): any {
   const foundryGlobal = environment.foundry ?? (globalThis as any).foundry;
@@ -179,12 +177,8 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
     invalidateWorkspaceCandidate(): boolean {
       if (this.workspaceState().locked) return false;
       this.cancel();
-      this.response = undefined;
-      this.intake = undefined;
-      this.stageProgress = [];
       this.created = undefined;
-      this.sourceSnapshot = undefined;
-      this.statusMessage = '';
+      this.statusMessage = this.response?'已保留此前生成的 Actor；编辑内容将用于下一次生成。':'';
       this.errorMessage = '';
       const root = this.element as HTMLElement | undefined;
       if (root) this.renderResult(root);
@@ -330,9 +324,6 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
       this.generationRevision += 1;
       this.blueprintGenerationSnapshot = undefined;
       this.controller?.abort();
-      this.response = undefined;
-      this.intake = undefined;
-      this.stageProgress = [];
       this.blueprintSourceRevision = -1;
       this.renderResult(root);
       this.updateBlueprintSource(root);
@@ -340,10 +331,6 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
 
     private addBlueprintComponent(root: HTMLElement, kind: 'attack' | 'save', invalidate: () => void): void {
       if (valueOf(root, 'mode') !== 'blueprint' || this.creating) return;
-      if (this.blueprintDraft.components.length >= BLUEPRINT_COMPONENT_LIMIT) {
-        this.notify('error', `能力组件最多 ${BLUEPRINT_COMPONENT_LIMIT} 项。`);
-        return;
-      }
       this.blueprintDraft.components.push(createBlueprintComponent(kind));
       this.blueprintDirty = true;
       invalidate();
@@ -488,14 +475,10 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
         if (this.creating) return;
         this.generationRevision += 1;
         this.blueprintOperationRevision += 1;
-        this.blueprintGenerationSnapshot = undefined;
         this.controller?.abort();
-        this.response = undefined;
-        this.intake = undefined;
-        this.stageProgress = [];
         this.created = undefined;
         this.readingFile = false;
-        this.statusMessage = '';
+        this.statusMessage = this.response?'已保留此前生成的 Actor；编辑内容将用于下一次生成。':'';
         this.errorMessage = '';
         this.renderResult(root);
         if (valueOf(root, 'mode') === 'blueprint') this.updateBlueprintSource(root);
@@ -609,9 +592,6 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
       this.generationRevision += 1;
       const revision = this.generationRevision;
       this.controller?.abort();
-      this.response = undefined;
-      this.intake = undefined;
-      this.stageProgress = [];
       this.created = undefined;
       this.errorMessage = '';
       this.statusMessage = `正在读取 ${file.name || '资料文件'}…`;
@@ -619,9 +599,6 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
       this.renderResult(root);
       try {
         if (!isSupportedSourceFile(file)) throw new Error('请选择 Markdown（.md）或 TXT（.txt）文件。');
-        if (Number.isFinite(file.size) && file.size > MAX_SOURCE_FILE_BYTES) {
-          throw new Error(`来源文件不能超过 ${MAX_SOURCE_FILE_BYTES / 1_000} KB。`);
-        }
         if (typeof file.text !== 'function') throw new Error('当前浏览器不能读取所选来源文件。');
         const sourceText = await file.text();
         if (this.generationRevision !== revision || this.creating) return;
@@ -648,13 +625,6 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
 
     private async generate(root: HTMLElement): Promise<void> {
       if (this.controller || this.creating || this.readingFile || environment.pane?.active() === false) return;
-      try {
-        assertGm(environment.game);
-        assertExactRuntime(environment.game);
-      } catch (error) {
-        this.notify('error', messageOf(error));
-        return;
-      }
       const mode = valueOf(root, 'mode');
       if (mode === 'ai') {
         this.notify('error', '普通文本 AI 请从 Actor 工作台运行；候选生成不会自动请求付费审核。');
@@ -683,8 +653,7 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
         this.notify('error', '已有 Forge AI Intake 任务正在运行；Actor 与 Item AI 共用一个活动任务上限。');
         return;
       }
-      this.response = undefined;
-      this.intake = undefined;
+      const priorResponse=this.response,priorIntake=this.intake,priorSnapshot=this.sourceSnapshot;
       this.stageProgress = [];
       this.created = undefined;
       this.statusMessage = '正在生成预览…';
@@ -739,8 +708,12 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
           });
           const response = await this.services.convertFinalActorSource(request);
           if (!this.isCurrentGeneration(controller, revision)) return;
-          this.response = response;
-          this.sourceSnapshot = JSON.stringify({ mode, source, displayName });
+          if('result'in response&&response.result.artifact){
+            this.response=response;this.intake=undefined;this.sourceSnapshot=JSON.stringify({mode,source,displayName});
+          }else if(priorResponse){
+            this.response=priorResponse;this.intake=priorIntake;this.sourceSnapshot=priorSnapshot;
+            this.errorMessage='本次未产生新的 Actor；此前完整产物保留。';
+          }else this.response=response;
           this.statusMessage = '';
           if (mode === 'blueprint') {
             this.blueprintGenerationSnapshot = source;
@@ -825,42 +798,15 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
     private async create(): Promise<void> {
       if (!this.response || this.creating || environment.pane?.active() === false) return;
       if (!isApplyable(this.response, this.intake)) {
-        this.notify('error', '只有完整 Forge 与 AI Intake 均为 accepted 的结果才能创建 Actor。');
+        this.notify('error', '当前没有已生成的 Actor 产物。');
         return;
       }
       const root = this.element as HTMLElement | undefined;
-      if (root && valueOf(root, 'mode') !== 'blueprint' && this.sourceSnapshot
-        && this.sourceSnapshot !== JSON.stringify({ mode: valueOf(root, 'mode'), source: valueOf(root, 'source'), displayName: valueOf(root, 'displayName') || 'Forge Actor' })) {
-        this.invalidateWorkspaceCandidate();
-        this.notify('error', '来源已变化，请按当前资料重新生成预览。');
-        return;
-      }
-      if (root && valueOf(root, 'mode') === 'blueprint') {
-        try {
-          const currentSource = this.prepareBlueprintSource(root);
-          if (!this.blueprintGenerationSnapshot || currentSource !== this.blueprintGenerationSnapshot) {
-            this.response = undefined;
-            this.blueprintGenerationSnapshot = undefined;
-            this.renderResult(root);
-            this.notify('error', '蓝图内容已变化，请重新生成预览后再创建。');
-            return;
-          }
-          assertGm(environment.game);
-          assertExactRuntime(environment.game);
-        } catch (error) {
-          this.notify('error', messageOf(error));
-          return;
-        }
-      }
       this.creating = true;
       if (root) this.renderResult(root);
       try {
         assertGm(environment.game);
         assertExactRuntime(environment.game);
-        if (root && valueOf(root, 'mode') === 'blueprint') {
-          const finalSource = this.prepareBlueprintSource(root);
-          if (finalSource !== this.blueprintGenerationSnapshot) throw new Error('蓝图内容已变化，请重新生成预览后再创建。');
-        }
         const result = await this.services.createAcceptedForgeActor({
           game: environment.game,
           response: this.response,
@@ -1144,14 +1090,7 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
       ];
       if (diagnostics) diagnostics.hidden = messages.length === 0;
       if (diagnosticList) diagnosticList.innerHTML = messages.map((message) => `<li>${escapeHtml(message)}</li>`).join('');
-      let currentBlueprintCandidate = false;
-      if (mode?.value === 'blueprint' && this.blueprintGenerationSnapshot) {
-        try {
-          currentBlueprintCandidate = this.currentBlueprintSource(root) === this.blueprintGenerationSnapshot;
-        } catch { /* An incomplete draft cannot retain a formally verified candidate. */ }
-      }
-      const formalArtifact = Boolean(result && 'artifact' in result
-        && (mode?.value !== 'blueprint' || currentBlueprintCandidate));
+      const formalArtifact = Boolean(result && 'artifact' in result && result.artifact);
       if (preview) preview.hidden = !formalArtifact;
       if (statblock) {
         if (formalArtifact && result && 'artifact' in result) statblock.innerHTML = renderActorStatblock(result.artifact);
@@ -1196,7 +1135,6 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
       });
       if (create) create.disabled = this.creating
         || !isApplyable(this.response, this.intake)
-        || (mode?.value === 'blueprint' && !currentBlueprintCandidate)
         || !isCurrentGmRuntime(environment.game);
       if (createdDocument) createdDocument.hidden = !this.created;
       if (createdSummary && this.created) createdSummary.textContent = this.created.readbackWarnings?.length
@@ -1278,21 +1216,8 @@ function isCurrentGmRuntime(game: any): boolean {
   }
 }
 
-function isApplyable(response: ForgeActorResponse | undefined, intake?: BrowserActorIntakeResult): boolean {
-  if (!response) return false;
-  if (intake && (
-    intake.status !== 'accepted'
-    || intake.response !== response
-    || intake.findings.some((finding) => finding.blocking)
-  )) return false;
-  const decoded = decodeForgeActorResponse(response);
-  if (!decoded.ok || !('result' in decoded.value)) return false;
-  const result = decoded.value.result;
-  return result.status === 'accepted'
-    && Boolean(result.artifact && result.artifactHash)
-    && result.verification.status === 'accepted'
-    && result.diagnostics.length === 0
-    && result.actorVerification.warnings.length === 0;
+function isApplyable(response: ForgeActorResponse | undefined, _intake?: BrowserActorIntakeResult): boolean {
+  return !!response&&'result'in response&&!!response.result.artifact;
 }
 
 function buildSafePreview(result: Extract<ForgeActorResponse, { result: unknown }>['result']): unknown {

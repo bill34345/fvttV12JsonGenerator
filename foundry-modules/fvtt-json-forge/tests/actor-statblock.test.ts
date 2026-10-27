@@ -63,6 +63,27 @@ describe('Forge Actor statblock renderer', () => {
     expect(html).toContain('1d8 piercing');
     expect(html).toContain('总伤害未计算');
     expect(html).toContain('效果提示：此项目包含 1 个 Active Effect');
+    const items=(artifact as Record<string,any>).items;
+    const attack=items.flatMap((item:any)=>Object.values<any>(item.system.activities)).find((activity:any)=>activity.type==='attack');
+    const save=items.flatMap((item:any)=>Object.values<any>(item.system.activities)).find((activity:any)=>activity.type==='save');
+    expect(attack.attack).toMatchObject({type:{value:'melee'},ability:'str',flat:false});
+    expect(save.save).toMatchObject({ability:['wis'],dc:{calculation:'con'}});
+    expect(html).toContain('近战攻击检定：+5');expect(html).toContain('DC 12');
+  });
+
+  test('labels v14 melee, ranged and explicit spell classifications without deriving runtime totals',async()=>{
+    const artifact=await generateBasicActor() as Record<string,any>;
+    const activity=artifact.items.flatMap((item:any)=>Object.values<any>(item.system.activities)).find((entry:any)=>entry.type==='attack');
+    for(const[value,classification,label]of[
+      ['melee','weapon','Melee Attack Roll 近战攻击检定'],
+      ['ranged','weapon','Ranged Attack Roll 远程攻击检定'],
+      ['melee','spell','Melee Spell Attack Roll 近战法术攻击检定'],
+      ['ranged','spell','Ranged Spell Attack Roll 远程法术攻击检定'],
+    ]){
+      activity.attack.type={value,classification};const before=structuredClone(artifact),html=renderActorStatblock(artifact);
+      expect(html).toContain(label!);expect(html).toContain('最终命中：未知（由 Foundry 运行时计算');
+      expect(html).toContain('最终 DC：未知（由 Foundry 运行时计算');expect(artifact).toEqual(before);
+    }
   });
 
   test('orders 2024 sections by activation and only shows explicitly provided totals', async () => {
