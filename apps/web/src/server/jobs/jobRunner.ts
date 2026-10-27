@@ -33,6 +33,7 @@ import { assertWorkspacePath, resolveWorkspacePath } from '../paths';
 import {
   addJobFile,
   appendJobLog,
+  getJob,
   jobDir,
   jobInputDir,
   jobOutputDir,
@@ -145,7 +146,7 @@ async function runSingleConvert(job: WebJob, body: WebJobRequest): Promise<void>
   });
 
   const file =
-    result.status === 'accepted'
+    result.outputPath && (result.kind === 'actor' || result.status === 'accepted')
       ? addJobFile(job.id, {
           path: outputPath,
           fileName: basename(outputPath),
@@ -153,7 +154,7 @@ async function runSingleConvert(job: WebJob, body: WebJobRequest): Promise<void>
           label: result.name || basename(outputPath),
         })
       : undefined;
-  if (result.status === 'accepted' && result.iconReviewPath) {
+  if ((result.kind === 'actor' || result.status === 'accepted') && result.iconReviewPath) {
     addJobFile(job.id, {
       path: result.iconReviewPath,
       fileName: basename(result.iconReviewPath),
@@ -454,13 +455,18 @@ function finishJob(
     error: string;
   }>,
 ): void {
+  const current = getJob(id);
+  const values = Object.fromEntries(Object.entries(summary));
+  const actorAvailable = current?.files.some(file => existsSync(file.path)
+    && (values.kind === 'actor' && file.path === values.outputPath
+      || current.type === 'ai-monster-intake' && file.fileName.endsWith('-actor.json'))) ?? false;
   setJobProgress(id, 1, 1, status === 'failed' ? '失败' : '完成');
-  appendJobLog(id, status === 'failed' ? 'error' : 'success', statusText(status));
+  appendJobLog(id, status === 'failed' ? 'error' : 'success', statusText(status, actorAvailable));
   updateJob(id, {
     status,
     warnings,
     failures,
-    summary: Object.fromEntries(Object.entries(summary)),
+    summary: values,
   });
 }
 
@@ -581,6 +587,8 @@ function finishIntakeJob(id: string, result: Awaited<ReturnType<typeof runMonste
       runId: result.runId,
       sourceSha256: result.sourceSha256,
       discoveryCount: result.discoveryCount,
+      discoveryFindings: result.discoveryFindings ?? [],
+      unassigned: result.unassigned ?? [],
       creatures: result.creatures.map((creature) => ({
         id: creature.id,
         label: creature.label,
@@ -597,9 +605,8 @@ function finishIntakeJob(id: string, result: Awaited<ReturnType<typeof runMonste
         },
       })),
     },
-    result.creatures.flatMap((creature) =>
-      creature.findings.filter((finding) => !finding.blocking).map((finding) => finding.message),
-    ),
+    [...(result.discoveryFindings ?? []).map(finding => finding.message), ...result.creatures.flatMap(creature =>
+      creature.findings.map(finding => finding.message))],
     result.creatures
       .filter((creature) => creature.status === 'failed')
       .map((creature) => ({
@@ -634,6 +641,7 @@ function registerIntakeFiles(
   for (const creature of result.creatures) {
     for (const [name, label, contentType] of [
       ['intake-ir.json', `${creature.label} · IR`, 'application/json; charset=utf-8'],
+      ['source-answer.md', `${creature.label} · AI 原始文本回答`, 'text/markdown; charset=utf-8'],
       ['standard.md', `${creature.label} · 候选 Markdown`, 'text/markdown; charset=utf-8'],
       [
         'deterministic-report.json',
@@ -652,7 +660,7 @@ function registerIntakeFiles(
           label,
         });
     }
-    if (creature.status === 'accepted' && creature.actorPath && creature.markdownPath) {
+    if (creature.actorPath && creature.markdownPath) {
       addJobFile(id, {
         path: creature.actorPath,
         fileName: `${creature.id}-actor.json`,
@@ -981,10 +989,15 @@ function hasTranslationConfig(): boolean {
   return Boolean(Bun.env.TRANSLATION_API_KEY || Bun.env.OPENAI_API_KEY);
 }
 
-function statusText(status: WebJobStatus): string {
+function statusText(status: WebJobStatus, actorAvailable: boolean): string {
+  if (actorAvailable) {
+    if (status === 'needs_review') return 'Actor JSON 已生成并可下载；请核对列出的问题。';
+    if (status === 'failed') return 'Actor JSON 已生成并可下载；检查或后续处理未完成，请查看具体问题。';
+    if (status === 'partial') return '已有 Actor JSON 可下载；部分条目或后续处理未完成，请查看具体问题。';
+  }
   if (status === 'succeeded') return '任务完成。';
   if (status === 'partial') return '任务部分完成，请查看失败条目。';
-  if (status === 'needs_review') return '任务需要人工确认；Actor JSON 尚未注册为正式下载。';
+  if (status === 'needs_review') return '任务需要核对，请查看具体问题。';
   if (status === 'failed') return '任务失败。';
   return status;
 }

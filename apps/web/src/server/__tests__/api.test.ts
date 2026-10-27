@@ -14,6 +14,9 @@ import {
   updateJob,
 } from '../jobs/jobStore';
 import { resetRateLimitForTests } from '../security/rateLimit';
+import { createHash } from 'node:crypto';
+import { ParserFactory } from '@fvtt-json-generator/parser';
+import { ActorValidator } from '@fvtt-json-generator/generation/validator';
 
 const SAMPLE_SOURCE = resolve(
   process.cwd(),
@@ -377,6 +380,48 @@ describe('web API', () => {
     expect(runningJobsTotal()).toBe(0);
   });
 
+  it('routes 中文 Actor frontmatter without layout through the existing local parser', async () => {
+    const path = process.env.FORGE_46_CANONICAL_SOURCE;
+    const source = path ? readFileSync(path, 'utf8') : [
+      '---', '名称: 标准路由样本 Canonical Route Fixture', '类型: npc', '护甲等级: 14', '生命值: 21 (6d6)',
+      '能力:', '  力量: 12', '  敏捷: 14', '动作:', '  - 名称: Strike', '    类型: utility', '    描述: Preserve this complete source rule.', '---',
+    ].join('\n');
+    expect(/^layout\s*:\s*creature\s*$/im.test(source)).toBe(false);
+    const parsed = new ParserFactory().parse(source);
+    expect(parsed.name.length).toBeGreaterThan(0);
+    expect(parsed.attributes.hp?.value).toBeGreaterThan(0);
+    expect(parsed.actions?.length).toBeGreaterThan(0);
+    const response = await post('/api/conversions/detect', { fileName: 'canonical-actor.md', content: source });
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.data).toMatchObject({ route: 'single', contentKind: 'actor', cardinality: 'single', confidence: 'high', usesAi: false });
+    expect(runningJobsTotal()).toBe(0);
+    if (path) {
+      expect(readFileSync(path, 'utf8')).toBe(source);
+      console.info(`canonical Actor routing fixture SHA-256: ${createHash('sha256').update(source).digest('hex')}`);
+    }
+  });
+
+  it.each([
+    ['minimal', '名称: 最小路由样本\n类型: npc'],
+    ['nested-abilities', '名称: 嵌套能力样本\n能力:\n  力量: 12\n  敏捷: 14'],
+    ['quoted-crlf', '"名称": "Quoted route fixture"\r\n"类型": "npc"\r\n"生命值": "14 (4d6)"'],
+  ])('routes 中文 Actor frontmatter representation %s without adding content completeness requirements', async (_label, fields) => {
+    const source = `---\n${fields}\n---`;
+    expect(new ParserFactory().parse(source).name.length).toBeGreaterThan(0);
+    const response = await post('/api/conversions/detect', { fileName: 'canonical-fields.md', content: source });
+    const body = await response.json();
+    expect(body.data).toMatchObject({ route: 'single', contentKind: 'actor', usesAi: false });
+  });
+
+  it('keeps explicit Item and non-creature layouts outside the 中文 Actor frontmatter route', async () => {
+    const fields = '名称: Other layout\n类型: npc\n生命值: 14\n护甲等级: 12';
+    const item = await post('/api/conversions/detect', { fileName: 'item.md', content: `---\nlayout: item\n${fields}\n---` });
+    expect((await item.json()).data).toMatchObject({ route: 'single', contentKind: 'item', usesAi: false });
+    const species = await post('/api/conversions/detect', { fileName: 'species.md', content: `---\nlayout: species\n${fields}\n---` });
+    expect((await species.json()).data.route).not.toBe('single');
+  });
+
   it('detects collections and keeps AI-only input as an explicit recommendation', async () => {
     const collectionResponse = await post('/api/conversions/detect', {
       fileName: 'monsters.md',
@@ -696,6 +741,33 @@ describe('web API', () => {
     const actor = await download.json();
     expect(actor._stats.coreVersion).toBe('14.364');
     expect(actor._stats.systemVersion).toBe('5.3.3');
+  });
+
+  it.each(['needs_review', 'failed'] as const)('keeps the Actor download available when a post-generation report fails or needs review (%s)', async checkStatus => {
+    const original = ActorValidator.prototype.validate;
+    ActorValidator.prototype.validate = () => {
+      if (checkStatus === 'failed') throw Error('LOCAL_REPORT_FAILURE');
+      return ['LOCAL_REPORT_REVIEW'];
+    };
+    try {
+      const response = await post('/api/convert/single', { fileName: 'report-failure.md', content: readFileSync(SAMPLE_SOURCE, 'utf8') });
+      const body = await response.json();
+      expect(response.status).toBe(200);
+      expect(body.data.status).toBe(checkStatus);
+      expect(body.data.downloadUrl).toContain('/api/jobs/');
+      const download = await handleApiRequest(new Request(`http://localhost${body.data.downloadUrl}`));
+      expect(download.status).toBe(200);
+      const actor = await download.json();
+      expect(actor.items.length).toBeGreaterThan(0);
+      const code = checkStatus === 'failed' ? 'GEN_LEGACY_VALIDATOR_INCOMPLETE' : 'GEN_LEGACY_VALIDATOR_WARNING';
+      expect(body.data.diagnostics.some((diagnostic: any) => diagnostic.code === code)).toBe(true);
+      const finished = getJob(body.data.jobId)!;
+      expect(finished.files.some(file => file.path === body.data.outputPath && existsSync(file.path))).toBe(true);
+      expect(finished.logs.at(-1)?.message).toContain('Actor JSON 已生成并可下载');
+      expect(finished.logs.at(-1)?.message).not.toContain('尚未注册');
+      expect(finished.logs.at(-1)?.message).not.toContain('未生成');
+      expect(finished.status).toBe(checkStatus);
+    } finally { ActorValidator.prototype.validate = original; }
   });
 
   it('preserves a fractional challenge rating in a browser-ready standard Actor download', async () => {

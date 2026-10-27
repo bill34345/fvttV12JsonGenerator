@@ -1077,13 +1077,13 @@ export function App() {
 
   const reviewCount = reviewBlockerCount(singleResult, job);
   const taskFailed = job?.status === "failed" || singleResult?.status === "failed" || status === "error";
-  const formalArtifactReady = isFormalArtifactReady(singleResult, job);
+  const artifactAvailable = hasGeneratedArtifact(singleResult, job);
   const activeStage =
     status === "loading" || (job && !terminalStatuses.includes(job.status))
       ? "extract"
       : job?.status === "needs_review"
         ? "review"
-        : formalArtifactReady || job?.status === "partial"
+        : artifactAvailable || job?.status === "partial"
           ? "deliver"
           : "input";
   const targetLabel = "Foundry " + fvttVersion + " · " + effectProfile;
@@ -1098,7 +1098,7 @@ export function App() {
       id: "extract",
       label: "提取",
       detail:
-        taskFailed ? "提取失败或中断" : activeStage === "extract"
+        taskFailed && !artifactAvailable ? "提取失败或中断" : activeStage === "extract"
           ? "正在处理"
           : job || singleResult
             ? "已生成结构"
@@ -1110,7 +1110,7 @@ export function App() {
       label: "核对",
       detail: taskFailed ? "未通过核对" : reviewCount
         ? reviewCount + " 项待确认"
-        : formalArtifactReady
+        : artifactAvailable
           ? "无需人工确认"
           : "等待提取",
       icon: <ExclamationTriangleIcon />,
@@ -1118,7 +1118,7 @@ export function App() {
     {
       id: "deliver",
       label: "交付",
-      detail: taskFailed ? "未生成正式产物" : formalArtifactReady ? "正式产物可用" : "等待验收",
+      detail: artifactAvailable ? "已有产物可获取" : taskFailed ? "本次未取得产物" : "等待生成",
       icon: <RocketIcon />,
     },
   ] as const;
@@ -1236,7 +1236,7 @@ export function App() {
               const isActive = stage.id === activeStage;
               const isComplete =
                 index < activeStageIndex ||
-                (stage.id === "deliver" && formalArtifactReady);
+                (stage.id === "deliver" && artifactAvailable);
               const isBlocked = stage.id === "review" && reviewCount > 0;
               return (
                 <button
@@ -1770,7 +1770,7 @@ export function App() {
                     <span>结构化核对</span>
                     <h2>
                       {reviewCount
-                        ? reviewCount + " 项问题阻止正式交付"
+                        ? reviewCount + " 项需要核对的问题"
                         : "当前没有待确认问题"}
                     </h2>
                   </div>
@@ -1803,7 +1803,7 @@ export function App() {
                   <div className="empty-state">
                     <MagicWandIcon />
                     <strong>先运行任务，再在这里核对结构化结果</strong>
-                    <span>阻断问题会带来源证据和明确决定入口。</span>
+                    <span>问题会附带来源位置与具体说明。</span>
                   </div>
                 )}
                 <CrawlSummary job={job} />
@@ -1859,24 +1859,24 @@ export function App() {
           <section
             className={
               "artifact-group " +
-              (formalArtifactReady ? "is-ready" : "is-blocked")
+              (artifactAvailable ? "is-ready" : "is-blocked")
             }
           >
             <div className="artifact-status-line">
               <span className="artifact-status-icon">
-                {formalArtifactReady ? (
+                {artifactAvailable ? (
                   <CheckCircledIcon />
                 ) : (
                   <CrossCircledIcon />
                 )}
               </span>
               <div>
-                <strong>正式 Foundry JSON</strong>
+                <strong>生成产物</strong>
                 <small>
-                  {formalArtifactReady
-                    ? "已通过工作流验收，可下载"
+                  {artifactAvailable
+                    ? "已有产物可下载，检查问题单独列出"
                     : taskFailed ? "任务失败或中断，请查看错误并重新提交" : reviewCount
-                      ? "被待确认问题阻止"
+                      ? "检查问题已记录，尚无可下载文件"
                       : "等待任务完成"}
                 </small>
               </div>
@@ -1918,8 +1918,8 @@ export function App() {
             <div>
               <strong>证据链不会丢</strong>
               <p>
-                来源引用、人工决定与下载产物保持关联；正式 JSON
-                只会在对应验收通过后开放。
+                来源引用、检查结果与下载产物保持关联；已有 Actor JSON
+                可以直接获取，问题列表不会取消产物。
               </p>
             </div>
           </section>
@@ -2625,17 +2625,17 @@ function numberSummary(summary: Record<string, unknown>, key: string): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-function DownloadPanel(props: {
+export function DownloadPanel(props: {
   singleResult: ConversionResult | null;
   job: WebJob | null;
 }) {
   if (props.singleResult) {
-    if (props.singleResult.status !== "accepted" || !props.singleResult.downloadUrl) {
+    if (!hasGeneratedArtifact(props.singleResult, null)) {
       return (
         <div className="empty-state">
           <ExclamationTriangleIcon />
-          <strong>这份 JSON 仍在人工核对，暂不提供下载</strong>
-          <span>请查看核对问题，修改原文后重新转换。</span>
+          <strong>{props.singleResult.kind === "actor" ? "本次尚无可下载的 Actor JSON" : "这份物品 JSON 仍需人工核对"}</strong>
+          <span>原始资料和具体问题仍可查看。</span>
         </div>
       );
     }
@@ -2688,7 +2688,7 @@ function DownloadPanel(props: {
   );
 }
 
-function SingleConversionReview(props: {
+export function SingleConversionReview(props: {
   result: ConversionResult;
   onReturnToInput: () => void;
 }) {
@@ -2699,8 +2699,10 @@ function SingleConversionReview(props: {
     <section className="intake-review single-conversion-review">
       <div className="review-intro">
         <span>标准资料核对</span>
-        <h3>预览已生成，但还不能当作正式 JSON 下载</h3>
-        <p>系统保留了这次预览和问题说明；请修改来源后重新转换，不会覆盖任何正式文件。</p>
+        <h3>{hasGeneratedArtifact(props.result, null) ? "Actor 已生成，可获取完整 JSON" : "生成结果仍有待核对的问题"}</h3>
+        <p>{hasGeneratedArtifact(props.result, null)
+          ? "已有产物保持可下载；下列问题单独列出，不会取消 Actor。"
+          : "原始资料和问题说明保留；请查看具体未完成项。"}</p>
       </div>
       {blockers.map((diagnostic, index) => (
         <article className="review-creature" key={`${diagnostic.code}-${diagnostic.path}-${index}`}>
@@ -2885,11 +2887,14 @@ export function reviewBlockerCount(
   );
 }
 
-export function isFormalArtifactReady(
-  singleResult: Pick<ConversionResult, "status"> | null,
-  job: Pick<WebJob, "status"> | null,
+export function hasGeneratedArtifact(
+  singleResult: Pick<ConversionResult, "status" | "kind" | "downloadUrl"> | null,
+  job: Pick<WebJob, "status" | "files" | "summary"> | null,
 ): boolean {
-  return singleResult?.status === "accepted" || job?.status === "succeeded";
+  if (singleResult) return Boolean(singleResult.downloadUrl) && (singleResult.kind === "actor" || singleResult.status === "accepted");
+  if (!job?.files.length) return false;
+  return job.status === "succeeded" || job.summary?.kind === "actor" && Boolean(job.summary.downloadUrl)
+    || job.files.some(file => file.fileName.endsWith("-actor.json"));
 }
 
 export function statusLabel(

@@ -24,6 +24,7 @@ import {
   INTAKE_LIMITS,
   normalizeDiscovery,
   partitionDiscoveryCandidates,
+  resolveDiscoveryCandidates,
 } from './discovery';
 import type {
   AbilityKey,
@@ -37,11 +38,13 @@ import type {
   MonsterIntakeAiProvider,
   MonsterIntakeCreatureResult,
   MonsterIntakeIR,
+  MonsterIntakeExtractionAnswer,
   MonsterIntakeOptions,
   MonsterIntakeRunResult,
   PortableSpellResolutionStatus,
 } from './types';
 import { renderIntakeVerificationMarkdown, verifyMonsterIntake } from './verifier';
+import { isMonsterSourceAnswer } from './types';
 import { validateMonsterIntakeIR } from './validator';
 import { normalizeMonsterSourceFacts } from './source-facts';
 import { normalizeMonsterIntakeProposal } from './provider';
@@ -51,6 +54,7 @@ export {
   INTAKE_LIMITS,
   normalizeDiscovery,
   partitionDiscoveryCandidates,
+  resolveDiscoveryCandidates,
 } from './discovery';
 
 interface Manifest {
@@ -67,9 +71,12 @@ interface Manifest {
   createdAt: string;
   completedAt?: string;
   creatures: MonsterIntakeCreatureResult[];
+  discoveryFindings?: IntakeFinding[];
+  unassigned?: EvidenceRef[];
 }
 
 export interface MonsterIntakeDependencies {
+  canonicalizeSourceText?(sourceText: string): string;
   convertMarkdownContentToJson(
     options: ConvertMarkdownContentOptions,
   ): Promise<ConversionResult>;
@@ -90,7 +97,7 @@ export async function runMonsterIntake(
     const estimate = estimateMonsterCount(options.source);
     return {
       runId: 'dry-run', sourceSha256, runPath: '', status: 'dry_run', creatures: [],
-      discoveryCount: estimate, estimatedMaxCalls: estimate * 6 + chunkSource(options.source).length * 2,
+      discoveryCount: estimate, estimatedMaxCalls: estimate + chunkSource(options.source).length,
     };
   }
   if (!provider) throw new Error('AI monster intake provider is required outside --dry-run.');
@@ -110,26 +117,33 @@ export async function runMonsterIntake(
 
   try {
     const discovered: DiscoveryCandidate[] = [];
+    const discoveryFindings: IntakeFinding[] = [];
     for (const chunk of chunkSource(options.source)) {
-      const result = await provider.discover({
-        source: chunk.text,
-        sourceSha256,
-        chunkStart: chunk.start,
-        chunkEnd: chunk.end,
-      });
-      if (result?.schemaVersion !== 1 || !Array.isArray(result.candidates)) throw new Error('Discovery response is not schemaVersion 1.');
-      discovered.push(...result.candidates);
+      try {
+        const discoveredChunk = await provider.discover({ source: options.source, sourceSha256,
+          chunkStart: chunk.start, chunkEnd: chunk.end });
+        if (Array.isArray(discoveredChunk?.candidates)) discovered.push(...discoveredChunk.candidates);
+        else discoveryFindings.push({ id: `discovery-answer:${chunk.start}`, code: 'DISCOVERY_NO_SELECTION', path: '/discovery',
+          message: 'The discovery answer did not provide source selections; the complete original source is retained.', blocking: false, origin: 'provider' });
+        discoveryFindings.push(...(discoveredChunk?.findings ?? []));
+      } catch (error) {
+        discoveryFindings.push({ id: `discovery-request:${chunk.start}`, code: 'DISCOVERY_REQUEST_FAILED', path: '/discovery',
+          message: error instanceof Error ? error.message : String(error), blocking: false, origin: 'provider',
+          evidence: [{ start: chunk.start, end: chunk.end, quote: chunk.text }] });
+      }
     }
-    const candidates = partitionDiscoveryCandidates(options.source, normalizeDiscovery(options.source, discovered));
-    writeJson(join(runPath, 'discovery.json'), { schemaVersion: 1, candidates });
-    if (candidates.length === 0) throw new Error('AI monster intake discovered 0 monsters.');
-    if (candidates.length > INTAKE_LIMITS.maxCreatures) throw new Error(`AI monster intake found more than ${INTAKE_LIMITS.maxCreatures} monsters.`);
+    const resolved = resolveDiscoveryCandidates(options.source, discovered, discoveryFindings);
+    const candidates = resolved.candidates;
+    discoveryFindings.splice(0, discoveryFindings.length, ...resolved.findings);
+    writeJson(join(runPath, 'discovery.json'), { schemaVersion: 1, candidates, findings: discoveryFindings, unassigned: resolved.unassigned });
 
     const creatures = await mapWithConcurrency(candidates, INTAKE_LIMITS.extractionConcurrency, (candidate) =>
       processCandidate(options, provider, runPath, sourceSha256, candidate, dependencies));
-    const status = aggregateStatus(creatures);
-    const result = { runId, sourceSha256, runPath, status, creatures, discoveryCount: candidates.length } satisfies MonsterIntakeRunResult;
-    Object.assign(manifest, { status, creatures, completedAt: new Date().toISOString() });
+    const generatedStatus = aggregateStatus(creatures);
+    const status = (generatedStatus === 'succeeded' && (discoveryFindings.length > 0 || resolved.unassigned.length > 0)) || !creatures.length
+      ? 'needs_review' : generatedStatus;
+    const result = { runId, sourceSha256, runPath, status, creatures, discoveryCount: candidates.length, discoveryFindings, unassigned: resolved.unassigned } satisfies MonsterIntakeRunResult;
+    Object.assign(manifest, { status, creatures, discoveryFindings, unassigned: resolved.unassigned, completedAt: new Date().toISOString() });
     writeJson(join(runPath, 'manifest.json'), manifest);
     writeDecisionTemplate(runPath, manifest);
     return result;
@@ -156,7 +170,7 @@ export async function resumeMonsterIntake(
   if (decisions.sourceSha256 !== manifest.sourceSha256 || sha256(source) !== manifest.sourceSha256) {
     throw new Error('Decisions sourceSha256 does not match the immutable source.');
   }
-  const discovery = readJson<{ candidates: DiscoveryCandidate[] }>(join(runPath, 'discovery.json'));
+  const discovery = readJson<{ candidates: DiscoveryCandidate[]; findings?: IntakeFinding[]; unassigned?: EvidenceRef[] }>(join(runPath, 'discovery.json'));
   const byIssue = new Map(decisions.decisions.map((decision) => [decision.issueId, decision]));
   const replaceConflicts = new Set(
     decisions.decisions.filter((decision) => decision.issueId.startsWith('target-conflict:') && decision.value === 'replace').map((decision) => decision.issueId.slice('target-conflict:'.length)),
@@ -172,22 +186,39 @@ export async function resumeMonsterIntake(
   const results: MonsterIntakeCreatureResult[] = [];
   for (const candidate of discovery.candidates) {
     const creaturePath = join(runPath, 'creatures', safeId(candidate.id));
-    const oldIr = readJson<MonsterIntakeIR>(join(creaturePath, 'intake-ir.json'));
-    // Refresh provider-owned evidence and source-proven normalizations first. User decisions are
-    // applied afterward and then protected from canonical rewrites by the conservative pass.
-    const refreshedIr = anchorIrEvidence(source, candidate, oldIr);
-    const decidedIr = anchorIrEvidence(source, candidate, applyDecisions(refreshedIr, byIssue), {
-      canonicalizeModelSpellEvidence: false,
-      normalizeAbsentOptionalZeroes: false,
-      removeDisprovedProcessUncertainties: false,
-    });
-    results.push(await processExistingIr(options, provider, runPath, candidate, decidedIr, dependencies));
+    const previous = manifest.creatures.find(creature => creature.id === candidate.id);
+    try {
+      const savedTextPath = join(creaturePath, 'source-answer.md');
+      if (!existsSync(join(creaturePath, 'intake-ir.json')) && existsSync(savedTextPath)) {
+        const standardPath = join(creaturePath, 'standard.md');
+        results.push(await processSourceText(options, runPath, candidate, readFileSync(savedTextPath, 'utf8'),
+          { extraction: 0, review: 0, repair: 0 }, dependencies,
+          existsSync(standardPath) ? readFileSync(standardPath, 'utf8') : undefined));
+        continue;
+      }
+      const oldIr = readJson<MonsterIntakeIR>(join(creaturePath, 'intake-ir.json'));
+      const refreshedIr = anchorIrEvidence(source, candidate, oldIr);
+      const decidedIr = anchorIrEvidence(source, candidate, applyDecisions(refreshedIr, byIssue), {
+        canonicalizeModelSpellEvidence: false,
+        normalizeAbsentOptionalZeroes: false,
+        removeDisprovedProcessUncertainties: false,
+      });
+      results.push(await processExistingIr(options, provider, runPath, candidate, decidedIr, dependencies));
+    } catch (error) {
+      const finding = localFinding('SAVED_INTAKE_UNAVAILABLE', error);
+      const retained = previous ?? result(candidate, creaturePath, 'failed', [], { extraction: 0, review: 0, repair: 0 },
+        { required: false, status: 'failed', spellCount: 0 });
+      results.push({ ...retained, calls: { extraction: 0, review: 0, repair: 0 }, findings: [...retained.findings, finding] });
+    }
   }
-  const status = aggregateStatus(results);
+  const generatedStatus = aggregateStatus(results);
+  const status = generatedStatus === 'succeeded' && (discovery.findings?.length || discovery.unassigned?.length)
+    ? 'needs_review' : generatedStatus;
   Object.assign(manifest, { status, creatures: results, completedAt: new Date().toISOString() });
   writeJson(join(runPath, 'manifest.json'), manifest);
   writeDecisionTemplate(runPath, manifest);
-  return { runId: manifest.runId, sourceSha256: manifest.sourceSha256, runPath, status, creatures: results, discoveryCount: discovery.candidates.length };
+  return { runId: manifest.runId, sourceSha256: manifest.sourceSha256, runPath, status, creatures: results, discoveryCount: discovery.candidates.length,
+    discoveryFindings: discovery.findings ?? [], unassigned: discovery.unassigned ?? [] };
 }
 
 async function processCandidate(
@@ -201,21 +232,28 @@ async function processCandidate(
   const bundlePath = join(runPath, 'creatures', safeId(candidate.id));
   mkdirSync(bundlePath, { recursive: true });
   const calls = { extraction: 1, review: 0, repair: 0 };
+  let answer: MonsterIntakeExtractionAnswer;
   try {
-    const ir = anchorIrEvidence(options.source, candidate, await provider.extract({ source: options.source, sourceSha256, candidate }));
-    return await processIr(options, provider, runPath, candidate, ir, calls, dependencies);
+    const request = { source: options.source, sourceSha256, candidate };
+    answer = provider.extractAnswer ? await provider.extractAnswer(request) : await provider.extract(request);
   } catch (error) {
     const finding = providerFinding(error);
     writeJson(join(bundlePath, 'deterministic-report.json'), { schemaVersion: 1, status: 'failed', findings: [finding] });
-    return {
-      id: candidate.id,
-      label: candidate.label,
-      status: 'failed',
-      bundlePath,
-      findings: [finding],
-      calls,
-      spellResolution: { required: false, status: 'failed', spellCount: 0 },
-    };
+    return result(candidate, bundlePath, 'failed', [finding], calls, { required: false, status: 'failed', spellCount: 0 });
+  }
+  try {
+    if (isMonsterSourceAnswer(answer)) {
+      return await processSourceText(options, runPath, candidate, answer.sourceText, calls, dependencies);
+    }
+    const ir = anchorIrEvidence(options.source, candidate, answer as MonsterIntakeIR);
+    return await processIr(options, provider, runPath, candidate, ir, calls, dependencies);
+  } catch (error) {
+    const finding = localFinding('INTAKE_CONVERSION_INCOMPLETE', error);
+    const sourceTextPath = join(bundlePath, 'source-answer.md'), markdownPath = join(bundlePath, 'standard.md'), actorPath = join(bundlePath, 'candidate-actor.json');
+    writeJson(join(bundlePath, 'deterministic-report.json'), { schemaVersion: 1, status: 'needs_review', findings: [finding] });
+    return { ...result(candidate, bundlePath, 'needs_review', [finding], calls, { required: false, status: 'failed', spellCount: 0 }),
+      ...(existsSync(sourceTextPath) ? { sourceTextPath } : {}), ...(existsSync(markdownPath) ? { markdownPath } : {}),
+      ...(existsSync(actorPath) ? { actorPath } : {}) };
   }
 }
 
@@ -240,121 +278,130 @@ async function processExistingIr(
 
 async function processIr(
   options: MonsterIntakeOptions,
-  provider: MonsterIntakeAiProvider,
+  _provider: MonsterIntakeAiProvider,
   runPath: string,
   candidate: DiscoveryCandidate,
-  initialIr: MonsterIntakeIR,
+  ir: MonsterIntakeIR,
   calls: { extraction: number; review: number; repair: number },
   dependencies: MonsterIntakeDependencies,
 ): Promise<MonsterIntakeCreatureResult> {
   const bundlePath = join(runPath, 'creatures', safeId(candidate.id));
   mkdirSync(bundlePath, { recursive: true });
-  let ir = initialIr;
-  while (true) {
-    writeJson(join(bundlePath, 'intake-ir.json'), ir);
-    const validation = validateMonsterIntakeIR(options.source, ir, { coverageRange: candidate });
-    if (validation.blocking.length > 0) {
-      if (calls.extraction === 1 && calls.repair === 0) {
-        calls.repair += 1;
-        const repaired = await provider.repair({
-          stage: 'deterministic-validation',
-          candidate,
-          source: options.source,
-          ir,
-          deterministicFindings: validation.findings,
-        });
-        ir = anchorIrEvidence(options.source, candidate, structuredClone(repaired));
-        continue;
-      }
-      const spellResolution = spellResolutionForFindings(
-        spellResolutionFromIr(ir, 'pending', bundlePath),
-        validation.findings,
-        bundlePath,
-      );
-      writeReports(bundlePath, { schemaVersion: 1, status: 'needs_review', findings: validation.findings, projection: {}, spellResolution });
-      return result(candidate, bundlePath, 'needs_review', validation.findings, calls, spellResolution);
-    }
-    const markdown = renderMonsterIntakeMarkdown(ir);
-    writeFileSync(join(bundlePath, 'standard.md'), markdown);
-    const candidateActorPath = join(bundlePath, 'candidate-actor.json');
-    const generated = await dependencies.convertMarkdownContentToJson({
-      content: markdown, sourcePath: join(bundlePath, 'standard.md'), outputPath: candidateActorPath,
-      fvttVersion: options.fvttVersion ?? '12', effectProfile: options.effectProfile ?? 'core', translationService: null,
-      iconOptions: options.iconOptions,
-    });
+  writeJson(join(bundlePath, 'intake-ir.json'), ir);
+  const findings: IntakeFinding[] = [];
+  try { findings.push(...validateMonsterIntakeIR(options.source, ir, { coverageRange: candidate }).findings); }
+  catch (error) { findings.push(localFinding('INTAKE_VALIDATION_INCOMPLETE', error)); }
+  const markdown = renderMonsterIntakeMarkdown(ir);
+  const markdownPath = join(bundlePath, 'standard.md');
+  writeFileSync(markdownPath, markdown);
+  const actorPath = join(bundlePath, 'candidate-actor.json');
+  const generated = await dependencies.convertMarkdownContentToJson({
+    content: markdown, sourcePath: markdownPath, outputPath: actorPath,
+    fvttVersion: options.fvttVersion ?? '12', effectProfile: options.effectProfile ?? 'core', translationService: null,
+    iconOptions: options.iconOptions,
+  });
+  // Persist the actual workflow output before any report or promotion can fail.
+  writeJson(actorPath, generated.rawJson);
+  findings.push(...generated.diagnostics.map(diagnostic => ({
+    id: `workflow:${diagnostic.code}:${diagnostic.path}`, code: diagnostic.code, path: diagnostic.path,
+    message: diagnostic.message, blocking: diagnostic.severity === 'error', origin: 'semantic' as const,
+  })));
+  let spellResolution = spellResolutionFromIr(ir, 'pending', bundlePath);
+  let verificationAccepted = false;
+  try {
     const report = verifyMonsterIntake(options.source, ir, markdown, generated.rawJson, candidate);
+    findings.push(...report.findings);
+    spellResolution = withReportPath(report.spellResolution, bundlePath);
+    verificationAccepted = report.status === 'accepted';
     writeReports(bundlePath, report);
-    calls.review += 1;
-    const rawReview = await provider.review({ source: options.source, candidate, ir, markdown, actorProjection: report.projection, deterministicFindings: report.findings });
-    writeJson(join(bundlePath, 'ai-review.raw.json'), rawReview);
-    const review = adjudicateReview(options.source, candidate, ir, report.projection, rawReview);
-    writeJson(join(bundlePath, 'ai-review.json'), review);
-    const combined = combineFindings(report.findings, review);
-    if (review.verdict === 'revise' && calls.extraction === 1 && calls.repair === 0) {
-      calls.repair += 1;
-      const repaired = await provider.repair({
-        stage: 'semantic-review',
-        candidate,
-        source: options.source,
-        ir,
-        markdown,
-        actorProjection: report.projection,
-        deterministicFindings: report.findings,
-        review,
-      });
-      ir = anchorIrEvidence(options.source, candidate, structuredClone(repaired));
-      continue;
-    }
-    if (review.verdict !== 'accepted' || combined.some((finding) => finding.blocking)) {
-      return result(
-        candidate,
-        bundlePath,
-        'needs_review',
-        combined,
-        calls,
-        spellResolutionForFindings(report.spellResolution, combined, bundlePath),
-      );
-    }
-    const promoted = await promoteAccepted(
-      options,
-      runPath,
-      candidate,
-      ir,
-      markdown,
-      generated.rawJson,
-      dependencies,
-    );
-    if (promoted.findings.length > 0) {
-      return result(candidate, bundlePath, 'needs_review', promoted.findings, calls, withReportPath(report.spellResolution, bundlePath));
-    }
+  } catch (error) { findings.push(localFinding('INTAKE_VERIFICATION_INCOMPLETE', error)); }
+  const retained = (): MonsterIntakeCreatureResult => ({
+    ...result(candidate, bundlePath, 'needs_review', findings, calls,
+      spellResolutionForFindings(spellResolution, findings, bundlePath)), markdownPath, actorPath,
+  });
+  if (generated.status !== 'accepted' || !verificationAccepted || findings.some(finding => finding.blocking)) return retained();
+  try {
+    const promoted = await promoteAccepted(options, runPath, candidate, ir, markdown, generated.rawJson, dependencies);
+    if (promoted.findings.length) { findings.push(...promoted.findings); return retained(); }
     copyFileSync(promoted.actorPath, join(bundlePath, 'actor.json'));
-    return {
-      ...result(candidate, bundlePath, 'accepted', [], calls, withReportPath(report.spellResolution, bundlePath)),
-      markdownPath: promoted.markdownPath,
-      actorPath: promoted.actorPath,
-    };
+    return { ...result(candidate, bundlePath, 'accepted', findings, calls, spellResolution),
+      markdownPath: promoted.markdownPath, actorPath: promoted.actorPath };
+  } catch (error) {
+    findings.push(localFinding('INTAKE_PROMOTION_INCOMPLETE', error));
+    return retained();
   }
+}
+
+async function processSourceText(
+  options: MonsterIntakeOptions,
+  runPath: string,
+  candidate: DiscoveryCandidate,
+  sourceText: string,
+  calls: MonsterIntakeCreatureResult['calls'],
+  dependencies: MonsterIntakeDependencies,
+  savedCanonicalSource?: string,
+): Promise<MonsterIntakeCreatureResult> {
+  const bundlePath = join(runPath, 'creatures', safeId(candidate.id));
+  mkdirSync(bundlePath, { recursive: true });
+  const sourceTextPath = join(bundlePath, 'source-answer.md');
+  writeFileSync(sourceTextPath, sourceText);
+  const canonicalSource = savedCanonicalSource ?? dependencies.canonicalizeSourceText?.(sourceText) ?? sourceText;
+  const markdownPath = join(bundlePath, 'standard.md'), actorPath = join(bundlePath, 'candidate-actor.json');
+  writeFileSync(markdownPath, canonicalSource);
+  const generated = await dependencies.convertMarkdownContentToJson({ content: canonicalSource, sourcePath: markdownPath,
+    outputPath: actorPath, fvttVersion: options.fvttVersion ?? '12', effectProfile: options.effectProfile ?? 'core',
+    translationService: null, iconOptions: options.iconOptions });
+  writeJson(actorPath, generated.rawJson);
+  const findings: IntakeFinding[] = generated.diagnostics.map(diagnostic => ({
+    id: `workflow:${diagnostic.code}:${diagnostic.path}`, code: diagnostic.code, path: diagnostic.path,
+    message: diagnostic.message, blocking: diagnostic.severity === 'error', origin: 'semantic',
+  }));
+  const manifest = (generated.rawJson as any)?.flags?.['fvtt-json-generator-spell-resolver']?.spellManifest;
+  const spellResolution: PortableSpellResolutionStatus = manifest ? { required: true, status: 'pending',
+    spellCount: manifest.spellcastingGroups.reduce((count: number, group: any) => count + group.spellRefs.length, 0) }
+    : { required: false, status: 'not-required', spellCount: 0 };
+  const retained = (): MonsterIntakeCreatureResult => ({
+    ...result(candidate, bundlePath, 'needs_review', findings, calls, spellResolution), sourceTextPath, markdownPath, actorPath,
+  });
+  try {
+    writeReports(bundlePath, { schemaVersion: 1, status: generated.status === 'accepted' ? 'accepted' : 'needs_review',
+      findings, projection: {}, spellResolution });
+  } catch (error) { findings.push(localFinding('INTAKE_REPORT_INCOMPLETE', error)); }
+  if (generated.status !== 'accepted' || findings.some(finding => finding.blocking)) return retained();
+  try {
+    const promoted = await promoteAccepted(options, runPath, candidate, undefined, canonicalSource, generated.rawJson, dependencies);
+    if (promoted.findings.length) { findings.push(...promoted.findings); return retained(); }
+    copyFileSync(promoted.actorPath, join(bundlePath, 'actor.json'));
+    return { ...result(candidate, bundlePath, 'accepted', findings, calls, spellResolution), sourceTextPath,
+      markdownPath: promoted.markdownPath, actorPath: promoted.actorPath };
+  } catch (error) { findings.push(localFinding('INTAKE_PROMOTION_INCOMPLETE', error)); return retained(); }
+}
+
+function localFinding(code: string, error: unknown): IntakeFinding {
+  return { id: code.toLowerCase(), code, path: '/intake', message: error instanceof Error ? error.message : String(error),
+    blocking: true, origin: 'semantic' };
 }
 
 async function promoteAccepted(
   options: MonsterIntakeOptions,
-  runPath: string,
+  _runPath: string,
   candidate: DiscoveryCandidate,
-  ir: MonsterIntakeIR,
+  ir: MonsterIntakeIR | undefined,
   markdown: string,
   generatedActor: unknown,
-  dependencies: MonsterIntakeDependencies,
+  _dependencies: MonsterIntakeDependencies,
 ): Promise<{ markdownPath: string; actorPath: string; findings: IntakeFinding[] }> {
   const vault = resolve(options.vaultPath ?? 'obsidian/dnd数据转fvttjson');
-  const slug = slugify(ir.creature.identity.englishName ?? ir.creature.identity.name, candidate.id);
+  const slug = slugify(ir?.creature.identity.englishName ?? ir?.creature.identity.name
+    ?? String((generatedActor as any)?.name ?? candidate.label), candidate.id);
   const markdownPath = join(vault, 'input', `${slug}.md`);
   const actorPath = join(vault, 'output', `${slug}.json`);
   const sameMarkdown = existsSync(markdownPath) && readFileSync(markdownPath, 'utf-8') === markdown;
   if (sameMarkdown && existsSync(actorPath) && !options.replaceConflicts?.has(candidate.id)) {
     try {
       const existingActor = JSON.parse(readFileSync(actorPath, 'utf-8')) as unknown;
-      const existingReport = verifyMonsterIntake(options.source, ir, markdown, existingActor, candidate);
-      if (existingReport.status === 'accepted') {
+      const existingReport = ir ? verifyMonsterIntake(options.source, ir, markdown, existingActor, candidate) : undefined;
+      if (!existingReport || existingReport.status === 'accepted') {
         const difference = firstPromotionDifference(existingActor, generatedActor);
         if (!difference) return { markdownPath, actorPath, findings: [] };
         return {
@@ -412,39 +459,8 @@ async function promoteAccepted(
   }
   mkdirSync(dirname(markdownPath), { recursive: true });
   mkdirSync(dirname(actorPath), { recursive: true });
-  if (options.replaceConflicts?.has(candidate.id)) {
-    const backupDir = join(runPath, 'backups', candidate.id);
-    mkdirSync(backupDir, { recursive: true });
-    if (existsSync(markdownPath)) copyFileSync(markdownPath, join(backupDir, basename(markdownPath)));
-    if (existsSync(actorPath)) copyFileSync(actorPath, join(backupDir, basename(actorPath)));
-  }
   atomicWrite(markdownPath, markdown);
-  const conversion = await dependencies.convertMarkdownContentToJson({ content: markdown, sourcePath: markdownPath, outputPath: actorPath, fvttVersion: options.fvttVersion ?? '12', effectProfile: options.effectProfile ?? 'core', translationService: null, iconOptions: options.iconOptions });
-  if (!existsSync(actorPath)) {
-    const onlyLiteralReview = conversion.status === 'needs_review'
-      && conversion.diagnostics.length > 0
-      && conversion.diagnostics.every((diagnostic) => diagnostic.code === 'GEN_LITERAL_REVIEW_REQUIRED');
-    const intakeVerification = verifyMonsterIntake(options.source, ir, markdown, conversion.rawJson, candidate);
-    const difference = firstPromotionDifference(conversion.rawJson, generatedActor);
-    if (!onlyLiteralReview || intakeVerification.status !== 'accepted' || difference) {
-      return {
-        markdownPath,
-        actorPath,
-        findings: [{
-          id: `promotion-generation:${candidate.id}`,
-          code: 'PROMOTION_GENERATION_NOT_ACCEPTED',
-          path: '/promotion',
-          message: `The formal workflow declined the Actor output${difference ? ` and regenerated content differs at ${difference}` : ''}.`,
-          blocking: true,
-          origin: 'semantic',
-        }],
-      };
-    }
-    // The regular workflow deliberately withholds literal-review output. Intake
-    // has an additional deterministic verifier plus independent AI acceptance,
-    // so write the exact, re-generated workflow Actor only after both gates pass.
-    atomicWrite(actorPath, JSON.stringify(conversion.rawJson, null, 2));
-  }
+  atomicWrite(actorPath, JSON.stringify(generatedActor, null, 2));
   return { markdownPath, actorPath, findings: [] };
 }
 
@@ -471,7 +487,6 @@ function applyDecisions(ir: MonsterIntakeIR, decisions: Map<string, IntakeDecisi
 
 function validateOptions(options: MonsterIntakeOptions): void {
   if (!options.source.trim()) throw new Error('AI monster intake source is empty.');
-  if (options.source.length > INTAKE_LIMITS.maxSourceLength) throw new Error(`AI monster intake source exceeds ${INTAKE_LIMITS.maxSourceLength} characters.`);
   const version = options.fvttVersion ?? '12';
   const profile = options.effectProfile ?? 'core';
   if (!['12', '14'].includes(version)) throw new Error('AI monster intake supports only Foundry v12 and v14.');
@@ -480,7 +495,7 @@ function validateOptions(options: MonsterIntakeOptions): void {
 
 function estimateMonsterCount(source: string): number {
   const crLines = source.match(/(?:^|\n)\s*(?:CR|挑战等级)\s*[:：]?\s*(?:\d|1\/)/gi)?.length ?? 0;
-  return Math.min(INTAKE_LIMITS.maxCreatures, Math.max(1, crLines));
+  return Math.max(1, crLines);
 }
 
 function aggregateStatus(creatures: MonsterIntakeCreatureResult[]): MonsterIntakeRunResult['status'] {

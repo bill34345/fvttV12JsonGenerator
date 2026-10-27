@@ -469,10 +469,10 @@ program
         writer(`[${diagnostic.severity.toUpperCase()}] ${diagnostic.code} ${diagnostic.path}: ${diagnostic.message}`);
       }
       if (result.status !== 'accepted') {
-        if (result.status === 'needs_review' && result.outputPath) {
-          console.warn(`Generated review-required output: ${result.outputPath}`);
-          console.warn('Status: needs_review (GM-assisted or external-rule mechanics are not automatic).');
-          process.exitCode = 2;
+        if (result.kind === 'actor' && result.outputPath) {
+          console.warn(`Generated Actor output: ${result.outputPath}`);
+          console.warn(`Check status: ${result.status}; the Actor output is retained with the diagnostics above.`);
+          process.exitCode = result.status === 'needs_review' ? 2 : 1;
           return;
         }
         console.error(`Generation ${result.status}; no formal output was written.`);
@@ -503,6 +503,8 @@ function printIntakeResult(result: Awaited<ReturnType<typeof runMonsterIntake>>)
   console.log(`Discovered monsters: ${result.discoveryCount}`);
   if (result.estimatedMaxCalls !== undefined) console.log(`Estimated worst-case provider calls: ${result.estimatedMaxCalls}`);
   if (result.runPath) console.log(`Review bundle: ${result.runPath}`);
+  for (const finding of result.discoveryFindings ?? []) console.log(`  [${finding.code}] ${finding.message}`);
+  for (const range of result.unassigned ?? []) console.log(`  Unassigned source: ${range.start}-${range.end}`);
   for (const creature of result.creatures) {
     console.log(`- ${creature.label}: ${creature.status} | calls extract=${creature.calls.extraction} review=${creature.calls.review} repair=${creature.calls.repair}`);
     if (creature.spellResolution.required) {
@@ -512,7 +514,8 @@ function printIntakeResult(result: Awaited<ReturnType<typeof runMonsterIntake>>)
         console.log(`  法术：${creature.spellResolution.spellCount} 项；目标世界解析状态 ${creature.spellResolution.status}`);
       }
     }
-    for (const finding of creature.findings.filter((value) => value.blocking)) console.log(`  blocking [${finding.code}] ${finding.message}`);
+    for (const finding of creature.findings) console.log(`  [${finding.code}] ${finding.message}`);
+    if (creature.sourceTextPath) console.log(`  AI source answer: ${creature.sourceTextPath}`);
     if (creature.markdownPath) console.log(`  Markdown: ${creature.markdownPath}`);
     if (creature.actorPath) console.log(`  Actor JSON: ${creature.actorPath}`);
   }

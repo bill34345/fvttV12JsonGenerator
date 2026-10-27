@@ -98,13 +98,13 @@ describe('closed normalization and explicit base-only resistance projection',()=
     const normalized=normalizeMonsterIntakeProposal(record.source,raw);expect(normalized.creature.spellcasting![1]!.componentWaivers).toEqual([]);
     expect(normalized.creature.spellcasting![0]!.componentWaivers).toEqual(raw.creature.spellcasting[0].componentWaivers);expect(Object.hasOwn(raw.creature.spellcasting[1],'componentWaivers')).toBe(false);
     for(const invalid of [null,{},'material']){const copy=structuredClone(raw);copy.creature.spellcasting[1].componentWaivers=invalid;const after=normalizeMonsterIntakeProposal(record.source,copy);
-      expect((after.creature.spellcasting![1] as any).componentWaivers).toEqual(invalid);expect(validateMonsterIntakeIR(record.source,after).blocking.some(finding=>finding.path==='/creature/spellcasting/1/componentWaivers')).toBe(true);}
+      expect((after.creature.spellcasting![1] as any).componentWaivers).toEqual([]);expect(after.creature.candidateReview).toBeDefined();expect(JSON.stringify(after.creature.candidateReview)).toContain(JSON.stringify(invalid));}
   });
-  test('only a complete closed singleton group can use the singleton notation',()=>{
+  test('partial singleton notation preserves the original group data and other creature abilities',async()=>{
     const record=source('spirit-naga'),raw=structuredClone(record.ir) as any;
     for(const invalid of [null,{}, {Spellcasting:raw.creature.spellcasting}, {...raw.creature.spellcasting,unrecognized:true}, {...raw.creature.spellcasting,ability:undefined}, {...raw.creature.spellcasting,usageGroups:undefined}]){
       const copy=structuredClone(raw);copy.creature.spellcasting=invalid;const after=normalizeMonsterIntakeProposal(record.source,copy);
-      expect((after.creature as any).spellcasting).toEqual(invalid);expect(validateMonsterIntakeIR(record.source,after).blocking.length).toBeGreaterThan(0);
+      expect(Array.isArray(after.creature.spellcasting)).toBe(true);const result=await formal({source:record.source,ir:copy},'partial-singleton');expect(result.generated.candidateAvailable).toBe(true);expect(result.actor.items.length).toBeGreaterThan(0);expect(copy.creature.spellcasting).toEqual(invalid);
     }
   });
   test('base capacity is independent, but a declared lair resistance still requires a valid explicit base/pair',()=>{
@@ -119,16 +119,16 @@ describe('closed normalization and explicit base-only resistance projection',()=
     const canonical=(value:unknown)=>['---','名称: Counter Control','类型: npc','护甲等级: 14','生命值: 30','传奇抗性次数: '+JSON.stringify(value),'---'].join('\n');
     const parser=new YamlParser();for(const value of [1,3,'9']){const text=canonical(value),parsed=parser.parse(text);expect(parsed.attributes.legres).toEqual({value:Number(value),max:Number(value)});expect(parser.parse(text.replaceAll('\n','\r\n'))).toEqual(parsed);
       const generated=await convertMarkdownContentToJson({content:text,fvttVersion:'14',effectProfile:'core',iconMode:'off',translationService:null});expect((generated.rawJson as any).system.resources.legres).toEqual({max:Number(value),spent:0});}
-    for(const invalid of [0,-1,1.5,'3/day','3e0','3 uses','',null,true,{},[]])expect(()=>parser.parse(canonical(invalid))).toThrow('LegendaryResistance');
-    expect(()=>parser.parse(canonical(3).replace('\n---','\nAttributes:\n  传奇抗性次数: 4\n---'))).toThrow();
+    for(const invalid of [0,-1,1.5,'3/day','3e0','3 uses','',null,true,{},[]]){const parsed=parser.parse(canonical(invalid));expect(parsed.attributes.legres).toBeUndefined();expect(parsed.candidateReview).toBeDefined();}
+    const repeated=parser.parse(canonical(3).replace('\n---','\nAttributes:\n  传奇抗性次数: 4\n---'));expect(repeated.attributes.legres).toEqual({value:3,max:3});expect(repeated.candidateReview).toBeDefined();
   });
   test('lair ledger and an explicitly conflicting standard counter cannot overwrite one another',()=>{
     const ir=normalizeMonsterIntakeProposal(brass.source,brass.ir as any),doc=yaml.load(renderMonsterIntakeMarkdown(ir).slice(4,-4)) as any;
     doc.传奇抗性次数=3;const compatible=new YamlParser().parse(yaml.dump(doc));
     expect(compatible.attributes.legres).toEqual({value:3,max:3});expect(compatible.sourceLegendaryLedger).toMatchObject({resistanceMax:3,resistanceLairMax:4});
     const missing=structuredClone(doc);delete missing['intake-legendary-ledger'].resistanceMax;delete missing['intake-legendary-ledger'].resistanceLairMax;
-    expect(()=>new YamlParser().parse(yaml.dump(missing))).toThrow('LegendaryResistance');
-    doc.传奇抗性次数=2;expect(()=>new YamlParser().parse(yaml.dump(doc))).toThrow('LegendaryResistance');
+    expect(new YamlParser().parse(yaml.dump(missing)).attributes.legres).toEqual({value:3,max:3});
+    doc.传奇抗性次数=2;const conflicting=new YamlParser().parse(yaml.dump(doc));expect(conflicting.attributes.legres).toEqual({value:2,max:2});expect(conflicting.sourceLegendaryLedger?.resistanceMax).toBe(3);
   });
   test('native lair mode cannot silently increase an undeclared resistance lair capacity',async()=>{
     // Synthetic projection control, never a repaired or re-scored Brass reply:
@@ -138,8 +138,8 @@ describe('closed normalization and explicit base-only resistance projection',()=
     const result=await formal({source:brass.source,ir},'synthetic-missing-lair-counter');
     expect(result.analysis.status).toBe('needs_review');
     expect(result.analysis.findings).toContainEqual(expect.objectContaining({code:'INVALID_STRUCTURE',path:'/creature/legendary/resistanceLairMax',blocking:true}));
-    expect(result.analysis.ir!.creature.legendary!.resistanceLairMax).toBeUndefined();expect(result.generated.status).toBe('failed');
-    expect(result.generated.candidateAvailable).toBe(false);expect(result.generated.actorProjection).toBeUndefined();expect(result.generated.analysis.ir).toEqual(result.analysis.ir);
+    expect(result.analysis.ir!.creature.legendary!.resistanceLairMax).toBeUndefined();expect(result.generated.status).toBe('ready_for_gm_review');
+    expect(result.generated.candidateAvailable).toBe(true);expect(result.actor.system.resources.legres).toEqual({max:3,spent:0});expect(result.actor.system.resources.lair.value).toBe(false);expect(result.generated.analysis.ir).toEqual(result.analysis.ir);
     expect(result.generated.calls.review).toBe(0);expect(ir.creature.legendary.resistanceLairMax).toBeUndefined();
   });
   test('explicit healing distances including zero stay separate from an omitted GM range',async()=>{

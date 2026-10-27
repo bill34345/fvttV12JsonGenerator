@@ -306,7 +306,8 @@ export async function handleApiRequest(
         },
       });
       const finished = getRequiredJob(job.id);
-      if (finished.status === 'failed') {
+      if (finished.status === 'failed' && !(finished.summary?.kind === 'actor'
+        && finished.files.some(file => file.path === finished.summary?.outputPath))) {
         throw userError(
           finished.error?.code ?? 'CONVERT_FAILED',
           finished.error?.message ?? '转换失败。',

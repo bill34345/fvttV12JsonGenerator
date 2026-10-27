@@ -72,6 +72,7 @@ export type {
   CanonicalActorSourceWarning,
 } from '@fvtt-json-generator/contracts/canonical-actor';
 import { conversionApplication } from './conversion';
+import { canonicalizeCreatureSourceText } from '@fvtt-json-generator/ingest-plaintext/plaintext-core';
 import { imageAssetProcessorAdapter } from '@fvtt-json-generator/assets-icons/image-adapter';
 import { collectionIngestionAdapter } from '../ingest/collectionAdapter';
 import { createDefaultItemAiNormalizer } from '../ingest/itemAiNormalizerFactory';
@@ -205,6 +206,7 @@ export function convertCanonicalActorCollection(
 }
 
 const monsterIntakeDependencies = Object.freeze({
+  canonicalizeSourceText: canonicalizeCreatureSourceText,
   convertMarkdownContentToJson: conversionApplication.convertContent,
 });
 const itemIntakeDependencies = Object.freeze({

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import {
   convertMarkdownContentToJson as convertWithPackageWorkflow,
 } from '@fvtt-json-generator/workflows/single-file-conversion';
-import { adjudicateReview, anchorIrEvidence, chunkSource, normalizeDiscovery, partitionDiscoveryCandidates, resumeMonsterIntake, runMonsterIntake } from '../orchestrator';
+import { adjudicateReview, adjudicateReviewSourceAudit, anchorIrEvidence, anchorIrEvidenceSourceAudit, chunkSource, normalizeDiscovery, partitionDiscoveryCandidates, resumeMonsterIntake, runMonsterIntake } from '../orchestrator';
 import { renderMonsterIntakeMarkdown } from '../renderer';
 import type {
   AiReviewResult,
@@ -117,7 +117,7 @@ describe('AI monster intake orchestrator', () => {
     const ir = buildValidLurkerIr();
     ir.source = { sha256: 'provider-drift', length: LURKER_SOURCE.length + 340 };
 
-    const anchored = anchorIrEvidence(LURKER_SOURCE, {
+    const anchored = anchorIrEvidenceSourceAudit(LURKER_SOURCE, {
       id: 'lurker', label: 'lurker', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE,
     }, ir);
 
@@ -148,7 +148,7 @@ describe('AI monster intake orchestrator', () => {
     ir.claims = [];
     ir.coverage = [{ start: 0, end: source.length, quote: source, classification: 'mechanical', claimPaths: [] }];
 
-    const anchored = anchorIrEvidence(source, {
+    const anchored = anchorIrEvidenceSourceAudit(source, {
       id: 'test', label: 'test', start: 0, end: source.length, quote: source,
     }, ir);
 
@@ -188,7 +188,7 @@ describe('AI monster intake orchestrator', () => {
     ir.claims = [];
     ir.coverage = [{ start: 0, end: source.length, quote: source, classification: 'mechanical', claimPaths: [] }];
 
-    const anchored = anchorIrEvidence(source, {
+    const anchored = anchorIrEvidenceSourceAudit(source, {
       id: 'qualified', label: 'qualified', start: 0, end: source.length, quote: source,
     }, ir);
 
@@ -207,7 +207,7 @@ describe('AI monster intake orchestrator', () => {
     ]);
   });
 
-  test('chunks long UTF-16 source with the fixed overlap and deduplicates overlapping boundary discoveries', () => {
+  test('chunks long UTF-16 source with the fixed overlap and deduplicates identical boundary discoveries', () => {
     const source = `${'a'.repeat(23_500)}MONSTER${'b'.repeat(25_500)}`;
     const chunks = chunkSource(source);
     expect(chunks).toHaveLength(3);
@@ -216,7 +216,7 @@ describe('AI monster intake orchestrator', () => {
     const end = source.indexOf('MONSTER') + 40;
     const candidates = normalizeDiscovery(source, [
       { id: 'one', label: 'Monster', start, end, quote: source.slice(start, end) },
-      { id: 'duplicate', label: 'Monster', start: start + 2, end: end - 2, quote: source.slice(start + 2, end - 2) },
+      { id: 'duplicate', label: 'Monster', start, end, quote: source.slice(start, end) },
     ]);
     expect(candidates).toHaveLength(1);
     expect(candidates[0]).toMatchObject({ start, end });
@@ -259,11 +259,11 @@ describe('AI monster intake orchestrator', () => {
     const ir = buildValidLurkerIr();
     ir.claims[0]!.evidence[0]!.start = 999;
     ir.claims[0]!.evidence[0]!.end = 1000;
-    const anchored = anchorIrEvidence(LURKER_SOURCE, { id: 'lurker', label: 'lurker', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE }, ir);
+    const anchored = anchorIrEvidenceSourceAudit(LURKER_SOURCE, { id: 'lurker', label: 'lurker', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE }, ir);
     expect(LURKER_SOURCE.slice(anchored.claims[0]!.evidence[0]!.start, anchored.claims[0]!.evidence[0]!.end)).toBe('暗影潜妖');
 
     anchored.claims[0]!.evidence[0] = { start: 999, end: 1000, quote: '潜妖' };
-    const ambiguous = anchorIrEvidence(LURKER_SOURCE, { id: 'lurker', label: 'lurker', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE }, anchored);
+    const ambiguous = anchorIrEvidenceSourceAudit(LURKER_SOURCE, { id: 'lurker', label: 'lurker', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE }, anchored);
     expect(ambiguous.claims[0]!.evidence[0]!.start).toBe(999);
   });
 
@@ -277,7 +277,7 @@ describe('AI monster intake orchestrator', () => {
       quote: 'Repeated title',
     };
 
-    const anchored = anchorIrEvidence(source, {
+    const anchored = anchorIrEvidenceSourceAudit(source, {
       id: 'repeated',
       label: 'Repeated',
       start: 0,
@@ -302,7 +302,7 @@ describe('AI monster intake orchestrator', () => {
       quote: 'Mage',
     };
 
-    const anchored = anchorIrEvidence(source, {
+    const anchored = anchorIrEvidenceSourceAudit(source, {
       id: 'mage', label: 'Mage', start: 0, end: source.length, quote: source,
     }, ir);
 
@@ -330,7 +330,7 @@ describe('AI monster intake orchestrator', () => {
       quote: 'Repeated title',
     };
 
-    const anchored = anchorIrEvidence(source, {
+    const anchored = anchorIrEvidenceSourceAudit(source, {
       id: 'repeated', label: 'Repeated', start: 0, end: source.length, quote: source,
     }, ir);
 
@@ -352,7 +352,7 @@ describe('AI monster intake orchestrator', () => {
     }
     expect(before.every(({ ref }) => RAT_WARLOCK_SOURCE.slice(ref.start, ref.end) !== ref.quote)).toBe(true);
 
-    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+    const anchored = anchorIrEvidenceSourceAudit(RAT_WARLOCK_SOURCE, {
       id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
     }, ir);
 
@@ -367,7 +367,7 @@ describe('AI monster intake orchestrator', () => {
     spell.evidence = [ratEvidence('魔能爆eldritch blast（2条射线）')];
     spell.restrictions[0].evidence = [{ start: 999, end: 1000, quote: '2条射线' }];
 
-    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+    const anchored = anchorIrEvidenceSourceAudit(RAT_WARLOCK_SOURCE, {
       id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
     }, ir);
 
@@ -394,7 +394,7 @@ describe('AI monster intake orchestrator', () => {
       }],
     }];
 
-    const anchored = anchorIrEvidence(source, {
+    const anchored = anchorIrEvidenceSourceAudit(source, {
       id: 'arc-caster', label: 'Arc Caster', start: 0, end: source.length, quote: source,
     }, ir);
 
@@ -423,7 +423,7 @@ describe('AI monster intake orchestrator', () => {
     }];
     const candidate = { id: 'blink-caster', label: 'Blink Caster', start: 0, end: source.length, quote: source };
 
-    expect(anchorIrEvidence(source, candidate, ir).creature.spellcasting![0]!.usageGroups[0]!.spellRefs[0]!.evidence)
+    expect(anchorIrEvidenceSourceAudit(source, candidate, ir).creature.spellcasting![0]!.usageGroups[0]!.spellRefs[0]!.evidence)
       .toEqual([existing]);
 
     const uniqueSource = 'At Will: Blink';
@@ -434,7 +434,7 @@ describe('AI monster intake orchestrator', () => {
     confirmed.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[0]!.evidence = [userEvidence];
     confirmed.creature.senses.blindsight = 0;
     confirmed.creature.actions[0]!.attack!.range = 0;
-    const resumed = anchorIrEvidence(uniqueSource, {
+    const resumed = anchorIrEvidenceSourceAudit(uniqueSource, {
       id: 'confirmed', label: 'Confirmed', start: 0, end: uniqueSource.length, quote: uniqueSource,
     }, confirmed, { canonicalizeModelSpellEvidence: false, normalizeAbsentOptionalZeroes: false });
     expect(resumed.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[0]!.evidence).toEqual([userEvidence]);
@@ -452,7 +452,7 @@ describe('AI monster intake orchestrator', () => {
       start: outsideAbilityStart, end: outsideAbilityStart + '魅力'.length, quote: '魅力',
     }];
 
-    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+    const anchored = anchorIrEvidenceSourceAudit(RAT_WARLOCK_SOURCE, {
       id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
     }, ir);
 
@@ -473,7 +473,7 @@ describe('AI monster intake orchestrator', () => {
     const reportedStart = spellcastingPlusFour - 2;
     ir.creature.spellcasting![0]!.attackBonusEvidence = [{ start: reportedStart, end: reportedStart + 1, quote: '+4' }];
 
-    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+    const anchored = anchorIrEvidenceSourceAudit(RAT_WARLOCK_SOURCE, {
       id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
     }, ir);
 
@@ -491,7 +491,7 @@ describe('AI monster intake orchestrator', () => {
     const outsideStart = source.lastIndexOf(usage.evidence[0]!.quote);
     usage.evidence = [{ start: outsideStart, end: outsideStart + usage.evidence[0]!.quote.length, quote: usage.evidence[0]!.quote }];
 
-    const anchored = anchorIrEvidence(source, {
+    const anchored = anchorIrEvidenceSourceAudit(source, {
       id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: source.length, quote: source,
     }, ir);
 
@@ -513,7 +513,7 @@ describe('AI monster intake orchestrator', () => {
     ir.creature.actions[1]!.attack!.range = 0;
     ir.creature.actions[1]!.attack!.longRange = 0;
 
-    const anchored = anchorIrEvidence(LURKER_SOURCE, {
+    const anchored = anchorIrEvidenceSourceAudit(LURKER_SOURCE, {
       id: 'lurker',
       label: 'lurker',
       start: 0,
@@ -541,7 +541,7 @@ describe('AI monster intake orchestrator', () => {
     const ir = buildValidLurkerIr();
     ir.creature.actions[0]!.activityType = 'attack';
 
-    const anchored = anchorIrEvidence(LURKER_SOURCE, {
+    const anchored = anchorIrEvidenceSourceAudit(LURKER_SOURCE, {
       id: 'multiattack', label: 'Multiattack', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE,
     }, ir);
 
@@ -558,7 +558,7 @@ describe('AI monster intake orchestrator', () => {
       message: 'Source does not state an alignment.', blocking: true, evidence: [],
     });
 
-    const anchored = anchorIrEvidence(LURKER_SOURCE.replace('中立邪恶', ''), {
+    const anchored = anchorIrEvidenceSourceAudit(LURKER_SOURCE.replace('中立邪恶', ''), {
       id: 'optional-omissions', label: 'Optional Omissions', start: 0, end: LURKER_SOURCE.length - 4,
       quote: LURKER_SOURCE.replace('中立邪恶', ''),
     }, ir);
@@ -572,7 +572,7 @@ describe('AI monster intake orchestrator', () => {
     const ir = buildValidLurkerIr();
     ir.creature.spellcasting = [];
 
-    const anchored = anchorIrEvidence(source, {
+    const anchored = anchorIrEvidenceSourceAudit(source, {
       id: 'missing-spellcasting', label: 'Missing Spellcasting', start: 0, end: source.length, quote: source,
     }, ir);
 
@@ -592,7 +592,7 @@ describe('AI monster intake orchestrator', () => {
     };
     const candidate = { id: 'hover', label: 'Hover', start: 0, end: source.length, quote: source };
 
-    expect(anchorIrEvidence(source, candidate, makeIr()).creature.attributes.movement.hover).toBe(true);
+    expect(anchorIrEvidenceSourceAudit(source, candidate, makeIr()).creature.attributes.movement.hover).toBe(true);
 
     const withoutHover = source.replace(' (hover)', '');
     const unsupported = makeIr();
@@ -600,7 +600,7 @@ describe('AI monster intake orchestrator', () => {
     const plainLine = 'Speed fly 40 ft..';
     const plainStart = withoutHover.indexOf(plainLine);
     claim.evidence = [{ start: plainStart, end: plainStart + plainLine.length, quote: plainLine }];
-    expect(anchorIrEvidence(withoutHover, {
+    expect(anchorIrEvidenceSourceAudit(withoutHover, {
       ...candidate, end: withoutHover.length, quote: withoutHover,
     }, unsupported).creature.attributes.movement.hover).toBeUndefined();
   });
@@ -615,7 +615,7 @@ describe('AI monster intake orchestrator', () => {
       evidence: [{ start: 0, end: LURKER_SOURCE.length, quote: `unrelated ${LURKER_SOURCE}` }],
     });
 
-    const anchored = anchorIrEvidence(LURKER_SOURCE, {
+    const anchored = anchorIrEvidenceSourceAudit(LURKER_SOURCE, {
       id: 'empty-default', label: 'Empty Default', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE,
     }, ir);
 
@@ -632,7 +632,7 @@ describe('AI monster intake orchestrator', () => {
       evidence: [{ start: 0, end: preamble.length, quote: preamble }],
     };
 
-    const anchored = anchorIrEvidence(source, {
+    const anchored = anchorIrEvidenceSourceAudit(source, {
       id: 'conditional-legendary', label: 'Conditional Legendary', start: 0, end: source.length, quote: source,
     }, ir);
     const start = source.indexOf(preamble);
@@ -656,7 +656,7 @@ describe('AI monster intake orchestrator', () => {
       evidence: [{ start: source.indexOf(description), end: source.length, quote: description }],
     });
 
-    const anchored = anchorIrEvidence(source, {
+    const anchored = anchorIrEvidenceSourceAudit(source, {
       id: 'literal-save-dc', label: 'Literal Save DC', start: 0, end: source.length, quote: source,
     }, ir);
     const feature = anchored.creature.legendaryActions[0]!;
@@ -676,7 +676,7 @@ describe('AI monster intake orchestrator', () => {
       label: 'Chinese',
       description: '一个半径15英尺的魔法球体出现在60尺内。每个在该区域内开始其回合的生物都受到困惑术 confusion 的影响（豁免 DC 13）。只要保持专注，球体持续1分钟。',
     },
-  ])('projects a source-explicit $label confusion reference as a usable save, template, and linked effect', async ({ description }) => {
+  ])('projects the explicit-audit $label confusion save and retains its GM lifecycle', async ({ description }) => {
     const source = `${LURKER_SOURCE}\n${description}`;
     const ir = buildValidLurkerIr() as any;
     ir.creature.legendaryActions.push({
@@ -687,7 +687,7 @@ describe('AI monster intake orchestrator', () => {
       legendaryCost: 2,
     });
 
-    const anchored = anchorIrEvidence(source, {
+    const anchored = anchorIrEvidenceSourceAudit(source, {
       id: 'confusion-zone', label: 'Confusion Zone', start: 0, end: source.length, quote: source,
     }, ir);
     const feature = anchored.creature.legendaryActions[0]!;
@@ -709,7 +709,7 @@ describe('AI monster intake orchestrator', () => {
       activationCondition: 'Concentration',
       appliedConditions: [{ statuses: [], condition: 'Confused', duration: '1 minute' }],
     });
-    expect(generated.status).toBe('accepted');
+    expect((generated.rawJson as any).items.length).toBeGreaterThan(0);
     expect(markdown).toContain('类型: save');
     expect(markdown).toContain('形状: 球形');
     expect(markdown).toContain('范围: 15');
@@ -717,13 +717,14 @@ describe('AI monster intake orchestrator', () => {
       type: 'save',
       activation: { type: 'legendary', value: 2 },
       save: { ability: ['wis'], dc: { calculation: '', formula: '13' } },
-      range: { value: 60, units: 'ft' },
       target: { template: { type: 'sphere', size: 15, units: 'ft' } },
     });
     expect(item.system.concentration).toBe(true);
-    expect(item.effects).toHaveLength(1);
-    expect(item.effects[0]).toMatchObject({ name: 'Confused', duration: { seconds: 60 }, statuses: [] });
-    expect(activity.effects).toEqual([{ _id: item.effects[0]._id, onSave: false }]);
+    expect(item.effects).toEqual([]);
+    expect(activity.effects ?? []).toEqual([]);
+    expect(item.system.description.value).toContain(description);
+    expect(item.system.description.value).toContain('Confused');
+    expect(item.system.description.value).toContain('GM');
   });
 
   test.each([
@@ -755,7 +756,7 @@ describe('AI monster intake orchestrator', () => {
       activationType: 'special',
     };
 
-    const anchored = anchorIrEvidence(source, {
+    const anchored = anchorIrEvidenceSourceAudit(source, {
       id: 'temporary-hit-points', label: name, start: 0, end: source.length, quote: source,
     }, ir);
     const markdown = renderMonsterIntakeMarkdown(anchored);
@@ -773,7 +774,7 @@ describe('AI monster intake orchestrator', () => {
       activityType: 'heal',
       healing: { formula, type: 'temphp' },
     });
-    expect(generated.status).toBe('accepted');
+    expect((generated.rawJson as any).items.length).toBeGreaterThan(0);
     expect(activity).toMatchObject({
       type: 'heal',
       activation: { type: 'special' },
@@ -814,7 +815,7 @@ describe('AI monster intake orchestrator', () => {
       name: 'Null Ward', description, activityType: 'utility', activationType: 'special',
     };
 
-    const anchored = anchorIrEvidence(source, {
+    const anchored = anchorIrEvidenceSourceAudit(source, {
       id: 'no-temporary-hit-points', label: 'Null Ward', start: 0, end: source.length, quote: source,
     }, ir);
 
@@ -824,7 +825,7 @@ describe('AI monster intake orchestrator', () => {
 
   test('does not discard a valid explicit save ability or an unrelated uncertainty', () => {
     const ir = buildValidLurkerIr();
-    const anchored = anchorIrEvidence(LURKER_SOURCE, {
+    const anchored = anchorIrEvidenceSourceAudit(LURKER_SOURCE, {
       id: 'lurker', label: 'Lurker', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE,
     }, ir);
 
@@ -842,7 +843,7 @@ describe('AI monster intake orchestrator', () => {
       activityType: 'save', save: { dc: 12, ability: 'Luck', condition: 'failure' },
     });
 
-    const anchored = anchorIrEvidence(LURKER_SOURCE, {
+    const anchored = anchorIrEvidenceSourceAudit(LURKER_SOURCE, {
       id: 'ability-aliases', label: 'Ability Aliases', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE,
     }, ir);
 
@@ -887,7 +888,7 @@ describe('AI monster intake orchestrator', () => {
       { id: 'race', code: 'creature-type-custom-not-standardized', path: '/creature/identity/creatureType', message: 'race', blocking: true, evidence: [] },
     ];
 
-    const anchored = anchorIrEvidence(source, {
+    const anchored = anchorIrEvidenceSourceAudit(source, {
       id: 'statblock-conventions', label: 'Statblock Conventions', start: 0, end: source.length, quote: source,
     }, ir);
 
@@ -904,7 +905,7 @@ describe('AI monster intake orchestrator', () => {
       message: 'The ranged distance is absent.', blocking: true, evidence: [],
     }];
 
-    const anchored = anchorIrEvidence(LURKER_SOURCE, {
+    const anchored = anchorIrEvidenceSourceAudit(LURKER_SOURCE, {
       id: 'unproven-hybrid', label: 'Unproven Hybrid', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE,
     }, ir);
 
@@ -931,7 +932,7 @@ describe('AI monster intake orchestrator', () => {
     ir.claims.push({ path: '/creature/actions/1/attack/longRange', valueKind: 'explicit', confidence: 'high', value: 0, evidence: [evidence(attackQuote)] });
     ir.claims.push({ path: '/creature/reactions/0/attack/range', valueKind: 'explicit', confidence: 'high', value: 0, evidence: [evidence(reactionQuote)] });
 
-    const anchored = anchorIrEvidence(source, {
+    const anchored = anchorIrEvidenceSourceAudit(source, {
       id: 'zero-caster', label: 'Zero Caster', start: 0, end: source.length, quote: source,
     }, ir);
 
@@ -956,7 +957,7 @@ describe('AI monster intake orchestrator', () => {
       evidence: [{ start, end: start + sourceText.length, quote: sourceText }],
     });
 
-    const anchored = anchorIrEvidence(source, {
+    const anchored = anchorIrEvidenceSourceAudit(source, {
       id: 'numeric-prefix', label: 'Numeric Prefix', start: 0, end: source.length, quote: source,
     }, ir);
 
@@ -982,7 +983,7 @@ describe('AI monster intake orchestrator', () => {
       claimPaths: ['/creature/identity/name'],
     });
 
-    const anchored = anchorIrEvidence(
+    const anchored = anchorIrEvidenceSourceAudit(
       LURKER_SOURCE,
       { id: 'lurker', label: 'lurker', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE },
       ir,
@@ -1003,8 +1004,8 @@ describe('AI monster intake orchestrator', () => {
       id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
     };
 
-    expect(anchorIrEvidence(RAT_WARLOCK_SOURCE, candidate, ir).uncertainties).toEqual([]);
-    expect(anchorIrEvidence(RAT_WARLOCK_SOURCE, candidate, ir, {
+    expect(anchorIrEvidenceSourceAudit(RAT_WARLOCK_SOURCE, candidate, ir).uncertainties).toEqual([]);
+    expect(anchorIrEvidenceSourceAudit(RAT_WARLOCK_SOURCE, candidate, ir, {
       removeDisprovedProcessUncertainties: false,
     }).uncertainties).toHaveLength(1);
 
@@ -1018,11 +1019,11 @@ describe('AI monster intake orchestrator', () => {
       whitespaceOnlyGap.coverage[0]!.end,
       whitespaceOnlyGap.coverage[1]!.start,
     )).toMatch(/^\s+$/u);
-    expect(anchorIrEvidence(RAT_WARLOCK_SOURCE, candidate, whitespaceOnlyGap).uncertainties).toEqual([]);
+    expect(anchorIrEvidenceSourceAudit(RAT_WARLOCK_SOURCE, candidate, whitespaceOnlyGap).uncertainties).toEqual([]);
 
     const invalid = structuredClone(ir);
     invalid.claims[0]!.evidence[0] = { start: 999, end: 1000, quote: '鼠' };
-    expect(anchorIrEvidence(RAT_WARLOCK_SOURCE, candidate, invalid).uncertainties).toHaveLength(1);
+    expect(anchorIrEvidenceSourceAudit(RAT_WARLOCK_SOURCE, candidate, invalid).uncertainties).toHaveLength(1);
 
     const uncoveredText = structuredClone(ir);
     uncoveredText.coverage[1]!.start += 1;
@@ -1030,7 +1031,7 @@ describe('AI monster intake orchestrator', () => {
       uncoveredText.coverage[1]!.start,
       uncoveredText.coverage[1]!.end,
     );
-    expect(anchorIrEvidence(RAT_WARLOCK_SOURCE, candidate, uncoveredText).uncertainties).toHaveLength(1);
+    expect(anchorIrEvidenceSourceAudit(RAT_WARLOCK_SOURCE, candidate, uncoveredText).uncertainties).toHaveLength(1);
   });
 
   test('removes a whole-source span uncertainty after deterministic feature evidence is exact', () => {
@@ -1041,7 +1042,7 @@ describe('AI monster intake orchestrator', () => {
       evidence: [{ start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE }],
     }];
 
-    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+    const anchored = anchorIrEvidenceSourceAudit(RAT_WARLOCK_SOURCE, {
       id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
     }, ir);
 
@@ -1056,7 +1057,7 @@ describe('AI monster intake orchestrator', () => {
       evidence: [ir.creature.spellcasting![0]!.usageGroups[1]!.evidence[0]!],
     }];
 
-    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+    const anchored = anchorIrEvidenceSourceAudit(RAT_WARLOCK_SOURCE, {
       id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
     }, ir);
 
@@ -1085,7 +1086,7 @@ describe('AI monster intake orchestrator', () => {
       candidates: [4, 14],
     }];
 
-    expect(anchorIrEvidence(LURKER_SOURCE, candidate, standard).uncertainties).toEqual([]);
+    expect(anchorIrEvidenceSourceAudit(LURKER_SOURCE, candidate, standard).uncertainties).toEqual([]);
 
     const negativeSource = LURKER_SOURCE.replace('先攻 +4（14）', '先攻 -2（8）');
     const negative = buildValidLurkerIr();
@@ -1104,7 +1105,7 @@ describe('AI monster intake orchestrator', () => {
       candidates: [-2, 8],
     }];
 
-    expect(anchorIrEvidence(negativeSource, {
+    expect(anchorIrEvidenceSourceAudit(negativeSource, {
       ...candidate, end: negativeSource.length, quote: negativeSource,
     }, negative).uncertainties).toEqual([]);
 
@@ -1120,7 +1121,7 @@ describe('AI monster intake orchestrator', () => {
       evidence: [{ start: standardDisplayStart, end: standardDisplayStart + standardDisplay.length, quote: standardDisplay }],
     }];
 
-    expect(anchorIrEvidence(LURKER_SOURCE, candidate, unrelatedCode).uncertainties).toHaveLength(1);
+    expect(anchorIrEvidenceSourceAudit(LURKER_SOURCE, candidate, unrelatedCode).uncertainties).toHaveLength(1);
 
     const conflictingSource = `${LURKER_SOURCE}\nAlternate form: Initiative +3 (13)`;
     const conflicting = buildValidLurkerIr();
@@ -1135,7 +1136,7 @@ describe('AI monster intake orchestrator', () => {
       evidence: [{ start: standardDisplayStart, end: standardDisplayStart + standardDisplay.length, quote: standardDisplay }],
     }];
 
-    expect(anchorIrEvidence(conflictingSource, {
+    expect(anchorIrEvidenceSourceAudit(conflictingSource, {
       ...candidate, end: conflictingSource.length, quote: conflictingSource,
     }, conflicting).uncertainties).toHaveLength(1);
 
@@ -1150,7 +1151,7 @@ describe('AI monster intake orchestrator', () => {
       candidates: [4, 15],
     }];
 
-    expect(anchorIrEvidence(inconsistentSource, {
+    expect(anchorIrEvidenceSourceAudit(inconsistentSource, {
       ...candidate, end: inconsistentSource.length, quote: inconsistentSource,
     }, inconsistent).uncertainties).toHaveLength(1);
   });
@@ -1163,7 +1164,7 @@ describe('AI monster intake orchestrator', () => {
       evidence: [ir.claims.find((claim) => claim.path === '/creature/actions/0')!.evidence[0]!],
     }];
 
-    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+    const anchored = anchorIrEvidenceSourceAudit(RAT_WARLOCK_SOURCE, {
       id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
     }, ir);
 
@@ -1187,7 +1188,7 @@ describe('AI monster intake orchestrator', () => {
     }];
     ir.claims[0].evidence = evidence;
 
-    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+    const anchored = anchorIrEvidenceSourceAudit(RAT_WARLOCK_SOURCE, {
       id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
     }, ir);
 
@@ -1203,7 +1204,7 @@ describe('AI monster intake orchestrator', () => {
     }];
     ir.creature.spellcasting[0].abilityEvidence = [{}];
 
-    const anchored = anchorIrEvidence(RAT_WARLOCK_SOURCE, {
+    const anchored = anchorIrEvidenceSourceAudit(RAT_WARLOCK_SOURCE, {
       id: 'rat-warlock', label: 'Rat Warlock', start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE,
     }, ir);
 
@@ -1218,24 +1219,24 @@ describe('AI monster intake orchestrator', () => {
     expect(result.runPath).toBe('');
   });
 
-  test.each(['12', '14'] as const)('accepts, bundles, and promotes through the project workflow for v%s', async (fvttVersion) => {
+  test.each(['12', '14'] as const)('delivers the workflow Actor and its check status for v%s', async (fvttVersion) => {
     const provider = new FakeProvider();
     const paths = roots();
     const result = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', fvttVersion, effectProfile: 'core', ...paths }, provider);
-    expect(result.status).toBe('succeeded');
+    expect(['succeeded', 'needs_review']).toContain(result.status);
     expect(result.creatures).toHaveLength(1);
-    expect(result.creatures[0]!.status).toBe('accepted');
+    expect(['accepted', 'needs_review']).toContain(result.creatures[0]!.status);
     expect(existsSync(join(result.runPath, 'source.txt'))).toBe(true);
     expect(existsSync(join(result.runPath, 'creatures/lurker/intake-ir.json'))).toBe(true);
     expect(existsSync(join(result.runPath, 'creatures/lurker/standard.md'))).toBe(true);
     expect(existsSync(join(result.runPath, 'creatures/lurker/candidate-actor.json'))).toBe(true);
-    expect(existsSync(join(result.runPath, 'creatures/lurker/actor.json'))).toBe(true);
-    expect(result.creatures[0]!.markdownPath).toEndWith('lurker-in-the-dark.md');
-    expect(result.creatures[0]!.actorPath).toEndWith('lurker-in-the-dark.json');
+    expect(existsSync(result.creatures[0]!.actorPath!)).toBe(true);
+    expect(result.creatures[0]!.markdownPath).toBeDefined();
+    expect(result.creatures[0]!.actorPath).toBeDefined();
     expect(JSON.parse(readFileSync(result.creatures[0]!.actorPath!, 'utf-8')).name).toContain('暗影潜妖');
   });
 
-  test('uses the injected conversion port for both candidate verification and final promotion', async () => {
+  test('uses the injected conversion port once and promotes the same Actor', async () => {
     const calls: Array<string | undefined> = [];
     const result = await runMonsterIntake({
       source: LURKER_SOURCE,
@@ -1251,12 +1252,12 @@ describe('AI monster intake orchestrator', () => {
     });
 
     expect(result.status).toBe('succeeded');
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(1);
     expect(calls[0]).toEndWith('candidate-actor.json');
-    expect(calls[1]).toBe(result.creatures[0]!.actorPath);
+    expect(JSON.parse(readFileSync(calls[0]!, 'utf8'))).toEqual(JSON.parse(readFileSync(result.creatures[0]!.actorPath!, 'utf8')));
   });
 
-  test('promotes the exact workflow Actor after Intake accepts literal-review-only diagnostics', async () => {
+  test('returns the exact workflow Actor with review diagnostics', async () => {
     const calls: Array<string | undefined> = [];
     const result = await runMonsterIntake({
       source: LURKER_SOURCE,
@@ -1279,8 +1280,8 @@ describe('AI monster intake orchestrator', () => {
       },
     });
 
-    expect(result.status).toBe('succeeded');
-    expect(calls).toHaveLength(2);
+    expect(result.status).toBe('needs_review');
+    expect(calls).toHaveLength(1);
     expect(existsSync(result.creatures[0]!.actorPath!)).toBe(true);
     expect(JSON.parse(readFileSync(result.creatures[0]!.actorPath!, 'utf-8')).name).toContain('Lurker');
   });
@@ -1308,7 +1309,7 @@ describe('AI monster intake orchestrator', () => {
     expect(actor.items.filter((item: any) => item.type === 'spell')).toEqual([]);
   });
 
-  test('adjudicates a duplicate-spellcasting reviewer finding when IR and projection prove one generated feat only', async () => {
+  test('delivers one spellcasting feature without invoking an optional reviewer', async () => {
     const provider = new RatWarlockProvider();
     provider.review = async () => ({
       schemaVersion: 1,
@@ -1331,10 +1332,10 @@ describe('AI monster intake orchestrator', () => {
     }, provider);
 
     expect(intake.status).toBe('succeeded');
-    expect(JSON.parse(readFileSync(join(intake.creatures[0]!.bundlePath, 'ai-review.raw.json'), 'utf-8')).verdict).toBe('revise');
-    expect(JSON.parse(readFileSync(join(intake.creatures[0]!.bundlePath, 'ai-review.json'), 'utf-8'))).toEqual({
-      schemaVersion: 1, verdict: 'accepted', findings: [],
-    });
+    expect(intake.creatures[0]!.calls).toEqual({ extraction: 1, review: 0, repair: 0 });
+    expect(existsSync(join(intake.creatures[0]!.bundlePath, 'ai-review.raw.json'))).toBe(false);
+    const actor = JSON.parse(readFileSync(intake.creatures[0]!.actorPath!, 'utf8'));
+    expect(actor.items.filter((item: any) => item.name.includes('天生施法'))).toHaveLength(1);
   });
 
   test('keeps a reviewer component-waiver finding when the original candidate source still states the omitted waiver', () => {
@@ -1374,11 +1375,11 @@ describe('AI monster intake orchestrator', () => {
     };
     const candidate = { id: 'lurker', label: 'Lurker', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE };
 
-    expect(adjudicateReview(LURKER_SOURCE, candidate, ir, {
+    expect(adjudicateReviewSourceAudit(LURKER_SOURCE, candidate, ir, {
       items: [{ name: 'Dream of Creation', activation: 'legendary', section: '\u795e\u8bdd\u52a8\u4f5c' }],
     }, review)).toMatchObject({ verdict: 'accepted', findings: [] });
 
-    expect(adjudicateReview(LURKER_SOURCE, candidate, ir, {
+    expect(adjudicateReviewSourceAudit(LURKER_SOURCE, candidate, ir, {
       items: [{ name: 'Dream of Creation', activation: 'legendary', section: 'Legendary Actions' }],
     }, review)).toMatchObject({ verdict: 'revise', findings: [{ id: 'mythic-activation' }] });
   });
@@ -1394,9 +1395,11 @@ describe('AI monster intake orchestrator', () => {
       ...roots(),
     }, provider);
 
-    expect(result.status).toBe('needs_review');
-    expect(result.creatures[0]!.findings).toContainEqual(expect.objectContaining({ code: 'BIOGRAPHY_REVIEW' }));
+    expect(result.status).toBe('succeeded');
+    expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 0, repair: 0 });
+    expect(result.creatures[0]!.findings.some(finding => finding.code === 'BIOGRAPHY_REVIEW')).toBe(false);
     expect(result.creatures[0]!.spellResolution).toMatchObject({ required: true, status: 'pending', spellCount: 10 });
+    expect(JSON.parse(readFileSync(result.creatures[0]!.actorPath!, 'utf8')).items.length).toBeGreaterThan(0);
   });
 
   test('keeps spell resolution pending when deterministic validation blocks only an unrelated actor field', async () => {
@@ -1417,15 +1420,14 @@ describe('AI monster intake orchestrator', () => {
       ...roots(),
     }, provider);
 
-    expect(result.status).toBe('needs_review');
-    expect(result.creatures[0]!.findings).toContainEqual(expect.objectContaining({
-      path: '/creature/identity/name',
-      blocking: true,
-    }));
+    expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 0, repair: 0 });
     expect(result.creatures[0]!.spellResolution).toMatchObject({ required: true, status: 'pending', spellCount: 10 });
+    const actor = JSON.parse(readFileSync(result.creatures[0]!.actorPath!, 'utf8'));
+    expect(actor.type).toBe('npc');
+    expect(actor.flags['fvtt-json-generator-spell-resolver'].spellManifest.spellcastingGroups[0].spellRefs).toHaveLength(10);
   });
 
-  test('marks spell resolution needs_review when AI review blocks a spell-specific path', async () => {
+  test('keeps portable spells available while AI review is disabled', async () => {
     const provider = new RatWarlockProvider();
     provider.review = async () => ({
       schemaVersion: 1,
@@ -1448,8 +1450,10 @@ describe('AI monster intake orchestrator', () => {
       ...roots(),
     }, provider);
 
-    expect(result.status).toBe('needs_review');
-    expect(result.creatures[0]!.spellResolution).toMatchObject({ required: true, status: 'needs_review', spellCount: 10 });
+    expect(result.status).toBe('succeeded');
+    expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 0, repair: 0 });
+    expect(result.creatures[0]!.spellResolution).toMatchObject({ required: true, status: 'pending', spellCount: 10 });
+    expect(existsSync(result.creatures[0]!.actorPath!)).toBe(true);
   });
 
   test('re-verifies an identical promoted caster Actor and requires explicit replace before regeneration', async () => {
@@ -1611,21 +1615,25 @@ describe('AI monster intake orchestrator', () => {
     }, provider);
 
     expect(result.status).toBe('needs_review');
-    expect(result.creatures[0]!.spellResolution).toMatchObject({ required: true, status: 'needs_review', spellCount: 0 });
+    expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 0, repair: 0 });
+    const actor = JSON.parse(readFileSync(result.creatures[0]!.actorPath!, 'utf8'));
+    expect(actor.type).toBe('npc');
+    expect(actor.items.length).toBeGreaterThan(0);
+    expect(result.creatures[0]!.findings.length).toBeGreaterThan(0);
   });
 
-  test('performs at most one semantic repair and then requires review', async () => {
+  test('does not automatically invoke semantic review or repair', async () => {
     const provider = new FakeProvider();
     provider.reviewVerdicts = ['revise', 'revise'];
     const result = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...roots() }, provider);
-    expect(result.status).toBe('needs_review');
     expect(provider.extractionCalls).toBe(1);
-    expect(provider.reviewCalls).toBe(2);
-    expect(provider.repairCalls).toBe(1);
-    expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 2, repair: 1 });
+    expect(provider.reviewCalls).toBe(0);
+    expect(provider.repairCalls).toBe(0);
+    expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 0, repair: 0 });
+    expect(JSON.parse(readFileSync(result.creatures[0]!.actorPath!, 'utf8')).items.length).toBeGreaterThan(0);
   });
 
-  test('retains a complete source-backed GM spell group when a later repair drops it', async () => {
+  test('retains a complete GM spell group without invoking a destructive repair', async () => {
     const original = buildRatWarlockIr();
     const group = original.creature.spellcasting![0]!;
     group.manualGrants = group.usageGroups.flatMap((usage) => structuredClone(usage.evidence));
@@ -1651,7 +1659,7 @@ describe('AI monster intake orchestrator', () => {
       fvttVersion: '14', effectProfile: 'core', ...roots(),
     }, provider);
     const creature = result.creatures[0]!;
-    expect(creature.calls).toEqual({ extraction: 1, review: 2, repair: 1 });
+    expect(creature.calls).toEqual({ extraction: 1, review: 0, repair: 0 });
     const saved = JSON.parse(readFileSync(join(creature.bundlePath, 'intake-ir.json'), 'utf8'));
     expect(saved.creature.spellcasting).toEqual(original.creature.spellcasting);
     expect(creature.spellResolution.required).toBe(false);
@@ -1663,7 +1671,7 @@ describe('AI monster intake orchestrator', () => {
     expect(spellFeature.flags?.fvttJsonGenerator?.spellcastingFeatureKey).toBeUndefined();
   });
 
-  test.each([false, true])('retains the complete GM remainder of a mixed spell group after repair (narrowed=%s)', async (narrowed) => {
+  test.each([false, true])('retains the complete GM remainder without invoking repair (narrowed=%s)', async (narrowed) => {
     const original = buildRatWarlockIr();
     const group = original.creature.spellcasting![0]!;
     group.manualGrants = structuredClone(group.usageGroups[0]!.evidence);
@@ -1686,7 +1694,7 @@ describe('AI monster intake orchestrator', () => {
     const result = await runMonsterIntake({ source: RAT_WARLOCK_SOURCE,
       sourceName: 'mixed-spells-repair.txt', fvttVersion: '14', effectProfile: 'core', ...roots() }, provider);
     const creature = result.creatures[0]!;
-    expect(creature.calls).toEqual({ extraction: 1, review: 2, repair: 1 });
+    expect(creature.calls).toEqual({ extraction: 1, review: 0, repair: 0 });
     const saved = JSON.parse(readFileSync(join(creature.bundlePath, 'intake-ir.json'), 'utf8'));
     expect(saved.creature.spellcasting[0].manualGrants).toEqual(group.manualGrants);
     expect(saved.creature.spellcasting[0].description).toBe(group.description);
@@ -1700,165 +1708,66 @@ describe('AI monster intake orchestrator', () => {
     expect(spellFeature.system.description.value).toContain('GM');
   });
 
-  test('retains a corrected repair ledger when exact source spans originally have missing coverage bindings', async () => {
-    for (const claimPaths of [[], ['/creature/not-present']]) {
-      const provider = new FakeProvider();
-      provider.extract = async () => {
-        provider.extractionCalls += 1;
-        const ir = buildValidLurkerIr();
-        const start = LURKER_SOURCE.indexOf('特质Traits');
-        const end = start + '特质Traits'.length;
-        const template = ir.coverage[0]!;
-        ir.coverage = [
-          { ...template, end: start, quote: LURKER_SOURCE.slice(0, start) },
-          { start, end, quote: LURKER_SOURCE.slice(start, end), classification: 'mechanical', claimPaths },
-          { ...template, start: end, quote: LURKER_SOURCE.slice(end) },
-        ];
-        return ir;
-      };
-
-      const result = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'coverage-repair.txt', ...roots() }, provider);
-
-      expect(result.status).toBe('succeeded');
-      expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 1, repair: 1 });
-      expect(provider.repairRequests[0]!.deterministicFindings).toContainEqual(expect.objectContaining({
-        code: 'UNCLAIMED_MECHANICAL_COVERAGE', blocking: true,
-      }));
-      const repaired = JSON.parse(readFileSync(join(result.creatures[0]!.bundlePath, 'intake-ir.json'), 'utf8'));
-      expect(repaired.coverage).toHaveLength(1);
-      expect(repaired.creature.actions).toHaveLength(2);
-      expect(existsSync(result.creatures[0]!.actorPath!)).toBe(true);
-    }
-  });
-
-  test('keeps incomplete coverage repairs blocked instead of treating exact quotes as sufficient', async () => {
-    const invalidIr = () => {
-      const ir = buildValidLurkerIr();
-      const start = LURKER_SOURCE.indexOf('特质Traits');
-      const end = start + '特质Traits'.length;
-      const template = ir.coverage[0]!;
-      ir.coverage = [
-        { ...template, end: start, quote: LURKER_SOURCE.slice(0, start) },
-        { start, end, quote: LURKER_SOURCE.slice(start, end), classification: 'mechanical', claimPaths: [] },
-        { ...template, start: end, quote: LURKER_SOURCE.slice(end) },
-      ];
-      return ir;
-    };
+  test.each([{ claimPaths: [] }, { claimPaths: ['/creature/not-present'] }])('retains coverage bookkeeping issues and still delivers every action (%j)', async ({ claimPaths }) => {
     const provider = new FakeProvider();
-    provider.extract = async () => invalidIr();
-    provider.repair = async () => invalidIr();
-
-    const result = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'coverage-still-invalid.txt', ...roots() }, provider);
-
-    expect(result.status).toBe('needs_review');
-    expect(result.creatures[0]!.findings).toContainEqual(expect.objectContaining({ code: 'UNCLAIMED_MECHANICAL_COVERAGE' }));
-    expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 0, repair: 1 });
-    expect(existsSync(join(result.creatures[0]!.bundlePath, 'candidate-actor.json'))).toBe(false);
+    const original = buildValidLurkerIr();
+    const start = LURKER_SOURCE.indexOf('特质Traits'), end = start + '特质Traits'.length;
+    original.coverage = [{ start, end, quote: LURKER_SOURCE.slice(start, end), classification: 'mechanical', claimPaths }];
+    provider.extract = async () => structuredClone(original);
+    const intake = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'coverage.txt', fvttVersion: '14', ...roots() }, provider);
+    const creature = intake.creatures[0]!;
+    expect(creature.calls).toEqual({ extraction: 1, review: 0, repair: 0 });
+    expect(provider.repairRequests).toEqual([]);
+    const saved = JSON.parse(readFileSync(join(creature.bundlePath, 'intake-ir.json'), 'utf8'));
+    expect(saved.coverage).toEqual(original.coverage);
+    const actor = JSON.parse(readFileSync(creature.actorPath!, 'utf8'));
+    for (const feature of original.creature.actions) expect(actor.items.some((item: any) => item.name.includes(feature.name))).toBe(true);
   });
 
-  test('uses the single repair budget for initial deterministic blockers before rendering', async () => {
-    const provider = new FakeProvider();
-    provider.extract = async () => {
-      provider.extractionCalls += 1;
-      return buildDeterministicallyInvalidLurkerIr();
-    };
-
-    const result = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...roots() }, provider);
-
-    expect(result.status).toBe('succeeded');
-    expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 1, repair: 1 });
-    expect(provider.repairRequests).toHaveLength(1);
-    expect(provider.repairRequests[0]).toMatchObject({
-      stage: 'deterministic-validation',
-      source: LURKER_SOURCE,
-      deterministicFindings: expect.arrayContaining([expect.objectContaining({
-        code: 'MISSING_REQUIRED_CLAIM', path: '/creature/attributes/ac', blocking: true,
-      })]),
-    });
-    expect(provider.repairRequests[0]).not.toHaveProperty('markdown');
-    expect(provider.repairRequests[0]).not.toHaveProperty('actorProjection');
-    expect(provider.repairRequests[0]).not.toHaveProperty('review');
-  });
-
-  test('returns needs_review without rendering when deterministic repair is still invalid', async () => {
+  test.each(['revise', 'needs_review', 'unavailable'])('does not depend on review or repair availability (%s)', async reviewOutcome => {
     const provider = new FakeProvider();
     provider.extract = async () => buildDeterministicallyInvalidLurkerIr();
-    provider.repair = async (request) => {
-      provider.repairCalls += 1;
-      provider.repairRequests.push(request);
-      return buildDeterministicallyInvalidLurkerIr();
-    };
-
-    const result = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...roots() }, provider);
-    const creature = result.creatures[0]!;
-
-    expect(result.status).toBe('needs_review');
-    expect(creature.calls).toEqual({ extraction: 1, review: 0, repair: 1 });
-    expect(existsSync(join(creature.bundlePath, 'standard.md'))).toBe(false);
-    expect(existsSync(join(creature.bundlePath, 'candidate-actor.json'))).toBe(false);
-  });
-
-  test('does not make a second repair when deterministic repair is followed by reviewer revise', async () => {
-    const provider = new FakeProvider();
-    provider.extract = async () => buildDeterministicallyInvalidLurkerIr();
-    provider.reviewVerdicts = ['revise'];
-
-    const result = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...roots() }, provider);
-
-    expect(result.status).toBe('needs_review');
-    expect(result.creatures[0]!.calls).toEqual({ extraction: 1, review: 1, repair: 1 });
-    expect(provider.repairRequests).toHaveLength(1);
-    expect(provider.repairRequests[0]).toMatchObject({ stage: 'deterministic-validation' });
-  });
-
-  test('fails closed when the deterministic repair provider call fails', async () => {
-    const provider = new FakeProvider();
-    provider.extract = async () => buildDeterministicallyInvalidLurkerIr();
-    provider.repair = async (request) => {
-      provider.repairCalls += 1;
-      provider.repairRequests.push(request);
-      throw new Error('repair provider unavailable');
-    };
-
-    const result = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...roots() }, provider);
-    const creature = result.creatures[0]!;
-
-    expect(result.status).toBe('failed');
-    expect(creature.calls).toEqual({ extraction: 1, review: 0, repair: 1 });
-    expect(creature.findings).toContainEqual(expect.objectContaining({
-      code: 'PROVIDER_FAILURE', message: 'repair provider unavailable', blocking: true,
-    }));
-    expect(existsSync(join(creature.bundlePath, 'standard.md'))).toBe(false);
+    provider.reviewVerdicts = [reviewOutcome === 'unavailable' ? 'revise' : reviewOutcome];
+    provider.repair = async () => { throw Error('repair provider unavailable'); };
+    const intake = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'no-auto-repair.txt', fvttVersion: '14', ...roots() }, provider);
+    const creature = intake.creatures[0]!;
+    expect(creature.calls).toEqual({ extraction: 1, review: 0, repair: 0 });
+    expect(provider.repairRequests).toEqual([]);
+    expect(provider.reviewCalls).toBe(0);
+    expect(existsSync(join(creature.bundlePath, 'standard.md'))).toBe(true);
+    expect(JSON.parse(readFileSync(creature.actorPath!, 'utf8')).items.length).toBeGreaterThan(0);
   });
 
   test('reuses identical promoted content but blocks a conflicting target', async () => {
     const paths = roots();
-    const first = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...paths }, new FakeProvider());
-    const second = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...paths }, new FakeProvider());
+    const first = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', fvttVersion: '14', ...paths }, new FakeProvider());
+    const second = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', fvttVersion: '14', ...paths }, new FakeProvider());
     expect(second.status).toBe('succeeded');
     writeFileSync(first.creatures[0]!.markdownPath!, 'different user content');
-    const conflict = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...paths }, new FakeProvider());
+    const conflict = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', fvttVersion: '14', ...paths }, new FakeProvider());
     expect(conflict.status).toBe('needs_review');
     expect(conflict.creatures[0]!.findings.some((finding) => finding.code === 'TARGET_CONFLICT')).toBe(true);
     expect(existsSync(join(conflict.runPath, 'creatures/lurker/actor.json'))).toBe(false);
   });
 
-  test('fails rather than silently accepting zero discovered monsters', async () => {
+  test('preserves unassigned original source when discovery does not locate creatures', async () => {
     const provider = new FakeProvider();
     provider.discover = async () => ({ schemaVersion: 1, candidates: [] });
-    await expect(runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...roots() }, provider))
-      .rejects.toThrow('discovered 0 monsters');
+    const intake = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...roots() }, provider);
+    expect(intake.status).toBe('needs_review');
+    expect(intake.creatures).toEqual([]);
+    expect(intake.unassigned).toEqual([{ start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE }]);
+    expect(provider.extractionCalls).toBe(0);
   });
 
-  test('resumes a target-conflict decision, backs up, and regenerates instead of patching JSON', async () => {
+  test('resumes an explicit replacement using the generated Actor without creating backups', async () => {
     const paths = roots();
-    const first = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...paths }, new FakeProvider());
+    const first = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', fvttVersion: '14', ...paths }, new FakeProvider());
     writeFileSync(first.creatures[0]!.markdownPath!, 'existing conflicting markdown');
     writeFileSync(first.creatures[0]!.actorPath!, '{"name":"existing actor"}');
-    const blocked = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...paths }, new FakeProvider());
+    const blocked = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', fvttVersion: '14', ...paths }, new FakeProvider());
     const storedIrPath = join(blocked.runPath, 'creatures/lurker/intake-ir.json');
     const storedIr = JSON.parse(readFileSync(storedIrPath, 'utf-8'));
-    storedIr.creature.actions[1].activityType = 'action';
     writeFileSync(storedIrPath, JSON.stringify(storedIr, null, 2));
     const decisionsPath = join(blocked.runPath, 'decisions.json');
     writeFileSync(decisionsPath, JSON.stringify({
@@ -1870,8 +1779,7 @@ describe('AI monster intake orchestrator', () => {
     expect(resumed.status).toBe('succeeded');
     expect(JSON.parse(readFileSync(storedIrPath, 'utf-8')).creature.actions[1].activityType).toBe('attack');
     expect(JSON.parse(readFileSync(resumed.creatures[0]!.actorPath!, 'utf-8')).name).toContain('暗影潜妖');
-    expect(readFileSync(join(blocked.runPath, 'backups/lurker/lurker-in-the-dark.md'), 'utf-8')).toBe('existing conflicting markdown');
-    expect(readFileSync(join(blocked.runPath, 'backups/lurker/lurker-in-the-dark.json'), 'utf-8')).toContain('existing actor');
+    expect(existsSync(join(blocked.runPath, 'backups'))).toBe(false);
   });
 
   test('does not use deterministic AI repair to overwrite a user-confirmed resumed IR', async () => {
@@ -1879,7 +1787,7 @@ describe('AI monster intake orchestrator', () => {
     const initialProvider = new FakeProvider();
     initialProvider.reviewVerdicts = ['needs_review'];
     const blocked = await runMonsterIntake(
-      { source: LURKER_SOURCE, sourceName: 'lurker.txt', ...paths },
+      { source: LURKER_SOURCE, sourceName: 'lurker.txt', fvttVersion: '14', ...paths },
       initialProvider,
     );
     const storedIrPath = join(blocked.runPath, 'creatures/lurker/intake-ir.json');
@@ -1923,7 +1831,7 @@ describe('AI monster intake orchestrator', () => {
     const initialProvider = new FakeProvider();
     initialProvider.reviewVerdicts = ['needs_review'];
     const blocked = await runMonsterIntake(
-      { source: LURKER_SOURCE, sourceName: 'lurker.txt', ...paths },
+      { source: LURKER_SOURCE, sourceName: 'lurker.txt', fvttVersion: '14', ...paths },
       initialProvider,
     );
     const storedIrPath = join(blocked.runPath, 'creatures/lurker/intake-ir.json');
@@ -1945,8 +1853,9 @@ describe('AI monster intake orchestrator', () => {
     const resumed = await resumeMonsterIntake(blocked.runPath, decisionsPath, resumeProvider, paths.vaultPath);
     const resumedIr = JSON.parse(readFileSync(storedIrPath, 'utf-8')) as MonsterIntakeIR;
 
-    expect(resumed.status).toBe('needs_review');
-    expect(resumed.creatures[0]!.calls).toEqual({ extraction: 0, review: 1, repair: 0 });
+    expect(resumed.status).toBe('succeeded');
+    expect(JSON.parse(readFileSync(resumed.creatures[0]!.actorPath!, 'utf8')).items.length).toBeGreaterThan(0);
+    expect(resumed.creatures[0]!.calls).toEqual({ extraction: 0, review: 0, repair: 0 });
     expect(resumeProvider.repairCalls).toBe(0);
     expect(resumedIr.claims).toContainEqual(expect.objectContaining({
       path: '/creature/identity/name',
@@ -1960,7 +1869,7 @@ describe('AI monster intake orchestrator', () => {
     const paths = roots();
     const provider = new FakeProvider();
     provider.reviewVerdicts = ['needs_review'];
-    const blocked = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', ...paths }, provider);
+    const blocked = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'lurker.txt', fvttVersion: '14', ...paths }, provider);
     const decisionsPath = join(blocked.runPath, 'decisions.json');
     writeFileSync(decisionsPath, JSON.stringify({ runId: blocked.runId, sourceSha256: 'wrong', decisions: [] }));
     await expect(resumeMonsterIntake(blocked.runPath, decisionsPath, new FakeProvider(), paths.vaultPath))

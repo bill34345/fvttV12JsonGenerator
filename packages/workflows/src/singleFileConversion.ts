@@ -171,75 +171,41 @@ export async function convertMarkdownContentToJson(
     iconWorkflow,
   });
   const actor = generated.actor;
-  const legacyWarnings = new ActorValidator().validate(parsed, actor);
-  const legacyDiagnostics: GenerationDiagnostic[] = legacyWarnings.map((message, index) => ({
-    code: 'GEN_LEGACY_VALIDATOR_WARNING',
-    severity: 'warning',
-    stage: 'semantic',
-    path: `legacy-validator/${index}`,
-    message,
-  }));
   const requestedOutputPath = options.outputPath ? resolvePath(options.outputPath) : undefined;
-  const actorVerification = buildActorVerificationSummaryFromValues({
-    source: options.content,
-    actor,
-    sourcePath: sourcePath ?? '<uploaded-markdown>',
-    actorPath: requestedOutputPath ?? '<generated-preview>',
-  });
-  const sourceDiagnostics: GenerationDiagnostic[] = actorVerification.sourceIntegrityErrors.map(message => ({
-    code: 'GEN_SOURCE_INTEGRITY_MISMATCH', severity: 'error', stage: 'semantic', path: 'source', message,
-  }));
-  const diagnostics = [...generated.diagnostics, ...legacyDiagnostics, ...sourceDiagnostics];
-  const status = generated.verification.status === 'failed' || sourceDiagnostics.length > 0
-    ? 'failed'
-    : legacyDiagnostics.length > 0 || generated.verification.status === 'needs_review'
-      ? 'needs_review'
-      : 'accepted';
-  const verification: GenerationVerification = {
-    ...generated.verification,
-    status,
-    diagnostics,
-  };
-  const reviewableBehaviorOutput = status === 'needs_review'
-    && isIntentionalBehaviorReviewOnly(diagnostics);
-  if (status === 'accepted' || reviewableBehaviorOutput) {
-    writeJsonIfRequested(requestedOutputPath, actor);
-  }
-  const iconReviewPath = status === 'accepted' || reviewableBehaviorOutput
-    ? writeReviewIfRequested(
-        requestedOutputPath,
-        generated.iconReview,
-        options.writeIconReviewReport,
-        iconWorkflow,
-      )
-    : undefined;
+  const diagnostics: GenerationDiagnostic[] = [...generated.diagnostics];
+  let outputPath: string | undefined;
+  try { writeJsonIfRequested(requestedOutputPath, actor); outputPath = requestedOutputPath; }
+  catch (error) { diagnostics.push(reportFailure('GEN_OUTPUT_WRITE_INCOMPLETE', error)); }
+  try {
+    diagnostics.push(...new ActorValidator().validate(parsed, actor).map((message, index): GenerationDiagnostic => ({
+      code: 'GEN_LEGACY_VALIDATOR_WARNING', severity: 'warning', stage: 'semantic', path: `legacy-validator/${index}`, message,
+    })));
+  } catch (error) { diagnostics.push(reportFailure('GEN_LEGACY_VALIDATOR_INCOMPLETE', error)); }
+  let actorVerification: ActorVerificationSummary | null = null;
+  try {
+    actorVerification = buildActorVerificationSummaryFromValues({ source: options.content, actor,
+      sourcePath: sourcePath ?? '<uploaded-markdown>', actorPath: requestedOutputPath ?? '<generated-preview>' });
+    diagnostics.push(...actorVerification.sourceIntegrityErrors.map((message): GenerationDiagnostic => ({
+      code: 'GEN_SOURCE_INTEGRITY_MISMATCH', severity: 'error', stage: 'semantic', path: 'source', message,
+    })));
+  } catch (error) { diagnostics.push(reportFailure('GEN_ACTOR_SUMMARY_INCOMPLETE', error)); }
+  let iconReviewPath: string | undefined;
+  try { iconReviewPath = writeReviewIfRequested(outputPath, generated.iconReview, options.writeIconReviewReport, iconWorkflow); }
+  catch (error) { diagnostics.push(reportFailure('GEN_ICON_REPORT_INCOMPLETE', error)); }
+  const status = generated.verification.status === 'failed' || diagnostics.some(diagnostic => diagnostic.severity === 'error')
+    ? 'failed' : generated.verification.status === 'needs_review' || diagnostics.length ? 'needs_review' : 'accepted';
+  const verification: GenerationVerification = { ...generated.verification, status, diagnostics };
   return {
-    kind: 'actor',
-    sourcePath,
-    outputPath: status === 'accepted' || reviewableBehaviorOutput ? requestedOutputPath : undefined,
-    fvttVersion,
-    effectProfile,
-    name: String(actor.name ?? ''),
-    itemCount: Array.isArray(actor.items) ? actor.items.length : 0,
-    status,
-    diagnostics,
-    warnings: warningMessages(diagnostics),
-    verification,
-    actorVerification,
-    rawJson: actor,
-    iconReview: generated.iconReview,
-    ...(iconReviewPath ? { iconReviewPath } : {}),
+    kind: 'actor', sourcePath, outputPath, fvttVersion, effectProfile,
+    name: String(actor.name ?? ''), itemCount: Array.isArray(actor.items) ? actor.items.length : 0,
+    status, diagnostics, warnings: warningMessages(diagnostics), verification, actorVerification, rawJson: actor,
+    iconReview: generated.iconReview, ...(iconReviewPath ? { iconReviewPath } : {}),
   };
 }
 
-function isIntentionalBehaviorReviewOnly(diagnostics: GenerationDiagnostic[]): boolean {
-  const reviewCodes = new Set([
-    'GEN_GM_ASSISTANCE_REQUIRED',
-    'GEN_EXTERNAL_RULE_REVIEW_REQUIRED',
-  ]);
-  return diagnostics.length > 0
-    && diagnostics.every((diagnostic) =>
-      diagnostic.severity === 'warning' && reviewCodes.has(diagnostic.code));
+function reportFailure(code: string, error: unknown): GenerationDiagnostic {
+  return { code, severity: 'error', stage: 'semantic', path: 'actor',
+    message: error instanceof Error ? error.message : String(error) };
 }
 
 export function inferDefaultOutputPath(sourcePath: string, vaultPath: string): string {

@@ -68,13 +68,10 @@ describe('AI monster intake CLI', () => {
       port: 0,
       async fetch(request) {
         const body = await request.json() as any;
-        const system = String(body.messages?.[0]?.content ?? '');
         const payload = JSON.parse(String(body.messages?.[1]?.content ?? '{}'));
         const content = Array.isArray(payload.sourceLines)
           ? { schemaVersion: 1, candidates: [{ id: 'rat-warlock', label: '鼠神邪术师', firstLineId: payload.sourceLines[0].id, lastLineId: payload.sourceLines.at(-1).id }] }
-          : system.includes('Extract exactly one monster')
-            ? buildRatWarlockIr()
-            : { schemaVersion: 1, verdict: 'accepted', findings: [] };
+          : buildRatWarlockIr();
         return Response.json({ choices: [{ message: { content: JSON.stringify(content) } }] });
       },
     });

@@ -1,4 +1,4 @@
-import { detectItemRoute, extractFrontmatter } from '@fvtt-json-generator/parser';
+import { detectItemRoute, extractFrontmatter, FIELD_MAPPING } from '@fvtt-json-generator/parser';
 import type { CollectionIngestionPort } from './externalPorts';
 
 export type AutomaticConversionRoute =
@@ -56,6 +56,17 @@ export function detectAutomaticConversionRoute(
       confidence: 'high',
       label: '标准 Actor Markdown',
       reasons: ['检测到 frontmatter 中的 layout: creature。'],
+    });
+  }
+
+  if (isChineseActorFrontmatter(frontmatter)) {
+    return detection({
+      route: 'single',
+      contentKind: 'actor',
+      cardinality: 'single',
+      confidence: 'high',
+      label: '标准 Actor Markdown',
+      reasons: ['检测到项目中文 Actor frontmatter，直接使用已有 YAML 转换。'],
     });
   }
 
@@ -141,6 +152,15 @@ export function detectAutomaticConversionRoute(
       ? 'Actor 与 Item 信号接近，需要确认内容种类。'
       : '没有足够结构判断这是 Actor、Item 还是合集。',
   );
+}
+
+function isChineseActorFrontmatter(frontmatter: string): boolean {
+  if (/^(?:layout|"layout"|'layout')\s*:/im.test(frontmatter)) return false;
+  if (!/^(?:名称|"名称"|'名称')\s*:/m.test(frontmatter)) return false;
+  if (/^(?:类型|"类型"|'类型')\s*:\s*['"]?npc['"]?\s*(?:#.*)?$/im.test(frontmatter)) return true;
+  const actorFields = Object.entries(FIELD_MAPPING).filter(([, field]) => field.path.startsWith('system.'))
+    .map(([name]) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(`^[ \t]*(?:${actorFields.map(name => `(?:${name}|"${name}"|'${name}')`).join('|')})\\s*:`, 'm').test(frontmatter);
 }
 
 function countSignals(content: string, patterns: RegExp[]): number {
