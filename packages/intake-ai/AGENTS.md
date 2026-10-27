@@ -6,7 +6,7 @@
 
 ## Monster默认责任边界
 
-AI负责理解内容；默认`validateMonsterIntakeIR`只检查闭合结构、支持的组合、来源身份和引用，`verifyMonsterIntake`检查IR到Markdown／Actor的投影保真。不得重新用原文语法、数字或覆盖率判断AI是否理解正确，不得从原文回填或覆盖机制。生物本体和关联召唤物统一复用完整IR入口；精确引文定位和技术ID整理不构成内容推断。旧来源检查仅在显式SourceAudit离线入口保留。AI声明的不确定及真实结构／转换错误保持原状态；Item和Species各自的契约不因此放宽。依据为[用户原话与当前状态](../../docs/plans/2026-10-20-forge-ab-current-state.md)。
+AI负责理解内容；外部生物回答在接收入口整理一次，程序负责技术ID与附带记录。`validateMonsterIntakeIR`和`verifyMonsterIntake`返回具体字段／投影问题，不能取消Actor或删除已有能力；内部不重复作整只接受检查。可读生物回答的外壳、字段位置、引文、缺省值或内部IR问题不是AI没有正常返回。不能从原文猜补数值或覆盖模型明确机制；复杂规则及未映射字段与对应能力原文一起保留。旧SourceAudit只在显式离线入口出报告。Item和Species契约独立。依据为[用户原话与46项范围](../../docs/acceptance/2026-10-27-forge-generation-delivery-remediation.md)。
 
 ## 状态边界
 
@@ -15,17 +15,17 @@ AI负责理解内容；默认`validateMonsterIntakeIR`只检查闭合结构、�
 - Species Intake is another independent evidence IR with formal entry `--intake-species`, exact `core` / 2024 targets for Foundry `12.331` + dnd5e `4.3.9`, Foundry `14.364` + dnd5e `5.3.3`, or the ServerNext static candidate Foundry `14.368` + dnd5e `6.0.2`. Its accepted ledger is target-aware: neither an older V14 acceptance nor a static projector test accepts `14.368/core/2024` content. V12 remains a static-candidate generation/build target until a real V12 Lab passes; the existing V14 target retains its own runtime evidence. It may accept fully preserved `gm-assisted`/`external-rule` mechanics, but arbitrary Foundry paths, arbitrary Effect changes, empty Utility fallbacks, stale Markdown, cross-target evidence reuse and unreviewed module entries must fail closed.
 
 - 结果必须保持 `accepted`、`needs_review`、`failed` 等真实状态；不得把 provider 返回、schema 通过或文件写出自动提升为 accepted。
-- provider 原始输出必须经过本 package 的 validator/verifier；确定性 renderer 只能渲染已支持的契约。
+- Monster provider保留原答并交付可读生物资料；renderer确定性输出可转换字段，局部问题保留在对应能力说明和IR导出，不把整项已有基本操作变为纯说明。Item/Species继续各自validator/verifier边界。
 - 每次 Intake 都必须维持同一来源的可审计链：source → evidence IR → 已验证的 rendered Markdown（含适用的 portable spell-manifest evidence）→ workflow JSON。不得让同一 run 的 IR、Markdown、manifest 或 JSON 交叉引用另一来源/另一 run 的证据。
 - verifier 必须按 source identity 和该 source 的 evidence/range 复核，不得用“本批有相似条目通过”代替当前来源的验收。
-- 当前 Intake IR 未表达的高级 mechanics 必须保留为 `needs_review`，不能根据自然语言猜测后偷偷写入 renderer/generator；`needs_review`/`failed` 不能经手修 Markdown 或 JSON 被提升、推广为正式产物。
+- 当前Intake IR未表达的高级mechanics保留具体问题与原文；不能手修Markdown/JSON冒充accepted。生物候选的获取不依赖检查通过，已生成Actor须返回可访问的actorPath；正式登记/覆盖冲突只限制相应写入。
 - API key、完整 provider 请求、敏感响应和凭据不得进入仓库或普通日志；测试使用 fake provider，除非用户明确授权真实调用。
 - resume 必须保留原 run、决定文件和审计链，不能覆盖用户尚未处理的选择。
 
 ## 修改入口
 
 - 公共出口：`packages/intake-ai/src/index.ts`。
-- provider/http 只处理外部调用；orchestrator 管流程；validator/verifier 决定可接受性；renderer 负责确定性输出。
+- provider/http处理外部调用和一次接收整理；orchestrator组织交付；validator/verifier报告检查结论；renderer负责确定性输出。生物流程不自动调用AI复核或纠错，显式纠错失败保留原答及已有产物。
 
 ## 验证
 

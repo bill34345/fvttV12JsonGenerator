@@ -1,12 +1,18 @@
 # Generated Actor / Item Verification
 
+## Actor delivery and verification results
+
+Actor产物存在与检查通过分别记录。生物AI入口只有在AI没有正常返回时才允许本次整只无产物；可读回答的格式、字段、引文、内部IR／协议及检查问题只影响对应字段或操作的表达。完整可读Markdown回答沿同一入口复用已有文本转换；原始输入、AI全文及规范源分别保留。不得删除已有能力，或用整项／整只说明文字代替已有攻击、伤害、豁免、法术和次数。
+
+下文的来源比较与验收标准用于判断正确性，不控制已有Actor的查看、下载或正常采用。已有Actor在验证、图标、摘要、报告、恢复记录或响应附带数据失败时仍交付，并明确列出尚未完成或不一致之处。正式登记、真实GM权限、文档归属及覆盖冲突只约束对应写入；独立Item／Species保持自身契约。当前46项整改及Mirror实际验收进度见[执行记录](acceptance/2026-10-27-forge-generation-delivery-remediation.md)。
+
 ## Source-backed replacement damage and swarm identity
 
 For v14 / dnd5e 5.3.3 source-operation abilities, independently check each exclusive Attack choice. A clearly printed replacement can produce ordinary/replacement Attack options in one Item; the GM selects one. Preserve the exact condition and its owner (attacker versus target), both printed formulas, shared unconditional damage, target, range, activation and the same single resource cost. Do not infer a half-dice formula or automatic HP threshold. A separately qualified extra damage roll stays a GM Damage operation. Ambiguous third alternatives and inseparable multipart rules keep their complete GM operations.
 
 An explicitly two-handed damage replacement uses a native Weapon with Versatile: source base/versatile damage on the Item and one native Attack, retaining fixed printed attack/damage totals. Standard weapon identifiers may be reused; their library statistics must not replace a monster's printed dice, totals or riders. Melee/thrown source modes retain their own range and thrown uses base damage. Two-Handed alone does not imply Versatile. Verify a negative damage formula by changing the executing custom formula, not an ignored numeric field.
 
-The optional Markdown key `集群个体体型` carries individual swarm size independently of overall `体型` and `生物类型`. Check final `system.traits.size`, `system.details.type.value`, `system.details.type.swarm` and token dimensions independently. Ordinary creatures must not inherit a swarm field from a template. Conflicting source declarations remain blocking. These local source/output checks do not replace native import, roll-dialog or UI acceptance, and do not automatically migrate existing Actors.
+The optional Markdown key `集群个体体型` carries individual swarm size independently of overall `体型` and `生物类型`. Check final `system.traits.size`, `system.details.type.value`, `system.details.type.swarm` and token dimensions independently. Ordinary creatures must not inherit a swarm field from a template. Report conflicting source declarations while retaining the Actor and all supplied size information. These local source/output checks do not replace native import, roll-dialog or UI acceptance, and do not automatically migrate existing Actors.
 
 ## Required Source-To-JSON Checks
 
@@ -17,7 +23,7 @@ For each generated Actor JSON, manually compare the generated output against the
 - Core stats: AC, HP, hit dice, speeds, abilities, saves, and skills.
 - For NPC HP, compare both the printed average/current and maximum (`system.attributes.hp.value` / `max`) and the optional dice formula (`system.attributes.hp.formula`). For example, the Intake table `| **HP&#x20;**&#x37;（3d4） |` means 7 / 7 / `3d4`; numeric HTML entities and fullwidth parentheses are presentation only. Keep raw evidence coordinates unchanged, do not roll or recompute the printed average, and do not infer a formula when absent or borrow attack/healing dice.
 - Traits: senses, languages, damage resistances, damage immunities, damage vulnerabilities, and condition immunities.
-- For a staged Forge source, qualified stat-header defenses and non-native conditions require complete source-bound GM Items. Do not make any member of a qualified comma clause unconditional. The approved Colossal presentation uses the native maximum gargantuan while retaining the exact source label, dimensions and explicit GM size adjudication; other unknown sizes remain blocked.
+- For a historical staged Forge source, qualified stat-header defenses and non-native conditions retain their complete GM rules. Do not make any member of a qualified comma clause unconditional. The approved Colossal presentation uses the native maximum gargantuan while retaining the exact source label, dimensions and explicit GM size adjudication; unknown sizes retain their source value and a local mapping finding without canceling the Actor.
 - Verify printed passive Perception after including the native Perception passive bonus. A skill total alone cannot reproduce every source-explicit passive score.
 - The explicit literal biography mode prevents extra Items and executable inference. Its closed food-retention display fact still supplies the same verified sea-water requirement and no-vomiting meaning to formal Chinese; other prose remains a source comparison boundary.
 - On v14, known English language labels such as `Aquan`, `AURAN`, or `DrAcOnIc` map to the system's lowercase codes. Compare the visible language list as well as JSON values: dnd5e 5.3.3 omits unknown code casing from its labels. Similar unknown phrases remain literal and require review; legacy target behavior is unchanged.
@@ -52,7 +58,9 @@ For each generated standalone Item, also compare:
 - Stage provenance: names, requirements, uses, and mechanics come from structured source data. A literal-only stage must remain `needs_review`.
 - Complex-rule boundary: if the locked target cannot express the source rule natively, the result must say `gm-assisted` or `external-rule` with preserved source text. Static JSON, a utility-shaped placeholder, or a passing verifier is not native automation acceptance.
 
-## Shared Verification Gate
+## Shared Verification Results
+
+本节中来源语义核对与旧诊断用于人工比较或显式离线检查，不重新接回默认生物生成链。下述“拒绝”仅表示该局部投影未被证明正确，不拥有整只Actor或已有文件的否决权；保留所有已给数据、完整规则及其他基本操作，不要求修到零问题才能取回产物。
 
 Monster Intake 的基础数字必须独立于后续能力分段核对。清楚的表格、链接显示文字、引用符及 PDF 连字按排版等价读取，证据仍用原文坐标；URL 数字与 OCR 模糊字符不能证明数值。无法确认或与来源冲突时，只保留当前候选待核对。可从同一头部补回明确缺失的先攻和语言附注；未打印 PB 时可用已核实 CR 的既有原生派生值，不允许任意猜填。感官范围限制同时核对 IR 和最终 Actor 可见正文。`bun run test:forge-statblock-semantics` 保留正确格式与错填对照；测试不代替真实模型、导入及运行验收。
 
@@ -66,13 +74,13 @@ Monster Intake 的基础数字必须独立于后续能力分段核对。清楚�
 
 来源主体明确且同句she/her或he/him回指一致时才可证明自身距离；其他实体的距离不能借用。Each/Every/Any creature within N feet of本体的隐含半径与分步推导保持一致，外部闪光等中心仍不能变成本体范围。带真实独立Variant标题行的完整GM侧栏保留所有分支，不能合并各变体属性；标题中的Types不是Type标签。显式GM／SourceOP载体不会因条件表中的临时生命值被额外注入平面治疗；真实基础操作仍逐项核对。
 
-All supported entry points must run the same canonical generation pipeline. Before a formal write:
+All supported entry points run the same canonical generation pipeline. Record the following verification results alongside the generated artifact:
 
 - Every canonical attack, damage, save outcome, activation, use, effect, range, and stage is projected once or explicitly marked `literal-only`/`unsupported`.
 - Activity/Effect IDs are stable, 16 characters, unique within their document, and map keys equal Activity `_id` values.
-- Duplicate IDs, dangling Effect references, lost mechanics, save-outcome drift, invalid target fields, or profile leakage are blocking errors.
-- `needs_review` and `failed` results do not enter formal single-file output or collection ZIP artifacts.
-- A source-scoped `needs_review`/`failed` result cannot be promoted by editing rendered Markdown or JSON by hand; regenerate from the accepted upstream chain instead.
+- Program-owned IDs and document skeletons are constructed once; duplicate source IDs and other local issues retain the original data and a specific finding. Dangling Effect references, lost mechanics, save-outcome drift, invalid target fields, or profile leakage must be reported without removing unrelated operations or the Actor artifact.
+- An Actor with `needs_review` or `failed` findings remains available as a file and in partial collection exports. Standalone Item output and formal promotion keep their separate contract.
+- Never hand-edit rendered Markdown or final JSON to falsify a passed check. Preserve the original status, source and candidate; GM adoption is a separate decision and does not change the verification verdict.
 
 在 v14/core 的 `SourceOperation.aoe` 中，`radius` 仍表示该形状的长度或半径；可选 `width` 仅用于 `line`，可选 `height` 仅用于 `cylinder`。分别对照同一完整来源、IR、Markdown 和最终 `Activity.target.template` 的 `size/width/height`，并将远程 `range` 单独核对。来源唯一证明当前区域的宽或高时可以补齐缺失字段，不能覆盖显式错值；系统默认的 5 尺不是来源证明。旧 `rectangle` 别名只有来源明确为正方形时才输出原生 `square`；本轮没有增加真实长方形支持。原生高度字段是元数据，不能据此宣称三维模板、空间命中或自动裁定已经运行通过。
 

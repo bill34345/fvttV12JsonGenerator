@@ -18,7 +18,7 @@
 
 `modded-v14` 当前锁定 MIDI-QOL 14.0.11 和 DAE 14.0.12；旧的 14.0.9 实机结果保留为历史证据，不能自动升级为 14.0.11 的运行时验收。完整生产模组集合整体兼容性状态仍是 **Partial**。详见 [`docs/acceptance/current-support-matrix.md`](docs/acceptance/current-support-matrix.md)。
 
-Actor、Item、单文件、合集、Vault Sync、CLI 和 Web Job 共享 `parse → canonical IR → validate IR → target projector → validate output → write` 管线。诊断状态为 `failed` 或 `needs_review` 时不会写入正式 output；`core` profile 不包含 MIDI-QOL、DAE、Times Up 或 Item Macro 专属字段。
+Actor、Item、单文件、合集、Vault Sync、CLI 和 Web Job 共享 `parse → canonical IR → validate IR → target projector → validate output → write` 管线。Actor 一经生成即交付文件和实际路径，`failed`／`needs_review` 只表达检查结论；正式登记及已有目标覆盖分别处理。独立 Item／Species 保持各自接受与推广契约。`core` profile 不包含 MIDI-QOL、DAE、Times Up 或 Item Macro 专属字段。
 
 ## FVTT JSON Forge（Foundry 模块）
 
@@ -32,7 +32,7 @@ Actor、Item、单文件、合集、Vault Sync、CLI 和 Web Job 共享 `parse �
 https://raw.githubusercontent.com/bill34345/fvttV12JsonGenerator/master/foundry-modules/fvtt-json-forge/src/module.json
 ```
 
-模块核对正式生成结果的来源、目标、完整性和GM权限。生物的可用候选与检查结论分别保留，GM可在阅读具体问题后确认采用；Item仍要求严格`accepted`。Forge额外AI内容复核暂时关闭，开发和测试均不启用；历史审核结果可查看，GM仍可对照来源确认候选。AI提取及独立的结构纠错政策保持。草稿恢复不自动请求模型、不继承旧GM确认；浏览器关闭或刷新也不会自动重发可能计费的请求。详细安装、操作、数据与支持边界见 [`foundry-modules/fvtt-json-forge/README.zh-CN.md`](foundry-modules/fvtt-json-forge/README.zh-CN.md)。
+生物只有在AI没有正常答复时才允许本次整只无产物；可读回答的格式、局部字段、引文、内部协议及后置检查问题均单独显示，已有攻击、伤害、法术、次数和完整规则保持。可查看、下载已有Actor并由GM正常采用；世界权限、文档归属和覆盖冲突只限制相应写入。Item仍要求自身严格`accepted`。Forge额外AI内容复核暂时关闭，开发和测试均不启用。正式v1/v2 Actor草稿直接读取保存产物，不以期限、模型、契约或重新生成一致为取回条件，也不继承旧GM确认；恢复不自动请求模型。当前实施与实机验收状态见[46项记录](docs/acceptance/2026-10-27-forge-generation-delivery-remediation.md)，详细操作见 [`foundry-modules/fvtt-json-forge/README.zh-CN.md`](foundry-modules/fvtt-json-forge/README.zh-CN.md)。
 
 ## 安装
 
@@ -191,7 +191,7 @@ Intake 成功不会自动重建模块；`build:homebrew-species` 是独立显式
 
 ## AI 怪物资料整理（推荐）
 
-第一次拿到 TXT 或格式混乱的 Markdown 时，推荐让 AI 负责发现怪物边界与提取来源证据，再由项目确定性生成标准 Markdown 和 Actor JSON。AI 不直接写最终 JSON，任一证据、覆盖、投影或独立 review 门失败都会进入 `needs_review` 或 `failed`，不会静默回退旧转换器。
+第一次拿到 TXT 或格式混乱的 Markdown 时，可让 AI 负责发现生物边界并整理资料，再由现有 workflow 生成标准 Markdown 和 Actor JSON。AI 不直接写最终 Actor；检查结论与产物获取分别记录，局部问题不取消整只生物。模型返回完整可读的 Markdown 数值卡时，同一入口复用已有文本转换继续生成，分别保留原始输入、AI全文和规范来源，不要求用户切模式或追加模型请求。
 
 配置专用环境变量，不会读取 `TRANSLATION_*` 或通用 `OPENAI_*`：
 
@@ -217,7 +217,7 @@ MONSTER_INTAKE_CODEX_OAUTH_REASONING_EFFORT=xhigh
 
 这里的 `xhigh` 对应 Codex 界面里说的 `ultra`。不填写模型时，`codex-oauth` 模式也会默认使用 `gpt-5.6-luna`；这只是旧的本机兼容桥设置，不是网页的 Companion。Companion 留空时始终使用这台电脑当前 Codex CLI 的默认模型，不会偷偷填入 Luna。
 
-怪物Intake由AI理解内容并给出完整结构化数据；程序默认检查字段类型、支持的操作组合、来源身份与精确引用，以及IR到标准Markdown和Actor JSON的转换保真，不再按原文句式、数值或覆盖率重新判断AI理解、判遗漏或回填字段。完整描述供GM对照，AI自己声明的不确定保留原状态；CLI既有内容review／repair由AI负责，Forge额外AI内容复核暂时关闭。生物本体和关联召唤物使用同一完整IR入口，攻击、能力和固定AC保留，普通装备不作为遗漏。旧SourceAudit及V2原文事实恢复仅作显式离线历史入口，Item／Species各自契约保持。
+怪物Intake由AI理解内容，外部回答在接收处统一整理一次；程序产生必要技术ID和容器，不猜补来源数值。结构、引用及IR／文本到Markdown和Actor的保真问题具体列出，未映射内容保留在对应说明和导出中，不再重判AI理解以否决整只。生物入口不自动调用内容review或repair；Forge的AI内容复核继续关闭，用户显式纠错失败仍保留原答与已有Actor。生物本体和关联召唤物沿同一生成链处理，普通装备不作为遗漏。旧SourceAudit及V2原文事实恢复仅作显式离线历史入口，Item／Species各自契约保持。
 
 默认完整IR提示词采用单一精确引文协议，程序按当前生物范围定位，历史行号／子句引用继续可读；不要求逐字段证明或空白覆盖账本。AI根据完整能力理解独立／共享法术次数，未自动支持的限定保留完整GM说明，实际不确定仍明确显示。
 
@@ -233,7 +233,7 @@ bun run src/index.ts `
   --effect-profile core
 ```
 
-`--dry-run` 只检查配置、输入限制并估算怪物数和最大调用数，不调用 AI、不推广文件。accepted Markdown 写入 vault `input/`，Actor JSON 由现有 workflow 写入 `output/`。若结果需要确认，审查包保存在 `.local/intake-runs/<run-id>/`，可提交 decisions 后完整重跑：
+`--dry-run` 只检查配置并估算生物数和最大调用数，不调用AI、不推广文件。每个已生成Actor都返回可访问文件和`actorPath`；`accepted`的正式登记写入vault `input/`／`output/`，目标冲突不撤回候选。原答、标准来源与检查记录保存在`.local/intake-runs/<run-id>/`；需要继续明确选择时，可提交decisions，已有回答的本地转换不要求Key或再次调用模型。
 
 可以用下面的命令检查 Intake。API Key 模式只检查配置；Codex OAuth 模式还会检查本机桥接服务的 `/health`：
 
@@ -250,7 +250,7 @@ bun run src/index.ts `
   --vault "obsidian/dnd数据转fvttjson"
 ```
 
-退出码：`0` 表示全部 accepted 或仅执行预览，`2` 表示至少一个候选 needs_review 且没有执行失败，`1` 表示存在 failed。TXT/MD 内容会发送到配置的 AI provider；密钥仅保留在服务端，日志不记录请求头、密钥或隐藏推理。Monster、Item 与 Species Intake 均最多处理 50 个候选、200,000 个 JavaScript UTF-16 字符；Item 与 Species 固定为 V14/core，精确边界见各自章节。三者都不支持图片/PDF OCR，也不承诺任意模型、任意文本都能自动通过。
+退出码：`0`表示全部accepted或仅预览，`2`表示存在needs_review且没有failed，`1`表示存在failed；退出码不撤回已返回的Actor文件。实际AI请求受当批授权额度约束，额度不限制已有回答的本地转换；生物数量、展示长度和来源记录不是取得答复后的整只生成门槛。Item／Species仍各自最多50个候选、200,000个JavaScript UTF-16字符，并固定V14/core。TXT/MD只在真实请求时发送到所选provider；凭据不进入日志。三个文本入口均不做图片/PDF OCR，生成产物也不等于任意规则已自动实现。
 
 ## 血猎手 2024 原生合集模块（Foundry v14）
 

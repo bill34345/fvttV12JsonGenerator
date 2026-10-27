@@ -1,28 +1,28 @@
 {
   "web-workbench": {
-    "fingerprint": "513f158843a0940be7518dd95baacc8fcf9d028824a772954c27cb95c23932bf",
-    "reviewedOn": "2026-10-26",
-    "note": "已核对共享parser/generation：新增显式易伤备注进入原生custom，普通易伤列表独立；入口/目标/输出推广规则不变，补充字段说明，不宣称Web实机新增接受。"
+    "fingerprint": "6751ed7b04e8a67f1ad2104d13d88a9aab9b86345191323fefd54fdc46c2f219",
+    "reviewedOn": "2026-10-27",
+    "note": "实际Web验证标准Actor检测、非accepted完整预览和下载链接；正常HTTP取得文件与登记/预览全等。修正核对页和job日志旧阻断文案，保留Chrome工具未返回本地路径的独立限制，Item契约保持。"
   },
   "markdown-convert": {
-    "fingerprint": "8fe29060a1693d9f30fed405a714b9c282645f0ad97335005347cf8d3444ce42",
-    "reviewedOn": "2026-10-26",
-    "note": "已核对共享parser/generation：新增显式易伤备注进入原生custom，普通易伤列表独立；入口/目标/输出推广规则不变，补充字段说明，不宣称Web实机新增接受。"
+    "fingerprint": "f8f476b3be05a37713d673c8f4f38ba1958252325c49a42b9bf68fdf365dce54",
+    "reviewedOn": "2026-10-27",
+    "note": "已对照Actor与Item转换分支：已有Actor保留候选路径，后置诊断不撤回；旧Actor文件和蓝图数量长度上限已移除，Item接受规则保持。"
   },
   "monster-intake": {
-    "fingerprint": "2e86f28e14c5dc5c8ad0b3fc2e19e8b3cc9a97e5b6c1dbbc3575c8fdce81506f",
-    "reviewedOn": "2026-10-26",
-    "note": "已对照共同Monster入口、原答与正式草稿、官方MM自定义易伤字段、响应预览及保存检查；更新空栏记录和易伤备注说明。AI复核继续关闭，固定资料不证明新模型质量。"
+    "fingerprint": "9f1e0f1df466dde1130d48ca9fd1cf7149069a818ebe1937e6fbc2cfc22a8913",
+    "reviewedOn": "2026-10-27",
+    "note": "已对照orchestrator与source-text分支：原答、规范源和Actor路径贯通，完整Markdown复用文本转换；不自动review或repair，不以局部问题整只否决。"
   },
   "item-intake": {
-    "fingerprint": "edd86b91e64bad200af04f3644208899d67116bf326084d9d1f30944d95e6e01",
-    "reviewedOn": "2026-10-26",
-    "note": "逐项核对：本次新增仅作用Monster creature空栏及易伤字段；Item/Species独立输入契约、生成推广、目标版本、使用步骤和限制保持。"
+    "fingerprint": "d7697b3fd795a4b5ef7852f423b1a9efb4a7849dcdbcb99588e72b3c4da787f9",
+    "reviewedOn": "2026-10-27",
+    "note": "已对照Item独立生成及Web分支，仍要求accepted正式输出和自身法术/资源契约；Actor交付放宽不改变本条。"
   },
   "species-intake": {
-    "fingerprint": "40d8919592435304efb85886c7c170bb09358980d30279f45e6b92ddcd044101",
-    "reviewedOn": "2026-10-26",
-    "note": "逐项核对：本次新增仅作用Monster creature空栏及易伤字段；Item/Species独立输入契约、生成推广、目标版本、使用步骤和限制保持。"
+    "fingerprint": "a94d592e19fd5da6a183b6348f451e097a737e34ee7e6e6bf14245fcb03701b5",
+    "reviewedOn": "2026-10-27",
+    "note": "Species provider、ledger及build未改，accepted来源与V12/V14目标约束保持；Monster类型变化不作用于Species。"
   },
   "document-extraction": {
     "fingerprint": "1fadc1f19a0a8346a15306bb247d90ae4b2bbaf709177747d8aded524ec25bcc",
@@ -30,29 +30,29 @@
     "note": "已对照文档规则：仅报告/元数据显示改变且原MD、顺序、候选及下游行为有未变证据时缩小验收；正文或消费变化/证据不足仍核完整来源链。"
   },
   "vault-sync": {
-    "fingerprint": "dc215d764d1ecd179c9e3720006942c9b0188327eb15c81ed0bad7517de2850f",
-    "reviewedOn": "2026-10-25",
-    "note": "逐项核对本轮差异：复核停用只在Forge浏览器入口与对应文档；CLI转换、Vault同步、论坛采集、图像、旧文本与血猎手入口/参数/输出未变。公共README和当前状态说明更新导致来源指纹变化；开发条目改为复核零调用检查及新版流程，增加专用安全测试入口，不恢复旧审核步骤。"
+    "fingerprint": "660cb805076e5b7bd7d71727fe8acd15824a7fb23c203293dc9b19346e366659",
+    "reviewedOn": "2026-10-27",
+    "note": "旧Vault Sync仍有output_backup和stale输出清理，代码未改；本条仍明确与无备份约定冲突、不作默认入口，未套用Actor候选政策。"
   },
   "goddessfantasy-crawl": {
-    "fingerprint": "24a76a39cfdc8baa608bfa06554a0a8f87c8a11c51d077c929b27f50e3589236",
-    "reviewedOn": "2026-10-25",
-    "note": "逐项核对本轮差异：复核停用只在Forge浏览器入口与对应文档；CLI转换、Vault同步、论坛采集、图像、旧文本与血猎手入口/参数/输出未变。公共README和当前状态说明更新导致来源指纹变化；开发条目改为复核零调用检查及新版流程，增加专用安全测试入口，不恢复旧审核步骤。"
+    "fingerprint": "0d5b63a54c7417405db55661d1b722fa0992b0d7c279bb8982e8a7c7f75785b2",
+    "reviewedOn": "2026-10-27",
+    "note": "README只变Actor交付说明；采集命令、登录授权、records及plaintext输出未改，条目无需改字。"
   },
   "artwork-icons": {
-    "fingerprint": "eefd20b345b360dff8d1be00d3962fb9cdbfab0509af56c1121d931bc171e8c2",
-    "reviewedOn": "2026-10-25",
-    "note": "逐项核对本轮差异：复核停用只在Forge浏览器入口与对应文档；CLI转换、Vault同步、论坛采集、图像、旧文本与血猎手入口/参数/输出未变。公共README和当前状态说明更新导致来源指纹变化；开发条目改为复核零调用检查及新版流程，增加专用安全测试入口，不恢复旧审核步骤。"
+    "fingerprint": "5980e08b107280e22bbfdd885cf02d71ec385c7077e2857b5ec1b34c7415e629",
+    "reviewedOn": "2026-10-27",
+    "note": "选图匹配和CLI默认off未变；Actor仅在图标报告异常时保留已有产物，不改变safe/override用途或资产上传授权。"
   },
   "legacy-text": {
-    "fingerprint": "e0c5095da9c9e1aa1184247269cbe054cf525b4ec0785d612703562b34dc9577",
-    "reviewedOn": "2026-10-25",
-    "note": "逐项核对本轮差异：复核停用只在Forge浏览器入口与对应文档；CLI转换、Vault同步、论坛采集、图像、旧文本与血猎手入口/参数/输出未变。公共README和当前状态说明更新导致来源指纹变化；开发条目改为复核零调用检查及新版流程，增加专用安全测试入口，不恢复旧审核步骤。"
+    "fingerprint": "94f1bf2126674e458aa9c3d701f824bea1b99b0f6bced68581f8c0d5b18748dc",
+    "reviewedOn": "2026-10-27",
+    "note": "旧兼容命令和同步路径未改；共有文本规范化被AI回答复用，不改旧严格文本或独立Item格式，也未替代不规则Item Intake。"
   },
   "json-translation": {
-    "fingerprint": "c23bb23081f783492e927fd6ea0a7b984eccf12187939fb1f7aeafbc2419b7bf",
-    "reviewedOn": "2026-10-25",
-    "note": "按用户最新决定核对Forge公开复核函数、provider和模板：生物、Item、召唤物、中文译文的AI内容复核暂时关闭；保留AI提取、结构纠错政策、GM人工批准、恢复和历史意见，CLI自身策略保持。更新操作步骤及当前交接入口。"
+    "fingerprint": "5fe687ac2486ed54772a437c0d498d08990c5a4648a9da34041742a23f751fa3",
+    "reviewedOn": "2026-10-27",
+    "note": "独立JSON翻译入口仍原位处理目标文件，服务配置与失败保留原串行为未改；Forge显式翻译与此流程分开。"
   },
   "foundry-ops": {
     "fingerprint": "a822f7eedff90d4c4b657b7a87291845561141aa757b4748bcf45b9b669e8889",
@@ -60,14 +60,14 @@
     "note": "逐项保留当前run/validationSelection/保留检查/Mirror及450秒门限；整合Selected Token首次安装白名单、去除自动合并重复目录项。历史测试仅显式只读复用已锁定输入，源码/lock/patch仍当前候选；本地整合与推送/实装/实机边界分开。"
   },
   "verification-development": {
-    "fingerprint": "dbe4fc51123973b453c62e8789a8f5ae80b5622f9747552bb6265c0e5031b3ec",
-    "reviewedOn": "2026-10-26",
-    "note": "已核对两个新增安全检查入口，说明对应空栏/备注/草稿及协议读回的实际范围，复用未变共同验收，不把固定回复当模型效果。"
+    "fingerprint": "ca9c3cec5cbcc53829a0512ed8b96179b5a3b3facdbbb7469c82b960568066ea",
+    "reviewedOn": "2026-10-27",
+    "note": "已对照生成保留和来源验证：差异报告不决定Actor存在；离线、界面、世界写入及宏失败证据分别记录，未把工具缺口写成通过。"
   },
   "human-encounter-intake": {
-    "fingerprint": "85b9a8b153a116a369b7b4a50a410b3d195a24e52d87efb1490aedac00f26ac9",
-    "reviewedOn": "2026-10-26",
-    "note": "已对照共同Monster入口、原答与正式草稿、官方MM自定义易伤字段、响应预览及保存检查；更新空栏记录和易伤备注说明。AI复核继续关闭，固定资料不证明新模型质量。"
+    "fingerprint": "6fee4b9e3e5c19d050e401164d479fb923204ef42a147f4c2ab7723e8f620f4c",
+    "reviewedOn": "2026-10-27",
+    "note": "已对照逐成员交付、cached artifact及独立宏结算；取消全员available、强制重生成等获取条件，缺失成员和控制问题保留。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -95,9 +95,9 @@
     "note": "保留master刚集成的42项地形、六条长音源、14.368/5.3.3范围及原接受边界；画笔AGENTS同时保留最新技能/接续指针并加入按影响验收。仅检查触发规则变化，无业务源码或素材修改。"
   },
   "fvtt-blood-hunter-2024": {
-    "fingerprint": "5902c81a3ef54779e51607fe5a219dadd1005f0b65223f1a07be992151bd8abf",
-    "reviewedOn": "2026-10-25",
-    "note": "逐项核对本轮差异：复核停用只在Forge浏览器入口与对应文档；CLI转换、Vault同步、论坛采集、图像、旧文本与血猎手入口/参数/输出未变。公共README和当前状态说明更新导致来源指纹变化；开发条目改为复核零调用检查及新版流程，增加专用安全测试入口，不恢复旧审核步骤。"
+    "fingerprint": "bec338133f1747300866001c345c21acb8c5a6822e9e47df86dbfd86487ffd4f",
+    "reviewedOn": "2026-10-27",
+    "note": "README的Actor生成说明变化不改血猎手三合集、升级、迁移或Next代表切片；旧迁移备份冲突与只读Preview限制仍准确。"
   },
   "fvtt-homebrew-species": {
     "fingerprint": "08762ebdbb4655ad01354079c0b8f46cace4181c7cfebb184ec9e41ee48c9701",
@@ -125,9 +125,9 @@
     "note": "已逐项核对本次纯命名调整：功能统一为生物生成，关联对象入口为生物与召唤物，JSON/ZIP为生物导入文件；召唤生物/物件属于生成本体的一部分。翻译工具仅引用新名称，Custom Conditions连接步骤与界面一致，验证入口补入既有导航/恢复测试；生成、GM确认、协议和权限边界保持。历史截图/PDF保留旧界面并作说明。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "36e2cd82651b08015bcf9fa6a7cbfa2be7056cd5f87d7c1c028fe4ca0d1b9f7d",
-    "reviewedOn": "2026-10-26",
-    "note": "已对照共同Monster入口、原答与正式草稿、官方MM自定义易伤字段、响应预览及保存检查；更新空栏记录和易伤备注说明。AI复核继续关闭，固定资料不证明新模型质量。"
+    "fingerprint": "5febc4a560edf2a54ebae58b77f0b3f757044f83201471a7905356aece97043c",
+    "reviewedOn": "2026-10-27",
+    "note": "46项计划验收收尾：补完Web实际UI和HTTP文件获取，明确撤回助手新增的download.path完成前置，原超时/投骰/内存store边界保留。所有自有测试文档、浏览器页及Web服务清理，Mirror保留。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "2e22086b12b7f6d9730eadbd9e7951eb07dcb66beeff6a68a6e0dadf036c06d1",

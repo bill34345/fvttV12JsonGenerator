@@ -118,7 +118,7 @@ FVTT_WEB_AUTH_TOKEN=<至少32个字符的高熵随机值>
 
 AI 怪物资料整理只读取专用的 `MONSTER_INTAKE_*` 变量，不会回退到翻译或通用 OpenAI 变量。`codex-oauth` 只适用于本机或受信任的 loopback 兼容桥，不应把它作为公开 Web 服务的远程认证方式。粘贴或上传的 TXT/MD 原文会发送给该 provider，因此公开部署必须在用户提交前明确告知这一点，并按 provider 的数据政策处理。服务端审计只记录 provider、model、prompt version、耗时、调用计数和错误码，不记录 key、请求头或隐藏推理。
 
-单次 Intake 最多 200,000 个 JavaScript UTF-16 字符、50 只怪物；长文本按 24,000 字符分块并保留 1,000 字符重叠，逐怪物 extraction 并发为 2。每只怪物最多 1 次 extraction、1 次独立 review 和 1 次 semantic repair；各阶段可对 timeout、429 或网络错误重试一次。模型不能自行增加循环或调用工具。`needs_review` 任务可下载 source、IR、候选 Markdown 和报告，但 Web 不会把候选 Actor JSON 注册为正式下载；只有 accepted 才注册 Actor JSON/ZIP。
+生物Intake按来源成员定位与处理，错误分区和未分配原文显示，其他成员继续，不再以50只或200,000字符否决已经取得的回答，也不静默截断。真实请求遵守当批调用额度；生物入口不自动调用内容review或repair，显式纠错失败保留原答和Actor。完整可读Markdown回答沿同一入口复用已有文本转换；已有回答的本地处理不要求API Key。每个生成的Actor均登记实际文件与`actorPath`，`needs_review`／`failed`保留问题并允许查看、下载或部分ZIP导出；正式登记和覆盖冲突单独处理，Item／Species契约独立。
 
 ## 固定资源保护
 
@@ -227,4 +227,4 @@ temp/web/jobs/<jobId>/
   result.json
 ```
 
-下载接口只允许下载任务登记过的产物。ZIP 下载会把成功产物打包为使用 UTF-8 文件名的 ZIP；清理策略按上文的年龄和数量边界执行。
+下载接口只允许下载任务登记过的产物。Actor文件存在时，即使检查结论为`needs_review`或`failed`，页面仍提供预览、单文件下载及按已有文件打包的ZIP；问题同时展示，不伪造`accepted`。独立Item保持自身接受规则。任务区域的清理策略按上文的年龄和数量边界执行，这与Forge正式Actor草稿的直接恢复不是同一存储契约。

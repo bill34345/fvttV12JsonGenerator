@@ -7,7 +7,7 @@
 ## 不可违反的规则
 
 - workflow 必须调用 package 的公开接口；不得重新实现 parser/generator 规则，也不得深层导入私有实现。
-- 正式输出只能在生成与规范验证完成后登记。`generated`、文件存在或 JSON 可解析不等于 `accepted`。
+- 生物Actor一经产生即保留并返回可访问文件；验证、图标、摘要、报告或正式登记失败不撤回产物。`generated`、文件存在或JSON可解析不等于`accepted`；检查状态与产物获取独立。Item/Species正式输出遵各自契约。
 - Intake 来源走入正式输出时，workflow 必须保留同一 source → evidence IR → rendered Markdown（含适用 manifest evidence）→ JSON 的链；不得把不同 source/run 的验证、manifest 或输出拼接为 accepted。
 - `verify:intake` 和后续 Actor/Item 验收必须按当前 source/range 执行，而非以批量中另一个相似条目的成功作替代；当前链中不可表达的 mechanics 保持 `needs_review`，不得手修 Markdown/JSON 后绕过 promotion gate。
 - 单文件转换、collection、Vault Sync、Item、纯文本 Actor 和 Web upload 必须保留各自的写入边界；upload 模式不得默认污染 Vault manifest。
@@ -29,6 +29,6 @@
 
 ## 完成标准
 
-- 正式 artifact gate 没有被绕过，失败和 needs-review 状态没有被伪装成成功。
+- 生物产物与真实检查状态一并交付，失败和needs-review未伪装accepted；正式登记/覆盖冲突不撤回已有候选，Item/Species独立边界保持。
 - CLI、Web 和兼容入口对相同流程保持一致语义。
 - 至少一个真实输入从入口走到最终输出并完成 source-scoped 语义检查；未表达的机制没有被手修推广。
