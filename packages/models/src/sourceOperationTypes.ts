@@ -32,13 +32,13 @@ export interface SourceOperation {
   evidence?: EvidenceRef;
   /** melee/ranged explicitly retain an unclassified source attack. Their
    * executor is a labelled GM roll, never a native weapon/spell Attack. */
-  attack?: { type: 'mwak' | 'rwak' | 'msak' | 'rsak' | 'melee' | 'ranged'; toHit: number; reach?: number; range?: number; longRange?: number };
+  attack?: { type: 'mwak' | 'rwak' | 'msak' | 'rsak' | 'melee' | 'ranged' | 'unclassified'; toHit: number; reach?: number; range?: number; longRange?: number };
   /** The printed damage is rolled once. GM applies this source-bound factor;
    * it is not another damage part, formula, effect or automatic HP change. */
   damageAdjustment?: {multiplier:0.5;condition:'source-actor-bloodied';actor:string;quote:string};
   save?: { dc: number; abilities: SourceOperationAbility[]; choice: 'single' | 'target'; outcome: 'none' | 'half' | 'full' };
   damage?: Array<{ formula: string; type: string; types?: string[]; relationship: 'base' | 'additional' | 'conditional' | 'replacement'; condition?: string }>;
-  healing?: {formula:string;type:'healing'|'temphp';target:{type:'self'|'creature';count:1;special:string}};
+  healing?: {formula:string;type:'healing'|'temphp';target:{type:'self'|'creature'|'any';count?:number;special?:string}};
   range?: number;
   aoe?: {shape:'sphere'|'radius'|'cone'|'line'|'cube'|'cylinder'|'rectangle';radius:number;width?:number;height?:number};
   targetSpecial?: string;

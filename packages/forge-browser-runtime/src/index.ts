@@ -85,7 +85,7 @@ export function buildForgeActorRequest(options: BuildForgeActorRequestOptions): 
     capabilityId: 'actor.standard.generate.v1',
     requestId: requireNonEmpty(options.requestId, 'requestId'),
     source: {
-      displayName: requireNonEmpty(options.displayName, 'displayName'),
+      displayName: options.displayName?.trim()||'生物',
       content: finalSource.content,
       sourceId: finalSource.sourceId,
       utf8Sha256: finalSource.sourceHash,
@@ -113,6 +113,7 @@ export async function convertFinalActorSource(request: ForgeActorRequest, option
   const parserFactory = new ParserFactory();
   const route = parserFactory.detectRoute(value.source.content);
 
+  let retainedArtifact:any;
   try {
     const parsed = parserFactory.parse(value.source.content);
     const generated = await generateActorArtifact({
@@ -128,13 +129,10 @@ export async function convertFinalActorSource(request: ForgeActorRequest, option
       captureRulePresentation: targetVersion === '14' && options.captureRulePresentation === true,
       ...(targetVersion === '14' ? { rulePresentationActorNormalizer: (actor: unknown) => normalizeForgeActorArtifact(actor, '14') } : {}),
     });
+    retainedArtifact=generated.actor;
     const artifact = normalizeForgeActorArtifact(generated.actor, targetVersion, options.reviewedLocalization ? generated.sourceActor : undefined);
-    const formalVerification = verifyGeneratedDocument({
-      canonical: generated.canonical,
-      output: artifact,
-      target: targetVersion,
-      effectProfile: 'core',
-    });
+    retainedArtifact=artifact;
+    const formalVerification = generated.verification;
     const legacyWarnings = new ActorValidator().validate(parsed, options.reviewedLocalization ? generated.sourceActor : artifact);
     const actorVerification = buildBrowserActorVerificationSummary(value.source.content, artifact);
     const diagnostics: GenerationDiagnostic[] = [
@@ -186,7 +184,7 @@ export async function convertFinalActorSource(request: ForgeActorRequest, option
       verification: { ...verification, status, diagnostics },
       actorVerification,
     }).verification;
-    const safeDiagnostics = projectForgeDiagnostics(diagnostics);
+    const safeDiagnostics = projectActorDiagnostics(diagnostics);
     const finalActorVerification = status === verification.status
       ? projection.actorVerification
       : projectForgeVerification({ verification: { ...verification, status, diagnostics }, actorVerification }).actorVerification;
@@ -214,15 +212,16 @@ export async function convertFinalActorSource(request: ForgeActorRequest, option
           ...base,
           status: 'needs_review',
           artifact,
+          artifactHash:hashArtifact(artifact),
           verification: finalVerification,
         },
       }, generated.rulePresentation),parsed);
     }
     // A strict semantic failure remains a failure. Keep the generated candidate
     // so delivery and an explicit GM decision do not depend on that verdict.
-    return withActorSourceReviews({ protocolVersion: 1, requestId: value.requestId, result: { ...base, status: 'failed', artifact, verification: finalVerification } },parsed);
+    return withActorSourceReviews({ protocolVersion: 1, requestId: value.requestId, result: { ...base, status: 'failed', artifact, artifactHash:hashArtifact(artifact), verification: finalVerification } },parsed);
   } catch (error) {
-    return failedWorkflowResponse(value, error);
+    return failedWorkflowResponse(value, error, retainedArtifact);
   }
 }
 
@@ -253,6 +252,7 @@ function makeResultBase(
 function failedWorkflowResponse(
   request: ForgeActorRequest,
   error: unknown,
+  artifact?:any,
 ): ForgeActorResponse {
   const diagnostic: GenerationDiagnostic = {
     code: 'FORGE_WORKFLOW_FAILED',
@@ -268,8 +268,9 @@ function failedWorkflowResponse(
   };
   const verification = { status: 'failed' as const, mechanicsCoverage: [] };
   const projected = projectForgeVerification({ verification, actorVerification });
-  const base = makeResultBase(request, request.foundryRuntime.systemVersion, projected.verification, projected.actorVerification, projectForgeDiagnostics([diagnostic]));
-  return { protocolVersion: 1, requestId: request.requestId, result: { ...base, status: 'failed' } };
+  const base = makeResultBase(request, request.foundryRuntime.systemVersion, projected.verification, projected.actorVerification, projectActorDiagnostics([diagnostic]));
+  const retained=artifact?JSON.parse(JSON.stringify(artifact)):undefined;
+  return { protocolVersion: 1, requestId: request.requestId, result: { ...base, status: 'failed',...(retained?{artifact:retained,artifactHash:hashArtifact(retained)}:{}) } };
 }
 
 function errorResponse(requestId: string, issues: Array<{ code: string; message: string }>): ForgeActorResponse {
@@ -380,7 +381,16 @@ function asRecord(value: unknown): Record<string, any> {
 function safeErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return message
-    .replace(/[A-Za-z]:\\[^\s"']+/gu, '<local path>')
+    .replace(/[A-Za-z]:[\\/][^\s"']+/gu, '<local path>')
     .replace(/(?:^|\s)\/[^\s"']+/gu, ' <local path>')
+    .replace(/\b(?:actorPath|dnd5eRepo|localCache|sourcePath)\b/gu,'source location')
+    .replace(/[\\/]/gu,'／')
     .slice(0, 500);
+}
+
+function projectActorDiagnostics(diagnostics:GenerationDiagnostic[]):ForgeDiagnostic[]{
+  return diagnostics.map(diagnostic=>{
+    try{return projectForgeDiagnostics([diagnostic])[0]!;}
+    catch{return {code:diagnostic.code,severity:diagnostic.severity,stage:diagnostic.stage,path:'actor',message:safeErrorMessage(diagnostic.message)||'检查报告未完成；Actor保留。'};}
+  });
 }

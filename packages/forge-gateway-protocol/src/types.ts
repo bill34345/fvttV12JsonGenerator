@@ -469,9 +469,11 @@ export type ForgeActorResult =
   | (ForgeActorResultBase & {
       status: 'needs_review';
       artifact?: JsonObject;
+      artifactHash?: Sha256;
     })
   | (ForgeActorResultBase & {
       status: 'failed';
+      artifactHash?: Sha256;
       /** A structurally usable Actor candidate may accompany a failed semantic
        * verdict. Its presence never grants accepted/create authority. */
       artifact?: JsonObject;

@@ -31,7 +31,7 @@ function weaponIdentity(name:string){
  * inferred from half/bloodied or the feature's name. Complete branch evidence
  * must explicitly replace one same-type printed damage atom. Ambiguous third
  * alternatives remain separate GM operations, never guessed into two modes. */
-export function deriveSourceAttackDamageModes(source:string,ops:readonly SourceOperation[],name:string,atomPosition:(quote:string,part:Part)=>number|undefined):SourceAttackDamageModes|undefined{
+export function deriveSourceAttackDamageModes(source:string,ops:readonly SourceOperation[],name:string,atomPosition:(quote:string,part:Part)=>number|undefined,closedShared?:(quote:string,part:Part)=>boolean):SourceAttackDamageModes|undefined{
  const attacks=ops.filter(op=>op.type==='attack');
  if(attacks.length!==1||attacks[0]!.relationship!=='primary'||!attacks[0]!.attack)return;
  const attack=attacks[0]!;
@@ -76,7 +76,8 @@ export function deriveSourceAttackDamageModes(source:string,ops:readonly SourceO
   // keyword list into a rule interpreter.
   const unqualifiedTail=afterAtom!==undefined&&/^(?:[ \t]*in (?:either|both) cases?)?[ \t.;。]*$/iu.test(afterAtom);
   const localConditional=position!==undefined&&(!unqualifiedTail||conditional.test(atomSuffix!));
-  const commonAfterQualifier=!localConditional&&/[,，]\s*(?:plus|and additionally|外加|另加|此外加上)\s+[^,，]*$/iu.test(trailing);
+  const commonAfterQualifier=!localConditional&&(/[,，]\s*(?:plus|and additionally|外加|另加|此外加上)\s+[^,，]*$/iu.test(trailing)
+    ||entry.quote===altQuote&&Boolean(closedShared?.(entry.quote,entry.part)));
   const prefix=position===undefined?'':entry.quote.slice(0,position);
   const unconditionalPrefix=/^(?:(?:in (?:either|both) cases?|both attacks|either attack)[,:]?\s*)?(?:(?:the|this|that)\s+(?:attack|weapon|hit)\s+)?(?:also\s+)?(?:deals?|causes?|inflicts?)\s+(?:an?\s+)?(?:(?:additional|extra)\s+)?(?:\d+\s*\()?\s*$/iu.test(prefix)
     ||/^(?:两种攻击|该攻击|此攻击|该武器|此武器)(?:均|都)?(?:额外)?造成(?:\d+\s*[（(])?\s*$/u.test(prefix);

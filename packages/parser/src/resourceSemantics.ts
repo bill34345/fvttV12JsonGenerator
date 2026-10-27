@@ -21,6 +21,10 @@ const DAMAGE_TYPES = new Set([
   'acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning', 'necrotic',
   'piercing', 'poison', 'psychic', 'radiant', 'slashing', 'thunder',
 ]);
+type ResourceIssue=(path:string,value:unknown,error:unknown)=>void;
+function parseEntries<T>(values:unknown[],path:string,parse:(value:unknown,path:string)=>T,onIssue?:ResourceIssue):T[]{
+  return values.flatMap((value,index)=>{const at=`${path}[${index}]`;try{return[parse(value,at)];}catch(error){if(!onIssue)throw error;onIssue(at,value,error);return[];}});
+}
 
 function fail(path: string, message: string): never {
   throw new Error(`InvalidResourceSemantics: ${path}: ${message}`);
@@ -161,6 +165,7 @@ function parseResource(
   resourceIds: Set<string>,
   operationIds: Set<string>,
   derivedIds: Set<string>,
+  onIssue?:ResourceIssue,
 ): ActorResourceDefinition {
   const raw = record(value, path);
   exactKeys(raw, ['ID', '名称', '英文名', '载体', '初始', '最大', '恢复', '操作', '派生'], path);
@@ -177,10 +182,8 @@ function parseResource(
     initial,
     max,
     recovery: enumValue(raw['恢复'], RECOVERIES, `${path}.恢复`),
-    operations: list(raw['操作'], `${path}.操作`).map((entry, index) =>
-      parseOperation(entry, `${path}.操作[${index}]`, operationIds)),
-    derived: list(raw['派生'], `${path}.派生`).map((entry, index) =>
-      parseDerived(entry, `${path}.派生[${index}]`, max, derivedIds)),
+    operations: parseEntries(list(raw['操作'], `${path}.操作`),`${path}.操作`,(entry,at)=>parseOperation(entry,at,operationIds),onIssue),
+    derived: parseEntries(list(raw['派生'], `${path}.派生`),`${path}.派生`,(entry,at)=>parseDerived(entry,at,max,derivedIds),onIssue),
   };
 }
 
@@ -305,7 +308,7 @@ function parseTransition(
   };
 }
 
-export function parseActorResourceSemantics(value: unknown): ActorResourceSemantics {
+export function parseActorResourceSemantics(value: unknown,onIssue?:ResourceIssue): ActorResourceSemantics {
   const raw = record(value, '资源机制');
   exactKeys(raw, ['资源', '消费', '转换'], '资源机制');
   const resourceIds = new Set<string>();
@@ -313,12 +316,12 @@ export function parseActorResourceSemantics(value: unknown): ActorResourceSemant
   const derivedIds = new Set<string>();
   const bindingIds = new Set<string>();
   const transitionIds = new Set<string>();
-  const resources = list(raw['资源'], '资源机制.资源', true).map((entry, index) =>
-    parseResource(entry, `资源机制.资源[${index}]`, resourceIds, operationIds, derivedIds));
+  const resources = parseEntries(list(raw['资源'], '资源机制.资源', true),'资源机制.资源',(entry,at)=>
+    parseResource(entry,at,resourceIds,operationIds,derivedIds,onIssue),onIssue);
   const resourceMap = new Map(resources.map((resource) => [resource.id, resource]));
-  const bindings = list(raw['消费'], '资源机制.消费').map((entry, index) =>
-    parseBinding(entry, `资源机制.消费[${index}]`, resourceIds, bindingIds, resourceMap));
-  const transitions = list(raw['转换'], '资源机制.转换').map((entry, index) =>
-    parseTransition(entry, `资源机制.转换[${index}]`, resourceIds, transitionIds));
+  const bindings = parseEntries(list(raw['消费'], '资源机制.消费'),'资源机制.消费',(entry,at)=>
+    parseBinding(entry,at,resourceIds,bindingIds,resourceMap),onIssue);
+  const transitions = parseEntries(list(raw['转换'], '资源机制.转换'),'资源机制.转换',(entry,at)=>
+    parseTransition(entry,at,resourceIds,transitionIds),onIssue);
   return { resources, bindings, transitions };
 }

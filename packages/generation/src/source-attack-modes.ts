@@ -6,8 +6,10 @@ import {createStableDocumentId} from './stableId';
  * run scripts or borrow system-library attack/damage numbers. */
 export function applySourceAttackDamageModes(item:any,source:string,ops:SourceOperation[],name:string,path:string,format:(part:any)=>any):void{
  const modes=sourceAttackDamageModes(source,ops,name);if(!modes)return;
- const activities=Object.values(item.system.activities) as any[],parents=activities.filter(a=>a.flags?.fvttJsonGenerator?.sourceOperation?.id===modes.attackId),attack=ops.find(op=>op.id===modes.attackId)!.attack!;
- if(!parents.length)throw Error('MissingSourceAttackModeParent');
+ const activities=Object.values(item.system.activities) as any[],attack=ops.find(op=>op.id===modes.attackId)!.attack!;
+ const neutral=attack.type==='melee'||attack.type==='ranged'||attack.type==='unclassified';
+ const parents=activities.filter(a=>a.flags?.fvttJsonGenerator?.sourceOperation?.id===modes.attackId&&(!neutral||a.flags?.fvttJsonGenerator?.sourceOperation?.role==='damage'));
+ if(!parents.length)return;
  const absorbed=new Set(modes.absorbedIds);
  for(const a of activities)if(absorbed.has(a.flags?.fvttJsonGenerator?.sourceOperation?.id))delete item.system.activities[a._id];
  if(modes.kind==='versatile'){
@@ -28,7 +30,7 @@ export function applySourceAttackDamageModes(item:any,source:string,ops:SourceOp
   for(const duplicate of parents.slice(1))delete item.system.activities[duplicate._id];
  }else{
   for(const parent of parents){
-   parent.name+='（普通伤害）';parent.damage={...parent.damage,includeBase:false,parts:[modes.ordinary,...modes.shared].map(format)};
+   parent.name+='（普通伤害）';parent.damage={...parent.damage,...(!neutral?{includeBase:false}:{}),parts:[modes.ordinary,...modes.shared].map(format)};
    parent.flags.fvttJsonGenerator.sourceOperation.damageMode='ordinary';
    const alternative=structuredClone(parent);alternative._id=createStableDocumentId({kind:'activity',path:path+'/source-operation/'+modes.attackId+'/replacement/'+parent._id});
    alternative.name=parent.name.replace(/（普通伤害）$/u,'（替代伤害）');alternative.damage.parts=[modes.alternative,...modes.shared].map(format);

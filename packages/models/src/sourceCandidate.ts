@@ -1,4 +1,5 @@
 import type { SourceCandidateReview, SourceCandidateCounter } from './sourceOperationTypes';
+import {isHealingRecipient} from './sourceInput';
 
 const object=(value:unknown):value is Record<string,any>=>!!value&&typeof value==='object'&&!Array.isArray(value);
 const text=(value:unknown):value is string=>typeof value==='string'&&value.trim().length>0;
@@ -51,7 +52,7 @@ export function candidateSourceOperationShapeErrors(value:unknown):string[]{
       :typeof p!=='string'&&(!Array.isArray(p)||p.some(v=>!text(v)))))bad('proof');
     if(op.attack!==undefined){
       const a=op.attack;
-      if(!object(a)||!['mwak','rwak','msak','rsak','melee','ranged'].includes(a.type)||!Number.isSafeInteger(a.toHit)
+      if(!object(a)||!['mwak','rwak','msak','rsak','melee','ranged','unclassified'].includes(a.type)||!Number.isSafeInteger(a.toHit)
         ||['reach','range','longRange'].some(k=>a[k]!==undefined&&(!finite(a[k])||a[k]<0)))bad('attack');
     }else if(op.type==='attack')bad('attack');
     if(op.save!==undefined){
@@ -65,7 +66,7 @@ export function candidateSourceOperationShapeErrors(value:unknown):string[]{
     if(op.healing!==undefined){
       const h=op.healing;
       if(!object(h)||!dice(h.formula)||!['healing','temphp'].includes(h.type)||!object(h.target)
-        ||!['self','creature'].includes(h.target.type)||h.target.count!==1||typeof h.target.special!=='string')bad('healing');
+        ||!isHealingRecipient(h.target))bad('healing');
     }else if(op.type==='heal')bad('healing');
     if(op.range!==undefined&&(!finite(op.range)||op.range<0))bad('range');
     if(op.aoe!==undefined){const a=op.aoe;if(!object(a)||!['sphere','radius','cone','line','cube','cylinder','rectangle'].includes(a.shape)

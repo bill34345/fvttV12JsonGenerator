@@ -1,5 +1,5 @@
 import { splitBilingualName } from '@fvtt-json-generator/models/display-name';
-import { sourceOperationStructureErrors,isSourceCandidateReview } from '@fvtt-json-generator/models/source-operations';
+import { normalizeCreatureFeatureInput,isHealingRecipient,type SourceOperation } from '@fvtt-json-generator/models/source-operations';
 import type {
   StructuredActionData,
   DamagePart,
@@ -47,29 +47,6 @@ const AOE_SHAPE_MAP: Record<string, string> = {
   '矩形': 'rect',
 };
 
-const closedRecord = (value: unknown, keys: readonly string[]): value is Record<string, unknown> => !!value
-  && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every(key => keys.includes(key));
-const nonempty = (value: unknown): value is string => typeof value === 'string' && !!value.trim();
-const positiveInteger = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) > 0;
-const nativeStatuses = (value: unknown): boolean => Array.isArray(value) && value.length <= 15
-  && value.every(status => typeof status === 'string' && Object.hasOwn(SOURCE_NATIVE_FAILURE_LABELS, status))
-  && new Set(value).size === value.length;
-
-/** Typed GM fields are authored IR data; descriptions never prove or rebuild them. */
-function assertExplicitGmFields(record: Record<string, unknown>, executionMode: unknown): void {
-  if (record.spellUseRecords !== undefined && (executionMode !== 'native-with-gm'
-    || !Array.isArray(record.spellUseRecords) || !record.spellUseRecords.length || record.spellUseRecords.length > 128
-    || record.spellUseRecords.some(value => !closedRecord(value, ['name', 'max', 'period'])
-      || !nonempty(value.name) || !positiveInteger(value.max) || value.period !== 'day'))) throw new Error('InvalidManualSpellUsesStructure');
-  if (record.gmTriggeredSave !== undefined) {
-    const save = record.gmTriggeredSave;
-    if (executionMode !== 'native-with-gm' || !closedRecord(save, ['dc', 'ability', 'trigger', 'sourceText', 'failureStatuses'])
-      || !positiveInteger(save.dc) || typeof save.ability !== 'string' || !['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(save.ability)
-      || !nonempty(save.trigger) || !nonempty(save.sourceText) || !nativeStatuses(save.failureStatuses)) throw new Error('InvalidGmTriggeredSaveStructure');
-  }
-  if (record.nativeFailureStatuses !== undefined && (executionMode !== 'native-with-gm' || !nativeStatuses(record.nativeFailureStatuses))) throw new Error('InvalidNativeFailureStatusesStructure');
-}
-
 export class StructuredActionParser {
   public parseStructuredSection(section: unknown, sectionName: string): StructuredActionData[] {
     if (!section || !Array.isArray(section)) {
@@ -83,26 +60,20 @@ export class StructuredActionParser {
       return { name: entry, type: 'utility', describe: entry };
     }
 
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return {name: '未映射能力', type: 'utility', describe: JSON.stringify(entry)};
     const name = (entry as Record<string, unknown>)['名称'] ?? (entry as Record<string, unknown>)['name'] ?? '';
-    const type = (entry as Record<string, unknown>)['类型'] ?? 'utility';
-    const describe = (entry as Record<string, unknown>)['描述'] ?? (entry as Record<string, unknown>)['describe'] ?? '';
+    const type = (entry as Record<string, unknown>)['类型'] ?? (entry as Record<string,unknown>).type ?? 'utility';
+    let describe = (entry as Record<string, unknown>)['描述'] ?? (entry as Record<string, unknown>)['describe'] ?? '';
 
-    const record = entry as Record<string, unknown>;
-    if (record.literalMechanics !== undefined && record.literalMechanics !== true) throw new Error('InvalidLiteralMechanics');
-    if(record.candidateReview!==undefined&&!isSourceCandidateReview(record.candidateReview))throw new Error('InvalidSourceCandidateReview');
-    if(record.candidateCounters!==undefined&&(!record.candidateReview||!Array.isArray(record.candidateCounters)||record.candidateCounters.some((counter:any)=>!counter||typeof counter.name!=='string'||!counter.name.trim()||!Number.isSafeInteger(counter.max)||counter.max<1||counter.recovery!==null&&typeof counter.recovery!=='string')))throw Error('InvalidSourceCandidateCounter');
-    const executionMode = record['执行模式'] ?? record.executionMode;
-    if (executionMode !== undefined && executionMode !== 'gm-manual'&&executionMode!=='native-with-gm') throw new Error('InvalidFeatureExecutionMode');
-    if(executionMode==='native-with-gm'&&(!String(record.nativeRuleText??'').trim()||!String(record.manualRemainder??'').trim()))throw new Error('InvalidMixedFeatureBoundary');
-    assertExplicitGmFields(record, executionMode);
-    if(record.sourceOperations!==undefined&&(executionMode!=='native-with-gm'||sourceOperationStructureErrors(record.sourceOperations).length))throw new Error('InvalidSourceOperations');
-    if(record.sourceContext!==undefined&&(!Array.isArray(record.sourceContext)||record.sourceContext.some(context=>typeof context!=='string'||!context.trim())))throw new Error('InvalidSourceOperationContext');
-    if(record.sourceFeatureId!==undefined&&(typeof record.sourceFeatureId!=='string'||!/^\w{16}$/u.test(record.sourceFeatureId)))throw new Error('InvalidSourceFeatureIdentity');
-    if (executionMode === 'gm-manual') {
-      const forbidden = ['伤害','damage','治疗','healing','攻击类型','attackType','命中','toHit','DC','属性','ability','AoE','aoe','目标','target','内嵌效果','子活动','失败效果','成功效果','weapon-properties','weaponProperties','武器特性','native-mastery','nativeMastery','原生精通','spellcastingFeatureKey'];
-      if (forbidden.some(key => Object.hasOwn(record, key)) || type !== 'utility' || !String(describe).trim()) {
-        throw new Error('ManualFeatureContainsExecutableMechanics');
-      }
+    const record = structuredClone(entry as Record<string, unknown>);
+    normalizeCreatureFeatureInput(record, describe);
+    describe = record.description ?? record['描述'] ?? describe;
+    let executionMode = record['执行模式'] ?? record.executionMode;
+    if (record.sourceOperations !== undefined) executionMode = 'native-with-gm';
+    if (executionMode === 'gm-manual' && ['伤害','damage','治疗','healing','攻击类型','attackType','命中','toHit','DC'].some(key => record[key] !== undefined)) executionMode = 'native-with-gm';
+    if (executionMode === 'native-with-gm') {
+      record.nativeRuleText ??= String(describe);
+      record.manualRemainder ??= String(describe);
     }
     const rawDamage = record['\u4f24\u5bb3'] ?? record['damage'];
     const rawHealing = record['\u6cbb\u7597'] ?? record['healing'];
@@ -119,17 +90,12 @@ export class StructuredActionParser {
     const nativeMastery = this.parseNativeMastery(
       record['native-mastery'] ?? record.nativeMastery ?? record['原生精通'],
     );
-    if (spellcastingFeatureKey && !['特性','动作','附赠动作','反应','传奇动作'].includes(sectionName)) {
-      throw new Error('InvalidSpellcastingFeatureLinkSection: expected a trait, action, bonus action or reaction.');
-    }
-    if (spellcastingFeatureKey && explicitActivationType && !['action','bonus','reaction','legendary'].includes(explicitActivationType)) {
-      throw new Error('InvalidSpellcastingFeatureActivation: unsupported linked spellcasting activation.');
-    }
     const subActions = this.parseSubActions((entry as Record<string, unknown>)['子活动']);
-    if(record.literalName!==undefined&&record.literalName!==true)throw new Error('InvalidLiteralName');
     const literalName=record.literalName===true||executionMode!==undefined||!!spellcastingFeatureKey;
     const embeddedEffects = this.parseEmbeddedEffects((entry as Record<string, unknown>)['内嵌效果']);
 
+    const suppliedType=this.normalizeType(String(type));
+    const effectiveType=suppliedType!=='utility'?suppliedType:record['攻击类型']||record.attackType?'attack':record.DC!==undefined?'save':rawHealing?'heal':rawDamage?'damage':'utility';
     const action: StructuredActionData = {
       ...(record.candidateReview?{candidateReview:structuredClone(record.candidateReview) as StructuredActionData['candidateReview']}:{}),
       ...(record.candidateCounters?{candidateCounters:structuredClone(record.candidateCounters) as StructuredActionData['candidateCounters']}:{}),
@@ -147,7 +113,7 @@ export class StructuredActionParser {
       spellcastingFeatureKey,
       ...(weaponConfiguration ? { weaponConfiguration } : {}),
       ...(nativeMastery ? { nativeMastery } : {}),
-      type: this.normalizeType(String(type)),
+      type: effectiveType,
       activation: activationType ? {
         type: activationType,
         condition: activationRecord?.['condition'] as string | undefined,
@@ -156,7 +122,8 @@ export class StructuredActionParser {
       describe: String(describe),
     };
     if (rawDamage !== undefined) action.sourceDamageParts = this.parseSourceDamageParts(rawDamage);
-    action.sourceRuleFacts = record.literalMechanics === true || executionMode === 'gm-manual'||executionMode==='native-with-gm' ? [] : parseSupportedRuleFacts(action.describe ?? '');
+    if(action.sourceDamageParts?.some(part=>part.relationship==='conditional'||part.relationship==='replacement'||part.condition))action.literalMechanics=true;
+    action.sourceRuleFacts = action.literalMechanics === true || executionMode === 'gm-manual'||executionMode==='native-with-gm' ? [] : parseSupportedRuleFacts(action.describe ?? '');
     if((record.literalMechanics === true || executionMode==='native-with-gm')&&['none','half','full'].includes(String(record.saveOutcome)))action.saveOutcome=record.saveOutcome as 'none'|'half'|'full';
     const explicitRange=record['范围']??record.range;
     if(typeof explicitRange==='string'&&explicitRange.trim())action.range=explicitRange.trim();
@@ -168,6 +135,21 @@ export class StructuredActionParser {
       action.toHit = this.parseNumber((entry as Record<string, unknown>)['命中'] ?? (entry as Record<string, unknown>)['toHit']);
       action.range = String((entry as Record<string, unknown>)['范围'] ?? (entry as Record<string, unknown>)['range'] ?? '');
       action.damage = this.parseDamageParts(rawDamage);
+      if(!Number.isFinite(action.toHit)){
+        this.retainActionField(action,'attack/toHit',record['命中']??record.toHit,'此命中修正由GM按原始值处理；已知伤害保留。');
+        delete action.attackType;delete action.toHit;action.type=action.damage?.length?'damage':'utility';
+      }else if(!action.attackType){
+        const rawKind=String(attackType).toLowerCase(),kind=rawKind==='melee'||rawKind==='ranged'?rawKind:'unclassified';
+        const reach=/(?:reach|触及)\s*(\d+)/iu.exec(action.range),range=/(?:range|射程)\s*(\d+)(?:\s*\/\s*(\d+))?/iu.exec(action.range);
+        const plain=/^\s*(\d+)(?:\s*\/\s*(\d+))?\s*(?:ft\.?|feet|尺)\s*$/iu.exec(action.range);
+        if(kind==='unclassified')this.retainActionField(action,'attack/type',attackType,'攻击分类未映射，保留未分类的GM攻击检定。');
+        const ids=new Set((action.sourceOperations??[]).map(op=>op.id));let id='flat-attack',suffix=1;while(ids.has(id))id='flat-attack-'+(++suffix);
+        const op:SourceOperation={id,name:action.name,type:'attack',relationship:'primary',sourceText:action.describe??'',
+          attack:{type:kind,toHit:action.toHit!,...(reach?{reach:Number(reach[1])}:kind==='melee'&&plain?{reach:Number(plain[1])}:{}),...(range?{range:Number(range[1]),...(range[2]?{longRange:Number(range[2])}:{})}:kind==='ranged'&&plain?{range:Number(plain[1]),...(plain[2]?{longRange:Number(plain[2])}:{})}:{})},
+          damage:action.sourceDamageParts??[],proof:{},...(!reach&&!range&&kind==='unclassified'&&action.range?{targetSpecial:'GM 范围：'+action.range}:{})};
+        action.sourceOperations=[...(action.sourceOperations??[]),op];action.executionMode='native-with-gm';action.nativeRuleText=action.describe??'';action.manualRemainder=action.describe??'';
+        delete action.attackType;delete action.toHit;delete action.damage;delete action.sourceDamageParts;action.type='utility';
+      }
     }
 
     if (action.type === 'save' || (entry as Record<string, unknown>)['DC']) {
@@ -181,6 +163,11 @@ export class StructuredActionParser {
       }
       action.aoe = this.parseAoe((entry as Record<string, unknown>)['AoE'] ?? (entry as Record<string, unknown>)['aoe']);
       if (rawDamage !== undefined) action.damage = this.parseDamageParts(rawDamage);
+      if(!Number.isFinite(action.DC)||!action.ability){
+        this.retainActionField(action,'save',{dc:record.DC,ability:record['属性']??record.ability,statuses:record.nativeFailureStatuses},'此豁免字段由GM按原始值处理，已知伤害与其他操作保留。');
+        delete action.DC;delete action.ability;delete action.nativeFailureStatuses;
+        if(action.type==='save')action.type=action.damage?.length?'damage':'utility';
+      }
     }
 
     if (action.type === 'damage' && rawDamage !== undefined) {
@@ -195,10 +182,11 @@ export class StructuredActionParser {
         action.healing = { formula, type: rawType };
         if(healing.target!==undefined){
           const target=healing.target;
-          if(!target||typeof target!=='object'||Array.isArray(target))throw new Error('InvalidHealingTarget');
+          if(!target||typeof target!=='object'||Array.isArray(target)) { action.describe += '\n\nGM 治疗对象：'+JSON.stringify(target); } else {
           const recipient=target as Record<string,unknown>;
-          if(Object.keys(recipient).some(key=>!['type','count','special'].includes(key))||!['self','creature'].includes(String(recipient.type))||recipient.count!==1||typeof recipient.special!=='string'||!recipient.special.trim())throw new Error('InvalidHealingTarget');
-          action.healing.target={type:recipient.type as 'self'|'creature',count:1,special:recipient.special};
+          if(isHealingRecipient(recipient))action.healing.target={type:recipient.type as 'self'|'creature'|'any',...(typeof recipient.count==='number'?{count:recipient.count}:{}),special:typeof recipient.special==='string'?recipient.special:''};
+          else action.describe += '\n\nGM 治疗对象：'+JSON.stringify(target);
+          }
         }
       }
     }
@@ -213,15 +201,14 @@ export class StructuredActionParser {
 
     if(record['perLongRest']!==undefined)action.perLongRest=this.parseNumber(record['perLongRest']);
     const hasUses=Object.hasOwn(record,'使用次数'),hasDaily=Object.hasOwn(record,'每日');
-    if(hasUses&&hasDaily)throw new Error('ConflictingSourceUses: multiple counter fields require review.');
     const rawUses=hasUses?record['使用次数']:hasDaily?{max:record['每日'],period:'day'}:undefined;
-    if(hasUses||hasDaily){
-      if(!rawUses||typeof rawUses!=='object'||Array.isArray(rawUses))throw new Error('InvalidSourceUses: expected max and period.');
+    if(rawUses && typeof rawUses === 'object' && !Array.isArray(rawUses)) {
       const uses=rawUses as Record<string,unknown>;
-      if(Object.keys(uses).some(key=>!['max','period'].includes(key))||!Number.isSafeInteger(uses.max)||Number(uses.max)<1||typeof uses.period!=='string'||!['day','longRest','shortRest','dawn'].includes(uses.period))throw new Error('InvalidSourceUses: positive integer max and a supported period are required.');
-      if(action.recharge||action.perLongRest!==undefined)throw new Error('ConflictingSourceUses: multiple recovery mechanisms require review.');
-      action.uses={max:Number(uses.max),period:uses.period as NonNullable<StructuredActionData['uses']>['period']};
-    }
+      if(Number.isSafeInteger(uses.max)&&Number(uses.max)>0&&typeof uses.period==='string'&&['day','longRest','shortRest','dawn'].includes(uses.period)) {
+        action.uses={max:Number(uses.max),period:uses.period as NonNullable<StructuredActionData['uses']>['period']};
+      } else action.describe += '\n\nGM 次数与恢复：'+JSON.stringify(rawUses);
+    } else if(rawUses!==undefined)action.describe += '\n\nGM 次数与恢复：'+JSON.stringify(rawUses);
+    if(hasUses&&hasDaily)action.describe += '\n\nGM 另有每日次数：'+JSON.stringify(record['每日']);
 
     const legendaryCost = (entry as Record<string, unknown>)['传奇动作消耗'] ?? (entry as Record<string, unknown>)['legendaryCost'];
     if (legendaryCost !== undefined) action.legendaryCost = this.parseNumber(legendaryCost);
@@ -250,26 +237,28 @@ export class StructuredActionParser {
       action.embeddedEffects = embeddedEffects;
     }
 
-    if (action.spellUseRecords && (action.type !== 'utility' || action.uses || action.recharge || action.perLongRest !== undefined)) throw new Error('InvalidManualSpellUsesCombination');
-    if (action.gmTriggeredSave && (action.type !== 'attack' || action.DC !== undefined || action.nativeFailureStatuses !== undefined)) throw new Error('InvalidGmTriggeredSaveCombination');
-    if (action.gmTriggeredSave && (!action.attackType || !Number.isSafeInteger(action.toHit))) throw new Error('InvalidGmTriggeredSavePrimaryAttack');
-    if (action.nativeFailureStatuses && (action.type !== 'save' || !positiveInteger(action.DC) || !action.ability || !['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(action.ability))) throw new Error('InvalidNativeFailureStatusesCombination');
     return action;
   }
 
   private parseSpellcastingFeatureKey(value: unknown): string | undefined {
     if (value === undefined) return undefined;
     if (typeof value !== 'string' || value.trim().length === 0) {
-      throw new Error('InvalidSpellcastingFeatureKey: spellcastingFeatureKey must be a non-empty string.');
+      return undefined;
     }
     return value.trim();
+  }
+
+  private retainActionField(action:StructuredActionData,path:string,value:unknown,message:string):void {
+    const prior=action.candidateReview;
+    action.candidateReview={version:1,findings:[...(prior?.findings??[]),{code:'FIELD_PROJECTION_INCOMPLETE',path,message}],proposal:{prior:prior?.proposal??null,value}};
+    action.describe=[action.describe,'GM：'+message+' '+JSON.stringify(value)].filter(Boolean).join('\n\n');
   }
 
   private parseWeaponConfiguration(value: unknown): WeaponConfiguration | undefined {
     if (value === undefined) return undefined;
     const parsed = parseWeaponConfiguration(value);
     if (!parsed) {
-      throw new Error('InvalidWeaponConfiguration: weapon-properties must be a valid WeaponConfiguration.');
+      return undefined;
     }
     return parsed;
   }
@@ -278,7 +267,7 @@ export class StructuredActionParser {
     if (value === undefined || value === null || value === '') return undefined;
     const normalized = typeof value === 'string' ? value.trim() : '';
     if (!isWeaponMasteryId(normalized)) {
-      throw new Error('InvalidNativeWeaponMastery: native-mastery must name one official dnd2024 mastery.');
+      return undefined;
     }
     return normalized;
   }
@@ -338,12 +327,12 @@ export class StructuredActionParser {
     if (m === 'rwak' || m?.includes('远程武器')) return 'rwak';
     if (m === 'msak' || m?.includes('近战法术')) return 'msak';
     if (m === 'rsak' || m?.includes('远程法术')) return 'rsak';
-    return 'mwak';
+    return undefined;
   }
 
   private normalizeAbility(a: string): SaveAbility | undefined {
     if (!a) return undefined;
-    return (ABILITY_MAP[a] ?? a) as SaveAbility;
+    return ABILITY_MAP[a.toLowerCase()] as SaveAbility | undefined;
   }
 
   private parseNumber(v: unknown): number {
@@ -354,26 +343,22 @@ export class StructuredActionParser {
 
   private parseSourceDamageParts(parts: unknown): SourceDamagePart[] | undefined {
     if (parts === undefined) return undefined;
-    if (!Array.isArray(parts)) throw new Error('InvalidSourceDamage: expected a damage list.');
-    const result = parts.map((part: unknown): SourceDamagePart => {
-      if (typeof part === 'string') return { formula: part, type: '', relationship: 'base' };
-      if (!part || typeof part !== 'object' || Array.isArray(part)) throw new Error('InvalidSourceDamage: expected a damage part.');
+    const values=Array.isArray(parts)?parts:[parts];
+    const result = values.flatMap((part: unknown): SourceDamagePart[] => {
+      if (typeof part === 'string') return [{ formula: part, type: '', relationship: 'base' }];
+      if (!part || typeof part !== 'object' || Array.isArray(part)) return [];
       const record = part as Record<string, unknown>;
       const relationship = String(record['关系'] ?? record.relationship ?? 'base').trim().toLowerCase();
       const condition = record['条件'] ?? record.condition;
       const types=record['类型选项']??record.types;
-      if(types!==undefined&&(!Array.isArray(types)||types.length<2||types.some(t=>typeof t!=='string'||!t.trim())||new Set(types).size!==types.length))throw new Error('InvalidSourceDamage: an exclusive type choice requires distinct nonempty types.');
-      if (!['base', 'additional', 'conditional', 'replacement'].includes(relationship)
-        || condition !== undefined && (typeof condition !== 'string' || !condition.trim())) {
-        throw new Error('InvalidSourceDamage: relationship or condition is invalid.');
-      }
-      return {
+      const knownRelationship=['base','additional','conditional','replacement'].includes(relationship)?relationship:'conditional';
+      return [{
         formula: String(record['公式'] ?? record.formula ?? ''),
         type: String(record['类型'] ?? record.type ?? ''),
-        ...(types===undefined?{}:{types:types as string[]}),
-        relationship: relationship as SourceDamagePart['relationship'],
-        ...(condition === undefined ? {} : { condition: condition.trim() }),
-      };
+        ...(!Array.isArray(types)?{}:{types:types.filter(t=>typeof t==='string') as string[]}),
+        relationship: knownRelationship as SourceDamagePart['relationship'],
+        ...(typeof condition === 'string'?{condition:condition.trim()}:knownRelationship!==relationship?{condition:'GM 伤害关系：'+relationship}:{}),
+      }];
     });
     return result.length ? result : undefined;
   }
@@ -413,7 +398,7 @@ export class StructuredActionParser {
 
   private parseSaveEffects(effects: unknown): SaveEffect[] | undefined {
     if (!effects || !Array.isArray(effects)) return undefined;
-    return effects.map((e: unknown) => ({
+    return effects.filter(e=>e&&typeof e==='object'&&!Array.isArray(e)).map((e: unknown) => ({
       formula: (e as Record<string, unknown>)['公式'] ? String((e as Record<string, unknown>)['公式']) : undefined,
       type: (e as Record<string, unknown>)['类型'] ? String((e as Record<string, unknown>)['类型']) : undefined,
       state: (e as Record<string, unknown>)['状态'] ? String((e as Record<string, unknown>)['状态']) : undefined,
@@ -423,7 +408,7 @@ export class StructuredActionParser {
 
   private parseSpecialEffects(effects: unknown): SpecialEffect[] | undefined {
     if (!effects || !Array.isArray(effects)) return undefined;
-    return effects.map((e: unknown) => ({
+    return effects.filter(e=>e&&typeof e==='object'&&!Array.isArray(e)).map((e: unknown) => ({
       trigger: String((e as Record<string, unknown>)['触发'] ?? (e as Record<string, unknown>)['trigger'] ?? ''),
       describe: String((e as Record<string, unknown>)['描述'] ?? (e as Record<string, unknown>)['describe'] ?? ''),
     }));
@@ -431,7 +416,7 @@ export class StructuredActionParser {
 
   private parseSubActions(sub: unknown): SubAction[] {
     if (!sub || !Array.isArray(sub)) return [];
-    return sub.map((s: unknown) => ({
+    return sub.filter(s=>s&&typeof s==='object'&&!Array.isArray(s)).map((s: unknown) => ({
       name: String((s as Record<string, unknown>)['名称'] ?? (s as Record<string, unknown>)['name'] ?? ''),
       type: this.normalizeType(String((s as Record<string, unknown>)['类型'] ?? (s as Record<string, unknown>)['type'] ?? 'utility')),
       trigger: String((s as Record<string, unknown>)['触发'] ?? (s as Record<string, unknown>)['trigger'] ?? 'special') as TriggerType,
@@ -445,15 +430,13 @@ export class StructuredActionParser {
 
   private parseEmbeddedEffects(emb: unknown): EmbeddedEffect[] {
     if (!emb || !Array.isArray(emb)) return [];
-    return emb.map((e: unknown) => {
+    return emb.filter(e=>e&&typeof e==='object'&&!Array.isArray(e)).map((e: unknown) => {
       const localized = (e as Record<string, unknown>)['条件'], literal = (e as Record<string, unknown>)['condition'];
-      if (localized !== undefined && literal !== undefined && localized !== literal) throw new Error('InvalidEmbeddedCondition: conflicting literal fields.');
       const condition = localized !== undefined ? localized : literal;
-      if (condition !== undefined && typeof condition !== 'string') throw new Error('InvalidEmbeddedCondition: expected a literal string.');
       return {
         type: String((e as Record<string, unknown>)['类型'] ?? (e as Record<string, unknown>)['type'] ?? ''),
         describe: String((e as Record<string, unknown>)['描述'] ?? (e as Record<string, unknown>)['describe'] ?? ''),
-        ...(condition !== undefined ? { condition } : {}),
+        ...(typeof condition === 'string' ? { condition } : {}),
         duration: (e as Record<string, unknown>)['持续'] ? String((e as Record<string, unknown>)['持续']) : undefined,
         damageType: (e as Record<string, unknown>)['伤害类型'] ? String((e as Record<string, unknown>)['伤害类型']) : undefined,
         damageFormula: (e as Record<string, unknown>)['伤害公式'] ? String((e as Record<string, unknown>)['伤害公式']) : undefined,

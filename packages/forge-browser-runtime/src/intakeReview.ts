@@ -267,6 +267,7 @@ export interface ForgeIntakeReviewBundleInput {
   calls?: { discovery: number; extraction: number; review: number; repair: number };
   repairCount?: number;
   canonicalSource?: string;
+  sourceText?: string;
   sourceIdentity?: { sourceId: string; finalSourceHash: Sha256 };
   target?: {
     generatorVersion: string;
@@ -312,6 +313,7 @@ export interface ForgeIntakeReviewBundleV1 {
   calls: { discovery: number; extraction: number; review: number; repair: number };
   repairCount: number;
   canonicalSource?: string;
+  sourceText?: string;
   sourceIdentity?: ForgeIntakeReviewBundleInput['sourceIdentity'];
   target?: ForgeIntakeReviewBundleInput['target'];
   candidateResponse?: ForgeIntakeReviewBundleInput['candidateResponse'];
@@ -327,7 +329,7 @@ export function buildForgeIntakeReviewBundle(input: ForgeIntakeReviewBundleInput
     mode: input.mode,
     requestId: input.requestId,
     attemptId: input.attemptId,
-    status: input.status,
+    status: input.objectKind==='actor'&&input.status==='accepted'&&input.candidateResponse?.status!=='accepted'?(input.gmApproval?'reviewed_candidate':'ready_for_gm_review'):input.status,
     rawSource: input.rawSource,
     rawSourceHash: input.rawSourceHash,
     ...(input.candidate ? { candidate: projectCandidate(input.candidate) } : {}),
@@ -339,6 +341,7 @@ export function buildForgeIntakeReviewBundle(input: ForgeIntakeReviewBundleInput
     calls: projectCalls(input.calls),
     repairCount: nonNegativeInteger(input.repairCount ?? 0, 'repairCount'),
     ...(input.canonicalSource !== undefined ? { canonicalSource: input.canonicalSource } : {}),
+    ...(input.objectKind==='actor'&&input.sourceText !== undefined ? { sourceText: input.sourceText } : {}),
     ...(input.sourceIdentity ? { sourceIdentity: { ...input.sourceIdentity } } : {}),
     ...(input.target ? { target: { ...input.target } } : {}),
     ...(input.candidateResponse ? { candidateResponse: projectCandidateResponse(input.candidateResponse) } : {}),
@@ -375,6 +378,7 @@ function assertBundleIdentity(input: ForgeIntakeReviewBundleInput): void {
 }
 
 function assertCandidateResponseConsistency(input: ForgeIntakeReviewBundleInput): void {
+  if(input.objectKind==='actor')return;
   const reviewed=input.status==='reviewed_candidate'||input.status==='committing_and_reading_back'&&!!input.gmApproval&&input.candidateResponse?.status!=='accepted';
   const acceptedTopLevel = input.status === 'accepted' || input.status === 'committing_and_reading_back'&&!reviewed;
   const awaitingGm = input.status === 'ready_for_gm_review';
@@ -389,7 +393,7 @@ function assertCandidateResponseConsistency(input: ForgeIntakeReviewBundleInput)
     throw new Error('Forge Intake GM-ready candidate needs a bound formal response without prior GM approval.');
   }
   if (!response) return;
-  if(reviewed&&(!input.gmApproval||input.objectKind!=='actor'||!input.candidateHash||!response.artifactHash))throw new Error('Reviewed Actor candidate requires its current GM decision and artifact identity.');
+  if(reviewed)throw new Error('Reviewed Actor candidate requires its current GM decision and artifact identity.');
   if (response.requestId !== input.requestId) {
     throw new Error('Forge Intake candidate response requestId does not match the review bundle.');
   }

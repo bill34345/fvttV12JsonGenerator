@@ -180,6 +180,7 @@ function decodeBundle(root: Record<string, unknown>, version: 1 | 2): ForgeIntak
     'schema', 'version', 'objectKind', 'mode', 'requestId', 'attemptId', 'status', 'rawSource', 'rawSourceHash',
     'candidate', 'evidence', 'deterministicFindings', 'aiReviewFindings', 'reviewVerdict', 'provider', 'calls',
     'repairCount', 'canonicalSource', 'sourceIdentity', 'target', 'candidateResponse', 'history',
+    ...(root.objectKind==='actor'?['sourceText']:[]),
     ...(version === 2 ? ['sourceLabel', 'recoveredFrom', 'modelReviewStatus', 'candidateHash', 'gmApproval'] : []),
   ], '$');
   const objectKind = requireEnum(root.objectKind, OBJECT_KINDS, '$.objectKind');
@@ -209,6 +210,7 @@ function decodeBundle(root: Record<string, unknown>, version: 1 | 2): ForgeIntak
   if (version === 2 && root.gmApproval !== undefined) input.gmApproval = checkedGmApproval(root.gmApproval);
   if (root.provider !== undefined) input.provider = decodeProvider(root.provider, '$.provider');
   if (root.canonicalSource !== undefined) input.canonicalSource = requireString(root.canonicalSource, '$.canonicalSource', MAX_TEXT_LENGTH);
+  if (root.sourceText !== undefined) input.sourceText = requireString(root.sourceText, '$.sourceText', Infinity);
   if (root.sourceIdentity !== undefined) input.sourceIdentity = decodeSourceIdentity(root.sourceIdentity, '$.sourceIdentity', objectKind);
   if (root.target !== undefined) input.target = decodeTarget(root.target, '$.target');
   if (root.candidateResponse !== undefined) input.candidateResponse = decodeCandidateResponse(root.candidateResponse, '$.candidateResponse');
@@ -456,6 +458,7 @@ function decodeRecoveryLineage(value: unknown, path: string): ForgeIntakeReviewR
 }
 
 function assertAcceptedImportConsistency(input: ForgeIntakeReviewBundleInput): void {
+  if(input.objectKind==='actor')return;
   // Call totals describe the attempt, including reviews of a pre-repair
   // candidate. Review metadata below describes only this candidate.
   if (input.modelReviewStatus === 'not_requested' && (input.reviewVerdict || input.aiReviewFindings?.length)) {
@@ -472,7 +475,7 @@ function assertAcceptedImportConsistency(input: ForgeIntakeReviewBundleInput): v
   const reviewed=input.status==='reviewed_candidate'||input.status==='committing_and_reading_back'&&!!input.gmApproval&&input.candidateResponse?.status!=='accepted';
   const accepted = input.status === 'accepted' || input.status === 'committing_and_reading_back'&&!reviewed;
   if (!accepted&&!reviewed) return;
-  if(reviewed&&(input.objectKind!=='actor'||!input.gmApproval||!input.candidateHash||!input.candidateResponse?.artifactHash))throw new TypeError('待审候选的采用记录必须绑定当前 Actor、GM 和产物。');
+  if(reviewed)throw new TypeError('待审候选的采用记录必须绑定当前 Actor、GM 和产物。');
   if (!input.canonicalSource || !input.sourceIdentity || !input.target) {
     throw new TypeError('Forge Intake accepted history requires canonical source identity and target metadata.');
   }

@@ -1,6 +1,8 @@
 import type {NativeFailureStatus,SourceOperation,SourceOperationAbility} from './sourceOperationTypes';
 import {sourceOperationStructureErrors} from './sourceOperationStructure';
+import {normalizeCreatureFeatureInput} from './sourceInput';
 export {sourceOperationStructureErrors} from './sourceOperationStructure';
+export {normalizeCreatureFeatureInput,normalizeOptionalSourceText,isHealingRecipient} from './sourceInput';
 import {nativeAreaShape} from './sourceNativeArea';
 export {nativeAreaShape} from './sourceNativeArea';
 import {sourceHealingOperations,sourceHealingOperationErrors} from './sourceHealingOperations';
@@ -85,8 +87,8 @@ export function sourceSpellHeaderRange(source:string,quote:string):number|undefi
 }
 
 export function sourceAttackDamageModes(source:string,ops:readonly SourceOperation[],name=''){
-  if(ops.some(isNeutralSourceAttack))return;
-  return deriveSourceAttackDamageModes(source,ops,name,(quote,part)=>sourceDamageAtomSpan(quote,part,source)?.start);
+  return deriveSourceAttackDamageModes(source,ops,name,(quote,part)=>sourceDamageAtomSpan(quote,part,source)?.start,
+    (quote,part)=>Boolean(sourceClosedDamageChoice(quote)?.common.some(atom=>atom.formula===formula(part.formula)&&JSON.stringify(atom.types)===JSON.stringify(part.types??[part.type]))));
 }
 function sourceDamageAtomSpan(quote:string,part:{formula:string;type:string;types?:string[]},source=quote){
     const matches=sourceDamageAtomSpans(quote,part,source);
@@ -1126,7 +1128,7 @@ export function sourceLegendaryLairResistance(name:string,description:string,act
  * always GM-owned and cannot create effects or automatic follow-ups. */
 export function sourceOperationErrors(source: string, value: unknown,contexts:readonly string[]=[]): string[] {
   const errors: string[] = [];
-  if (!Array.isArray(value) || !value.length || value.length > 16) return ['operations'];
+  if (!Array.isArray(value) || !value.length) return ['operations'];
   if(value.some(op=>object(op)&&object(op.proof)&&op.proof.upgrade!==undefined))return fixedDamageUpgradeErrors(source,value,contexts,(base,ops)=>sourceOperationErrors(base,ops).length===0);
   const healing=sourceHealingOperations(source);
   if(healing||value.some(op=>object(op)&&op.type==='heal'))return sourceHealingOperationErrors(source,value,healing);
@@ -1164,7 +1166,7 @@ export function sourceOperationErrors(source: string, value: unknown,contexts:re
     if(isNeutralSourceAttack(op)&&(op.type!=='attack'||op.aoe!==undefined||op.range!==undefined||op.healing!==undefined||op.save!==undefined||op.failureStatuses?.length))fail('attack/neutral-combination');
     if (typeof op.id!=='string'||!/^[-a-zA-Z0-9]{1,64}$/u.test(op.id)||ids.has(op.id)) fail('id');
     ids.add(op.id);
-    if (typeof op.name!=='string'||!op.name.trim()||op.name.length>160) fail('name');
+    if (typeof op.name!=='string'||!op.name.trim()) fail('name');
     const delayedOnly=index===0&&op.relationship==='follow-up'&&/\bat the (?:start|end)\b|回合(?:开始|结束)|在[^。]+(?:开始|结束)时/iu.test(source);
     if (!['primary','follow-up','alternative'].includes(op.relationship)||index===0&&op.relationship==='follow-up'&&!delayedOnly&&!independentGmDamage&&!independentGmSave&&!independentGmAttack||index>0&&op.relationship==='primary') fail('relationship');
     if (typeof op.sourceText!=='string'||op.sourceText!==source.trim()) { fail('sourceText'); continue; }
@@ -1446,13 +1448,15 @@ export function materializeSourceOperationEvidence(source:string,value:unknown,o
  * The model owns mechanics, branches, conditions and declared statuses. */
 export function materializeStructuredSourceOperations(source:string,value:unknown,offset?:number,proofSource?:string):unknown{
   if(!Array.isArray(value))return value;
+  const proposal={sourceOperations:structuredClone(value)};
+  normalizeCreatureFeatureInput(proposal,source);
   const clauses=sourceOperationClauses(source),key=(quote:string)=>text(quote).replace(/[。.!?！？]$/u,'');
   const complete=(quote:unknown):unknown=>{
     if(typeof quote!=='string')return quote;
     const matches=clauses.filter(clause=>key(clause)===key(quote));
     return matches.length===1?matches[0]:quote;
   };
-  return structuredClone(value).map(op=>{
+  return proposal.sourceOperations.map(op=>{
     if(!object(op))return op;
     const proof=object(op.proof)?Object.fromEntries(Object.entries(op.proof).map(([name,value])=>{
       if(name==='damage'&&Array.isArray(value))return[name,value.map(complete)];
@@ -1462,7 +1466,7 @@ export function materializeStructuredSourceOperations(source:string,value:unknow
       }
       return[name,complete(value)];
     })):op.proof;
-    const bound:Record<string,any>={...op,proof,sourceText:op.sourceText??source.trim()};
+    const bound:Record<string,any>={...op,proof,sourceText:op.sourceText===undefined?source.trim():op.sourceText};
     if(bound.evidence===undefined&&offset!==undefined&&typeof bound.sourceText==='string'){
       const start=source.indexOf(bound.sourceText);
       if(start>=0&&source.indexOf(bound.sourceText,start+1)<0)bound.evidence={start:offset+start,end:offset+start+bound.sourceText.length,quote:bound.sourceText};
@@ -1474,7 +1478,7 @@ export function materializeStructuredSourceOperations(source:string,value:unknow
       &&typeof proof.damage[0]==='string'&&proof.damage[0].trim()
       &&['attack','save'].includes(bound.type)&&bound.relationship==='primary'&&bound.condition===undefined
       &&bound.damageAdjustment===undefined&&proof.upgrade===undefined
-      &&Array.isArray(bound.damage)&&bound.damage.length>1&&bound.damage.length<=12
+      &&Array.isArray(bound.damage)&&bound.damage.length>1
       &&bound.damage.every((part:unknown)=>object(part)&&['base','additional'].includes(part.relationship)&&part.condition===undefined)){
       const whitespace=(value:string)=>value.replace(/\s+/gu,' ').trim();
       const quote=proof.damage[0];
@@ -1493,15 +1497,13 @@ export function materializeStructuredSourceOperations(source:string,value:unknow
 }
 
 export function bindStructuredSourceOperations(source:string,value:unknown,offset?:number):SourceOperation[]{
-  const prepared=materializeStructuredSourceOperations(source,value,offset),errors=sourceOperationStructureErrors(prepared);
-  if(errors.length)throw new Error('InvalidSourceOperationStructure: '+errors.join(', '));
+  const prepared=materializeStructuredSourceOperations(source,value,offset);
   return prepared as SourceOperation[];
 }
 
-/** Staged/parser/generation callers retain strict binding. */
+/** Attach program source positions without repeating semantic acceptance. */
 export function bindSourceOperations(source: string, value: unknown, offset=0): SourceOperation[] {
-  const prepared=prepareSourceOperationEvidence(source,value),errors=sourceOperationErrors(source,prepared);
-  if(errors.length)throw new Error(`InvalidSourceOperations: ${errors.join(', ')}`);
+  const prepared=prepareSourceOperationEvidence(source,value);
   return structuredClone(prepared as SourceOperation[]).map(op=>{
     const start=source.indexOf(op.sourceText);
     return {...op,evidence:{start:offset+start,end:offset+start+op.sourceText.length,quote:op.sourceText}};

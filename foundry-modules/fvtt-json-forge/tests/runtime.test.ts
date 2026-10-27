@@ -6,6 +6,7 @@ import { splitCollection } from '@fvtt-json-generator/ingest-plaintext/plaintext
 import {
   createAcceptedForgeActor,
   createReviewedForgeActorCandidate,
+  prepareFoundryImportArtifact,
   forgeActorCandidateReviewHash,
   assertActorSemantics,
   ForgeTemporaryActorCleanupError,
@@ -33,6 +34,35 @@ beforeAll(async () => {
 });
 
 describe('Foundry Forge Actor creation boundary', () => {
+  test('actor delivery: the normal create action accepts generated Actors with content findings',async()=>{
+    for(const status of ['needs_review','failed'] as const){
+      const response=reviewedCandidateResponse(status),collection=new FakeActorCollection();
+      const before=structuredClone(response);
+      const result=await createAcceptedForgeActor({game:supportedGame(collection),response});
+      expect(result.status).toBe('created');expect(collection.createCount).toBe(1);
+      expect(()=>assertActorSemantics((response as any).result.artifact,collection.contents[0]!.toObject())).not.toThrow();
+      expect(response).toEqual(before);
+    }
+  });
+  test('actor delivery: adapter issues retain both neutral damage modes, ranges and unresolved spell activity',()=>{
+    const artifact:any=structuredClone((acceptedResponse as any).result.artifact);
+    const item=artifact.items[0],sourceText='A complete rule with ordinary and alternative damage.';
+    item.flags={fvttJsonGenerator:{manualRule:{mode:'native-with-gm',sourceText,sourceOperations:[{id:'bite'}]}}};
+    const marker=(role:string,damageMode?:string)=>({fvttJsonGenerator:{sourceOperation:{id:'bite',role,damageMode,sourceText}}});
+    item.system.range={value:20,long:null,units:'ft'};
+    item.system.activities={
+      roll:{type:'utility',flags:marker('attack-roll'),range:{value:20,long:60}},
+      ordinary:{type:'damage',flags:marker('damage','ordinary'),damage:{parts:[{formula:'1d8+3'},{formula:'1d8'}]},range:{long:60}},
+      alternative:{type:'damage',flags:marker('damage','alternative'),damage:{parts:[{formula:'2d8+3'},{formula:'1d8'}]},range:{long:120},spell:{uuid:'ffffffffffffffff'}},
+    };
+    const warnings:string[]=[],result:any=prepareFoundryImportArtifact(artifact,{modules:{get:()=>({active:true,version:'future'})}},warnings);
+    expect(Object.keys(result.items[0].system.activities)).toEqual(['roll','ordinary','alternative']);
+    expect(result.items[0].system.activities.ordinary.damage.parts).toHaveLength(2);
+    expect(result.items[0].system.activities.alternative.damage.parts).toHaveLength(2);
+    expect(result.items[0].system.activities.alternative.spell.uuid).toBe('ffffffffffffffff');
+    expect(result.items[0].system.range.long).toBeNull();expect(warnings).toHaveLength(3);
+    expect(artifact.items[0].system.activities.roll.midiProperties).toBeUndefined();
+  });
   test('native chat-flavor StringField trims only boundary whitespace and preserves the source body',()=>{
     if(!('result'in acceptedResponse)||acceptedResponse.result.status!=='accepted')throw Error('Expected accepted fixture');
     const expected:any=structuredClone(acceptedResponse.result.artifact);
@@ -68,9 +98,9 @@ describe('Foundry Forge Actor creation boundary', () => {
       const collection = new FakeActorCollection();
       const game = { ...supportedGame(collection), user: { isGM: true, id: 'candidate-gm' } };
       const approval = candidateApproval(response);
-      await expect(createAcceptedForgeActor({ game, response })).rejects.toThrow(/accepted/u);
+      await expect(createAcceptedForgeActor({game,response})).resolves.toMatchObject({status:'created'});
       const created = await createReviewedForgeActorCandidate({ game, response, reviewApproval: approval });
-      expect(created.status).toBe('created');
+      expect(created.status).toBe('existing');
       expect(collection.createInputs).toHaveLength(1);
       const sourceResult = 'result' in response ? response.result : undefined;
       expect(collection.contents[0]!.data.flags[MODULE_ID].candidateReview).toBeUndefined();
@@ -103,7 +133,7 @@ describe('Foundry Forge Actor creation boundary', () => {
     const malformed = structuredClone(response);
     if (!('result' in malformed)) throw new Error('Candidate fixture result required.');
     malformed.result.artifact!.items = 'invalid';
-    await expect(createReviewedForgeActorCandidate({ game, response: malformed, reviewApproval: approval })).rejects.toThrow(/decoded/u);
+    await expect(createReviewedForgeActorCandidate({ game, response: malformed, reviewApproval: approval })).rejects.toThrow(/approval/u);
     const parseFailure = structuredClone(response);
     if (!('result' in parseFailure)) throw new Error('Candidate fixture result required.');
     parseFailure.result.diagnostics[0]!.stage = 'parse';
@@ -561,7 +591,7 @@ describe('Foundry Forge Actor creation boundary', () => {
     expect(collection.createCount).toBe(0);
   });
 
-  test('rejects an unresolved legacy spell response before any world write', async () => {
+  test('retains an Actor with an unresolved legacy spell and its findings', async () => {
     const source = await Bun.file('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md').text();
     const casterSource = source.replace('背景: |-', '施法:\n  - "随意: ArcaneGate"\n背景: |-');
     const response = await convertFinalActorSource(buildForgeActorRequest({
@@ -574,8 +604,8 @@ describe('Foundry Forge Actor creation boundary', () => {
     if (!('result' in response)) throw new Error(`Expected an unresolved spell result: ${JSON.stringify(response)}`);
     expect(response.result.status).toBe('needs_review');
     const collection = new FakeActorCollection();
-    await expect(createAcceptedForgeActor({ game: supportedGame(collection), response })).rejects.toThrow(/accepted/u);
-    expect(collection.createCount).toBe(0);
+    await expect(createAcceptedForgeActor({game:supportedGame(collection),response})).resolves.toMatchObject({status:'created'});
+    expect(collection.createCount).toBe(1);
   });
 
   test('cancellation before world submission prevents creation', async () => {

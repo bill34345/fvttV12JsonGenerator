@@ -112,13 +112,12 @@ export function attachForgeSourceId(
   sourceId?: ForgeSourceId,
 ): ForgeSourceIdentityAttachment {
   const current = readForgeSourceId(markdown);
-  if (current.status === 'invalid') {
-    throw new TypeError('Cannot repair an invalid Forge source identity: ' + current.reason);
+  if (current.status === 'invalid' && current.reason === 'source-id-invalid') {
+    markdown=markdown.replace(/^forge-source-id:[^\r\n]*(?:\r?\n|$)/mu,'');
+    return attachForgeSourceId(markdown,sourceId&&isForgeSourceId(sourceId)?sourceId:undefined);
   }
+  if(current.status==='invalid')throw new TypeError('Cannot attach an identity to invalid YAML: '+current.reason);
   if (current.status === 'valid') {
-    if (sourceId !== undefined && (!isForgeSourceId(sourceId) || current.sourceId !== sourceId)) {
-      throw new TypeError('Cannot replace an existing Forge source ID with a different identity.');
-    }
     return {
       content: markdown,
       sourceId: current.sourceId,
@@ -127,10 +126,7 @@ export function attachForgeSourceId(
     };
   }
 
-  const resolvedSourceId = sourceId ?? createForgeSourceId();
-  if (!isForgeSourceId(resolvedSourceId)) {
-    throw new TypeError('Cannot attach an invalid Forge source ID.');
-  }
+  const resolvedSourceId = sourceId&&isForgeSourceId(sourceId)?sourceId:createForgeSourceId();
 
   const region = findFrontmatter(markdown);
   if (region === 'malformed') {

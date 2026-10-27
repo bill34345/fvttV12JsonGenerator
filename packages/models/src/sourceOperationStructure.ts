@@ -1,4 +1,5 @@
 /** Closed execution contract only. This module never interprets source prose. */
+import {isHealingRecipient} from './sourceInput';
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 const DAMAGE_TYPES = ['acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning', 'necrotic', 'piercing', 'poison', 'psychic', 'radiant', 'slashing', 'thunder'];
 const STATUSES = ['dead', 'blinded', 'charmed', 'deafened', 'frightened', 'grappled', 'incapacitated', 'invisible', 'paralyzed', 'petrified', 'poisoned', 'prone', 'restrained', 'stunned', 'unconscious'];
@@ -19,7 +20,7 @@ function dice(value: unknown): boolean {
  * Strings in sourceText/proof/condition are inert provenance, never commands. */
 export function sourceOperationStructureErrors(value: unknown): string[] {
   const errors: string[] = [];
-  if (!Array.isArray(value) || value.length === 0 || value.length > 128) return ['operations'];
+  if (!Array.isArray(value) || value.length === 0) return ['operations'];
   const ids = new Set<string>();
   for (const [index, entry] of value.entries()) {
     const path = String(index), fail = (field: string) => errors.push(`${path}/${field}`);
@@ -32,7 +33,7 @@ export function sourceOperationStructureErrors(value: unknown): string[] {
     const op = entry;
     if (typeof op.id !== 'string' || !/^[-a-zA-Z0-9]{1,64}$/u.test(op.id) || ids.has(op.id)) fail('id');
     else ids.add(op.id);
-    if (!text(op.name) || op.name.length > 160) fail('name');
+    if (!text(op.name)) fail('name');
     if (!text(op.sourceText)) fail('sourceText');
     if (!member(op.type, ['attack', 'save', 'damage', 'heal'])) fail('type');
     if (!member(op.relationship, ['primary', 'follow-up', 'alternative'])) fail('relationship');
@@ -43,7 +44,7 @@ export function sourceOperationStructureErrors(value: unknown): string[] {
     }
     if (shape(op.proof, ['attack', 'save', 'damage', 'healing', 'range', 'aoe', 'target', 'upgrade'], 'proof')) {
       for (const key of ['attack', 'save', 'healing', 'range', 'aoe', 'target']) if (op.proof[key] !== undefined && !text(op.proof[key])) fail(`proof/${key}`);
-      if (op.proof.damage !== undefined && (!Array.isArray(op.proof.damage) || op.proof.damage.length > 12 || op.proof.damage.some(q => !text(q)))) fail('proof/damage');
+      if (op.proof.damage !== undefined && (!Array.isArray(op.proof.damage) || op.proof.damage.some(q => !text(q)))) fail('proof/damage');
       if (op.proof.upgrade !== undefined && shape(op.proof.upgrade, ['sourceText', 'quote'], 'proof/upgrade')) {
         if (!text(op.proof.upgrade.sourceText) || !text(op.proof.upgrade.quote)) fail('proof/upgrade');
         // The native upgrade target displays the first damage proof. A lone
@@ -54,20 +55,20 @@ export function sourceOperationStructureErrors(value: unknown): string[] {
     }
     if (op.attack !== undefined && shape(op.attack, ['type', 'toHit', 'reach', 'range', 'longRange'], 'attack')) {
       const attack = op.attack;
-      if (!member(attack.type, ['mwak', 'rwak', 'msak', 'rsak', 'melee', 'ranged']) || !integer(attack.toHit)) fail('attack');
+      if (!member(attack.type, ['mwak', 'rwak', 'msak', 'rsak', 'melee', 'ranged', 'unclassified']) || !integer(attack.toHit)) fail('attack');
       for (const key of ['reach', 'range', 'longRange']) if (attack[key] !== undefined && !distance(attack[key])) fail(`attack/${key}`);
       if (attack.longRange !== undefined && (attack.range === undefined || (attack.longRange as number) < (attack.range as number))) fail('attack/longRange');
-      if (member(attack.type, ['melee', 'ranged']) && (op.aoe !== undefined || op.range !== undefined || op.failureStatuses !== undefined)) fail('attack/neutral-combination');
+      if (member(attack.type, ['melee', 'ranged', 'unclassified']) && (op.aoe !== undefined || op.range !== undefined || op.failureStatuses !== undefined)) fail('attack/neutral-combination');
     }
     if (op.save !== undefined && shape(op.save, ['dc', 'abilities', 'choice', 'outcome'], 'save')) {
       const save = op.save;
       if (!integer(save.dc, 1)) fail('save/dc');
       if (!Array.isArray(save.abilities) || !save.abilities.length || save.abilities.some(a => !member(a, ABILITIES)) || new Set(save.abilities).size !== save.abilities.length) fail('save/abilities');
-      if (!member(save.choice, ['single', 'target']) || Array.isArray(save.abilities) && (save.choice === 'single' ? save.abilities.length !== 1 : save.abilities.length !== 2)) fail('save/choice');
+      if (!member(save.choice, ['single', 'target']) || Array.isArray(save.abilities) && (save.choice === 'single' ? save.abilities.length !== 1 : false)) fail('save/choice');
       if (!member(save.outcome, ['none', 'half', 'full'])) fail('save/outcome');
     }
     if (op.damage !== undefined) {
-      if (!Array.isArray(op.damage) || !op.damage.length || op.damage.length > 12) fail('damage');
+      if (!Array.isArray(op.damage) || !op.damage.length) fail('damage');
       else for (const [partIndex, part] of op.damage.entries()) {
         const at = `damage/${partIndex}`;
         if (!shape(part, ['formula', 'type', 'types', 'relationship', 'condition'], at)) continue;
@@ -84,7 +85,7 @@ export function sourceOperationStructureErrors(value: unknown): string[] {
     }
     if (op.healing !== undefined && shape(op.healing, ['formula', 'type', 'target'], 'healing')) {
       if (!dice(op.healing.formula) || !member(op.healing.type, ['healing', 'temphp'])) fail('healing');
-      if (shape(op.healing.target, ['type', 'count', 'special'], 'healing/target') && (!member(op.healing.target.type, ['self', 'creature']) || op.healing.target.count !== 1 || typeof op.healing.target.special !== 'string')) fail('healing/target');
+      if (shape(op.healing.target, ['type', 'count', 'special'], 'healing/target') && !isHealingRecipient(op.healing.target)) fail('healing/target');
     }
     if (op.damageAdjustment !== undefined && shape(op.damageAdjustment, ['multiplier', 'condition', 'actor', 'quote'], 'damageAdjustment')) {
       const adjustment = op.damageAdjustment;

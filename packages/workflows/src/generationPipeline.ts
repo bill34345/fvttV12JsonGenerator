@@ -8,8 +8,10 @@ import type {
 } from '@fvtt-json-generator/generation/types';
 import { verifyGeneratedDocument } from '@fvtt-json-generator/generation/verification';
 import type { ActorGeneratorOptions } from '@fvtt-json-generator/generation/actor';
+import { actorGenerationDiagnostics } from '@fvtt-json-generator/generation/actor';
 import type { EffectProfile } from '@fvtt-json-generator/generation/effect-profile';
 import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
+import { getFoundryTarget } from '@fvtt-json-generator/generation/target';
 import type { ParserRoute } from '@fvtt-json-generator/parser/types';
 import { FACT_LOCALIZATION_POLICY, type ReviewedLocalization } from '@fvtt-json-generator/contracts/localization';
 import type { RulePresentationPlan } from '@fvtt-json-generator/generation/rule-presentation';
@@ -57,9 +59,14 @@ export async function generateActorArtifact(
     sourceText: options.sourceText,
   });
   const projector = getGenerationProjector(options.fvttVersion);
-  const iconSession = options.iconWorkflow
+  const diagnostics:GenerationDiagnostic[]=[];
+  const reportFailure=(code:string,error:unknown)=>diagnostics.push({code,severity:'warning',stage:'semantic',path:'actor',
+    message:error instanceof Error?error.message:String(error)});
+  let iconSession;
+  try{iconSession=options.iconWorkflow
     ? options.iconWorkflow.createResolutionSession(options.fvttVersion, options.iconOptions)
-    : createDisabledIconResolutionSession(options.iconOptions);
+    : createDisabledIconResolutionSession(options.iconOptions);}
+  catch(error){reportFailure('ICON_REPORT_INCOMPLETE',error);iconSession=createDisabledIconResolutionSession({mode:'off'});}
   let rulePresentation: RulePresentationPlan | undefined;
   const capture = options.fvttVersion === '14' && (options.captureRulePresentation
     || options.reviewedLocalization?.policy === FACT_LOCALIZATION_POLICY);
@@ -73,15 +80,18 @@ export async function generateActorArtifact(
     ...(capture ? { onRulePresentationPlan: (plan: RulePresentationPlan) => { rulePresentation = plan; },
       rulePresentationActorNormalizer: options.rulePresentationActorNormalizer } : {}),
   });
-  const verification = verifyGeneratedDocument({
-    canonical,
-    output: actor,
-    target: options.fvttVersion,
-    effectProfile: options.effectProfile,
-  });
-  const localized = options.reviewedLocalization
-    ? projectReviewedActorLocalization(actor, options.sourceText, options.reviewedLocalization, rulePresentation).actor
-    : actor;
+  const projectionFindings=(actor as any)?.flags?.fvttJsonGenerator?.candidateReview?.findings;
+  diagnostics.push(...actorGenerationDiagnostics(actor as object));
+  for(const finding of Array.isArray(projectionFindings)?projectionFindings:[])if(finding.code==='FIELD_PROJECTION_INCOMPLETE')reportFailure(finding.code,finding.message);
+  let verification:GenerationVerification;
+  try{verification=verifyGeneratedDocument({canonical,output:actor,target:options.fvttVersion,effectProfile:options.effectProfile});}
+  catch(error){reportFailure('GENERATION_CHECK_INCOMPLETE',error);verification={status:'needs_review',diagnostics:[],target:getFoundryTarget(options.fvttVersion),mechanicsCoverage:[]};}
+  let localized=actor;
+  if(options.reviewedLocalization)try{localized=projectReviewedActorLocalization(actor,options.sourceText,options.reviewedLocalization,rulePresentation).actor;}
+  catch(error){reportFailure('LOCALIZATION_PROJECTION_INCOMPLETE',error);}
+  let iconReview:IconReviewReport|null=null;
+  try{iconReview=iconSession.report();}catch(error){reportFailure('ICON_REPORT_INCOMPLETE',error);}
+  if(diagnostics.length)verification={...verification,status:verification.status==='failed'?'failed':'needs_review',diagnostics:[...verification.diagnostics,...diagnostics]};
   return {
     actor: localized,
     sourceActor: actor,
@@ -89,6 +99,6 @@ export async function generateActorArtifact(
     canonical,
     verification,
     diagnostics: verification.diagnostics,
-    iconReview: iconSession.report(),
+    iconReview,
   };
 }

@@ -1,5 +1,27 @@
 import yaml from 'js-yaml';
 import { normalizeChineseText } from '@fvtt-json-generator/parser/normalize';
+import { FIELD_MAPPING } from '@fvtt-json-generator/parser/mapping';
+
+export function canonicalizeCreatureSourceText(sourceText:string):string{
+  let source=stripSourceAnswerFence(sourceText);
+  try{const wrapper=JSON.parse(source);if(typeof wrapper?.markdown==='string')source=wrapper.markdown;else if(wrapper?.kind==='source-text'&&typeof wrapper.sourceText==='string')source=wrapper.sourceText;}catch{/* Non-JSON source text follows the ordinary text converter. */}
+  const content=stripSourceAnswerFence(source);
+  const frontmatter=/^\s*---\s*\r?\n([\s\S]*?)\r?\n---(?:\s*\r?\n|$)/u.exec(content)?.[1]??content;
+  try{
+    const document=yaml.load(frontmatter);
+    if(document&&typeof document==='object'&&!Array.isArray(document)
+      &&((document as Record<string,unknown>).layout==='creature'||Object.keys(document).some(key=>Object.hasOwn(FIELD_MAPPING,key))))return content;
+  }catch{/* The existing plaintext format may contain punctuation that is not YAML. */}
+  const blocks=splitCollection(content);
+  if(blocks.length!==1)throw new Error(`Returned source text has ${blocks.length} recognized creature blocks; the existing text converter needs one located block.`);
+  const block=blocks[0]!,outside=[content.slice(0,block.start),content.slice(block.end)].filter(text=>text.trim()).join('\n');
+  const markdown=parseCreatureBlock(normalizeBlock(block.rawBlock)).markdown;
+  return outside?markdown+'\n'+outside:markdown;
+}
+
+function stripSourceAnswerFence(source:string):string{
+  return /^\s*```(?:markdown|md|yaml|yml|json)?[^\S\r\n]*\r?\n([\s\S]*?)\r?\n```\s*$/iu.exec(source)?.[1]??source;
+}
 
 const SECTION_ORDER = ['特性', '动作', '附赠动作', '反应', '传奇动作'] as const;
 type SectionName = (typeof SECTION_ORDER)[number];

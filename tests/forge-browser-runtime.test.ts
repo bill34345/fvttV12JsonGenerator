@@ -289,7 +289,7 @@ describe('browser Forge Actor runtime', () => {
       code: 'FORGE_LEGACY_SPELL_TARGET_UNRESOLVED',
       severity: 'warning',
     }));
-    expect('artifactHash' in decoded.value.result).toBe(false);
+    expect(decoded.value.result.artifactHash).toBe(hashArtifact(decoded.value.result.artifact!));
   });
 
   test('parses an English source with Forge metadata and keeps the output applyable', async () => {
@@ -336,10 +336,10 @@ describe('browser Forge Actor runtime', () => {
     if (!decoded.ok || !('result' in decoded.value)) throw new Error('Expected a decoded Bolbara response.');
     expect(decoded.value.result.status).toBe('needs_review');
     expect(decoded.value.result.diagnostics.some((diagnostic) => diagnostic.severity === 'warning')).toBe(true);
-    expect('artifactHash' in decoded.value.result).toBe(false);
+    expect(decoded.value.result.artifactHash).toBe(hashArtifact(decoded.value.result.artifact!));
   });
 
-  test('rejects empty and oversized input before parsing, while accepting the exact UTF-8 boundary', () => {
+  test('rejects empty input and locally converts Actor sources beyond the old byte boundary', () => {
     expect(() => buildForgeActorRequest({
       content: ' \n\t ',
       sourceId: SOURCE_ID,
@@ -356,8 +356,8 @@ describe('browser Forge Actor runtime', () => {
     const oversized = boundarySource(200_001);
     const oversizedResponsePromise = convertFinalActorSource(makeRequest(oversized));
     return oversizedResponsePromise.then((response) => {
-      expect('error' in response).toBe(true);
-      if ('error' in response) expect(response.error.code).toBe('FORGE_INPUT_TOO_LARGE');
+      expect('result' in response).toBe(true);
+      if ('result' in response) expect(response.result.artifact).toBeDefined();
     });
   });
 
@@ -411,7 +411,7 @@ describe('browser Forge Actor runtime', () => {
     expect(result.rawSourceHash).toBe(hashSource(RAT_WARLOCK_SOURCE));
     expect(result.finalSource).toContain(`forge-source-id: ${SOURCE_ID}`);
     expect(result.finalSourceHash).toBe(hashSource(result.finalSource!));
-    expect(result.response).toBeUndefined();
+    expect(result.response).toBeDefined();
     expect(result.findings.map(finding => finding.code)).toContain('GM_CONFIRMATION_REQUIRED');
     expect(result.findings.some((finding) => finding.blocking)).toBe(false);
     expect(result.findings.map((finding) => finding.code)).not.toContain('SOURCE_HASH_MISMATCH');
@@ -428,7 +428,7 @@ describe('browser Forge Actor runtime', () => {
     expect(JSON.stringify(result)).not.toContain('fake-api-key');
   });
 
-  test('legacy AI conversion makes zero implicit corrections and keeps the source-identity failure visible', async () => {
+  test('legacy AI conversion keeps the complete candidate and supplied source-record notice with zero implicit corrections', async () => {
     const invalid=buildRatWarlockIr();invalid.source.sha256='0'.repeat(64);
     let repairs=0,reviews=0;
     const provider=ratWarlockProvider({extract:async()=>invalid,
@@ -436,8 +436,9 @@ describe('browser Forge Actor runtime', () => {
       review:async()=>{reviews++;return{schemaVersion:1,verdict:'accepted',findings:[]};}});
     const result=await convertRawActorSourceWithAi(actorAiInput('legacy-default-no-correction'),provider);
     expect(repairs).toBe(0);expect(reviews).toBe(0);
-    expect(result.status).toBe('needs_review');expect(result.response).toBeUndefined();
-    expect(result.findings).toContainEqual(expect.objectContaining({code:'STALE_SOURCE',blocking:true}));
+    expect(result.status).toBe('needs_review');expect(result.response).toBeDefined();
+    expect(result.findings).toContainEqual(expect.objectContaining({code:'FIELD_PROJECTION_INCOMPLETE',path:'/source',blocking:false}));
+    expect('result' in result.response! && result.response!.result.artifact).toBeDefined();
     expect(result.stages.find(stage=>stage.stage==='repair')?.status).toBe('skipped');
   });
 
@@ -539,7 +540,7 @@ describe('browser Forge Actor runtime', () => {
     )))).toBe(true);
   });
 
-  test('requires explicit feature arrays and preserves the model coverage instead of inferring absent source sections', async () => {
+  test('completes omitted feature containers while preserving supplied model coverage and abilities', async () => {
     const drifted = buildRatWarlockIr();
     delete (drifted.creature as Partial<typeof drifted.creature>).reactions;
     delete (drifted.creature as Partial<typeof drifted.creature>).legendaryActions;
@@ -555,16 +556,16 @@ describe('browser Forge Actor runtime', () => {
     );
 
     expect(analysis.status).toBe('needs_review');
-    expect(analysis.ir?.creature.reactions).toBeUndefined();
-    expect(analysis.ir?.creature.legendaryActions).toBeUndefined();
-    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'INVALID_STRUCTURE', path: '/creature/reactions', blocking: true }));
-    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'INVALID_STRUCTURE', path: '/creature/legendaryActions', blocking: true }));
+    expect(analysis.ir?.creature.reactions).toEqual([]);
+    expect(analysis.ir?.creature.legendaryActions).toEqual([]);
+    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'EMPTY_FIELD_NORMALIZED', path: '/creature/reactions', blocking: false }));
+    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'EMPTY_FIELD_NORMALIZED', path: '/creature/legendaryActions', blocking: false }));
     expect(analysis.ir?.coverage).toEqual(drifted.coverage);
     expect(analysis.ir?.creature.actions).toEqual(drifted.creature.actions);
     expect(analysis.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
   });
 
-  test('preserves the historical bare heading while reporting its unrelated empty custom type without another call', async () => {
+  test('preserves the historical bare heading and normal empty custom type without another call', async () => {
     const calls = { repair: 0, review: 0 };
     const provider = ratWarlockProvider({
       discover: async () => ({ schemaVersion: 1, candidates: [{
@@ -579,8 +580,8 @@ describe('browser Forge Actor runtime', () => {
     }, provider);
 
     expect(GUARD_HEADING_IR.source.sha256).toBe(hashSource(GUARD_HEADING_SOURCE));
-    expect(analysis.status).toBe('needs_review');
-    expect(analysis.findings).toContainEqual(expect.objectContaining({code:'INVALID_STRUCTURE',path:'/creature/identity/creatureTypeCustom'}));
+    expect(analysis.status).toBe('ready_to_generate');
+    expect(analysis.findings).not.toContainEqual(expect.objectContaining({code:'INVALID_STRUCTURE',path:'/creature/identity/creatureTypeCustom'}));
     expect(analysis.findings).not.toContainEqual(expect.objectContaining({ code: 'UNCLAIMED_MECHANICAL_COVERAGE' }));
     expect(analysis.ir?.coverage.find(entry => entry.start === 277)).toMatchObject({
       end: 285, quote: 'Actions\n', classification: 'mechanical', claimPaths: [],
@@ -695,7 +696,7 @@ describe('browser Forge Actor runtime', () => {
     }
   });
 
-  test('keeps formal Actor generation blocked when both display and source names are blank', async () => {
+  test('uses the generated Actor when both display and source labels are blank', async () => {
     const input = {
       ...actorAiInput('guard-no-name'), source: GUARD_HEADING_SOURCE,
       displayName: ' ', sourceName: '', fvttVersion: '14.368',
@@ -704,12 +705,12 @@ describe('browser Forge Actor runtime', () => {
     const analysis = await analyzeBrowserActorSourceWithAi(input, provider);
     expect(analysis.status).toBe('ready_to_generate');
     const candidate = await generateBrowserActorIntakeCandidate(input, analysis, provider);
-    expect(candidate.status).toBe('failed');
-    expect(candidate.candidateResponse).toBeUndefined();
+    expect(candidate.status).toBe('ready_for_gm_review');
+    expect(candidate.candidateAvailable).toBe(true);expect(candidate.candidateResponse).toBeDefined();
     expect(candidate.calls).toEqual({ discovery: 0, extraction: 1, repair: 0, review: 0 });
   });
 
-  test('keeps an absent feature section and parent coverage without exact child claims fail-closed', async () => {
+  test('keeps an absent feature section and parent coverage as diagnostics without losing the Actor', async () => {
     const invalid = buildRatWarlockIr();
     delete (invalid.creature as Partial<typeof invalid.creature>).reactions;
     invalid.coverage[0]!.classification = 'mechanical';
@@ -721,7 +722,7 @@ describe('browser Forge Actor runtime', () => {
     );
 
     expect(analysis.status).toBe('needs_review');
-    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'INVALID_STRUCTURE', path: '/creature/reactions', blocking: true }));
+    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'EMPTY_FIELD_NORMALIZED', path: '/creature/reactions', blocking: false }));
     const audit = auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, invalid);
     expect(audit.findings).toContainEqual(expect.objectContaining({ code: 'INVALID_FEATURE_SECTION', path: '/creature/reactions' }));
     expect(audit.findings).toContainEqual(expect.objectContaining({ code: 'UNKNOWN_COVERAGE_CLAIM' }));
@@ -757,13 +758,17 @@ describe('browser Forge Actor runtime', () => {
     expect(analysis.calls).toEqual({ discovery: 1, extraction: 1, repair: 0, review: 0 });
   });
 
-  test('pauses evidence drift before generation and never fabricates a creatable response', async () => {
+  test('rebuilds supplied source metadata, retains its original value and delivers the existing creature', async () => {
     const invalid = buildRatWarlockIr();
     invalid.source = { ...invalid.source, sha256: '0'.repeat(64) };
     const provider = ratWarlockProvider({ extract: async () => invalid });
     const analysis = await analyzeBrowserActorSourceWithAi(actorAiInput('evidence-drift'), provider);
     expect(analysis.status).toBe('needs_review');
-    expect(analysis.findings).toContainEqual(expect.objectContaining({ code: 'SOURCE_HASH_MISMATCH', blocking: true }));
+    expect(analysis.findings).toContainEqual(expect.objectContaining({code:'FIELD_PROJECTION_INCOMPLETE',path:'/source',blocking:false}));
+    expect(analysis.ir?.source.sha256).toBe(hashSource(RAT_WARLOCK_SOURCE));
+    expect(JSON.stringify(analysis.ir)).toContain('0'.repeat(64));
+    const generated=await generateBrowserActorIntakeCandidate(actorAiInput('evidence-drift'),analysis,provider);
+    expect(generated.candidateAvailable).toBe(true);
     expect(analysis.calls.review).toBe(0);
     expect(JSON.stringify(analysis)).not.toContain('artifactHash');
   });
@@ -814,7 +819,7 @@ describe('browser Forge Actor runtime', () => {
     expect(cancelled.response).toBeUndefined();
   });
 
-  test('normalizes overlapping chunk discoveries exactly like the formal Node Intake', async () => {
+  test('keeps unresolved overlapping discoveries visible without silently choosing a creature', async () => {
     const longSource = `${RAT_WARLOCK_SOURCE}\n${'x'.repeat(24_500 - RAT_WARLOCK_SOURCE.length - 1)}`;
     let extractionCalls = 0;
     const provider: MonsterIntakeAiProvider = {
@@ -840,11 +845,11 @@ describe('browser Forge Actor runtime', () => {
       systemVersion: '5.3.3',
     }, provider);
 
-    expect(extractionCalls).toBe(1);
-    expect(result.errorCode).not.toBe('multiple_entities');
+    expect(extractionCalls).toBe(0);
+    expect(result.findings).toContainEqual(expect.objectContaining({code:'DISCOVERY_OVERLAP_UNRESOLVED',blocking:false}));
   });
 
-  test('empty legendary metadata keeps its blocking finding beside a GM-pending literal candidate [review disabled]', async () => {
+  test('empty legendary metadata uses the normal empty-container policy without losing the complete candidate [review disabled]', async () => {
     let reviewCalls = 0;
     const provider = ratWarlockProvider({
       review: async () => {
@@ -862,15 +867,12 @@ describe('browser Forge Actor runtime', () => {
     expect(result.status).toBe('ready_for_gm_review');
     expect(result.candidateAvailable).toBe(true);
     expect(result.actorProjection).toBeDefined();
-    expect(result.findings).toContainEqual(expect.objectContaining({
-      code: 'INVALID_STRUCTURE',
-      path: '/creature/legendary',
-      blocking: true,
-    }));
+    expect(result.findings).not.toContainEqual(expect.objectContaining({code:'INVALID_STRUCTURE',path:'/creature/legendary'}));
+    expect(result.actorProjection.items.length).toBeGreaterThan(0);
     expect(reviewCalls).toBe(0);expect(result.modelReviewStatus).toBe('not_requested');
   });
 
-  test('fails closed when any discovered Actor candidate does not match the exact source', async () => {
+  test('retains an independently located Actor when a different discovery member is unlocatable', async () => {
     let extractionCalls = 0;
     const provider: MonsterIntakeAiProvider = {
       providerName: 'fake-invalid-candidate-provider',
@@ -899,13 +901,13 @@ describe('browser Forge Actor runtime', () => {
       systemVersion: '5.3.3',
     }, provider);
 
-    expect(result.status).toBe('failed');
-    expect(result.errorCode).toBe('invalid_response');
-    expect(result.response).toBeUndefined();
-    expect(extractionCalls).toBe(0);
+    expect(result.status).toBe('needs_review');
+    expect(result.response).toBeDefined();
+    expect(result.findings).toContainEqual(expect.objectContaining({code:'DISCOVERY_CANDIDATE_UNLOCATED',blocking:false}));
+    expect(extractionCalls).toBe(1);
   });
 
-  test('does not hash invalid raw AI input before enforcing the browser byte policy', async () => {
+  test('rejects empty raw input while allowing long saved sources through local generation', async () => {
     const unusedProvider = {} as MonsterIntakeAiProvider;
     const empty = await convertRawActorSourceWithAi({
       source: ' \n\t ',
@@ -921,13 +923,15 @@ describe('browser Forge Actor runtime', () => {
     const tooLarge = await convertRawActorSourceWithAi({
       source: '中'.repeat(100_001),
       sourceName: 'large',
+      sourceScope:'single',
       requestId: 'large-ai',
       fvttVersion: '14.364',
       systemVersion: '5.3.3',
-    }, unusedProvider);
-    expect(tooLarge.status).toBe('failed');
-    expect(tooLarge.errorCode).toBe('input_too_large');
-    expect(tooLarge.rawSourceHash).toBeUndefined();
+    }, ratWarlockProvider());
+    expect(tooLarge.status).toBe('needs_review');
+    expect(tooLarge.errorCode).not.toBe('input_too_large');
+    expect(tooLarge.rawSourceHash).toBe(hashSource('中'.repeat(100_001)));
+    expect(tooLarge.response).toBeDefined();
   });
 
   test('reports HTTPS, auth, rate-limit, timeout, invalid-response, and honest browser transport failures safely', async () => {

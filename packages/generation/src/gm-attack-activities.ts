@@ -5,7 +5,7 @@ import {createStableDocumentId} from './stableId';
  * This explicitly labelled generic roll does not invoke native Attack hooks,
  * select weapon/spell classification, determine hits or apply critical damage. */
 export function generateGmAttackActivities(op:SourceOperation,path:string,formatDamage:(part:any)=>any):Record<string,any>{
-  if(!op.attack||!['melee','ranged'].includes(op.attack.type))throw Error('InvalidGmAttack');
+  if(!op.attack||!['melee','ranged','unclassified'].includes(op.attack.type))throw Error('InvalidGmAttack');
   const result:Record<string,any>={},id=createStableDocumentId({kind:'activity',path:path+'/gm-attack-roll'});
   const dual=op.attack.reach!==undefined&&op.attack.range!==undefined;
   result[id]={_id:id,type:'utility',roll:{formula:'1d20'+(op.attack.toHit>=0?'+':'')+op.attack.toHit,name:'GM辅助攻击检定',prompt:true,visible:false},

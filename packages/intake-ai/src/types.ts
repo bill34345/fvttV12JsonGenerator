@@ -56,7 +56,7 @@ export interface IntakeUncertainty {
   candidates?: unknown[];
 }
 
-export const NORMALIZED_MONSTER_EMPTY_PATHS = ['/creature/saves','/creature/traits','/creature/actions','/creature/bonusActions','/creature/reactions','/creature/legendaryActions'] as const;
+export const NORMALIZED_MONSTER_EMPTY_PATHS = ['/creature/saves','/creature/skills','/creature/defenses','/creature/defenses/resistances','/creature/defenses/immunities','/creature/defenses/vulnerabilities','/creature/defenses/conditionImmunities','/creature/senses','/creature/languages','/creature/languages/values','/creature/traits','/creature/actions','/creature/bonusActions','/creature/reactions','/creature/legendaryActions'] as const;
 
 export interface MonsterIntakeIR {
   schemaVersion: 1;
@@ -66,6 +66,18 @@ export interface MonsterIntakeIR {
   claims: IntakeClaim[];
   coverage: SourceCoverageEntry[];
   uncertainties: IntakeUncertainty[];
+}
+
+export interface MonsterIntakeSourceAnswer {
+  kind: 'source-text';
+  sourceText: string;
+}
+
+export type MonsterIntakeExtractionAnswer = MonsterIntakeIR | MonsterIntakeSourceAnswer;
+
+export function isMonsterSourceAnswer(value:unknown):value is MonsterIntakeSourceAnswer{
+  return !!value&&typeof value==='object'&&!Array.isArray(value)&&!('creature'in value)
+    &&'kind'in value&&value.kind==='source-text'&&'sourceText'in value&&typeof value.sourceText==='string';
 }
 
 export interface DiscoveryCandidate extends EvidenceRef {
@@ -81,6 +93,7 @@ export interface DiscoveryRequest {
 }
 
 export interface DiscoveryResult {
+  findings?: IntakeFinding[];
   schemaVersion: 1;
   candidates: DiscoveryCandidate[];
 }
@@ -151,6 +164,7 @@ export interface MonsterIntakeAiProvider {
   getExtractionCorrectionCount?(request: ExtractionRequest): 0 | 1;
   discover(request: DiscoveryRequest): Promise<DiscoveryResult>;
   extract(request: ExtractionRequest): Promise<MonsterIntakeIR>;
+  extractAnswer?(request: ExtractionRequest): Promise<MonsterIntakeExtractionAnswer>;
   review(request: ReviewRequest): Promise<AiReviewResult>;
   repair(request: RepairRequest): Promise<MonsterIntakeIR>;
 }
@@ -176,10 +190,13 @@ export interface MonsterIntakeCreatureResult {
   calls: { extraction: number; review: number; repair: number };
   spellResolution: PortableSpellResolutionStatus;
   markdownPath?: string;
+  sourceTextPath?: string;
   actorPath?: string;
 }
 
 export interface MonsterIntakeRunResult {
+  discoveryFindings?: IntakeFinding[];
+  unassigned?: EvidenceRef[];
   runId: string;
   sourceSha256: string;
   runPath: string;

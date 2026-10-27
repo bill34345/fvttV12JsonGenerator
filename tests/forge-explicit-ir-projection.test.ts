@@ -71,15 +71,14 @@ describe('native-with-gm preserves explicit IR instead of rebuilding from prose'
     ['unknown counter field', () => ({ ...spellRecords(), spellUseRecords: [{ name: '法术', max: 1, period: 'day', path: 'system.hp' }] })],
     ['counter and item uses', () => ({ ...spellRecords(), 使用次数: { max: 2, period: 'day' } })],
   ];
-  for (const [label, build] of invalid) test('rejects '+label, () => {
-    expect(() => parse(build())).toThrow();
+  for (const [label, build] of invalid) test('retains the Actor and other mechanics for '+label, () => {
+    const record=build(),before=structuredClone(record),action=parse(record),actor=generate(action);expect(record).toEqual(before);expect(actor.items).toHaveLength(1);expect(actor.items[0].system.description.value).toContain('DC99');
+    if(record.伤害?.length)expect(activities(actor.items[0]).some(activity=>activity.damage?.parts?.length)).toBe(true);
   });
 
-  test('the generator also rejects malformed direct structured data', () => {
-    const action = parse(gmSave()); (action.gmTriggeredSave as any).ability = 'luck'; expect(() => generate(action)).toThrow('InvalidGmTriggeredSaveStructure');
-    const counter = parse(spellRecords()); counter.spellUseRecords![0]!.max = Infinity; expect(() => generate(counter)).toThrow('InvalidManualSpellUsesStructure');
-    const status = parse(nativeSave()); (status.nativeFailureStatuses as any) = ['unknown']; expect(() => generate(status)).toThrow('InvalidNativeFailureStatusesStructure');
-    const noBoundary = parse(nativeSave()); delete noBoundary.executionMode; expect(() => generate(noBoundary)).toThrow('InvalidExplicitGmExecutionMode');
+  test('external structured fields are projected locally before reaching the typed generator', () => {
+    const records=[{...gmSave(),gmTriggeredSave:{...gmSave().gmTriggeredSave,ability:'luck'}},{...spellRecords(),spellUseRecords:[{name:'Unmapped count',max:Infinity,period:'day'}]},{...nativeSave(),nativeFailureStatuses:['unknown']},{...nativeSave(),执行模式:undefined}];
+    for(const record of records){const actor=generate(parse(record));expect(actor.items).toHaveLength(1);expect(actor.items[0].system.description.value).toContain('DC99');}
   });
 });
 
@@ -142,8 +141,8 @@ describe('literal flat features retain fields and keep prose out of legacy infer
     expect(action.spellcastingFeatureKey).toBe('test-spells'); expect(action.describe).toBe(prose); expect(action.sourceRuleFacts).toEqual([]);
   });
 
-  test('rejects unsupported marker values without changing ordinary unmarked input', () => {
-    expect(() => parse({ 名称: '错误标记', literalMechanics: false, 类型: 'utility', 描述: '文字' })).toThrow('InvalidLiteralMechanics');
+  test('an optional marker cannot reject a real ability or change ordinary unmarked input', () => {
+    expect(generate(parse({ 名称: '错误标记', literalMechanics: false, 类型: 'utility', 描述: '文字' })).items[0].system.description.value).toContain('文字');
     const ordinary = parse({ 名称: '普通能力', 类型: 'attack', 攻击类型: 'mwak', 命中: 5, 伤害: [{ 公式: '1d6+2', 类型: 'cold' }], 描述: '' });
     const first = generate(ordinary), second = generate(structuredClone(ordinary));
     const { _stats: firstStats, ...firstData } = first, { _stats: secondStats, ...secondData } = second;

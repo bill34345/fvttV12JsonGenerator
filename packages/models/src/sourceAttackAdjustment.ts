@@ -5,7 +5,7 @@ const compact=(value:string)=>visible(value).replace(/\s/gu,'').toLowerCase();
 const types='acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder';
 
 export function isNeutralSourceAttack(op:Pick<SourceOperation,'attack'>):boolean{
-  return op?.attack?.type==='melee'||op?.attack?.type==='ranged';
+  return op?.attack?.type==='melee'||op?.attack?.type==='ranged'||op?.attack?.type==='unclassified';
 }
 export function sourceNeutralAttackKind(quote:string):'melee'|'ranged'|undefined{
   const match=/\b(Melee|Ranged)(\s+(?:or|and)\s+(?:Melee|Ranged))?\s+(?:(Weapon|Spell)\s+)?Attack(?:\s+Roll)?\s*:/iu.exec(visible(quote));

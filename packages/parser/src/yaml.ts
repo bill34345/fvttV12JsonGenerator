@@ -37,11 +37,7 @@ export class YamlParser {
   public parse(content: string): ParsedNPC {
     const { frontmatter, body } = this.splitContent(content);
     const rawData = yaml.load(frontmatter) as Record<string, any>;
-    validateForgeSourceMetadata(rawData);
     const literalBiography = rawData && Object.hasOwn(rawData, 'intake-biography-mode');
-    if (literalBiography && (rawData['intake-biography-mode'] !== 'literal-v1' || body.trim())) {
-      throw new Error('InvalidIntakeBiographyMode: expected literal-v1 with frontmatter-only canonical content.');
-    }
 
     const result: ParsedNPC = {
       name: '',
@@ -58,6 +54,7 @@ export class YamlParser {
       items: []
     };
     if (literalBiography) result.biographyMode = 'literal';
+    try{validateForgeSourceMetadata(rawData);}catch(error){this.retainField(result,FORGE_SOURCE_ID_FIELD,rawData?.[FORGE_SOURCE_ID_FIELD],error);}
 
     if (body.trim()) {
       const extracted = this.extractBodySections(body);
@@ -94,26 +91,21 @@ export class YamlParser {
       }
     }
 
-    this.traverse(rawData, result, true);
     if(rawData&&Object.hasOwn(rawData,'intake-candidate-review')){
-      if(!literalBiography||!isSourceCandidateReview(rawData['intake-candidate-review']))throw Error('InvalidSourceCandidateReview');
-      result.candidateReview=structuredClone(rawData['intake-candidate-review']);
+      if(isSourceCandidateReview(rawData['intake-candidate-review']))result.candidateReview=structuredClone(rawData['intake-candidate-review']);
+      else this.retainField(result,'intake-candidate-review',rawData['intake-candidate-review'],'审阅记录未能读取；Actor内容继续。');
     }
+    this.traverse(rawData, result, true);
     if(rawData&&Object.hasOwn(rawData,'intake-legendary-ledger')){
       const ledger=rawData['intake-legendary-ledger'];
       const positive=(value:unknown)=>typeof value==='number'&&Number.isSafeInteger(value)&&value>0;
-      if(!literalBiography||!ledger||typeof ledger!=='object'||Array.isArray(ledger)||Object.keys(ledger).some(key=>!['max','lairMax','recovery','resistanceMax','resistanceLairMax'].includes(key))
-        ||!positive(ledger.max)||ledger.lairMax!==ledger.max+1||ledger.recovery!=='own-turn-start'
-        ||result.attributes.legact?.max!==ledger.max
-        ||(ledger.resistanceMax!==undefined||ledger.resistanceLairMax!==undefined)&&(!positive(ledger.resistanceMax)||ledger.resistanceLairMax!==ledger.resistanceMax+1))throw Error('InvalidSourceLegendaryLedger');
-      if(result.attributes.legres&&(ledger.resistanceMax===undefined||result.attributes.legres.max!==ledger.resistanceMax))
-        throw Error('InvalidLegendaryResistanceConflict: a native lair mode requires matching explicit base/lair resistance capacities.');
-      result.sourceLegendaryLedger=structuredClone(ledger);
+      if(ledger&&typeof ledger==='object'&&positive(ledger.max)&&positive(ledger.lairMax))result.sourceLegendaryLedger=structuredClone(ledger);
+      else this.retainField(result,'intake-legendary-ledger',ledger,'传奇资源附带记录未能转换；已有次数保留。');
     }
 
     if (rawData && Object.hasOwn(rawData, 'intake-biography-presentation')) {
-      if (!literalBiography) throw new Error('InvalidIntakeBiographyPresentation: literal mode required.');
-      result.biographyPresentation = decodeSourceTextPresentationBoundary(rawData['intake-biography-presentation'], result.details.biography ?? '');
+      try{result.biographyPresentation = decodeSourceTextPresentationBoundary(rawData['intake-biography-presentation'], result.details.biography ?? '');}
+      catch(error){this.retainField(result,'intake-biography-presentation',rawData['intake-biography-presentation'],error);}
     }
 
     if (rawData && typeof rawData === 'object') {
@@ -149,6 +141,12 @@ export class YamlParser {
     return result;
   }
 
+  private retainField(result:ParsedNPC,key:string,value:unknown,error:unknown):void {
+    const message=error instanceof Error?error.message:String(error),prior=result.candidateReview;
+    result.candidateReview={version:1,findings:[...(prior?.findings??[]),{code:'FIELD_PROJECTION_INCOMPLETE',path:key,message}],proposal:{prior:prior?.proposal??null,field:key,value}};
+    result.details.biography=[result.details.biography,`GM：${message} 原始字段 ${key}：${JSON.stringify(value)}`].filter(Boolean).join('\n\n');
+  }
+
   private splitContent(content: string): { frontmatter: string; body: string } {
     const normalized = content.trim();
 
@@ -170,6 +168,7 @@ export class YamlParser {
   }
 
   private traverse(obj: any, result: ParsedNPC, isRoot = false) {
+    if(!obj||typeof obj!=='object')return;
     for (const [key, value] of Object.entries(obj)) {
       if (isRoot && key === FORGE_SOURCE_ID_FIELD) continue;
       if (isRoot && key === 'intake-biography-mode') continue;
@@ -179,13 +178,12 @@ export class YamlParser {
       const mapping = FIELD_MAPPING[key];
 
       if (mapping) {
-        this.applyField(mapping, value, result);
+        try{this.applyField(mapping, value, result);}catch(error){this.retainField(result,key,value,error);}
       } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
         // Nested container (e.g. "能力" or "Attributes")
         this.traverse(value, result, false);
       } else {
-        // Unknown key at leaf level -> Strict Mode Error
-        throw new Error(`InvalidField: Unknown field '${key}'`);
+        this.retainField(result,key,value,'此字段尚未映射，原始内容保留。');
       }
     }
   }
@@ -199,16 +197,57 @@ export class YamlParser {
 
     // Determine target location in ParsedNPC
     if (path === 'resourceSemantics') {
-      result.resourceSemantics = parseActorResourceSemantics(processedValue);
+      result.resourceSemantics = parseActorResourceSemantics(processedValue,(path,value,error)=>this.retainField(result,path,value,error));
     } else if (path === 'behaviorSemantics') {
       result.behaviorSemantics = parseActorBehaviorSemantics(processedValue);
     } else if (path === 'spellManifest') {
-      const validation = validatePortableSpellManifestStructure(processedValue);
-      if (!validation.ok) {
-        const stableFindings = validation.findings.map((finding) => `${finding.code} ${finding.path}`).join('; ');
-        throw new Error(`InvalidSpellManifest: ${stableFindings}`);
+      const supplied=structuredClone(processedValue);
+      for(const group of Array.isArray(supplied?.spellcastingGroups)?supplied.spellcastingGroups:[])
+        for(const ref of Array.isArray(group?.spellRefs)?group.spellRefs:[]){
+          for(const key of ['aliases','restrictions','evidence'])if(ref&&ref[key]!==undefined&&!Array.isArray(ref[key])){
+            this.retainField(result,'法术清单/'+String(group.groupId)+'/'+String(ref.refId)+'/'+key,ref[key],'法术附带记录未映射；法术保留。');ref[key]=[];
+          }
+          if(Array.isArray(ref?.aliases))ref.aliases=ref.aliases.filter((alias:unknown,index:number)=>{
+            if(typeof alias==='string'&&alias.trim())return true;
+            this.retainField(result,'法术清单/'+String(group.groupId)+'/'+String(ref.refId)+'/aliases/'+index,alias,'法术别名未映射；该法术与同组其他法术保留。');return false;
+          });
+        }
+      let validation = validatePortableSpellManifestStructure(supplied);
+      while(!validation.ok){
+        const groups=Array.isArray(supplied?.spellcastingGroups)?supplied.spellcastingGroups:[];
+        const invalidRefs=new Map<number,Set<number>>();
+        let changed=false;
+        for(const finding of validation.findings){
+          const match=/^\/spellcastingGroups\/(\d+)\/spellRefs\/(\d+)(?:\/|$)/u.exec(finding.path);if(!match)continue;
+          const groupIndex=Number(match[1]),refIndex=Number(match[2]),group=groups[groupIndex],ref=group?.spellRefs?.[refIndex];
+          if(finding.code==='INVALID_SPELL_REUSE'&&ref?.reuseOf!==undefined){
+            this.retainField(result,'法术清单/'+group.groupId+'/'+ref.refId+'/reuseOf',ref.reuseOf,finding.message+' 原生法术保留，未完成的复用关联由GM按原文处理。');delete ref.reuseOf;changed=true;continue;
+          }
+          if(finding.code==='INVALID_SHARED_USE'&&ref?.uses?.shared===true&&group.spellRefs.filter((entry:any)=>entry?.uses?.shared===true).length===1){
+            this.retainField(result,'法术清单/'+group.groupId+'/'+ref.refId+'/uses',structuredClone(ref.uses),'共享成员尚未全部映射；保留现有同一计数与恢复，其他成员规则仍可查看。');ref.uses.shared=false;changed=true;continue;
+          }
+          const refs=invalidRefs.get(groupIndex)??new Set<number>();refs.add(refIndex);invalidRefs.set(groupIndex,refs);
+        }
+        for(const[groupIndex,refs]of invalidRefs){
+          const group=groups[groupIndex];if(!Array.isArray(group?.spellRefs))continue;
+          group.spellRefs=group.spellRefs.filter((ref:any,index:number)=>{
+            if(!refs.has(index))return true;
+            const findings=validation.ok?[]:validation.findings.filter(finding=>finding.path===`/spellcastingGroups/${groupIndex}/spellRefs/${index}`||finding.path.startsWith(`/spellcastingGroups/${groupIndex}/spellRefs/${index}/`));
+            this.retainField(result,'法术清单/'+group.groupId+'/spellRefs/'+index,ref,findings.map(finding=>finding.code+' '+finding.path).join('; ')+' 此引用未映射；同组其他法术保留。');changed=true;return false;
+          });
+        }
+        if(!changed){
+          const invalidGroups=new Set(validation.findings.flatMap(finding=>{const match=/^\/spellcastingGroups\/(\d+)(?:\/|$)/u.exec(finding.path);return match?[Number(match[1])]:[];}));
+          if(!invalidGroups.size){this.retainField(result,'法术清单',supplied,validation.findings.map(finding=>finding.code+' '+finding.path).join('; '));return;}
+          supplied.spellcastingGroups=groups.filter((group:any,index:number)=>{
+            if(!invalidGroups.has(index))return true;
+            this.retainField(result,'法术清单/'+index,group,'此组关联尚未映射；原始组规则与其他组法术保留。');return false;
+          });
+          if(!supplied.spellcastingGroups.length)return;
+        }
+        validation=validatePortableSpellManifestStructure(supplied);
       }
-      result.spellManifest = validation.value;
+      result.spellManifest=validation.value;
     } else if (path === 'name') {
       result.name = processedValue;
     } else if (path === 'type') {
@@ -291,7 +330,8 @@ export class YamlParser {
         const level = Number(levelText);
         const count = Number(countValue);
         if (!Number.isInteger(level) || level < 1 || level > 9 || !Number.isInteger(count) || count < 1) {
-          throw new Error(`InvalidSpellSlots: level ${levelText} must have a positive integer count.`);
+          this.retainField(result,'法术位/'+levelText,countValue,'此法术位记录按原始资料处理。');
+          continue;
         }
         slots[level as keyof NonNullable<ParsedNPC['spellSlots']>] = count;
       }
@@ -868,7 +908,8 @@ export class YamlParser {
         const total = (val as Record<string, unknown>)['总加值'];
         if (Array.isArray(val) || Object.keys(val).length !== 1 || !Object.hasOwn(val, '总加值')
           || typeof total !== 'number' || !Number.isFinite(total) || !Number.isInteger(total)) {
-          throw new Error(`InvalidSkillTotal: '${key}' must contain only 总加值 with a finite integer.`);
+          this.retainField(result,'技能/'+key,val,'此技能总值尚未转换；其他技能保留。');
+          continue;
         }
         skillValue = this.inferSkillProficiency(skillKey, total, result, profBonus);
         // Source totals do not establish half proficiency. Avoid fractional

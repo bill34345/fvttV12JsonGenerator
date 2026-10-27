@@ -14,14 +14,14 @@ import {
  * This projection is Forge-only so existing CLI/Web output remains unchanged.
  */
 export function normalizeForgeActorArtifact(value: unknown, target: '12' | '14', identitySource?: unknown): JsonObject {
-  const actor = cloneJsonObject(value);
+  const actor = cloneJsonObject(JSON.parse(JSON.stringify(value)));
   normalizeStats(actor);
   if (target === '14' && Array.isArray(actor.items)) {
     for (const item of actor.items) if (isJsonObject(item)) normalizeEmbeddedAttackRangesForFoundryV14(item);
   }
 
   // Display translations must not allocate different Effect identities or break their Activity references.
-  const source = identitySource === undefined ? actor : cloneJsonObject(identitySource);
+  const source = identitySource === undefined ? actor : cloneJsonObject(JSON.parse(JSON.stringify(identitySource)));
   if (identitySource !== undefined) normalizeStats(source);
   const replacements = collectEffectIdReplacements(source);
   replaceGeneratedEffectIds(actor, replacements);

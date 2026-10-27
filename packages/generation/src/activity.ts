@@ -229,12 +229,12 @@ export class ActivityGenerator {
         // schema-derived: missing range defaults to self in dnd5e 5.3.3.
         // A source-qualified creature recipient has special range, never a
         // guessed distance or an implicit self-only range.
-        ...(recipient?.type==='creature'?{range:{units:'spec',special:recipient.special,override:false}}:{}),
+        ...(recipient&&recipient.type!=='self'?{range:{units:'spec',special:recipient.special,override:false}}:{}),
         target: {
           override: false,
-          prompt: recipient?.type==='creature',
+          prompt: !!recipient&&recipient.type!=='self',
           template: { count: '', contiguous: false, type: '', size: '', width: '', height: '', units: 'ft' },
-          affects: { count: '1', type: recipient?.type??'self', choice: false, special: recipient?.special??'' },
+          affects: { count: recipient ? recipient.count===undefined?'':String(recipient.count) : '1', type: recipient?.type??'self', choice: false, special: recipient?.special??'' },
         },
       };
     } else if (action.damage && action.damage.length > 0) {

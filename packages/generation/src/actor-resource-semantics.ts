@@ -458,14 +458,21 @@ export function applyActorResourceSemantics(
         .map((mutation) => mutation.target),
     ]),
   ];
+  const project=(path:string,value:unknown,operation:()=>void)=>{try{operation();}catch(error){
+    actor.flags??={};actor.flags[FLAG_SCOPE]??={};const prior=actor.flags[FLAG_SCOPE].candidateReview;
+    actor.flags[FLAG_SCOPE].candidateReview={version:1,findings:[...(prior?.findings??[]),{code:'FIELD_PROJECTION_INCOMPLETE',path,message:error instanceof Error?error.message:String(error)}],proposal:{prior:prior?.proposal??null,value}};
+  }};
   for (const ref of allRefs) {
+    project('resource/reference',ref,()=>{
     const item = findItem(actor, ref);
     const itemId = ensureItemId(actorName, item, ref, ids);
     itemIds.set(itemKey(ref), itemId);
+    });
   }
 
   const resourceItems = new Map<string, any>();
   for (const resource of semantics.resources) {
+    project('resource/'+resource.id,resource,()=>{
     const item = findItem(actor, resource.carrier);
     resourceItems.set(resource.id, item);
     if (item.system?.uses?.max) {
@@ -490,12 +497,14 @@ export function applyActorResourceSemantics(
       derived: resource.derived,
     };
     for (const operation of resource.operations) {
-      appendOperation(actorName, item, resource, operation);
+      project('resource/'+resource.id+'/operation',operation,()=>appendOperation(actorName,item,resource,operation));
     }
-    appendTiers(actorName, item, resource, fvttVersion);
+    project('resource/'+resource.id+'/tiers',resource.derived,()=>appendTiers(actorName,item,resource,fvttVersion));
+    });
   }
 
   for (const binding of semantics.bindings) {
+    project('resource/binding',binding,()=>{
     const item = findItem(actor, binding.source);
     const resourceItem = resourceItems.get(binding.resourceId);
     if (!resourceItem?._id) throw new Error(`ResourceProjection: missing resource "${binding.resourceId}".`);
@@ -504,9 +513,10 @@ export function applyActorResourceSemantics(
     } else {
       appendVariableBinding(actorName, item, resourceItem._id, binding);
     }
+    });
   }
 
   for (const transition of semantics.transitions) {
-    appendTransition(actor, actorName, transition, resourceItems, itemIds);
+    project('resource/transition',transition,()=>appendTransition(actor,actorName,transition,resourceItems,itemIds));
   }
 }

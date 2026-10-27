@@ -31,7 +31,7 @@ export interface HealingPart {
   formula: string;
   type: 'healing' | 'temphp';
   /** Explicit recipient; source qualifications stay literal and GM-reviewed. */
-  target?: { type:'self'|'creature'; count:1; special:string };
+  target?: { type:'self'|'creature'|'any'; count?:number; special?:string };
 }
 
 export type SaveOutcome = 'none' | 'half' | 'full' | 'literal';

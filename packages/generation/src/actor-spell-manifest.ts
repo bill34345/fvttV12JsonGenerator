@@ -78,18 +78,12 @@ export function buildActorSpellManifest(
   }
   const validated = validation.value;
   const groupsByFeature = new Map<string, typeof validated.spellcastingGroups>();
+  const activeGroups:typeof validated.spellcastingGroups=[];
+  const unresolved:Array<{group:unknown;message:string}>=[];
   for (const group of validated.spellcastingGroups) {
     const groups = groupsByFeature.get(group.featureItemKey) ?? [];
     groups.push(group);
     groupsByFeature.set(group.featureItemKey, groups);
-  }
-  for (const [key, groups] of groupsByFeature) {
-    if (groups.length !== 1) {
-      throw new ActorSpellManifestError(
-        'SPELL_FEATURE_LINK_DUPLICATE_MANIFEST_KEY',
-        `featureItemKey ${key} must identify exactly one manifest group.`,
-      );
-    }
   }
 
   const items = Array.isArray(actor.items) ? actor.items : [];
@@ -103,12 +97,8 @@ export function buildActorSpellManifest(
     itemsByFeature.set(key, linked);
   }
 
-  for (const key of itemsByFeature.keys()) {
-    if (!groupsByFeature.has(key)) {
-      throw new ActorSpellManifestError('SPELL_FEATURE_LINK_UNKNOWN', `Generated feature key ${key} is absent from the manifest.`);
-    }
-  }
   for (const group of validated.spellcastingGroups) {
+    try{
     const linked = itemsByFeature.get(group.featureItemKey) ?? [];
     if (linked.length === 0) {
       throw new ActorSpellManifestError('SPELL_FEATURE_LINK_MISSING', `No generated feature has key ${group.featureItemKey}.`);
@@ -152,14 +142,21 @@ export function buildActorSpellManifest(
       featureItemKey: group.featureItemKey,
       groupId: group.groupId,
     };
+    activeGroups.push(group);
+    }catch(error){unresolved.push({group,message:error instanceof Error?error.message:String(error)});}
   }
 
   actor.flags = actor.flags ?? {};
+  if(unresolved.length){actor.flags.fvttJsonGenerator??={};const prior=actor.flags.fvttJsonGenerator.candidateReview;actor.flags.fvttJsonGenerator.candidateReview={version:1,findings:[...(prior?.findings??[]),...unresolved.map(entry=>({code:'FIELD_PROJECTION_INCOMPLETE',path:'spellManifest',message:entry.message}))],proposal:{prior:prior?.proposal??null,unresolved}};
+    actor.system.details.biography.value+='\n<p>GM 未连接法术组：'+unresolved.map(entry=>entry.message).join('；')+'</p>';
+  }
+  if(!activeGroups.length)return;
+  const retained={...validated,spellcastingGroups:activeGroups};
   actor.flags[RESOLVER_MODULE_ID] = {
-    spellManifest: validated,
+    spellManifest: retained,
     spellResolution: {
       status: 'pending',
-      manifestHash: hashManifest(validated),
+      manifestHash: hashManifest(retained),
     },
   };
 }

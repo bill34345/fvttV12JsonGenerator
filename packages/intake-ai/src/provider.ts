@@ -15,14 +15,15 @@ import type {
   ExtractionRequest,
   MonsterIntakeAiProvider,
   MonsterIntakeIR,
+  MonsterIntakeExtractionAnswer,
   RepairRequest,
   ReviewRequest,
 } from './types';
-import {NORMALIZED_MONSTER_EMPTY_PATHS} from './types';
+import {NORMALIZED_MONSTER_EMPTY_PATHS,isMonsterSourceAnswer} from './types';
 import type { MonsterIntakeConfig } from './config';
 import { sha256 } from '@fvtt-json-generator/contracts/hash';
 import { captureProviderResponse, failureEvidenceRecorder, type ProviderResponseEvidenceSink, type ProviderJsonFormatRecovery } from './provider-response-evidence';
-import { runStagedMonsterExtraction, type StagedExtractionOptions } from './staged-extraction';
+import type { StagedExtractionOptions } from './staged-extraction';
 import {bindProviderSourceContracts} from './source-operation-contract';
 import {MONSTER_EXTRACT_PROMPT,MONSTER_REVIEW_PROMPT,MONSTER_REPAIR_PROMPT} from './monster-prompts';
 import {completeSourceFeatureEvidence,completeSourceSpellcastingEvidence} from './source-completeness';
@@ -32,11 +33,12 @@ import {materializeSourceLineReferences} from './source-line-references';
 import {inlineDeclaredSpellCatalogs} from './spell-ref-identities';
 import {MONSTER_GEAR_POLICY} from './monster-gear-policy';
 import {validateMonsterIntakeStructure} from './structure-validator';
+import {normalizeCreatureFeatureInput,normalizeOptionalSourceText} from '@fvtt-json-generator/models/source-operations';
 export type { ProviderResponseEvidence, ProviderResponseEvidenceSink } from './provider-response-evidence';
 
 export const INTAKE_PROMPT_VERSIONS = {
   discover: 'monster-intake-discover-v2-source-lines',
-  extract: 'monster-intake-extract-v49-vulnerability-notes',
+  extract: 'monster-intake-extract-v50-input-field-policy',
   review: 'monster-intake-review-v37-consolidated-full-ir',
   repair: 'monster-intake-repair-v42-vulnerability-notes',
 } as const;
@@ -127,6 +129,7 @@ export interface IntakeProviderAuditEvent {
   attempt: number;
   errorCode?: MonsterIntakeProviderErrorCode;
   diagnostic?: IntakeResponseDiagnostic;
+  extractionMode?: 'full-ir' | 'source-text';
 }
 
 export interface OpenAICompatibleMonsterIntakeOptions extends MonsterIntakeConfig {
@@ -150,7 +153,7 @@ export interface OpenAICompatibleMonsterIntakeOptions extends MonsterIntakeConfi
   reviewFocus?: 'forge-brief';
   /** Internal, default-off private evidence capture; never ordinary audit data. */
   responseEvidence?: ProviderResponseEvidenceSink;
-  /** Explicit legacy staged extraction; the default Monster path returns complete IR. */
+  /** Deprecated compatibility setting. Formal extraction always returns complete IR; historical staged helpers are offline-only. */
   stagedExtraction?: boolean | StagedExtractionOptions;
 }
 
@@ -224,27 +227,11 @@ export class OpenAICompatibleMonsterIntakeProvider implements MonsterIntakeAiPro
   }
 
   async extract(request: ExtractionRequest): Promise<MonsterIntakeIR> {
-    if (this.options.stagedExtraction) {
-      const configured = typeof this.options.stagedExtraction === 'object' ? this.options.stagedExtraction : {};
-      this.extractionCorrections.set(request,0);
-      const options:StagedExtractionOptions={...configured,onStage:async metadata=>{
-        this.extractionCorrections.set(request,metadata.correctionCount??0);
-        await configured.onStage?.(metadata);
-      }};
-      let responseRequested = false;
-      try {
-        return await runStagedMonsterExtraction(request, stage => { responseRequested = true; return this.call('extract', this.extractionModel, stage.payload, {
-          prompt: stage.prompt, promptVersion: stage.promptVersion, raw: stage.stage !== 'base' || options.baseMode === 'facts',
-          ...(stage.stage==='source'?{sourceHash:request.sourceSha256}:{}),
-          signal: options.signal, onAttempt: stage.onAttempt,onResponseText:stage.onResponseText,
-        }); }, options);
-      } catch (error) {
-        if (error instanceof StagedExtractionError) throw new MonsterIntakeProviderError(responseRequested ? 'invalid_response' : 'invalid_source', error.message,
-          {stagedDiagnostic:{stage:responseRequested?'response':'source',code:error.code,path:error.path,...(error.related.length?{related:error.related}:{})}});
-        throw error;
-      }
-    }
     return this.call('extract', this.extractionModel, request) as Promise<MonsterIntakeIR>;
+  }
+
+  extractAnswer(request:ExtractionRequest):Promise<MonsterIntakeExtractionAnswer>{
+    return this.call('extract',this.extractionModel,request,undefined,true) as Promise<MonsterIntakeExtractionAnswer>;
   }
 
   review(request: ReviewRequest): Promise<AiReviewResult> {
@@ -260,10 +247,11 @@ export class OpenAICompatibleMonsterIntakeProvider implements MonsterIntakeAiPro
     model: string,
     payload: unknown,
     override?: StagedCallOverride,
+    sourceAnswer = false,
   ): Promise<unknown> {
     const timeoutMs = stage === 'repair' ? this.options.repairTimeoutMs : this.options.timeoutMs;
     let attempt = 0;
-    const maxAttempts = this.options.maxAttempts ?? (this.options.waitPolicy ? 1 : 2);
+    const maxAttempts = sourceAnswer ? 1 : this.options.maxAttempts ?? (this.options.waitPolicy ? 1 : 2);
     const deadline = this.now() + timeoutMs;
     while (attempt < maxAttempts) {
       const remainingMs = deadline - this.now();
@@ -279,16 +267,18 @@ export class OpenAICompatibleMonsterIntakeProvider implements MonsterIntakeAiPro
       await override?.onAttempt(attempt);
       let responseReceived=false;
       try {
-        const value = await this.callOnce(stage, model, payload, remainingMs, attempt, override);
+        const value = await this.callOnce(stage, model, payload, remainingMs, attempt, override,sourceAnswer);
         responseReceived=true;
         this.options.audit?.({
           provider: this.providerName,
+          ...(stage==='extract'?{extractionMode:isMonsterSourceAnswer(value)?'source-text' as const:'full-ir' as const}:{}),
           model,
           promptVersion: override?.promptVersion ?? INTAKE_PROMPT_VERSIONS[stage],
           durationMs: Math.max(0, this.now() - startedAt),
           attempt,
         });
         if (override?.raw) return value;
+        if(sourceAnswer&&isMonsterSourceAnswer(value))return value;
         // HTTP/body handling has completed. Domain/schema binding failures
         // cannot become network/CORS errors or a transport retry.
         try{
@@ -312,6 +302,7 @@ export class OpenAICompatibleMonsterIntakeProvider implements MonsterIntakeAiPro
           :normalizeProviderError(error);
         this.options.audit?.({
           provider: this.providerName,
+          ...(stage==='extract'?{extractionMode:'full-ir' as const}:{}),
           model,
           promptVersion: override?.promptVersion ?? INTAKE_PROMPT_VERSIONS[stage],
           durationMs: Math.max(0, this.now() - startedAt),
@@ -332,6 +323,7 @@ export class OpenAICompatibleMonsterIntakeProvider implements MonsterIntakeAiPro
     timeoutMs: number,
     attempt: number,
     override?: StagedCallOverride,
+    sourceAnswer = false,
   ): Promise<unknown> {
     const controller = new AbortController();
     const timeout = this.options.waitPolicy
@@ -383,6 +375,14 @@ export class OpenAICompatibleMonsterIntakeProvider implements MonsterIntakeAiPro
         { systemPrompt, userContent, model, protocol: result.protocol, promptVersion: override?.promptVersion ?? INTAKE_PROMPT_VERSIONS[stage] },
         result.content, [this.options.apiKey, this.options.baseUrl]);
       override?.onResponseText?.(result.content);
+      if(sourceAnswer){
+        const record=asObject(parsed?.value);
+        const text=isMonsterSourceAnswer(record)?record.sourceText:record&&!('creature'in record)&&typeof record.markdown==='string'?record.markdown:undefined;
+        if(typeof text==='string'&&!text.trim()&&Object.keys(record!).every(key=>['kind','sourceText','markdown','schemaVersion','source','claims','coverage','uncertainties'].includes(key)))
+          throw new MonsterIntakeProviderError('invalid_response','AI returned no source text answer.',{retryable:false});
+        if(typeof text==='string'&&text.trim())return{kind:'source-text',sourceText:result.content};
+        if(parseFailure&&result.content.trim())return{kind:'source-text',sourceText:result.content};
+      }
       if(parseFailure)throw parseFailure;
       return parsed!.value;
     } catch (error) {
@@ -561,8 +561,12 @@ function normalizeStageEvidence(stage: keyof typeof PROMPTS, value: unknown, pay
   const bounds = Number.isInteger(candidate?.start) && Number.isInteger(candidate?.end)
     ? { start: candidate!.start as number, end: candidate!.end as number }
     : undefined;
-  const next = structuredClone((stage==='extract'&&!evidenceOnly
-    ?materializeSourceLineReferences(source,value,bounds):value) as Record<string, unknown>);
+  let bound:unknown=value;
+  let referenceFailure:unknown;
+  if(stage==='extract'&&!evidenceOnly){
+    try{bound=materializeSourceLineReferences(source,value,bounds);}catch(error){referenceFailure=error;}
+  }
+  const next = structuredClone(bound as Record<string, unknown>);
   if (stage === 'review') {
     if (!Array.isArray(next.findings)) return next;
     for (const findingValue of next.findings) {
@@ -578,6 +582,9 @@ function normalizeStageEvidence(stage: keyof typeof PROMPTS, value: unknown, pay
   }
 
   if (stage !== 'extract' && stage !== 'repair') return next;
+  if(!evidenceOnly)normalizeProjectionContainers(next,source);
+  if(referenceFailure&&Array.isArray(next.uncertainties))next.uncertainties.push({id:'source-lines-unresolved',code:'SOURCE_LINES_UNRESOLVED',path:'/creature',
+    message:'部分来源行引用不能定位；原始字段与生物内容保留。',blocking:false,evidence:[]});
   const sourceIdentity = asObject(next.source) ?? {};
   sourceIdentity.length = source.length;
   if (typeof payloadRecord.sourceSha256 === 'string' && payloadRecord.sourceSha256.length > 0) {
@@ -602,6 +609,7 @@ function normalizeStageEvidence(stage: keyof typeof PROMPTS, value: unknown, pay
  * from the original document; only declared names/IDs and evidence bind. */
 export function normalizeMonsterIntakeProposal(source:string,ir:MonsterIntakeIR,bounds?:{start:number;end:number}):MonsterIntakeIR{
   const next=structuredClone(ir);
+  normalizeProjectionContainers(next as unknown as Record<string,unknown>,source);
   normalizeEmptyMonsterFields(next as unknown as Record<string,unknown>);
   materializeClaimEvidenceQuotes(source,next as unknown as Record<string,unknown>,bounds);
   normalizeDeclaredSpellIdentities(next as unknown as Record<string,unknown>,source);
@@ -609,17 +617,148 @@ export function normalizeMonsterIntakeProposal(source:string,ir:MonsterIntakeIR,
   return next;
 }
 
+/** This is the external Monster data boundary. Missing program containers do
+ * not erase a readable answer; unprojected values remain on its own proposal. */
+function normalizeProjectionContainers(value:Record<string,unknown>,source:string):void{
+  const metadata=new Set(['schemaVersion','source','claims','coverage','uncertainties','normalizedEmptyFields']);
+  const payload=asObject(value.creature)??asObject(value.monster)??asObject(value.npc)??asObject(value.actor);
+  if(payload?Object.keys(payload).length===0:Object.keys(value).every(key=>metadata.has(key)))
+    throw new MonsterIntakeProviderError('invalid_response','AI returned no creature answer.',{retryable:false});
+  const original=structuredClone(value),notes:Array<{code:string;path:string;message:string}>=[];
+  const note=(path:string,message:string)=>notes.push({code:'FIELD_PROJECTION_INCOMPLETE',path,message});
+  const priorSource=asObject(value.source);
+  if(priorSource&&(priorSource.sha256!==undefined||priorSource.length!==undefined)&&(priorSource.sha256!==sha256(source)||priorSource.length!==source.length))note('/source','来源技术记录已按本次输入重建；原记录保留。');
+  value.source={sha256:sha256(source),length:source.length};
+  let creature=asObject(value.creature);
+  if(!creature){
+    creature=asObject(value.monster)??asObject(value.npc)??asObject(value.actor)??Object.fromEntries(Object.entries(value).filter(([key])=>!['schemaVersion','source','claims','coverage','uncertainties'].includes(key)));
+    value.creature=creature;note('/creature','回答的生物资料已接到现有生物入口；原外壳保留。');
+  }
+  if(value.schemaVersion!==1){value.schemaVersion=1;note('/schemaVersion','内部版本记录由程序整理。');}
+  const record=(owner:Record<string,unknown>,key:string,path:string):Record<string,unknown>=>{
+    const known=asObject(owner[key]);if(known)return known;
+    if(owner[key]!==undefined)note(path,'此栏的原始表示未转换；其他字段继续生成。');
+    if(owner[key]===undefined&&NORMALIZED_MONSTER_EMPTY_PATHS.includes(path as any))value.normalizedEmptyFields=[...new Set([...(Array.isArray(value.normalizedEmptyFields)?value.normalizedEmptyFields:[]),path])];
+    const next:Record<string,unknown>={};owner[key]=next;return next;
+  };
+  const array=(owner:Record<string,unknown>,key:string,path:string):unknown[]=>{
+    if(Array.isArray(owner[key]))return owner[key] as unknown[];
+    const supplied=owner[key];if(supplied!==undefined&&supplied!==null){note(path,'单项或其他列表表示由程序整理，原始值保留。');owner[key]=[supplied];}
+    else{if(supplied===undefined&&NORMALIZED_MONSTER_EMPTY_PATHS.includes(path as any))value.normalizedEmptyFields=[...new Set([...(Array.isArray(value.normalizedEmptyFields)?value.normalizedEmptyFields:[]),path])];owner[key]=[];}return owner[key] as unknown[];
+  };
+  const identity=record(creature,'identity','/creature/identity');
+  if(typeof identity.name!=='string'||!identity.name.trim())identity.name=typeof creature.name==='string'?creature.name:source.split(/\r?\n/u).find(line=>line.trim())?.replace(/^#+\s*/u,'').trim()||'生物';
+  if(typeof identity.creatureType!=='string')identity.creatureType=typeof creature.creatureType==='string'?creature.creatureType:'';
+  for(const key of ['englishName','size','swarmSize','alignment','sourceSize','creatureTypeCustom'])if(identity[key]!==undefined&&typeof identity[key]!=='string'){note('/creature/identity/'+key,'此展示字段按原始值保留。');delete identity[key];}
+  record(creature,'abilities','/creature/abilities');
+  const attributes=record(creature,'attributes','/creature/attributes');
+  record(attributes,'hp','/creature/attributes/hp');record(attributes,'movement','/creature/attributes/movement');
+  for(const key of ['saves','skills','senses','languages'])record(creature,key,'/creature/'+key);
+  const defenses=record(creature,'defenses','/creature/defenses');
+  for(const key of ['resistances','immunities','vulnerabilities','conditionImmunities'])array(defenses,key,'/creature/defenses/'+key);
+  array(creature.languages as Record<string,unknown>,'values','/creature/languages/values');
+  for(const section of ['traits','actions','bonusActions','reactions','legendaryActions','mythicActions']){
+    if(section==='mythicActions'&&creature[section]===undefined)continue;
+    const features=array(creature,section,'/creature/'+section);
+    creature[section]=features.map((entry,index)=>{
+      const feature=asObject(entry)??{name:`能力 ${index+1}`,description:typeof entry==='string'?entry:JSON.stringify(entry)};
+      if(typeof feature.name!=='string')feature.name=typeof feature['名称']==='string'?feature['名称']:`能力 ${index+1}`;
+      if(typeof feature.description!=='string')feature.description=typeof feature['描述']==='string'?feature['描述']:typeof feature.describe==='string'?feature.describe:'';
+      if(feature.description!==entry&&entry!==null&&!asObject(entry))note(`/creature/${section}/${index}`,'此能力的原始表示保留在正文与提取资料中。');
+      return feature;
+    });
+  }
+  if(creature.spellcasting!==undefined){
+    const singleton=asObject(creature.spellcasting);
+    if(singleton){const named=Object.entries(singleton).filter(([,entry])=>asObject(entry)&&Array.isArray(asObject(entry)!.usageGroups));
+      if(!singleton.featureName&&named.length){note('/creature/spellcasting','命名施法组容器已展开；原始容器保留。');creature.spellcasting=named.map(([name,entry])=>({...asObject(entry),featureName:asObject(entry)!.featureName??name}));}
+      else creature.spellcasting=[singleton];}
+    creature.spellcasting=array(creature,'spellcasting','/creature/spellcasting').map((entry,index)=>{
+      const group=asObject(entry)??{description:typeof entry==='string'?entry:JSON.stringify(entry)};
+      if(typeof group.featureName!=='string')group.featureName=`施法 ${index+1}`;
+      if(typeof group.description!=='string')group.description='';
+      const usages=array(group,'usageGroups',`/creature/spellcasting/${index}/usageGroups`);
+      group.usageGroups=usages.flatMap((entry,usageIndex)=>{
+        const usage=asObject(entry);if(!usage){note(`/creature/spellcasting/${index}/usageGroups/${usageIndex}`,'此施法次数组按原始资料由GM处理。');return [];}
+        const refs=array(usage,'spellRefs',`/creature/spellcasting/${index}/usageGroups/${usageIndex}/spellRefs`);
+        usage.spellRefs=refs.map((entry,refIndex)=>{
+          const ref=typeof entry==='string'?{originalName:entry}:asObject(entry)??{originalName:JSON.stringify(entry)};
+          for(const key of ['aliases','restrictions','evidence'])if(ref[key]!==undefined&&!Array.isArray(ref[key])){
+            note(`/creature/spellcasting/${index}/usageGroups/${usageIndex}/spellRefs/${refIndex}/${key}`,'此法术附带记录保留为提示；法术及其他记录继续转换。');ref[key]=[];
+          }
+          if(Array.isArray(ref.aliases))ref.aliases=ref.aliases.filter((alias,aliasIndex)=>{
+            if(typeof alias==='string'&&alias.trim())return true;
+            note(`/creature/spellcasting/${index}/usageGroups/${usageIndex}/spellRefs/${refIndex}/aliases/${aliasIndex}`,'此法术别名未映射，原值保留；该法术与同组其他法术继续转换。');return false;
+          });
+          return ref;
+        });
+        return [usage];
+      });
+      if(group.componentWaivers!==undefined&&!Array.isArray(group.componentWaivers)){
+        note(`/creature/spellcasting/${index}/componentWaivers`,'此施法成分附注未转换；法术与原始记录保留。');group.componentWaivers=[];
+      }
+      return group;
+    });
+  }
+  if(creature.sourceResourcePools!==undefined){
+    creature.sourceResourcePools=array(creature,'sourceResourcePools','/creature/sourceResourcePools').flatMap((entry,poolIndex)=>{
+      const pool=asObject(entry),path=`/creature/sourceResourcePools/${poolIndex}`;
+      if(!pool||!Array.isArray(pool.members)||!pool.members.length||typeof pool.max!=='number'||pool.max<1){note(path,'此共享资源记录尚未转换；其他资源与全部能力保留。');return [];}
+      const members=pool.members.filter((entry,memberIndex)=>{
+        const member=asObject(entry),features=member&&typeof member.collection==='string'?creature![member.collection]:undefined;
+        const valid=member&&Array.isArray(features)&&Number.isInteger(member.index)&&Number(member.index)>=0&&asObject(features[Number(member.index)]);
+        if(!valid)note(`${path}/members/${memberIndex}`,'此资源成员尚不能连接；其他成员和资源保留。');return valid;
+      });
+      if(!members.length){note(path,'此资源没有可连接成员，原始记录保留。');return [];}
+      pool.members=members;return[pool];
+    });
+  }
+  for(const key of ['claims','coverage','uncertainties'])if(!Array.isArray(value[key])){
+    if(value[key]!==undefined)note('/'+key,'附带记录不作为生物生成条件，原始记录保留。');value[key]=[];
+  }
+  value.claims=(value.claims as unknown[]).filter(entry=>asObject(entry)).map(entry=>({...asObject(entry),evidence:Array.isArray(asObject(entry)?.evidence)?asObject(entry)!.evidence:[]}));
+  value.coverage=(value.coverage as unknown[]).filter(entry=>asObject(entry));
+  value.uncertainties=(value.uncertainties as unknown[]).filter(entry=>asObject(entry)).map((entry,index)=>{
+    const finding=asObject(entry)!;return {...finding,id:typeof finding.id==='string'?finding.id:`uncertainty-${index+1}`,code:typeof finding.code==='string'?finding.code:'AI_UNCERTAINTY',path:typeof finding.path==='string'?finding.path:'/creature',message:typeof finding.message==='string'?finding.message:JSON.stringify(entry),evidence:Array.isArray(finding.evidence)?finding.evidence:[]};
+  });
+  if(notes.length){
+    const prior=asObject(creature.candidateReview);
+    creature.candidateReview={version:1,findings:[...(Array.isArray(prior?.findings)?prior.findings:[]),...notes],proposal:{prior:prior?.proposal??null,original}};
+    (value.uncertainties as unknown[]).push(...notes.map((finding,index)=>({id:`input-projection-${index+1}`, ...finding,blocking:false,evidence:[]})));
+  }
+}
+
 function normalizeEmptyMonsterFields(value:Record<string,unknown>):void{
   const creature=asObject(value.creature);if(!creature)return;
+  for(const key of ['claims','coverage','uncertainties']){
+    const misplaced=creature[key],empty=Array.isArray(misplaced)&&misplaced.length===0;
+    if(value[key]===undefined&&(misplaced===undefined||empty))value[key]=[];
+    if(empty)delete creature[key];
+  }
+  for(const key of ['claims','uncertainties'])if(Array.isArray(value[key]))for(const entry of value[key] as unknown[]){const record=asObject(entry);if(record&&record.evidence===undefined)record.evidence=[];}
+  if(Array.isArray(value.coverage))for(const entry of value.coverage){const record=asObject(entry);if(!record)continue;if(record.claimPaths===undefined)record.claimPaths=[];if(record.classification!=='ignored-with-reason')normalizeOptionalSourceText(record,['reason']);}
   const added:string[]=[];
   for(const path of NORMALIZED_MONSTER_EMPTY_PATHS){
-    const key=path.slice('/creature/'.length);
-    if(creature[key]!==undefined)continue;
-    creature[key]=key==='saves'?{}:[];added.push(path);
+    const keys=path.slice('/creature/'.length).split('/'),key=keys.pop()!;
+    let parent:Record<string,unknown>|undefined=creature;
+    for(const part of keys)parent=asObject(parent?.[part]);
+    if(!parent||parent[key]!==undefined)continue;
+    parent[key]=['saves','skills','defenses','senses','languages'].includes(key)?{}:[];added.push(path);
   }
-  if(!added.length)return;
-  if(value.normalizedEmptyFields===undefined)value.normalizedEmptyFields=added;
-  else if(Array.isArray(value.normalizedEmptyFields))value.normalizedEmptyFields=[...new Set([...value.normalizedEmptyFields,...added])];
+  if(added.length){
+    if(value.normalizedEmptyFields===undefined)value.normalizedEmptyFields=added;
+    else if(Array.isArray(value.normalizedEmptyFields))value.normalizedEmptyFields=[...new Set([...value.normalizedEmptyFields,...added])];
+  }
+  const identity=asObject(creature.identity);if(identity)normalizeOptionalSourceText(identity,['englishName','creatureTypeCustom','sourceSize','alignment']);
+  const attributes=asObject(creature.attributes);if(attributes){normalizeOptionalSourceText(attributes,['acNote']);const hp=asObject(attributes.hp);if(hp)normalizeOptionalSourceText(hp,['formula']);}
+  const senses=asObject(creature.senses);if(senses)normalizeOptionalSourceText(senses,['special']);
+  const languages=asObject(creature.languages);if(languages)normalizeOptionalSourceText(languages,['custom']);
+  const legendary=asObject(creature.legendary);if(legendary){if(legendary.evidence===undefined)legendary.evidence=[];if(legendary.preamble===undefined)legendary.preamble='';}
+  if(Array.isArray(creature.sourceResourcePools))for(const poolValue of creature.sourceResourcePools){const pool=asObject(poolValue);if(pool){normalizeOptionalSourceText(pool,['name']);if(pool.evidence===undefined)pool.evidence=[];}}
+  for(const collection of ['traits','actions','bonusActions','reactions','legendaryActions','mythicActions']){
+    if(!Array.isArray(creature[collection]))continue;
+    for(const entry of creature[collection] as unknown[]){const feature=asObject(entry);if(feature)normalizeCreatureFeatureInput(feature,feature.description);}
+  }
 }
 
 function materializeClaimEvidenceQuotes(source:string,value:Record<string,unknown>,bounds={start:0,end:source.length}):void{
@@ -641,13 +780,13 @@ function normalizeDeclaredSpellIdentities(value:Record<string,unknown>,source:st
   // nested support/field checks; a name map, incomplete object or invalid group
   // stays untouched and is rejected rather than guessed into an array.
   if(creature&&singleton
-    &&['groupId','featureName','description','ability'].every(key=>typeof singleton[key]==='string'&&(singleton[key] as string).trim())
-    &&Array.isArray(singleton.evidence)&&Array.isArray(singleton.abilityEvidence)&&Array.isArray(singleton.usageGroups)){
+    &&['featureName','description','ability'].every(key=>typeof singleton[key]==='string'&&(singleton[key] as string).trim())
+    &&Array.isArray(singleton.usageGroups)){
     const probe=structuredClone(value),probeCreature=asObject(probe.creature)!;
     probeCreature.spellcasting=[structuredClone(singleton)];
     normalizeDeclaredSpellIdentities(probe,source);
     if(!validateMonsterIntakeStructure(source,probe).blocking.some(finding=>finding.path==='/creature/spellcasting'||finding.path.startsWith('/creature/spellcasting/')))
-      creature.spellcasting=[singleton];
+      creature.spellcasting=probeCreature.spellcasting;
   }
   inlineDeclaredSpellCatalogs(value);
   if(!Array.isArray(creature?.spellcasting))return;
@@ -657,6 +796,9 @@ function normalizeDeclaredSpellIdentities(value:Record<string,unknown>,source:st
   const refIds=new Set(refs.flatMap(ref=>typeof ref.refId==='string'?[ref.refId]:[]));
   const unique=(base:string,ids:Set<string>)=>{let id=base,suffix=1;while(ids.has(id))id=`${base}-${++suffix}`;ids.add(id);return id;};
   for(const [index,group]of groups.entries()){
+    normalizeOptionalSourceText(group,['featureEnglishName']);
+    for(const key of ['evidence','abilityEvidence'])if(group[key]===undefined)group[key]=[];
+    if(Array.isArray(group.componentWaivers))for(const waiverValue of group.componentWaivers){const waiver=asObject(waiverValue);if(waiver&&waiver.evidence===undefined)waiver.evidence=[];}
     // An omitted list explicitly declares no group waivers. Preserve provided
     // arrays and invalid null/object values; never infer V/S/M from prose here.
     if(!Object.hasOwn(group,'componentWaivers'))group.componentWaivers=[];
@@ -667,8 +809,13 @@ function normalizeDeclaredSpellIdentities(value:Record<string,unknown>,source:st
     if(!Array.isArray(group.usageGroups))continue;
     for(const [usageIndex,usageValue]of group.usageGroups.entries()){
       const usage=asObject(usageValue);if(!Array.isArray(usage?.spellRefs))continue;
+      if(usage.evidence===undefined)usage.evidence=[];
+      if(usage.usage==='prepared-slots')for(const key of ['levelEvidence','slotsEvidence'])if(usage[key]===undefined)usage[key]=[];
       for(const [refIndex,refValue]of usage.spellRefs.entries()){
         const ref=asObject(refValue);if(!ref)continue;
+        normalizeOptionalSourceText(ref,['englishName','chineseName','identifier']);
+        for(const key of ['aliases','restrictions','evidence'])if(ref[key]===undefined)ref[key]=[];
+        if(Array.isArray(ref.restrictions))for(const restrictionValue of ref.restrictions){const restriction=asObject(restrictionValue);if(restriction&&restriction.evidence===undefined)restriction.evidence=[];}
         if(ref.refId===undefined)ref.refId=unique(`spell-${index+1}-${usageIndex+1}-${refIndex+1}`,refIds);
         const name=typeof ref.englishName==='string'&&ref.englishName.trim()?ref.englishName:ref.originalName;
         if(ref.identifier===undefined&&typeof name==='string')ref.identifier=name.trim();
@@ -1137,17 +1284,13 @@ function isAbortError(error: unknown): boolean {
 
 function validateStageResponse(stage: keyof typeof PROMPTS, value: unknown): unknown {
   const record = value as Record<string, unknown>;
+  if(stage==='extract'||stage==='repair')return value;
   if (record.schemaVersion !== 1) {
     throw new MonsterIntakeProviderError('invalid_response', `${stage} response schemaVersion must be 1.`, { retryable: true,
       diagnostic: responseDiagnostic('ir-schema', '/schemaVersion', 'schemaVersion=1', record.schemaVersion) });
   }
   if (stage === 'discover' && !Array.isArray(record.candidates)) {
     throw new MonsterIntakeProviderError('invalid_response', 'Discovery response candidates must be an array.');
-  }
-  if ((stage === 'extract' || stage === 'repair') && (!record.creature || !Array.isArray(record.claims) || !Array.isArray(record.coverage) || !Array.isArray(record.uncertainties))) {
-    const field = !record.creature ? 'creature' : !Array.isArray(record.claims) ? 'claims' : !Array.isArray(record.coverage) ? 'coverage' : 'uncertainties';
-    throw new MonsterIntakeProviderError('invalid_response', `${stage} response is not a complete MonsterIntakeIR.`, { retryable: true,
-      diagnostic: responseDiagnostic('ir-schema', `/${field}`, field === 'creature' ? 'object' : 'array', record[field]) });
   }
   if (stage === 'review') {
     const verdict = String(record.verdict);

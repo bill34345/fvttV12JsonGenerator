@@ -907,16 +907,17 @@ function compareFeatureSections(
       if(!complete||!fullLiteral||marker.mode!=='native-with-gm'||marker.sourceText!==feature.description||JSON.stringify(marker.sourceOperations)!==JSON.stringify(feature.sourceOperations)||JSON.stringify(marker.sourceContext)!==JSON.stringify(contexts)||contexts.some(context=>!sourceRuleText(description).includes(sourceRuleText(context))))add('ACTOR_SOURCE_OPERATION_RULE_LOSS',path,'Source operations must retain complete rules, shared conditions and their exact source identity.');
       const expectedEffectCount=feature.sourceOperations.reduce((count,op)=>count+(op.failureStatuses?.length??0),0);
       const modes=sourceAttackDamageModes(feature.description,feature.sourceOperations,feature.name);
-      type ViewOp=NonNullable<CanonicalFeature['sourceOperations']>[number]&{damageMode?:string;nameSuffix?:string};
+      type ViewOp=NonNullable<CanonicalFeature['sourceOperations']>[number]&{damageMode?:string;nameSuffix?:string;gmDamageOnly?:boolean;gmAttackOnly?:boolean};
       const viewOps:ViewOp[]=feature.sourceOperations.filter(op=>!modes?.absorbedIds.includes(op.id)).flatMap(op=>{
         if(!modes||op.id!==modes.attackId)return[op];
+        if(isNeutralSourceAttack(op))return [{...op,damage:undefined,gmAttackOnly:true},{...op,damage:[modes.ordinary,...modes.shared],damageMode:'ordinary',nameSuffix:'（普通伤害）',gmDamageOnly:true},{...op,damage:[modes.alternative,...modes.shared],damageMode:'alternative',nameSuffix:'（替代伤害）',gmDamageOnly:true}];
         return modes.kind==='versatile'?[{...op,damage:modes.shared,damageMode:'versatile'}]:[
           {...op,damage:[modes.ordinary,...modes.shared],damageMode:'ordinary',nameSuffix:'（普通伤害）'},
           {...op,damage:[modes.alternative,...modes.shared],damageMode:'alternative',nameSuffix:'（替代伤害）'},
         ];
       });
       const dual=(op:ViewOp)=>Boolean(!(modes?.kind==='versatile'&&op.id===modes.attackId)&&op.attack?.reach!==undefined&&op.attack.range!==undefined&&op.attack.type.startsWith('m'));
-      if(activities.length!==viewOps.reduce((count,op)=>count+(isNeutralSourceAttack(op)?(op.attack!.reach!==undefined&&op.attack!.range!==undefined?2:1)+(op.damage?.length?1:0):dual(op)?2:1),0)||found.effectCount!==expectedEffectCount)add('ACTOR_SOURCE_OPERATION_COUNT_DRIFT',path,'Only source-proven operations and mutually exclusive attack modes may execute.');
+      if(activities.length!==viewOps.reduce((count,op)=>count+(isNeutralSourceAttack(op)?(op.gmDamageOnly?0:op.attack!.reach!==undefined&&op.attack!.range!==undefined?2:1)+(op.damage?.length?1:0):dual(op)?2:1),0)||found.effectCount!==expectedEffectCount)add('ACTOR_SOURCE_OPERATION_COUNT_DRIFT',path,'Only source-proven operations and mutually exclusive attack modes may execute.');
       if(modes?.kind==='versatile'){
         const native=asRecord(found.nativeWeapon),damage=asRecord(native.damage),weaponType=asRecord(native.type),range=asRecord(native.range),op=feature.sourceOperations.find(op=>op.id===modes.attackId)!;
         const partMatches=(value:unknown,expected:typeof modes.ordinary)=>{const part=asRecord(value);return compact(damageFormulaFromActivityPart(part,{attack:{ability:'none'}},{}))===compact(expected.formula)&&JSON.stringify(arrayValues(part.types))===JSON.stringify(expected.types??[expected.type]);};
@@ -931,11 +932,11 @@ function compareFeatureSections(
         if(isNeutralSourceAttack(op)){
           const rolls=matches.filter(entry=>asRecord(entry.sourceOperation).role==='attack-roll'),damages=matches.filter(entry=>asRecord(entry.sourceOperation).role==='damage');
           const gmDual=op.attack!.reach!==undefined&&op.attack!.range!==undefined;
-          if(rolls.length!==(gmDual?2:1)||damages.length!==(op.damage?.length?1:0)||matches.length!==rolls.length+damages.length||found.type==='weapon')add('ACTOR_GM_ATTACK_IDENTITY_DRIFT',path+'/sourceOperations/'+op.id,'Unclassified attacks require one explicitly labelled GM roll and, if present, one separately triggered damage roll.');
+          if(rolls.length!==(op.gmDamageOnly?0:gmDual?2:1)||damages.length!==(op.damage?.length?1:0)||matches.length!==rolls.length+damages.length||found.type==='weapon')add('ACTOR_GM_ATTACK_IDENTITY_DRIFT',path+'/sourceOperations/'+op.id,'Unclassified attacks require one explicitly labelled GM roll and, if present, one separately triggered damage roll.');
           for(const entry of matches){
             const marker=asRecord(entry.sourceOperation),damageRole=marker.role==='damage',attackMode=marker.attackMode,roll=asRecord(entry.rollData),range=asRecord(entry.range),parts=Array.isArray(entry.damageParts)?entry.damageParts.map(asRecord):[];
             if(marker.sourceText!==op.sourceText||marker.attackClassification!=='unspecified'||marker.attackKind!==op.attack!.type||marker.relationship!==(damageRole?'follow-up':op.relationship)
-              ||entry.type!==(damageRole?'damage':'utility')||entry.name!==op.name+(damageRole?'（命中后伤害）':`（${attackMode==='melee'?'近战 · ':attackMode==='ranged'?`远程 ${op.attack!.range}${op.attack!.longRange!==undefined?'/'+op.attack!.longRange:''} 尺 · `:''}GM攻击检定）`)||entry.condition!==condition
+              ||entry.type!==(damageRole?'damage':'utility')||entry.name!==op.name+(damageRole?'（命中后伤害）':`（${attackMode==='melee'?'近战 · ':attackMode==='ranged'?`远程 ${op.attack!.range}${op.attack!.longRange!==undefined?'/'+op.attack!.longRange:''} 尺 · `:''}GM攻击检定）`)+(op.nameSuffix??'')||entry.condition!==condition
               ||entry.activation!==(damageRole||op.relationship==='follow-up'?'special':expectedActivation??'')||Object.keys(asRecord(entry.attackData)).length
               ||Object.keys(asRecord(entry.saveData)).length||arrayValues(entry.effectIds).length||entry.includeBase!==undefined) add('ACTOR_GM_ATTACK_IDENTITY_DRIFT',path+'/sourceOperations/'+op.id,'A generic GM roll cannot silently become a native weapon/spell Attack or automatic follow-up.');
             if(!damageRole&&(roll.formula!=='1d20'+(op.attack!.toHit>=0?'+':'')+op.attack!.toHit||roll.name!=='GM辅助攻击检定'||roll.prompt!==true||roll.visible!==false||parts.length))add('ACTOR_GM_ATTACK_ROLL_DRIFT',path+'/sourceOperations/'+op.id,'GM attack formula must use exactly the source total once, without damage or inferred ability/proficiency.');
@@ -968,7 +969,7 @@ function compareFeatureSections(
         if(op.healing){
           const heal=asRecord(activity.healing),target=asRecord(activity.targetAffects),expected=op.healing;
           if(compact(String(heal.formula??''))!==compact(expected.formula)||JSON.stringify(arrayValues(heal.types))!==JSON.stringify([expected.type])
-            ||target.type!==expected.target.type||String(target.count)!=='1'||target.special!==expected.target.special||activity.targetPrompt!==(expected.target.type==='creature'))
+            ||target.type!==expected.target.type||String(target.count)!==(expected.target.count===undefined?'':String(expected.target.count))||target.special!==(expected.target.special??'')||activity.targetPrompt!==(expected.target.type!=='self'))
             add('ACTOR_SOURCE_OPERATION_HEALING_DRIFT',path+'/sourceOperations/'+op.id,'Each healing event must retain its own exact formula, kind and source-qualified recipient.');
         }
         const links=arrayValues(activity.effectIds),definitions=Array.isArray(found.effectDefinitions)?found.effectDefinitions.map(asRecord):[],statuses=op.failureStatuses??[];

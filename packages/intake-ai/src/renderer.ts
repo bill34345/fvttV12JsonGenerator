@@ -126,7 +126,7 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR, source?:string)
 }
 
 function renderSpellManifest(ir: MonsterIntakeIR): Record<string, unknown> | undefined {
-  const groups = ir.creature.spellcasting?.filter(group=>group.usageGroups.some(usage=>usage.spellRefs.length));
+  const groups = ir.creature.spellcasting?.filter(group=>['str','dex','con','int','wis','cha'].includes(group.ability)&&group.usageGroups.some(usage=>usage.spellRefs.length));
   if (!groups?.length) return undefined;
   return {
     schemaVersion: 1,
@@ -185,17 +185,17 @@ export function renderPreparedSpellcastingProfile(creature: CanonicalMonster): {
   if (groups.length === 0) return undefined;
   const first = groups[0]!;
   const casterLevel = first.casterLevel;
-  if (!Number.isInteger(casterLevel)) throw new Error('Prepared spellcasting requires an explicit caster level.');
+  if (!Number.isInteger(casterLevel)) return undefined;
   const slots: Record<number, number> = {};
   for (const group of groups) {
     if (group.ability !== first.ability || group.casterLevel !== casterLevel) {
-      throw new Error('Conflicting prepared spellcasting ability or caster level cannot share one Actor profile.');
+      return undefined;
     }
     for (const usage of group.usageGroups) {
       if (usage.usage !== 'prepared-slots') continue;
       const existing = slots[usage.level];
       if (existing !== undefined && existing !== usage.slots) {
-        throw new Error(`Conflicting prepared level-${usage.level} slot pools cannot share one Actor profile.`);
+        return undefined;
       }
       slots[usage.level] = usage.slots;
     }
@@ -342,10 +342,10 @@ function renderFeature(feature: CanonicalFeature, section: string,sharedPool=fal
 }
 
 function renderBiography(creature: CanonicalMonster): SourceTextPresentation | undefined {
-  const parts = creature.biography?.trim() ? [creature.biography.trim()] : [];
+  const parts = typeof creature.biography==='string'&&creature.biography.trim() ? [creature.biography.trim()] : [];
   const programNotes: string[] = [];
-  if (creature.legendary?.preamble.trim()&&!creature.biography?.includes(creature.legendary.preamble.trim())) parts.push(creature.legendary.preamble.trim());
-  const acNote = creature.attributes.acNote?.trim()
+  if (typeof creature.legendary?.preamble==='string'&&creature.legendary.preamble.trim()&&!creature.biography?.includes(creature.legendary.preamble.trim())) parts.push(creature.legendary.preamble.trim());
+  const acNote = (typeof creature.attributes.acNote==='string'?creature.attributes.acNote.trim():'')
     || (creature.attributes.acKind === 'natural' ? '天生护甲' : '');
   if (acNote) {
     const note = acNote;
@@ -357,12 +357,13 @@ function renderBiography(creature: CanonicalMonster): SourceTextPresentation | u
     if(choice)programNotes.push(choice);
     else if(/^Colossal(?:\s*\([^)]*\))?$/iu.test(creature.identity.sourceSize)&&creature.identity.size==='gargantuan'){
       programNotes.push(`原文尺寸：${creature.identity.sourceSize}。角色卡使用最大原生尺寸 gargantuan（超巨型）；尺寸相关规则由 GM 手动判断。`);
-    }else throw new TypeError('InvalidSourceSizePresentation');
+    }else programNotes.push(`原文体型：${creature.identity.sourceSize}；由GM按完整来源选择当前体型。`);
   }
   return parts.length || programNotes.length ? {version:1, sourceText:parts.join('\n\n'), programNotes} : undefined;
 }
 
 function canonicalDamageType(value: string): string {
+  value=String(value);
   const normalized = value.toLowerCase();
   const direct = Object.keys(DAMAGE_ZH).find((key) => key === normalized);
   if (direct) return direct;
@@ -404,10 +405,11 @@ function mapSkills(skills: Record<string, number>): Record<string, { 总加值: 
 }
 
 function mapList(values: string[], labels: Record<string, string>): string[] {
-  return values.map((value) => labels[value.toLowerCase()] ?? value);
+  return values.map((value) => labels[String(value).toLowerCase()] ?? String(value));
 }
 
 function languageZh(value: string): string {
+  value=String(value);
   return ({ common: '通用语', dwarvish: '矮人语', elvish: '精灵语', giant: '巨人语', goblin: '地精语' } as Record<string, string>)[value.toLowerCase()] ?? value;
 }
 

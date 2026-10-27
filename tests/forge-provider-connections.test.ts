@@ -63,90 +63,23 @@ describe('Forge provider-first connections', () => {
     expect(requestedModels).toEqual(['generator']);
   });
 
-  test('Forge sends one real review request to the generation model and keeps a negative verdict', async () => {
-    const originalFetch = globalThis.fetch;
-    const requests: Array<{ model: string; prompt: string }> = [];
-    globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body));
-      requests.push({ model: body.model, prompt: body.messages[0].content });
-      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
-        schemaVersion: 1, verdict: 'needs_review', findings: [{
-          id: 'missing-limit', code: 'SOURCE_LIMIT_MISSING', path: '/creature/actions/0',
-          message: 'The source limit was omitted.', blocking: true,
-        }],
-      }) } }] }), { status: 200, headers: { 'content-type': 'application/json' } });
-    }) as typeof fetch;
-    try {
-      const provider = createBrowserAiProvider({
-        baseUrl: 'https://provider.example/v1', apiKey: 'test-key', model: 'generator',
-        reviewModel: 'old-reviewer', protocol: 'openai-chat',
-      });
-      const review = await provider.review({ source: 'Source limit', ir: {}, markdown: '', actorProjection: {}, deterministicFindings: [] } as any);
-      expect(provider.reviewModel).toBe('generator');
-      expect(requests).toHaveLength(1);
-      expect(requests[0]).toMatchObject({ model: 'generator' });
-      expect(requests[0]!.prompt).toContain('Forge self-check with the selected generation model');
-      expect(review.verdict).toBe('needs_review');
-      expect(review.findings).toHaveLength(1);
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
+  test('Forge Actor review remains disabled and sends zero model requests', () => {
+    const provider = createBrowserAiProvider({baseUrl:'https://provider.example/v1',apiKey:'test-key',model:'generator',reviewModel:'old-reviewer',protocol:'openai-chat'});
+    expect(provider.reviewModel).toBe('generator');
+    expect(()=>provider.review({source:'Source limit',ir:{},markdown:'',actorProjection:{},deterministicFindings:[]} as any)).toThrow('AI 内容复核已暂时关闭');
   });
 
-  test('Forge Item review also uses its generation model and preserves a negative verdict', async () => {
-    const originalFetch = globalThis.fetch;
-    const requests: Array<{ model: string; prompt: string }> = [];
-    globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body));
-      requests.push({ model: body.model, prompt: body.messages[0].content });
-      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
-        schemaVersion: 1, verdict: 'needs_review', findings: [{
-          id: 'wrong-uses', code: 'SOURCE_USES_MISMATCH', path: '/item/uses',
-          message: 'The source gives no charges.', blocking: true, origin: 'semantic',
-        }],
-      }) } }] }), { status: 200, headers: { 'content-type': 'application/json' } });
-    }) as typeof fetch;
-    try {
-      const provider = createBrowserItemAiProvider({
-        baseUrl: 'https://provider.example/v1', apiKey: 'test-key', model: 'generator',
-        reviewModel: 'old-reviewer', protocol: 'openai-chat',
-      });
-      const review = await provider.review({ source: 'No charges', candidate: {}, ir: {}, markdown: '', itemProjection: {}, deterministicFindings: [] } as any);
-      expect(provider.reviewModel).toBe('generator');
-      expect(requests).toHaveLength(1);
-      expect(requests[0]).toMatchObject({ model: 'generator' });
-      expect(requests[0]!.prompt).toContain('Forge self-check with the selected generation model');
-      expect(review.verdict).toBe('needs_review');
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
+  test('Forge Item review retains its existing disabled contract', () => {
+    const provider = createBrowserItemAiProvider({baseUrl:'https://provider.example/v1',apiKey:'test-key',model:'generator',reviewModel:'old-reviewer',protocol:'openai-chat'});
+    expect(provider.reviewModel).toBe('generator');
+    expect(()=>provider.review({source:'No charges',candidate:{},ir:{},markdown:'',itemProjection:{},deterministicFindings:[]} as any)).toThrow('AI 内容复核已暂时关闭');
   });
 
-  test('Forge Chinese self-check uses its generation model with one review request', async () => {
-    const originalFetch = globalThis.fetch;
-    const requests: Array<{ model: string; prompt: string }> = [];
-    globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body));
-      requests.push({ model: body.model, prompt: body.messages[0].content });
-      return new Response(JSON.stringify({ choices: [{ message: { content: '{"verdict":"accepted","findings":[]}' } }] }),
-        { status: 200, headers: { 'content-type': 'application/json' } });
-    }) as typeof fetch;
-    try {
-      const { provider, translationService } = createEncounterIntakeProviders({
-        baseUrl: 'https://provider.example/v1', apiKey: 'test-key', model: 'generator',
-        reviewModel: 'old-reviewer', protocol: 'openai-chat',
-      });
-      expect(provider.reviewModel).toBe('generator');
-      expect(translationService.reviewModel).toBe('generator');
-      const request = localizationRequest('source', [localizationText('title', 'Goblin')]);
-      const review = await translationService.review(request, { texts: [{ id: request.texts[0]!.id, text: '地精' }] });
-      expect(review).toEqual({ verdict: 'accepted', findings: [] });
-      expect(requests).toHaveLength(1);
-      expect(requests[0]).toMatchObject({ model: 'generator' });
-      expect(requests[0]!.prompt).toMatch(/^Briefly self-check/u);
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
+  test('Forge localization review remains disabled alongside its selected model identity', () => {
+    const {provider,translationService}=createEncounterIntakeProviders({baseUrl:'https://provider.example/v1',apiKey:'test-key',model:'generator',reviewModel:'old-reviewer',protocol:'openai-chat'});
+    expect(provider.reviewModel).toBe('generator');expect(translationService.reviewModel).toBe('generator');
+    const request=localizationRequest('source',[localizationText('title','Goblin')]);
+    expect(()=>translationService.review(request,{texts:[{id:request.texts[0]!.id,text:'地精'}]})).toThrow('AI 内容复核已暂时关闭');
   });
 
   test('builds normalized OpenAI Chat, Responses, and Anthropic Messages envelopes', async () => {

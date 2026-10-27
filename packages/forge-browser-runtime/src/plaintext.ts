@@ -50,14 +50,9 @@ export interface BrowserPlaintextActorAnalysis {
   errorCode?: 'input_empty' | 'input_too_large' | 'no_entities' | 'multiple_entities' | 'coverage_gap' | 'parse_failed' | 'audit_blocked';
 }
 
-const MAX_PLAINTEXT_UTF8_BYTES = 200_000;
-
 export function analyzePlaintextActorSource(source: string): BrowserPlaintextActorAnalysis {
   if (typeof source !== 'string' || !source.trim()) {
     return { status: 'failed', candidates: [], findings: [], errorCode: 'input_empty' };
-  }
-  if (new TextEncoder().encode(source).byteLength > MAX_PLAINTEXT_UTF8_BYTES) {
-    return { status: 'failed', candidates: [], findings: [], errorCode: 'input_too_large' };
   }
   const rawSourceHash = hashSource(source);
   const blocks = splitCollection(source);
@@ -82,15 +77,10 @@ export function analyzePlaintextActorSource(source: string): BrowserPlaintextAct
   }
   const candidate = candidates[0]!;
   const outside = `${source.slice(0, candidate.start)}${source.slice(candidate.end)}`;
-  if (outside.trim()) {
-    return {
-      status: 'needs_review', rawSourceHash, candidates, candidate, errorCode: 'coverage_gap',
-      findings: [boundaryFinding('PLAINTEXT_SOURCE_COVERAGE_GAP', 'Non-whitespace source text exists outside the single recognized creature boundary.')],
-    };
-  }
+  const coverageFindings=outside.trim()?[boundaryFinding('PLAINTEXT_SOURCE_COVERAGE_GAP', 'Non-whitespace source text exists outside the single recognized creature boundary; that text remains with the source.')]:[];
   try {
     const creature = parseCreatureBlock(normalizeBlock(blocks[0]!.rawBlock));
-    const auditFindings = buildPlaintextAuditFindings(creature, candidate);
+    const auditFindings = [...coverageFindings,...buildPlaintextAuditFindings(creature, candidate)];
     const blocking = auditFindings.some((finding) => finding.blocking);
     return {
       status: blocking ? 'needs_review' : 'ready_to_generate',
@@ -98,7 +88,7 @@ export function analyzePlaintextActorSource(source: string): BrowserPlaintextAct
       candidates,
       candidate,
       creature: projectCreature(creature),
-      canonicalSource: creature.markdown,
+      canonicalSource: creature.markdown+(outside.trim()?'\n'+outside:''),
       findings: auditFindings,
       ...(blocking ? { errorCode: 'audit_blocked' as const } : {}),
     };

@@ -416,68 +416,42 @@ export function decodeForgeActorResult(value: unknown): ForgeDecodeResult<ForgeA
   if (!record) return failure(issues);
   const base = readActorResultBase(record, issues);
   const status = readEnum(record, 'status', '$', ['accepted', 'needs_review', 'failed'] as const, issues);
-  if (!status || !base) return failure(issues);
-  if (base.verification.status !== status) {
-    issue(issues, '$/verification/status', 'STATUS_MISMATCH', 'result.status must equal verification.status.');
+  const artifact = Object.hasOwn(record, 'artifact') ? readJsonObject(record, 'artifact', '$', issues) : undefined;
+  let artifactHash: ReturnType<typeof hashArtifact> | undefined;
+  if(artifact)artifactHash=hashArtifact(artifact);
+  if(record.artifactHash!==undefined&&record.artifactHash!==artifactHash)issue(issues,'$/artifactHash','ARTIFACT_HASH_MISMATCH','The recorded artifact hash does not match this candidate.');
+  if(status==='accepted'&&base)validateResultStatusInvariants(status,base,issues);
+  if(base&&status&&base.verification.status!==status)issue(issues,'$/verification/status','STATUS_MISMATCH','The report status differs from the result status.');
+  if(base&&status&&issues.length===0){
+    if(status==='accepted'&&artifact&&artifactHash)return success({...base,status,artifact,artifactHash,verification:base.verification as ForgeAcceptedVerificationSummary});
+    if(status!=='accepted')return success({...base,status,...(artifact?{artifact,artifactHash}:{})});
   }
-  validateResultStatusInvariants(status, base, issues);
-
-  if (status === 'accepted') {
-    const artifact = readJsonObject(record, 'artifact', '$', issues);
-    const artifactHash = readHash(record, 'artifactHash', '$', issues);
-    if (artifact && artifactHash) {
-      try {
-        if (hashArtifact(artifact) !== artifactHash) {
-          issue(issues, '$/artifactHash', 'ARTIFACT_HASH_MISMATCH', 'artifactHash must match the canonical artifact.');
-        }
-      } catch (error) {
-        issue(issues, '$/artifact', 'ARTIFACT_INVALID', error instanceof Error ? error.message : 'Artifact is not hashable.');
-      }
-    }
-    if (issues.length > 0 || !artifact || !artifactHash) return failure(issues);
-    return success({
-      ...base,
-      verification: base.verification as ForgeAcceptedVerificationSummary,
-      status,
-      artifact,
-      artifactHash,
-    });
+  // An internal report is ancillary to the generated document. A malformed
+  // report cannot take an already produced Actor away from its caller.
+  if(artifact){
+    const source=record.sourceIdentity&&typeof record.sourceIdentity==='object'?record.sourceIdentity as Record<string,unknown>:{};
+    const target=record.target&&typeof record.target==='object'?record.target as Record<string,unknown>:{};
+    const originalDiagnostics=readDiagnostics(record.diagnostics,'$/diagnostics',[])??[];
+    const diagnostics:ForgeDiagnostic[]=[...originalDiagnostics.map(entry=>isSafeForgeWireMessage(entry.message)?entry:{...entry,message:entry.code+'：原始报告包含内部路径，问题记录仍保留。'}),{code:'FORGE_REPORT_INCOMPLETE',severity:'warning',stage:'semantic',path:'actor',
+      message:'Generated Actor retained; report metadata needs review: '+issues.map(entry=>entry.code).join(', ')}];
+    const retainedStatus=status==='failed'||diagnostics.some(entry=>entry.severity==='error')?'failed':'needs_review';
+    const verificationRecord=record.verification&&typeof record.verification==='object'?record.verification as Record<string,unknown>:{};
+    const actorRecord=record.actorVerification&&typeof record.actorVerification==='object'?record.actorVerification as Record<string,unknown>:{};
+    const actorSummary=readActorSummary(actorRecord.actor,'$/actorVerification/actor',[])??{name:typeof artifact.name==='string'?artifact.name:'生物',type:typeof artifact.type==='string'?artifact.type:'npc',senses:{}};
+    const retainedWarnings=Array.isArray(actorRecord.warnings)?actorRecord.warnings.filter((entry):entry is string=>typeof entry==='string'):[];
+    const retained:ForgeActorResult={sourceIdentity:{sourceId:String(source.sourceId??'') as ForgeActorResultBase['sourceIdentity']['sourceId'],sourceHash:String(source.sourceHash??'') as ForgeActorResultBase['sourceIdentity']['sourceHash']},
+      target:{fvttRuntimeVersion:String(target.fvttRuntimeVersion??''),generatorProfile:target.generatorProfile==='v12'?'v12':'v14',generatorVersion:String(target.generatorVersion??''),systemId:'dnd5e',systemVersionObserved:String(target.systemVersionObserved??''),effectProfile:'core',iconMode:target.iconMode==='safe'?'safe':'off'},
+      diagnostics,verification:{status:retainedStatus,mechanicsCoverage:readMechanicsCoverage(verificationRecord.mechanicsCoverage,'$/verification/mechanicsCoverage',[])??[]},
+      actorVerification:{actor:actorSummary,items:readItemSummaries(actorRecord.items,'$/actorVerification/items',[])??[],warnings:[...retainedWarnings,'部分检查报告未完成；完整Actor保留。']},
+      status:retainedStatus,artifact,artifactHash};
+    return success(retained);
   }
-
-  if (Object.prototype.hasOwnProperty.call(record, 'artifactHash')) {
-    issue(issues, '$/artifactHash', 'UNEXPECTED_FIELD', 'Only accepted results may include artifactHash.');
-  }
-  if (status === 'needs_review') {
-    const artifact = Object.prototype.hasOwnProperty.call(record, 'artifact')
-      ? readJsonObject(record, 'artifact', '$', issues)
-      : undefined;
-    if (issues.length > 0) return failure(issues);
-    return success({ ...base, status, ...(artifact ? { artifact } : {}) });
-  }
-
-  const artifact = Object.prototype.hasOwnProperty.call(record, 'artifact')
-    ? readJsonObject(record, 'artifact', '$', issues)
-    : undefined;
-  if (artifact && !isUsableActorCandidateArtifact(artifact)) {
-    issue(issues, '$/artifact', 'INVALID_ACTOR_CANDIDATE', 'A failed result may retain only a structurally usable NPC candidate.');
-  }
-  return issues.length > 0 ? failure(issues) : success({ ...base, status, ...(artifact ? { artifact } : {}) });
+  return failure(issues.length?issues:[{path:'$/artifact',code:'ARTIFACT_MISSING',message:'The response contains no generated Actor.'}]);
 }
 
-/** Candidate delivery is independent of its semantic verdict, but still
- * requires JSON-safe document containers. This is not semantic acceptance. */
+/** Actor acquisition requires readable JSON, not a semantic approval verdict. */
 export function isUsableActorCandidateArtifact(value: unknown): value is JsonObject {
-  if (!isJsonObject(value) || typeof value.name !== 'string' || !value.name.trim()
-    || value.type !== 'npc' || !isJsonObject(value.system) || !Array.isArray(value.items)
-    || value.items.some(item => !isJsonObject(item) || typeof item.name !== 'string'
-      || !item.name.trim() || typeof item.type !== 'string' || !item.type.trim() || !isJsonObject(item.system))
-    || (value.effects !== undefined && (!Array.isArray(value.effects) || value.effects.some(effect => !isJsonObject(effect))))) return false;
-  const safeKeys = (entry: JsonValue): boolean => {
-    if (!entry || typeof entry !== 'object') return true;
-    if (Array.isArray(entry)) return entry.every(safeKeys);
-    return Object.entries(entry).every(([key, child]) => !['__proto__', 'prototype', 'constructor'].includes(key) && safeKeys(child));
-  };
-  return safeKeys(value);
+  return isJsonObject(value);
 }
 
 export function decodeForgeItemResult(value: unknown): ForgeDecodeResult<ForgeItemResult> {
@@ -622,7 +596,13 @@ export function decodeForgeError(value: unknown): ForgeDecodeResult<ForgeGateway
 }
 
 export function decodeForgeActorResponse(value: unknown): ForgeDecodeResult<ForgeActorResponse> {
-  return decodeResponse(value, decodeForgeActorResult);
+  const decoded=decodeResponse(value,decodeForgeActorResult);
+  if(decoded.ok)return decoded;
+  if(value&&typeof value==='object'&&!Array.isArray(value)){
+    const record=value as Record<string,unknown>,result=decodeForgeActorResult(record.result);
+    if(result.ok&&result.value.artifact)return success({protocolVersion:FORGE_PROTOCOL_VERSION,requestId:typeof record.requestId==='string'?record.requestId:'retained-actor',result:result.value});
+  }
+  return decoded;
 }
 
 export function decodeForgeSourceCreateResponse(value: unknown): ForgeDecodeResult<ForgeSourceCreateResponse> {
@@ -688,7 +668,7 @@ function readActorRequestSource(
   const record = readRecord(value, path, new Set(['displayName', 'content', 'sourceId', 'utf8Sha256']), issues);
   if (!record) return undefined;
   const displayName = readNonEmptyString(record, 'displayName', path, issues);
-  const content = readForgeSourceContent(record, path, issues);
+  const content = readString(record, 'content', path, issues);
   const sourceId = readSourceId(record, 'sourceId', path, issues);
   const utf8Sha256 = readHash(record, 'utf8Sha256', path, issues);
   if (!displayName || content === undefined || !sourceId || !utf8Sha256) return undefined;

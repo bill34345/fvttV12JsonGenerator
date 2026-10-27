@@ -456,6 +456,21 @@ export function assertRulePresentationPlan(plan: RulePresentationPlan | undefine
     throw new TypeError('规则事实与当前来源或Actor不一致，必须重新生成。');
   }
 }
+
+/** Rebind a saved display plan to the same generated Actor. This validates
+ * localization data only; it never regenerates or rejects the Actor itself. */
+export function restoreRulePresentationPlan(
+  saved:RulePresentationPlan, actor:any, sourceIdentity:string,
+  actorNormalizer:(actor:any)=>any=(value:any)=>value,
+):RulePresentationPlan {
+  const plan=structuredClone(saved);
+  const sourceHash=localizationHash({sourceIdentityHash:plan.sourceIdentityHash,templateHash:plan.templateHash,factsHash:plan.factsHash,
+    mechanicalHash:plan.mechanicalHash,fields:plan.fields.map(field=>({path:field.path,source:field.source,segments:field.segments})),uncoveredMechanics:plan.uncoveredMechanics});
+  if(sourceHash!==plan.sourceHash)throw new TypeError('保存的规则展示记录不完整；Actor保持可用。');
+  trustedPlans.add(plan);planNormalizers.set(plan,actorNormalizer);
+  try{assertRulePresentationPlan(plan,actor,sourceIdentity);}catch(error){trustedPlans.delete(plan);planNormalizers.delete(plan);throw error;}
+  return freeze(plan);
+}
 export function rulePresentationField(plan: RulePresentationPlan, path: RuleDisplayPath): RulePresentationField | undefined {
   return plan.fields.find(field => pathKey(field.path) === pathKey(path));
 }

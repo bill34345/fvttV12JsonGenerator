@@ -255,11 +255,12 @@ export function stagedFeatureMechanics(quote:string,name:string,actorName?:strin
   if(healingOperations)return{facts:{activityType:'utility',sourceOperations:healingOperations},nativeRuleText:quote.trim(),manualRemainder:quote.trim()};
   const healingFacts=sourceFixedHealingFacts(quote,name,actorName),healing=healingFacts?.healing;
   if(healing){
-    let range=healing.target?.type==='creature'?sourceActorRangeDistance(healing.target.special,actorName):undefined;
-    if(healing.target?.type==='creature'&&range===undefined){
+    const qualification=healing.target?.special??'';
+    let range=healing.target?.type==='creature'&&qualification?sourceActorRangeDistance(qualification,actorName):undefined;
+    if(healing.target?.type==='creature'&&qualification&&range===undefined){
       const body=sourceHealingBody(quote,name),clauses=body===undefined?[]:sourceOperationClauses(body).map(featureText);
-      if(healing.target.special===clauses[0]&&/^Choose a creature that you can see within range\.$/u.test(healing.target.special))range=sourceSpellHeaderRange(quote,sourceOperationClauses(quote)[0]??'');
-      else if(/^If an ally with 0 Hit Points starts its turn in the aura,/u.test(healing.target.special))range=sourceHealingAura(clauses);
+      if(qualification===clauses[0]&&/^Choose a creature that you can see within range\.$/u.test(qualification))range=sourceSpellHeaderRange(quote,sourceOperationClauses(quote)[0]??'');
+      else if(/^If an ally with 0 Hit Points starts its turn in the aura,/u.test(qualification))range=sourceHealingAura(clauses);
     }
     return{facts:{activityType:'heal',...healingFacts,...(range!==undefined?{range}:{})},nativeRuleText:quote.trim(),manualRemainder:quote.trim()};
   }

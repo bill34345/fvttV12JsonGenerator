@@ -31,7 +31,7 @@ describe('AI owns default creature content across program boundaries',()=>{
   expect(payload.candidate).toEqual({id:candidate.id,label:candidate.label,start:candidate.start,end:candidate.end});
   expect(system).toContain('All source mechanical fields are model-owned');expect(system).not.toContain('let the program bind condition');
   expect(system).toContain('EvidenceRef is {start:-1,end:-1,quote:string}');
-  expect(result.creature).toEqual(original.creature);expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v49-vulnerability-notes');
+  expect(result.creature).toEqual(original.creature);expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v50-input-field-policy');
  });
  test('an explicitly manual casting group normalizes only its omitted empty list and retains valid attacks',async()=>{
   const original=buildRatWarlockIr(),group=original.creature.spellcasting![0]!;

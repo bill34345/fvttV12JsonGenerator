@@ -2,6 +2,7 @@ import {expect,test} from 'bun:test';
 import {materializeStructuredSourceOperations,sourceOperationStructureErrors} from '@fvtt-json-generator/models/source-operations';
 import {normalizeMonsterIntakeProposal} from '@fvtt-json-generator/intake-ai/provider';
 import {analyzeBrowserActorIntakeDraft,generateBrowserActorIntakeCandidate} from '@fvtt-json-generator/forge-browser-runtime/ai';
+import type {ForgeSourceId} from '@fvtt-json-generator/forge-gateway-protocol';
 import fixture from './fixtures/forge-2024-ankheg-shared-proof.json';
 
 const base=()=>structuredClone(fixture.ir) as any;
@@ -22,10 +23,21 @@ test('already parallel citations and unrelated operations remain unchanged',()=>
   expect(normalize(ir)).toEqual(ir);
 });
 
+test('input field policy: an empty optional damage proof matches omission without inventing a citation',async()=>{
+ const empty=base(),omitted=base();bite(empty).sourceOperations[0].proof.damage=[];delete bite(omitted).sourceOperations[0].proof.damage;
+ const before=structuredClone(empty),emptyNormalized=normalize(empty),omittedNormalized=normalize(omitted);
+ expect(emptyNormalized).toEqual(omittedNormalized);expect(empty).toEqual(before);expect(bite(emptyNormalized).sourceOperations[0].proof.damage).toBeUndefined();
+ expect(sourceOperationStructureErrors(bite(emptyNormalized).sourceOperations)).toEqual([]);
+ const forbidden=async()=>{throw Error('No model permitted');},provider:any={providerName:'frozen',extractionModel:'frozen',reviewModel:'disabled',discover:forbidden,extract:forbidden,review:forbidden,repair:forbidden};
+ const input={source:fixture.source,sourceName:'Ankheg',sourceScope:'single' as const,fvttVersion:'14.368',systemVersion:'5.3.3',requestId:'optional-empty-proof',sourceId:'actor:v1:17fa7d9b-9f7e-4e55-b627-48bb26937048' as ForgeSourceId};
+ const results=[];
+ for(const ir of [empty,omitted]){const analysis=analyzeBrowserActorIntakeDraft(input,ir,provider),generation=await generateBrowserActorIntakeCandidate(input,analysis,provider);expect(generation.candidateAvailable).toBe(true);expect(generation.findings).toEqual([]);results.push(generation.candidateResponse);}
+ expect(results[0]).toEqual(results[1]);
+});
+
 for(const [label,mutate] of [
-  ['empty list',(op:any)=>op.proof.damage=[]],['empty quote',(op:any)=>op.proof.damage=['']],
+  ['empty quote',(op:any)=>op.proof.damage=['']],
   ['non-string',(op:any)=>op.proof.damage=[17]],['partial citation array',(op:any)=>{op.damage.push({...op.damage[1]});op.proof.damage.push(op.proof.damage[0]);}],
-  ['over capacity',(op:any)=>op.damage=Array.from({length:13},()=>({...op.damage[0]}))],
   ['conditional part',(op:any)=>op.damage[1].relationship='conditional'],['replacement part',(op:any)=>op.damage[1].relationship='replacement'],
   ['part condition',(op:any)=>op.damage[1].condition='When chosen by the GM.'],
   ['operation condition',(op:any)=>op.condition='When chosen by the GM.'],['alternative',(op:any)=>op.relationship='alternative'],
@@ -40,6 +52,12 @@ for(const [label,mutate] of [
     expect(result[0].proof.damage).toEqual(supplied);
   });
 }
+
+test('shared citation supports more than twelve declared damage parts without truncation',()=>{
+ const op=operation();op.damage=Array.from({length:13},()=>({...op.damage[0]}));
+ const result=materializeStructuredSourceOperations(parent(),[op],undefined,parent()) as any[];
+ expect(result[0].damage).toHaveLength(13);expect(result[0].proof.damage).toHaveLength(13);
+});
 
 test('ambiguous or unbound owner cannot lend a shared citation',()=>{
   const op=operation(),quote=op.proof.damage[0];

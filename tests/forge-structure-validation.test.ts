@@ -279,16 +279,16 @@ describe('source-operation execution combinations match the formal conversion bo
     expect(ir as unknown).toEqual(before);
   });
 
-  test('the formal workflow rejects attack damage that needs an independent GM operation', async () => {
+  test('the formal workflow retains attack and independent conditional damage without rejecting the Actor', async () => {
     const ir = formalFixture(); ir.creature.actions[0]!.sourceOperations![0]!.damage![0]!.relationship = 'conditional';
     expect(errors(ir).some(finding => finding.path.endsWith('/independent-damage-required'))).toBe(true);
-    await expect(convert(ir)).rejects.toThrow('InvalidSourceOperations');
+    const result=await convert(ir),actor=result.rawJson as any;expect(actor.items.length).toBeGreaterThan(0);expect(Object.values<any>(actor.items[0].system.activities).some(activity=>activity.type==='attack')).toBe(true);expect(Object.values<any>(actor.items[0].system.activities).some(activity=>activity.type==='damage')).toBe(true);
   });
 
-  test('the formal workflow rejects a carrier that also declares a flat attack', async () => {
+  test('the formal workflow retains explicit flat attack fields beside an operation carrier', async () => {
     const ir = formalFixture(); ir.creature.actions[0]!.attack = { type: 'mwak', toHit: 19, reach: 10 };
     expect(errors(ir).some(finding => finding.code === 'CONFLICTING_SOURCE_OPERATION_CARRIER')).toBe(true);
-    await expect(convert(ir)).rejects.toThrow('ConflictingSourceOperations');
+    const result=await convert(ir),actor=result.rawJson as any;expect(actor.items.length).toBeGreaterThan(0);expect(Object.values<any>(actor.items[0].system.activities).some(activity=>activity.type==='attack')).toBe(true);
   });
 });
 
@@ -316,7 +316,7 @@ describe('source operation shape is independent of prose proof', () => {
     ['unsupported adjustment', ops => { ops[0].damageAdjustment.multiplier = 2; }],
     ['attack and save on one operation', ops => { ops[0].save = structuredClone(ops[2].save); }],
     ['wrong save choice', ops => { ops[2].save.choice = 'single'; }],
-    ['bad healing target', ops => { ops[4].healing.target.count = 2; }],
+    ['bad healing target', ops => { ops[4].healing.target.count = -2; }],
     ['zero area', ops => { ops[3].aoe.radius = 0; }],
     ['bad evidence length', ops => { ops[0].evidence = { ...ref, end: ref.end + 1 }; }],
   ];

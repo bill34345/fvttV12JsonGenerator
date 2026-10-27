@@ -43,7 +43,7 @@ describe('Forge browser-safe plaintext Actor analysis', () => {
     expect(analysis).not.toHaveProperty('artifactHash');
   });
 
-  test('blocks zero, multiple, and uncovered source text without selecting a first candidate', () => {
+  test('keeps zero and multiple entities explicit while preserving outside text with a located creature', () => {
     const zero = analyzePlaintextActorSource('ordinary prose without a creature heading');
     expect(zero.status).toBe('needs_review');
     expect(zero.errorCode).toBe('no_entities');
@@ -57,8 +57,8 @@ describe('Forge browser-safe plaintext Actor analysis', () => {
 
     const uncovered = analyzePlaintextActorSource(`unreviewed prelude\n${BLOCKS[0]!.quote}`);
     expect(uncovered.status).toBe('needs_review');
-    expect(uncovered.errorCode).toBe('coverage_gap');
-    expect(uncovered.canonicalSource).toBeUndefined();
+    expect(uncovered.findings).toContainEqual(expect.objectContaining({code:'PLAINTEXT_SOURCE_COVERAGE_GAP'}));
+    expect(uncovered.canonicalSource).toContain('unreviewed prelude');
   });
 
   test('preserves exact CRLF evidence offsets while keeping parser semantics identical', () => {
@@ -97,9 +97,9 @@ describe('Forge browser-safe plaintext Actor analysis', () => {
       senses: { ranges: { blindsight: 60 } },
     });
     expect(response.result.actorVerification.items).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: '爪击 (Claw)', activityTypes: expect.arrayContaining(['attack']) }),
-      expect.objectContaining({ name: '毒液咬击 (Venomous Bite)', activityTypes: expect.arrayContaining(['attack', 'save']) }),
-      expect.objectContaining({ name: '缩壳防御 (Retract)', effects: expect.arrayContaining([
+      expect.objectContaining({ name: '爪击 Claw', activityTypes: expect.arrayContaining(['attack']) }),
+      expect.objectContaining({ name: '毒液咬击 Venomous Bite', activityTypes: expect.arrayContaining(['attack', 'save']) }),
+      expect.objectContaining({ name: '缩壳防御 Retract', effects: expect.arrayContaining([
         expect.objectContaining({ sourceDerivedAcEffect: true, sourceText: '+9 AC' }),
       ]) }),
     ]));

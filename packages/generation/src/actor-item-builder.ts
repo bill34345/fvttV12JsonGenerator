@@ -199,10 +199,10 @@ export function structuredActionToActivityData(action: StructuredActionData): an
     base.healing = { ...action.healing };
   }
 
-  if ((action.type === 'save' || action.DC) && action.DC) {
+  if ((action.type === 'save' || action.DC) && action.DC && action.ability) {
     base.save = {
       dc: action.DC,
-      ability: action.ability || 'str',
+      ability: action.ability,
       outcome: action.saveOutcome??deriveExplicitSaveOutcome(action as unknown as Record<string, any>),
     };
     if (action.dcSourceAbility) base.save.dcSourceAbility = action.dcSourceAbility;

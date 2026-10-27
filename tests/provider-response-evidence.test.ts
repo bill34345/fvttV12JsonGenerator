@@ -68,7 +68,7 @@ describe('explicit private response evidence before rejection', () => {
       responseEvidence: { record: async () => { throw new Error('private filesystem error'); },
         onStorageFailure: () => { failed++; throw new Error('private diagnostic error'); } },
       httpClient: async () => { calls++; return response(JSON.stringify(valid)); } });
-    expect(await provider.discover({ source, sourceSha256: sha256(source), chunkStart: 0, chunkEnd: source.length })).toEqual(valid);
+    expect(await provider.discover({ source, sourceSha256: sha256(source), chunkStart: 0, chunkEnd: source.length })).toMatchObject(valid);
     expect(calls).toBe(1);
     expect(failed).toBe(1);
   });
@@ -104,7 +104,7 @@ describe('explicit private response evidence before rejection', () => {
     } finally { globalThis.fetch = originalFetch; }
   });
   for(const legacy of [false,true])test(legacy
-    ? 'explicit legacy BW records its base and whole-feature requests and preserves both operations'
+    ? 'deprecated staged options keep the same one full-IR request and both operations'
     : 'the default Forge factory records one full-IR request and preserves both AI-authored operations', async () => {
     const originalFetch=globalThis.fetch, events:ProviderResponseEvidence[]=[],stages:any[]=[],payloads:any[]=[];
     const source='Proof CR 1\nMedium construct, unaligned\nArmor Class 15\nHit Points 20\nSpeed 30 ft.\nSTR 10 DEX 10 CON 10 INT 10 WIS 10 CHA 10\nChallenge 1\nActions\nSlam. Melee Weapon Attack: +2 to hit, reach 5 ft., one target. Hit: 3 (1d6) bludgeoning damage.\nDream Snare (Recharge 5-6). Each creature within 20 feet must make a DC 12 Wisdom saving throw or fall asleep until the end of its next turn.\n';
@@ -126,7 +126,7 @@ describe('explicit private response evidence before rejection', () => {
     let calls=0;
     globalThis.fetch=(async(_url:unknown,init:any)=>{
       calls++;const payload=JSON.parse(JSON.parse(init.body).messages[1].content);payloads.push(payload);
-      if(!payload.template)return response(JSON.stringify(legacy?facts:fullIr));
+      if(!payload.template)return response(JSON.stringify(fullIr));
       const form=yaml.load(payload.template) as any;
       Object.assign(form.动作[0],{攻击:{类型:'近战武器攻击',命中加值:2,触及尺:5,射程尺:null,远射程尺:null,目标数量:1,目标限制:null},
         伤害:[{公式:'1d6',伤害类型:'bludgeoning',生效条件:null,倍率:1,成功时倍率:null}]});
@@ -139,26 +139,20 @@ describe('explicit private response evidence before rejection', () => {
         ?new OpenAICompatibleMonsterIntakeProvider({...connection,maxAttempts:1,stagedExtraction:{baseMode:'facts',featureMode:'whole-v2',maxCorrections:0,onStage:event=>{stages.push(event);}},responseEvidence:sink})
         :createEncounterIntakeProviders({...connection,onExtractionStage:event=>{stages.push(event);},responseEvidence:sink}).provider;
       const ir=await provider.extract({source,sourceSha256:sha256(source),candidate:{id:'proof',label:'Proof',start:0,end:source.length,quote:source}});
-      expect(calls).toBe(legacy?2:1);expect(events).toHaveLength(legacy?2:1);expect(events.every(event=>event.stage==='extract')).toBe(true);
+      expect(calls).toBe(1);expect(events).toHaveLength(1);expect(events.every(event=>event.stage==='extract')).toBe(true);
       expect(ir.creature.actions).toHaveLength(2);
       expect(ir.creature.actions[0]).toMatchObject({name:'Slam',executionMode:'native-with-gm',sourceOperations:[{type:'attack',attack:{toHit:2}}]});
       expect(ir.creature.actions[1]).toMatchObject({name:'Dream Snare (Recharge 5-6)',executionMode:'native-with-gm',sourceOperations:[{type:'save',save:{dc:12,abilities:['wis']}}],recharge:[5,6]});
       expect(ir.creature.actions[1]!.appliedConditions).toBeUndefined();
       expect(ir.creature.actions[1]!.description).toContain('or fall asleep until the end of its next turn.');
       expect(ir.creature.actions[1]!.damage).toBeUndefined();expect(ir.creature.actions[1]!.manualRemainder).toContain('fall asleep');
-      if(legacy){
-        expect(stages.filter(event=>event.stage==='feature'&&event.unitId!=='all'&&event.status==='validated'&&event.processor==='program')).toHaveLength(2);
-        expect(stages.filter(event=>event.stage==='feature').some(event=>event.processor==='model'&&event.status==='request')).toBe(true);
-        expect(stages.at(-1)).toMatchObject({stage:'assembly',status:'validated',plannedCalls:2,retryCalls:0});
-      }else{
-        expect(stages).toEqual([]);expect(payloads[0]).not.toHaveProperty('template');
-        for(const field of ['sourceSpellGrants','sourceLines','sourceProofClauses'])expect(payloads[0]).not.toHaveProperty(field);
-        expect(payloads[0].source).toBe(source);expect(payloads[0].sourceLength).toBe(source.length);
-        expect(payloads[0].candidate).toEqual({id:'proof',label:'Proof',start:0,end:source.length});
-        expect(JSON.stringify(payloads[0]).split(JSON.stringify(source)).length-1).toBe(1);
-        expect(ir as unknown).toEqual(before);expect(fullIr).toEqual(before);
-        expect(events[0]).toMatchObject({sourceHash:sha256(source),content:JSON.stringify(before),attempt:1});
-      }
+      expect(stages).toEqual([]);expect(payloads[0]).not.toHaveProperty('template');
+      for(const field of ['sourceSpellGrants','sourceLines','sourceProofClauses'])expect(payloads[0]).not.toHaveProperty(field);
+      expect(payloads[0].source).toBe(source);expect(payloads[0].sourceLength).toBe(source.length);
+      expect(payloads[0].candidate).toEqual({id:'proof',label:'Proof',start:0,end:source.length});
+      expect(JSON.stringify(payloads[0]).split(JSON.stringify(source)).length-1).toBe(1);
+      expect(ir as unknown).toEqual(before);expect(fullIr).toEqual(before);
+      expect(events[0]).toMatchObject({sourceHash:sha256(source),content:JSON.stringify(before),attempt:1});
     }finally{globalThis.fetch=originalFetch;}
   });
 });

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { CUSTOM_CONDITION_IDS } from '@fvtt-json-generator/contracts/conditions';
-import { isSourceCandidateReview, isSourceCandidateCounters, sourceOperationStructureErrors } from '@fvtt-json-generator/models/source-operations';
+import { isSourceCandidateReview, isSourceCandidateCounters, sourceOperationStructureErrors, isHealingRecipient } from '@fvtt-json-generator/models/source-operations';
 import {NORMALIZED_MONSTER_EMPTY_PATHS,type IntakeFinding,type IntakeValidationResult} from './types';
 
 type Data = Record<string, unknown>;
@@ -104,9 +104,7 @@ export function validateMonsterIntakeStructure(
     if (!shape(entry, path, ['formula', 'type', 'target'])) return;
     formula(entry.formula, `${path}/formula`); enumeration(entry.type, `${path}/type`, ['healing', 'temphp']);
     if (entry.target !== undefined && shape(entry.target, `${path}/target`, ['type', 'count', 'special'])) {
-      enumeration(entry.target.type, `${path}/target/type`, ['self', 'creature']);
-      if (entry.target.count !== 1) invalid(`${path}/target/count`, 'Healing targets one recipient.');
-      string(entry.target.special, `${path}/target/special`, false);
+      if(!isHealingRecipient(entry.target))invalid(`${path}/target`,'Healing requires one explicit self or creature recipient; optional qualifications must be text.');
     }
   };
   const area = (entry: unknown, path: string) => {
@@ -278,7 +276,7 @@ export function validateMonsterIntakeStructure(
     optional(creature, 'biography', '/creature', (e, p) => string(e, p, false));
     optional(creature, 'legendary', '/creature', (entry, path) => {
       if (!shape(entry, path, ['max', 'lairMax', 'recovery', 'resistanceMax', 'resistanceLairMax', 'preamble', 'evidence'])) return;
-      positive(entry.max, `${path}/max`); optional(entry, 'lairMax', path, positive); optional(entry, 'recovery', path, (e, p) => enumeration(e, p, ['own-turn-start'])); string(entry.preamble, `${path}/preamble`); evidenceList(entry.evidence, `${path}/evidence`);
+      positive(entry.max, `${path}/max`); optional(entry, 'lairMax', path, positive); optional(entry, 'recovery', path, (e, p) => enumeration(e, p, ['own-turn-start'])); string(entry.preamble, `${path}/preamble`,false); evidenceList(entry.evidence, `${path}/evidence`);
       if (entry.lairMax !== undefined && entry.lairMax !== (entry.max as number) + 1) invalid(`${path}/lairMax`, 'Native lair capacity is the base capacity plus one.');
       optional(entry,'resistanceMax',path,positive);
       if(entry.lairMax!==undefined&&entry.resistanceMax!==undefined&&entry.resistanceLairMax===undefined)

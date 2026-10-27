@@ -4,7 +4,6 @@ import {
   isUsableActorCandidateArtifact,
   type ForgeActorResponse,
   type ForgeActorResult,
-  type ForgeAcceptedVerificationSummary,
   type ForgeSourceId,
   type JsonObject,
   type Sha256,
@@ -100,21 +99,17 @@ export async function createAcceptedForgeActor(
   assertGm(input.game);
   assertExactRuntime(input.game);
   const decoded = decodeForgeActorResponse(input.response);
-  if (!decoded.ok || !('result' in decoded.value) || decoded.value.result.status !== 'accepted') {
-    throw new Error('Only a decoded accepted Forge Actor response can be created.');
+  if (!decoded.ok || !('result' in decoded.value) || !decoded.value.result.artifact) {
+    throw new Error('Forge Actor response does not contain a generated Actor.');
   }
   throwIfAborted(input.signal);
   const result = decoded.value.result;
   assertResponseTarget(result.target, input.game);
-  const accepted = result.verification as ForgeAcceptedVerificationSummary;
-  if (accepted.status !== 'accepted' || !result.artifact || !result.artifactHash || result.diagnostics.length > 0 || result.actorVerification.warnings.length > 0) {
-    throw new Error('Forge Actor response is not applyable.');
-  }
-  if (hashArtifact(result.artifact) !== result.artifactHash) {
-    throw new Error('Forge Actor artifact hash does not match before creation.');
-  }
-
-  return createForgeActorDocument(input, result);
+  return createForgeActorDocument(input, {
+    sourceIdentity: result.sourceIdentity,
+    artifact: result.artifact!,
+    artifactHash: hashArtifact(result.artifact!),
+  });
 }
 
 /** Binds a GM's decision to the current candidate and the unchanged strict
@@ -165,7 +160,8 @@ async function createForgeActorDocument(
 
   const collection = input.game.actors;
   if (!collection) throw new Error('Foundry world Actor collection is unavailable.');
-  const importArtifact = prepareFoundryImportArtifact(result.artifact,input.game);
+  const importWarnings: string[] = [];
+  const importArtifact = prepareFoundryImportArtifact(result.artifact,input.game,importWarnings);
   const documentId = forgeActorDocumentId(result.sourceIdentity.sourceId);
   const identity = {
     protocolVersion: 1,
@@ -245,7 +241,7 @@ async function createForgeActorDocument(
       input.rawSourceHash,
     );
     const uuid=requireActorUuid(actor);
-    const readbackWarnings=actorReadbackWarnings(importArtifact,readback);
+    const readbackWarnings=[...importWarnings,...actorReadbackWarnings(importArtifact,readback)];
     cleanupRequired = false;
     // Readback is committed before publishing completion. A failed phase
     // update leaves the verified Actor in place; it must not race hydration
@@ -308,12 +304,12 @@ export async function completeForgeSpellImport(actor: ForgeActorLike): Promise<v
   }
 }
 
-export function prepareFoundryImportArtifact(artifact: JsonObject,game?:Pick<ForgeGameLike,'modules'>): JsonObject {
+export function prepareFoundryImportArtifact(artifact: JsonObject,game?:Pick<ForgeGameLike,'modules'>,warnings: string[] = []): JsonObject {
   const copy = JSON.parse(JSON.stringify(artifact)) as JsonObject;
   if (!Array.isArray(copy.items)) return copy;
-  const independent=sourceOperationActivityGroups(copy),midi=game?.modules?.get('midi-qol');
+  const independent=sourceOperationActivityGroups(copy,warnings),midi=game?.modules?.get('midi-qol');
   if(independent.length&&midi?.active){
-    if(midi.version!=='14.0.11')throw new Error('Independent sourceOperations require the verified midi-qol14.0.11 import adapter. Active unverified Midi version: stop before world writes.');
+    if(midi.version!=='14.0.11')warnings.push(`Midi ${midi.version??'unknown'} 的独立活动适配尚未验证；原生活动保留，请核对第三方自动化。`);
     for(const group of independent)for(const{activity}of group.activities){
       activity.midiProperties={...getRecord(activity.midiProperties),otherActivityCompatible:false,triggeredActivityId:'none'};
       // Midi14.0.11 removes core damage buttons and may hide its replacement
@@ -332,7 +328,7 @@ export function prepareFoundryImportArtifact(artifact: JsonObject,game?:Pick<For
   for (const itemValue of copy.items) {
     const item = getRecord(itemValue);
     const system = getRecord(item.system);
-    normalizeLegacySpellReferencesForFoundry(system);
+    normalizeLegacySpellReferencesForFoundry(system,warnings);
     const parentRange = getRecord(system.range);
     if (!Object.prototype.hasOwnProperty.call(system, 'range') || parentRange.long !== null) continue;
 
@@ -342,7 +338,8 @@ export function prepareFoundryImportArtifact(artifact: JsonObject,game?:Pick<For
       if (typeof activityRange.long === 'number') activityLongs.add(activityRange.long);
     }
     if (activityLongs.size > 1) {
-      throw new Error('Foundry dnd5e cannot represent multiple long ranges on one Item parent range.');
+      warnings.push(`${String(item.name??'能力')}：活动包含不同远射程；已保留各活动距离，未指定统一父级远射程。`);
+      continue;
     }
     const [long] = activityLongs;
     if (long !== undefined) parentRange.long = long;
@@ -351,50 +348,18 @@ export function prepareFoundryImportArtifact(artifact: JsonObject,game?:Pick<For
   return copy;
 }
 
-/** The accepted artifact already carries exact source-operation identities.
- * Do not classify by names, activation labels or a coincidental sibling type. */
-function sourceOperationActivityGroups(artifact:unknown):Array<{index:number;activities:Array<{key:string;activity:Record<string,any>}>}>{
+/** Collect existing operation activities for the optional Midi adapter. The
+ * generator owns their mechanics; annotation mismatches never remove them. */
+function sourceOperationActivityGroups(artifact:unknown,warnings:string[]=[]):Array<{index:number;activities:Array<{key:string;activity:Record<string,any>}>}>{
   const groups:Array<{index:number;activities:Array<{key:string;activity:Record<string,any>}>}>=[];
   const items=getRecord(artifact).items;if(!Array.isArray(items))return groups;
   for(const[index,item]of items.entries()){
     const rule=getRecord(getRecord(getRecord(item).flags).fvttJsonGenerator).manualRule;
     if(!Array.isArray(rule?.sourceOperations))continue;
-    const operations=rule.sourceOperations;
-    if(rule.mode!=='native-with-gm'||typeof rule.sourceText!=='string'||!operations.length)throw new Error('Unbound sourceOperations cannot enter the independent-activity import adapter.');
-    const activities=Object.entries(getRecord(getRecord(getRecord(item).system).activities)).map(([key,value])=>({key,activity:getRecord(value)}));
-    if(!activities.length||activities.some(({activity})=>{
-      const marker=getRecord(getRecord(activity.flags).fvttJsonGenerator).sourceOperation;
-      const matches=operations.filter((op:any)=>op?.id===marker?.id);
-      // Source-line references retain boundary newlines while the operation
-      // binder trims them. Require the same full rule; only edge whitespace
-      // may differ, never an interior edit or a neighbouring rule.
-      if(matches.length!==1||typeof matches[0].sourceText!=='string'||typeof marker.sourceText!=='string'
-        ||matches[0].sourceText.trim()!==rule.sourceText.trim()||marker.sourceText.trim()!==rule.sourceText.trim())return true;
-      const op=matches[0],neutral=op.type==='attack'&&(op.attack?.type==='melee'||op.attack?.type==='ranged');
-      if(!neutral)return marker.relationship!==op.relationship||activity.type!==op.type;
-      // A source-neutral attack deliberately has two independent projections,
-      // bound to the same operation. They never become a native Attack or a
-      // guessed sibling chain in Midi.
-      const damage=marker.role==='damage';
-      return marker.role!=='attack-roll'&&!damage
-        ||marker.attackClassification!=='unspecified'||marker.attackKind!==op.attack.type
-        ||JSON.stringify(marker.damageAdjustment)!==JSON.stringify(op.damageAdjustment)
-        ||marker.relationship!==(damage?'follow-up':op.relationship)
-        ||activity.type!==(damage?'damage':'utility')
-        ||damage&&(!Array.isArray(op.damage)||!op.damage.length);
-    }))throw new Error('Unbound source-operation Activity cannot enter the independent-activity import adapter.');
-    for(const op of operations.filter((op:any)=>op?.type==='attack'&&(op.attack?.type==='melee'||op.attack?.type==='ranged'))){
-      const roles=activities.filter(({activity})=>getRecord(getRecord(activity.flags).fvttJsonGenerator).sourceOperation?.id===op.id)
-        .map(({activity})=>getRecord(getRecord(activity.flags).fvttJsonGenerator).sourceOperation.role);
-      const dual=op.attack.reach!==undefined&&op.attack.range!==undefined;
-      if(roles.filter(role=>role==='attack-roll').length!==(dual?2:1)||roles.filter(role=>role==='damage').length!==(op.damage?.length?1:0))
-        throw new Error('Unbound source-operation Activity roles cannot enter the independent-activity import adapter.');
-      if(dual){
-        const modes=activities.filter(({activity})=>getRecord(getRecord(activity.flags).fvttJsonGenerator).sourceOperation?.id===op.id)
-          .map(({activity})=>getRecord(getRecord(activity.flags).fvttJsonGenerator).sourceOperation)
-          .filter(marker=>marker.role==='attack-roll').map(marker=>marker.attackMode).sort();
-        if(JSON.stringify(modes)!==JSON.stringify(['melee','ranged']))throw new Error('Unbound source-operation attack modes cannot enter the independent-activity import adapter.');
-      }
+    const activities=Object.entries(getRecord(getRecord(getRecord(item).system).activities))
+      .map(([key,value])=>({key,activity:getRecord(value)}));
+    if(rule.mode!=='native-with-gm'||typeof rule.sourceText!=='string'){
+      warnings.push(`${String(getRecord(item).name??'能力')}：操作附带记录不完整，已有活动保持。`);
     }
     groups.push({index,activities});
   }
@@ -696,7 +661,7 @@ function normalizeInactiveActivityTemplateForComparison(activity: Record<string,
 const LEGACY_SPELL_UUID_PATTERN = /^[0-9a-f]{16}$/u;
 const LEGACY_SPELL_REFERENCE_PATTERN = /^Compendium\.dnd5e\.spells\.Item\.([0-9a-f]{16})$/u;
 
-function normalizeLegacySpellReferencesForFoundry(system: Record<string, any>): void {
+function normalizeLegacySpellReferencesForFoundry(system: Record<string, any>,warnings:string[]): void {
   const activities = getRecord(system.activities);
   for (const activityValue of Object.values(activities)) {
     const activity = getRecord(activityValue);
@@ -708,7 +673,8 @@ function normalizeLegacySpellReferencesForFoundry(system: Record<string, any>): 
     if (!legacyUuid) continue;
     const foundryUuid = resolveFoundrySpellUuid(legacyUuid);
     if (!foundryUuid) {
-      throw new Error(`Legacy dnd5e spell ID "${legacyUuid}" has no unique dnd5e 5.3.3 Item mapping.`);
+      warnings.push(`法术引用 ${legacyUuid} 没有唯一的 dnd5e 5.3.3 对应；原法术活动及引用保留。`);
+      continue;
     }
     spell.uuid = foundryUuid;
   }
