@@ -10,6 +10,7 @@ import {
 const featureKeys = new WeakMap<object, string>();
 const featureActivations=new WeakMap<object,'action'|'bonus'|'reaction'|'legendary'>();
 const featureCosts=new WeakMap<object,number>();
+const spellRecoveryPeriods = { day: 'day', shortRest: 'sr', longRest: 'lr' } as const;
 
 export const SPELL_MANIFEST_UNSUPPORTED_TARGET = 'SPELL_MANIFEST_UNSUPPORTED_TARGET' as const;
 
@@ -116,17 +117,18 @@ export function buildActorSpellManifest(
     const single=group.spellRefs.length===1?group.spellRefs[0]:undefined;
     const parentUses=!!single?.uses&&!single.uses.shared&&!!item.system?.uses?.max;
     if(parentUses&&(single!.method!=='innate'||String(item.system.uses.max)!==String(single!.uses!.value)
-      ||single!.uses!.recovery!=='day'||!item.system.uses.recovery?.some((r:any)=>r.period==='day'&&r.type==='recoverAll')))
-      throw new ActorSpellManifestError('SPELL_PARENT_POOL_CONFLICT','A single daily Cast must match its exact generated parent pool.');
+      ||!item.system.uses.recovery?.some((r:any)=>r.period===spellRecoveryPeriods[single!.uses!.recovery]&&r.type==='recoverAll')))
+      throw new ActorSpellManifestError('SPELL_PARENT_POOL_CONFLICT','A single Cast must match its exact generated parent pool.');
     if(shared.length){
       const value=shared[0]!.uses!.value;
-      if(shared.some(ref=>ref.uses!.value!==value||ref.uses!.recovery!=='day'))throw new ActorSpellManifestError('SPELL_SHARED_POOL_CONFLICT','Shared spell pools must agree on count and daily recovery.');
+      const recovery=shared[0]!.uses!.recovery;
+      if(shared.some(ref=>ref.uses!.value!==value||ref.uses!.recovery!==recovery))throw new ActorSpellManifestError('SPELL_SHARED_POOL_CONFLICT','Shared spell pools must agree on count and recovery.');
       const previous=item.system?.uses;
       if(previous?.max&&String(previous.max)!==String(value))throw new ActorSpellManifestError('SPELL_SHARED_POOL_CONFLICT','An existing feature counter cannot be overwritten by a different shared spell pool.');
       item.system??={};
       // schema-derived: itemUses consumes this one feature pool; independent
       // uses remain on their own Cast Activities. No extra placeholder Item.
-      item.system.uses={spent:0,max:String(value),recovery:[{period:'day',type:'recoverAll'}]};
+      item.system.uses={spent:0,max:String(value),recovery:[{period:spellRecoveryPeriods[recovery],type:'recoverAll'}]};
     }
     item.flags = item.flags ?? {};
     // source-derived: this stable project-owned marker preserves the exact

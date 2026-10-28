@@ -92,12 +92,15 @@ export interface CanonicalSpellComponentWaiver {
 
 interface CanonicalIndependentSpellUsageGroup {
   usage: 'at-will' | '1/day-each';
+  recovery?: 'day' | 'shortRest' | 'longRest';
   evidence: EvidenceRef[];
   spellRefs: CanonicalSpellRef[];
 }
 
 interface CanonicalDailySpellUsageGroup {
   usage: 'daily-each' | 'daily-shared';
+  /** Legacy usage labels retain their count/sharing meaning; omitted recovery means day. */
+  recovery?: 'day' | 'shortRest' | 'longRest';
   /** Source-explicit count. Its grant evidence must entail both count and sharing. */
   count: number;
   evidence: EvidenceRef[];

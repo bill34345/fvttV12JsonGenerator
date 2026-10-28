@@ -193,9 +193,10 @@ export function validateMonsterIntakeStructure(
     array(entry.usageGroups, `${path}/usageGroups`, (usage, at) => {
       if (!object(usage)) { invalid(at, 'Expected a spell usage group.'); return; }
       const daily = member(usage.usage, ['daily-each', 'daily-shared']), slots = usage.usage === 'prepared-slots';
-      shape(usage, at, ['usage', 'evidence', 'spellRefs', ...(daily ? ['count'] : []), ...(slots ? ['level', 'levelEvidence', 'slots', 'slotsEvidence'] : [])]);
+      shape(usage, at, ['usage', 'evidence', 'spellRefs', ...(daily ? ['count'] : []), ...(daily || usage.usage === '1/day-each' ? ['recovery'] : []), ...(slots ? ['level', 'levelEvidence', 'slots', 'slotsEvidence'] : [])]);
       enumeration(usage.usage, `${at}/usage`, ['at-will', '1/day-each', 'daily-each', 'daily-shared', 'prepared-cantrip', 'prepared-slots']); evidenceList(usage.evidence, `${at}/evidence`);
       if (daily) positive(usage.count, `${at}/count`);
+      if (daily || usage.usage === '1/day-each') optional(usage, 'recovery', at, (value, path) => enumeration(value, path, ['day', 'shortRest', 'longRest']));
       if (slots) { number(usage.level, `${at}/level`, 1, true, 9); positive(usage.slots, `${at}/slots`); evidenceList(usage.levelEvidence, `${at}/levelEvidence`); evidenceList(usage.slotsEvidence, `${at}/slotsEvidence`); }
       array(usage.spellRefs, `${at}/spellRefs`, (ref, refPath) => {
         if (!shape(ref, refPath, ['refId', 'identifier', 'originalName', 'englishName', 'chineseName', 'aliases', 'restrictions', 'evidence', 'reuseOf'])) return;

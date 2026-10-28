@@ -104,3 +104,36 @@ test.skipIf(!frozenRoot)('the Berserker failure-evidence excerpt can be replayed
   expect(fixture.evidence[0]).toMatchObject({content:before,formatRecovery:{kind:'complete-json-terminal-delimiters',addedTail:'}'}});
   expect(fixture.bodies).toHaveLength(1);expect(readFileSync(answerPath,'utf8')).toBe(before);expect((result.candidateResponse as any).result.artifactHash).toBe(hashArtifact(actor));
 });
+
+test('usage recovery is normalized once from only its associated explicit quote, preserving explicit values, members and counts',()=>{
+  for(const[quote,explicit,expected]of[
+    ['鬼婆必须完成一次长休后才能再次用此特质施展其所选的法术。',undefined,'longRest'],
+    ['The creature regains its uses after finishing a short rest.',undefined,'shortRest'],
+    ['Uses recover on finishing a Long Rest.',undefined,'longRest'],
+    ['Uses are regained after a Long Rest.',undefined,'longRest'],
+    ['每项1/日：某法术，效应持续至下一次长休。',undefined,undefined],
+    ['每项2/日：完成长休后才能再次施展该法术。',undefined,undefined],
+    ['Each spell 2/day. Uses recover after a Long Rest.',undefined,undefined],
+    ['某法术的效应持续至下一次长休。',undefined,undefined],
+    ['The effect lasts until the next Short Rest.',undefined,undefined],
+    ['无需完成长休后才能再次施展该法术。',undefined,undefined],
+    ['不需要完成一次短休后才能再次施展该法术。',undefined,undefined],
+    ['这些法术共享一次使用，不会在完成长休后恢复。',undefined,undefined],
+    ['这些法术共享一次使用，完成短休后不会恢复。',undefined,undefined],
+    ['这些法术共享一次使用，完成长休后不恢复。',undefined,undefined],
+    ['The creature does not require a Long Rest to use the spell again.',undefined,undefined],
+    ['Uses do not recover after finishing a Short Rest.',undefined,undefined],
+    ["Uses don't recover after finishing a Long Rest.",undefined,undefined],
+    ['Uses never recover on finishing a Long Rest.',undefined,undefined],
+    ['Once per day, or after a long rest.',undefined,undefined],
+    ['After a short rest or a long rest.',undefined,undefined],
+    ['Two uses.',undefined,undefined],
+    ['After a long rest.','day','day'],
+  ] as const){
+    const ir:any=buildValidLurkerIr();ir.creature.spellcasting=[{groupId:'group',featureName:'Long Rest title is not evidence',description:'A long rest in the description does not imply recovery.',ability:'wis',evidence:[],abilityEvidence:[],componentWaivers:[],usageGroups:[{usage:'daily-shared',count:2,...(explicit?{recovery:explicit}:{}),evidence:[{start:0,end:quote.length,quote}],spellRefs:[{refId:'light',identifier:'Light',originalName:'Light',aliases:[],restrictions:[],evidence:[]}]}]}];
+    const before=structuredClone(ir),normalized=normalizeMonsterIntakeProposal('Unrelated whole source mentions a day and a long rest.',ir),usage:any=normalized.creature.spellcasting![0]!.usageGroups[0];
+    expect(usage.recovery).toBe(expected);expect(usage.count).toBe(2);expect(usage.usage).toBe('daily-shared');expect(usage.spellRefs.map((ref:any)=>ref.refId)).toEqual(['light']);expect(ir).toEqual(before);
+    if(expected&&!explicit)expect(normalized.creature.candidateReview?.findings).toContainEqual(expect.objectContaining({path:'/creature/spellcasting/0/usageGroups/0/recovery'}));
+    expect(normalizeMonsterIntakeProposal('Unrelated whole source mentions a day and a long rest.',normalized)).toEqual(normalized);
+  }
+});

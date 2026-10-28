@@ -38,7 +38,7 @@ export type { ProviderResponseEvidence, ProviderResponseEvidenceSink } from './p
 
 export const INTAKE_PROMPT_VERSIONS = {
   discover: 'monster-intake-discover-v2-source-lines',
-  extract: 'monster-intake-extract-v50-input-field-policy',
+  extract: 'monster-intake-extract-v51-spell-recovery',
   review: 'monster-intake-review-v37-consolidated-full-ir',
   repair: 'monster-intake-repair-v42-vulnerability-notes',
 } as const;
@@ -681,6 +681,10 @@ function normalizeProjectionContainers(value:Record<string,unknown>,source:strin
       const usages=array(group,'usageGroups',`/creature/spellcasting/${index}/usageGroups`);
       group.usageGroups=usages.flatMap((entry,usageIndex)=>{
         const usage=asObject(entry);if(!usage){note(`/creature/spellcasting/${index}/usageGroups/${usageIndex}`,'此施法次数组按原始资料由GM处理。');return [];}
+        if(usage.recovery===undefined&&['daily-each','daily-shared','1/day-each'].includes(String(usage.usage))){
+          const recovery=declaredUsageRecovery(usage.evidence);
+          if(recovery){usage.recovery=recovery;note(`/creature/spellcasting/${index}/usageGroups/${usageIndex}/recovery`,'恢复周期按此次数组已关联的明确原文整理；次数与成员关系保持。');}
+        }
         const refs=array(usage,'spellRefs',`/creature/spellcasting/${index}/usageGroups/${usageIndex}/spellRefs`);
         usage.spellRefs=refs.map((entry,refIndex)=>{
           const ref=typeof entry==='string'?{originalName:entry}:asObject(entry)??{originalName:JSON.stringify(entry)};
@@ -727,6 +731,17 @@ function normalizeProjectionContainers(value:Record<string,unknown>,source:strin
     creature.candidateReview={version:1,findings:[...(Array.isArray(prior?.findings)?prior.findings:[]),...notes],proposal:{prior:prior?.proposal??null,original}};
     (value.uncertainties as unknown[]).push(...notes.map((finding,index)=>({id:`input-projection-${index+1}`, ...finding,blocking:false,evidence:[]})));
   }
+}
+
+function declaredUsageRecovery(evidence:unknown):'longRest'|'shortRest'|undefined{
+  const quotes=(Array.isArray(evidence)?evidence:[]).flatMap(entry=>typeof asObject(entry)?.quote==='string'?[asObject(entry)!.quote as string]:[]),text=quotes.join('\n');
+  const long=/\blong\s+rest\b|长休/iu.test(text),short=/\bshort\s+rest\b|短休/iu.test(text);
+  if(long===short||/\b(?:day|daily|dawn)\b|[/／]\s*日|每日|每天|每[一1]日|一天|一日|黎明/iu.test(text))return;
+  if(/(?:不必|无需|无须|不需要|不需|不须|不要求|不会)[^。；;.!?\n]*(?:长休|短休)|(?:长休|短休)[^。；;.!?\n]*不(?:会)?(?:恢复|重获|重新获得)|\b(?:not|never|cannot|can't|don't|doesn't|no)\b[^.!?;\n]*(?:\brest\b|\buses?\b)/iu.test(text))return;
+  const recast=/(?:完成|结束)(?:一(?:次|个))?(?:长休|短休)(?:后|之后)才(?:能|可以|可)(?:再次|再度)[^。；;.!?\n]*(?:施展|施放|使用)/u;
+  const restore=/(?:次数|共享[^。；;.!?\n]*使用)[^。；;.!?\n]*(?:完成|结束)(?:一(?:次|个))?(?:长休|短休)(?:后|之后)(?:恢复|重获)(?:[。；;.!?\n]|$)/u;
+  const english=/\b(?:uses?\b[^.!?;\n]*\b(?:(?:regain|recover)(?:s|ed|ing)?|restor(?:e|es|ed|ing))|(?:(?:regain|recover)(?:s|ed|ing)?|restor(?:e|es|ed|ing))\b[^.!?;\n]*\buses?)\b[^.!?;\n]*\b(?:after|on|upon)\b(?:\s+(?:finishing|completing))?\s+(?:(?:a|an|the)\s+)?(?:long|short)\s+rest\b/iu;
+  if(quotes.some(quote=>recast.test(quote)||restore.test(quote)||english.test(quote)))return long?'longRest':'shortRest';
 }
 
 function normalizeEmptyMonsterFields(value:Record<string,unknown>):void{

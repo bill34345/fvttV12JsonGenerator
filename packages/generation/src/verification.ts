@@ -1183,14 +1183,14 @@ interface StructuredUsesValue {
 /** Pending is a portable source contract, not runtime hydration. A rule reader
  * must remain inert; only the matched resolver-owned Cast spends this pool. */
 function pendingSpellParentUses(actor:any,item:any,key:string|undefined,uses:StructuredUsesValue):boolean{
-  if(!key||uses.period!=='day'||item?.flags?.fvttJsonGenerator?.spellcastingFeatureKey!==key)return false;
+  if(!key||!['day','longRest','shortRest'].includes(uses.period)||item?.flags?.fvttJsonGenerator?.spellcastingFeatureKey!==key)return false;
   const owner=actor?.flags?.[RESOLVER_MODULE_ID],checked=validatePortableSpellManifestStructure(owner?.spellManifest);
   if(!checked.ok||owner?.spellResolution?.status!=='pending'||owner.spellResolution.manifestHash!==hashManifest(checked.value))return false;
   const groups=checked.value.spellcastingGroups.filter(g=>g.featureItemKey===key);
   if(groups.length!==1)return false;
   const group=groups[0]!,link=item.flags?.[RESOLVER_MODULE_ID];
   if(link?.featureItemKey!==key||link?.groupId!==group.groupId||!group.spellRefs.length)return false;
-  if(group.spellRefs.some(ref=>ref.method!=='innate'||ref.uses?.value!==uses.max||ref.uses?.recovery!=='day'))return false;
+  if(group.spellRefs.some(ref=>ref.method!=='innate'||ref.uses?.value!==uses.max||ref.uses.recovery!==uses.period))return false;
   if(group.spellRefs.length===1?item.flags.fvttJsonGenerator.spellcastingUsesParent!==true||group.spellRefs[0]!.uses!.shared:group.spellRefs.some(ref=>ref.uses?.shared!==true))return false;
   const activities=Object.values(item.system?.activities??{}) as any[],reader=activities[0];
   return activities.length===1&&reader.type==='utility'&&reader.activation?.type===''&&reader.consumption?.spellSlot===false

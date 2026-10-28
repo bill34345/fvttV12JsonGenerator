@@ -152,8 +152,8 @@ function renderSpellManifest(ir: MonsterIntakeIR): Record<string, unknown> | und
           ? 'at-will'
           : usageGroup.usage === 'prepared-slots' ? 'prepared' : 'innate',
         ...(usageGroup.usage === '1/day-each'
-          ? { uses: { value: 1, recovery: 'day', shared: false } }
-          : usageGroup.usage==='daily-each'||usageGroup.usage==='daily-shared'?{uses:{value:usageGroup.count,recovery:'day',shared:usageGroup.usage==='daily-shared'}}:{}),
+          ? { uses: { value: 1, recovery: usageGroup.recovery ?? 'day', shared: false } }
+          : usageGroup.usage==='daily-each'||usageGroup.usage==='daily-shared'?{uses:{value:usageGroup.count,recovery:usageGroup.recovery ?? 'day',shared:usageGroup.usage==='daily-shared'}}:{}),
         ...(usageGroup.usage === 'prepared-slots' ? { castingLevel: usageGroup.level } : {}),
         ignoresMaterialComponents: group.componentWaivers.some((waiver) => waiver.component === 'material'),
         restrictions: ref.restrictions,
@@ -234,7 +234,7 @@ function renderSpellcastingFeature(group: CanonicalSpellcastingGroup): Record<st
       ...(group.activationType?{activationType:group.activationType}:{}),
       ...(group.recharge?{recharge:group.recharge}:{}),
       ...(group.legendaryCost!==undefined?{legendaryCost:group.legendaryCost}:{}),
-      ...(shared?.usage==='daily-shared'?{uses:{max:shared.count,period:'day' as const}}:{}),
+      ...(shared?.usage==='daily-shared'?{uses:{max:shared.count,period:shared.recovery??'day'}}:{}),
     }, 'trait'),
     // Source-derived machine linkage; it does not alter the visible description.
     ...(native?{spellcastingFeatureKey: group.groupId}:{}),

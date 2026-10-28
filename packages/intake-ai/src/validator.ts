@@ -46,7 +46,8 @@ const SPELLCASTING_GROUP_KEYS = new Set([
   'componentWaivers', 'usageGroups', 'activationType', 'manualGrants', 'recharge', 'legendaryCost', 'candidateReview', 'candidateCounters',
 ]);
 const SPELL_USAGE_GROUP_KEYS = new Set(['usage', 'evidence', 'spellRefs']);
-const DAILY_USAGE_GROUP_KEYS = new Set([...SPELL_USAGE_GROUP_KEYS, 'count']);
+const DAILY_USAGE_GROUP_KEYS = new Set([...SPELL_USAGE_GROUP_KEYS, 'count', 'recovery']);
+const SINGLE_USE_GROUP_KEYS = new Set([...SPELL_USAGE_GROUP_KEYS, 'recovery']);
 const PREPARED_SLOT_USAGE_GROUP_KEYS = new Set([
   ...SPELL_USAGE_GROUP_KEYS, 'level', 'levelEvidence', 'slots', 'slotsEvidence',
 ]);
@@ -832,7 +833,7 @@ function validateSpellcasting(
             method: atWill ? 'at-will' : prepared ? 'prepared' : 'innate',
             ...(prepared
               ? { castingLevel: usageGroup.level }
-              : atWill ? {} : { uses: { value: usageGroup.usage==='daily-each'||usageGroup.usage==='daily-shared'?usageGroup.count:1, recovery: 'day', shared: usageGroup.usage==='daily-shared' } }),
+              : atWill ? {} : { uses: { value: usageGroup.usage==='daily-each'||usageGroup.usage==='daily-shared'?usageGroup.count:1, recovery: 'recovery' in usageGroup ? usageGroup.recovery ?? 'day' : 'day', shared: usageGroup.usage==='daily-shared' } }),
             ignoresMaterialComponents: Array.isArray(group.componentWaivers)
               && group.componentWaivers.some((waiver) => isRecord(waiver) && waiver.component === 'material'),
           });
@@ -1197,7 +1198,8 @@ function validateSpellUsageGroup(
   }
   const allowedKeys = usageGroup.usage === 'prepared-slots'
     ? PREPARED_SLOT_USAGE_GROUP_KEYS
-    : usageGroup.usage==='daily-each'||usageGroup.usage==='daily-shared'?DAILY_USAGE_GROUP_KEYS:SPELL_USAGE_GROUP_KEYS;
+    : usageGroup.usage==='daily-each'||usageGroup.usage==='daily-shared'?DAILY_USAGE_GROUP_KEYS:usageGroup.usage==='1/day-each'?SINGLE_USE_GROUP_KEYS:SPELL_USAGE_GROUP_KEYS;
+  if (usageGroup.recovery !== undefined && !['day', 'shortRest', 'longRest'].includes(String(usageGroup.recovery))) finding('INVALID_SPELL_USE_GROUP', `${path}/recovery`, 'Spell recovery must be day, shortRest or longRest.', 'schema');
   if((usageGroup.usage==='daily-each'||usageGroup.usage==='daily-shared')&&(!Number.isSafeInteger(usageGroup.count)||usageGroup.count<1))finding('INVALID_SPELL_USE_GROUP',`${path}/count`,'Daily counts must be positive source integers.','schema');
   for (const key of Object.keys(usageGroup)) {
     if (allowedKeys.has(key)) continue;

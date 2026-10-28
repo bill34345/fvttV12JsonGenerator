@@ -7,6 +7,7 @@ import {
 } from '../../../src/core/spell-resolution';
 import {
   buildCastActivitySource,
+  SPELL_RECOVERY_PERIODS,
   literalRestrictionChatFlavor,
   computeManagedSourceHash,
   generatedResolverDocumentId,
@@ -129,7 +130,7 @@ export async function hydrateManagedSelection(input: HydrateManagedSelectionInpu
   if(parentUses&&(!ref.uses||group.spellRefs.length!==1||ref.uses.shared))throw new TypeError('Single-spell parent pool requires one matching daily ref.');
   if(ref.uses?.shared||parentUses){
     const uses=feature.system?.uses;
-    if(String(uses?.max)!==String(ref.uses!.value)||!uses?.recovery?.some((r:any)=>r.period==='day'&&r.type==='recoverAll')){
+    if(String(uses?.max)!==String(ref.uses!.value)||!uses?.recovery?.some((r:any)=>r.period===SPELL_RECOVERY_PERIODS[ref.uses!.recovery]&&r.type==='recoverAll')){
       throw new TypeError('Shared Cast requires the source-generated feature pool; refusing an absent or conflicting counter.');
     }
   }

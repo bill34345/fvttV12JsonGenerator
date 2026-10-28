@@ -145,8 +145,6 @@ describe('all-or-nothing hydration preflight', () => {
     ['at-will with uses', 'at-will', { value: 1, recovery: 'day', shared: false }],
     ['innate without uses', 'innate', undefined],
     ['unsafe integer uses', 'innate', { value: Number.MAX_SAFE_INTEGER + 1, recovery: 'day', shared: false }],
-    ['short-rest recovery', 'innate', { value: 1, recovery: 'shortRest', shared: false }],
-    ['long-rest recovery', 'innate', { value: 1, recovery: 'longRest', shared: false }],
   ] as const)('fails incompatible before planning unsupported uses contract: %s', (_label, method, uses) => {
     const unsupported = manifest();
     const ref = unsupported.spellcastingGroups[0]!.spellRefs[0]!;
@@ -163,6 +161,18 @@ describe('all-or-nothing hydration preflight', () => {
       path: '/spellcastingGroups/0/spellRefs/0/uses',
       blocking: true,
     }));
+  });
+
+  test.each(['shortRest', 'longRest'] as const)('accepts source-supported rest recovery: %s', recovery => {
+    const supported = manifest();
+    const ref = supported.spellcastingGroups[0]!.spellRefs[0]!;
+    ref.method = 'innate';
+    ref.uses = {value: 1, recovery, shared: false};
+    const before = structuredClone(supported);
+    const result = requireReady(plan({manifest: supported, candidates: [spell('fireball'), spell('cure-wounds')]}));
+    expect(result.plan.selections).toHaveLength(2);
+    expect(result.report.findings).toEqual([]);
+    expect(supported).toEqual(before);
   });
 
   test('accepts the complete supported Cast matrix without disturbing an unrelated ref', () => {

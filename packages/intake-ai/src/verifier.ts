@@ -330,7 +330,8 @@ function verifyPortableSpellResolution(
     if(shared?.usage!=='daily-shared')continue;
     const feature=items.find((item:any)=>item.flags?.[RESOLVER_MODULE_ID]?.groupId===group.groupId);
     const uses=feature?.system?.uses;
-    if(String(uses?.max)!==String(shared.count)||uses?.spent!==0||!uses?.recovery?.some((r:any)=>r.period==='day'&&r.type==='recoverAll'))add('SHARED_SPELL_POOL_DRIFT','/actor/items','Shared spell feature uses must preserve the exact source count and daily recovery.');
+    const period=({day:'day',shortRest:'sr',longRest:'lr'} as const)[shared.recovery??'day'];
+    if(String(uses?.max)!==String(shared.count)||uses?.spent!==0||!uses?.recovery?.some((r:any)=>r.period===period&&r.type==='recoverAll'))add('SHARED_SPELL_POOL_DRIFT','/actor/items','Shared spell feature uses must preserve the exact source count and recovery.');
   }
   items.forEach((item, index) => {
     const itemRecord = asRecord(item);

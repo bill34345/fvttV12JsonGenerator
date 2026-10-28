@@ -10,6 +10,7 @@ import {
 
 const FOUNDRY_ID = /^[A-Za-z0-9]{16}$/;
 const COMPENDIUM_SPELL_UUID = /^Compendium\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.Item\.[A-Za-z0-9]{16}$/;
+export const SPELL_RECOVERY_PERIODS = { day: 'day', shortRest: 'sr', longRest: 'lr' } as const;
 
 export interface ResolverGeneratedIdentity {
   manifestId: string;
@@ -45,7 +46,7 @@ export interface NativeCastActivitySource {
   uses?: {
     spent: 0;
     max: string;
-    recovery: [{ period: 'day'; type: 'recoverAll' }];
+    recovery: [{ period: 'day' | 'sr' | 'lr'; type: 'recoverAll' }];
   };
   duration?: {value:string;units:'hour'|'minute'|'day';concentration:false;override:true};
   target?: {
@@ -161,18 +162,18 @@ export function buildCastActivitySource(input: BuildCastActivitySourceInput): Bu
     if(pair.length!==2||pair.some(value=>!Number.isInteger(value)||value<1||value>6)||pair[1]!==6||pair[0]>pair[1]||input.ref.method!=='at-will'||input.ref.uses!==undefined)throw new TypeError('Conflicting parent Recharge casting contract.');
     consumption.targets=[{type:'itemUses',value:'1'}];
   }else if (input.ref.uses !== undefined) {
-    if (!Number.isSafeInteger(input.ref.uses.value)||input.ref.uses.value<1||input.ref.uses.recovery !== 'day') {
-      throw new TypeError('Native daily spell uses require a positive source-evidenced integer and day recovery.');
+    if (!Number.isSafeInteger(input.ref.uses.value)||input.ref.uses.value<1) {
+      throw new TypeError('Native spell uses require a positive source-evidenced integer.');
     }
     if(input.useParentItemPool){
       if(input.group.spellRefs.length!==1||input.ref.uses.shared||input.ref.method!=='innate')throw new TypeError('Single-spell parent uses require one independent daily ref.');
       consumption.targets=[{type:'itemUses',value:'1'}];
     }else if(input.ref.uses.shared){
       const shared=input.group.spellRefs.filter(ref=>ref.uses?.shared);
-      if(shared.length<2||shared.some(ref=>ref.uses!.value!==input.ref.uses!.value||ref.uses!.recovery!=='day'))throw new TypeError('Shared Cast refs must identify one consistent source pool.');
+      if(shared.length<2||shared.some(ref=>ref.uses!.value!==input.ref.uses!.value||ref.uses!.recovery!==input.ref.uses!.recovery))throw new TypeError('Shared Cast refs must identify one consistent source pool.');
       consumption.targets=[{type:'itemUses',value:'1'}];
     }else{
-      uses = { spent: 0, max: String(input.ref.uses.value), recovery: [{ period: 'day', type: 'recoverAll' }] };
+      uses = { spent: 0, max: String(input.ref.uses.value), recovery: [{ period: SPELL_RECOVERY_PERIODS[input.ref.uses.recovery], type: 'recoverAll' }] };
       consumption.targets = [{ type: 'activityUses', value: '1' }];
     }
   } else if (input.ref.method === 'innate') {
@@ -183,16 +184,17 @@ export function buildCastActivitySource(input: BuildCastActivitySourceInput): Bu
   const selfTarget = input.ref.restrictions.find(isExactSelfTarget);
   const handled=new Set<PreservedSpellRestriction>();
   let duration:NativeCastActivitySource['duration'];
-  let castingLevel=prepared?input.ref.castingLevel:undefined;
+  let castingLevel=input.ref.castingLevel;
   const sourceNotes:PreservedSpellRestriction[]=[];
   const componentNotes:PreservedSpellRestriction[]=[];
   const ignored=new Set(input.ref.ignoresMaterialComponents?['material']:[]);
   for(const restriction of input.ref.restrictions){
     if(restriction.kind!=='casting')continue;
     const text=restriction.text.normalize('NFKC').replace(/[*_]/gu,'').replace(/\s+/gu,' ').trim();
-    const level=/^\(?\s*level\s+([1-9])\s+version\s*\)?$/iu.exec(text);
+    const level=/^\(?\s*(?:level\s+([1-9])\s+version|([1-9一二三四五六七八九])\s*环\s*版本)\s*\)?$/iu.exec(text);
     if(level){
-      const value=Number(level[1]);
+      const token=level[1]??level[2]!;
+      const value=/^[1-9]$/u.test(token)?Number(token):'一二三四五六七八九'.indexOf(token)+1;
       if(restriction.value!==undefined&&restriction.value!==value)throw Error('Source spell casting level value contradicts its full restriction');
       if(castingLevel!==undefined&&castingLevel!==value)throw Error('Conflicting source spell casting levels');
       castingLevel=value;handled.add(restriction);continue;
