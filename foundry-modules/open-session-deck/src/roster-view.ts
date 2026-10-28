@@ -199,10 +199,10 @@ export class DeckRosterView {
     const dock = this.selection.selected.length ? this.#root?.querySelector<HTMLElement>('[data-osd-operations]')?.getBoundingClientRect() : undefined;
     const left = Math.max(12, list?.left ?? 12);
     const right = Math.min(viewport.innerWidth - 12, list?.right ?? viewport.innerWidth - 12);
-    const top = Math.max(12, list?.top ?? 12);
     const bottom = Math.min(viewport.innerHeight - 12, list?.bottom ?? viewport.innerHeight - 12, dock ? dock.top - 8 : viewport.innerHeight - 12);
+    const top = Math.max(12, Math.min(list?.top ?? 12, bottom - 320));
     popup.style.maxWidth = `${Math.max(0, right - left)}px`;
-    popup.style.maxHeight = `${Math.max(0, bottom - top)}px`;
+    popup.style.maxHeight = `${Math.max(0, Math.min(560, viewport.innerHeight * .75, bottom - top))}px`;
     const bounds = popup.getBoundingClientRect();
     popup.style.left = `${Math.max(left, Math.min(row.right + 8, right - bounds.width))}px`;
     popup.style.top = `${Math.max(top, Math.min(row.top, bottom - bounds.height))}px`;

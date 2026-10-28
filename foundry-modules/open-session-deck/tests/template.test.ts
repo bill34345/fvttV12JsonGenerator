@@ -62,6 +62,24 @@ function context() {
 }
 
 describe('Deck template semantics', () => {
+  test('shows an avatar-free read-only inspector with depleted slots and separate inventory counts', () => {
+    const value=context();value.party=[actorCard({death:{success:0,failure:0},inspection:{
+      passives:{perception:17,insight:13,investigation:11},
+      slots:[{key:'spell1',level:1,pact:false,value:0,max:3,depleted:true},{key:'pact',level:2,pact:true,value:1,max:2,depleted:false}],
+      abilities:[{key:'rage',name:'Rage',uses:{value:0,max:2,depleted:true}}],
+      inventory:[{key:'wand',name:'Wand',quantity:{value:2,depleted:false},uses:{value:3,max:7,depleted:false}},{key:'ammo',name:'Arrows',quantity:{value:0,depleted:true}}],
+    }})];
+    const document=new JSDOM(render(value)).window.document,popup=document.querySelector('[data-osd-party-row] [data-osd-inspection]')!;
+    expect(popup.querySelector('img')).toBeNull();
+    expect(popup.querySelector('.osd-inspection-passives')?.textContent).toContain('17');
+    expect(popup.querySelectorAll('.osd-inspection-slots li')).toHaveLength(2);
+    expect(popup.textContent).toContain('Pact Magic');expect(popup.textContent).toContain('Depleted');
+    expect(popup.querySelector('.osd-inspection-resource-values')?.textContent).toContain('0 / 2');
+    expect(popup.textContent).toContain('Quantity 2');expect(popup.textContent).toContain('Charges 3 / 7');
+    expect(popup.querySelector('.osd-inspection-body')?.querySelector('button,input,select,[data-osd-operation]')).toBeNull();
+    expect(popup.querySelectorAll('footer button')).toHaveLength(2);
+    expect(popup.querySelector('.osd-inspection-secondary')?.textContent).toContain('Death saves');
+  });
   test('shows party inspiration and exhaustion without selection in both surfaces, including zero and higher levels', () => {
     for (const isPopout of [false, true]) {
       const value = context();

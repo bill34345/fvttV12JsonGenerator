@@ -5,7 +5,7 @@ import { DeckColumnLayout } from './column-layout.ts';
 import { DeckRosterView } from './roster-view.ts';
 import { partySelectionKey } from './operation-selection.ts';
 import { DeckListEllipsis } from './list-ellipsis.ts';
-import type { DeckCommand, DeckSnapshot } from './types.ts';
+import type { DeckActorCard, DeckCommand, DeckSnapshot } from './types.ts';
 
 export interface DeckSurfaceHandlers {
   portraitThumbnail?(source: string): string;
@@ -34,17 +34,29 @@ function viewContext(snapshot: DeckSnapshot, isPopout: boolean): Record<string, 
     party: snapshot.party.map((card) => {
       const matches = snapshot.encounter.combatants.filter((combatant) => combatant.uuid === card.uuid);
       const combatant = matches.length === 1 ? matches[0] : undefined;
-      return { ...card, selectionKey: partySelectionKey(card, snapshot), tokenUuid: combatant?.tokenUuid,
+      return { ...card, inspection: inspectorContext(card), selectionKey: partySelectionKey(card, snapshot), tokenUuid: combatant?.tokenUuid,
         commands: { ...card.commands, locate: combatant?.commands.locate ?? card.commands.locate },
         characterControls: card.type === 'character', exhaustionControls: true, showDeath: Boolean(card.death && card.hp.value === 0) };
     }),
-    encounter: { ...snapshot.encounter, combatants: snapshot.encounter.combatants.map((card) => ({ ...card, exhaustionControls: card.characterControls, showDeath: Boolean(card.death && card.hp.value === 0) })) },
+    encounter: { ...snapshot.encounter, combatants: snapshot.encounter.combatants.map((card) => ({ ...card, inspection: inspectorContext(card), exhaustionControls: card.characterControls, showDeath: Boolean(card.death && card.hp.value === 0) })) },
     partyTabActive: snapshot.activeTab === 'party',
     encounterTabActive: snapshot.activeTab === 'encounter',
     compact: snapshot.density === 'compact',
     staleCount: snapshot.stalePinned.length + snapshot.staleHidden.length,
     currentCombatant,
     hasCurrentCombatant: Boolean(currentCombatant),
+  };
+}
+
+function inspectorContext(card: DeckActorCard): Record<string, unknown> | undefined {
+  const inspection = card.inspection;
+  if (!inspection) return undefined;
+  const resource = (entry: typeof inspection.abilities[number]) => ({ ...entry,
+    name: entry.labelKey ? game.i18n.localize(entry.labelKey) : entry.name,
+  });
+  return { ...inspection,
+    passives: Object.fromEntries(Object.entries(inspection.passives).map(([key,value]) => [key,value ?? '—'])),
+    abilities: inspection.abilities.map(resource), inventory: inspection.inventory.map(resource),
   };
 }
 

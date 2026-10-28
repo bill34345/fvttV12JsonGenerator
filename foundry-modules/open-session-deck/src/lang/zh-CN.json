@@ -198,5 +198,19 @@
   "OSD.Selection.Defeated": "战败／恢复",
   "OSD.Selection.Eligible": "适用 {count} 个生物",
   "OSD.Actor.HeroicInspiration": "英雄激励",
-  "OSD.Selection.MaxHpModifier": "最大生命修正"
+  "OSD.Selection.MaxHpModifier": "最大生命修正",
+  "OSD.Inspection.Readouts": "角色详情读数",
+  "OSD.Inspection.PassivePerception": "被动察觉",
+  "OSD.Inspection.PassiveInsight": "被动洞悉",
+  "OSD.Inspection.PassiveInvestigation": "被动调查",
+  "OSD.Inspection.SpellSlots": "法术环位",
+  "OSD.Inspection.PactSlots": "契约魔法",
+  "OSD.Inspection.SlotLevel": "环",
+  "OSD.Inspection.Depleted": "已耗尽",
+  "OSD.Inspection.AbilityUses": "能力与职业资源",
+  "OSD.Inspection.Recharge": "充能",
+  "OSD.Inspection.Inventory": "装备、消耗品与弹药",
+  "OSD.Inspection.Quantity": "数量",
+  "OSD.Inspection.Charges": "充能",
+  "OSD.Inspection.OtherReadouts": "其他读数"
 }

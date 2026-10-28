@@ -1,3 +1,4 @@
+import { projectInspectorReadouts } from './inspector-readouts.ts';
 import {
   MODULE_ID,
   SERVER_NEXT_FOUNDRY_VERSION,
@@ -240,6 +241,7 @@ export class Dnd5eAdapter {
       } : {}),
     };
     return {
+      inspection: projectInspectorReadouts(actor),
       uuid: String(actor.uuid),
       id: String(actor.id),
       name: String(actor.name ?? ''),

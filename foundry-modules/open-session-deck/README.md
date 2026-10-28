@@ -82,3 +82,10 @@ Build and install verification do not prove in-world behavior. Runtime acceptanc
 Licensed under the MIT License. No dnd5e or Daggerheart artwork, logos, or rules text is redistributed. Bundled Noto Serif SC fonts use SIL Open Font License 1.1; the original license is included at `assets/fonts/noto-serif-sc/OFL.txt`. Fonts load from local module assets.
 
 The interface uses desktop operation sizes: body and common action labels are about14–17px, with primary controls about32–36px high. More values retains AC and maximum-HP adjustments for eligible selected targets. Lists scroll independently while the selected-target strip and operation dock remain available. The unified dock, expanded batch scope and turn-selection reset require their own scoped runtime acceptance; earlier runtime results do not establish those new interactions.
+
+
+## Read-only creature inspection
+
+Name clicks open an avatar-free popover without changing batch targets. It shows HP, AC, prepared Passive Perception/Insight/Investigation, ordinary spell slots and separate Pact Magic slots, finite ability/class pools, equipment charges, and consumable/ammunition quantities. Shared pools appear once; stack quantity and charges remain separate. Depleted resources stay visible with zero, while absent pools produce no empty rows. Base HP, modifiers and death saves remain in Other readouts.
+
+Sections are expanded by default. The content scrolls within a height limit while sheet/location actions remain at the bottom. All added resource readouts are display-only; open the native sheet to consume or recover them. Missing prepared values are not inferred as zero, and independently stored third-party counters are not synthesized. Runtime acceptance for these new readouts targets local Next14.368/dnd5e6.0.6 only.

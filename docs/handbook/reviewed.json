@@ -160,9 +160,9 @@
     "note": "已核6.0.6 Rat NPC原生卡上的十个严格来源Spell/Cast/引用、一次Midi Use资源变化、Undo/普通重载和完整owned缓存清理。不推广纯Core无Midi、真实传送落点、全法术/全部Activity或生产。 AGENTS同步限定接受及其余Cast/Review边界。 整合时仅清理新增文件末尾多余空行，共享视图/TE事件逻辑及用户步骤不变；已核差异，不扩大运行接受。"
   },
   "open-session-deck": {
-    "fingerprint": "57ae9ab69359fe36ee1c30dd8f1122e43b1cfeb468ffad3292f45f91602ff25c",
+    "fingerprint": "1489cbc845e0376a18f82b0492dfe58212ec8e4f90c6b2d1f113ea7e15c09128",
     "reviewedOn": "2026-10-28",
-    "note": "R30底部视觉核对：标题/图标/箭头与数值步进区恢复原稿。步进只修改待填数值并遵循原最小值，仍须点原执行按钮；README/manual关于输入和执行的步骤保持准确，业务命令与撤回未变。"
+    "note": "核对本轮无头像只读详情说明；窄窗修复只在列表高度不足320px时向上展开，保持内部滚动和底栏按钮，用户入口、读数范围和只读限制无新增变化。"
   },
   "session-monitor": {
     "fingerprint": "84f2b29042e6cedac47459937a6b9564f73c19e383b44cf514c7c06402ab9af1",

@@ -198,5 +198,19 @@
   "OSD.Selection.Defeated": "Defeated / restore",
   "OSD.Selection.Eligible": "Applies to {count} creatures",
   "OSD.Actor.HeroicInspiration": "Heroic inspiration",
-  "OSD.Selection.MaxHpModifier": "Max HP modifier"
+  "OSD.Selection.MaxHpModifier": "Max HP modifier",
+  "OSD.Inspection.Readouts": "Creature details",
+  "OSD.Inspection.PassivePerception": "Passive Perception",
+  "OSD.Inspection.PassiveInsight": "Passive Insight",
+  "OSD.Inspection.PassiveInvestigation": "Passive Investigation",
+  "OSD.Inspection.SpellSlots": "Spell slots",
+  "OSD.Inspection.PactSlots": "Pact Magic",
+  "OSD.Inspection.SlotLevel": "level",
+  "OSD.Inspection.Depleted": "Depleted",
+  "OSD.Inspection.AbilityUses": "Abilities and class resources",
+  "OSD.Inspection.Recharge": "Recharge",
+  "OSD.Inspection.Inventory": "Equipment, consumables and ammunition",
+  "OSD.Inspection.Quantity": "Quantity",
+  "OSD.Inspection.Charges": "Charges",
+  "OSD.Inspection.OtherReadouts": "Other readouts"
 }

@@ -137,7 +137,25 @@ describe('unified operation selection', () => {
     expect(Number.parseFloat(popup.style.left)+300).toBeLessThanOrEqual(1130);
     expect(popup.style.maxHeight).toBe('350px');
     f.root.querySelector<HTMLButtonElement>('[data-osd-clear-selection]')!.click();button.click();
-    expect(popup.style.top).toBe('440px');expect(popup.style.maxHeight).toBe('745px');
+    expect(popup.style.top).toBe('440px');expect(popup.style.maxHeight).toBe('560px');
+    view.dispose();f.dom.window.close();
+  });
+
+  test('expands above a short list to keep the inspector readable without covering the dock', () => {
+    const f=fixture(),view=new DeckRosterView();
+    const list=f.dom.window.document.createElement('div');list.className='osd-roster';
+    const row=f.root.querySelector('[value="combatant:hero"]')!.closest('article')!;row.before(list);list.append(row);
+    const button=row.querySelector<HTMLButtonElement>('[data-osd-inspect]')!,popup=row.querySelector<HTMLElement>('[data-osd-inspection]')!;
+    list.getBoundingClientRect=()=>({left:52,right:762,top:180,bottom:357,width:710,height:177} as DOMRect);
+    button.getBoundingClientRect=()=>({left:90,right:400,top:270,bottom:306,width:310,height:36} as DOMRect);
+    popup.getBoundingClientRect=()=>({width:420,height:320} as DOMRect);
+    f.root.querySelector<HTMLElement>('[data-osd-operations]')!.getBoundingClientRect=()=>({top:368} as DOMRect);
+    Object.defineProperties(f.dom.window,{innerWidth:{value:784},innerHeight:{value:608}});
+    view.bind(f.root,snapshot());toggle(f.root,'[value="combatant:hero"]');button.click();
+    expect(popup.style.maxHeight).toBe('320px');
+    expect(popup.style.top).toBe('37px');
+    expect(Number.parseFloat(popup.style.top)+320).toBeLessThanOrEqual(360);
+    expect(view.selection.selected).toHaveLength(1);
     view.dispose();f.dom.window.close();
   });
 

@@ -1,3 +1,5 @@
+import type { InspectorReadouts } from './inspector-readouts.ts';
+
 export type DeckOpenMode = 'panel' | 'popout';
 export type DeckTab = 'party' | 'encounter';
 export type DeckDensity = 'comfortable' | 'compact';
@@ -72,6 +74,7 @@ export interface DeckPartyFolder {
 }
 
 export interface DeckActorCard {
+  readonly inspection?: InspectorReadouts;
   readonly uuid: string;
   readonly id: string;
   readonly name: string;

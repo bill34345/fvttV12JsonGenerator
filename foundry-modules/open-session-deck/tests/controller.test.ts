@@ -75,6 +75,17 @@ function installControllerGlobals() {
 }
 
 describe('DeckController behavior', () => {
+  test('refreshes read-only inventory resources after native item changes', async () => {
+    const fixture=installControllerGlobals(),controller=new DeckController();let builds=0;
+    const original=controller.adapter.buildSnapshot.bind(controller.adapter);
+    controller.adapter.buildSnapshot=()=>{builds++;return original();};
+    await controller.start();
+    for(const hook of ['createItem','updateItem','deleteItem']) {
+      fixture.hookCallbacks.get(hook)!();
+      await new Promise((resolve)=>setTimeout(resolve,0));
+    }
+    expect(builds).toBe(4);
+  });
   test('panel close and reopen do not add invalidation subscriptions', async () => {
     const fixture = installControllerGlobals();
     const controller = new DeckController();

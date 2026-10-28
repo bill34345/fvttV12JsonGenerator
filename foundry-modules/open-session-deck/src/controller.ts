@@ -205,6 +205,7 @@ export class DeckController implements DeckModuleApi, DeckSurfaceHandlers {
   private registerInvalidationHooks(): void {
     for (const hook of [
       'createActor', 'updateActor', 'deleteActor',
+      'createItem', 'updateItem', 'deleteItem',
       'createActiveEffect', 'updateActiveEffect', 'deleteActiveEffect',
       'createCombat', 'updateCombat', 'deleteCombat',
       'createCombatant', 'updateCombatant', 'deleteCombatant',
