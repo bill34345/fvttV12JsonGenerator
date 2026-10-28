@@ -72,6 +72,7 @@ function runtime(options: Record<string, any> = {}): Dnd5eRuntime {
         { id: 'falling', name: 'Falling', pseudo: true },
       ],
       DND5E: { conditionTypes: { exhaustion: { levels: 6 } } },
+      specialStatusEffects: { DEFEATED: 'dead' },
     },
     canvas: options.canvas ?? { scene: { id: 'scene' }, dimensions: { size: 100 }, animatePan: async () => {} },
     resolveUuid: options.resolveUuid ?? (async (uuid: string) => actors.find((entry: any) => entry.uuid === uuid) ?? options.uuidMap?.[uuid]),
@@ -80,6 +81,44 @@ function runtime(options: Record<string, any> = {}): Dnd5eRuntime {
 }
 
 describe('Dnd5eAdapter snapshots', () => {
+  test('projects the shared thumbnail without changing the actor image source', () => {
+    const hero = actor('hero');
+    const source = runtime({ actors: [hero] });
+    const requested: string[] = [];
+    source.portrait = (path) => { requested.push(path); return 'blob:small-portrait'; };
+    expect(new Dnd5eAdapter(source).buildSnapshot().party[0]!.img).toBe('blob:small-portrait');
+    expect(requested).toEqual(['/hero.webp']);
+    expect(hero.img).toBe('/hero.webp');
+  });
+
+  test('uses Chinese UI labels, omits vision detection markers and keeps named custom effects', async () => {
+    const translations = await Bun.file(new URL('../src/lang/zh-CN.json', import.meta.url)).json() as Record<string, string>;
+    const hero = actor('hero', {
+      statuses: ['poisoned', 'bloodied', 'thinking', 'dazed', 'flanked', 'custom-shield'],
+      effects: [{ name: '法术护盾', statuses: new Set(['custom-shield']) }],
+    });
+    const source = runtime({ actors: [hero] });
+    source.localize = (key) => translations[key] ?? key;
+    source.config.statusEffects[0].name = '中毒';
+    source.config.statusEffects.push({ id: 'dazed', name: 'Dazed' }, { id: 'flanked', name: 'Flanked' });
+    const before = [...hero.statuses];
+    const value = new Dnd5eAdapter(source).buildSnapshot();
+    const labels = Object.fromEntries(value.party[0]!.statuses.map((entry) => [entry.id, entry.label]));
+    expect(labels).toEqual({ poisoned: '中毒', bloodied: '浴血', dazed: '恍惚', flanked: '受夹击', 'custom-shield': '法术护盾' });
+    expect(value.statusOptions.find((entry) => entry.id === 'dazed')?.label).toBe('恍惚');
+    expect(value.statusOptions.find((entry) => entry.id === 'flanked')?.label).toBe('受夹击');
+    expect(value.statusOptions.some((entry) => entry.id === 'bloodied')).toBeFalse();
+    expect([...hero.statuses]).toEqual(before);
+  });
+
+  test('keeps native derived bloodied localized on an English client', async () => {
+    const translations = await Bun.file(new URL('../src/lang/en.json', import.meta.url)).json() as Record<string, string>;
+    const source = runtime({ actors: [actor('hero', { statuses: ['bloodied', 'thinking'] })] });
+    source.localize = (key) => translations[key] ?? key;
+    Object.assign(source.config.DND5E, { bloodied: { name: 'DND5E.ConditionsBloodied', img: 'systems/dnd5e/icons/svg/statuses/bloodied.svg' } });
+    expect(new Dnd5eAdapter(source).buildSnapshot().party[0]!.statuses).toEqual([{ id: 'bloodied', label: 'Bloodied', icon: 'systems/dnd5e/icons/svg/statuses/bloodied.svg' }]);
+  });
+
   test('requires exact Foundry and dnd5e versions', () => {
     expect(supportError(runtime())).toBeUndefined();
     expect(supportError(runtime({ foundryVersion: '14.368', systemVersion: '6.0.2' }))).toBeUndefined();
@@ -236,6 +275,67 @@ describe('Dnd5eAdapter snapshots', () => {
 });
 
 describe('Dnd5eAdapter commands', () => {
+  test('sets heroic inspiration and concentration to explicit states without flipping already-matching targets', async () => {
+    const calls: unknown[] = [];
+    const hero = actor('hero', { inspiration: 0 });
+    hero.update = async (change: any) => {
+      calls.push(['update', change]);
+      if (Object.hasOwn(change, 'system.attributes.inspiration')) hero.system.attributes.inspiration = change['system.attributes.inspiration'];
+    };
+    hero.toggleStatusEffect = async (...args: unknown[]) => {
+      calls.push(['toggleStatusEffect', ...args]);
+      if ((args[1] as { active: boolean }).active) hero.concentration.effects.add({});
+      else hero.concentration.effects.clear();
+    };
+    (hero as any).endConcentration = async () => { calls.push(['endConcentration']); hero.concentration.effects.clear(); };
+    const adapter = new Dnd5eAdapter(runtime({ actors: [hero] }));
+    for (const active of [false, true, true, false, false]) await adapter.execute({ id: 'actor.toggle-inspiration', targetUuid: hero.uuid, active });
+    for (const active of [false, true, true, false, false]) await adapter.execute({ id: 'actor.toggle-concentration', targetUuid: hero.uuid, active });
+    expect(calls).toEqual([
+      ['update', { 'system.attributes.inspiration': 1 }], ['update', { 'system.attributes.inspiration': 0 }],
+      ['toggleStatusEffect', 'concentrating', { active: true }], ['endConcentration'],
+    ]);
+  });
+
+  test('keeps NPC general resources available but rejects character-only inspiration and death saves', async () => {
+    const calls: unknown[] = [];
+    const npc = actor('npc', { type: 'npc', calls, effects: { get: () => undefined } });
+    const adapter = new Dnd5eAdapter(runtime({ actors: [npc], foundryVersion: '14.368', systemVersion: '6.0.6' }));
+    const card = adapter.buildSnapshot().party[0]!;
+    expect(card.commands.toggleInspiration.enabled).toBeFalse();
+    expect(card.commands.setDeathSave.enabled).toBeFalse();
+    expect(card.commands.exhaustionUp.enabled).toBeTrue();
+    expect(card.commands.toggleConcentration.enabled).toBeTrue();
+    await expect(adapter.execute({ id: 'actor.toggle-inspiration', targetUuid: npc.uuid, active: true })).rejects.toThrow('player characters');
+    await expect(adapter.execute({ id: 'actor.set-death-save', targetUuid: npc.uuid, field: 'success', value: 1 })).rejects.toThrow('player characters');
+    expect(calls).toEqual([]);
+  });
+
+  test('applies explicit visibility and defeat states to mixed combatants instead of toggling their original states', async () => {
+    const calls: unknown[] = [];
+    const first = { id: 'first', actor: actor('npc-first', { type: 'npc', calls }), hidden: true, isDefeated: true,
+      update: async (change: { defeated: boolean }) => { first.isDefeated = change.defeated; } };
+    const second = { id: 'second', actor: actor('npc-second', { type: 'npc', calls }), hidden: false, isDefeated: false,
+      update: async (change: { defeated: boolean }) => { second.isDefeated = change.defeated; } };
+    const combatants = [first, second];
+    const combat = { uuid: 'Combat.mixed', combatants,
+      updateEmbeddedDocuments: async (_type: string, changes: any[]) => {
+        calls.push(['updateEmbeddedDocuments', changes]);
+        for (const change of changes) combatants.find((entry) => entry.id === change._id)!.hidden = change.hidden;
+      } };
+    const adapter = new Dnd5eAdapter(runtime({ combat }));
+    for (const active of [true, true, false, false]) {
+      for (const target of combatants) {
+        await adapter.execute({ id: 'combat.toggle-visibility', combatUuid: combat.uuid, combatantId: target.id, active });
+        await adapter.execute({ id: 'combat.toggle-defeated', combatUuid: combat.uuid, combatantId: target.id, active });
+      }
+      expect(combatants.map((entry) => entry.hidden)).toEqual([!active, !active]);
+      expect(combatants.map((entry) => entry.isDefeated)).toEqual([active, active]);
+    }
+    expect(calls.filter((entry: any) => entry[0] === 'toggleStatusEffect').map((entry: any) => entry[2].active))
+      .toEqual([true, true, true, true, false, false, false, false]);
+  });
+
   test('uses dnd5e-native damage, healing, temp HP, update, and status APIs', async () => {
     const calls: unknown[] = [];
     const hero = actor('hero', { calls, inspiration: 0, exhaustion: 2 });
@@ -418,7 +518,7 @@ describe('Dnd5eAdapter commands', () => {
     await adapter.execute({ id: 'actor.set-ac-modifier', targetUuid: hero.uuid, value: 2 });
     await adapter.execute({ id: 'actor.set-death-save', targetUuid: hero.uuid, field: 'failure', value: 3 });
     expect(calls).toEqual([
-      ['applyDamage', 6],
+      ['update', { 'system.attributes.hp.value': 4 }],
       ['update', { 'system.attributes.hp.temp': 1 }],
       ['update', { 'system.attributes.hp.tempmax': -15, 'system.attributes.hp.value': 5 }],
       ['toggleStatusEffect', 'poisoned', { active: false }],
@@ -430,6 +530,71 @@ describe('Dnd5eAdapter commands', () => {
       }]],
       ['update', { 'system.attributes.death.failure': 3 }],
     ]);
+  });
+
+  test('marks and unmarks defeat through the native combatant flag and configured overlay without changing HP', async () => {
+    const calls: unknown[] = [];
+    const npc = actor('npc', { type: 'npc', calls });
+    const combatant = { id: 'turn', actor: npc, isDefeated: false,
+      update: async (change: { defeated: boolean }) => { calls.push(['combatant.update', change]); combatant.isDefeated = change.defeated; } };
+    const combat = { uuid: 'Combat.one', combatants: [combatant] };
+    const adapter = new Dnd5eAdapter(runtime({ combat }));
+    for (const defeated of [true, false]) {
+      await adapter.execute({ id: 'combat.toggle-defeated', combatUuid: combat.uuid, combatantId: combatant.id });
+      expect(combatant.isDefeated).toBe(defeated);
+    }
+    expect(calls).toEqual([
+      ['toggleStatusEffect', 'dead', { overlay: true, active: true }], ['combatant.update', { defeated: true }],
+      ['toggleStatusEffect', 'dead', { overlay: true, active: false }], ['combatant.update', { defeated: false }],
+    ]);
+    expect(npc.system.attributes.hp.value).toBe(10);
+    expect(adapter.projectActor(npc, [], { combatantId: 'turn', sources: ['encounter'], inCombat: true }).commands.toggleDefeated.enabled).toBeTrue();
+  });
+
+  test('finishes defeat overlays before asynchronous combatant hooks can create the same fixed-ID status', async () => {
+    for (const type of ['character', 'npc']) {
+      let dead = false, pending = false, overlay = false, creations = 0;
+      let release: (() => void) | undefined;
+      let hook: Promise<unknown> | undefined;
+      const creature = actor(type, { type });
+      creature.toggleStatusEffect = async (...args: unknown[]) => {
+        const options = args[1] as { active: boolean; overlay?: boolean };
+        if (dead === options.active) return;
+        if (options.active) {
+          if (pending) throw new Error('The _id [dnd5edead0000000] already exists');
+          pending = true;
+          await new Promise<void>((resolve) => { release = resolve; });
+          creations += 1;
+          overlay = options.overlay === true;
+          pending = false;
+        }
+        dead = options.active;
+      };
+      const combatant = { id: 'turn', actor: creature, isDefeated: false,
+        update: async (change: { defeated: boolean }) => {
+          combatant.isDefeated = change.defeated;
+          // Monks Combat Details' updateCombatant hook is asynchronous and Hooks does not await it.
+          if (dead !== change.defeated) hook = creature.toggleStatusEffect('dead', { active: change.defeated });
+        } };
+      const combat = { uuid: 'Combat.hook', combatants: [combatant] };
+      const adapter = new Dnd5eAdapter(runtime({ combat }));
+      const mark = adapter.execute({ id: 'combat.toggle-defeated', combatUuid: combat.uuid, combatantId: combatant.id, active: true })
+        .then(() => undefined, (error) => error);
+      await Promise.resolve();
+      await Promise.resolve();
+      release!();
+      expect(await mark).toBeUndefined();
+      await hook;
+      expect(creations).toBe(1);
+      expect(dead).toBeTrue();
+      expect(overlay).toBeTrue();
+      expect(combatant.isDefeated).toBeTrue();
+      await adapter.execute({ id: 'combat.toggle-defeated', combatUuid: combat.uuid, combatantId: combatant.id, active: false });
+      await hook;
+      expect(dead).toBeFalse();
+      expect(combatant.isDefeated).toBeFalse();
+      expect(creature.system.attributes.hp.value).toBe(10);
+    }
   });
 
   test('preserves decimal initiative, swaps exact values, and rolls only missing NPC initiative privately', async () => {

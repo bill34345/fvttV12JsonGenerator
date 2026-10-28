@@ -23,12 +23,19 @@ import type {
 } from './types.ts';
 
 export interface Dnd5eRuntime {
+  portrait?(source: string): string;
   game: any;
   config: any;
   canvas: any;
   resolveUuid(uuid: string): Promise<any>;
   localize(key: string): string;
 }
+
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  bloodied: 'OSD.Status.Bloodied',
+  dazed: 'OSD.Status.Dazed',
+  flanked: 'OSD.Status.Flanked',
+};
 
 export function createGlobalRuntime(): Dnd5eRuntime {
   return {
@@ -153,6 +160,7 @@ export class Dnd5eAdapter {
         characterControls: String(actor.type) === 'character',
         hidden: Boolean(combatant.hidden),
         revealed: Boolean(combatant.flags?.[MODULE_ID]?.revealed),
+        defeated: Boolean(combatant.isDefeated),
       }, statusOptions);
     }).filter(Boolean) as DeckActorCard[];
 
@@ -165,6 +173,7 @@ export class Dnd5eAdapter {
       system: { id: String(runtimeGame.system?.id ?? ''), version: String(runtimeGame.system?.version ?? '') },
       scene: scene ? { id: String(scene.id), name: String(scene.name ?? '') } : null,
       onlineUsers: users.filter((user) => user.active).length,
+      initiativeIcon: this.runtime.config.Combat?.initiativeIcon,
       party,
       encounter: {
         active: Boolean(combat),
@@ -205,7 +214,7 @@ export class Dnd5eAdapter {
     const maxModifier = finiteNumber(hp.tempmax);
     const effectiveMax = Math.max(0, baseMax + maxModifier);
     const value = finiteNumber(hp.value);
-    const statuses = actorStatuses(actor, this.statusMap());
+    const statuses = actorStatuses(actor, this.statusMap(), this.runtime.localize);
     const activeStatusIds = new Set(statuses.map((status) => status.id));
     const players = users.filter((user) => !user.isGM && (String(user.character?.uuid ?? '') === String(actor.uuid) || Number(actor.ownership?.[user.id] ?? 0) >= 3))
       .map((user) => ({ id: String(user.id), name: String(user.name ?? ''), active: Boolean(user.active) }));
@@ -216,6 +225,7 @@ export class Dnd5eAdapter {
     const exhaustionMax = Number(this.runtime.config.DND5E?.conditionTypes?.exhaustion?.levels);
     const canLocate = Boolean(options.canLocate);
     const combat = this.runtime.game.combat;
+    const combatant = options.combatantId ? collectionValues(combat?.combatants).find((entry) => String(entry.id) === options.combatantId) : undefined;
     const commands: DeckActorCommands = {
       ...actorCommands(actor, exhaustion, exhaustionMax, statusOptions.length > 0, canLocate,
         serverNext
@@ -225,13 +235,16 @@ export class Dnd5eAdapter {
         setInitiative: available(typeof combat?.setInitiative === 'function', 'OSD.Actions.SetInitiative', 'OSD.Errors.NativeApiUnavailable'),
         rollInitiative: available(typeof combat?.rollInitiative === 'function', 'OSD.Actions.RollInitiative', 'OSD.Errors.NativeApiUnavailable'),
         toggleVisibility: available(typeof combat?.updateEmbeddedDocuments === 'function', 'OSD.Actions.ToggleVisibility', 'OSD.Errors.NativeApiUnavailable'),
+        toggleDefeated: available(typeof combatant?.update === 'function' && typeof actor.toggleStatusEffect === 'function'
+          && Boolean(this.runtime.config.specialStatusEffects?.DEFEATED), 'OSD.Actions.ToggleDefeated', 'OSD.Errors.NativeApiUnavailable'),
       } : {}),
     };
     return {
       uuid: String(actor.uuid),
       id: String(actor.id),
       name: String(actor.name ?? ''),
-      img: String(actor.img ?? 'icons/svg/mystery-man.svg'),
+      img: this.runtime.portrait?.(String(actor.img ?? 'icons/svg/mystery-man.svg')) ?? String(actor.img ?? 'icons/svg/mystery-man.svg'),
+      portraitSource: String(actor.img ?? 'icons/svg/mystery-man.svg'),
       type: String(actor.type ?? ''),
       players,
       playerNames: players.map((player) => player.name).join(', '),
@@ -268,6 +281,7 @@ export class Dnd5eAdapter {
       characterControls: options.characterControls ?? String(actor.type) === 'character',
       hidden: options.hidden,
       revealed: options.revealed,
+      defeated: options.defeated,
     };
   }
 
@@ -280,8 +294,7 @@ export class Dnd5eAdapter {
         const hp = actor.system?.attributes?.hp ?? {};
         const effectiveMax = Math.max(0, finiteNumber(hp.max) + finiteNumber(hp.tempmax));
         const desired = boundedInteger(command.value, 0, effectiveMax, 'Current HP');
-        const delta = finiteNumber(hp.value) - desired;
-        if (delta !== 0) await actor.applyDamage(delta);
+        if (finiteNumber(hp.value) !== desired) await actor.update({ 'system.attributes.hp.value': desired });
       } else if (command.id === 'actor.set-temp-hp') {
         const desired = nonNegativeInteger(command.value, 'Temporary HP');
         const current = finiteNumber(actor.system?.attributes?.hp?.temp);
@@ -305,15 +318,21 @@ export class Dnd5eAdapter {
         const current = new Set(collectionValues(actor.statuses).map(String)).has(command.statusId);
         if (current !== command.active) await actor.toggleStatusEffect(command.statusId, { active: command.active });
       } else if (command.id === 'actor.toggle-concentration') {
-        await toggleActorConcentration(actor);
+        await toggleActorConcentration(actor, command.active);
       } else if (command.id === 'actor.set-death-save') {
+        if (actor.type !== 'character' || !actor.system?.attributes?.death) throw new Error('Death saves are available for player characters only.');
         if (command.field !== 'success' && command.field !== 'failure') throw new Error('Death save field is invalid.');
         const value = boundedInteger(command.value, 0, 3, 'Death save');
         await actor.update({ [`system.attributes.death.${command.field}`]: value });
       } else if (command.id === 'actor.damage') await actor.applyDamage(positiveInteger(command.amount));
       else if (command.id === 'actor.heal') await actor.applyDamage(-positiveInteger(command.amount));
       else if (command.id === 'actor.temp-hp') await actor.applyTempHP(positiveInteger(command.amount));
-      else if (command.id === 'actor.toggle-inspiration') await actor.update({ 'system.attributes.inspiration': actor.system.attributes.inspiration ? 0 : 1 });
+      else if (command.id === 'actor.toggle-inspiration') {
+        if (actor.type !== 'character') throw new Error('Heroic inspiration is available for player characters only.');
+        const current = Boolean(actor.system.attributes.inspiration);
+        const desired = command.active ?? !current;
+        if (current !== desired) await actor.update({ 'system.attributes.inspiration': desired ? 1 : 0 });
+      }
       else if (command.id === 'actor.adjust-exhaustion') {
         const delta = command.delta === -1 ? -1 : command.delta === 1 ? 1 : NaN;
         if (!Number.isFinite(delta)) throw new Error('Exhaustion delta must be -1 or 1.');
@@ -370,9 +389,20 @@ export class Dnd5eAdapter {
         const hiddenUpdates = ids.filter((id) => npcIds.has(id)).map((id) => ({ _id: id, hidden: true, [`flags.${MODULE_ID}.revealed`]: false }));
         if (hiddenUpdates.length > 0) await combat.updateEmbeddedDocuments('Combatant', hiddenUpdates);
         await combat.rollInitiative(ids, { messageOptions: { rollMode: 'gmroll' } });
+      } else if (command.id === 'combat.toggle-defeated') {
+        const combatant = resolveCombatant(combat, command.combatantId);
+        const defeatedId = this.runtime.config.specialStatusEffects?.DEFEATED;
+        if (!defeatedId || typeof combatant.update !== 'function' || typeof combatant.actor?.toggleStatusEffect !== 'function') {
+          throw new Error(this.runtime.localize('OSD.Errors.NativeApiUnavailable'));
+        }
+        const defeated = command.active ?? !combatant.isDefeated;
+        // Combatant update hooks can also create this fixed-ID effect without awaiting it.
+        // Finish the status first so those hooks observe the requested state instead of racing a second create.
+        await combatant.actor.toggleStatusEffect(defeatedId, { overlay: true, active: defeated });
+        await combatant.update({ defeated });
       } else if (command.id === 'combat.toggle-visibility') {
         const combatant = resolveCombatant(combat, command.combatantId);
-        const hidden = !Boolean(combatant.hidden);
+        const hidden = typeof command.active === 'boolean' ? !command.active : !Boolean(combatant.hidden);
         await combat.updateEmbeddedDocuments('Combatant', [{
           _id: combatant.id,
           hidden,
@@ -431,18 +461,25 @@ export class Dnd5eAdapter {
   statusOptions(): DeckStatusOption[] {
     return collectionValues(this.runtime.config.statusEffects)
       .filter((status) => status?.id && !status.pseudo && status.id !== 'concentrating' && status.id !== 'exhaustion' && !String(status.id).startsWith('exhaustion-'))
-      .map((status) => ({ id: String(status.id), label: this.runtime.localize(String(status.name ?? status.label ?? status.id)), icon: status.img ? String(status.img) : undefined }))
+      .map((status) => this.statusDefinition(status))
       .sort((a, b) => a.label.localeCompare(b.label, this.runtime.game.i18n?.lang ?? 'en'));
   }
 
   private statusMap(): Map<string, DeckStatusOption> {
-    return new Map(collectionValues(this.runtime.config.statusEffects)
+    const statuses = new Map(collectionValues(this.runtime.config.statusEffects)
       .filter((status) => status?.id)
-      .map((status) => [String(status.id), {
-        id: String(status.id),
-        label: this.runtime.localize(String(status.name ?? status.label ?? status.id)),
-        icon: status.img ? String(status.img) : undefined,
-      }]));
+      .map((status) => [String(status.id), this.statusDefinition(status)]));
+    if (!statuses.has('bloodied')) statuses.set('bloodied', this.statusDefinition({ ...this.runtime.config.DND5E?.bloodied, id: 'bloodied' }));
+    return statuses;
+  }
+
+  private statusDefinition(status: any): DeckStatusOption {
+    const id = String(status.id);
+    return {
+      id,
+      label: this.runtime.localize(STATUS_LABEL_KEYS[id] ?? String(status.name ?? status.label ?? id)),
+      icon: status.img ? String(status.img) : undefined,
+    };
   }
 
   private assertCommandAllowed(): void {
@@ -481,21 +518,22 @@ function actorCommands(actor: any, exhaustion: number, exhaustionMax: number, ha
     damage: available(canApplyDamage, 'OSD.Actions.Damage', 'OSD.Errors.NativeApiUnavailable'),
     heal: available(canApplyDamage, 'OSD.Actions.Heal', 'OSD.Errors.NativeApiUnavailable'),
     tempHp: available(canApplyTempHp, 'OSD.Actions.TempHP', 'OSD.Errors.NativeApiUnavailable'),
-    toggleInspiration: available(canUpdate, 'OSD.Actions.Inspiration', 'OSD.Errors.NativeApiUnavailable'),
+    toggleInspiration: available(canUpdate && actor.type === 'character', 'OSD.Actions.Inspiration', 'OSD.Errors.NativeApiUnavailable'),
     exhaustionDown: available(hasExhaustionModel && exhaustion > 0, 'OSD.Actions.ExhaustionDown', hasExhaustionModel ? 'OSD.Errors.ExhaustionMinimum' : 'OSD.Errors.NativeApiUnavailable'),
     exhaustionUp: available(hasExhaustionModel && exhaustion < exhaustionMax, 'OSD.Actions.ExhaustionUp', hasExhaustionModel ? 'OSD.Errors.ExhaustionMaximum' : 'OSD.Errors.NativeApiUnavailable'),
     toggleStatus: available(canToggleStatus, 'OSD.Actions.ToggleStatus', hasStatuses ? 'OSD.Errors.NativeApiUnavailable' : 'OSD.Errors.NoControllableStatuses'),
     openSheet: available(canOpenSheet, 'OSD.Actions.OpenSheet', 'OSD.Errors.SheetUnavailable'),
     locate: available(canLocate, 'OSD.Actions.Locate', 'OSD.Errors.TokenNotActive'),
-    setHp: available(canApplyDamage, 'OSD.Actions.SetHP', 'OSD.Errors.NativeApiUnavailable'),
+    setHp: available(canUpdate, 'OSD.Actions.SetHP', 'OSD.Errors.NativeApiUnavailable'),
     setTempHp: available(canApplyTempHp || canUpdate, 'OSD.Actions.SetTempHP', 'OSD.Errors.NativeApiUnavailable'),
     setMaxModifier: available(canUpdate, 'OSD.Actions.SetMaxModifier', 'OSD.Errors.NativeApiUnavailable'),
     setAcModifier: available(canEditEmbedded, 'OSD.Actions.SetACModifier', 'OSD.Errors.NativeApiUnavailable'),
     toggleConcentration: available(typeof actor.toggleStatusEffect === 'function', 'OSD.Actions.ToggleConcentration', 'OSD.Errors.NativeApiUnavailable'),
-    setDeathSave: available(canUpdate && Boolean(actor.system?.attributes?.death), 'OSD.Actions.SetDeathSave', 'OSD.Errors.NativeApiUnavailable'),
+    setDeathSave: available(canUpdate && actor.type === 'character' && Boolean(actor.system?.attributes?.death), 'OSD.Actions.SetDeathSave', 'OSD.Errors.NativeApiUnavailable'),
     setInitiative: available(false, 'OSD.Actions.SetInitiative', 'OSD.Errors.NoActiveCombat'),
     rollInitiative: available(false, 'OSD.Actions.RollInitiative', 'OSD.Errors.NoActiveCombat'),
     toggleVisibility: available(false, 'OSD.Actions.ToggleVisibility', 'OSD.Errors.NoActiveCombat'),
+    toggleDefeated: available(false, 'OSD.Actions.ToggleDefeated', 'OSD.Errors.NoActiveCombat'),
   };
 }
 
@@ -525,9 +563,17 @@ function emptyEncounter(reasonKey: string): DeckSnapshot['encounter'] {
   return { active: false, round: 0, turn: -1, displayTurn: 0, combatants: [], commands: emptyEncounterCommands(reasonKey) };
 }
 
-function actorStatuses(actor: any, map: Map<string, DeckStatusOption>): DeckStatusOption[] {
+function actorStatuses(actor: any, map: Map<string, DeckStatusOption>, localize: Dnd5eRuntime['localize']): DeckStatusOption[] {
   const ids = new Set(collectionValues(actor.statuses).map((id) => String(id)));
-  return [...ids].map((id) => map.get(id) ?? { id, label: id }).sort((a, b) => a.label.localeCompare(b.label));
+  const effects = collectionValues(actor.effects).filter((effect) => !effect.disabled && !effect.isSuppressed);
+  return [...ids].flatMap((id) => {
+    const registered = map.get(id);
+    if (registered) return [registered];
+    const effect = effects.find((entry) => collectionValues(entry.statuses).includes(id));
+    // Vision5e adds detection markers such as `thinking` to actor.statuses without a UI condition or effect.
+    if (!effect?.name) return [];
+    return [{ id, label: localize(String(effect.name)), icon: effect.img ? String(effect.img) : undefined }];
+  }).sort((a, b) => a.label.localeCompare(b.label));
 }
 
 function actorAcModifier(actor: any): number {
@@ -552,8 +598,10 @@ async function setActorAcModifier(actor: any, value: number): Promise<void> {
   else await actor.createEmbeddedDocuments('ActiveEffect', [data]);
 }
 
-async function toggleActorConcentration(actor: any): Promise<void> {
+async function toggleActorConcentration(actor: any, active?: boolean): Promise<void> {
   const effects = collectionValues(actor.concentration?.effects);
+  const desired = active ?? effects.length === 0;
+  if (desired === (effects.length > 0)) return;
   if (effects.length > 0) {
     if (typeof actor.endConcentration === 'function') await actor.endConcentration();
     else {

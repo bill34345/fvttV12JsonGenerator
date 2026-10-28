@@ -46,6 +46,7 @@ export interface DeckActorCommands {
   readonly setInitiative: DeckCommandAvailability;
   readonly rollInitiative: DeckCommandAvailability;
   readonly toggleVisibility: DeckCommandAvailability;
+  readonly toggleDefeated: DeckCommandAvailability;
 }
 
 export interface DeckEncounterCommands {
@@ -75,6 +76,7 @@ export interface DeckActorCard {
   readonly id: string;
   readonly name: string;
   readonly img: string;
+  readonly portraitSource?: string;
   readonly type: string;
   readonly players: readonly DeckPlayer[];
   readonly playerNames: string;
@@ -111,6 +113,7 @@ export interface DeckActorCard {
   readonly characterControls?: boolean;
   readonly hidden?: boolean;
   readonly revealed?: boolean;
+  readonly defeated?: boolean;
 }
 
 export interface DeckRosterManagerEntry {
@@ -136,6 +139,8 @@ export interface DeckEncounter {
 }
 
 export interface DeckSnapshot {
+  readonly initiativeIcon?: Readonly<{ icon: string; hover: string }>;
+  readonly undo?: Readonly<{ count: number; label: string; available: boolean; reason?: string }>;
   readonly supported: boolean;
   readonly supportError?: string;
   readonly coreVersion: string;
@@ -178,6 +183,7 @@ export type DeckCommandId =
   | 'combat.roll-initiative'
   | 'combat.roll-npc-initiative'
   | 'combat.toggle-visibility'
+  | 'combat.toggle-defeated'
   | 'token.locate'
   | 'roster.set-folder'
   | 'roster.toggle-pin'
@@ -207,6 +213,8 @@ export interface DeckCommandResult {
 }
 
 export interface DeckModuleApi {
+  portraitCacheStats(): Promise<import('./portrait-thumbnails.ts').PortraitThumbnailStats | undefined>;
+  undo(): Promise<void>;
   openPanel(): Promise<void>;
   openPopout(): Promise<void>;
   openHelp(): Promise<void>;

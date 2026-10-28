@@ -9,6 +9,8 @@ export function createDeckApi(resolveController: () => DeckModuleApi | undefined
   }
 
   return Object.freeze({
+    portraitCacheStats: () => requireController().portraitCacheStats(),
+    undo: () => requireController().undo(),
     openPanel: () => requireController().openPanel(),
     openPopout: () => requireController().openPopout(),
     openHelp: () => requireController().openHelp(),

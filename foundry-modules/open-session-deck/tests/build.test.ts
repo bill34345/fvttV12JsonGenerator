@@ -26,10 +26,31 @@ describe('Open Session Deck build', () => {
     const result = await buildModule();
     expect(result.files).toContain('scripts/index.js');
     expect(result.files).toContain('templates/deck.hbs');
+    expect(result.files).toContain('templates/popout.html');
+    const popoutDocument = await readFile(resolve(result.moduleRoot, 'templates/popout.html'), 'utf8');
+    expect(popoutDocument).toContain('<!doctype html>');
+    expect(popoutDocument).toBe(await readFile(resolve(import.meta.dir, '../src/templates/popout.html'), 'utf8'));
     expect(result.files).toContain('styles/open-session-deck.css');
+    for (const name of ['paper', 'leather', 'bookcloth', 'rivet', 'paper-edge', 'tab']) {
+      expect(result.files).toContain(`assets/ledger-${name}.webp`);
+      expect(await readFile(resolve(result.moduleRoot, `assets/ledger-${name}.webp`))).toEqual(await readFile(resolve(import.meta.dir, `../src/assets/ledger-${name}.webp`)));
+    }
     expect(result.files).toContain('lang/en.json');
     expect(result.files).toContain('lang/zh-CN.json');
     expect(result.files).toContain('LICENSE');
+    const fontRoot = 'assets/fonts/noto-serif-sc';
+    expect(result.files).toContain(`${fontRoot}/OFL.txt`);
+    expect(await readFile(resolve(result.moduleRoot, fontRoot, 'OFL.txt'), 'utf8')).toContain('SIL OPEN FONT LICENSE');
+    const fontCss = await readFile(resolve(result.moduleRoot, fontRoot, 'font-faces.css'), 'utf8');
+    expect(fontCss).toContain('OSD Ledger Serif');
+    const fontFiles = new Set([...fontCss.matchAll(/url\(['"]?([^)'"\s]+)['"]?\)/g)].map((match) => match[1]!));
+    expect([...fontFiles].every((file) => !/^https?:\/\//.test(file))).toBe(true);
+    expect(fontFiles.size).toBeGreaterThan(10);
+    for (const fontFile of fontFiles) {
+      expect(result.files).toContain(`${fontRoot}/${fontFile.replace(/^\.\//, '')}`);
+      const bytes = await readFile(resolve(result.moduleRoot, fontRoot, fontFile));
+      expect(bytes.subarray(0, 4).toString()).toBe('wOF2');
+    }
     expect(await readFile(resolve(result.moduleRoot, 'LICENSE'), 'utf8')).toContain('Permission is hereby granted');
     const browser = await readFile(resolve(result.moduleRoot, 'scripts/index.js'), 'utf8');
     expect(browser).not.toMatch(/node:|process\.env|@fvtt-json-generator\//i);

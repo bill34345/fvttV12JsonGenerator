@@ -26,6 +26,7 @@ export async function buildModule(): Promise<{ moduleRoot: string; zipPath: stri
   await cp(resolve(source, 'module.json'), resolve(moduleRoot, 'module.json'));
   await cp(resolve(source, 'lang'), resolve(moduleRoot, 'lang'), { recursive: true });
   await cp(resolve(source, 'styles'), resolve(moduleRoot, 'styles'), { recursive: true });
+  await cp(resolve(source, 'assets'), resolve(moduleRoot, 'assets'), { recursive: true });
   await cp(resolve(source, 'templates'), resolve(moduleRoot, 'templates'), { recursive: true });
   await cp(resolve(root, 'README.md'), resolve(moduleRoot, 'README.md'));
   await cp(resolve(root, 'README.zh-CN.md'), resolve(moduleRoot, 'README.zh-CN.md'));

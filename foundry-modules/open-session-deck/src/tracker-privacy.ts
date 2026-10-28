@@ -1,8 +1,20 @@
 import { MODULE_ID, SETTINGS } from './constants.ts';
 
+const pendingPrivacyWrites = new Set<Promise<unknown>>();
+
+export async function waitForTrackerPrivacyWrites(): Promise<void> {
+  while (pendingPrivacyWrites.size) await Promise.all([...pendingPrivacyWrites]);
+}
+
+function trackPrivacyWrite(write: unknown): void {
+  const pending = Promise.resolve(write);
+  pendingPrivacyWrites.add(pending);
+  void pending.then(() => pendingPrivacyWrites.delete(pending), () => pendingPrivacyWrites.delete(pending));
+}
+
 export function registerTrackerPrivacyHooks(): void {
-  Hooks.on('preCreateCombatant', (combatant: any, data: any) => {
-    if (!game.user?.isGM) return;
+  Hooks.on('preCreateCombatant', (combatant: any, data: any, options: any) => {
+    if (!game.user?.isGM || options?.openSessionDeckUndo) return;
     const actor = combatant.actor;
     const joinedRound = Math.max(1, Number(combatant.parent?.round ?? game.combat?.round ?? 1));
     const update: Record<string, unknown> = { [`flags.${MODULE_ID}.joinedRound`]: joinedRound };
@@ -10,18 +22,18 @@ export function registerTrackerPrivacyHooks(): void {
     combatant.updateSource?.(update);
   });
 
-  Hooks.on('createCombatant', (combatant: any) => {
-    if (!game.user?.isGM) return;
+  Hooks.on('createCombatant', (combatant: any, options: any) => {
+    if (!game.user?.isGM || options?.openSessionDeckUndo) return;
     if (combatant.getFlag?.(MODULE_ID, 'joinedRound') == null) {
-      void combatant.setFlag?.(MODULE_ID, 'joinedRound', Math.max(1, Number(combatant.parent?.round ?? 1)));
+      trackPrivacyWrite(combatant.setFlag?.(MODULE_ID, 'joinedRound', Math.max(1, Number(combatant.parent?.round ?? 1))));
     }
   });
 
-  Hooks.on('updateCombat', (combat: any) => {
-    if (!game.user?.isGM) return;
+  Hooks.on('updateCombat', (combat: any, _changes: any, options: any) => {
+    if (!game.user?.isGM || options?.openSessionDeckUndo) return;
     const current = combat.combatant;
     if (!current?.actor || !isFriendlyActor(current.actor)) return;
-    if (!current.getFlag?.(MODULE_ID, 'hasActed')) void current.setFlag?.(MODULE_ID, 'hasActed', true);
+    if (!current.getFlag?.(MODULE_ID, 'hasActed')) trackPrivacyWrite(current.setFlag?.(MODULE_ID, 'hasActed', true));
   });
 
   Hooks.on('renderCombatTracker', (_app: unknown, element: unknown) => {
