@@ -5,24 +5,24 @@
     "note": "实际Web验证标准Actor检测、非accepted完整预览和下载链接；正常HTTP取得文件与登记/预览全等。修正核对页和job日志旧阻断文案，保留Chrome工具未返回本地路径的独立限制，Item契约保持。"
   },
   "markdown-convert": {
-    "fingerprint": "f8f476b3be05a37713d673c8f4f38ba1958252325c49a42b9bf68fdf365dce54",
+    "fingerprint": "90fb7fcff8144b299660c390721368b36093fe6bcd8cc08967ee2273a518bcf7",
     "reviewedOn": "2026-10-27",
-    "note": "已对照Actor与Item转换分支：已有Actor保留候选路径，后置诊断不撤回；旧Actor文件和蓝图数量长度上限已移除，Item接受规则保持。"
+    "note": "对照官方状态正式链、Activity链接、实际Apply与移除证据：补齐所有官方状态模板，复杂触发由GM按效果原文选择；增加无投骰聊天应用、力竭官方等级及Midi局部适配说明，明确原世界不迁移和未验收生命周期；保留旧样本历史事实。"
   },
   "monster-intake": {
-    "fingerprint": "9f1e0f1df466dde1130d48ca9fd1cf7149069a818ebe1937e6fbc2cfc22a8913",
+    "fingerprint": "369e933a9877f075290637b3c9df07ae09b50f34106ce8316e7020aba9e4cfb3",
     "reviewedOn": "2026-10-27",
-    "note": "已对照orchestrator与source-text分支：原答、规范源和Actor路径贯通，完整Markdown复用文本转换；不自动review或repair，不以局部问题整只否决。"
+    "note": "对照官方状态正式链、Activity链接、实际Apply与移除证据：补齐所有官方状态模板，复杂触发由GM按效果原文选择；增加无投骰聊天应用、力竭官方等级及Midi局部适配说明，明确原世界不迁移和未验收生命周期；保留旧样本历史事实。"
   },
   "item-intake": {
-    "fingerprint": "d7697b3fd795a4b5ef7852f423b1a9efb4a7849dcdbcb99588e72b3c4da787f9",
+    "fingerprint": "7430f8ce70504dfe98bbc9b1e1436b4419d59d33980a3dc4e5a02c14be4e5006",
     "reviewedOn": "2026-10-27",
-    "note": "已对照Item独立生成及Web分支，仍要求accepted正式输出和自身法术/资源契约；Actor交付放宽不改变本条。"
+    "note": "本轮共享中间类型增加生物官方状态声明；独立Item接受／恢复契约未变，定向正式链保留独立Item等价证据，Species入口未扩展。核对现有步骤与边界无需改写。"
   },
   "species-intake": {
-    "fingerprint": "a94d592e19fd5da6a183b6348f451e097a737e34ee7e6e6bf14245fcb03701b5",
+    "fingerprint": "d165b977dabe04f709ffa3496944a6cc2a074bbac1fbb2cf902f1351509ec9b9",
     "reviewedOn": "2026-10-27",
-    "note": "Species provider、ledger及build未改，accepted来源与V12/V14目标约束保持；Monster类型变化不作用于Species。"
+    "note": "本轮共享中间类型增加生物官方状态声明；独立Item接受／恢复契约未变，定向正式链保留独立Item等价证据，Species入口未扩展。核对现有步骤与边界无需改写。"
   },
   "document-extraction": {
     "fingerprint": "1fadc1f19a0a8346a15306bb247d90ae4b2bbaf709177747d8aded524ec25bcc",
@@ -60,14 +60,14 @@
     "note": "逐项保留当前run/validationSelection/保留检查/Mirror及450秒门限；整合Selected Token首次安装白名单、去除自动合并重复目录项。历史测试仅显式只读复用已锁定输入，源码/lock/patch仍当前候选；本地整合与推送/实装/实机边界分开。"
   },
   "verification-development": {
-    "fingerprint": "ca9c3cec5cbcc53829a0512ed8b96179b5a3b3facdbbb7469c82b960568066ea",
+    "fingerprint": "a737c1b1a42e27ba4c01efe0217ecbcb77d3248276a65e211efb7cb8ab57a30a",
     "reviewedOn": "2026-10-27",
-    "note": "已对照生成保留和来源验证：差异报告不决定Actor存在；离线、界面、世界写入及宏失败证据分别记录，未把工具缺口写成通过。"
+    "note": "本轮新增检查沿用现有安全wrapper，仅官方状态生成、导入聊天、冻结回放及失败驱动定向用例；无新测试工具或全仓矩阵门槛，开发入口说明保持正确。"
   },
   "human-encounter-intake": {
-    "fingerprint": "6fee4b9e3e5c19d050e401164d479fb923204ef42a147f4c2ab7723e8f620f4c",
+    "fingerprint": "2c8aa0cb94469e6d458a492479b0db54aa1627f4271b71f53e915cca3b574eb1",
     "reviewedOn": "2026-10-27",
-    "note": "已对照逐成员交付、cached artifact及独立宏结算；取消全员available、强制重生成等获取条件，缺失成员和控制问题保留。"
+    "note": "对照官方状态正式链、Activity链接、实际Apply与移除证据：补齐所有官方状态模板，复杂触发由GM按效果原文选择；增加无投骰聊天应用、力竭官方等级及Midi局部适配说明，明确原世界不迁移和未验收生命周期；保留旧样本历史事实。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -125,9 +125,9 @@
     "note": "已逐项核对本次纯命名调整：功能统一为生物生成，关联对象入口为生物与召唤物，JSON/ZIP为生物导入文件；召唤生物/物件属于生成本体的一部分。翻译工具仅引用新名称，Custom Conditions连接步骤与界面一致，验证入口补入既有导航/恢复测试；生成、GM确认、协议和权限边界保持。历史截图/PDF保留旧界面并作说明。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "5febc4a560edf2a54ebae58b77f0b3f757044f83201471a7905356aece97043c",
+    "fingerprint": "1716f50e03abe251dd522bd399a2380138528ba7bd7cf68f2e652fae3bbfbd1c",
     "reviewedOn": "2026-10-27",
-    "note": "46项计划验收收尾：补完Web实际UI和HTTP文件获取，明确撤回助手新增的download.path完成前置，原超时/投骰/内存store边界保留。所有自有测试文档、浏览器页及Web服务清理，Mirror保留。"
+    "note": "补录最终历史证据哈希保持与手册file协议拒绝：手册内容/生成一致性已核对，Chrome未取得本地HTML截图；Foundry实际Apply证据不受影响，不宣称手册视觉通过。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "2e22086b12b7f6d9730eadbd9e7951eb07dcb66beeff6a68a6e0dadf036c06d1",
@@ -135,9 +135,9 @@
     "note": "框选同步0.2.0精确Next配对与各Actor增减一级语义、首次安装/权限限制一致，构建5文件与现装一致，复用原限定HUD接受。WMP真实Cleave事件先后缺口已定点修补并276回归通过，已装新build而实机复验待收据，仍不扩大完整八精通。"
   },
   "monster-spell-resolver": {
-    "fingerprint": "9e9cec67b65f4e8942b1abd46c745d0b162068d83f2ce19b854b2aff997ab454",
-    "reviewedOn": "2026-10-26",
-    "note": "已对照 Cast 构建器、5.3.3 原生属性语义及 Naga 实际保存：闭合 casting 声明只免除列出的 S/M，保留 V；条件/未知词交 GM，冲突拒绝。已有 hydrated Actor 不自动更新，仅本批同 Actor 正常 Undo/Resolve，未扩成全世界迁移。"
+    "fingerprint": "637a6b7b66cc2bbcd78205445a83d66d66a5064974ef3f23ff724c23f9f6d513",
+    "reviewedOn": "2026-10-27",
+    "note": "已对照实机发现的计划器day-only漏改及最终实现：计划器、Cast、hydrator一致接受day/sr/lr；新增完整计划定向检查与两条旧拒绝断言修正，526无关测试过滤。实际配置/原生MCP/刷新核对通过，零投骰，原始失败和Effect为空的缺口保持。"
   },
   "open-session-deck": {
     "fingerprint": "136bb0745de37ef6c710902f47f48710e5b9c0589fe8bffe5dc4c106b08a4505",
