@@ -10,6 +10,10 @@ The public API exposes CRUD for trigger definitions and `api.subscribe(listener)
 
 Calling the unsubscribe function returned by `subscribe` or `subscribeExternal` skips callbacks that have not started, including those already captured for the current delivery. It does not cancel a running callback or reverse its side effects.
 
+`api.capabilities.awaitIdle === 1` exposes `await api.whenIdle()` to drain queued Actor/Combat processing, subscriber work and appended jobs, and external event deliveries. It neither disables triggers nor freezes future events. Call it outside event subscribers and trigger Macros to avoid awaiting the current queue. The API retains active-GM authorization; Deck undo uses it to include asynchronous Injury reactions before recording or restoring differences.
+
+`api.ready` reports that the runtime has started. `combatRewind: 1` exposes active-GM-only `captureCombatUndo(combat)` and `reconcileCombatUndo(combat, checkpoint)`: capture the combat's in-memory deduplication checkpoint before an operation, then restore it and notify condition consumers after restoring the documents. Existing turn checkpoints remain intact; advancing again after undo can resolve the restored turn normally. These APIs do not restore documents and must be called outside subscribers.
+
 The active GM sees a warning when stored trigger data cannot be safely rewritten. The manager keeps a failed edit in its text area and shows the save error. If existing world trigger data uses a future schema, contains invalid entries, or has unknown fields, valid definitions remain readable but edits are refused so the original setting is preserved for review. Definition changes from one client are serialized; Foundry settings do not provide an atomic compare-and-swap across clients or direct setting writes.
 
 Actor event `before`/`after` remain source snapshots. Characters with automatic hit points may persist `hp.max: null`; HP consumers use the optional synchronously captured `preparedHp.before`/`preparedHp.after` numeric pair. Embedded Item and ActiveEffect changes refresh that separate prepared snapshot without replacing a pending Actor HP transition.

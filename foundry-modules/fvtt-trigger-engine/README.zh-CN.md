@@ -42,6 +42,10 @@ await api.create({
 
 调用 `subscribe` 或 `subscribeExternal` 返回的退订函数后，尚未开始的回调会被跳过，包括已经进入当前交付队列的回调。已经开始执行的回调仍由调用者负责完成，退订不会撤销它产生的副作用。
 
+`api.capabilities.awaitIdle === 1` 表示提供 `await api.whenIdle()`：等待已排队的Actor/Combat处理、订阅者及其追加任务和外部事件交付完成。它不禁用触发器，不回滚数据，也不冻结之后的新事件。仅在订阅回调和触发器宏之外调用，避免等待自己所在的队列；入口继续检查当前主GM。Deck撤回据此等待伤势等联动完成后再记录和恢复差异。
+
+`api.ready` 表示运行时已启动。`combatRewind: 1` 提供 `captureCombatUndo(combat)` 和 `reconcileCombatUndo(combat, checkpoint)`：在操作前保存该战斗的内存去重检查点，文档恢复后还原检查点并通知自定义状态刷新对应缓存。既有回合的去重记录保留，同一回合再次前进可按恢复后的状态正常结算。这些接口不恢复文档，也不在订阅回调内调用。
+
 等待订阅者、回合回调或宏解析期间若 active GM 改变，旧客户端停止后续分发和宏动作；`triggerContext.updateDocument()` 也会重新验权。已经开始执行的用户宏无法被引擎中断，宏内直接调用文档写入仍须自行检查当前权限。此修复已有定点回归，ServerNext 的双 GM 实机接受仍待完成。
 
 回合结算等待 Foundry 原生 `combatTurnChange`，即核心回合与效果生命周期完成之后；不使用定时器猜测完成时间。快速切换回合时，同一次转换的结束、开始事件会一起按序入队。新建或导入 Actor 会建立更新前快照，便于消费者识别第一次 HP 变化。

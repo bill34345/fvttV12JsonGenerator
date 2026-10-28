@@ -81,6 +81,10 @@ export class WeaponEffectRuntime {
     return (['sap', 'slow', 'vex'] as const).map((kind) => ({ kind, label: LABELS[kind] }));
   }
 
+  async whenIdle(): Promise<void> {
+    while (this.#queues.size) await Promise.all([...this.#queues.values()]);
+  }
+
   stop(): void {
     this.#queues.clear();
     this.#knownActors.clear();

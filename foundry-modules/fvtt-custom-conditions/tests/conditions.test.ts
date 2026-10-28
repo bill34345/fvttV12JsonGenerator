@@ -405,6 +405,20 @@ describe('condition runtime', () => {
     expect(Object.keys(target.flags['fvtt-custom-conditions'].turns)).toHaveLength(1);
   });
 
+  test('a combat rewind invalidates timed-condition memory after document checkpoints were restored',async()=>{
+    const {runtime,target,handlers}=runtimeFixture(actor(),{
+      game:{version:'14.368',system:{id:'dnd5e',version:'6.0.6'}},
+      Roll:class{total=4;async evaluate(){return this;}},
+    });
+    await runtime.apply(target,'bleeding',{formula:'4',mode:'hpLoss',timing:'turnEnd'});
+    const flags=structuredClone(target.flags);
+    const context={event:{type:'combatTurnEnd',documentType:'Actor'},document:target,combatUuid:'Combat.test',key:'Combat.test:end:1:0',round:1,turn:0};
+    await runtime.handleTriggerEvent(context);await runtime.handleTriggerEvent(context);expect(target.system.attributes.hp.value).toBe(16);
+    target.system.attributes.hp.value=20;for(const key of Object.keys(target.flags))delete target.flags[key];Object.assign(target.flags,flags);
+    handlers.get('fvtt-trigger-engine.combatRewound')({combatUuid:'Combat.test',combat:{combatants:[{actor:target}]}});
+    await runtime.handleTriggerEvent(context);await runtime.handleTriggerEvent(context);expect(target.system.attributes.hp.value).toBe(16);
+  });
+
   test('accumulates final fire and bludgeoning damage and removes Frozen at its threshold', async () => {
     const gm = { id: 'gm', isGM: true, active: true, targets: new Set() };
     const handlers = new Map<string, any>();

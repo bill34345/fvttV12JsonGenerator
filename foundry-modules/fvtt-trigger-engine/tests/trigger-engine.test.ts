@@ -131,6 +131,32 @@ describe('Actor documentUpdate runtime', () => {
   const runtimes: TriggerEngineRuntime[] = [];
   afterEach(async () => { for (const runtime of runtimes.splice(0)) await runtime.stop(); });
 
+  test('GM undo restoration refreshes snapshots without reapplying rules and a player cannot spoof it',async()=>{
+    const gm={id:'gm',isGM:true,active:true},target=actor(10);
+    const runtime=new TriggerEngineRuntime({globals:globalsFor(gm,[target]),storage:new MemoryTriggerStorage()});runtimes.push(runtime);await runtime.start();
+    const contexts:any[]=[];runtime.subscribe(context=>{contexts.push(context);});
+    target.set('system.attributes.hp.value',9);
+    const restored=await runtime.handleDocumentUpdate(target,{'system.attributes.hp.value':9},{openSessionDeckUndo:true},'gm');
+    expect(restored.skippedReason).toBe('undo-restore');expect(contexts).toHaveLength(0);
+    target.set('system.attributes.hp.value',8);
+    await runtime.handleDocumentUpdate(target,{'system.attributes.hp.value':8},{openSessionDeckUndo:true},'player');
+    expect(contexts).toHaveLength(1);expect(contexts[0].before.system.attributes.hp.value).toBe(9);expect(contexts[0].after.system.attributes.hp.value).toBe(8);
+  });
+
+  test('whenIdle waits for queued listeners and a second document enqueued by them',async()=>{
+    const gm={id:'gm',isGM:true,active:true},first=actor(10,'Actor.first'),second=actor(10,'Actor.second');
+    const runtime=new TriggerEngineRuntime({globals:globalsFor(gm,[first,second]),storage:new MemoryTriggerStorage()});runtimes.push(runtime);await runtime.start();
+    const api=createTriggerApi(()=>runtime,()=>runtime.isActiveGM());
+    let releaseFirst!:()=>void,releaseSecond!:()=>void,finished=false;
+    const gateFirst=new Promise<void>(resolve=>{releaseFirst=resolve;}),gateSecond=new Promise<void>(resolve=>{releaseSecond=resolve;});
+    runtime.subscribe(async context=>{if(context.documentUuid===first.uuid){await gateFirst;void runtime.handleDocumentUpdate(second,{});}else await gateSecond;});
+    void runtime.handleDocumentUpdate(first,{});const idle=api.whenIdle().then(()=>{finished=true;});
+    await new Promise(resolve=>setTimeout(resolve,0));expect(finished).toBeFalse();releaseFirst();
+    await new Promise(resolve=>setTimeout(resolve,0));expect(finished).toBeFalse();releaseSecond();await idle;expect(finished).toBeTrue();
+    expect(api.capabilities.awaitIdle).toBe(1);
+    const player=createTriggerApi(()=>runtime,()=>false);expect(()=>player.whenIdle()).toThrow('active GMs');
+  });
+
   test('unsubscribe skips a snapshotted Actor listener that has not started', async () => {
     const gm = { id: 'gm', isGM: true, active: true };
     const target = actor(10);

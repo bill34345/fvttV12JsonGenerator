@@ -610,8 +610,7 @@ export class InjuryRuntime {
     const actor = effect.parent;
     if (!this.managed(actor)) return;
     const stacks = readInjury(actor).stacks;
-    if (stacks > 0) queueMicrotask(() => { void this.resolveActor(actor)
-      .then((current) => this.project(current, readInjury(current).stacks)).catch((error) => this.report(error)); });
+    if (stacks > 0) await this.enqueue(actor, (current) => this.project(current, readInjury(current).stacks));
   }
 
   private async importLegacySettings(): Promise<void> {

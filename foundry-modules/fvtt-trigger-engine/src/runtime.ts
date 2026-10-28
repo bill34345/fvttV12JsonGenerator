@@ -21,6 +21,7 @@ import { FoundryTriggerStorage } from './storage.ts';
 import { EXTERNAL_EVENT_SETTING_KEY, MODULE_ID } from './constants.ts';
 import type {
   CombatTurnContext,
+  CombatUndoCheckpoint,
   CombatUpdateReport,
   ExternalEvent,
   ExternalEventListener,
@@ -119,6 +120,35 @@ export class TriggerEngineRuntime {
   }
 
   get started(): boolean { return this.#started; }
+
+  /** Drain actual queue tails, including work appended by listeners; no quiet-time heuristic. */
+  async whenIdle(): Promise<void> {
+    while (true) {
+      const published = this.#externalPublishQueue, delivered = this.#externalDeliveryQueue;
+      await Promise.all([...this.#documentQueues.values(), ...this.#combatQueues.values(), published, delivered]);
+      if (!this.#documentQueues.size && !this.#combatQueues.size
+        && published === this.#externalPublishQueue && delivered === this.#externalDeliveryQueue) return;
+    }
+  }
+
+  captureCombatUndo(combat: any): CombatUndoCheckpoint {
+    if (!isCombatDocument(combat)) throw new Error('A Combat document is required.');
+    const uuid = combatUuid(combat)!;
+    return { combatUuid: uuid, keys: [...this.#seenCombatTurnKeys].filter((key) => key.startsWith(`${uuid}:`)) };
+  }
+
+  async reconcileCombatUndo(combat: any, checkpoint: CombatUndoCheckpoint): Promise<void> {
+    if (!isCombatDocument(combat)) throw new Error('A Combat document is required.');
+    await this.whenIdle();
+    if (!this.isActiveGM()) throw new Error('Only the active GM can reconcile a combat undo.');
+    const uuid = combatUuid(combat)!;
+    if (checkpoint?.combatUuid !== uuid || !Array.isArray(checkpoint.keys)
+      || checkpoint.keys.some((key) => typeof key !== 'string' || !key.startsWith(`${uuid}:`))) throw new Error('Invalid combat undo checkpoint.');
+    this.#combatSnapshots.set(uuid, readCombatState(combat));
+    for (const key of this.#seenCombatTurnKeys) if (key.startsWith(`${uuid}:`)) this.#seenCombatTurnKeys.delete(key);
+    for (const key of checkpoint.keys) this.#seenCombatTurnKeys.add(key);
+    this.globals.Hooks?.callAll?.('fvtt-trigger-engine.combatRewound', { combatUuid: uuid, combat });
+  }
 
   get invalidIssues(): readonly ValidationIssue[] { return this.#invalidIssues; }
 
@@ -413,6 +443,10 @@ export class TriggerEngineRuntime {
       ? { before: { ...priorHp }, after: { ...preparedAfter } } : undefined;
     this.#snapshots.set(documentUuidValue, cloneUnknown(after));
     this.rememberPreparedHp(document, documentUuidValue);
+
+    if (this.isActiveGM() && userId === this.globals.game.user.id && (options as any)?.openSessionDeckUndo === true) {
+      return { documentUuid: documentUuidValue, matchedTriggerIds: [], results: [], skippedReason: 'undo-restore' };
+    }
 
     const nativeModified = Number(document?._stats?.modifiedTime);
     const event = { document, changed, options, userId, documentUuidValue, before, after,

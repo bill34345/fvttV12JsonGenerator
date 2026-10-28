@@ -65,3 +65,7 @@ Immobilized 与 Frozen 会拦截拖拽、方向键等自主移动，也会拦截
 本地 E2E 使用 `F:\FoundryLab\foundry-v14\data\server-mirror`，地址 `127.0.0.1:30001`（外部 Chrome 用 `localhost:30001` 访问同一实例）。真实组合验收进入 `cor-cotn` 并保留原模组组合；历史隔离 E2E 使用 `fvtt-v14-module-matrix`。状态核心规则、来源生成模板、真实结算与解除、页面重载后不重复扣血、Sickened/取消攻击/自主移动修复均已有对应路径的实测证据。键盘长按受当前浏览器工具能力限制，未完成该输入路径验收；鼠标拖拽与玩家 HUD 高度编辑有独立证据。先前 HUD 和伤势联动验收记录于 `docs/reviews/2026-09-22-condition-hud-localization.md`。此后全 19 项在 CoTN 的 HUD 入口可见性已复验通过，自定义「流血」点击后只打开绑定 Actor 的空参数管理器；本轮其余按钮未逐项点击或结算。本轮 ID、点击路径审计及页面证据见 [全 19 项记录](../../docs/reviews/2026-09-24-all-custom-condition-hud-audit.md)，日常操作见 `docs/runbooks/custom-conditions-and-trigger-engine-usage.md`。
 
 构建、测试和类型检查使用仓库根目录的 `bun run build:custom-conditions`、`bun run test:custom-conditions` 与 `bun run typecheck:foundry-modules`。
+
+## 撤回联动
+
+新版 API 的 capabilities.awaitIdle 和 combatRewind 用于操作台撤回。whenIdle() 等待状态、伤势与武器效果队列；伤势投影的自动重建也进入队列。回合恢复后按触发器引擎通知清理对应内存去重并从当前文档重读行动状态，持久化已完成检查点继续生效。普通操作的伤势、状态与回合结算没有停用；恢复投影时沿用 injuryProjection 维护上下文，避免恢复过程重新生成投影。

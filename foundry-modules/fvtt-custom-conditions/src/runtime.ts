@@ -150,12 +150,30 @@ export class ConditionRuntime {
       this.#rollHooks.push(['updateItem', hooks.on('updateItem', (item: any, changed: any, options: any, userId: string) => this.postUpdateItem(item, changed, options, userId))]);
       this.#rollHooks.push(['preCreateChatMessage', hooks.on('preCreateChatMessage', (message: any, data: any) => this.prepareHelplessCriticalMessage(message, data))]);
       this.#rollHooks.push(['updateActor', hooks.on('updateActor', (actor: any, changed: any) => this.syncSharedTurnState(actor, changed))]);
+      this.#rollHooks.push(['fvtt-trigger-engine.combatRewound', hooks.on('fvtt-trigger-engine.combatRewound', ({ combatUuid, combat }: any) => {
+        for (const key of this.#processed) if (key.startsWith(`${combatUuid}:`)) this.#processed.delete(key);
+        for (const combatant of collection(combat.combatants)) {
+          const actor = combatant.actor;
+          if (!actor) continue;
+          const key = actorKey(actor), state = readActorTurnState(actor);
+          this.#turnStates.delete(key); this.#pendingAttackChoices.delete(key);
+          if (state) this.#turnStates.set(key, state);
+        }
+      })]);
     }
     // The Trigger Engine's ready listener is asynchronous. Custom Conditions
     // may reach Foundry's ready hook first, so bind our retry listener and all
     // dnd5e hooks before attempting the initial subscription.
     this.connectTriggerEngine();
     void this.normalizeLegacyMovementChanges().catch((error) => this.report(error));
+  }
+
+  async whenIdle(): Promise<void> {
+    if (!this.isActiveGM()) throw new Error('Only the active GM can await condition processing.');
+    while (true) {
+      await Promise.all([...this.#queues.values(), ...this.injury.queues.values(), this.weaponEffects.whenIdle()]);
+      if (!this.#queues.size && !this.injury.queues.size) return;
+    }
   }
 
   stop(): void {

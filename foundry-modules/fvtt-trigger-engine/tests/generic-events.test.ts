@@ -112,7 +112,7 @@ describe('public external event bridge', () => {
     const api = createTriggerApi(() => runtime, () => runtime.isActiveGM());
 
     expect(api.apiVersion).toBe(1);
-    expect(api.capabilities).toEqual({ externalEvents: 1 });
+    expect(api.capabilities).toMatchObject({ externalEvents: 1, awaitIdle: 1, combatRewind: 1 });
     expect(api.list()).toEqual([]);
     expect(api.getStore()).toEqual({ schemaVersion: 1, triggers: [] });
     expect(typeof api.subscribe).toBe('function');
