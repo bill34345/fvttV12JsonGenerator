@@ -1,74 +1,313 @@
-# Design QA
+# Open Session Deck 记录夹视觉还原核对
 
-## Comparison target
+final result: passed
 
-- source visual truth path: `design-qa-assets/source-target.png`
-- implementation URL: `http://127.0.0.1:5173/`
-- implementation screenshot: `design-qa-assets/implementation-linked-result.jpg`
-- full-view comparison evidence: `design-qa-assets/comparison-source-implementation.jpg`
+Current: R30 bottom-only reference refinement accepted after focused same-size comparison and actual stepper/overflow checks.
 
-## Viewport and normalization
+2026-10-27按用户实机反馈完成R16续修与自验。当前默认主面板1360×860、自然副屏1158×769均完整显示五人名单和底部编辑区，姓名17px、常用操作14px、主要按钮32–34px高。两张表各4列、首3行边界差均0 CSS px；已补NPC总护甲与场景读数，并修菜单裁切、原生弹层白字和死亡豁免方框。主代理亲自查看当前两张整页与原稿并实际检查选择、角色卡、帮助、批量、状态、先攻工具和中线。R8–R15保留为历史限定证据，不能代替R16实际默认尺寸。95%仍为近似还原要求，未伪造数值相似度；材质细节差异仍有保留。此结论不宣称重测全部原生写命令/GM玩家矩阵或生产发布。
 
-- source pixels: 1487 x 1058 at 96 dpi.
-- implementation pixels: 1179 x 1113, CSS viewport 1179 x 1113, devicePixelRatio 1.
-- comparison image: source and implementation are stacked at their native pixel sizes on a 1487 x 2219 canvas. The difference in aspect ratio is recorded and layout proportions, rather than pixel-identical placement, were compared.
-- state: both images show an accepted desktop task with a staged rail, central evidence/result work area, artifact rail, and persistent action bar. The source shows a review problem; the implementation shows the accepted result because this pass validates the user-requested post-run source/result state.
 
-## Findings
+## 2026-10-27 用户实机反馈后的重新验收
 
-- Historical result: no actionable P0, P1, or P2 visual differences were recorded for the captured implementation state. This is not proof that later integration changes still pass visual QA.
-- Fonts and typography: the compact Chinese sans-serif navigation, serif work-area headings, and monospace evidence/JSON panes preserve the selected direction. Text remains legible at the captured viewport and long source lines wrap inside their pane.
-- Spacing and layout rhythm: the left stages, central working canvas, right artifact rail, and bottom command bar match the source hierarchy. The implementation intentionally gives more of the center to source/result content and removes duplicated standalone source, Markdown, and JSON views.
-- Colors and visual tokens: navy header, warm neutral rails, blue provenance emphasis, green accepted state, and dark JSON surface are consistent with the source target and existing product tokens.
-- Image and icon fidelity: neither state needs raster product imagery. Existing Radix icons are used consistently; no placeholder, emoji, CSS drawing, or handcrafted SVG was introduced.
-- Copy and content: user-facing copy describes the unified automatic conversion entry, Foundry 14/core target, explicit AI consent, and formal artifact gates. Internal job types are no longer exposed as primary product choices.
-- Accessibility and affordances: the work-area tabs are reduced to task input, source/result, review, and logs. The split divider has separator semantics and a label; source lines and pane controls are buttons with visible focus styles. Screenshot evidence cannot establish full screen-reader compliance.
+用户要求原话：“把原设计稿和现在的主面板、副屏逐项对照，自己把问题找全修好，原来开发的功能一个都不能丢。”以及“真的符合人类操作的按钮跟文字大小吗？我不是瞎子”。
 
-## Focused evidence
+本轮初始判定：不通过，不能沿用此前笼统完成结论。先前1440×1000证据仅保留各自当时尺寸/功能边界；实际打开的1158×768副屏显示字号、行高和编辑区过大，五人队伍仅两人完整可见。此次重做实际默认尺寸的布局验收，不让用户承担发现明显故障的工作。
 
-- The full-view comparison was sufficient for hierarchy, typography, colors, pane proportions, and artifact state because both source and implementation controls remain readable in the combined image.
-- Browser DOM checks confirmed the empty state contains only `任务输入 / 核对问题 / 运行日志`; after execution it adds one `来源 / 结果` view.
-- Browser checks confirmed no page-level vertical overflow in the post-run state and independent visible scrollbars for long source and JSON content.
+本次修正范围：保留记录夹材质、细线拖动与原命令，把正文/操作字号和目标尺寸统一为正常桌面密度，减少无效标题/行高/编辑区占用；补齐旧版NPC总护甲读数等实际缺失信息。核对完整旧功能入口集合、模板与控制器连接，修后在主屏与副屏的实际默认尺寸、常用桌面及窄容器集中验证列表、两张表对齐、长名称、多状态、菜单与全部编辑入口。保留旧R8–R15原件，不把历史通过改成当前通过。
 
-## Primary interactions tested
+## R15历史证据与边界
 
-- Opened the simplified selector and confirmed one main conversion entry and a separate compatibility/tools section.
-- Pasted a real standard Actor fixture; detection reported `标准 Actor Markdown / 直接转换 / 高置信度` and enabled execution.
-- Executed that Actor through the formal Web conversion path with Foundry 14/core; the page transitioned from the single-column input view to the linked two-pane source/result view and exposed a downloadable accepted JSON.
-- Pasted a real standard Item fixture; detection reported `标准 Item Markdown / 直接转换 / 高置信度`.
-- Pasted a three-entry monster collection fixture; detection reported `怪物合集 / 3 条`.
-- Pasted unstructured monster text; detection recommended AI Actor Intake but kept execution disabled because this machine has no configured AI provider and no consent could be granted.
-- Pasted ambiguous text; detection returned `需要确认内容种类`, kept execution disabled, and displayed explicit Actor/Item override controls.
-- Checked browser console warnings and errors: none.
+- 当前候选：本worktree加未提交改动；本地Next14.368/dnd5e6.0.6/cor-cotn，PID33448/30002。119个安装文件与构建一致，92项测试/859断言、类型、构建及38项手册检查通过。未commit/merge/push或操作生产。
+- 最终真实副屏：`.local/status-alignment-20261027/chrome/r15-toolbar/popout-active-sized-full.jpg`，实际1440×1000；右上聚焦`toolbar-focus-current.jpg`。父代理已实际看图，短主屏纸签/独立深色×与原稿适配一致，保持完整中文aria/title。R15真实点击主屏使原面板从无到可见且副屏保留，再真实×仅关闭副屏；模式与用户页均读回。
+- R14真实副屏完整图、62%拖动、双击55及菜单：`.local/status-alignment-20261027/chrome/r14-http-shell/`。左5人/编辑区完整，两表4列边界差0，62状态中文；真鼠标55→62/release false/非拖动稳定/双击55通过。5个HP与11个先攻未变，不将复位后主屏55追加成62时的独立性证明。
+- R8–R11主屏的全部列、舒适/紧凑、滚动、55/62/70%、窄面板/宽页面、数字完整与菜单证据按各自实际范围复用。没有逐个hover全部提示或注入三位/负数测试值；这些限制不改写成新通过。
+- 官方Chrome恢复顺序已验证：真实HTTP副屏先Page.bringToFront，再对该活动页reset/set viewport并核实实际CSS/像素尺寸，正常截图和鼠标操作可用。默认截图未经激活仍可能超时；没有修改Chrome/扩展/服务器安全设置或声称更底层唯一原因已确认。初期错误/裁图冻结保留。
+- 最终原空队伍来源/包含子文件夹true/舒适/55/队伍页签/panel模式和viewport已恢复；本任务两页关闭，仅用户原页保留，Next继续active/users0。先前临时对象清理原件仍保留。
 
-## Comparison history
+## 续做历史与已解决缺口
 
-- Earlier implementation exposed separate `任务输入 / 来源证据 / 标准 Markdown / JSON 预览` tabs. The user identified these as duplicate views in single-file conversion. They were consolidated into a pre-run input state and one post-run source/result state.
-- Earlier workflow selection exposed every backend `JobType` as a product card. It was replaced by one automatic conversion entry; Vault Sync, translation, crawling, and explicitly labelled compatibility tools remain separate because they represent different intent or side effects.
-- The first automatic-routing implementation risked silently starting an AI route. It was changed so detection is read-only and AI Intake requires a visible, per-task consent checkbox; absent provider configuration keeps execution disabled.
-- The historical browser comparison found no remaining P0/P1/P2 issue in navigation hierarchy, central utilization, scroll containment, typography, tokens, icons, or copy for its captured state. Re-run it after material UI changes.
+- R8冻结证据：`.local/status-alignment-20261027/chrome/r8-live/REPORT-R8-FINAL-PARTIAL.md`与`evidence-manifest-final.json`。主代理亲自查看唯一原稿、整页、标题和菜单对照。
+- 主屏舒适/紧凑、55%/62%、滚动、1440×800、880页签中，两表全部4+4列边界偏差0，至少三行语义数值中心/内容左边界偏差≤1 CSS px。62个状态菜单与62个批量选项均中文，193个tooltip已对应中文title；保留命名伤势，不展示thinking。原生tooltip源码和代表实际悬停已核对，未逐项hover截图。
+- 主屏真实鼠标55→62、释放resizing=false、非拖动点击保持、双击55已验证。副屏DOM几何不能替代截图；人类确认前台后仍同点截图超时，根因UNKNOWN，旧R7 pointer仍PARTIAL。当前Chrome连接正常，Next已由现有准备命令恢复为PID33448/30002，不要求用户反复打开或@Chrome。
+- R9仅修已发现视觉：皮革标题带金边和关闭按钮框、标题竖分隔、装订织物/页边层次；复选框使用原生控件并清除Foundry伪元素，菜单图标使用纸面深色。表格、状态语义及业务命令不改。
+- 新增检查理由是这两组实际R8失败。复用88项测试、类型和R8未失效行为；构建/手册检查并安装后，补标题/装订/菜单真实图、代表checked/unchecked/disabled视觉及窄标题。副屏只在文档化截图调用的实质条件改变时再测，不原样重试失败链。
+- R8恢复：原队伍设置/舒适/55/队伍页签/panel模式读回，viewport reset，三个自有页关闭，用户newtab保留，Next仍active/users0。无Actor/Effect/Combat写入、无生产操作；未commit/merge/push。
+- R9主代理已亲自查看header与装订同稿比较、窄面板失败图。62菜单项原生checkbox18×18且伪元素none，状态图标深色清晰，批量纯UI5→0→5恢复；自然disabled0，未制造。装订粗糙度/折边仍有材质差异，保留为近似还原的细节残差。
+- 新P2的最小复现为panel880×800/page1474×966。原断点按page判断，隐藏页签并启用双栏；@container450中的通用osd-person还把遭遇姓名强制排进先攻列。R10给两个surface命名容器，标题/页签依据自身可用宽度，单列定位只作用队伍行。实际检查仅补该复现、原880/1440边界和拖出窄遭遇栏，不重跑R8整矩阵。
+- R9副屏已reset主viewport后使用实际1448×962的文档化clip捕捉，仍5000ms超时，根因UNKNOWN。不能再以默认整页或越界作为已证原因，也不重复让人类置前。无R9副屏pointer；旧R7保持PARTIAL。原R9报告、实际图片、错误及清理均在`.local/status-alignment-20261027/chrome/r9-confirm/`冻结。
+- R10窄面板在page扩展后保持页签，两个活动页三行4列边界差0、内容对齐≤1px；70%右栏姓名正常，同排Y差小于0.001px，释放/非拖动/复位正确。但50px先攻输入仍用24px字体且超出46px轨道，真实22.16/22.14末位裁切。父代理已亲看四倍原始截图对比，不能以位置正确掩盖字形缺失。
+- R11统一先攻输入跟随实际轨道宽度，常规轨72px、窄栏轨64px且字号20px；不截断/改写数值。检查了其他数值控件：生命行无内边距且已移除步进占位，更多数值为满列；编辑区的64px字段带20px字号/内边距/原生步进，扩大到78px并减内边距。实际复验只覆盖55/70%先攻字形、对应列与编辑区完整显示；不制造角色写入测试数值。
+- R11确认已通过：22.16/22.14/19.12在55/70%均完整，输入与轨道分别72/64px且不越界；55表头中心差0，三行先攻/姓名/HP同排。编辑器现有5/0完整；未提交3位/负值，关闭的更多数值未算本轮实测。父代理亲自看initiative-confirmation.png、editor-55-detail.png和main-55.jpg。证据冻结`.local/status-alignment-20261027/chrome/r11-numbers/`，HP/先攻前后相同，原设置/viewport/本任务页恢复，Next仍active/users0。
+- 仅剩副屏实际图和完整pointer未接受；当前没有新的网页截图恢复条件。官方Windows窗口截图/拖动是具体备选：只绑定本任务副屏的确切windowId，不触碰用户页、浏览器设置或世界数据。项目规定不自动换Computer Use，因此先向用户请求这项窄范围方式选择；未获允许前不执行。
+- 用户随后要求“为什么会超时，给我去找解决方案，之前是可以的，最早开发的时候”，没有批准Windows替代。现按[副屏截图恢复调查](docs/reviews/2026-10-27-open-session-deck-popout-screenshot-recovery.md)核对原始成功调用并沿官方Chrome做窗口置前/页面加载/静态资源的最小分层检查。原等待Native选择被这条新指令取代，不再要求用户反复置前或@Chrome。
+- R12相同副屏改静态SVG仍失败、同资源普通页97ms成功；R13官方Page.bringToFront激活静态副屏后133ms取图成功。这仅是有效恢复原语，原Deck about:blank不符合官方首CDP的HTTP来源前置且未收到attached child selector。R14改用模块无脚本HTTP空壳，保持GM渲染并设置原baseURI；待真实Deck取图和完整pointer，不能用SVG成功关闭总体目标。
+- R14真实HTTP Deck经官方Page.bringToFront后435ms截图成功，后续五张实际1440×1000完整图已由父聊天看图，727图完成且无script；5人左表及底部控件完整，两表共享列差0，62状态中文及菜单入界，无蓝光。真鼠标55→62→正常release false、非拖动保持62、真双击55false通过，HP/先攻前后不变；复位后才读主屏55，不冒称新增独立性证明。R14资源/图片/清理冻结在`.local/status-alignment-20261027/chrome/r14-http-shell/`。
+- 父聊天对比唯一稿后决定补齐一项显著适配差异：副屏原“打开主屏面板/关闭副屏”双纸签，R15改为“主屏”短纸签和独立深色×框，aria/title仍为完整中文，保留原open-panel/close-popout命令。手册准确说明主屏入口打开原窗口面板但不自动关闭副屏。仅补该工具栏实图及两个入口，R14拖动/整页/菜单不重跑。
+- 外框磨损/厚度与装订纤维粗糙程度仍与生成稿不同；主代理亲自查看完整图后保留为近似还原的材质细节残差，不将真实头像/战斗顺序/状态数量变化列为造型故障。
 
-## Follow-up polish
+## 以下为保留的实现和比较历史
 
-- P3: exact automatic source-range-to-JSON-field highlighting still requires a backend provenance mapping contract. The current linked line is user-selected and visual, not yet semantic field-level provenance.
+## 视觉目标和比较条件
 
-## AI connection entry pass (2026-08-14)
+- 用户原话：“就按照这一个设计稿来处理……95% 的还原没问题吧。”
+- 唯一 source visual truth：`H:/CodexData/generated_images/01a16cbb-70c2-7930-ae46-97cd64e0a241/exec-17a05356-0909-4d9c-a3c5-24f2911930f7.png`，1504×1045，SHA-256 `7292ea204ef411b12d617579d7f59d93b3fe928838275662c657913153ae25ed`。
+- 候选：本 worktree，HEAD `aefed11cce98a253ad7a36ba09fcb59ee2af39c2` 加未提交改动；当前Next模块118个文件均与构建一致，见 `.local/session-deck-redesign-20261026/refinement/install-final.json`。其中新增完整本地字体切片和OFL许可。
+- 运行面：`http://localhost:30002/game`，`cor-cotn`，Foundry14.368／dnd5e6.0.6，任务自有 GM 页。
+- 最终主屏implementation screenshot：`.local/session-deck-redesign-20261026/implementation-iteration7.jpg`，裁图`panel-iteration7.png`；副屏为`refinement/popout-final-comparison.jpg`及`panel-iteration8.png`，均为完整1440×1000比较面。
+- CSS viewport 1600×1400；浏览器尺寸覆盖2000×1750，DOM devicePixelRatio约1.25；连接器截图以1600×1400像素返回。面板1440×1000 CSS像素，裁取原图(80,200,1440,1000)，不将DPR再次相乘。
+- 副屏创建后单独应用1440×1000尺寸覆盖，DOM root与截图均1440×1000、DPR约1；使用fullPage捕捉完整布局，避免可见视口截图只覆盖模拟视口上半部。见`refinement/popout-final-state.json`。
+- 原稿截去外部画布，取(24,40,1460,976)，统一到1440×1000。原稿与产品窗体纵横比相差约4%；此归一化用于肉眼比较，不用于计算百分比。
+- 状态：同一世界的五人队伍、舒适密度、55:45两栏、卡勒姆被选中、轮次11。遭遇队列滚动至当前回合。头像、长名称、真实状态使用世界数据；原稿生成的头像、名称缩写、错误状态和错误激励数值不作为数据真值。
+- full-view comparisons：`.local/session-deck-redesign-20261026/comparison-iteration7.png`与`comparison-iteration8.png`，均在同一图中左稿右实现。
+- focused comparisons：同目录iteration7／8的`-header.png`、`-roster.png`、`-editor.png`。标题、密集文字、表格和按钮另作局部核对；只读独立复核也实际查看了两张完整对照图。
 
-- source visual truth path: `design-qa-assets/source-target.png` and the existing workbench direction shown in the prior comparison.
-- implementation screenshot path: `design-qa-assets/ai-connections-entry.png`.
-- combined comparison path: `design-qa-assets/comparison-ai-connections.png`.
-- viewport: 1280 x 720 CSS pixels, devicePixelRatio 1; implementation screenshot is 1280 x 720 pixels. The source is 1487 x 1058 pixels, so the combined comparison uses native-size stacked panels and evaluates hierarchy/tokens rather than pixel-identical placement.
-- state: desktop pre-run empty input with the AI connection drawer open; site provider and Codex Companion are visibly disabled by server capability, while the user API Key entry is available.
-- full-view comparison evidence: the existing navy topbar, warm-neutral workbench rails, blue selected/interactive accents, compact serif work-area heading, and right-side operational panel remain consistent with the selected workbench direction.
-- focused region comparison evidence: the drawer header, three connection cards, disabled capability states, refresh affordance, and security footer were inspected in the combined comparison. No raster product imagery was implied by the source; Radix icons were retained.
-- primary interactions tested: opened the topbar AI connection button; verified the dialog label and close/backdrop controls; expanded and collapsed the user API Key form; verified required API Key disables submit; confirmed the three provider states and explicit “Foundry 14 / core” boundary copy; verified `/api/ai-connections` returns the current session overview.
-- browser console: no warnings or errors observed during the checked state.
+## 发现与处理
 
-### Findings
+- [P1，已修正] 第一轮标题与装订条压入纸页。Foundry暗色主题在`.window-content`设置了`backdrop-filter`，改变绝对定位参照；原生应用背景也盖过了织物。用精确应用选择器固定面板背景，并在本面板内容区取消滤镜。后续实际截图确认标题和装订归位。
+- [P2，已修正] 列表、遭遇头像、编辑区按钮偏小。调整到宋体标题36px、队伍标题38px、队伍姓名25px、遭遇姓名23px、队列头像64×68、主要操作46px。保持实际长名称换行及列表滚动。
+- [P2，已修正] 纸面白色状态图标不清楚。为原有图标增加纸面适用的滤镜；没有另造图标或删除真实状态。原生Font Awesome中确认存在剑形图标后使用它。
+- [P2，已修正] 次级文字与纸面基色对比不足。`#716953`为4.16:1，旧运行环境文字为3.73:1；统一为`#5e5542`，与`#e9e0cd`为5.61:1，正文`#201e17`为12.71:1。运行环境入口增至12px。纹理局部色差仍属于材质残差。
+- [P2，已修正] 独立副屏标题在清空head时丢失。将标题设置移到清空head之后；正常UI重开后，浏览器读回“开放式跑团副屏”。
+- [已闭合的证据缺口] 独立副屏此前`Page.captureScreenshot`在5000ms超时；人类按请求置前后首次成功取图，随后新副屏可稳定采集。原生管理元数据的active仍返回false，因此没有把它当作真实前台状态的充分判断，也没有宣称已确认Chrome内部根因。官方tabs.update不支持active属性，未改用其他连接通道；真实截图替代了此前缺失的视觉证据。
+- [P2，续做已修正] 真实截图暴露副屏青色光晕：复制主屏body的`mld-paused`等世界UI类，触发Monks Little Details暂停边框。副屏改为只继承原生明暗主题，并显式归零独立正文的padding；主屏暂停和其他模块设置不变。修正后body::after shadow为none、padding0，完整截图确认。
+- [P2，续做已修正] 独立复核将SimSun薄而疏的粗体列为继续还原的缺口。采用本地Noto Serif SC的400／600／700，移除额外标题字距；平台字体读回`isCustomFont: true`，姓名为`Noto-Serif-SC-ExtraLight-Bold`。纸边和纸签也改为独立真实资产。iteration7／8重新比较后无遗留P0／P1／P2。
 
-- Historical result: no actionable P0, P1, or P2 visual differences were recorded for the AI connection entry screenshot. It does not cover the later remote-confirmation flow.
-- P3: when site AI or Companion is enabled in deployment, the same cards will show live quota/connection diagnostics; this state was not available in the local capability configuration and is intentionally represented as disabled rather than mocked as ready.
+## 五个视觉面
 
-## Acceptance boundary
+1. 字体：宋体方向与字号层级保留，主屏／副屏均使用本地Noto Serif SC，实际字形比iteration6的SimSun合成粗体更接近原稿。保留完整101个WOFF2切片和unicode-range，不裁动态姓名；随包OFL许可。CSS、实际加载与浏览器平台字体均有读回。生成稿没有可提取的精确字体信息，未声称逐字同源。
+2. 间距与布局：连续纸页、55:45分区、细线、左侧装订、纸签工具栏及底部角色编辑均已实现。无横向溢出的桌面列宽读回为757／619；细线可见宽度1px、透明命中区11px。表格内容量随真实状态变化。
+3. 色彩：纸面`#e9e0cd`、墨色`#201e17`、暗红伤害`#923c32`、深绿主要操作`#454d3d`；浅色纸签和暗色皮革对照原稿。记录实际文字对比度，不声称每一纹理像素相同。
+4. 资产：纸张、皮革、书布、铜钉、磨损纸边、纸签均为按所选稿生成的真实WebP材质；头像直接使用现有Actor图片。没有用渐变、CSS噪声或自绘SVG替代这些资产。纸边按8px九宫格消费，透明边缘合成检视无红黄碎边。原稿较重的磨损、厚纸阴影和饰纹仍属P3。
+5. 文案与内容：使用中英双语目录及真实字段。激励为开关，力竭为步进，状态为多选，死亡豁免分成功／失败；保留批量操作、交换先攻、投先攻、可见性、角色卡及GM／不支持版本门。当前版本信息移到右下角展开项，并同步手册。
 
-This file is archived visual evidence for the screenshots named above. It is not a current “all checks passed” claim and does not replace a fresh browser acceptance run for this integration branch.
+## 比较历史
+
+- iteration1：同图并排发现标题、装订、背景和整体裁切错误；判定不通过。
+- iteration2：结构修正，继续发现字体、头像与编辑区密度偏差；集中修正。
+- iteration3：纸页和列表比例接近；继续调整纸签与队列头像、操作按钮，并以库内真实剑形／当前回合箭头替代不合适图标和粗色条。
+- iteration4：保留收据；取图时滚动尚未落到最终帧，不用此图证明当前回合位于队首。
+- iteration5：同一布局、当前回合真实滚入顶部，完成全图与标题／编辑区局部比较。
+- iteration6：补正纸面次级文字对比度后重新采集并排和局部图。桌面剩余外观差异归于下列P3；独立副屏证据仍阻塞整体结论。
+- iteration7：按续做复核采用真实字重、纸签与纸边，并收敛工具栏可见文案。主屏同图与局部复核无P0／P1／P2；旧素材、旧图与旧失败记录冻结保留。
+- iteration8：人类置前后取得副屏截图；发现并修正世界暂停光晕和普通文档padding，创建后对齐1440×1000，再采集完整图及同图比较。独立复核确认底部编辑完整可见、字体／材质延续主屏、无P0／P1／P2。此前blocked结论在此证据上更新为passed。
+
+## 代表操作和运行检查
+
+- 临时NPC `OSD-Ledger-20261026-fb5e`／`exLqR2ERsTJlgqqe`在真实UI选择，伤害7使20→13，治疗7使13→20；分别由Next MCP读回，记录`fixture-api.json`。操作前核对编辑器与按钮UUID一致。没有对既有角色执行伤害／治疗。
+- 切换角色、密度刷新后维持单一所选编辑器；删除临时目标后回退有效角色。
+- 实际指针拖动细线55→62，Enter恢复55；副屏键盘独立55→57，主屏仍55。
+- 状态62选项、更多数值、批量操作、交换先攻可打开和关闭。本轮没有借此扩大状态写入、Combat写入或完整角色权限的接受。
+- 880×1000 CSS视口可切换队伍／遭遇，两列的可见页无横向溢出。Foundry自身显示低于1024px最小宽度的警告，窄屏顶部截图有外部警告遮挡，不追认为无遮挡的全界面视觉证据。
+- 超大覆盖视口下的一次原生窗口缩放探测没有取得可靠结果，保留`native-resize-attempt.json`；恢复正常视口后重验，实际1440×741→1360×681，正好缩小80×60，随后恢复。见`native-resize-normal.json`。不把前一失败写成产品通过。
+- 浏览器错误记录没有Deck相关TypeError／ReferenceError／OSD错误；保留其他已启用模块的启动警告。
+- 初轮84测试／605断言通过，保留原件。续做复用了未失效的业务检查，并补验字体本地URL／WOFF2／许可的实际打包及副屏body类回归；新增检查中的来源注释URL误判和测试数组类型错误已分别修正并复验。当前118文件安装SHA-256、模块类型检查／构建、38项手册、AGENTS与diff检查通过。
+- 新字体下880×1000独立副屏的队伍／遭遇分页也已补验：可见列宽818且scrollWidth818，五个纸签均在视口内，编辑区完整可见。见`refinement/narrow-party.*`与`narrow-encounter.*`。
+
+## 仍需确认
+
+- 主屏与副屏的真实截图和对应比较现已闭合，没有遗留必需视觉证据。
+- [P3] 材质磨损程度、厚纸阴影、横线饰纹和装订细节仍有细微偏差，属于近似还原保留的范围；没有计算或伪造95%分数。
+- [P3] 数值输入在文档刷新后回到默认5；当前选中角色保持。后续是否保存该临时输入属于额外UX取舍，本轮未增加状态机制。
+
+## 交付清单
+
+- [x] 唯一所选稿、真实材质、原有操作适配和桌面实机对照
+- [x] 代表写入、细线、菜单、窄屏分页、正常视口原生缩放
+- [x] 临时Actor删除及缺席读回、原队伍来源与密度恢复
+- [x] 当前Next模块候选可用，未提交／合并／推送，未操作生产
+- [x] 独立副屏真实截图与同稿比较，原取图缺口闭合
+
+## 用户纠正后的显示修复（2026-10-27，进行中）
+
+用户原话：“像这些状态，你要是敢出现英文的话……你的设计稿里面有英文的状态吗……生命这一列，它跟底下的这两个数值根本不在同一个纵列上。”原稿状态为中文，实际图中的bloodied、thinking不能因“真实数据”而被接受；状态ID与显示语言应分开。
+
+原因已在目标Next中核实：Vision5e3.2.2+servernext.1为思想探测按语言能力派生thinking标记，未注册为可展示条件；Deck把所有actor.statuses缺失项直接回退ID，泄漏该内部标记及原生bloodied。当前条件表还存在Dazed/Flanked两项英文名称。修复范围是中文显示、内部标记过滤及有名ActiveEffect保留，不改Actor/Effect数据、条件ID或判定。
+
+生命列的问题为表头左对齐、HP居中，表头在滚动区之外且没有与数据行共用水平内边距和滚动条占位。修复将表头置于同一滚动容器，保留粘性表头，统一列内边距并居中生命/护甲标题；队伍及遭遇表一并处理。窄栏、舒适/紧凑和拖动后列宽须实际量测并看图。
+
+最小验证：既有模块测试加原始thinking/bloodied与中文状态回归，模块类型/构建/手册；Chrome只复验两处可见失败，并在同一图核对状态中文和HP列中心。旧伤害治疗、字体及已通过拖动证据保留，不重跑完整矩阵。
+
+整页扩查范围已按用户后续要求扩大：队伍4列、遭遇4列、头部纸签、角色编辑、状态/更多/批量/先攻菜单、两种密度及窄页签。源码还发现状态图标与名称是分开的flex子项，窄列时可分离，已组合成同一项；当前回合标记的负偏移超过队列内边距，会被滚动边界切掉，已将偏移限在实际内边距内。均须在新候选真实截图里核对，不凭源码直接判通过。
+
+只读独立对照还确认两项偏差：专注被全局棕红/sepia处理失去正向绿色，底部常用入口被透明边框写成文字链接。已在同批候选改为按真实状态ID显示专注/有利绿色、危害红色、未知中性，并恢复底部按钮/summary一致的纸面描边。原稿及旧实机坐标证据由只读审查代理提供；待新候选实际看图，不能先称通过。
+
+
+## R16 对照与功能保留核对
+
+- 原稿1504×1045表现为五人名单上方、选中对象编辑区下方、右侧先攻列表；真实自然副屏1158×769时，旧25px姓名/20px按钮、96px常规行和多次换行编辑区挤掉名单。本次改为17px姓名、14px操作、18px主要数值、68px常规行、32–36px常用按钮。自然尺寸下5行均完整，编辑区约137px，名单可用449px且无垂直溢出。
+- 保留原纸张/皮革/书布/纸签/细线/原生头像与动态状态信息。主面板初始上限1360×860并预留浏览器边距；正常截图与原稿做结构比较，不声称数值相似度分数。
+- 对比HEAD模板的15类UI action、11类按钮命令、5类直接编辑与5类批量命令，当前集合没有缺项；新增单体伤害/治疗按钮。controller、快捷键和既有命令执行分支不因本次排版改变。
+- 恢复非队伍NPC“更多数值”的总护甲读数；当前AC与AC修正分列。场景名称恢复到“当前运行环境”。队伍NPC的激励不作为已验证原生能力，保留既有characterControls语义；pinned/hidden/stale基线没有UI入口，不虚报为此次功能损失。
+- 自验发现NPC菜单被遭遇滚动列表裁切。采用浏览器原生Popover顶层并限制可见窗口范围；保留details/summary原入口和本地命令路由，支持外部点击/Esc关闭。依据[Chrome官方Popover说明](https://developer.chrome.com/blog/introducing-popover-api)的顶层、外部关闭与Esc行为；没有启用实验特性或修改浏览器设置。实际顶部命中元素属于菜单，护甲读数14可见；原生弹层CanvasText默认白色已显式改回墨色rgb32,30,23并复验。
+- 死亡豁免保留24×24点击区与圆形可见标记，清除Foundry针对pressed按钮附加的方形outline，键盘focus-visible仍保留。
+- 自验实际完成：长姓名切换、62中文状态与62批量状态、批量0→5选择、NPC选择及更多数值、交换先攻两个11人选项、场景名称、中线55→62/释放/普通点击稳定/双击55与此时主面板仍55；未写既有Actor/Effect/Combat。880×700原生缩窄时队伍/遭遇分别可见、无横向溢出，列表按高度正常滚动。最终已恢复默认主面板；实际选择第五人并打开正确的原生角色卡，帮助进入统一手册且内容已更新为2026-10-27、1360×860/总护甲/浮层关闭步骤。主面板和副屏均重新看整页，当前判定通过本轮UI与保留命令入口范围。
+- 94 tests / 871 assertions、类型、构建、119安装文件一致、38项手册一致已通过；证据在.local/status-alignment-20261027/r16*及chrome/r16-usability。
+
+
+## R16 最终交付状态
+
+- 当前整页：`.local/status-alignment-20261027/chrome/r16-usability/main-final.jpg`与`popout-final.jpg`。主代理亲自看图。表格与控件尺寸原件`final-table-and-controls.json`，长姓名、NPC/状态菜单、批量/先攻工具、场景与中线分别有读回。默认五人都在可见名单内；窄880×700窗口采用分页与正常纵向滚动，不把滚动行数量描述为全部同时显示。
+- 功能差异核对`r16-feature-parity.json`：旧15类UI action/11类按钮命令/5类直接编辑/5类批量命令均无缺项。选中编辑和菜单入口实际操作；既有原生写命令分支继续复用94测试及之前精确目标的限定接受，本轮没有写既有Actor/Effect/Combat。角色卡、帮助查看为只读。
+- Preferred统一手册原装内容仍是旧版，已按现有构建重新生成并仅在本地Next同步0.3.0的脚本及其build-identity；同28条Foundry内容、manifest/stylesheet/LICENSE不变。38条总目录中新增的两个工程条目仍被省略。实际帮助已读到本次正确说明。安装前/后清单在`r16-suite-help-install*.json`。
+- Chrome普通页面个别Playwright点击返回后没有UI变化，主代理没有将其算作通过；改用同一官方Chrome标签页的实际AX控件点击，确认关闭、角色选择、原生角色卡和帮助打开。未切换Windows Computer Use。验收期间原生面板缩放后的异常小窗口已通过正常页面重载恢复为1360×860；最终已看图与读回。浮动监测器仅在本地页面移至左侧以免遮挡主面板，未改监测逻辑或角色数据。
+- 最终保留主GM页651352023与独立副屏651352064给用户，队伍来源“玩家角色”5人、舒适、55:45；帮助/角色卡已关闭，服务Next保留运行。未创建测试Actor或Combat，不执行自动关闭页面或恢复空来源。未commit/merge/push，未接触Mirror或生产。
+
+
+## R17 新增撤回需求
+
+用户本次明确要求无Chrome原生二次确认，并选择撤回覆盖数值、状态和战斗修改。该撤回是新增需求；R16已有视觉/入口验收保留。当前正实现跨主屏/副屏共用的操作差异历史；专注按实际原生依赖图恢复，不能用简单开启专注代替。新增逻辑完成前不称已可用；不把新需求追溯成旧版已要求能力。
+
+- R17实施范围：移除Deck内原生confirm，不加入Popconfirm；工具栏共用内存撤回。数值、状态、专注、死亡豁免和战斗命令记录文档/字段差异；批量为一步；后续同字段修改时冲突保留，不覆盖。原生Promise经现有libWrapper观察，不替代原方法；缺少依赖或主GM身份时关闭撤回，既有操作仍可用。
+- 实机中找到并修复6.0.6条件等级回调的上下文要求：系统`ConditionData._onUpdate`在缺失`dnd5e.originalLevel`时读取未定义的`Infinite`；采用同一系统`increase/decrease`传递原等级的原生方式。没有修改系统文件或忽略回调错误。既有力竭2→3→2和创建/撤回专注已实际通过。
+- 交换先攻引起Combat.turn排序位置变化时，Core保留实际当前行动者，不要求回合生命周期；完成边界检查已限定在真正的上一/下一回合命令。专用回归覆盖这种排序路径，实机正在复验。
+- 数值10项与中毒增删已通过真实源码比对；结束专注的原效果ID、跨Actor效果、关联Item和Activity恢复已通过。R17战斗、跨表面实际点击、最终安装/手册及用户交付仍未完成，不能提前称本轮完成。
+- 后续实机发现并修复未链接Token的继承问题：合成Actor资源虽恢复正确，原先不存在的Delta覆盖却残留。现通过原生ActorDelta API恢复差异，保留原始覆盖数组、删除本次新增覆盖。三项回合/世界时间/场外到期检查的完整Source比对已通过。独立复审补出“基础Actor后改被遮盖字段”场景，已在写入前检查原继承值，冲突时不写；回归及限定复审通过。
+- 最终整批核验有明确的新证据缺口：本轮新增Delta采集、创建归属和继承校验改变了共同撤回路径，所以在最后候选重跑既有数值/状态/专注/先攻/回合案例，并增加真实的基础Actor冲突检查；不以之前候选的PASS自动代替。当前128 tests /1162 assertions和类型检查通过，最终候选实机批次正在进行。
+
+
+## R17 最终限定接受
+
+2026-10-27新增撤回已完成32项原生数据用例，以及外部Chrome真实点击“副屏结束专注→主屏撤回”的完整依赖链读回。没有原生alert/confirm/prompt，也没有新增Popconfirm。主副屏共用LIFO记录，批量算一步；数值、状态、专注依赖链、先攻／可见性、回合资源与效果、移动和世界时间按记录差异恢复。行内当前HP已修正为绝对值，保留临时HP；伤害／治疗仍走原生计算。372项测试／3049断言与三个模块类型检查通过。
+
+本任务自有Actor、Scene、Combat、Folder、掷骰测试消息及验收Macro已清理；原活动战斗重新激活并核对Source哈希，原场景、队伍设置与世界时间恢复。最终119文件Deck和5文件合集帮助与构建逐字节一致，触发器引擎／自定义状态仅更新本次脚本，保留安装目录已有README差异。38项手册检查通过，Chrome内帮助已读到撤回及绝对HP说明。
+
+主代理亲自查看最终主屏与1158×769副屏整页：五人名单与底部编辑区完整，表头／首三行4列边界偏差0，状态为中文，新增工具栏撤回按钮无裁切。复用未失效的R16原功能、菜单、拖动与窄容器证据，未把它们改成R17重新执行。外部Chrome保留主屏与副屏供用户验收。最终收据：`.local/status-alignment-20261027/r17-undo/receipt-final.json`。
+
+接受只限14.368／6.0.6及本轮主GM页，不扩大其他版本和完整多GM／玩家矩阵。历史重载即清空、后续同字段修改时冲突保护、聊天及任意第三方／外部副作用不承诺撤回。所有旧失败及冻结证据保留。仅本地Next安装，未发布、提交、合并或推送。
+
+
+## R19 先攻快捷入口与战败
+
+按用户本轮确认，保留先攻数值、交换和私密／隐藏策略；移除遭遇工具折叠入口，交换及NPC投骰作为独立图标与中文提示；每行显隐无需选中；先攻空值显示原生配置d20，投后显示数字，0仍是已有数值；点选后新增骷髅战败／取消按钮及共用撤回。不加Ping或拖动排序。
+
+父代理在外部Chrome实际完成未选中显隐、单个私密先攻、两NPC批量先攻、标记／取消战败及跨主副屏连续撤回；原生dead覆盖效果、原ID和HP读回通过，交换图标打开原窗口，真实悬停显示中文提示。首图暴露原生d20相对URL错误，已修正GM页绝对URL并补表面回归；空白首图和原始差异均保留。135项测试／1259断言、模块类型、38项手册检查通过。
+
+恢复核对：显隐、单投、批投撤回后完整Source与初始一致；战败链只余一个已核实的中性ActorDelta从null实体化为空结构，未遗留属性／物品／效果覆盖。保留raw差异，不称字节完全恢复。仅QA对该Token的精确固定空结构作等价比较；产品未为此增加恢复复杂度。自有对象和验收宏已清理，原战斗哈希、场景、设置及时间恢复。
+
+父代理已查看最终主屏与1158×769副屏：左侧五人和编辑区完整，遭遇11行均有非折叠显隐入口，主副屏表头与首三行边界差0。文档帮助已在安装后读回，119个Deck文件／5个合集文件与构建一致。最终页面保留外部Chrome。收据：`.local/status-alignment-20261027/r19-encounter-controls/receipt-final.json`。限定14.368／6.0.6主GM；不扩大其他版本、完整多GM／玩家矩阵或生产接受；未commit／merge／push。
+
+
+## R20 名单密度与缩略图
+
+同一1158×769副屏、舒适密度、55:45分栏：完整可见参战者由6增至11（名单总数11），普通行约62.53→40.53CSSpx，姓名16px、头像约28×32、常用图标34px，主副屏表头／数据列边界差0。父代理已查看最终主屏与热缓存副屏整页，五人队伍和编辑区完整，NPC详细操作仍能展开。
+
+8张真实头像首读1078156字节，生成64×64WebP共18724字节；刷新后8次文件信息校验，8张缓存命中、0次原图读取／重新生成，失败0。实际DOM天然尺寸64×64，原始头像路径逐项与修改前相同。图片完成只更新src，保留输入、焦点和弹层的回归通过。数字是Blob数据量，不冒称整页流量或堆内存测量；原生Foundry和其他模块仍可自行读取原图。
+
+145项测试／1295断言、类型与38项手册检查通过，119个Deck／5个合集文件与构建一致，内置帮助已读回。只读验收宏已删除，未创建Actor／Token／Combat测试对象。冷／热27项读回中26原始哈希相同，另一个Actor在已列明的空rider标记／非文档changeID归一化后语义相同；随机ID有原生模型生成依据，rider标记的具体加载来源仍未知，不称原始字节全等，也没有为此修正世界数据。原始失败与辅助记录均保留。
+
+最终收据`.local/status-alignment-20261027/r20-density-thumbnails/receipt-final.json`。外部Chrome保留两页，副屏置前。限定本地14.368／6.0.6主GM，不扩大其他版本、生产、多GM或完整玩家矩阵；未commit／merge／push。
+
+
+## R21 单行姓名、状态与稳定行高
+
+用户原话：“名字如果太长，最后用‘……’省略号代替，不要换行。”、“状态太多的话，建议也显示‘……’，鼠标移上去可以看到所有状态。”、“如果不聚焦于某一个 NPC 或 PC，底下不弹出特定选项时，比例永远是正常的。” 实现选择：单行按宽度省略，完整提示；死亡豁免仅在选中时展开；临时生命不换行，窄栏采用统一固定双轨布局。当前行动、编辑区与批量名单长姓名一并处理。
+
+主副屏实际长名、多状态、0生命、临时生命和大数值应力及完整悬停已通过。副屏观察器所属窗口错误在实际拖动中发现并修复；收窄和Enter复位会重新计算文本，初次失败证据保留。恢复真实5人／11参战者后，两页队伍44px，未选中遭遇约40.533px；窄栏约66.533px且同高，选中详情可展开。148测试／1338断言、类型、构建、38项手册一致性通过，安装119＋5文件逐项hash一致。临时对象及验收Macro已清理，原战斗hash／世界时间／场景／队伍设置恢复，外部Chrome两页保留供用户验收。仅接受本地14.368／6.0.6本轮范围，原命令与其他版本使用未失效的历史证据，未据此扩大矩阵或发布。完整收据：`.local/status-alignment-20261027/r21-single-line/receipt-final.json`。
+
+
+## R22 状态默认仅图标
+
+用户原话：“状态我建议也是默认只有 icon  tooltip 出现文字吧”。主副屏队伍／遭遇默认状态仅图标，中文名称保留在单项悬停与无障碍名称，省略处保留全部状态提示。实际首版暴露派生浴血缺图标，已改读目标系统DND5E.bloodied的原生SVG。最终两页5人／11参战者均无状态文字标签，图标20px目标、队伍行44px；主面板真实中文tooltip已显示，副屏原生title已配置并核对悬停对象，未把它声称为可截图的Foundry提示。148测试／1373断言、类型、构建、38项手册一致性及119＋5安装文件hash通过。无Actor／Combat写命令及新fixture，原溢出算法及R21实机证据未失效；Chrome主副屏保留。本轮限定收据：`.local/status-alignment-20261028/r22-status-icons/receipt-final.json`。
+
+
+## R23 状态列收窄与姓名空间
+
+用户要求主副屏状态列适当收窄，把空间留给名字，并保持列对齐和行高。四条共享网格定义把状态权重转给姓名，保留70px状态下限、原字体／高度及窄栏双轨布局。实际主面板队伍／遭遇姓名增宽约69／40px，副屏约57／35px。两页全部表头与行四列边界误差0，逐个ID的完整行高、主行高度和字号与改前一致。实际55→65→Enter复位55检查通过，窄栏未选中遭遇66.533px且同高。148测试／1373断言、构建、手册、119＋5安装hash通过，最终两页截图已亲看并保留外部Chrome。无Actor／Combat命令或新fixture。收据：`.local/status-alignment-20261028/r23-status-column-width/receipt-final.json`。
+
+
+## R24 队伍资源与输入按钮分组
+
+用户补充要求显示英雄激励与力竭，并纠正问题在于数值框和按钮不在同排。最终把数值、伤害、治疗放在同一不拆分组；姓名下显示只读激励有无和力竭层数，行高与列宽保持。实际主副屏默认／35%窄栏控件中心Y相同；独立临时角色验证5伤害20→15→撤回20、激励切换及力竭0→3→撤回0。修复按钮子元素不能收到鼠标导致的资源tooltip缺失，最终实际出现完整中文提示。150测试／1433断言、类型、构建、手册、119＋5安装hash通过。临时角色和空文件夹已清理，来源、五人名单、55分栏与0撤回历史恢复；Chrome两页保留。收据：`.local/status-alignment-20261028/r24-party-resources/receipt-final.json`。
+
+
+## R25 原稿与编辑区固定分组
+
+用户指出“还是太乱了左下角 原设计稿呢？”。已实际重看并展示原稿、核验同一SHA。R24同排功能通过不代表整体视觉分组通过；本次修复自由折行造成的力竭孤行和更多远右孤岛。身份/健康、资源、常用操作固定三层，保留后续输入与健康按钮同排要求。默认主副屏与独立看图复核接受；自然副屏编辑区166.53→132.53px，17处命令绑定保持，名单列宽行高不变。实际最小分栏32%/38%、2×2常用操作、两菜单边界及NPC共享编辑器检查通过，已复位55并恢复原选择。150测试1454断言、构建、手册、119＋5安装hash通过；无游戏文档写入、新fixture或发布。区域取图失败保留，完整实图有效。收据：`.local/status-alignment-20261028/r25-editor-structure/receipt-final.json`。
+
+
+## 2026-10-28 R27 统一操作台：最终比较与验收
+
+final result: passed
+
+- 视觉目标是用户本次明确附图 `C:/Users/ADMINI~1/AppData/Local/Temp/codex-clipboard-4e0bc0dd-a722-4f73-b8f7-22cb75bfe65a.png`；该选择优先于助手此前退回这张工作稿的意见，未误用其余候选。
+- 实机证据目录：`.local/status-alignment-20261028/r27-unified-operations/`。源图1536×1024与 `popout-reference-size.jpg` 1536×1024在同一组图像输入中比较；目标CSS视口1536×1024、DPR约1.25，已撤销临时视口覆盖。默认副屏1158×769的 `popout-final.jpg` 检查详情，`popout-delivery.jpg`是最终交付画面；`main-final.jpg`为2047×972页面中的主面板1360×860。
+- 比较状态为原队伍5人、原遭遇11人、选中3个实际目标；模拟稿中的先攻/HP/头像/勾选不一致不写入真实角色。默认图额外查看未勾选NPC，原窗口保留原生场景背景。没有把独立截图称为机械像素相似度。
+- 字体与排版：沿用已确认记录夹中文字体及紧凑名单；姓名16px、底栏控件14px、主要控件34px、复选框24px。保留此前明确要求的紧凑行，未照搬mock放大的头像。
+- 间距与结构：五组跨栏底栏、生命数值与按钮同排、临时生命独立；已选条48px一行；最终队伍和遭遇每列边界误差0 CSS px。无选择时收起；窄窗口实际784×608中数量/清空/撤回均在视口内。
+- 色彩：沿用纸底/皮革和深红伤害、橄榄绿勾选；原生复选框采用light color-scheme。详情字色修正为rgb(32,30,23)，不再被Foundry暗色主题染浅。
+- 图像：复用原世界肖像及现有64px缩图机制与既有材质；没有新占位图替代真实人物。本轮fixture早期错误图标路径已经更正，fixture已全部移除，不作最终产品截图。
+- 文案与状态：状态图标中文提示，英雄激励和遭遇默认显示实际适用数量。点击姓名只查看，底栏目标由勾选决定。
+
+### 比较中修正的问题
+
+1. P1/P2：初始详情dt/dd被宿主主题染浅、浮层遮挡底栏。修正主题重置与紧凑详情，并按列表边界/底栏上缘定位。`popout-first.jpg`保留初始失败；`inspector-fixed.json`和`popout-inspector-fixed.jpg`证明修后字色及浮层下缘517.07小于底栏上缘527.07。
+2. P2：详情打开后勾选标记没有随选择同步。已在统一选择刷新路径修复并加入测试。
+3. 默认适用数量和浅色空框补齐后，当前父代理及独立reviewer在同组源图和实机图中未发现新的可行动P1/P2。独立复核仅接受三目标视觉；11目标+7和原生行为引用父代理记录。
+
+### 功能证据与边界
+
+真实Next14.368/6.0.6验证了跨栏去重、独立查看、单行溢出取消、普通刷新保留、原生追踪器切换同时清空两面板、批量伤害/力竭/状态/隐藏/战败及单次撤回。共享模板与稀疏Token重复扣血、继承状态撤回以及MCD战败重复效果均由本轮实际失败推动修复并重测。只选基础Actor而未选Token的继承效果也已验证撤回。
+
+未重新执行完整多GM/玩家矩阵、其他Core/dnd5e配对或生产；没有借本轮结果扩大旧接受范围。P3仅保留mock和真实数据/固定CSS字级的表现差异，不要求对真实数据做视觉造假。源码、说明和安装字节一致，临时对象/宏清理并恢复原场景、Combat、队伍来源，外部Chrome主副屏保留。
+
+
+## R28 用户指出左下角还原偏差
+
+R27对底部生命组的视觉接受判断失准。重新比对用户选定稿，连续临时生命控件、生命组比例、字号和标签层级存在明确偏差，本轮修正并重新验收该区域。R27原生行为与撤回证据保留，不用业务测试绿色替代此次视觉要求。
+
+### R28 修正与断线后复核
+
+- 临时生命恢复为左侧动作按钮与右侧独立数值框的连续组合，移除独立“应用”；原命令和数值绑定保持。75项操作/输入属性与R27相同。
+- 生命组占底栏24.75%，主数值紧邻伤害/治疗且同排。仅底栏按容器尺寸使用16px/36px、18px/40px、20px/46px三级控件；默认副屏上方名单行高与修前完全相同。
+- 对照用户选定1536×1024原稿，`large-final.jpg`展示20px/46px控件；`default-final.jpg`和`main-final.jpg`覆盖默认副屏及主面板。`overflow-final.jpg`展示11目标时单行+8、清空和撤回；完整列表独立滚动。初次`after-reference-size.jpg`仍偏小的失败对照保留。
+- 根代理实际看过源图、最终同尺寸图及恢复后的`delivery.jpg`；独立代理`/root/r28_visual_recovery`实际检查源图和四张最终截图，限定底栏未发现P1/P2。治疗按钮纸色、部分图标/字形/边框仍与稿有细微差异，不宣称像素完全一致。
+- 20项模板检查/259断言、单项连体控件检查/19断言、类型/构建和手册38项通过；与本次无关的R27实际批量及撤回证据复用，未重写真实角色。断线后重新核对119个副屏文件和5个帮助文件，与最终构建及安装收据一致。
+- 断线后原代理不再存活，最后独立视觉复核与收尾尚未完成；本轮根据落盘成果完成复核，没有把代理消失等同于工作完成。本地Next原进程已停止，按正式准备入口启动原实例为PID62924，GM读回cor-cotn/14.368/6.0.6，原场景k0tDQjWqrbvHbjdu、角色8/22生命与0临时生命保持。未重新创建fixture。
+- 外部Chrome3保留主页面651352522及副屏651352525，旧/no页面未改动；已撤销viewport覆盖，最终自然副屏2048×972，三目标仅用于展示。证据目录`.local/status-alignment-20261028/r28-footer-fidelity/`，以`receipt-final.json`为当前收据。
+
+
+## R29 原稿样式对照与修正
+
+用户原话：“你确定跟设计稿一模一样？这种纯样式不会处理吗”。R28以无阻断问题接受仍有明显样式差异的底栏，结论撤回。R27业务与撤回证据保留。
+
+### 比较对象与状态
+
+源图为用户选定的`C:/Users/ADMINI~1/AppData/Local/Temp/codex-clipboard-4e0bc0dd-a722-4f73-b8f7-22cb75bfe65a.png`，1536×1024。实际图`.local/status-alignment-20261028/r29-footer-style/reference-final.jpg`同为1536×1024，CSS视口1536×1024，Chrome缩放/DPR约1.25，工具输出像素已为对应CSS大小，未另行拉伸或修改截图。源图与实际图在同一次图像输入中打开两次，重点检查下方约746–1014区域；原尺寸下控件文字和边缘清晰，直接按该区域逐项核对，无需裁图重采。两图均为三个目标，真实姓名、肖像、临时生命输入0与原稿示例值不一致；撤回无历史时保留禁用态，不伪造真实状态。上方紧凑名册遵从此前用户要求，本轮不扩张为整页像素复制。
+
+### 先前问题与修正后证据
+
+- P1：没有独立纸面底框、清空远离标签。已补纸框、浅内边和阴影；清空置于标签容器末端，保留右侧撤回及分隔。收纳宽度预留清空按钮，避免满选遮挡。
+- P2：治疗无浅绿、控件边框/比例/留白偏离原稿。已恢复浅绿色治疗、暗红伤害、连体临时生命和纸色描边；生命组主要控件实际x64.53/y867.47、106px数字框、48px高；临时生命y929.47/48px高。与原稿约x65/y869和y931的栅格位置接近；分组边界约413/642/935/1214。
+- P2：标签字号与资源图标不同。标签改16px较粗文字、48px高、最大172px；星形英雄激励、半圆力竭、靶心专注、圆柱资源、人物护甲/生命菜单均使用现有Font Awesome图标。
+- 实际截图发现刚刷新后新增标签保留占位头像。动态标签现在向原缩略图缓存取当前URL；初次修正遗漏方法调用对象，真实选择出现空标签，已绑定正确对象并重测。最终3个标签全部为已加载64px blob图像，名单及选择不再出现此失败。
+
+### 五项视觉检查
+
+- 字体：保留项目记录夹衬线字体；参考尺寸数量26px、分组标题22px、按钮18px、主要数值20px、标签16px。主副屏按原有容器断点适配，姓名/名单行高未变。
+- 间距：底栏起点约745px、选中行68px；五组25/15.6/20/19/20.4比例，按钮与数值同排，连体临时生命相邻。原稿的底栏主要结构、位置、边框和留白已逐项修正。
+- 色彩：纸面、暗红伤害、浅绿治疗、墨色图标及禁用撤回分别检查，按钮边界完整。没有用禁用变可点击来追求截图相似。
+- 图像：复用既有纸张/皮革与真实64px缩略图；未生成虚假人物图来替换实际角色。字体栅格、图标细笔画和纹理不宣称逐像素相同。
+- 文案：保留真实“护甲修正/最大生命修正”的作用语义，未为模拟稿“调整”改写行为；已选数量与适用数量均取真实选择。保留中文tooltip。
+
+### 实际交互与交付
+
+`overflow-default.jpg/json`1158×814下11目标收纳为+8，`narrow-final.jpg/json`784×608下为+10，清空与撤回均在单行且位于视口内。窄屏操作组沿用横向滚动以保持文字尺寸。实际点击清空使操作台收起，重新勾选恢复；主面板`main-final.jpg`三目标已在前台截图核对。首次主面板截图为背景旧帧，未作为最终证据，激活后重新截图。173项测试/1689断言通过；只读fixture修正后定向1项/5断言通过；最终类型与38项手册检查通过。75项操作/输入绑定保持，119安装文件与最终构建逐字节一致。
+
+没有执行真实角色或战斗写入，复用R27对应行为证据。临时viewport已reset，外部Chrome主651352522/副651352545保留，三目标只用于展示。最终收据为同目录`receipt-final.json`。
+
+
+## R30 底部操作区聚焦还原
+
+用户明确仅针对下面的操作区，继续按同一选定原稿精修。先保存原稿与R29实际图的同坐标底栏裁切，核对字体、图标、箭头、组件几何和纸面处理；上方名单与业务证据保持。结果在修后视觉对照前为blocked。
+
+### R30 修后对照与验收
+
+- 源图和当前1536×1024截图均以同一矩形[34,744,1527,1014]裁切为1493×270，没有缩放或改动界面像素。`footer-comparison.png`只是给这两张原样裁片添加中文行标题。主代理在同一次图像输入中比较了原稿、R29修前及R30两轮修后底部；最终以`after-footer.png`为准。
+- P2字体：Foundry给h3的标题字体未被继承重置；底栏h3现显式使用现有OSD Ledger Serif。标题和正文层级恢复衬线字形；数量26px、标题22px、主要按钮18px、标签16px的参考层级保留。
+- P2图标/箭头：源稿HP心形、骨形状态、圆柱资源直接提取为三张透明小PNG，背景已透明化，未把控件或文字栅格化；来源SHA与裁切坐标在`source-icons.json`。其余仍为原有Font Awesome图标，下拉改实心caret。未引入新字体或图标库。
+- P2数字框：浏览器原生细箭头的宽度/颜色无法对应原稿，替换为同一输入旁的上下按钮，原number输入、min和值持久化保持。新增按钮只调用输入的stepUp/stepDown并记录待填值。实际点按伤害量5→6→5、临时生命0→1→0，角色当前生命仍8；为同数值视觉对照仅把待填临时生命填5，没有点执行命令。
+- P2布局/色彩：微调五组宽度与最后一组内边距，标题光学上移、菜单行留白、纸面色温、选择条垂直位置和数字步进区分隔线。伤害红/治疗浅绿保留；禁用撤回仍显示真实状态。纸纹与字体栅格不是像素身份断言，控件样式与组间关系已对照。
+- 图像质量：新装饰图标按原稿小尺寸使用，角色头像继续使用真实64px缓存，不以原稿头像替换世界生物。正文、姓名和字段仍可选择/编辑，未以整张截图冒充交互界面。
+- 文案：仅处理底部样式；真实姓名、中文提示、适用数量、护甲/最大生命“修正”字段含义保持，未为了字面模拟稿更改数值语义。
+- 行为/适配：默认1158×814下11目标为+8，清空与撤回同排在视口内；主面板实际显示新样式。上方名单各行高度与R29完全相同。28项聚焦检查/317断言、最终类型、构建/122文件安装一致性、手册38项通过；首次两项测试因旧fixture的text输入及label结构失效，已对齐真实number/容器并保留失败日志。
+- 外部Chrome主651352522/副651352555保留，临时viewport已reset。原有R27实际批量与撤回证据复用，本轮没有角色/战斗写入。当前验收限定底部区域，收据`.local/status-alignment-20261028/r30-footer-refinement/receipt-final.json`。

@@ -135,14 +135,14 @@
     "note": "已核6.0.6有CC与无CC的普通复活代表链、原生贡献/GM裁定/真实盲骰、旧卡不重结算、重载/下一死亡阶段、未来版本零写拒绝和清理。停用CC不使用残留接口；其他复活模式、更多玩家/多GM及长时未扩大。 额外完整run下载缺口保留，AGENTS同步受限原生证据。"
   },
   "fvtt-trigger-engine": {
-    "fingerprint": "8eddefd174f4adf80a72fe058780ae01d8dcae5f427b886273032cf85884dd06",
-    "reviewedOn": "2026-10-25",
-    "note": "已核CC/TE active/API/能力与GM持久门、原总账606首次保存/事件、Addled/Frozen、HP/伤势/短休及消费接口；WMP Slow/IFS普通复活代表链指向各自范围。socket stop仅单测，全状态/全复活/多GM仍未覆盖，历史证据不改写。 整合时仅清理新增文件末尾多余空行，共享视图/TE事件逻辑及用户步骤不变；已核差异，不扩大运行接受。"
+    "fingerprint": "717b4942c5875887ed6397def5b42881af92d3f2f6f3c20eb2c2cc5010fee3b7",
+    "reviewedOn": "2026-10-27",
+    "note": "核对whenIdle、ready及战斗检查点联动：仅新增主GM内部接口，管理器入口与正常触发规则保持一致；新撤回在14.368/6.0.6验证，不扩大其他版本或多GM接受。"
   },
   "fvtt-custom-conditions": {
-    "fingerprint": "9233c27183aefe5958f6a75efa00117851d08cf7c6d9d500fbe9d2acbde21477",
-    "reviewedOn": "2026-10-25",
-    "note": "已核CC/TE active/API/能力与GM持久门、原总账606首次保存/事件、Addled/Frozen、HP/伤势/短休及消费接口；WMP Slow/IFS普通复活代表链指向各自范围。socket stop仅单测，全状态/全复活/多GM仍未覆盖，历史证据不改写。"
+    "fingerprint": "3eda9b614ba62b2d9cfa28bb5d0a1c12fc3f6245a9061be290f9a9fdfe136d92",
+    "reviewedOn": "2026-10-27",
+    "note": "核对状态伤势队列与撤回后的回合缓存重读；普通状态、伤势与回合规则继续执行，管理器步骤保持一致；限定14.368/6.0.6伤势和流血撤回重放已接受。"
   },
   "fvtt-json-forge": {
     "fingerprint": "69ea1867603d7fe3875b3076253dc9218dad96c1ec340cab3513a675df684d46",
@@ -160,9 +160,9 @@
     "note": "已核6.0.6 Rat NPC原生卡上的十个严格来源Spell/Cast/引用、一次Midi Use资源变化、Undo/普通重载和完整owned缓存清理。不推广纯Core无Midi、真实传送落点、全法术/全部Activity或生产。 AGENTS同步限定接受及其余Cast/Review边界。 整合时仅清理新增文件末尾多余空行，共享视图/TE事件逻辑及用户步骤不变；已核差异，不扩大运行接受。"
   },
   "open-session-deck": {
-    "fingerprint": "362daaac742cc522a9994a421cecd54097cfcddc992107091507bf08ef3bec71",
-    "reviewedOn": "2026-10-25",
-    "note": "已核6.0.6 GM面板/副屏代表行为、临时生命自然busy/disabled、失效目标行消失以及玩家公开入口GM-only拒绝。状态编辑仅向GM开放；通用stale分支、其余GM命令、禁用原因UI和更多并发矩阵仍按未验范围保留。 英文README/AGENTS同步限定606证据，不声称完整GM命令矩阵。"
+    "fingerprint": "57ae9ab69359fe36ee1c30dd8f1122e43b1cfeb468ffad3292f45f91602ff25c",
+    "reviewedOn": "2026-10-28",
+    "note": "R30底部视觉核对：标题/图标/箭头与数值步进区恢复原稿。步进只修改待填数值并遵循原最小值，仍须点原执行按钮；README/manual关于输入和执行的步骤保持准确，业务命令与撤回未变。"
   },
   "session-monitor": {
     "fingerprint": "84f2b29042e6cedac47459937a6b9564f73c19e383b44cf514c7c06402ab9af1",
