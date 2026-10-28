@@ -13,6 +13,8 @@ import { buildBleedingFlag, extractBleedingSpec } from './bleeding';
 import { extractBurningSpec } from './burning';
 import { readEncounterRuleMarker } from '@fvtt-json-generator/contracts/encounter-rules';
 import { NATIVE_LIFECYCLE_STATUS_DEFINITIONS, nativeLifecycleStatusLabel } from '@fvtt-json-generator/contracts/status-lifecycle';
+import {SOURCE_NATIVE_FAILURE_LABELS} from '@fvtt-json-generator/models/source-rule-facts';
+import type {CanonicalAppliedCondition,SourceOperation} from '@fvtt-json-generator/models/source-operations';
 
 /** Only an exact numeric interval can become an ordinary native Effect clock. */
 export function simpleConditionDuration(source: string | undefined): { seconds?: number; rounds?: number } | undefined {
@@ -59,7 +61,6 @@ export function sourceConditionLifecycle(source: string, status: string, declare
     || statusBranch
     || /\b(?:if|when|whenever|provided|only\s+when)\b|若|如果|当|每当|仅当|只有/iu.test(statusClause)
     || /\b(?:if|unless|while|provided|only\s+when)\b|若|如果|仅当|只有/iu.test(prefix);
-  if (hasLifecycle || declaredDuration?.trim() && !simpleConditionDuration(declaredDuration)) return { mode: 'gm' };
   // Bind a source interval to this status, never to an attack range or another
   // number elsewhere in the feature. Structured duration cannot override it.
   let afterStatus = normalized.slice(start + (found?.[0].length ?? 0), end);
@@ -79,58 +80,109 @@ export function sourceConditionLifecycle(source: string, status: string, declare
     const nextAlias = /^\s*[（(]([^）)]+)[）)]/u.exec(afterStatus);
     if (nextAlias && next.entry.pattern.test(nextAlias[1]!)) afterStatus = afterStatus.slice(nextAlias[0].length);
   }
-  const after = /^\s*(?:状态)?[,，]?\s*(?:for\s+|持续\s*)(\d+\s*(?:rounds?|minutes?|hours?|days?|轮|分钟|小时|天|日))/iu.exec(afterStatus);
+  const after = /^\s*(?:状态|condition)?[,，]?\s*(?:for\s+|持续\s*)(\d+\s*(?:rounds?|minutes?|hours?|days?|轮|分钟|小时|天|日))/iu.exec(afterStatus);
   const before = /(\d+\s*(?:轮|分钟|小时|天|日))(?:的)?\s*$/u.exec(prefix);
-  const sourceDuration = simpleConditionDuration(after?.[1] ?? before?.[1]);
+  const continuation = /^\s*[.。]\s*(?:(?:this|the|that)\s+(?:condition|effect)\s+lasts?\s+for\s+|(?:该|此)(?:状态|效果)(?:持续|维持)\s*)(\d+\s*(?:rounds?|minutes?|hours?|days?|轮|分钟|小时|天|日))/iu.exec(afterStatus);
+  const sourceDuration = simpleConditionDuration(after?.[1] ?? before?.[1] ?? continuation?.[1]);
   const explicit = simpleConditionDuration(declaredDuration);
   if (!sourceDuration && (/^\s*(?:状态)?[,，]?\s*(?:for\b|持续|维持|lasting\b|lasts?\b)/iu.test(afterStatus)
     || /[一二三四五六七八九十百半]+\s*(?:轮|分钟|小时|天|日)(?:的)?\s*$/u.test(prefix)
     || /\b(?:this|the|that)\s+(?:condition|effect)\s+lasts?\b|(?:该|此)(?:状态|效果)(?:持续|维持)/iu.test(scope))) return { mode: 'gm' };
   if (sourceDuration && explicit && JSON.stringify(sourceDuration) !== JSON.stringify(explicit)) return { mode: 'gm' };
-  return { mode: 'native', ...(sourceDuration ?? explicit ? { duration: sourceDuration ?? explicit } : {}) };
+  return { mode: hasLifecycle||declaredDuration?.trim()&&!explicit?'gm':'native', ...(sourceDuration ?? explicit ? { duration: sourceDuration ?? explicit } : {}) };
 }
 
-/** V14 core has no executor for these source lifecycles. Remove only status
- * Effects and their links; AC, passive and custom-condition Effects stay owned
- * by their existing projection. The complete rule and basic Activities remain.
- */
-export function enforceCoreConditionLifecycles(actor: any, sourceByItem?: ReadonlyMap<number, string>): void {
-  for (const [index, item] of (actor.items ?? []).entries()) {
-    // These paths already prove each native failure state from its own source
-    // operation and exclude complex lifecycles before constructing the Effect.
-    if (item.flags?.fvttJsonGenerator?.manualRule || item.flags?.fvttJsonGenerator?.literalMechanics?.version === 1) continue;
-    const sourceText = sourceByItem?.get(index) ?? String(item.system?.description?.value ?? '').replace(/<[^>]*>/gu, ' ').replace(/&nbsp;/gu, ' ').trim();
-    const removed = new Set<string>(), statuses = new Set<string>();
-    for (const effect of item.effects ?? []) {
-      if (readConditionInstance(effect) || effect.transfer === true) continue;
-      const nativeStatuses: string[] = effect.statuses ?? [];
-      if (!nativeStatuses.length) continue;
-      const manual = new Set<string>();
-      const nativeDurations: Array<{ seconds?: number; rounds?: number } | undefined> = [];
-      for (const status of nativeStatuses) {
-        const lifecycle = sourceConditionLifecycle(sourceText, status, effect.flags?.fvttJsonGenerator?.sourceDuration ?? undefined);
-        if (lifecycle.mode === 'gm') { manual.add(status); statuses.add(status); }
-        else nativeDurations.push(lifecycle.duration);
-      }
-      if (manual.size === nativeStatuses.length) removed.add(effect._id);
-      else {
-        if (manual.size && effect.changes?.length || new Set(nativeDurations.map(value => JSON.stringify(value ?? null))).size > 1) {
-          throw new Error('ConditionLifecycleAmbiguous: a shared Effect cannot represent different native status lifecycles.');
-        }
-        if (manual.size) effect.statuses = nativeStatuses.filter(status => !manual.has(status));
-        if (nativeDurations[0]) effect.duration = { ...effect.duration, ...nativeDurations[0] };
-      }
+export function officialCondition(status:string):boolean{return Object.hasOwn(SOURCE_NATIVE_FAILURE_LABELS,status);}
+/** schema-derived: dnd5e 5.3.3 CONFIG conditionTypes; Prone is a separate unconscious rider. */
+export function officialConditionStatuses(statuses:string[]):string[]{return[...new Set([...statuses,...(statuses.some(status=>['paralyzed','petrified','stunned','unconscious'].includes(status))?['incapacitated']:[])])];}
+
+function applicationScope(source:string,status:string):string{
+  const sentences=source.split(/(?<=[.!?。；;])\s*/u).filter(Boolean);
+  const index=sentences.findIndex(sentence=>extractExplicitlyInflictedStatuses(sentence,true).includes(status));
+  if(index<0)return source;
+  const previous=sentences[index-1]??'';
+  return (/saving throw|\bsave\b|豁免/iu.test(previous)&&!extractExplicitlyInflictedStatuses(previous,true).length?previous+' ':'')+sentences[index];
+}
+
+/** Existing explicit-status extraction supplies templates, not a trigger executor. */
+export function inferredAppliedConditions(source:string):CanonicalAppliedCondition[]{
+  const staged=hasStagedSaveOutcomes(source);
+  const declarations=extractExplicitlyInflictedStatuses(source,true).filter(officialCondition).map(status=>{
+    const scope=applicationScope(source,status),life=sourceConditionLifecycle(source,status);
+    return{statuses:[status],...(life.mode==='gm'||/期间|\bwhile\b/iu.test(scope)||staged?{condition:scope}:{}),...(staged?{staged:true}:{})};
+  });
+  for(const dependent of [...declarations]){
+    const status=dependent.statuses[0]!,scope=applicationScope(source,status);
+    if(!/期间|\bwhile\b/iu.test(scope))continue;
+    const parent=declarations.find(candidate=>candidate!==dependent&&candidate.statuses.some(other=>EXPLICIT_STATUS_PATTERNS.find(entry=>entry.status===other)?.pattern.test(scope)));
+    if(parent&&sourceConditionLifecycle(source,parent.statuses[0]!).duration&&!sourceConditionLifecycle(scope,status).duration){
+      parent.statuses.push(...dependent.statuses);parent.condition=source;declarations.splice(declarations.indexOf(dependent),1);
     }
-    if (!statuses.size) continue;
-    item.effects = item.effects.filter((effect: any) => !removed.has(effect._id));
-    for (const activity of Object.values(item.system?.activities ?? {}) as any[]) {
-      if (Array.isArray(activity.effects)) activity.effects = activity.effects.filter((link: any) => !removed.has(link._id));
-      activity.description ??= {};
-      activity.description.chatFlavor = String(activity.description.chatFlavor ?? '') + '<p>GM：按完整原文处理状态后果；这些状态不会由活动自动施加。</p>';
+  }
+  return declarations;
+}
+
+export function operationConditionSource(source:string,op:SourceOperation,operations:SourceOperation[]):string{
+  let scope=op.sourceText||source;
+  if(!op.appliedConditions){
+    const anchor=(entry:SourceOperation)=>entry.type==='save'?entry.proof.save:entry.type==='attack'?entry.proof.attack:entry.proof.damage?.[0];
+    const start=anchor(op)?source.indexOf(anchor(op)!):-1;
+    const ends=operations.filter(entry=>entry!==op).map(entry=>anchor(entry)?source.indexOf(anchor(entry)!):-1).filter(at=>at>start);
+    if(start>=0)scope=source.slice(start,ends.length?Math.min(...ends):undefined);
+    else if(operations.length>1&&scope===source)scope='';
+  }
+  return scope;
+}
+export function operationAppliedConditions(source:string,op:SourceOperation,operations:SourceOperation[]):CanonicalAppliedCondition[]{
+  const scope=operationConditionSource(source,op,operations),staged=op.type==='save'&&hasStagedSaveOutcomes(source);
+  const conditions=op.appliedConditions?structuredClone(op.appliedConditions):inferredAppliedConditions(scope);
+  for(const status of op.failureStatuses??[])if(!conditions.some(entry=>entry.statuses.includes(status)))conditions.push({statuses:[status]});
+  return conditions.flatMap(condition=>{
+    const split=condition.statuses.includes('exhaustion')&&condition.statuses.length>1?[{...condition,statuses:condition.statuses.filter(status=>status!=='exhaustion'),exhaustionLevels:undefined},{...condition,statuses:['exhaustion']}]:[condition];
+    return split.map(entry=>{const condition=entry.condition??(staged?entry.statuses.map(status=>applicationScope(scope,status)).join('\n'):undefined);return{...entry,...(staged?{staged:true}:{}),...(condition||op.condition?{condition:[op.condition,condition].filter(Boolean).join('\n')}: {})};});
+  });
+}
+
+export function conditionActivityTargets(activities:any,source:string,statuses:string[]):any[]{
+  const all=Object.values(activities??{}) as any[],saves=all.filter(activity=>activity.type==='save');
+  const hits=all.filter(activity=>activity.type==='attack'||activity.flags?.fvttJsonGenerator?.sourceOperation?.role==='damage');
+  const selected=new Set<any>();
+  for(const status of statuses){
+    const scope=applicationScope(source,status),at=EXPLICIT_STATUS_PATTERNS.find(entry=>entry.status===status)?.pattern.exec(scope)?.index??scope.length;
+    // A later Save in the same sentence does not own an earlier hit result.
+    const triggers=[...scope.slice(0,at).matchAll(/\bsaving\s+throw\b|\bsave\b|\bfailure\b|\bhit\b|豁免|失败|命中/giu)];
+    const trigger=triggers.at(-1)?.[0],saveResult=trigger!==undefined&&!/^(?:hit|命中)$/iu.test(trigger);
+    for(const activity of saveResult&&saves.length?saves:hits.length?hits:saves.length?saves:all.filter(activity=>activity.flags?.fvttJsonGenerator?.sourceOperation?.role!=='attack-roll'&&activity.type!=='heal'))selected.add(activity);
+  }
+  return all.filter(activity=>selected.has(activity));
+}
+
+export function configureOfficialConditionEffect(effect:any,declaration:CanonicalAppliedCondition,source:string):void{
+  if(!declaration.statuses.length||!declaration.statuses.every(officialCondition))return;
+  const lifecycles=declaration.statuses.map(status=>sourceConditionLifecycle(source,status,declaration.duration));
+  const clocks=lifecycles.flatMap(life=>life.duration?[life.duration]:[]),unique=[...new Set(clocks.map(clock=>JSON.stringify(clock)))];
+  const duration=simpleConditionDuration(declaration.duration)??(unique.length===1?clocks[0]:undefined);
+  const manual=!!declaration.condition||declaration.escapeDc!==undefined||declaration.staged===true||lifecycles.some(life=>life.mode==='gm')||declaration.statuses.includes('exhaustion')||unique.length>1;
+  effect.statuses=officialConditionStatuses(declaration.statuses);effect.name=declaration.statuses.map(status=>displayName(SOURCE_NATIVE_FAILURE_LABELS[status as keyof typeof SOURCE_NATIVE_FAILURE_LABELS],status[0]!.toUpperCase()+status.slice(1))).join(' / ');
+  effect.disabled=false;effect.transfer=false;effect.img=statusIconPath(declaration.statuses[0]!);
+  if(duration)effect.duration={...effect.duration,...duration};
+  effect.description=[source,declaration.condition?`适用/结束条件：${declaration.condition}`:'',declaration.duration?`期限：${declaration.duration}`:'',declaration.escapeDc!==undefined?`逃脱 DC ${declaration.escapeDc}`:'',declaration.staged?'分阶段结果由DM选择此模板应用。':'',declaration.statuses.includes('exhaustion')?'Exhaustion级数按原文由DM设置；此模板不推定级数或累加。':'',manual?'DM判断触发与提前解除；此模板可选应用，不代表自动判定完整规则。':''].filter(Boolean).join('\n');
+  effect.flags??={};effect.flags.fvttJsonGenerator={...effect.flags.fvttJsonGenerator,conditionLifecycle:{...declaration,version:1,mode:manual?'gm':'native',sourceText:source}};
+}
+
+/** Preserve optional native templates; lifecycle gaps select GM application rather than deleting Effects. */
+export function enforceCoreConditionLifecycles(actor:any,sourceByItem?:ReadonlyMap<number,string>):void{
+  for(const[index,item]of(actor.items??[]).entries()){
+    if(item.flags?.fvttJsonGenerator?.manualRule||item.flags?.fvttJsonGenerator?.literalMechanics?.version===1)continue;
+    const source=sourceByItem?.get(index)??String(item.system?.description?.value??'').replace(/<[^>]*>/gu,' ');
+    const manual:any[]=[];
+    for(const effect of item.effects??[]){
+      if(readConditionInstance(effect)||effect.transfer===true||!effect.statuses?.length||!effect.statuses.every(officialCondition))continue;
+      const prior=effect.flags?.fvttJsonGenerator?.conditionLifecycle;
+      configureOfficialConditionEffect(effect,{statuses:effect.statuses,...(effect.flags?.fvttJsonGenerator?.sourceDuration?{duration:effect.flags.fvttJsonGenerator.sourceDuration}:{}),...(prior??{} )},source);
+      if(effect.flags.fvttJsonGenerator.conditionLifecycle.mode==='gm')manual.push(effect.flags.fvttJsonGenerator.conditionLifecycle);
     }
-    item.flags ??= {}; item.flags.fvttJsonGenerator ??= {};
-    item.flags.fvttJsonGenerator.conditionLifecycle = { version: 1, mode: 'gm', sourceText, statuses: [...statuses] };
-    item.system.description.value += '<p>GM：按完整原文处理以上状态的期限、提前结束与再次豁免；这些状态不会由活动自动施加。</p>';
+    if(manual.length){item.flags??={};item.flags.fvttJsonGenerator??={};item.flags.fvttJsonGenerator.conditionLifecycle={version:1,mode:'gm',sourceText:source,statuses:[...new Set(manual.flatMap(entry=>entry.statuses))],conditions:manual};}
   }
 }
 
@@ -167,7 +219,7 @@ const STATUS_ICON_OVERRIDES: Record<string, string> = {
 
 const CUSTOM_STATUS_ICON_NAMES = new Set(['blood', 'daze']);
 
-const EXPLICIT_STATUS_PATTERNS: Array<{ status: string; pattern: RegExp }> = [
+const EXPLICIT_STATUS_PATTERNS: Array<{ status: string; pattern: RegExp;legacyPattern?:RegExp }> = [
   { status: 'addled', pattern: /\baddled\b|心智混乱|心智混亂/i },
   { status: 'bewildered', pattern: /\bbewildered\b|迷乱|迷亂/i },
   { status: 'burning', pattern: /\bburning\b|燃烧|燃燒/i },
@@ -186,19 +238,21 @@ const EXPLICIT_STATUS_PATTERNS: Array<{ status: string; pattern: RegExp }> = [
   { status: 'valor', pattern: /\bvalor\b|英勇/i },
   { status: 'weakened', pattern: /\bweakened\b|虚弱|虛弱/i },
   { status: 'poisoned', pattern: /\bpoisoned\b|\u4e2d\u6bd2/i },
-  { status: 'paralyzed', pattern: /\bparaly[sz]ed\b|\u9ebb\u75f9/i },
+  { status: 'paralyzed', pattern: /\bparaly[sz]ed\b|\u9ebb\u75f9|瘫痪/i,legacyPattern:/\bparaly[sz]ed\b|\u9ebb\u75f9/i },
   { status: 'stunned', pattern: /\bstunned\b|\u9707\u6151/i },
   { status: 'charmed', pattern: /\bcharmed\b|\u9b45\u60d1/i },
   { status: 'frightened', pattern: /\bfrightened\b|\u6050\u614c/i },
   { status: 'prone', pattern: /\bprone\b|\u5012\u5730/i },
   { status: 'restrained', pattern: /\brestrained\b|\u675f\u7f1a|\u53d7\u9650/i },
-  { status: 'blinded', pattern: /\bblinded\b|\u76ee\u76f2/i },
+  { status: 'blinded', pattern: /\bblinded\b|\u76ee\u76f2|致盲/i,legacyPattern:/\bblinded\b|\u76ee\u76f2/i },
   { status: 'deafened', pattern: /\bdeafened\b|\u8033\u804b/i },
   { status: 'invisible', pattern: /\binvisible\b|\u9690\u5f62/i },
   { status: 'petrified', pattern: /\bpetrified\b|\u77f3\u5316/i },
   { status: 'exhaustion', pattern: /\bexhaust(?:ed|ion)\b|\u529b\u7aed/i },
   { status: 'unconscious', pattern: /\bunconscious\b|\u660f\u8ff7/i },
-  { status: 'grappled', pattern: /\bgrappled\b|\u64d2\u62b1|\u88ab\u64d2\u62b1/i },
+  { status: 'incapacitated', pattern: /\bincapacitated\b|失能/i },
+  { status: 'dead', pattern: /\bdead\b|\bdies\b|死亡/i },
+  { status: 'grappled', pattern: /\bgrappled\b|\u64d2\u62b1|\u88ab\u64d2\u62b1|受擒/i,legacyPattern:/\bgrappled\b|\u64d2\u62b1|\u88ab\u64d2\u62b1/i },
   { status: 'dazed', pattern: /\bdazed\b|\u604d\u60da|\u7729\u6655/i },
   { status: 'bleeding', pattern: /\bbleed(?:ing)?\b|\u6d41\u8840/i },
 ];
@@ -217,8 +271,8 @@ export function statusIconPath(status: string): string {
  * condition to a target/creature. Bare mentions, prerequisites, immunity text,
  * and actor-state termination clauses are not target effects.
  */
-export function extractExplicitlyInflictedStatuses(text: string): string[] {
-  if (hasStagedSaveOutcomes(text)) {
+export function extractExplicitlyInflictedStatuses(text: string,includeStaged=false): string[] {
+  if (!includeStaged&&hasStagedSaveOutcomes(text)) {
     return [];
   }
   const statuses = new Set<string>();
@@ -233,19 +287,21 @@ export function extractExplicitlyInflictedStatuses(text: string): string[] {
 
     const clauses = sentence.split(/,|\uFF0C|\bbut\b/i).map((part) => part.trim()).filter(Boolean);
     for (const clause of clauses) {
+      if(includeStaged&&(/^(?:if|while|unless|provided)\s+(?:the\s+)?(?:target|creature|it)\s+(?:is|has|was)\b/iu.test(clause)||/^(?:若|如果|当|仅当|只有)(?:该)?(?:目标|生物|其|它)(?:已|已经|处于|具有)/u.test(clause)))continue;
       const predicates: Array<{ text: string; allowedStatuses?: ReadonlySet<string> }> = [];
-      const englishApplication = clause.match(
-        /\b(?:target|creature|enemy|foe|it|they)\b[\s\S]{0,120}?\b(?:is|are|becomes?|be|falls?|starts?)\s+([\s\S]+)/i,
-      );
+      const englishApplication = clause.match(/\b(?:target|creature|enemy|foe|it|they)\b[\s\S]{0,120}?\b(?:is|are|becomes?|be|falls?|starts?)\s+([\s\S]+)/i);
       if (englishApplication?.[1]) {
         predicates.push({ text: englishApplication[1] });
       }
+      const modern=includeStaged?/\b(?:target|creature|enemy|foe|it|they)\b[\s\S]{0,120}?\b(?:has|have)\s+(?:the\s+)?([a-z]+)\s+condition\b/iu.exec(clause):undefined;
+      if(modern&&officialCondition(modern[1]!.toLowerCase()))predicates.push({text:modern[1]!});
+      if(includeStaged&&!/^\s*(?:if|when|while|after|unless|若|当|每当)/iu.test(clause)&&/\b(?:target|creature|it)\s+(?:immediately\s+)?dies\b|(?:目标|生物|其|它)(?:立即)?死亡/iu.test(clause))predicates.push({text:'dead'});
 
       const gainedParameterizedCondition = clause.match(
         /\b(?:target|creature|enemy|foe|it|they)\b[\s\S]{0,120}?\b(?:gains?|receives?|acquires?)\s+([\s\S]+)/i,
       );
       if (gainedParameterizedCondition?.[1]) {
-        predicates.push({ text: gainedParameterizedCondition[1], allowedStatuses: new Set(['bleeding', 'burning']) });
+        predicates.push({ text: gainedParameterizedCondition[1], allowedStatuses: new Set(['bleeding', 'burning',...(includeStaged?['exhaustion']:[])]) });
       }
 
       const saveFailureApplication = clause.match(
@@ -266,7 +322,7 @@ export function extractExplicitlyInflictedStatuses(text: string): string[] {
         /(?:\u76ee\u6807|\u751f\u7269|\u5b83|\u5176)?\s*(?:\u83b7\u5f97|\u7372\u5f97|\u9644\u52a0)\s*([\s\S]+)/,
       );
       if (gainedChineseParameterizedCondition?.[1]) {
-        predicates.push({ text: gainedChineseParameterizedCondition[1], allowedStatuses: new Set(['bleeding', 'burning']) });
+        predicates.push({ text: gainedChineseParameterizedCondition[1], allowedStatuses: new Set(['bleeding', 'burning',...(includeStaged?['exhaustion']:[])]) });
       }
 
       const chinesePassiveApplication = clause.match(
@@ -277,12 +333,13 @@ export function extractExplicitlyInflictedStatuses(text: string): string[] {
       }
 
       for (const predicate of predicates) {
-        if (/^\s*(?:already|not|no\s+longer|immune\s+to|unaffected\s+by)\b/i.test(predicate.text)) {
+        if (/^\s*(?:already|not|no\s+longer|immun(?:e|ity)\s+to|unaffected\s+by)\b/i.test(predicate.text)||includeStaged&&/不再|不会|并未|未曾|免疫|解除|移除/u.test(clause.slice(0,clause.indexOf(predicate.text)))) {
           continue;
         }
         for (const entry of EXPLICIT_STATUS_PATTERNS) {
           if (predicate.allowedStatuses && !predicate.allowedStatuses.has(entry.status)) continue;
-          if (entry.pattern.test(predicate.text)) {
+          if(entry.status==='exhaustion'&&predicate.allowedStatuses&&!/^(?:(?:\d+|one|two|three|four|five|six)\s+(?:levels?\s+of\s+)?)?exhaustion\b|^(?:[一二三四五六\d]+(?:级|等级))?力竭/iu.test(predicate.text))continue;
+          if ((includeStaged?entry.pattern:entry.legacyPattern??entry.pattern).test(predicate.text)) {
             statuses.add(entry.status);
           }
         }
@@ -294,8 +351,8 @@ export function extractExplicitlyInflictedStatuses(text: string): string[] {
 }
 
 function hasStagedSaveOutcomes(text: string): boolean {
-  const hasInitialStage = /首次失败|第一次失败|\bfirst\s+failed\s+save\b|\bon\s+a\s+failed\s+save\b/i.test(text);
-  const hasLaterStage = /再次失败|第二次失败|又一次失败|\bsecond\s+failed\s+save\b|\bfails?(?:\s+this|\s+the)?\s+save\s+again\b/i.test(text);
+  const hasInitialStage = /首次失败|第一次失败|\bfirst\s+(?:failure|failed\s+save)\b|\bon\s+a\s+failed\s+save\b/i.test(text);
+  const hasLaterStage = /再次失败|第二次失败|又一次失败|\bsecond\s+(?:failure|failed\s+save)\b|\bfails?(?:\s+this|\s+the)?\s+save\s+again\b/i.test(text);
   if (!(hasInitialStage && hasLaterStage)) return false;
 
   const mentionedStatuses = new Set(
@@ -490,6 +547,7 @@ export function generateEnhancedConditionEffects(
   actionName?: string,
   sourceLogicalPath?: string,
   v14 = false,
+  officialTemplates = false,
 ): any[] {
   const effects: any[] = [];
   if (!desc) return effects;
@@ -539,6 +597,7 @@ export function generateEnhancedConditionEffects(
     { cn: '恍惚', en: 'dazed', label: 'Dazed' },
     { cn: 'Dazed', en: 'dazed', label: 'Dazed' },
     { cn: '流血', en: 'bleeding', label: 'Bleeding' },
+    ...(officialTemplates?[{cn:'失能',en:'incapacitated',label:'Incapacitated'},{cn:'死亡',en:'dead',label:'Dead'}]:[]),
     { cn: '中毒', en: 'poisoned', label: 'Poisoned' },
     { cn: '麻痹', en: 'paralyzed', label: 'Paralyzed' },
     { cn: '震慑', en: 'stunned', label: 'Stunned' },
@@ -576,7 +635,7 @@ export function generateEnhancedConditionEffects(
     bleeding: '流血',
   };
   const bleedingSpec = extractBleedingSpec(desc);
-  const explicitlyInflicted = new Set(extractExplicitlyInflictedStatuses(desc));
+  const explicitlyInflicted = new Set(extractExplicitlyInflictedStatuses(desc,officialTemplates));
   const untilDamagedStatuses = extractUntilDamagedStatuses(desc, explicitlyInflicted);
 
   const generatedStatuses = new Set<string>();
@@ -632,6 +691,12 @@ export function generateEnhancedConditionEffects(
     });
   }
 
+  if(officialTemplates)for(const declaration of inferredAppliedConditions(desc)){
+    const matching=effects.filter(effect=>effect.statuses?.some((status:string)=>declaration.statuses.includes(status)));
+    if(!matching.length)continue;
+    const effect=matching[0];configureOfficialConditionEffect(effect,declaration,desc);
+    for(const duplicate of matching.slice(1))effects.splice(effects.indexOf(duplicate),1);
+  }
   if (effects.length > 0 && activities && typeof activities === 'object') {
     const hasUntilDamagedEffect = effects.some(
       (effect) => effect.flags?.fvttJsonGenerator?.sourceDuration === 'untilDamaged',
@@ -640,7 +705,8 @@ export function generateEnhancedConditionEffects(
       if (activity && typeof activity === 'object') {
         if (!activity.effects) activity.effects = [];
         for (const effect of effects) {
-          activity.effects.push({ _id: effect._id });
+          if(officialTemplates&&effect.statuses?.every(officialCondition)&&!conditionActivityTargets(activities,desc,effect.statuses).includes(activity))continue;
+          activity.effects.push({ _id: effect._id,...(officialTemplates&&activity.type==='save'?{onSave:false}:{}) });
         }
         if (hasUntilDamagedEffect) {
           activity.duration = {

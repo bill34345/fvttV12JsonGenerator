@@ -5,6 +5,7 @@ import {analyzeBrowserActorSourceWithAi,generateBrowserActorIntakeCandidate} fro
 import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
 import {YamlParser} from '@fvtt-json-generator/parser/yaml';
+import {buildForgeActorRequest,convertFinalActorSource} from '@fvtt-json-generator/forge-browser-runtime';
 import type {MonsterIntakeIR} from '@fvtt-json-generator/intake-ai/types';
 import cases from './fixtures/forge-literal-condition-cases.json';
 
@@ -42,7 +43,9 @@ for(const row of cases)test(row.id+' retains typed conditions through the formal
   expect(activity.damage.parts).toEqual([expect.objectContaining({number:1,denomination:10,bonus:'4',types:['slashing']})]);
   expect(item.system.description.value).toContain(row.rule);
   if(row.manual){
-    expect(item.effects).toEqual([]);expect(activity.effects??[]).toEqual([]);
+    expect(item.effects).toHaveLength(row.conditions.length);
+    expect(activity.effects).toEqual(item.effects.map((effect:any)=>({_id:effect._id})));
+    for(const effect of item.effects){expect(effect.disabled).toBe(false);expect(effect.transfer).toBe(false);expect(effect.flags.fvttJsonGenerator.conditionLifecycle).toMatchObject({version:1,mode:'gm',sourceText:ir.creature.actions[0]!.description});expect(effect.description).toContain(row.rule);}
     const ledger=item.flags.fvttJsonGenerator.conditionLifecycle;
     expect(ledger).toMatchObject({version:1,mode:'gm',sourceText:ir.creature.actions[0]!.description});
     expect(ledger.conditions).toEqual(row.conditions.flatMap(({statuses,...metadata})=>statuses.map(status=>({status,...metadata}))));
@@ -56,30 +59,46 @@ for(const row of cases)test(row.id+' retains typed conditions through the formal
   expect(verifyMonsterIntake(data.source,ir,markdown,actor).findings).toEqual([]);
 });
 
-test('LF/CRLF and explicit condition fields preserve the same parsed mechanics; malformed condition fields reject',()=>{
+test('LF/CRLF and explicit condition fields preserve grouped state mechanics; malformed metadata does not cancel the Actor',async()=>{
   for(const row of cases){
     const left=new YamlParser().parse(renderMonsterIntakeMarkdown(fixture(row).ir));
     const right=new YamlParser().parse(renderMonsterIntakeMarkdown(fixture(row,'\r\n').ir).replace(/\n/g,'\r\n'));
     expect(right.structuredActions).toEqual(left.structuredActions);
-    expect(left.structuredActions?.动作?.[0]?.embeddedEffects?.map(({type,condition,escapeDc,duration,staged})=>({status:type,condition,escapeDc,duration,staged})))
-      .toEqual(row.conditions.flatMap(({statuses,...rest})=>statuses.map(status=>({status,condition:undefined,escapeDc:undefined,duration:undefined,staged:undefined,...rest}))));
+    expect(left.structuredActions?.动作?.[0]?.embeddedEffects?.map(({type,statuses,condition,escapeDc,duration,staged})=>({type,statuses,condition,escapeDc,duration,staged})))
+      .toEqual(row.conditions.map(({statuses,...rest})=>({type:statuses[0],statuses,condition:undefined,escapeDc:undefined,duration:undefined,staged:undefined,...rest})));
   }
   const markdown=renderMonsterIntakeMarkdown(fixture(cases[0]!).ir),document=yaml.load(markdown.slice(4,-4)) as any;
+  const retainsActor=async(copy:any)=>{
+    const before=structuredClone(copy),content='---\n'+yaml.dump(copy)+'---\n';
+    const response=await convertFinalActorSource(buildForgeActorRequest({content,displayName:'Condition metadata control',requestId:'condition-metadata-control',fvttVersion:'14.364',systemVersion:'5.3.3'}));
+    expect(copy).toEqual(before);
+    if(!('result'in response)||!response.result.artifact)throw Error('The existing Actor and its actions must remain available.');
+    const item=(response.result.artifact.items as any[]).find(item=>item.name==='Strike'),activity=Object.values<any>(item.system.activities)[0];
+    expect(activity.attack).toMatchObject({bonus:'6',flat:true,type:{value:'melee',classification:'weapon'}});
+    expect(activity.damage.parts).toEqual([expect.objectContaining({number:1,denomination:10,bonus:'4',types:['slashing']})]);
+    expect(item.effects).toHaveLength(1);expect(item.effects[0].statuses).toEqual(['grappled','restrained']);
+    expect(item.effects[0].flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');
+    expect(item.effects[0].description).toContain(cases[0]!.rule);expect(activity.effects).toEqual([{_id:item.effects[0]._id}]);
+    return new YamlParser().parse(content).structuredActions?.动作?.[0]?.embeddedEffects?.[0];
+  };
   for(const invalid of [null,{},42]){
     const copy=structuredClone(document);copy.动作[0].内嵌效果[0].条件=invalid;
-    expect(()=>new YamlParser().parse(yaml.dump(copy))).toThrow('InvalidEmbeddedCondition');
+    expect((await retainsActor(copy))?.condition).toBeUndefined();
+    // The supplied object/source retains the unmapped value; no meaning is invented for it.
+    expect(copy.动作[0].内嵌效果[0].条件).toEqual(invalid);
   }
   const conflict=structuredClone(document);conflict.动作[0].内嵌效果[0].condition='another condition';
-  expect(()=>new YamlParser().parse(yaml.dump(conflict))).toThrow('InvalidEmbeddedCondition');
+  expect((await retainsActor(conflict))?.condition).toBe(conflict.动作[0].内嵌效果[0].条件);
+  expect(conflict.动作[0].内嵌效果[0].condition).toBe('another condition');
 });
 
 test('the verifier rejects altered GM parameters and reintroduced automatic effects or dangling links',async()=>{
   const data=fixture(cases[0]!),{actor,markdown,ir}=await generate(data);
   const errors=(mutate:(item:any)=>void)=>{const copy=structuredClone(actor);mutate(copy.items[0]);return verifyMonsterIntake(data.source,ir,markdown,copy).findings.map(f=>f.code);};
-  expect(errors(item=>{item.flags.fvttJsonGenerator.conditionLifecycle.conditions[0].escapeDc=99;})).toContain('ACTOR_CONDITION_GM_METADATA_DRIFT');
-  expect(errors(item=>{item.flags.fvttJsonGenerator.conditionLifecycle.conditions[0].condition='permanent';})).toContain('ACTOR_CONDITION_GM_METADATA_DRIFT');
-  expect(errors(item=>{delete item.flags.fvttJsonGenerator.conditionLifecycle;})).toContain('ACTOR_CONDITION_GM_METADATA_DRIFT');
-  expect(errors(item=>{item.effects=[{_id:'bad',statuses:['restrained'],duration:{}}];Object.values<any>(item.system.activities)[0].effects=[{_id:'bad'}];})).toContain('ACTOR_CONDITION_AUTOMATION_DRIFT');
+  expect(errors(item=>{item.effects[0].flags.fvttJsonGenerator.conditionLifecycle.escapeDc=99;})).toContain('ACTOR_CONDITION_GM_METADATA_DRIFT');
+  expect(errors(item=>{item.effects[0].flags.fvttJsonGenerator.conditionLifecycle.condition='permanent';})).toContain('ACTOR_CONDITION_GM_METADATA_DRIFT');
+  expect(errors(item=>{delete item.effects[0].flags.fvttJsonGenerator.conditionLifecycle;})).toContain('ACTOR_CONDITION_GM_METADATA_DRIFT');
+  expect(errors(item=>{item.effects=[{_id:'bad',statuses:['restrained'],duration:{}}];Object.values<any>(item.system.activities)[0].effects=[{_id:'bad'}];})).toContain('ACTOR_CONDITION_GM_METADATA_DRIFT');
   expect(errors(item=>{Object.values<any>(item.system.activities)[0].effects=[{_id:'orphan'}];})).toContain('ACTOR_CONDITION_LINK_DRIFT');
 });
 
@@ -87,7 +106,9 @@ test('a conditional branch of the same status cannot be bypassed by a second nat
   const base=fixture(cases[0]!),original=await generate(base),mixed=structuredClone(base);
   mixed.ir.creature.actions[0]!.appliedConditions!.push({statuses:['restrained'],duration:'2 rounds'});
   const actual=await generate(mixed);
-  expect(actual.actor.items[0].effects).toEqual([]);
+  expect(actual.actor.items[0].effects).toHaveLength(2);
+  expect(actual.actor.items[0].effects.every((effect:any)=>effect.flags.fvttJsonGenerator.conditionLifecycle.mode==='gm')).toBe(true);
+  expect(Object.values<any>(actual.actor.items[0].system.activities)[0].effects).toEqual(actual.actor.items[0].effects.map((effect:any)=>({_id:effect._id})));
   expect(actual.actor.items[0].flags.fvttJsonGenerator.conditionLifecycle.conditions).toHaveLength(3);
   expect(actual.actor.items[1]).toEqual(original.actor.items[1]);
 });
@@ -96,9 +117,11 @@ for(const nativeFirst of [false,true])test('mixed GM and native states retain na
   const conditions=[...cases[0]!.conditions,...cases[4]!.conditions];
   const row={...cases[0]!,rule:cases[0]!.rule+' '+cases[4]!.rule,conditions:nativeFirst?[conditions[1]!,conditions[0]!]:conditions};
   const data=fixture(row),{actor,ir,markdown}=await generate(data),item=actor.items[0],activity=Object.values<any>(item.system.activities)[0];
-  expect(item.effects).toHaveLength(1);
-  expect(item.effects[0]).toMatchObject({statuses:['poisoned'],duration:{rounds:2},description:ir.creature.actions[0]!.description});
-  expect(activity.effects).toEqual([{_id:item.effects[0]._id}]);
+  expect(item.effects).toHaveLength(2);
+  const poison=item.effects.find((effect:any)=>effect.statuses.includes('poisoned')),grapple=item.effects.find((effect:any)=>effect.statuses.includes('grappled'));
+  expect(poison).toMatchObject({statuses:['poisoned'],duration:{rounds:2},flags:{fvttJsonGenerator:{conditionLifecycle:{mode:'native'}}}});
+  expect(grapple).toMatchObject({statuses:['grappled','restrained'],flags:{fvttJsonGenerator:{conditionLifecycle:{mode:'gm',escapeDc:14}}}});
+  expect(activity.effects).toEqual(item.effects.map((effect:any)=>({_id:effect._id})));
   expect(item.flags.fvttJsonGenerator.conditionLifecycle.statuses).toEqual(['grappled','restrained']);
   expect(item.flags.fvttJsonGenerator.conditionLifecycle.conditions).toHaveLength(2);
   const note=item.system.description.value.slice(item.system.description.value.lastIndexOf('<p>'));

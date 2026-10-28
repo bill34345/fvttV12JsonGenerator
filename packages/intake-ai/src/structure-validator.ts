@@ -9,7 +9,7 @@ const SIZES = ['tiny', 'small', 'medium', 'large', 'huge', 'gargantuan'];
 const COLLECTIONS = ['traits', 'actions', 'bonusActions', 'reactions', 'legendaryActions', 'mythicActions'];
 const PERIODS = ['day', 'longRest', 'shortRest', 'dawn'];
 const DAMAGE_TYPES = ['acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning', 'necrotic', 'piercing', 'poison', 'psychic', 'radiant', 'slashing', 'thunder'];
-const STATUSES = ['dead', 'blinded', 'charmed', 'deafened', 'frightened', 'grappled', 'incapacitated', 'invisible', 'paralyzed', 'petrified', 'poisoned', 'prone', 'restrained', 'stunned', 'unconscious'];
+const STATUSES = ['dead', 'blinded', 'charmed', 'deafened', 'exhaustion', 'frightened', 'grappled', 'incapacitated', 'invisible', 'paralyzed', 'petrified', 'poisoned', 'prone', 'restrained', 'stunned', 'unconscious'];
 const object = (value: unknown): value is Data => !!value && typeof value === 'object' && !Array.isArray(value)
   && [Object.prototype, null].includes(Object.getPrototypeOf(value));
 const text = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
@@ -135,7 +135,6 @@ export function validateMonsterIntakeStructure(
     optional(entry, 'executionMode', path, (e, p) => enumeration(e, p, ['gm-manual', 'native-with-gm']));
     if(entry.executionMode==='native-with-gm'){
       string(entry.nativeRuleText,`${path}/nativeRuleText`);string(entry.manualRemainder,`${path}/manualRemainder`);
-      if(Array.isArray(entry.appliedConditions)&&entry.appliedConditions.length)invalid(`${path}/appliedConditions`,'Mixed native/GM features cannot carry embedded condition effects; keep the basic operation and complete GM consequence.');
     }
     if(entry.uses!==undefined&&entry.recharge!==undefined)invalid(path,'A feature cannot carry both an independent use pool and recharge.');
     optional(entry, 'range', path, distance); optional(entry, 'attack', path, attack);
@@ -147,8 +146,9 @@ export function validateMonsterIntakeStructure(
       optional(e, 'dcSourceKind', p, (v, at) => enumeration(v, at, ['spellcasting', 'literal'])); optional(e, 'outcome', p, (v, at) => enumeration(v, at, ['none', 'half', 'full']));
     });
     optional(entry, 'appliedConditions', path, (e, p) => array(e, p, (condition, at) => {
-      if (!shape(condition, at, ['statuses', 'escapeDc', 'condition', 'duration', 'staged'])) return;
+      if (!shape(condition, at, ['statuses', 'escapeDc', 'condition', 'duration', 'staged','exhaustionLevels'])) return;
       statuses(condition.statuses, `${at}/statuses`, [...STATUSES, 'exhaustion', 'exhausted', 'diseased', ...CUSTOM_CONDITION_IDS]); optional(condition, 'escapeDc', at, positive); optional(condition, 'condition', at, string); optional(condition, 'duration', at, string); optional(condition, 'staged', at, boolean);
+      optional(condition,'exhaustionLevels',at,positive);
     }));
     optional(entry, 'spellUseRecords', path, (e, p) => array(e, p, (record, at) => {
       if (!shape(record, at, ['name', 'max', 'period'])) return;
@@ -160,7 +160,7 @@ export function validateMonsterIntakeStructure(
       positive(e.dc, `${p}/dc`); enumeration(e.ability, `${p}/ability`, ABILITIES); string(e.trigger, `${p}/trigger`); string(e.sourceText, `${p}/sourceText`); statuses(e.failureStatuses, `${p}/failureStatuses`);
     });
     if (entry.sourceOperations !== undefined) {
-      for (const field of ['attack', 'save', 'damage', 'healing', 'aoe', 'range', 'targetSpecial', 'appliedConditions', 'spellUseRecords', 'gmTriggeredSave', 'nativeFailureStatuses']) {
+      for (const field of ['attack', 'save', 'damage', 'healing', 'aoe', 'range', 'targetSpecial', 'spellUseRecords', 'gmTriggeredSave', 'nativeFailureStatuses']) {
         if (entry[field] !== undefined) fail('CONFLICTING_SOURCE_OPERATION_CARRIER', `${path}/${field}`, 'Source operations exclusively own the executable fields of their carrier.');
       }
       if (entry.activityType !== undefined && entry.activityType !== 'utility') fail('CONFLICTING_SOURCE_OPERATION_CARRIER', `${path}/activityType`, 'A source-operation carrier uses Utility; each child declares its own activity type.');
@@ -170,7 +170,7 @@ export function validateMonsterIntakeStructure(
       });
       if (entry.executionMode !== 'native-with-gm') invalid(`${path}/executionMode`, 'Independent source operations require the explicit GM execution boundary.');
     }
-    if (entry.executionMode === 'gm-manual' && (entry.activityType !== 'utility' || ['attack', 'save', 'damage', 'healing', 'aoe', 'range', 'targetSpecial', 'appliedConditions', 'sourceOperations', 'gmTriggeredSave', 'nativeFailureStatuses'].some(key => entry[key] !== undefined))) invalid(path, 'Manual features cannot carry executable native mechanics.');
+    if (entry.executionMode === 'gm-manual' && (entry.activityType !== 'utility' || ['attack', 'save', 'damage', 'healing', 'aoe', 'range', 'targetSpecial', 'sourceOperations', 'gmTriggeredSave', 'nativeFailureStatuses'].some(key => entry[key] !== undefined))) invalid(path, 'Manual features cannot carry executable native mechanics.');
     if ((entry.gmTriggeredSave !== undefined || entry.nativeFailureStatuses !== undefined) && entry.executionMode !== 'native-with-gm') invalid(`${path}/executionMode`, 'GM native mechanics require the explicit execution boundary.');
     if (entry.sourceOperations === undefined && (entry.activityType === 'attack' && entry.attack === undefined || entry.activityType === 'save' && entry.save === undefined || entry.activityType === 'damage' && entry.damage === undefined || entry.activityType === 'heal' && entry.healing === undefined)) invalid(`${path}/activityType`, 'The selected activity requires its typed mechanics.');
   };

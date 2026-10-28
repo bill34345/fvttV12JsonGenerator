@@ -1,7 +1,8 @@
 import type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';
 import type { PortableSpellRef } from '@fvtt-json-generator/spell-manifest-contracts';
 import type { ManualSpellUseRecord, GmTriggeredSave, NativeFailureStatus, HealingPart } from './action';
-import type { SourceOperation,SourceResourcePool,SourceCandidateReview,SourceCandidateCounter } from './sourceOperationTypes';
+import type { SourceOperation,SourceResourcePool,SourceCandidateReview,SourceCandidateCounter,CanonicalAppliedCondition } from './sourceOperationTypes';
+export type {CanonicalAppliedCondition} from './sourceOperationTypes';
 
 export type AbilityKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 export type CreatureSize = 'tiny' | 'small' | 'medium' | 'large' | 'huge' | 'gargantuan';
@@ -13,14 +14,6 @@ export interface CanonicalDamagePart {
   types?: string[];
   relationship: 'base' | 'additional' | 'replacement' | 'conditional';
   condition?: string;
-}
-
-export interface CanonicalAppliedCondition {
-  statuses: string[];
-  escapeDc?: number;
-  condition?: string;
-  duration?: string;
-  staged?: boolean;
 }
 
 export interface CanonicalFeature {

@@ -20,7 +20,7 @@ import type {
 } from './types';
 import { renderMonsterFeatureName, renderPreparedSpellcastingProfile } from './renderer';
 import { formatMixedRuleHtml } from '@fvtt-json-generator/generation/actor-text';
-import { sourceConditionLifecycle, simpleConditionDuration, isGeneratedConditionId } from '@fvtt-json-generator/generation/actor-effects';
+import { sourceConditionLifecycle, simpleConditionDuration, isGeneratedConditionId,officialCondition } from '@fvtt-json-generator/generation/actor-effects';
 import { auditMonsterIntakeSource, validateMonsterIntakeIR } from './validator';
 import { hasLiteralDamageHelpers, isLiteralDamageHelperOnly, verifyMonsterProjectionPreservation } from './projection-verifier';
 import { hasManualForcedMovementMechanic, manualForcedMovementRequirements } from './manual-forced-movement';
@@ -726,6 +726,10 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
   const behaviorMechanics = Array.isArray(rawBehaviorMechanics)
     ? rawBehaviorMechanics.map(asRecord)
     : [];
+  const manualTemplateIds=new Set((Array.isArray(item.effects)?item.effects:[]).filter(effect=>{
+    const data=asRecord(effect),life=asRecord(asRecord(asRecord(data.flags).fvttJsonGenerator).conditionLifecycle);
+    return life.version===1&&life.mode==='gm'&&arrayValues(data.statuses).every(officialCondition);
+  }).map(effect=>String(asRecord(effect)._id)));
   return {
     name: item.name,
     sourceFeatureId:asRecord(itemFlags.fvttJsonGenerator).sourceFeatureId,
@@ -758,11 +762,11 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
     literalMechanics: asRecord(asRecord(itemFlags.fvttJsonGenerator).literalMechanics),
     nativeWeapon:{properties:arrayValues(system.properties),type:asRecord(system.type),range:asRecord(system.range),damage:asRecord(system.damage)},
     effectCount: Array.isArray(item.effects)?item.effects.length:0,
-    effectDefinitions:Array.isArray(item.effects)?item.effects.map(effect=>({_id:asRecord(effect)._id,statuses:arrayValues(asRecord(effect).statuses),duration:asRecord(asRecord(effect).duration)})):[],
+    effectDefinitions:Array.isArray(item.effects)?item.effects.map(effect=>({_id:asRecord(effect)._id,statuses:arrayValues(asRecord(effect).statuses),duration:asRecord(asRecord(effect).duration),flags:asRecord(asRecord(effect).flags),description:asRecord(effect).description,disabled:asRecord(effect).disabled,transfer:asRecord(effect).transfer})):[],
     conditionLifecycle:asRecord(itemFlags.fvttJsonGenerator).conditionLifecycle,
-    manualExecutable: (Array.isArray(item.effects) && item.effects.length > 0)
+    manualExecutable: (Array.isArray(item.effects) && item.effects.some(effect=>!manualTemplateIds.has(String(asRecord(effect)._id))))
       || Object.values(activities).map(asRecord).some(activity=>activity.type!=='utility' || activity.attack || activity.save || activity.damage
-        || Array.isArray(activity.effects)&&activity.effects.length>0
+        || Array.isArray(activity.effects)&&activity.effects.some(link=>!manualTemplateIds.has(String(asRecord(link)._id)))
         || ((targets:unknown)=>Array.isArray(targets)&&targets.length>0)(asRecord(activity.consumption).targets)),
     uses: projectItemUses(asRecord(system.uses)),
     useRecovery: Array.isArray(asRecord(system.uses).recovery)?asRecord(system.uses).recovery:[],
@@ -906,7 +910,6 @@ function compareFeatureSections(
       const marker=asRecord(found.manualRule),activities=Array.isArray(found.activities)?found.activities.map(asRecord):[];
       const contexts=feature.sourceContext??[];
       if(!complete||!fullLiteral||marker.mode!=='native-with-gm'||marker.sourceText!==feature.description||JSON.stringify(marker.sourceOperations)!==JSON.stringify(feature.sourceOperations)||JSON.stringify(marker.sourceContext)!==JSON.stringify(contexts)||contexts.some(context=>!sourceRuleText(description).includes(sourceRuleText(context))))add('ACTOR_SOURCE_OPERATION_RULE_LOSS',path,'Source operations must retain complete rules, shared conditions and their exact source identity.');
-      const expectedEffectCount=feature.sourceOperations.reduce((count,op)=>count+(op.failureStatuses?.length??0),0);
       const modes=sourceAttackDamageModes(feature.description,feature.sourceOperations,feature.name);
       type ViewOp=NonNullable<CanonicalFeature['sourceOperations']>[number]&{damageMode?:string;nameSuffix?:string;gmDamageOnly?:boolean;gmAttackOnly?:boolean};
       const viewOps:ViewOp[]=feature.sourceOperations.filter(op=>!modes?.absorbedIds.includes(op.id)).flatMap(op=>{
@@ -918,7 +921,7 @@ function compareFeatureSections(
         ];
       });
       const dual=(op:ViewOp)=>Boolean(!(modes?.kind==='versatile'&&op.id===modes.attackId)&&op.attack?.reach!==undefined&&op.attack.range!==undefined&&op.attack.type.startsWith('m'));
-      if(activities.length!==viewOps.reduce((count,op)=>count+(isNeutralSourceAttack(op)?(op.gmDamageOnly?0:op.attack!.reach!==undefined&&op.attack!.range!==undefined?2:1)+(op.damage?.length?1:0):dual(op)?2:1),0)||found.effectCount!==expectedEffectCount)add('ACTOR_SOURCE_OPERATION_COUNT_DRIFT',path,'Only source-proven operations and mutually exclusive attack modes may execute.');
+      if(activities.length!==viewOps.reduce((count,op)=>count+(isNeutralSourceAttack(op)?(op.gmDamageOnly?0:op.attack!.reach!==undefined&&op.attack!.range!==undefined?2:1)+(op.damage?.length?1:0):dual(op)?2:1),0))add('ACTOR_SOURCE_OPERATION_COUNT_DRIFT',path,'Only source-proven operations and mutually exclusive attack modes may execute.');
       if(modes?.kind==='versatile'){
         const native=asRecord(found.nativeWeapon),damage=asRecord(native.damage),weaponType=asRecord(native.type),range=asRecord(native.range),op=feature.sourceOperations.find(op=>op.id===modes.attackId)!;
         const partMatches=(value:unknown,expected:typeof modes.ordinary)=>{const part=asRecord(value);return compact(damageFormulaFromActivityPart(part,{attack:{ability:'none'}},{}))===compact(expected.formula)&&JSON.stringify(arrayValues(part.types))===JSON.stringify(expected.types??[expected.type]);};
@@ -939,7 +942,7 @@ function compareFeatureSections(
             if(marker.sourceText!==op.sourceText||marker.attackClassification!=='unspecified'||marker.attackKind!==op.attack!.type||marker.relationship!==(damageRole?'follow-up':op.relationship)
               ||entry.type!==(damageRole?'damage':'utility')||entry.name!==op.name+(damageRole?'（命中后伤害）':`（${attackMode==='melee'?'近战 · ':attackMode==='ranged'?`远程 ${op.attack!.range}${op.attack!.longRange!==undefined?'/'+op.attack!.longRange:''} 尺 · `:''}GM攻击检定）`)+(op.nameSuffix??'')||entry.condition!==condition
               ||entry.activation!==(damageRole||op.relationship==='follow-up'?'special':expectedActivation??'')||Object.keys(asRecord(entry.attackData)).length
-              ||Object.keys(asRecord(entry.saveData)).length||arrayValues(entry.effectIds).length||entry.includeBase!==undefined) add('ACTOR_GM_ATTACK_IDENTITY_DRIFT',path+'/sourceOperations/'+op.id,'A generic GM roll cannot silently become a native weapon/spell Attack or automatic follow-up.');
+              ||Object.keys(asRecord(entry.saveData)).length||!damageRole&&arrayValues(entry.effectIds).length||entry.includeBase!==undefined) add('ACTOR_GM_ATTACK_IDENTITY_DRIFT',path+'/sourceOperations/'+op.id,'A generic GM roll cannot silently become a native weapon/spell Attack or automatic follow-up.');
             if(!damageRole&&(roll.formula!=='1d20'+(op.attack!.toHit>=0?'+':'')+op.attack!.toHit||roll.name!=='GM辅助攻击检定'||roll.prompt!==true||roll.visible!==false||parts.length))add('ACTOR_GM_ATTACK_ROLL_DRIFT',path+'/sourceOperations/'+op.id,'GM attack formula must use exactly the source total once, without damage or inferred ability/proficiency.');
             if(damageRole&&(Object.keys(roll).length||parts.length!==(op.damage?.length??0)||parts.some((part,index)=>compact(String(part.formula??''))!==compact(op.damage![index]!.formula)||JSON.stringify(arrayValues(part.types))!==JSON.stringify(op.damage![index]!.types??[op.damage![index]!.type]))))add('ACTOR_SOURCE_OPERATION_DAMAGE_DRIFT',path+'/sourceOperations/'+op.id,'GM-triggered hit damage must retain its one complete source roll.');
             if(range.override!==true||range.units!=='ft'||range.value!==(attackMode==='melee'?op.attack!.reach:op.attack!.range??op.attack!.reach??null)||range.long!==undefined||range.special!==(attackMode==='melee'?'':op.attack!.longRange!==undefined?`远射程 ${op.attack!.longRange} 尺`:'')) add('ACTOR_SOURCE_OPERATION_RANGE_DRIFT',path+'/sourceOperations/'+op.id,'The GM attack and damage must retain the exact source distance, including zero.');
@@ -951,6 +954,7 @@ function compareFeatureSections(
             if(!Array.isArray(costs)||costs.length!==(expectedCost?1:0)||expectedCost&&(asRecord(costs[0]).type!=='itemUses'||asRecord(costs[0]).target!==resourceTarget||String(asRecord(costs[0]).value)!=='1'))add('ACTOR_SOURCE_OPERATION_RESOURCE_DRIFT',path+'/sourceOperations/'+op.id,'GM hit damage cannot consume the attack resource a second time.');
             const consumption=asRecord(entry.consumption),scaling=asRecord(consumption.scaling);
             if(consumption.spellSlot!==false||scaling.allowed!==false||scaling.max!==''||Array.isArray(costs)&&costs.some(cost=>asRecord(asRecord(cost).scaling).mode!==''||asRecord(asRecord(cost).scaling).formula!==''))add('ACTOR_SOURCE_OPERATION_RESOURCE_DRIFT',path+'/sourceOperations/'+op.id,'A generic GM roll cannot add spell-slot consumption or resource scaling.');
+            if(damageRole&&!operationConditionProjectionValid(op,entry,Array.isArray(found.effectDefinitions)?found.effectDefinitions.map(asRecord):[]))add('ACTOR_SOURCE_OPERATION_STATUS_DRIFT',path+'/sourceOperations/'+op.id,'The post-hit state templates lost their declared qualifier, duration or link.');
           }
           continue;
         }
@@ -973,8 +977,9 @@ function compareFeatureSections(
             ||target.type!==expected.target.type||String(target.count)!==(expected.target.count===undefined?'':String(expected.target.count))||target.special!==(expected.target.special??'')||activity.targetPrompt!==(expected.target.type!=='self'))
             add('ACTOR_SOURCE_OPERATION_HEALING_DRIFT',path+'/sourceOperations/'+op.id,'Each healing event must retain its own exact formula, kind and source-qualified recipient.');
         }
-        const links=arrayValues(activity.effectIds),definitions=Array.isArray(found.effectDefinitions)?found.effectDefinitions.map(asRecord):[],statuses=op.failureStatuses??[];
-        if(links.length!==statuses.length||statuses.some(status=>!definitions.some(effect=>links.includes(String(effect._id))&&JSON.stringify(arrayValues(effect.statuses))===JSON.stringify([status])))||(Array.isArray(activity.effectLinksData)?activity.effectLinksData:[]).some(link=>asRecord(link).onSave!==false))add('ACTOR_SOURCE_OPERATION_STATUS_DRIFT',path+'/sourceOperations/'+op.id,'Only this Save may reference its exact source-verified ordinary failure status.');
+        const links=arrayValues(activity.effectIds),definitions=Array.isArray(found.effectDefinitions)?found.effectDefinitions.map(asRecord):[],statuses=[...(op.failureStatuses??[]),...(op.appliedConditions??[]).flatMap(condition=>condition.statuses)];
+        if(statuses.some(status=>!definitions.some(effect=>links.includes(String(effect._id))&&arrayValues(effect.statuses).includes(status)))||(Array.isArray(activity.effectLinksData)?activity.effectLinksData:[]).some(link=>activity.type==='save'?asRecord(link).onSave!==false:asRecord(link).onSave!==undefined))add('ACTOR_SOURCE_OPERATION_STATUS_DRIFT',path+'/sourceOperations/'+op.id,'The operation must retain its optional state templates with hit or failed-save links.');
+        if(!operationConditionProjectionValid(op,activity,definitions))add('ACTOR_SOURCE_OPERATION_STATUS_DRIFT',path+'/sourceOperations/'+op.id,'The state templates lost their declared qualifier, duration or link.');
         const parts=Array.isArray(activity.damageParts)?activity.damageParts.map(asRecord):[];
         const baseFieldValid=matches.length>0&&matches.every(entry=>op.type==='attack'?entry.includeBase===Boolean(nativeVersatile):entry.includeBase===undefined);
         if(parts.length!==(op.damage?.length??0)||!baseFieldValid||parts.some((part,index)=>compact(String(part.formula??''))!==compact(op.damage![index]!.formula)||JSON.stringify(arrayValues(part.types))!==JSON.stringify(op.damage![index]!.types??[op.damage![index]!.type])))add('ACTOR_SOURCE_OPERATION_DAMAGE_DRIFT',path+'/sourceOperations/'+op.id,'Each operation must retain its own complete damage parts and type choices. Attack must explicitly exclude Item base damage; Save/Damage cannot contain a non-native includeBase field.');
@@ -1016,8 +1021,7 @@ function compareFeatureSections(
       const records=(value:unknown)=>Array.isArray(value)?value.map(asRecord):[];
       const dual=Boolean(feature.attack?.reach&&feature.attack.range&&/^(?:mwak|msak)$/u.test(feature.attack.type));
       const primary=feature.gmTriggeredSave?activities.filter(a=>a.type!=='save'):activities;
-      const expectedEffects=feature.gmTriggeredSave?.failureStatuses.length??feature.nativeFailureStatuses?.length??0;
-      if(found.effectCount!==expectedEffects||activities.length!==(feature.spellUseRecords?.length??((dual?2:1)+(feature.gmTriggeredSave?1:0)))||primary.some(a=>a.type!==(feature.activityType??'utility')))
+      if(activities.length!==(feature.spellUseRecords?.length??((dual?2:1)+(feature.gmTriggeredSave?1:0)))||primary.some(a=>a.type!==(feature.activityType??'utility')))
         add('ACTOR_MIXED_RULE_EXECUTION_DRIFT',path,'Only the verified primary operation and its source-declared attack modes may execute.');
       if(dual){
         const modes=primary.map(a=>a.attackMode).sort();
@@ -1036,12 +1040,12 @@ function compareFeatureSections(
         const expected=feature.gmTriggeredSave,saves=activities.filter(a=>a.type==='save'),save=saves[0],data=asRecord(save?.saveData),dc=asRecord(data.dc);
         const definitions=records(found.effectDefinitions),links=arrayValues(save?.effectIds);
         if(saves.length!==1||Number(dc.formula)!==expected.dc||JSON.stringify(arrayValues(data.ability))!==JSON.stringify([expected.ability])||save?.activation!=='special'||save?.condition!==expected.trigger
-          ||primary.some(a=>Number(a.effectLinks)>0)||links.length!==expectedEffects||records(save?.effectLinksData).some(link=>link.onSave!==false)||definitions.some(e=>!links.includes(String(e._id))||JSON.stringify(arrayValues(e.statuses))!==JSON.stringify(expected.failureStatuses)))
+          ||primary.some(a=>arrayValues(a.effectIds).some(id=>links.includes(id)))||records(save?.effectLinksData).some(link=>link.onSave!==false)||expected.failureStatuses.some(status=>!definitions.some(effect=>links.includes(String(effect._id))&&arrayValues(effect.statuses).includes(status))))
           add('ACTOR_GM_TRIGGERED_SAVE_DRIFT',path+'/gmTriggeredSave','Separate GM-triggered Save must retain its literal DC/ability/trigger and native failed-save statuses, never linked to the attack.');
       }
       if(feature.nativeFailureStatuses){
-        const definitions=records(found.effectDefinitions),links=arrayValues(activities[0]?.effectIds);
-        if(links.length!==expectedEffects||records(activities[0]?.effectLinksData).some(link=>link.onSave!==false)||definitions.some(e=>!links.includes(String(e._id))||!arrayValues(e.statuses).every(status=>feature.nativeFailureStatuses!.includes(status as any))))add('ACTOR_NATIVE_FAILURE_STATUS_DRIFT',path+'/nativeFailureStatuses','Source-explicit native failed-save statuses must remain bound to their Save.');
+        const activity=activities.find(entry=>entry.type==='save'),definitions=records(found.effectDefinitions),links=arrayValues(activity?.effectIds);
+        if(records(activity?.effectLinksData).some(link=>link.onSave!==false)||feature.nativeFailureStatuses.some(status=>!definitions.some(effect=>links.includes(String(effect._id))&&arrayValues(effect.statuses).includes(status))))add('ACTOR_NATIVE_FAILURE_STATUS_DRIFT',path+'/nativeFailureStatuses','Source-explicit native failed-save statuses must remain bound to their Save.');
       }
       if(feature.aoe){
         const area=asRecord(activities[0]?.areaTemplate),range=asRecord(activities[0]?.range);
@@ -1150,8 +1154,9 @@ function compareFeatureSections(
       }
     }
     const actualStatuses = arrayValues(found.statuses).map(normalizeCondition);
+    const automaticStatuses=(Array.isArray(found.effectDefinitions)?found.effectDefinitions.map(asRecord):[]).filter(effect=>asRecord(asRecord(asRecord(effect.flags).fvttJsonGenerator).conditionLifecycle).mode!=='gm').flatMap(effect=>arrayValues(effect.statuses));
     const nativeBranches = (feature.appliedConditions ?? []).filter((applied) => (
-      applied.statuses.some((status) => actualStatuses.includes(normalizeCondition(status)))
+      applied.statuses.some((status) => automaticStatuses.includes(normalizeCondition(status)))
     ));
     const nativeBranchStatuses = new Set(nativeBranches.flatMap((applied) => applied.statuses.map(normalizeCondition))
       .filter((status) => actualStatuses.includes(status)));
@@ -1161,6 +1166,20 @@ function compareFeatureSections(
     for (const [conditionIndex, applied] of (feature.appliedConditions ?? []).entries()) {
       const expectedStatuses = applied.statuses.map(normalizeCondition);
       const conditionPath = `/creature/${section}/${index}/appliedConditions/${conditionIndex}`;
+      if(expectedStatuses.length&&expectedStatuses.every(officialCondition)){
+        const definitions=Array.isArray(found.effectDefinitions)?found.effectDefinitions.map(asRecord):[],conditionActivities=Array.isArray(found.activities)?found.activities.map(asRecord):[];
+        for(const status of expectedStatuses){
+          const statusDefinitions=definitions.filter(effect=>arrayValues(effect.statuses).includes(status)),matching=statusDefinitions.filter(effect=>{const life=asRecord(asRecord(asRecord(effect.flags).fvttJsonGenerator).conditionLifecycle);return ['condition','duration','escapeDc','staged',...(status==='exhaustion'?['exhaustionLevels']:[])].every(key=>(applied as unknown as Record<string,unknown>)[key]===undefined||life[key]===(applied as unknown as Record<string,unknown>)[key]);}),duration=simpleConditionDuration(applied.duration);
+          if(!matching.length)add(statusDefinitions.length?'ACTOR_CONDITION_GM_METADATA_DRIFT':'ACTOR_CONDITION_DRIFT',conditionPath,'The declared official state lost its optional template or exact qualification.');
+          for(const effect of matching){
+            const lifecycle=asRecord(asRecord(effect.flags).fvttJsonGenerator).conditionLifecycle,life=asRecord(lifecycle),links=conditionActivities.flatMap(activity=>arrayValues(activity.effectIds).includes(String(effect._id))?[activity]:[]);
+            if(!links.length||effect.disabled===true||effect.transfer!==false||links.some(activity=>asRecord(activity.sourceOperation).role==='attack-roll'))add('ACTOR_CONDITION_LINK_DRIFT',conditionPath,'An official template must be usable from its own result Activity.');
+            if(life.version!==1||compact(String(life.sourceText??''))!==compact(feature.description)||(applied.condition||applied.escapeDc!==undefined||applied.staged||status==='exhaustion')&&life.mode!=='gm'||applied.condition&&(life.condition!==applied.condition||!String(effect.description).includes(applied.condition))||applied.escapeDc!==undefined&&life.escapeDc!==applied.escapeDc||applied.staged!==undefined&&life.staged!==applied.staged||applied.duration!==undefined&&life.duration!==applied.duration||status==='exhaustion'&&applied.exhaustionLevels!==undefined&&life.exhaustionLevels!==applied.exhaustionLevels)add('ACTOR_CONDITION_GM_METADATA_DRIFT',conditionPath,'The optional template lost its explicit GM qualification.');
+            if(duration&&(asRecord(effect.duration).seconds!==(duration.seconds??null)||asRecord(effect.duration).rounds!==(duration.rounds??null)))add('ACTOR_CONDITION_DURATION_DRIFT',conditionPath,'The optional template lost its numeric duration.');
+          }
+        }
+        continue;
+      }
       if (!context.auditSource) {
         const manual = asRecord(found.conditionLifecycle);
         const companion = hasConditionCompanionMarker(found, section, index, feature, 'manual')
@@ -1525,6 +1544,22 @@ function stripHtml(value: string): string {
     .replace(/[ \t]+\n/gu, '\n')
     .replace(/\n{2,}/gu, '\n')
     .trim();
+}
+
+function operationConditionProjectionValid(op:NonNullable<CanonicalFeature['sourceOperations']>[number],activity:Record<string,unknown>,definitions:Record<string,unknown>[]):boolean{
+  const ids=arrayValues(activity.effectIds);
+  for(const condition of op.appliedConditions??[])for(const status of condition.statuses.filter(officialCondition)){
+    const matching=definitions.filter(effect=>ids.includes(String(effect._id))&&arrayValues(effect.statuses).includes(status));
+    if(!matching.length)return false;
+    const duration=simpleConditionDuration(condition.duration);
+    for(const effect of matching){
+      const life=asRecord(asRecord(asRecord(effect.flags).fvttJsonGenerator).conditionLifecycle),clock=asRecord(effect.duration);
+      if(effect.disabled===true||effect.transfer!==false||life.version!==1||condition.condition&&!String(effect.description).includes(condition.condition)||condition.escapeDc!==undefined&&life.escapeDc!==condition.escapeDc||condition.staged===true&&life.staged!==true||status==='exhaustion'&&condition.exhaustionLevels!==undefined&&life.exhaustionLevels!==condition.exhaustionLevels)return false;
+      if((condition.condition||condition.escapeDc!==undefined||condition.staged||status==='exhaustion')&&life.mode!=='gm')return false;
+      if(duration&&(clock.seconds!==(duration.seconds??null)||clock.rounds!==(duration.rounds??null)))return false;
+    }
+  }
+  return true;
 }
 
 function dedupe(findings: IntakeFinding[]): IntakeFinding[] {

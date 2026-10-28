@@ -38,7 +38,7 @@ export type { ProviderResponseEvidence, ProviderResponseEvidenceSink } from './p
 
 export const INTAKE_PROMPT_VERSIONS = {
   discover: 'monster-intake-discover-v2-source-lines',
-  extract: 'monster-intake-extract-v51-spell-recovery',
+  extract: 'monster-intake-extract-v52-official-status-effects',
   review: 'monster-intake-review-v37-consolidated-full-ir',
   repair: 'monster-intake-repair-v42-vulnerability-notes',
 } as const;

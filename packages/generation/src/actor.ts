@@ -74,6 +74,11 @@ import {
   suppressEncounterStagedInferredEffects,
   enforceCoreConditionLifecycles,
   simpleConditionDuration,
+  operationAppliedConditions,
+  operationConditionSource,
+  inferredAppliedConditions,
+  conditionActivityTargets,
+  officialCondition,
 } from './actor-effects';
 import { buildBleedingFlag, extractBleedingSpec, hasDelayedBleedingFormula } from './bleeding';
 import {
@@ -1061,17 +1066,17 @@ export class ActorGenerator {
       // explicit-exception: canonical Intake owns its typed mechanics. Hide
       // prose (including nested effect prose) from every legacy fallback.
       const embedded = action.embeddedEffects ?? [];
-      const statusOf = (effect: typeof embedded[number]) => normalizeEmbeddedEffectStatus(effect.type) ?? effect.type;
+      const statusesOf = (effect: typeof embedded[number]) => effect.statuses??[normalizeEmbeddedEffectStatus(effect.type) ?? effect.type];
       const manualStatuses = new Set(embedded.filter(effect => effect.escapeDc !== undefined || effect.staged === true
-        || Boolean(effect.condition?.trim()) || Boolean(effect.duration?.trim() && !simpleConditionDuration(effect.duration))).map(statusOf));
+        || Boolean(effect.condition?.trim()) || Boolean(effect.duration?.trim() && !simpleConditionDuration(effect.duration))).flatMap(statusesOf));
       // If two explicit branches share a status, a conditional branch cannot
       // be bypassed by a second unconditional Effect of the same status.
-      const manualEffects = embedded.filter(effect => manualStatuses.has(statusOf(effect)));
-      const nativeEffects = embedded.filter(effect => !manualStatuses.has(statusOf(effect)));
+      const manualEffects = embedded.filter(effect => statusesOf(effect).some(status=>manualStatuses.has(status)));
+      const templates=embedded.map(effect=>({...effect,statuses:statusesOf(effect).filter(status=>officialCondition(status)||!manualStatuses.has(status))})).filter(effect=>effect.statuses.length);
       const safe: StructuredActionData = {
         ...action, literalMechanics: undefined, name: '', englishName: undefined,
         describe: '', nativeRuleText: undefined, manualRemainder: undefined, sourceRuleFacts: [],
-        embeddedEffects: nativeEffects.map(effect => ({ ...effect, describe: '' })),
+        embeddedEffects: undefined,
         failEffects: action.failEffects?.map(effect => ({ ...effect, describe: undefined })),
         successEffects: action.successEffects?.map(effect => ({ ...effect, describe: undefined })),
         subActions: action.subActions?.map(sub => ({ ...sub, describe: '' })),
@@ -1084,9 +1089,8 @@ export class ActorGenerator {
         if (!activity.name) activity.name = item.name;
         activity.description = { chatFlavor: formatLiteralHtml(action.describe ?? '') };
       }
-      for (const [index, effect] of nativeEffects.entries()) {
-        if (item.effects[index]) item.effects[index].description = effect.describe;
-      }
+      if(embedded.length)attachEmbeddedEffectsExt(item,templates);
+      else this.attachConditionTemplates(item,inferredAppliedConditions(action.describe??''),action.describe??'',logicalPath+'/literal-conditions');
       const conditionalParts = (action.sourceDamageParts ?? []).flatMap((part, index) =>
         (part.relationship === 'base' || part.relationship === 'additional') && !part.condition ? [] : [{ part, index }]);
       const base = Object.values(item.system.activities ?? {})[0] as any;
@@ -1113,13 +1117,13 @@ export class ActorGenerator {
       if (manualEffects.length) {
         const labels = [...manualStatuses].map(status => Object.hasOwn(SOURCE_NATIVE_FAILURE_LABELS,status)
           ? `${SOURCE_NATIVE_FAILURE_LABELS[status as keyof typeof SOURCE_NATIVE_FAILURE_LABELS]} ${status}` : status);
-        const note = formatLiteralHtml(`GM：${labels.join('、')}的适用条件、期限、逃脱与解除依完整原文手动处理；这些状态不会由活动自动施加。`);
+        const note = formatLiteralHtml(`GM：${labels.join('、')}可在对应活动选择状态模板；适用条件、期限、逃脱与解除依完整原文判断。`);
         item.flags.fvttJsonGenerator.conditionLifecycle = { version: 1, mode: 'gm', sourceText: action.describe ?? '',
-          statuses: [...manualStatuses], conditions: manualEffects.map(effect => ({ status: statusOf(effect),
+          statuses: [...manualStatuses], conditions: manualEffects.flatMap(effect => statusesOf(effect).map(status=>({ status,
             ...(effect.condition !== undefined ? { condition: effect.condition } : {}),
             ...(effect.escapeDc !== undefined ? { escapeDc: effect.escapeDc } : {}),
             ...(effect.duration !== undefined ? { duration: effect.duration } : {}),
-            ...(effect.staged !== undefined ? { staged: effect.staged } : {}) })) };
+            ...(effect.staged !== undefined ? { staged: effect.staged } : {}) }))) };
         item.system.description.value += note;
         for (const activity of Object.values(item.system.activities ?? {}) as any[]) activity.description.chatFlavor += note;
       }
@@ -1160,6 +1164,7 @@ export class ActorGenerator {
       const operationKinds=[...new Set(operations.flatMap(op=>[op.type,...(op.damage?.length?['damage']:[])]))];
       if(action.uses||action.recharge)operationKinds.push('resource');
       const sourceText=action.describe??'',contextText=(action.sourceContext??[]).join('\n');
+      const outerStatuses=new Set((action.embeddedEffects??[]).flatMap(effect=>effect.statuses??[normalizeEmbeddedEffectStatus(effect.type)??effect.type]));
       for(const op of operations){
         if(op.damageAdjustment&&!sourceActorNameMatches(op.damageAdjustment.actor,activityContext.sourceActorName)){item.system.description.value+='\nGM伤害调整：'+JSON.stringify(op.damageAdjustment);delete op.damageAdjustment;}
         const neutral=isNeutralSourceAttack(op),recipientType=sourceOperationTargetType(sourceText,op)??(neutral?'any':'creature');
@@ -1184,11 +1189,6 @@ export class ActorGenerator {
           if((action.uses||action.recharge)&&!followUp)activity.consumption={targets:[{type:'itemUses',target:'',value:'1',scaling:{mode:'',formula:''}}],spellSlot:false,scaling:{allowed:false,max:''}};
           activity.effects=[];
           if(op.proof.upgrade)activity.target={override:true,prompt:true,template:{type:'',size:'',units:'ft'},affects:{count:'1',type:'creature',choice:false,special:op.proof.damage![0]}};
-          for(const status of op.failureStatuses??[]){
-            const id=createStableDocumentId({kind:'effect',path:logicalPath+'/source-operation/'+op.id+'/'+status});
-            item.effects.push({_id:id,name:SOURCE_NATIVE_FAILURE_LABELS[status],type:'base',img:`systems/dnd5e/icons/svg/statuses/${status}.svg`,transfer:false,disabled:false,statuses:[status],changes:[],duration:{},description:op.sourceText});
-            activity.effects.push({_id:id,onSave:false});
-          }
           if(op.save)activity.save.ability=[...op.save.abilities];
           // Schema-derived: dnd5e 5.3.3 defines includeBase only on Attack.
           // Save/Damage roll their explicit parts; unsupported fields are
@@ -1234,8 +1234,14 @@ export class ActorGenerator {
             item.system.activities[ranged._id]=ranged;
           }
         }
+        const selected=(Object.values(item.system.activities) as any[]).filter(activity=>activity.flags?.fvttJsonGenerator?.sourceOperation?.id===op.id&&(!neutral||activity.flags.fvttJsonGenerator.sourceOperation.role==='damage'));
+        const conditions=operationAppliedConditions(sourceText,op,operations).map(condition=>({...condition,statuses:op.appliedConditions?condition.statuses:condition.statuses.filter(status=>!outerStatuses.has(status)),...(neutral?{condition:[condition.condition,'DM确认此GM攻击已命中后应用状态模板。'].filter(Boolean).join('\n')}: {})})).filter(condition=>condition.statuses.length);
+        const before=item.effects.length;
+        this.attachConditionTemplates(item,conditions,[contextText,operationConditionSource(sourceText,op,operations)||op.sourceText||sourceText,op.condition].filter(Boolean).join('\n'),logicalPath+'/source-operation/'+op.id,selected);
+        for(const effect of item.effects.slice(before))effect.flags.fvttJsonGenerator.sourceOperationId=op.id;
       }
       applySourceAttackDamageModes(item,sourceText,operations,action.name,logicalPath,part=>this.activityGenerator.formatDamage(part));
+      if(action.embeddedEffects?.length)attachEmbeddedEffectsExt(item,action.embeddedEffects);
       item.system.description={value:formatMixedRuleHtml([contextText,sourceText].filter(Boolean).join('\n\n'),true,operationKinds),chat:''};
       item.flags.fvttJsonGenerator.manualRule={version:1,mode:'native-with-gm',sourceText,nativeRuleText:action.nativeRuleText,manualRemainder:action.manualRemainder,operations:operationKinds,sourceOperations:operations,sourceContext:action.sourceContext??[],logicalPath};
       const consumed=this.consumedRuleActions.at(-1);if(consumed)consumed.sourceStructured=action;
@@ -1248,10 +1254,8 @@ export class ActorGenerator {
       const safe={...action,literalMechanics:true as const,executionMode:undefined,nativeRuleText:undefined,manualRemainder:undefined,spellUseRecords:undefined,gmTriggeredSave:undefined,nativeFailureStatuses:undefined,describe:'',sourceRuleFacts:[]};
       this.appendSingleStructuredAction(items,safe,activationType,activityContext,logicalPath,sectionOverride);
       const item=items.at(-1)!;
-      if(action.nativeFailureStatuses){
-        const activity=Object.values(item.system.activities)[0] as any;activity.effects=[];
-        for(const status of action.nativeFailureStatuses){const id=createStableDocumentId({kind:'effect',path:logicalPath+'/failure/'+status});item.effects.push({_id:id,name:SOURCE_NATIVE_FAILURE_LABELS[status],type:'base',img:`systems/dnd5e/icons/svg/statuses/${status}.svg`,transfer:false,disabled:false,statuses:[status],changes:[],duration:{},description:sourceText});activity.effects.push({_id:id,onSave:false});}
-      }
+      const conditions=action.embeddedEffects?.length?[]:inferredAppliedConditions(sourceText);
+      for(const status of action.nativeFailureStatuses??[])if(!conditions.some(condition=>condition.statuses.includes(status)))conditions.push({statuses:[status]});
       // The existing common attack contract carries both source distances.
       // When they are explicitly rendered as alternatives, expose two modes
       // on the same Item; neither a thrown property nor a second attack use is
@@ -1286,13 +1290,10 @@ export class ActorGenerator {
         activity.range={override:true,units:'spec',special:save.trigger};
         activity.target={override:true,prompt:true,template:{type:'',units:'ft'},affects:{count:'1',type:'creature',choice:false,special:save.trigger}};
         activity.effects=[];
-        for(const status of save.failureStatuses){
-          const id=createStableDocumentId({kind:'effect',path:logicalPath+'/gm-save/'+status});
-          item.effects.push({_id:id,name:SOURCE_NATIVE_FAILURE_LABELS[status],type:'base',img:`systems/dnd5e/icons/svg/statuses/${status}.svg`,transfer:false,disabled:false,statuses:[status],changes:[],duration:{},description:save.sourceText});
-          activity.effects.push({_id:id,onSave:false});
-        }
+        this.attachConditionTemplates(item,save.failureStatuses.map(status=>({statuses:[status],condition:save.trigger})),save.sourceText,logicalPath+'/gm-save',[activity]);
         item.system.activities[activity._id]=activity;
       }
+      this.attachConditionTemplates(item,conditions.filter(condition=>!condition.statuses.every(status=>item.effects.some((effect:any)=>effect.statuses?.includes(status)))),sourceText,logicalPath+'/native-conditions');
       const operations=[action.type==='attack'?'attack':'',action.DC!==undefined||action.gmTriggeredSave?'save':'',action.damage?.length?'damage':'',action.uses||action.recharge||action.spellUseRecords?'resource':'',action.aoe?'area':''].filter(Boolean);
       item.system.description={value:formatMixedRuleHtml(sourceText,true,operations),chat:''};
       for(const activity of Object.values(item.system.activities) as any[])activity.description={chatFlavor:formatMixedRuleHtml(sourceText,false,operations)};
@@ -1301,8 +1302,7 @@ export class ActorGenerator {
       return;
     }
     if (action.executionMode === 'gm-manual') {
-      // Source-derived explicit boundary: the complete rule is readable, but
-      // its prose never enters native damage/save/effect inference.
+      // Official state templates use this existing rule button; no basic roll is invented.
       const activation = action.activation?.explicit ? action.activation.type : activationType === 'passive' ? '' : activationType;
       const cost = activation === 'legendary' ? action.legendaryCost ?? 1 : activation && activation !== 'special' ? 1 : null;
       const activities = this.activityGenerator.generate({name:action.name,type:'utility',desc:'',logicalPath}, {});
@@ -1319,6 +1319,9 @@ export class ActorGenerator {
         effects:[],flags:this.buildItemSectionFlags(activation,activation==='',sectionOverride),
       };
       item.flags.fvttJsonGenerator.manualRule={version:1,mode:'gm-manual',sourceText:action.describe,logicalPath};
+      const conditions=action.embeddedEffects?.length?action.embeddedEffects.map(effect=>({statuses:(effect.statuses??[normalizeEmbeddedEffectStatus(effect.type)??effect.type]).filter(officialCondition),condition:effect.condition,duration:effect.duration,escapeDc:effect.escapeDc,staged:effect.staged,exhaustionLevels:effect.exhaustionLevels})):inferredAppliedConditions(action.describe??'');
+      this.attachConditionTemplates(item,conditions.filter(condition=>condition.statuses.length),action.describe??'',logicalPath+'/manual-state-templates',Object.values(activities));
+      for(const effect of item.effects)if(effect.flags?.fvttJsonGenerator?.conditionLifecycle){effect.flags.fvttJsonGenerator.conditionLifecycle.mode='gm';effect.description+='\nDM按本能力完整规则判断目标与状态应用。';}
       if (action.uses) {
         const periods={day:'day',longRest:'lr',shortRest:'sr',dawn:'dawn'};
         item.system.uses={spent:0,max:String(action.uses.max),recovery:[{period:periods[action.uses.period],type:'recoverAll'}]};
@@ -1487,6 +1490,10 @@ export class ActorGenerator {
 
   private attachEmbeddedEffects(item: any, embeddedEffects: StructuredActionData['embeddedEffects']): void {
     attachEmbeddedEffectsExt(item, embeddedEffects);
+  }
+
+  private attachConditionTemplates(item:any,conditions:import('@fvtt-json-generator/models/source-operations').CanonicalAppliedCondition[],source:string,path:string,selected?:any[]):void{
+    attachEmbeddedEffectsExt(item,conditions.map(condition=>({type:condition.statuses[0]??'Effect',describe:source,...condition})),selected,path);
   }
 
   private mapTriggerType(trigger: string): string {
@@ -3426,7 +3433,7 @@ export class ActorGenerator {
   }
 
   private generateEnhancedConditionEffects(desc: string, activities: any, actionName?: string): any[] {
-    return generateEnhancedConditionEffects(desc, activities, actionName, undefined, this.isV14());
+    return generateEnhancedConditionEffects(desc, activities, actionName, undefined, this.isV14(),this.isV14());
   }
 
   private applyActivityMetadata(

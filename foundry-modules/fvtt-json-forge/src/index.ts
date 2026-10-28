@@ -3,6 +3,7 @@ import { createForgeWorkspaceApplicationClass, type ForgeWorkspaceMode } from '.
 import { createForgeGuideApplicationClass } from './guideApplication';
 import {createEncounterAutomationLifecycle} from './encounterAutomationLifecycle';
 import {installEncounterDamageBridge,installPassiveActivityLockGuard} from './encounterAutomationRuntime';
+import {renderManualConditionEffects} from './manualConditionEffects';
 import {
   assertExactRuntime,
   assertGm,
@@ -105,6 +106,7 @@ export function initializeForgeModule(globalEnvironment: any = globalThis): void
   });
   globalEnvironment.Hooks.on?.('renderActorDirectory', (_app: unknown, html: unknown) => mountForgeDirectoryButton('Actor', html, globalEnvironment));
   globalEnvironment.Hooks.on?.('renderItemDirectory', (_app: unknown, html: unknown) => mountForgeDirectoryButton('Item', html, globalEnvironment));
+  globalEnvironment.Hooks.on?.('renderChatMessageHTML', (message: unknown, html: unknown) => renderManualConditionEffects(message, html, globalEnvironment));
   let registered = false;
   let retries = 0;
   const registerSettings = () => {

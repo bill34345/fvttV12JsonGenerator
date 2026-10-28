@@ -2,7 +2,7 @@ import type { EffectProfile } from './effectProfileApplier';
 import { resolveLockedDnd5eV14Spell } from './v14SpellCatalog';
 import { getFoundryTarget, type FvttTargetVersion } from './target';
 import { isFoundryHtmlDescription } from './item-description';
-import { sourceConditionLifecycle, extractExplicitlyInflictedStatuses, simpleConditionDuration } from './actor-effects';
+import { sourceConditionLifecycle, extractExplicitlyInflictedStatuses, simpleConditionDuration, officialCondition } from './actor-effects';
 import { readConditionInstance } from '@fvtt-json-generator/contracts/conditions';
 import {RESOLVER_MODULE_ID,validatePortableSpellManifestStructure,hashManifest} from '@fvtt-json-generator/spell-manifest-contracts';
 import {
@@ -514,53 +514,28 @@ function verifyMechanicCoverage(
       outputPaths.push(`documents/${documentIndex}/system/damage/base`);
     }
     if (mechanic.kind === 'effect') {
-      const value = mechanic.value as { type?: string; duration?: string; sourceText?: string; condition?:string; escapeDc?:number; staged?:boolean } | undefined;
-      const statuses = value?.type ? extractExplicitlyInflictedStatuses(`The target is ${value.type}.`) : [];
-      const source = value?.sourceText;
-      // Canonical AI mechanics already declare statuses/duration. Verify their projection,
-      // never classify their prose again as an alternative lifecycle.
-      const applies = document?.flags?.fvttJsonGenerator?.literalMechanics?.version !== 1 && target === '14' && effectProfile === 'core' && statuses.length > 0 && typeof source === 'string' && activities.length > 0;
-      const marker = document?.flags?.fvttJsonGenerator?.conditionLifecycle;
-      const effects = document?.effects ?? [];
-      const lifecycle = statuses.map(status => sourceConditionLifecycle(source ?? '', status, value?.duration));
-      const literal = document?.flags?.fvttJsonGenerator?.literalMechanics?.version === 1;
-      const declaredManual = value?.escapeDc !== undefined || value?.staged === true || Boolean(value?.condition?.trim())
-        || Boolean(value?.duration?.trim() && !simpleConditionDuration(value.duration));
-      if (literal && activities.length>0 && statuses.length && (declaredManual || statuses.some(status => marker?.statuses?.includes(status)))) {
-        const exact = statuses.every(status => {
-          const expected = { status, ...(value?.condition !== undefined ? {condition:value.condition} : {}),
-            ...(value?.escapeDc !== undefined ? {escapeDc:value.escapeDc} : {}),
-            ...(value?.duration !== undefined ? {duration:value.duration} : {}),
-            ...(value?.staged !== undefined ? {staged:value.staged} : {}) };
-          return Array.isArray(marker?.conditions) && marker.conditions.filter((condition:any) => condition && typeof condition==='object'
-            && Object.keys(condition).length===Object.keys(expected).length && Object.entries(expected).every(([key,entry]) => condition[key]===entry)).length===1;
-        });
-        const retained = exact && activities.length>0 && marker?.version===1 && marker.mode==='gm' && marker.sourceText===source
-          && statuses.every(status => marker.statuses?.includes(status))
-          && !effects.some((effect:any) => effect.statuses?.some((status:string) => statuses.includes(status)))
-          && !activities.some(activity => activity.effects?.some((link:any) => !effects.some((effect:any) => effect._id===link._id)))
-          && String(document.system?.description?.value).includes('GM')
-          && String(document.system?.description?.value).replace(/<[^>]*>/gu,'').replace(/\s/gu,'').includes(String(source??'').replace(/\s/gu,''));
-        if (retained) outputPaths.push(`documents/${documentIndex}/system/activities/${allActivities.indexOf(activities[0])}`);
-        else diagnostics.push(error('GEN_CONDITION_LIFECYCLE_INVALID','semantic',mechanic.path,'The explicit condition metadata requires its exact GM ledger and no automatic status or dangling link.'));
-      } else if (applies && lifecycle.some(entry => entry.mode === 'gm') && !effects.some((effect: any) => statuses.includes(readConditionInstance(effect)?.conditionId ?? ''))) {
-        const retained = marker?.version === 1 && marker.mode === 'gm'
-          && String(marker.sourceText).replace(/\s/gu, '') === source.replace(/\s/gu, '')
-          && statuses.every(status => marker.statuses?.includes(status))
-          && !effects.some((effect: any) => effect.statuses?.some((status: string) => statuses.includes(status)))
-          && String(document.system?.description?.value).includes('GM')
-          && String(document.system?.description?.value).replace(/<[^>]*>/gu, '').replace(/\s/gu, '').includes(source.replace(/\s/gu, ''));
-        if (retained) outputPaths.push(`documents/${documentIndex}/system/activities/${allActivities.indexOf(activities[0])}`);
-        else diagnostics.push(error('GEN_CONDITION_LIFECYCLE_INVALID', 'semantic', mechanic.path, 'Source lifecycle requires the complete GM-only rule with no executable status Effect.'));
-      } else if ((document?.effects?.length ?? 0) > 0) {
-        if (applies) for (const [index, status] of statuses.entries()) {
-          const expected = lifecycle[index]?.duration;
-          if (expected && effects.some((effect: any) => effect.statuses?.includes(status) && (effect.duration?.seconds !== (expected.seconds ?? null) || effect.duration?.rounds !== (expected.rounds ?? null) || effect.duration?.turns != null))) {
-            diagnostics.push(error('GEN_CONDITION_DURATION_INVALID', 'semantic', mechanic.path, 'Native status duration differs from its complete source interval.'));
+      if(!activities.length)continue;
+      const value=mechanic.value as {type?:string;statuses?:string[];duration?:string;sourceText?:string;condition?:string;escapeDc?:number;staged?:boolean;exhaustionLevels?:number}|undefined;
+      const statuses=value?.statuses??(value?.type?extractExplicitlyInflictedStatuses(`The target is ${value.type}.`,true):[]),effects=document?.effects??[];
+      if(target==='14'&&statuses.length&&statuses.every(officialCondition)){
+        const displayed=String(document?.system?.description?.value??'').replace(/<[^>]*>/gu,' ').replace(/&quot;/gu,'"').replace(/&#39;/gu,"'").replace(/&lt;/gu,'<').replace(/&gt;/gu,'>').replace(/&amp;/gu,'&').replace(/\s+/gu,'');
+        let valid=!value?.sourceText||displayed.includes(value.sourceText.replace(/\s+/gu,''));
+        for(const status of statuses){
+          const matching=effects.filter((effect:any)=>effect.statuses?.includes(status)&&['condition','duration','escapeDc','staged',...(status==='exhaustion'?['exhaustionLevels']:[])].every(key=>(value as any)?.[key]===undefined||effect.flags?.fvttJsonGenerator?.conditionLifecycle?.[key]===(value as any)[key])),expected=simpleConditionDuration(value?.duration)??sourceConditionLifecycle(value?.sourceText??'',status,value?.duration).duration;
+          const manual=!!value?.condition||value?.escapeDc!==undefined||value?.staged===true||status==='exhaustion'||sourceConditionLifecycle(value?.sourceText??'',status,value?.duration).mode==='gm';
+          if(!matching.length)valid=false;
+          for(const effect of matching){
+            const lifecycle=effect.flags?.fvttJsonGenerator?.conditionLifecycle;
+            const links=activities.flatMap(activity=>(activity.effects??[]).filter((link:any)=>link._id===effect._id).map((link:any)=>({activity,link})));
+            if(lifecycle?.version!==1||effect.transfer!==false||effect.disabled===true||!links.length||links.some(({activity,link})=>activity.flags?.fvttJsonGenerator?.sourceOperation?.role==='attack-roll'||(activity.type==='save'?link.onSave!==false:link.onSave!==undefined)))valid=false;
+            if(value?.sourceText&&lifecycle?.sourceText!==value.sourceText)valid=false;
+            if(manual&&lifecycle?.mode!=='gm'||value?.condition&&!String(effect.description).includes(value.condition)||value?.escapeDc!==undefined&&lifecycle?.escapeDc!==value.escapeDc||value?.staged===true&&lifecycle?.staged!==true||status==='exhaustion'&&value?.exhaustionLevels!==undefined&&lifecycle?.exhaustionLevels!==value.exhaustionLevels)valid=false;
+            if(expected&&(effect.duration?.seconds!==(expected.seconds??null)||effect.duration?.rounds!==(expected.rounds??null)))diagnostics.push(error('GEN_CONDITION_DURATION_INVALID','semantic',mechanic.path,'The optional template must preserve its explicit numeric duration.'));
           }
         }
-        outputPaths.push(`documents/${documentIndex}/effects`);
-      }
+        if(valid)outputPaths.push(`documents/${documentIndex}/effects`);
+        else diagnostics.push(error('GEN_CONDITION_LIFECYCLE_INVALID','semantic',mechanic.path,'Official states require available templates, exact qualifiers and links to their own hit or failed-save activity.'));
+      }else if(effects.length)outputPaths.push(`documents/${documentIndex}/effects`);
     }
     if (mechanic.kind === 'uses' && document?.system?.uses) {
       outputPaths.push(`documents/${documentIndex}/system/uses`);

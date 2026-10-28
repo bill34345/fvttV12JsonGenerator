@@ -2,7 +2,7 @@
 import {isHealingRecipient} from './sourceInput';
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 const DAMAGE_TYPES = ['acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning', 'necrotic', 'piercing', 'poison', 'psychic', 'radiant', 'slashing', 'thunder'];
-const STATUSES = ['dead', 'blinded', 'charmed', 'deafened', 'frightened', 'grappled', 'incapacitated', 'invisible', 'paralyzed', 'petrified', 'poisoned', 'prone', 'restrained', 'stunned', 'unconscious'];
+const STATUSES = ['dead', 'blinded', 'charmed', 'deafened', 'exhaustion', 'frightened', 'grappled', 'incapacitated', 'invisible', 'paralyzed', 'petrified', 'poisoned', 'prone', 'restrained', 'stunned', 'unconscious'];
 type Data = Record<string, unknown>;
 const object = (value: unknown): value is Data => !!value && typeof value === 'object' && !Array.isArray(value)
   && [Object.prototype, null].includes(Object.getPrototypeOf(value));
@@ -29,7 +29,7 @@ export function sourceOperationStructureErrors(value: unknown): string[] {
       for (const key of Object.keys(entry)) if (!fields.includes(key)) fail(`${field}/${key}`);
       return true;
     };
-    if (!shape(entry, ['id', 'name', 'type', 'relationship', 'condition', 'sourceText', 'evidence', 'attack', 'save', 'damage', 'healing', 'damageAdjustment', 'range', 'aoe', 'targetSpecial', 'failureStatuses', 'proof'], 'shape')) continue;
+    if (!shape(entry, ['id', 'name', 'type', 'relationship', 'condition', 'sourceText', 'evidence', 'attack', 'save', 'damage', 'healing', 'damageAdjustment', 'range', 'aoe', 'targetSpecial', 'failureStatuses', 'appliedConditions', 'proof'], 'shape')) continue;
     const op = entry;
     if (typeof op.id !== 'string' || !/^[-a-zA-Z0-9]{1,64}$/u.test(op.id) || ids.has(op.id)) fail('id');
     else ids.add(op.id);
@@ -58,7 +58,7 @@ export function sourceOperationStructureErrors(value: unknown): string[] {
       if (!member(attack.type, ['mwak', 'rwak', 'msak', 'rsak', 'melee', 'ranged', 'unclassified']) || !integer(attack.toHit)) fail('attack');
       for (const key of ['reach', 'range', 'longRange']) if (attack[key] !== undefined && !distance(attack[key])) fail(`attack/${key}`);
       if (attack.longRange !== undefined && (attack.range === undefined || (attack.longRange as number) < (attack.range as number))) fail('attack/longRange');
-      if (member(attack.type, ['melee', 'ranged', 'unclassified']) && (op.aoe !== undefined || op.range !== undefined || op.failureStatuses !== undefined)) fail('attack/neutral-combination');
+      if (member(attack.type, ['melee', 'ranged', 'unclassified']) && (op.aoe !== undefined || op.range !== undefined)) fail('attack/neutral-combination');
     }
     if (op.save !== undefined && shape(op.save, ['dc', 'abilities', 'choice', 'outcome'], 'save')) {
       const save = op.save;
@@ -96,7 +96,17 @@ export function sourceOperationStructureErrors(value: unknown): string[] {
       if (!member(op.aoe.shape, ['sphere', 'radius', 'cone', 'line', 'cube', 'cylinder', 'rectangle']) || !distance(op.aoe.radius) || op.aoe.radius === 0) fail('aoe');
       for (const key of ['width', 'height']) if (op.aoe[key] !== undefined && (!distance(op.aoe[key]) || op.aoe[key] === 0)) fail(`aoe/${key}`);
     }
-    if (op.failureStatuses !== undefined && (!Array.isArray(op.failureStatuses) || op.failureStatuses.some(s => !member(s, STATUSES)) || new Set(op.failureStatuses).size !== op.failureStatuses.length || op.type !== 'save')) fail('failureStatuses');
+    if (op.failureStatuses !== undefined && (!Array.isArray(op.failureStatuses) || op.failureStatuses.some(s => !member(s, STATUSES)) || new Set(op.failureStatuses).size !== op.failureStatuses.length)) fail('failureStatuses');
+    if(op.appliedConditions!==undefined){
+      if(!Array.isArray(op.appliedConditions))fail('appliedConditions');
+      else for(const[index,condition]of op.appliedConditions.entries()){
+        const at='appliedConditions/'+index;if(!shape(condition,['statuses','condition','duration','escapeDc','staged','exhaustionLevels'],at))continue;
+        if(!Array.isArray(condition.statuses)||condition.statuses.some(status=>!text(status)))fail(at+'/statuses');
+        for(const key of ['condition','duration'])if(condition[key]!==undefined&&!text(condition[key]))fail(at+'/'+key);
+        if(condition.escapeDc!==undefined&&!integer(condition.escapeDc,1))fail(at+'/escapeDc');if(condition.staged!==undefined&&typeof condition.staged!=='boolean')fail(at+'/staged');
+        if(condition.exhaustionLevels!==undefined&&!integer(condition.exhaustionLevels,1))fail(at+'/exhaustionLevels');
+      }
+    }
     if (op.type === 'attack' && (op.attack === undefined || op.save !== undefined || op.healing !== undefined)
       || op.type === 'save' && (op.save === undefined || op.attack !== undefined || op.healing !== undefined)
       || op.type === 'damage' && (op.damage === undefined || op.attack !== undefined || op.save !== undefined || op.healing !== undefined)

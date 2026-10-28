@@ -7,7 +7,7 @@ const ABILITY: Record<string, 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'> = {
   intelligence: 'int', wisdom: 'wis', charisma: 'cha',
 };
 interface LocatedFact { start: number; end: number; fact: SourceRuleFact }
-export const SOURCE_NATIVE_FAILURE_LABELS:Record<NativeFailureStatus,string>={dead:'死亡',blinded:'目盲',charmed:'魅惑',deafened:'耳聋',frightened:'恐慌',grappled:'受擒',incapacitated:'失能',invisible:'隐形',paralyzed:'麻痹',petrified:'石化',poisoned:'中毒',prone:'倒地',restrained:'束缚',stunned:'震慑',unconscious:'昏迷'};
+export const SOURCE_NATIVE_FAILURE_LABELS:Record<NativeFailureStatus,string>={dead:'死亡',blinded:'目盲',charmed:'魅惑',deafened:'耳聋',exhaustion:'力竭',frightened:'恐慌',grappled:'受擒',incapacitated:'失能',invisible:'隐形',paralyzed:'麻痹',petrified:'石化',poisoned:'中毒',prone:'倒地',restrained:'束缚',stunned:'震慑',unconscious:'昏迷'};
 /** Only a direct, unconditional, untimed failed-save state. Timed states and
  * conditional consequences retain their complete GM rule instead of creating
  * an executable indefinite Effect or approximating a target's next turn. */

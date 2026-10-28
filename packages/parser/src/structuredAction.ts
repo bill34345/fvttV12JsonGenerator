@@ -435,6 +435,8 @@ export class StructuredActionParser {
       const condition = localized !== undefined ? localized : literal;
       return {
         type: String((e as Record<string, unknown>)['类型'] ?? (e as Record<string, unknown>)['type'] ?? ''),
+        ...((e as Record<string,unknown>)['状态']??(e as Record<string,unknown>).statuses?{statuses:((e as Record<string,unknown>)['状态']??(e as Record<string,unknown>).statuses) as string[]}:{}),
+        ...((e as Record<string,unknown>)['力竭级数']!==undefined?{exhaustionLevels:this.parseNumber((e as Record<string,unknown>)['力竭级数'])}:{}),
         describe: String((e as Record<string, unknown>)['描述'] ?? (e as Record<string, unknown>)['describe'] ?? ''),
         ...(typeof condition === 'string' ? { condition } : {}),
         duration: (e as Record<string, unknown>)['持续'] ? String((e as Record<string, unknown>)['持续']) : undefined,

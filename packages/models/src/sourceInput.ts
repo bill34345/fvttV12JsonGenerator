@@ -3,7 +3,7 @@ const object = (value: unknown): value is RecordValue => !!value && typeof value
 const numeric = (value: unknown): number | undefined => typeof value === 'number' && Number.isFinite(value)
   ? value : typeof value === 'string' && /^[+-]?\d+(?:\.\d+)?$/u.test(value.trim()) ? Number(value) : undefined;
 const abilities = ['str','dex','con','int','wis','cha'];
-const statuses = ['dead','blinded','charmed','deafened','frightened','grappled','incapacitated','invisible','paralyzed','petrified','poisoned','prone','restrained','stunned','unconscious'];
+const statuses = ['dead','blinded','charmed','deafened','exhaustion','frightened','grappled','incapacitated','invisible','paralyzed','petrified','poisoned','prone','restrained','stunned','unconscious'];
 const damageTypes=new Set(['acid','bludgeoning','cold','fire','force','lightning','necrotic','piercing','poison','psychic','radiant','slashing','thunder','强酸','酸蚀','钝击','冷冻','寒冷','火焰','力场','闪电','黯蚀','死灵','暗蚀','穿刺','毒素','毒性','心灵','光耀','挥砍','雷鸣']);
 
 /** Preserve an unprojected field beside its own ability, without discarding
@@ -94,9 +94,8 @@ function projectSourceOperations(feature:RecordValue):void {
       }
     }
     if(Array.isArray(op.failureStatuses)&&!op.failureStatuses.length)delete op.failureStatuses;
-    else if(op.failureStatuses!==undefined&&op.type!=='save'){
-      retainField(feature,at+'/failureStatuses',op.failureStatuses,'命中状态的适用、期限和解除由GM按完整规则处理；攻击和伤害保留。');delete op.failureStatuses;
-    }else if(Array.isArray(op.failureStatuses))op.failureStatuses=projectStatuses(feature,op.failureStatuses,at+'/failureStatuses');
+    else if(Array.isArray(op.failureStatuses))op.failureStatuses=projectStatuses(feature,op.failureStatuses,at+'/failureStatuses');
+    if(Array.isArray(op.appliedConditions))for(const[conditionIndex,condition]of op.appliedConditions.entries())if(object(condition))normalizeAppliedCondition(feature,condition,at+'/appliedConditions/'+conditionIndex);
     for(const key of ['range'] as const)if(op[key]!==undefined){const n=numeric(op[key]);if(n!==undefined)op[key]=n;else{retainField(feature,at+'/'+key,op[key],'此距离按原始字段由GM处理。');delete op[key];}}
     if(op.aoe!==undefined&&(!object(op.aoe)||numeric(op.aoe.radius)===undefined)){retainField(feature,at+'/aoe',op.aoe,'此范围按原始字段由GM处理。');delete op.aoe;}
     if(op.condition!==undefined&&typeof op.condition!=='string'){retainField(feature,at+'/condition',op.condition,'此条件按原始字段由GM处理。');delete op.condition;}
@@ -118,6 +117,14 @@ function projectSourceOperations(feature:RecordValue):void {
     }).flat();
   });
   if(!(feature.sourceOperations as unknown[]).length)delete feature.sourceOperations;
+}
+
+function normalizeAppliedCondition(feature:RecordValue,condition:RecordValue,path:string):void{
+  normalizeOptionalSourceText(condition,['condition','duration']);
+  for(const key of ['exhaustionLevels','力竭级数'])if(condition[key]!==undefined){
+    const level=numeric(condition[key]);if(level!==undefined&&Number.isSafeInteger(level)&&level>0)condition[key]=level;
+    else{retainField(feature,path+'/'+key,condition[key],'此力竭级数由DM按原始值选择，状态模板保留。');delete condition[key];}
+  }
 }
 
 function projectStatuses(feature:RecordValue,values:unknown[],path:string):unknown[]{
@@ -192,7 +199,7 @@ export function normalizeCreatureFeatureInput(feature: RecordValue, description:
   normalizeHealingInput(feature['治疗']);
   if (object(feature.save)) normalizeOptionalSourceText(feature.save, ['condition']);
   normalizeDamageInput(feature.damage);
-  if (Array.isArray(feature.appliedConditions)) for (const condition of feature.appliedConditions) if (object(condition)) normalizeOptionalSourceText(condition, ['condition', 'duration']);
+  for(const key of ['appliedConditions','内嵌效果'])if(Array.isArray(feature[key]))for(const[index,condition]of (feature[key] as unknown[]).entries())if(object(condition))normalizeAppliedCondition(feature,condition,key+'/'+index);
   if (Array.isArray(feature.spellUseRecords) && feature.spellUseRecords.length === 0) delete feature.spellUseRecords;
   const operations = Array.isArray(feature.sourceOperations);
   if (feature.executionMode === 'gm-manual' || operations) {

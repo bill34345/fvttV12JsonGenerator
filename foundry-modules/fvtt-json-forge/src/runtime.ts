@@ -1,3 +1,4 @@
+import {prepareManualConditionEffectsForMidi} from './manualConditionEffects';
 import {
   decodeForgeActorResponse,
   hashArtifact,
@@ -327,6 +328,7 @@ export function prepareFoundryImportArtifact(artifact: JsonObject,game?:Pick<For
 
   for (const itemValue of copy.items) {
     const item = getRecord(itemValue);
+    if (midi?.active) prepareManualConditionEffectsForMidi(item);
     const system = getRecord(item.system);
     normalizeLegacySpellReferencesForFoundry(system,warnings);
     const parentRange = getRecord(system.range);

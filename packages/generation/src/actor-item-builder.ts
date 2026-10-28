@@ -2,6 +2,7 @@ import type { ActionData, ActionTarget, StructuredActionData } from '@fvtt-json-
 import {nativeAreaShape} from '@fvtt-json-generator/models/source-operations';
 import { ActivityGenerator } from './activity';
 import { extractExplicitlyInflictedStatuses, statusIconPath, simpleConditionDuration } from './actor-effects';
+import {conditionActivityTargets,officialConditionStatuses,configureOfficialConditionEffect,officialCondition} from './actor-effects';
 import { buildConditionTemplateFlag, conditionParamsForText, isGeneratedConditionId } from './actor-effects';
 import { projectedConditionStatusId } from '@fvtt-json-generator/contracts/conditions';
 import { buildBleedingFlag, extractBleedingSpec } from './bleeding';
@@ -293,19 +294,22 @@ export function attachSubActivities(
 /**
  * Attach embedded effects to item.
  */
-export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActionData['embeddedEffects']): void {
+export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActionData['embeddedEffects'],selectedActivities?:any[],logicalPath?:string): void {
   if (!embeddedEffects || !embeddedEffects.length) return;
   const effects = Array.isArray(item.effects) ? item.effects : (item.effects = []);
   const activities = item?.system?.activities;
   const inferredByStatus = new Map<string, any>();
   for (const effect of effects) {
+    if(selectedActivities)continue;
     if (effect?.flags?.fvttJsonGenerator?.sourceDerivedEmbeddedEffect) continue;
     for (const status of effect?.statuses ?? []) {
       inferredByStatus.set(String(status), effect);
     }
   }
 
-  for (const [index, embedded] of embeddedEffects.entries()) {
+  const templates=embeddedEffects.flatMap(embedded=>embedded.statuses?.includes('exhaustion')&&embedded.statuses.length>1
+    ?[{...embedded,statuses:embedded.statuses.filter(status=>status!=='exhaustion'),exhaustionLevels:undefined},{...embedded,type:'exhaustion',statuses:['exhaustion']}]:[embedded]);
+  for (const [index, embedded] of templates.entries()) {
     const status = normalizeEmbeddedEffectStatus(embedded.type);
     const bleedingSpec = status === 'bleeding'
       ? extractBleedingSpec(embedded.describe ?? '', {
@@ -319,16 +323,16 @@ export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActi
         ...(embedded.damageType !== undefined ? { damageType: embedded.damageType } : {}),
       })
       : undefined;
-    const inferredStatuses = [...new Set(status
+    const inferredStatuses = [...new Set(embedded.statuses??(status
       ? [status]
-      : extractExplicitlyInflictedStatuses(embedded.describe ?? ''))]
+      : extractExplicitlyInflictedStatuses(embedded.describe ?? '')))]
       .map((inferredStatus) => isGeneratedConditionId(inferredStatus)
         ? projectedConditionStatusId(inferredStatus)
         : inferredStatus);
     let effect = inferredStatuses.length === 1
       ? inferredByStatus.get(inferredStatuses[0]!)
       : undefined;
-    if (effect && (!Array.isArray(effect.statuses) || effect.statuses.length !== 1 || effect.statuses[0] !== inferredStatuses[0])) {
+    if (effect && (!Array.isArray(effect.statuses) || JSON.stringify([...effect.statuses].sort()) !== JSON.stringify((inferredStatuses.every(officialCondition)?officialConditionStatuses(inferredStatuses):inferredStatuses).slice().sort()))) {
       effect = undefined;
     }
     if (effect) {
@@ -359,7 +363,7 @@ export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActi
     if (!effect) {
       const id = createStableDocumentId({
         item: item.name,
-        path: `embeddedEffects/${index}`,
+        path: logicalPath?`${logicalPath}/embeddedEffects/${index}`:`embeddedEffects/${index}`,
         embedded,
       });
       if (effects.some((entry: any) => entry?._id === id)) {
@@ -378,9 +382,7 @@ export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActi
         tint: '#ffffff',
         transfer: false,
         img: status ? statusIconPath(status) : 'icons/svg/aura.svg',
-        statuses: status
-          ? [isGeneratedConditionId(status) ? projectedConditionStatusId(status) : status]
-          : [],
+        statuses: inferredStatuses,
         flags: {
           fvttJsonGenerator: {
             sourceDerivedEmbeddedEffect: true,
@@ -401,7 +403,9 @@ export function attachEmbeddedEffects(item: any, embeddedEffects: StructuredActi
       effects.push(effect);
     }
 
-    for (const activity of Object.values(activities ?? {}) as any[]) {
+    const official=inferredStatuses.length>0&&inferredStatuses.every(officialCondition);
+    if(official)configureOfficialConditionEffect(effect,{statuses:inferredStatuses,...(embedded.condition?{condition:embedded.condition}:{}),...(embedded.duration?{duration:embedded.duration}:{}),...(embedded.escapeDc!==undefined?{escapeDc:embedded.escapeDc}:{}),...(embedded.staged!==undefined?{staged:embedded.staged}:{}),...(embedded.exhaustionLevels!==undefined?{exhaustionLevels:embedded.exhaustionLevels}:{})},embedded.describe??'');
+    for (const activity of selectedActivities??(official?conditionActivityTargets(activities,embedded.describe??'',inferredStatuses):Object.values(activities??{})) as any[]) {
       if (!Array.isArray(activity.effects)) activity.effects = [];
       const existing = activity.effects.find((entry: any) => entry?._id === effect._id);
       if (existing) {

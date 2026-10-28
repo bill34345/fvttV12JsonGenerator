@@ -71,7 +71,7 @@ export function candidateSourceOperationShapeErrors(value:unknown):string[]{
     if(op.range!==undefined&&(!finite(op.range)||op.range<0))bad('range');
     if(op.aoe!==undefined){const a=op.aoe;if(!object(a)||!['sphere','radius','cone','line','cube','cylinder','rectangle'].includes(a.shape)
       ||!finite(a.radius)||a.radius<=0||['width','height'].some(k=>a[k]!==undefined&&(!finite(a[k])||a[k]<=0)))bad('area');}
-    if(op.failureStatuses!==undefined||op.damageAdjustment!==undefined)bad('unsupported-candidate-automation');
+    if(op.damageAdjustment!==undefined)bad('unsupported-candidate-automation');
   }
   return errors;
 }

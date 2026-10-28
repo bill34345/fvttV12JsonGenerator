@@ -428,11 +428,18 @@ describe('common source operation contract through the complete Actor chain',()=
   });
   for(const failure of ['The target is stunned until the end of its next turn.','The target is not blinded.','The target dies if it has 50 hit points or fewer.'])test('timed, negated or conditional consequences remain GM with the Save retained: '+failure,async()=>{
     const feature=fixture.attack.replace('The target cannot recover until its next turn.',failure),{actor}=await formal('attack',header+'Actions\n'+feature+'\n',feature);
-    expect(actor.items[0].effects).toEqual([]);expect((Object.values(actor.items[0].system.activities) as any[]).map(activity=>activity.type)).toEqual(['attack','save']);
+    const item=actor.items[0],activities=Object.values(item.system.activities) as any[];
+    expect(activities.map(activity=>activity.type)).toEqual(['attack','save']);
+    if(failure.includes('not blinded'))expect(item.effects).toEqual([]);
+    else{expect(item.effects).toHaveLength(1);expect(item.effects[0].statuses).toEqual(failure.includes('stunned')?['stunned','incapacitated']:['dead']);expect(item.effects[0].flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(item.effects[0].description).toContain(failure);expect(activities[0].effects).toEqual([]);expect(activities[1].effects).toEqual([{_id:item.effects[0]._id,onSave:false}]);}
   });
   for(const failure of ['The target is frightened. This condition lasts until the end of its next turn.','The target is frightened. The frightened condition ends at the end of its next turn.','The target is frightened. That condition lasts for 1 minute.','The target is blinded. It ends early when the target takes damage.','目标陷入恐慌。该状态持续到其下个回合结束。','目标受到中毒。目标在受到伤害后解除该状态。'])test('a later result sentence cannot create an indefinite status: '+failure,async()=>{
     const feature=fixture.attack.replace('The target cannot recover until its next turn.',failure),{actor}=await formal('attack',header+'Actions\n'+feature+'\n',feature);
-    expect(actor.items[0].effects).toEqual([]);expect((Object.values(actor.items[0].system.activities) as any[]).map(activity=>activity.type)).toEqual(['attack','save']);
+    const item=actor.items[0],activities=Object.values(item.system.activities) as any[];
+    expect(activities.map(activity=>activity.type)).toEqual(['attack','save']);expect(item.effects).toHaveLength(1);
+    expect(item.effects[0].flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(item.effects[0].description).toContain(failure);
+    expect(activities[0].effects).toEqual([]);expect(activities[1].effects).toEqual([{_id:item.effects[0]._id,onSave:false}]);
+    expect(item.effects[0].duration.seconds).toBe(failure.includes('1 minute')?60:null);
   });
   test('local no-damage on success does not negate the failed-save damage',async()=>{
     const feature=fixture.choice.replace('or half as much damage on a successful one','and no damage on a successful save');

@@ -153,13 +153,15 @@ describe('appendStructuredActionItems', () => {
           uses: { max: 1, period: 'shortRest' }, embeddedEffects: [{ type: 'frightened', describe, duration: '1 day' }] }],
       }));
       const item = actor.items.find((entry: any) => entry.name.includes('Dread Tether')), activity = getActivities(item)[0];
-      expect(item.effects).toEqual([]); expect(activity.effects ?? []).toEqual([]);
+      expect(item.effects).toHaveLength(1);
+      expect(item.effects[0]).toMatchObject({ statuses: ['frightened'], duration: { seconds: 86400 }, flags: { fvttJsonGenerator: { conditionLifecycle: { version: 1, mode: 'gm', sourceText: describe } } } });
+      expect(activity.effects).toEqual([{ _id: item.effects[0]._id, onSave: false }]);
       expect(activity).toMatchObject({ type: 'save', activation: { type: 'bonus' }, save: { dc: { formula: '14' }, ability: ['wis'] } });
       expect(item.system.uses).toMatchObject({ max: '1', recovery: [{ period: 'sr' }] });
       expect(activity.consumption.targets).toContainEqual(expect.objectContaining({ type: 'itemUses', value: '1' }));
       expect(item.system.description.value).toContain('1 mile');
       expect(item.flags.fvttJsonGenerator.conditionLifecycle).toMatchObject({ version: 1, mode: 'gm', sourceText: describe, statuses: ['frightened'] });
-      expect(item.system.description.value).toContain('GM');
+      expect(item.effects[0].description).toContain('DM');
     });
 
     it('projects exact simple condition durations including Chinese 日 without changing untimed conditions', () => {
@@ -176,13 +178,20 @@ describe('appendStructuredActionItems', () => {
       const describe = 'The target becomes stunned until the end of its next turn.';
       const actor = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(createMinimalParsedNPC({ 动作: [{ name: 'Brief Shock', type: 'save', DC: 13, ability: 'con', describe, embeddedEffects: [{ type: 'stunned', describe, duration: 'until the end of its next turn' }] }] }));
       const item = actor.items.find((entry: any) => entry.name.includes('Brief Shock'));
-      expect(item.effects).toEqual([]); expect(getActivities(item)[0].effects ?? []).toEqual([]);
+      expect(item.effects).toHaveLength(1);
+      expect(item.effects[0]).toMatchObject({ statuses: ['stunned', 'incapacitated'], flags: { fvttJsonGenerator: { conditionLifecycle: { mode: 'gm', duration: 'until the end of its next turn' } } } });
+      expect(item.effects[0].duration.seconds).toBeNull();
+      expect(item.effects[0].description).toContain('until the end of its next turn');
+      expect(getActivities(item)[0].effects).toEqual([{ _id: item.effects[0]._id, onSave: false }]);
     });
 
     it('keeps unparsed source durations GM-owned even when structured duration is absent', () => {
       for (const describe of ['The target becomes charmed for one minute.', '目标陷入魅惑，持续一日。']) {
         const actor = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(createMinimalParsedNPC({ 动作: [{ name: 'Quiet Influence', type: 'save', DC: 13, ability: 'wis', describe, embeddedEffects: [{ type: 'charmed', describe }] }] }));
-        expect(actor.items[0].effects).toEqual([]);
+        expect(actor.items[0].effects).toHaveLength(1);
+        expect(actor.items[0].effects[0]).toMatchObject({ statuses: ['charmed'], flags: { fvttJsonGenerator: { conditionLifecycle: { mode: 'gm', sourceText: describe } } } });
+        expect(actor.items[0].effects[0].description).toContain(describe);
+        expect(actor.items[0].effects[0].duration.seconds).toBeNull();
         expect(actor.items[0].flags.fvttJsonGenerator.conditionLifecycle.statuses).toEqual(['charmed']);
       }
     });
@@ -191,8 +200,9 @@ describe('appendStructuredActionItems', () => {
       for (const describe of ['The target is prone. It is poisoned until the end of its next turn.', '目标陷入倒地。它陷入中毒，直到其下一回合结束。']) {
         const actor = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(createMinimalParsedNPC({ 动作: [{ name: 'Stinging Sweep', type: 'save', DC: 13, ability: 'dex', describe, embeddedEffects: [{ type: 'prone', describe }, { type: 'poisoned', describe }] }] }));
         const item = actor.items[0];
-        expect(item.effects.flatMap((effect: any) => effect.statuses)).toEqual(['prone']);
-        expect(getActivities(item)[0].effects).toEqual([{ _id: item.effects[0]._id, onSave: false }]);
+        expect(item.effects.flatMap((effect: any) => effect.statuses)).toEqual(['prone','poisoned']);
+        expect(item.effects.map((effect: any) => effect.flags.fvttJsonGenerator.conditionLifecycle.mode)).toEqual(['native','gm']);
+        expect(getActivities(item)[0].effects).toEqual(item.effects.map((effect: any) => ({ _id: effect._id, onSave: false })));
         expect(item.flags.fvttJsonGenerator.conditionLifecycle.statuses).toEqual(['poisoned']);
       }
     });
@@ -232,10 +242,10 @@ describe('appendStructuredActionItems', () => {
         if (change === 'damage') { for (const activity of activities) if (activity.damage) activity.damage.parts = []; if (item.system.damage) item.system.damage.base = {}; }
         if (change === 'save') for (const [key, activity] of Object.entries(altered.items[1].system.activities) as [string, any][]) { if (activity.type === 'save') delete altered.items[1].system.activities[key]; }
         if (change === 'uses') delete item.system.uses;
-        if (change === 'source') item.flags.fvttJsonGenerator.conditionLifecycle.sourceText = 'Unrelated rule.';
+        if (change === 'source') item.effects[0].flags.fvttJsonGenerator.conditionLifecycle.sourceText = 'Unrelated rule.';
         if (change === 'qualifier') item.system.description.value = '<p>The target becomes blinded.</p><p>GM</p>';
         if (change === 'mode') activities[0].attack.type.value = 'mwak';
-        expect(verify(altered).status).toBe('failed');
+        expect(verify(altered).status,change).toBe('failed');
       }
     });
 
@@ -247,7 +257,8 @@ describe('appendStructuredActionItems', () => {
       expect(getActivities(item)[0].effects).toContainEqual(expect.objectContaining({ _id: effect._id }));
       const other = { items: [{ system: { description: { value: 'The target becomes prone. If the source is bloodied, its AC increases by 2.' }, activities: {} }, effects: [{ _id: 'nativeProne00001', statuses: ['prone'], duration: {} }, { _id: 'armorEffect00001', statuses: [], changes: [{ key: 'system.attributes.ac.bonus', value: '2' }] }] }] };
       const unchanged = structuredClone(other); enforceCoreConditionLifecycles(other);
-      expect(other).toEqual(unchanged);
+      expect(other.items[0].effects[1]).toEqual(unchanged.items[0].effects[1]);
+      expect(other.items[0].effects[0]).toMatchObject({ _id: 'nativeProne00001', statuses: ['prone'], disabled: false, transfer: false, flags: { fvttJsonGenerator: { conditionLifecycle: { version: 1, mode: 'native' } } } });
     });
 
     it('keeps unimplemented escape lifecycles GM-owned without losing the native attack', () => {
@@ -274,8 +285,10 @@ describe('appendStructuredActionItems', () => {
       const activities = getActivities(item);
       const effectIds = (item.effects ?? []).map((effect: any) => effect._id);
 
-      expect(item.effects).toEqual([]); expect(effectIds).toEqual([]);
-      expect(activities[0].effects ?? []).toEqual([]);
+      expect(item.effects).toHaveLength(2);
+      expect(item.effects.flatMap((effect: any) => effect.statuses).sort()).toEqual(['grappled','restrained']);
+      expect(item.effects.every((effect: any) => effect.flags.fvttJsonGenerator.conditionLifecycle.mode === 'gm' && effect.description.includes('until it escapes'))).toBe(true);
+      expect(activities[0].effects).toEqual(effectIds.map((_id: string) => ({ _id })));
       expect(activities[0].type).toBe('attack'); expect(activities[0].damage.parts).toHaveLength(1);
       expect(item.flags.fvttJsonGenerator.conditionLifecycle.statuses.sort()).toEqual(['grappled', 'restrained']);
     });

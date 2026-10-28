@@ -1,7 +1,8 @@
 import type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';
 
 export type SourceOperationAbility = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
-export type NativeFailureStatus = 'dead'|'blinded'|'charmed'|'deafened'|'frightened'|'grappled'|'incapacitated'|'invisible'|'paralyzed'|'petrified'|'poisoned'|'prone'|'restrained'|'stunned'|'unconscious';
+export type NativeFailureStatus = 'dead'|'blinded'|'charmed'|'deafened'|'exhaustion'|'frightened'|'grappled'|'incapacitated'|'invisible'|'paralyzed'|'petrified'|'poisoned'|'prone'|'restrained'|'stunned'|'unconscious';
+export interface CanonicalAppliedCondition {statuses:string[];escapeDc?:number;condition?:string;duration?:string;staged?:boolean;exhaustionLevels?:number;}
 export type SourceFeatureCollection='traits'|'actions'|'bonusActions'|'reactions'|'legendaryActions'|'mythicActions';
 /** A reviewable model proposal, never proof of source correctness or acceptance. */
 export interface SourceCandidateReview {
@@ -42,8 +43,9 @@ export interface SourceOperation {
   range?: number;
   aoe?: {shape:'sphere'|'radius'|'cone'|'line'|'cube'|'cylinder'|'rectangle';radius:number;width?:number;height?:number};
   targetSpecial?: string;
-  /** Program-derived ordinary failed-save statuses, never AI-authored effects. */
+  /** Compatibility declaration of the operation's hit or failed-save states. */
   failureStatuses?:NativeFailureStatus[];
+  appliedConditions?:CanonicalAppliedCondition[];
   /** Complete source sentences, independently bound by the program. */
   proof: { attack?: string; save?: string; damage?: string[];healing?:string;range?:string;aoe?:string;target?:string;
     /** Program-bound complete same-source rule that explicitly upgrades this named option. */

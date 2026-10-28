@@ -1481,3 +1481,7 @@
   .forge-encounter-control-window * { transition: none !important; animation: none !important; }
 }
 .fvtt-json-forge .forge-localized-prose { white-space: pre-wrap; overflow-wrap: anywhere; }
+fvtt-json-forge-condition-application { display: block; }
+.fvtt-json-forge-condition-effects > strong { display: block; margin-top: 0.6rem; }
+.fvtt-json-forge-condition-effects details { margin: 0.3rem 0; }
+.fvtt-json-forge-condition-effects details p { white-space: pre-wrap; }

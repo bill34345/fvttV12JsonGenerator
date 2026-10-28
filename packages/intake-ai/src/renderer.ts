@@ -319,17 +319,16 @@ function renderFeature(feature: CanonicalFeature, section: string,sharedPool=fal
   }
   if (feature.aoe) result.AoE = { 形状: AOE_ZH[nativeAreaShape(feature.aoe.shape,feature.aoe.radius,feature.nativeRuleText??feature.description)], 范围: feature.aoe.radius };
   if (feature.appliedConditions?.length) {
-    result.内嵌效果 = feature.appliedConditions.flatMap((applied) => {
-      const types = applied.statuses.length > 0 ? applied.statuses : [applied.condition ?? 'Effect'];
-      return types.map((type) => ({
-        类型: type,
+    result.内嵌效果 = feature.appliedConditions.map((applied) => ({
+        类型: applied.statuses[0]??applied.condition??'Effect',
+        状态: applied.statuses,
+        力竭级数: applied.exhaustionLevels,
         描述: feature.description,
         条件: applied.condition,
         持续: applied.duration,
         逃脱DC: applied.escapeDc,
         阶段: applied.staged,
       }));
-    });
     result.失败效果 = feature.appliedConditions.map((applied) => ({
       描述: applied.condition ?? (applied.statuses.join(', ') || feature.description),
     }));
