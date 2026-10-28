@@ -3,15 +3,16 @@ import { localizationHash } from '@fvtt-json-generator/contracts/localization';
 import {sanitizeFailureReply,type TransportFailureEvidence,type TransportFailureDiagnostic} from './transport-failure-evidence';
 
 /** Deterministic syntax recovery only. Hashes bind the complete original
- * response and the unchanged JSON object; the discarded tail is punctuation. */
+ * response and the unchanged values; only terminal punctuation is adjusted. */
 export interface ProviderJsonFormatRecovery {
   version:1;
-  kind:'drop-json-terminal-delimiters';
+  kind:'drop-json-terminal-delimiters'|'complete-json-terminal-delimiters';
   originalResponseHash:string;
   parsedObjectHash:string;
   objectLength:number;
   /** One/two closers (legacy interstitial whitespace allowed), or quote+closer. */
   removedTail:string;
+  addedTail?:string;
 }
 
 /** Opt-in diagnostic data, never part of a Forge response, bundle or audit log.

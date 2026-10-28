@@ -361,6 +361,7 @@ export class OpenAICompatibleMonsterIntakeProvider implements MonsterIntakeAiPro
         userContent,
         httpClient: this.httpClient,
         signal: this.options.signal ? AbortSignal.any([controller.signal, this.options.signal]) : controller.signal,
+        ...(sourceAnswer?{deferContentParsing:true}:{}),
         waitPolicy: this.options.waitPolicy,
         onActivity: this.options.onActivity,
         onFailureEvidence:failureEvidenceRecorder(this.options.responseEvidence,
@@ -369,7 +370,7 @@ export class OpenAICompatibleMonsterIntakeProvider implements MonsterIntakeAiPro
           [this.options.apiKey,this.options.baseUrl])??this.options.transport?.onFailureEvidence,
       });
       let parsed:ReturnType<typeof parseStrictJsonResult>|undefined,parseFailure:unknown;
-      try{parsed=parseStrictJsonResult(result.content);}catch(error){parseFailure=error;}
+      try{parsed=parseStrictJsonResult(result.content,sourceAnswer);}catch(error){parseFailure=error;}
       await captureProviderResponse(this.options.responseEvidence,
         { stage, sourceHash, model, attempt,...(parsed?.formatRecovery?{formatRecovery:parsed.formatRecovery}:{}) },
         { systemPrompt, userContent, model, protocol: result.protocol, promptVersion: override?.promptVersion ?? INTAKE_PROMPT_VERSIONS[stage] },
@@ -1215,7 +1216,7 @@ export function parseStrictJson(content: string): unknown {
 
 /** Find the end of exactly one leading object without treating braces inside
  * strings as delimiters. JSON.parse still proves all of its actual syntax. */
-function completeJsonObjectEnd(content:string):number|undefined{
+function jsonObjectBoundary(content:string):{end?:number;missingTail?:string}|undefined{
   if(content[0]!=='{')return;
   const stack=['}'];let quoted=false,escaped=false;
   for(let index=1;index<content.length;index++){
@@ -1225,12 +1226,13 @@ function completeJsonObjectEnd(content:string):number|undefined{
     if(character==='{'||character==='[')stack.push(character==='{'?'}':']');
     else if(character==='}'||character===']'){
       if(stack.pop()!==character)return;
-      if(!stack.length)return index+1;
+      if(!stack.length)return{end:index+1};
     }
   }
+  if(!quoted&&stack.length)return{missingTail:[...stack].reverse().join('')};
 }
 
-function parseStrictJsonResult(content:string):{value:unknown;formatRecovery?:ProviderJsonFormatRecovery}{
+function parseStrictJsonResult(content:string,completeTerminal=false):{value:unknown;formatRecovery?:ProviderJsonFormatRecovery}{
   let cleaned = content.trim();
   const reasoning = /^<(?:think|analysis|reasoning)\b[^>]*>[\s\S]*?<\/(?:think|analysis|reasoning)>\s*/i;
   while (reasoning.test(cleaned)) cleaned = cleaned.replace(reasoning, '').trim();
@@ -1251,13 +1253,18 @@ function parseStrictJsonResult(content:string):{value:unknown;formatRecovery?:Pr
     // Recover only the closed terminal-delimiter class: one/two duplicated
     // object closers, or a stray quote followed by one object closer. This
     // never searches past prose or accepts a second value after the object.
-    const end=completeJsonObjectEnd(cleaned),candidate=end===undefined?undefined:cleaned.slice(0,end),tail=end===undefined?'':cleaned.slice(end).trim();
+    const boundary=jsonObjectBoundary(cleaned),end=boundary?.end,candidate=end===undefined?undefined:cleaned.slice(0,end),tail=end===undefined?'':cleaned.slice(end).trim();
     if(candidate&&/^(?:\}(?:\s*\})?|['"]\})$/u.test(tail)){
       try{
         const value=parseObject(candidate);
         return{value,formatRecovery:{version:1,kind:'drop-json-terminal-delimiters',originalResponseHash:sha256(content),
           parsedObjectHash:sha256(candidate),objectLength:candidate.length,removedTail:tail}};
       }catch{/* Malformed or incomplete object bodies cannot be repaired here. */}
+    }
+    if(completeTerminal&&boundary?.missingTail){
+      const completed=cleaned+boundary.missingTail;
+      try{return{value:parseObject(completed),formatRecovery:{version:1,kind:'complete-json-terminal-delimiters',originalResponseHash:sha256(content),
+        parsedObjectHash:sha256(completed),objectLength:completed.length,removedTail:'',addedTail:boundary.missingTail}};}catch{/* Missing values and unfinished strings remain untouched. */}
     }
     throw new MonsterIntakeProviderError('invalid_response', 'AI response is not one strict JSON object.', { retryable: true,
       diagnostic: {stage: 'json', path: '/', expected: 'object', actual: 'unknown'} });

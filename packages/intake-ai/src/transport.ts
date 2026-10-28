@@ -123,6 +123,8 @@ export interface IntakeTransportRequest extends IntakeTransportOptions {
   userContent: string;
   httpClient?: HttpClient;
   signal?: AbortSignal;
+  /** Actor reception owns its JSON/text format handling; request output hints stay unchanged. */
+  deferContentParsing?: boolean;
   /** Opt-in interactive waiting. Omitted callers retain their existing timeout policy. */
   waitPolicy?: IntakeRequestWaitPolicy;
 }
@@ -725,6 +727,7 @@ async function readOpenAiResponsesStream(
   observed.bodyCompletedAtMs = Date.now();
 
   if (terminal !== 'completed' || !terminalResponse) {
+    observed.failureReason=(observed.receivedBytes??0)>0?'provider_incomplete':'empty_response';
     observed.transport = 'closed';
     observed.activityPhase = terminal === 'incomplete' ? 'incomplete' : 'failed';
     observed.providerActivity = 'failed';
@@ -735,14 +738,16 @@ async function readOpenAiResponsesStream(
   // a completed event without a verifiable final envelope fails closed.
   const content = extractProviderContent('openai-responses', terminalResponse);
   if (!content) {
+    observed.failureReason=hasAnswerSlot('openai-responses',terminalResponse)?'empty_response':'unexpected_response';
     observed.transport = 'closed';
     observed.activityPhase = 'failed';
     observed.providerActivity = 'failed';
     emitActivity(request, observed, startedAt, 'response.failed');
     throw new IntakeTransportError('invalid_response', 'AI provider completed without usable content.', { retryable: true });
   }
-  if (request.structuredOutput?.mode !== 'prompt_fallback') {
+  if (!request.deferContentParsing && request.structuredOutput?.mode !== 'prompt_fallback') {
     try { JSON.parse(content); } catch {
+      observed.failureReason='invalid_json';
       observed.transport = 'closed';
       observed.activityPhase = 'failed';
       observed.providerActivity = 'failed';
