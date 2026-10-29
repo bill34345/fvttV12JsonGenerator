@@ -159,7 +159,7 @@ describe.skipIf(!upstreamMain)('exact installed Bridge source contract', () => {
       constructor(_url: string) { sockets.push(this); }
       addEventListener(name: string, fn: any) { if (!this.listeners.has(name)) this.listeners.set(name, new Set()); this.listeners.get(name)!.add(fn); }
       removeEventListener(name: string, fn: any) { this.listeners.get(name)?.delete(fn); }
-      fire(name: string, event: any = {}) { this[`on${name}` as keyof this]?.(event); for (const fn of this.listeners.get(name) ?? []) fn(event); }
+      fire(name: 'open' | 'close' | 'error' | 'message', event: any = {}) { this[`on${name}`]?.(event); for (const fn of this.listeners.get(name) ?? []) fn(event); }
       close() { this.readyState = 3; this.fire('close', { wasClean: true }); }
       open() { this.readyState = 1; this.fire('open'); }
       fail() { this.readyState = 3; this.fire('error', new Error('fixture')); }
