@@ -3,7 +3,8 @@ import {createHash} from 'node:crypto';
 import fixture from './fixtures/forge-archivist-discovery-failure.json';
 import {singleCreatureSourceCandidate,normalizeDiscovery,partitionDiscoveryCandidates} from '@fvtt-json-generator/intake-ai/discovery';
 import {MonsterIntakeProviderError,OpenAICompatibleMonsterIntakeProvider} from '@fvtt-json-generator/intake-ai/provider';
-import {createEncounterIntakeProviders,generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
+import {generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
+import {runStagedMonsterExtraction} from '@fvtt-json-generator/intake-ai/staged-extraction';
 import {splitStagedMonsterSource,stagedSourceBiography} from '@fvtt-json-generator/intake-ai/staged-source';
 import type {DiscoveryRequest,ExtractionRequest} from '@fvtt-json-generator/intake-ai/types';
 
@@ -106,36 +107,27 @@ describe('saved first discovery failure and source ownership',()=>{
     for(const input of [source.replace('### Traits','### Treasure'),source.replace('### Lore','### Lair Actions')])
       expect(()=>splitStagedMonsterSource({source:input,sourceSha256:hash(input),candidate:{id:'unsafe',label:'Gate Sentinel',start:0,end:input.length,quote:input}})).toThrow('UNKNOWN_HEADING');
   });
-  test('explicit legacy staged provider reports its local source error with code and path before any request',async()=>{
+  test('offline legacy staged helper reports its local source error with code and path before any request',async()=>{
     const input=source.replace('### Traits','### Unresolved Combat Options');
-    const env=localProvider(()=>{throw Error('A legacy source error must not reach HTTP');},true);
-    const output=await generateEncounterFromHumanMarkdown({source:input,label:'Gate Sentinel',provider:env.provider,
-      automationProvider:{generate:forbidden,review:forbidden},reviewPolicy:'deferred',outputLanguage:'source'});
-    expect(env.calls).toHaveLength(0);expect(output.prepared).toBeUndefined();
-    expect(output.report.actors[0]!.analysis.errorCode).toBe('invalid_source');
-    expect(output.report.actors[0]!.analysis.findings[0]!.path).toMatch(/^\/source\/\d+$/u);
-    expect(output.report.findings.join(' ')).toContain('UNKNOWN_HEADING');
-    expect(output.report.findings.join(' ')).toContain('/source/');
-    expect(output.report.findings.join(' ')).not.toContain('AI provider');
+    let calls=0;
+    await expect(runStagedMonsterExtraction({source:input,sourceSha256:hash(input),candidate:{id:'legacy',label:'Gate Sentinel',start:0,end:input.length,quote:input}},
+      async()=>{calls++;throw Error('A legacy source error must not reach a stage request');},{baseMode:'facts',featureMode:'source'}))
+      .rejects.toMatchObject({code:'UNKNOWN_HEADING',path:`/source/${input.indexOf('### Unresolved Combat Options')}`});
+    expect(calls).toBe(0);
   });
   test('current default sends an unknown body heading unchanged to one full-IR extraction and retains a malformed-reply failure',async()=>{
     const input=source.replace('### Traits','### Unresolved Combat Options');
-    const previousFetch=globalThis.fetch,requests:any[]=[];
-    globalThis.fetch=Object.assign(async(_url:any,init?:RequestInit)=>{
-      const body=JSON.parse(String(init?.body));requests.push(JSON.parse(body.messages.find((entry:any)=>entry.role==='user').content));
-      return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify({schemaVersion:0})}}]}),{headers:{'Content-Type':'application/json'}});
-    },{preconnect:previousFetch.preconnect});
-    try{
-      const providers=createEncounterIntakeProviders({apiKey:'offline-only',baseUrl:'https://offline.invalid/v1',model:'offline-only'});
-      const output=await generateEncounterFromHumanMarkdown({source:input,label:'Gate Sentinel',...providers,reviewPolicy:'deferred',outputLanguage:'source'});
-      expect(requests).toHaveLength(1);expect(requests[0].source).toBe(input);expect(requests[0].sourceSha256).toBe(hash(input));
-      expect(requests[0].candidate).toMatchObject({start:0,end:input.length});expect(requests[0].template).toBeUndefined();
-      expect(output.report.discovery).toEqual({mode:'single-statblock',providerCalls:0});
-      expect(output.prepared).toBeUndefined();expect(output.report.actors[0]!.analysis.errorCode).toBe('invalid_response');
-      expect(output.report.findings.join(' ')).not.toContain('UNKNOWN_HEADING');
-      // A source-envelope/control test does not claim that a model understood
-      // the changed heading or that the fixture has a valid complete IR reply.
-    }finally{globalThis.fetch=previousFetch;}
+    const env=localProvider(()=>({schemaVersion:0}));
+    const output=await generateEncounterFromHumanMarkdown({source:input,label:'Gate Sentinel',provider:env.provider,
+      automationProvider:{generate:forbidden,review:forbidden},reviewPolicy:'deferred',outputLanguage:'source'});
+    expect(env.calls).toHaveLength(1);
+    expect(env.calls[0]!.payload).toMatchObject({source:input,sourceSha256:hash(input),candidate:{start:0,end:input.length}});
+    expect(env.calls[0]!.payload.template).toBeUndefined();
+    expect(output.report.discovery).toEqual({mode:'single-statblock',providerCalls:0});
+    expect(output.prepared).toBeUndefined();expect(output.report.actors[0]!.analysis.errorCode).toBe('invalid_response');
+    expect(output.report.findings.join(' ')).not.toContain('UNKNOWN_HEADING');
+    // A source-envelope/control test does not claim that a model understood
+    // the changed heading or that the fixture has a valid complete IR reply.
   });
   test('staged diagnostic metadata excludes arbitrary source text and unsafe paths',()=>{
     const error=new MonsterIntakeProviderError('invalid_source','untrusted source secret',{
@@ -143,10 +135,10 @@ describe('saved first discovery failure and source ownership',()=>{
     });
     expect(error.stagedDiagnostic).toBeUndefined();expect(error.diagnosticMessage).toBeUndefined();
   });
-  test('a malformed base answer remains a response validation failure after one actual stub request',async()=>{
+  test('an empty creature answer remains a nonretryable response failure after one actual stub request',async()=>{
     const env=localProvider(()=>({schemaVersion:1,creature:{},uncertainties:[]}),true);
     await expect(env.provider.extract({source,sourceSha256:hash(source),candidate:{id:'response',label:'Gate Sentinel',start:0,end:source.length,quote:source}}))
-      .rejects.toMatchObject({code:'invalid_response',stagedDiagnostic:{stage:'response'}});
+      .rejects.toMatchObject({code:'invalid_response',retryable:false,message:'AI returned no creature answer.',stagedDiagnostic:undefined});
     expect(env.calls).toHaveLength(1);
   });
 });

@@ -101,5 +101,7 @@ test('the saved real Ankheg reply completes the formal chain with no model calls
   expect(activities.find(a=>a.type==='damage')?.damage.parts).toHaveLength(2);
   expect(item.system.description.value).toContain('escape DC 13');
   expect(item.system.description.value).toContain('with Advantage if the target is Grappled by the ankheg');
-  expect(item.effects).toEqual([]);
+  expect(item.effects.flatMap((effect:any)=>effect.statuses)).toEqual(['grappled']);
+  const grapple=item.effects.find((effect:any)=>effect.statuses.includes('grappled'));
+  expect(activities.filter(activity=>activity.effects?.some((link:any)=>link._id===grapple._id)).map(activity=>activity.flags.fvttJsonGenerator.sourceOperation.role)).toEqual(['damage']);
 });

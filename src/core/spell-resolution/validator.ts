@@ -2,4 +2,5 @@
 export {
   validatePortableSpellManifest,
   validatePortableSpellManifestStructure,
+  validateActorSpellManifestStructure,
 } from '@fvtt-json-generator/spell-manifest-contracts/validator';

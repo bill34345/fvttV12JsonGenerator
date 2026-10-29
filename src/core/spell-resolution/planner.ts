@@ -15,7 +15,7 @@ import type {
   SpellResolutionConfiguration,
   SpellResolutionReport,
 } from './types';
-import { validatePortableSpellManifestStructure } from './validator';
+import { validateActorSpellManifestStructure } from './validator';
 
 export interface PlanSpellHydrationInput {
   manifest: PortableSpellManifest;
@@ -30,7 +30,7 @@ export interface PlanSpellHydrationInput {
 
 export function planSpellHydration(input: PlanSpellHydrationInput): HydrationPreflight {
   const safeInput: Partial<PlanSpellHydrationInput> = isRecord(input) ? input : {};
-  const manifestValidation = validatePortableSpellManifestStructure(safeInput.manifest);
+  const manifestValidation = validateActorSpellManifestStructure(safeInput.manifest);
   const manifestId = manifestValidation.ok ? manifestValidation.value.manifestId : '';
   const candidatesShapeValid = Array.isArray(safeInput.candidates);
   const candidates = candidatesShapeValid ? safeInput.candidates! : [];

@@ -134,7 +134,8 @@ function collectActionMechanics(
   }
   if (raw.useAction?.limitedUses || raw.uses || raw.perLongRest || raw.recharge) {
     const value=raw.useAction?.limitedUses ?? raw.uses ?? raw.perLongRest ?? raw.recharge;
-    result.push(mechanic('uses', `${path}/uses`, raw.executionMode==='gm-manual'&&raw.uses
+    result.push(mechanic('uses', `${path}/uses`, raw.uses&&raw.actorResource
+      ? {...raw.uses,actorResource:raw.actorResource} : raw.executionMode==='gm-manual'&&raw.uses
       ? {...raw.uses,executionMode:'gm-manual',sourceText:raw.describe} : raw.uses&&raw.spellcastingFeatureKey?{...raw.uses,spellcastingFeatureKey:raw.spellcastingFeatureKey}:value));
   }
   if (raw.range || attack?.range) result.push(mechanic('range', `${path}/range`, raw.range ?? attack.range));
@@ -150,10 +151,18 @@ export function adaptParsedActorToCanonical(
   options: AdapterSource = {},
 ): CanonicalActorDocument {
   const mechanics: CanonicalGenerationMechanic[] = [];
+  const resistanceMax=parsed.attributes.legres?.max??parsed.sourceLegendaryLedger?.resistanceMax;
   for (const [section, actions] of Object.entries(parsed.structuredActions ?? {})) {
     if (!Array.isArray(actions)) continue;
     for (const [index, action] of actions.entries()) {
       mechanics.push(...collectActionMechanics(action, `actor/structuredActions/${section}/${index}`));
+      // Source-derived: the marker joins this trait to an explicit Actor
+      // ledger; it does not manufacture an independent feature.uses field.
+      if(action.actorResource==='legres'&&!action.uses&&Number.isSafeInteger(resistanceMax)&&resistanceMax!==undefined&&resistanceMax>0){
+        mechanics.push(mechanic('uses',`actor/structuredActions/${section}/${index}/actorResource`,{
+          max:resistanceMax,period:'day',actorResource:'legres',nativeResistanceLedgerOnly:true,
+        }));
+      }
     }
   }
   for (const [index, resource] of (parsed.resourceSemantics?.resources ?? []).entries()) {

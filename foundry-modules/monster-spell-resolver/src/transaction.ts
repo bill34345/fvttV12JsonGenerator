@@ -4,7 +4,7 @@ import {
   logicalSpellRefKey,
   RESOLVER_MODULE_ID,
   sha256,
-  validatePortableSpellManifestStructure,
+  validateActorSpellManifestStructure,
   type ManagedSpellProjection,
   type PortableSpellManifest,
   type SpellHydrationPlan,
@@ -260,10 +260,10 @@ function assertPreWriteConflictAuthorization(actor: any, manifest: PortableSpell
 }
 
 function validateTransactionInput(input: ExecuteHydrationTransactionInput): void {
-  const validated = validatePortableSpellManifestStructure(input.manifest);
+  const validated = validateActorSpellManifestStructure(input.manifest);
   if (!validated.ok) throw new TypeError('Transaction manifest is structurally invalid.');
   const actorManifest = input.actor.flags?.[RESOLVER_MODULE_ID]?.spellManifest;
-  const actorValidated = validatePortableSpellManifestStructure(actorManifest);
+  const actorValidated = validateActorSpellManifestStructure(actorManifest);
   if (!actorValidated.ok || hashManifest(actorValidated.value) !== hashManifest(validated.value)) {
     throw new TypeError('Actor manifest does not exactly match the transaction manifest.');
   }

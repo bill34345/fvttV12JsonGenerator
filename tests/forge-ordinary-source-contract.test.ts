@@ -111,7 +111,7 @@ describe('ordinary source contracts use complete indexed claims',()=>{
   test('the real erroneous repair still cannot combine separate shared spell pools',async()=>{
     const prompts:string[]=[],provider=offlineProvider([recorded.ordinary.content,recorded.ordinary.repairContent],prompts);await provider.extract(request(source));const ir=structuredClone(recorded.ordinary.repairInputIr) as any,repaired=await provider.repair({stage:'deterministic-validation',source,ir,deterministicFindings:validateMonsterIntakeIR(source,ir).findings});
     expect(validateMonsterIntakeIR(source,repaired).blocking.map(finding=>finding.code)).toContain('MULTIPLE_SHARED_SPELL_POOLS');
-    for(const prompt of prompts){expect(prompt).toContain('at most one daily-shared usageGroup per group');expect(prompt).toContain('The literal word Shared/each is not required');expect(prompt).toContain('On a sourceOperations feature, omit flat attack/save/damage');expect(prompt).toContain('No per-leaf claim proof or whitespace partition is requested');expect(prompt).not.toContain('EXAMPLE_IR_FRAGMENT_JSON:');}
+    for(const prompt of prompts){expect(prompt).toContain('at most one daily-shared usageGroup per group');expect(prompt).toContain('The literal word Shared/each is not required');expect(prompt).toContain('On a sourceOperations feature, omit flat attack/save/damage');expect(prompt).toContain('no per-leaf claim proof or whitespace partition is requested');expect(prompt).not.toContain('EXAMPLE_IR_FRAGMENT_JSON:');}
   });
   test('the consolidated prompt declares independent pools without per-group ledgers or example partitions',async()=>{
     const prompts:string[]=[],provider=offlineProvider([recorded.ordinary.content],prompts);
@@ -119,10 +119,10 @@ describe('ordinary source contracts use complete indexed claims',()=>{
     expect(prompt).toContain(FULL_IR_SOURCE_OPERATION_CONTRACT);
     expect(prompt).toContain('distinct shared pools need distinct groups/feature names');
     expect(prompt).toContain('at most one daily-shared usageGroup per group');
-    expect(prompt).toContain('model the actual membership, count and recovery');
+    expect(prompt).toContain('model actual membership, count and recovery');
     expect(prompt).toContain('The literal word Shared/each is not required');
-    expect(prompt).toContain('For a new default response, set claims:[] and coverage:[]');
-    expect(prompt).toContain('No per-leaf claim proof or whitespace partition is requested');
+    expect(prompt).toContain('supplies empty claims/coverage records when omitted');
+    expect(prompt).toContain('no per-leaf claim proof or whitespace partition is requested');
     expect(prompt).not.toContain('EXAMPLE_SOURCE_JSON:');expect(prompt).not.toContain('EXAMPLE_IR_FRAGMENT_JSON:');
   });
 });

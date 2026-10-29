@@ -16,7 +16,8 @@ const originalFiles = new Map<string, string>();
 const rows: Record<string, unknown>[] = [];
 let networkAttempts = 0;
 const originalFetch = globalThis.fetch;
-globalThis.fetch = (async () => { networkAttempts++; throw Error('Frozen acceptance forbids network requests'); }) as typeof fetch;
+globalThis.fetch = Object.assign(async () => { networkAttempts++; throw Error('Frozen acceptance forbids network requests'); },
+  {preconnect: () => { networkAttempts++; throw Error('Frozen acceptance forbids network preconnect'); }});
 
 interface FrozenCase {
   id: string;
@@ -156,7 +157,7 @@ for (const frozen of cases) test(`46 frozen: ${frozen.id} original answer retain
   try {
     const evidence: any[] = [];
     let reads = 0;
-    const provider = new OpenAICompatibleMonsterIntakeProvider({baseUrl: 'https://frozen.invalid/v1', apiKey: 'frozen-fixture',
+    const provider = new OpenAICompatibleMonsterIntakeProvider({authMode: 'api-key', baseUrl: 'https://frozen.invalid/v1', apiKey: 'frozen-fixture',
       model: 'frozen', reviewModel: 'disabled', maxAttempts: 1, timeoutMs: 10000, repairTimeoutMs: 10000,
       responseEvidence: {record: value => { evidence.push(value); }},
       httpClient: async () => { reads++; return Response.json({choices: [{message: {content: frozen.rawReply}}]}); }});

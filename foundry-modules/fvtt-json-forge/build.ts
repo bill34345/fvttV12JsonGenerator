@@ -35,6 +35,7 @@ export async function buildModule(): Promise<{ moduleRoot: string; files: string
   await mkdir(resolve(moduleRoot, 'templates'), { recursive: true });
   await mkdir(resolve(moduleRoot, 'styles'), { recursive: true });
   await cp(resolve(sourceRoot, 'module.json'), resolve(moduleRoot, 'module.json'));
+  await cp(resolve(sourceRoot, 'third-party-licenses.txt'), resolve(moduleRoot, 'third-party-licenses.txt'));
   await cp(resolve(sourceRoot, 'templates/forge-actor.hbs'), resolve(moduleRoot, 'templates/forge-actor.hbs'));
   await cp(resolve(sourceRoot, 'templates/forge-item.hbs'), resolve(moduleRoot, 'templates/forge-item.hbs'));
   await cp(resolve(sourceRoot, 'templates/forge-intake.hbs'), resolve(moduleRoot, 'templates/forge-intake.hbs'));
@@ -153,6 +154,10 @@ export function browserAdapterPlugin(workspaceAliases: ReadonlyMap<string, strin
         if (workspaceReplacement) {
           const adapter = browserAdapterAliases.get(bunPath(workspaceReplacement));
           return { path: bunPath(adapter ?? workspaceReplacement) };
+        }
+        // Bun 1.3.14 on Windows requires normalized paths for this bundled ESM dependency graph.
+        if (args.path === 'parse5' || args.path.startsWith('entities/')) {
+          return { path: bunPath(Bun.resolveSync(args.path, args.resolveDir)) };
         }
         const candidate = resolve(args.resolveDir, args.path);
         const replacement = findBrowserAdapter(candidate);

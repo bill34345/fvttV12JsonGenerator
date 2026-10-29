@@ -149,7 +149,7 @@ describe('AI source-text answers through the existing CLI workflow', () => {
     const markdown = renderMonsterIntakeMarkdown(buildValidLurkerIr());
     const sourceText = `\`\`\`markdown\n${markdown}\n\`\`\``;
     let requests = 0;
-    const provider = new OpenAICompatibleMonsterIntakeProvider({ baseUrl: 'https://offline.invalid/v1', apiKey: 'offline-only',
+    const provider = new OpenAICompatibleMonsterIntakeProvider({ authMode: 'api-key', baseUrl: 'https://offline.invalid/v1', apiKey: 'offline-only',
       model: 'offline-fixture', reviewModel: 'disabled', timeoutMs: 1000, repairTimeoutMs: 1000,
       httpClient: async () => { requests++; return { ok: true, status: 200,
         json: async () => ({ choices: [{ message: { content: sourceText } }] }) }; } });
@@ -230,7 +230,7 @@ describe('AI source-text answers through the existing CLI workflow', () => {
       ...(variant !== 'plain' ? { kind: 'source-text' } : {}),
       ...(variant === 'kind-and-source-text' ? { sourceText: '# Do not replace the structured creature with this extra metadata' } : {}),
     };
-    const provider = new OpenAICompatibleMonsterIntakeProvider({ baseUrl: 'https://offline.invalid/v1', apiKey: 'offline-only',
+    const provider = new OpenAICompatibleMonsterIntakeProvider({ authMode: 'api-key', baseUrl: 'https://offline.invalid/v1', apiKey: 'offline-only',
       model: 'offline-fixture', reviewModel: 'disabled', timeoutMs: 1000, repairTimeoutMs: 1000,
       httpClient: async () => { requests++; return { ok: true, status: 200,
         json: async () => ({ choices: [{ message: { content: JSON.stringify(reply) } }] }) }; } });

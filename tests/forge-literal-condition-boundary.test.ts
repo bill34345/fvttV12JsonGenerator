@@ -1,3 +1,5 @@
+import assert from 'node:assert/strict';
+import type {CanonicalAppliedCondition} from '@fvtt-json-generator/models/canonical-monster';
 import {test,expect} from 'bun:test';
 import yaml from 'js-yaml';
 import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
@@ -10,7 +12,7 @@ import type {MonsterIntakeIR} from '@fvtt-json-generator/intake-ai/types';
 import cases from './fixtures/forge-literal-condition-cases.json';
 
 // Synthetic schema controls, not claims about a published creature or live play.
-function fixture(row:typeof cases[number],ending='\n') {
+function fixture(row:{id:string;rule:string;conditions:CanonicalAppliedCondition[];manual:boolean},ending='\n') {
   const description='Melee Weapon Attack Roll: +6, reach 10 ft. Hit: 9 (1d10+4) Slashing damage. '+row.rule;
   const source=['Condition Control','Medium Beast, Unaligned','AC 14; HP 30 (4d8+12); Speed 30 ft.',
     'STR 18 DEX 10 CON 16 INT 10 WIS 10 CHA 10; CR 2','Actions','Strike. '+description,'Watch. It remains alert.'].join(ending);
@@ -65,7 +67,7 @@ test('LF/CRLF and explicit condition fields preserve grouped state mechanics; ma
     const right=new YamlParser().parse(renderMonsterIntakeMarkdown(fixture(row,'\r\n').ir).replace(/\n/g,'\r\n'));
     expect(right.structuredActions).toEqual(left.structuredActions);
     expect(left.structuredActions?.动作?.[0]?.embeddedEffects?.map(({type,statuses,condition,escapeDc,duration,staged})=>({type,statuses,condition,escapeDc,duration,staged})))
-      .toEqual(row.conditions.map(({statuses,...rest})=>({type:statuses[0],statuses,condition:undefined,escapeDc:undefined,duration:undefined,staged:undefined,...rest})));
+      .toEqual(row.conditions.map(({statuses,...rest})=>{const type=statuses[0];assert.ok(type);return {type,statuses,condition:undefined,escapeDc:undefined,duration:undefined,staged:undefined,...rest};}));
   }
   const markdown=renderMonsterIntakeMarkdown(fixture(cases[0]!).ir),document=yaml.load(markdown.slice(4,-4)) as any;
   const retainsActor=async(copy:any)=>{

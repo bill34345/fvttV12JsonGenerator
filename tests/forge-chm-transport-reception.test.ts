@@ -13,7 +13,7 @@ import {buildValidLurkerIr,LURKER_SOURCE} from '../src/core/intake/__tests__/fix
 const noCall=async():Promise<never>=>{throw Error('No extra model request is permitted');};
 const offline={providerName:'local-only',extractionModel:'frozen',reviewModel:'disabled',discover:noCall,extract:noCall,repair:noCall,review:noCall};
 const input={source:LURKER_SOURCE,sourceName:'Reception fixture',sourceScope:'single' as const,requestId:'reception-fixture',sourceId:'actor:v1:22600a3f-8819-41e1-ade8-998768910011' as ForgeSourceId,fvttVersion:'14.368',systemVersion:'5.3.3'};
-const connection={baseUrl:'https://fixture.invalid',apiKey:'fixture-key',model:'fixture',reviewModel:'fixture',timeoutMs:1000,repairTimeoutMs:1000,maxAttempts:1 as const};
+const connection={authMode:'api-key' as const,baseUrl:'https://fixture.invalid',apiKey:'fixture-key',model:'fixture',reviewModel:'fixture',timeoutMs:1000,repairTimeoutMs:1000,maxAttempts:1 as const};
 function completed(content:string){return 'event: response.completed\ndata: '+JSON.stringify({type:'response.completed',sequence_number:0,response:{id:'fixture-response',status:'completed',output:[{type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:content}]}]}})+'\n\n';}
 function stream(body:string){return new Response(body,{status:200,headers:{'content-type':'text/event-stream'}});}
 function actorProvider(body:string){

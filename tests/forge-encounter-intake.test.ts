@@ -1,6 +1,7 @@
 import {describe,test,expect} from 'bun:test';
 import {generateEncounterFromHumanMarkdown,reviewForgeEncounterCandidate,createEncounterIntakeProviders,assertEncounterSecretsAbsent,explicitCreatureSections,retryingMonsterProvider,type EncounterAutomationPort} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
+import {LOCALIZATION_TERMS} from '@fvtt-json-generator/contracts/localization';
 import {draftForgeEncounterLocalization} from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
 import type {MonsterIntakeAiProvider} from '@fvtt-json-generator/intake-ai/types';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
@@ -185,7 +186,7 @@ describe('human Markdown multi-actor encounter intake',()=>{
     expect(resumed.prepared!.actors[0]!.artifact).toEqual(first.prepared!.actors[0]!.artifact);
     expect(resumed.prepared!.actors[0]!.rulePresentation).toBeDefined();
     const draft=await draftForgeEncounterLocalization({prepared:resumed.prepared!,service:{model:'offline-fixture',reviewModel:'disabled',
-      translate:async request=>({texts:request.texts.map(field=>({id:field.id,text:field.kind==='title'?'测试标题':'中文说明 '+field.source.replace(/\bgrappled\b/giu,'受擒').replace(/\brestrained\b/giu,'束缚')}))}),
+      translate:async request=>({texts:request.texts.map(field=>({id:field.id,text:field.kind==='title'?'测试标题 '+LOCALIZATION_TERMS.filter(term=>new RegExp(`\\b${term.english}s?\\b`,'iu').test(field.source)).map(term=>term.chinese).join(' '):'中文说明 '+field.source.replace(/\bgrappled\b/giu,'受擒').replace(/\brestrained\b/giu,'束缚').replace(/\bDM\b/gu,'主持人')}))}),
       review:noModel}});
     expect(draft.actors).toHaveLength(1);expect(calls).toBe(0);
   });

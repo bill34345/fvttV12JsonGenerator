@@ -8,6 +8,7 @@ import { projectedConditionStatusId } from '@fvtt-json-generator/contracts/condi
 import { buildBleedingFlag, extractBleedingSpec } from './bleeding';
 import { createStableDocumentId } from './stableId';
 import { conditionalAttackSaveTrigger, deriveExplicitSaveOutcome } from './save-outcome';
+import {formatLiteralHtml} from './actor-text';
 
 type GeneratedActionData = ActionData & {
   legendaryCost?: number;
@@ -281,12 +282,21 @@ export function attachSubActivities(
     const subKey = Object.keys(subActivity)[0];
     if (subKey && subActivity[subKey]) {
       ActivityGenerator.mergeUnique(activities, subActivity);
+      for(const activity of Object.values(subActivity) as any[]){
+        activity.name=sub.name;
+        activity.description={chatFlavor:formatLiteralHtml(sub.describe??'')};
+        activity.activation={type:'special',value:null,override:true,condition:[sub.trigger,sub.describe].filter(Boolean).join('\n')};
+        activity.consumption={targets:[],spellSlot:false,scaling:{allowed:false,max:''}};
+        activity.flags??={};activity.flags.fvttJsonGenerator??={};
+        activity.flags.fvttJsonGenerator.sourceResourceRole='follow-up';
+      }
       if (sub.trigger) {
         activities[subKey].trigger = { type: mapTriggerType(sub.trigger) };
       }
       if (sub.threshold !== undefined) {
         activities[subKey].damageThreshold = sub.threshold;
       }
+      if(sub.embeddedEffects?.length)attachEmbeddedEffects(item,sub.embeddedEffects,Object.values(subActivity),subData.logicalPath);
     }
   }
 }

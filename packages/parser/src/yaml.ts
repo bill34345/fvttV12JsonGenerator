@@ -6,12 +6,13 @@ import { CHINESE_ACTION_REGEX } from './chineseActionRegex';
 import { StructuredActionParser } from './structuredAction';
 import { parseSupportedRuleFacts } from './sourceRuleFacts';
 import type { StructuredActionData } from '@fvtt-json-generator/models/action';
-import { validatePortableSpellManifestStructure } from '@fvtt-json-generator/spell-manifest-contracts/validator';
+import { validateActorSpellManifestStructure } from '@fvtt-json-generator/spell-manifest-contracts/validator';
+import {sha256} from '@fvtt-json-generator/contracts/hash';
 import { parseActorResourceSemantics } from './resourceSemantics';
 import { parseActorBehaviorSemantics } from './behaviorSemantics';
 import { validateForgeSourceMetadata } from './forgeSourceMetadata';
 import { FORGE_SOURCE_ID_FIELD } from '@fvtt-json-generator/contracts';
-import { decodeSourceTextPresentationBoundary } from '@fvtt-json-generator/models/source-text-presentation';
+import { decodeSourceTextPresentationBoundary,composeSourceTextPresentation } from '@fvtt-json-generator/models/source-text-presentation';
 import {isSourceCandidateReview} from '@fvtt-json-generator/models/source-operations';
 
 type YamlBodySectionKey =
@@ -34,6 +35,7 @@ type YamlBodyExtractionResult = {
 };
 
 export class YamlParser {
+  private readonly retainedNotes = new WeakMap<ParsedNPC,string[]>();
   public parse(content: string): ParsedNPC {
     const { frontmatter, body } = this.splitContent(content);
     const rawData = yaml.load(frontmatter) as Record<string, any>;
@@ -98,8 +100,8 @@ export class YamlParser {
     this.traverse(rawData, result, true);
     if(rawData&&Object.hasOwn(rawData,'intake-legendary-ledger')){
       const ledger=rawData['intake-legendary-ledger'];
-      const positive=(value:unknown)=>typeof value==='number'&&Number.isSafeInteger(value)&&value>0;
-      if(ledger&&typeof ledger==='object'&&positive(ledger.max)&&positive(ledger.lairMax))result.sourceLegendaryLedger=structuredClone(ledger);
+      const capacity=(value:unknown,minimum:number)=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=minimum;
+      if(ledger&&typeof ledger==='object'&&capacity(ledger.max,0)&&capacity(ledger.lairMax,1))result.sourceLegendaryLedger=structuredClone(ledger);
       else this.retainField(result,'intake-legendary-ledger',ledger,'传奇资源附带记录未能转换；已有次数保留。');
     }
 
@@ -138,13 +140,55 @@ export class YamlParser {
       const displayFacts = result.biographyMode === 'literal' ? facts.filter(fact => fact.kind === 'food-retention') : facts;
       if (displayFacts.length) result.biographyRuleFacts = displayFacts;
     }
+    const notes=this.retainedNotes.get(result);
+    if(notes?.length){
+      if(result.biographyPresentation){
+        result.biographyPresentation.programNotes=[[...result.biographyPresentation.programNotes,...notes].join('\n\n')];
+        result.details.biography=composeSourceTextPresentation(result.biographyPresentation);
+      }else result.details.biography=[result.details.biography,...notes].filter(Boolean).join('\n\n');
+    }
     return result;
   }
 
   private retainField(result:ParsedNPC,key:string,value:unknown,error:unknown):void {
     const message=error instanceof Error?error.message:String(error),prior=result.candidateReview;
     result.candidateReview={version:1,findings:[...(prior?.findings??[]),{code:'FIELD_PROJECTION_INCOMPLETE',path:key,message}],proposal:{prior:prior?.proposal??null,field:key,value}};
-    result.details.biography=[result.details.biography,`GM：${message} 原始字段 ${key}：${JSON.stringify(value)}`].filter(Boolean).join('\n\n');
+    const notes=this.retainedNotes.get(result)??[];
+    notes.push(`GM：${message} 原始字段 ${key}：${JSON.stringify(value)}`);this.retainedNotes.set(result,notes);
+  }
+
+  private normalizeSpellManifestRecords(manifest:any,result:ParsedNPC):void{
+    const groups=Array.isArray(manifest?.spellcastingGroups)?manifest.spellcastingGroups:[],used=new Set<string>();
+    if(typeof manifest?.manifestId==='string'&&manifest.manifestId.trim())used.add(manifest.manifestId);
+    const id=(owner:any,key:string,path:string)=>{
+      const original=owner[key];if(typeof original==='string'&&original.trim()&&!used.has(original)){used.add(original);return;}
+      const base='record-'+sha256(String(manifest.sourceSha256)+':'+path).slice(0,16);let next=base,suffix=1;while(used.has(next))next=base+'-'+(++suffix);
+      owner[key]=next;used.add(next);this.retainField(result,path,original,'法术技术标识已由程序重分配；法术与使用次数保留。');
+    };
+    const evidence=(owner:any,path:string)=>{
+      const supplied=owner.evidence,entries=Array.isArray(supplied)?supplied:[];
+      owner.evidence=entries.flatMap((entry:any,index:number)=>{
+        if(entry&&typeof entry==='object'&&!Array.isArray(entry)&&Number.isSafeInteger(entry.start)&&Number.isSafeInteger(entry.end)&&entry.start>=0&&entry.end>entry.start&&typeof entry.quote==='string'&&entry.quote.length===entry.end-entry.start){
+          if(Object.keys(entry).some(key=>!['start','end','quote'].includes(key)))this.retainField(result,path+'/'+index,entry,'证据附带字段保留在审阅记录中；法术不受影响。');
+          return[{start:entry.start,end:entry.end,quote:entry.quote}];
+        }
+        this.retainField(result,path+'/'+index,entry,'此来源引文记录未映射；法术及限制原文保留。');return[];
+      });
+      if(!entries.length)this.retainField(result,path,supplied??[],'来源引文记录未提供；法术及限制原文保留供核对。');
+    };
+    const changes=new Map<string,Array<{groupId:string;refId:string}>>();
+    groups.forEach((group:any,groupIndex:number)=>{
+      if(!group||typeof group!=='object'||Array.isArray(group))return;
+      const oldGroup=group.groupId;id(group,'groupId',`/spellcastingGroups/${groupIndex}/groupId`);
+      for(const [refIndex,ref]of (Array.isArray(group.spellRefs)?group.spellRefs:[]).entries()){
+        if(!ref||typeof ref!=='object'||Array.isArray(ref))continue;
+        const path=`/spellcastingGroups/${groupIndex}/spellRefs/${refIndex}`,oldRef=ref.refId;
+        id(ref,'refId',path+'/refId');evidence(ref,path+'/evidence');
+        for(const [index,restriction]of (Array.isArray(ref.restrictions)?ref.restrictions:[]).entries())if(restriction&&typeof restriction==='object'&&!Array.isArray(restriction))evidence(restriction,path+'/restrictions/'+index+'/evidence');
+        if(typeof oldGroup==='string'&&typeof oldRef==='string'){const key=JSON.stringify([oldGroup,oldRef]),mapped=changes.get(key)??[];mapped.push({groupId:group.groupId,refId:ref.refId});changes.set(key,mapped);}
+      }
+    });
+    for(const group of groups)for(const ref of Array.isArray(group?.spellRefs)?group.spellRefs:[]){const reuse=ref?.reuseOf;if(!reuse)continue;const mapped=changes.get(JSON.stringify([reuse.groupId,reuse.refId]));if(mapped?.length===1)ref.reuseOf=mapped[0];}
   }
 
   private splitContent(content: string): { frontmatter: string; body: string } {
@@ -202,6 +246,7 @@ export class YamlParser {
       result.behaviorSemantics = parseActorBehaviorSemantics(processedValue);
     } else if (path === 'spellManifest') {
       const supplied=structuredClone(processedValue);
+      this.normalizeSpellManifestRecords(supplied,result);
       for(const group of Array.isArray(supplied?.spellcastingGroups)?supplied.spellcastingGroups:[])
         for(const ref of Array.isArray(group?.spellRefs)?group.spellRefs:[]){
           for(const key of ['aliases','restrictions','evidence'])if(ref&&ref[key]!==undefined&&!Array.isArray(ref[key])){
@@ -212,7 +257,7 @@ export class YamlParser {
             this.retainField(result,'法术清单/'+String(group.groupId)+'/'+String(ref.refId)+'/aliases/'+index,alias,'法术别名未映射；该法术与同组其他法术保留。');return false;
           });
         }
-      let validation = validatePortableSpellManifestStructure(supplied);
+      let validation = validateActorSpellManifestStructure(supplied);
       while(!validation.ok){
         const groups=Array.isArray(supplied?.spellcastingGroups)?supplied.spellcastingGroups:[];
         const invalidRefs=new Map<number,Set<number>>();
@@ -245,7 +290,7 @@ export class YamlParser {
           });
           if(!supplied.spellcastingGroups.length)return;
         }
-        validation=validatePortableSpellManifestStructure(supplied);
+        validation=validateActorSpellManifestStructure(supplied);
       }
       result.spellManifest=validation.value;
     } else if (path === 'name') {

@@ -38,7 +38,7 @@ test('legacy resource migration changes only the declared native counter and led
   const beforeMarkdown = renderMonsterIntakeMarkdown(data.assembled), markdown = renderMonsterIntakeMarkdown(result);
   const convert = async (content: string) => {
     const clock = spyOn(Date, 'now').mockReturnValue(1_792_900_000_000);
-    try { return await convertMarkdownContentToJson({ content, fvttVersion: '14', effectProfile: 'core', iconMode: 'off', translationService: null }); }
+    try { return await convertMarkdownContentToJson({ content, fvttVersion: '14', effectProfile: 'core', iconOptions: { mode: 'off' }, translationService: null }); }
     finally { clock.mockRestore(); }
   };
   const before = (await convert(beforeMarkdown)).rawJson as any, actor = (await convert(markdown)).rawJson as any;

@@ -33,7 +33,13 @@ export function validatePortableSpellManifestStructure(manifest: unknown): Manif
   return validateManifest(manifest);
 }
 
-function validateManifest(manifest: unknown, source?: string): ManifestValidationResult {
+/** Actor candidates retain declared spells when their source ledger is incomplete.
+ * Source-backed Intake and the other portable consumers keep the strict contract. */
+export function validateActorSpellManifestStructure(manifest: unknown): ManifestValidationResult {
+  return validateManifest(manifest, undefined, true);
+}
+
+function validateManifest(manifest: unknown, source?: string, actorCandidate = false): ManifestValidationResult {
   const findings: SpellResolutionFinding[] = [];
   const usedIds = new Map<string, string>();
   const logicalSpells = new Map<string, string>();
@@ -90,11 +96,11 @@ function validateManifest(manifest: unknown, source?: string): ManifestValidatio
     addFinding('INVALID_SPELLCASTING_GROUPS', '/spellcastingGroups', 'spellcastingGroups 必须是非空数组。');
   } else {
     manifest.spellcastingGroups.forEach((group, groupIndex) => {
-      validateGroup(group, groupIndex, source, usedIds, logicalSpells, addFinding);
+      validateGroup(group, groupIndex, source, usedIds, logicalSpells, addFinding,actorCandidate);
     });
   }
 
-  validateExplicitSpellReuse(manifest, addFinding);
+  validateExplicitSpellReuse(manifest, addFinding,actorCandidate);
 
   if (findings.length > 0) return { ok: false, findings };
   return { ok: true, value: manifest as unknown as PortableSpellManifest };
@@ -107,6 +113,7 @@ function validateGroup(
   usedIds: Map<string, string>,
   logicalSpells: Map<string, string>,
   addFinding: FindingWriter,
+  actorCandidate:boolean,
 ): void {
   const path = `/spellcastingGroups/${groupIndex}`;
   if (!isRecord(groupValue)) {
@@ -136,7 +143,7 @@ function validateGroup(
   }
 
   group.spellRefs.forEach((ref, refIndex) => {
-    validateRef(ref, `${path}/spellRefs/${refIndex}`, source, usedIds, logicalSpells, addFinding);
+    validateRef(ref, `${path}/spellRefs/${refIndex}`, source, usedIds, logicalSpells, addFinding,actorCandidate);
   });
   if(group.recharge!==undefined&&group.spellRefs.some(ref=>isRecord(ref)&&(ref.uses!==undefined||ref.method!=='at-will')))
     addFinding('CONFLICTING_FEATURE_RECHARGE',`${path}/recharge`,'A parent Recharge Cast cannot also consume spell slots or an independent spell-use pool.');
@@ -150,6 +157,7 @@ function validateRef(
   usedIds: Map<string, string>,
   logicalSpells: Map<string, string>,
   addFinding: FindingWriter,
+  actorCandidate:boolean,
 ): void {
   if (!isRecord(refValue)) {
     addFinding('INVALID_SPELL_REF', path, '法术引用必须是对象。');
@@ -197,8 +205,8 @@ function validateRef(
     addFinding('INVALID_MATERIAL_COMPONENT_FLAG', `${path}/ignoresMaterialComponents`, 'ignoresMaterialComponents 必须是布尔值。');
   }
 
-  validateRestrictions(ref.restrictions, `${path}/restrictions`, source, addFinding);
-  validateEvidenceArray(ref.evidence, `${path}/evidence`, source, addFinding);
+  validateRestrictions(ref.restrictions, `${path}/restrictions`, source, addFinding,actorCandidate);
+  validateEvidenceArray(ref.evidence, `${path}/evidence`, source, addFinding,actorCandidate);
   // A reuse is independently checked against exactly one existing definition.
   // All ordinary logical-definition duplicate checks remain unchanged.
   if(ref.reuseOf===undefined)validateLogicalSpell(ref, path, logicalSpells, addFinding);
@@ -208,7 +216,7 @@ function validateRef(
  * second quota/profile. Exact source-clause ownership remains the producer's
  * stronger check; this pure boundary also rejects dangling, cyclic or changed
  * identities, mechanics and copied evidence before any world hydration. */
-function validateExplicitSpellReuse(manifest:RecordValue,addFinding:FindingWriter):void{
+function validateExplicitSpellReuse(manifest:RecordValue,addFinding:FindingWriter,actorCandidate:boolean):void{
   if(!Array.isArray(manifest.spellcastingGroups))return;
   const entries=manifest.spellcastingGroups.flatMap((g,gi)=>isRecord(g)&&Array.isArray(g.spellRefs)
     ?g.spellRefs.flatMap((r,ri)=>isRecord(r)?[{group:g,ref:r,path:`/spellcastingGroups/${gi}/spellRefs/${ri}`}]:[]):[]);
@@ -226,7 +234,7 @@ function validateExplicitSpellReuse(manifest:RecordValue,addFinding:FindingWrite
       ||entry.ref.method!=='at-will'||target.ref.method!=='at-will'||entry.ref.uses!==undefined||target.ref.uses!==undefined
       ||entry.group.recharge!==undefined||target.group.recharge!==undefined
       ||profile(entry.group)!==profile(target.group)||identity(entry.ref)!==identity(target.ref)
-      ||JSON.stringify(entry.ref.evidence)===JSON.stringify(target.ref.evidence))
+      ||!actorCandidate&&JSON.stringify(entry.ref.evidence)===JSON.stringify(target.ref.evidence))
       addFinding('INVALID_SPELL_REUSE',entry.path+'/reuseOf','A source Cast reuse must identify one distinct existing at-will definition with identical identity/profile/restrictions, no extra pool, and its own source evidence.');
   }
 }
@@ -266,7 +274,7 @@ function validateSharedUses(refs: unknown[], groupPath: string, addFinding: Find
   }
 }
 
-function validateRestrictions(value: unknown, path: string, source: string | undefined, addFinding: FindingWriter): void {
+function validateRestrictions(value: unknown, path: string, source: string | undefined, addFinding: FindingWriter,actorCandidate:boolean): void {
   if (!Array.isArray(value)) {
     addFinding('INVALID_RESTRICTIONS', path, 'restrictions 必须是数组。');
     return;
@@ -288,12 +296,12 @@ function validateRestrictions(value: unknown, path: string, source: string | und
     } else if (restriction.value !== undefined && !['string', 'number', 'boolean'].includes(typeof restriction.value)) {
       addFinding('INVALID_RESTRICTION_VALUE', `${restrictionPath}/value`, '限制 value 必须是字符串、有限数字或布尔值。');
     }
-    validateEvidenceArray(restriction.evidence, `${restrictionPath}/evidence`, source, addFinding);
+    validateEvidenceArray(restriction.evidence, `${restrictionPath}/evidence`, source, addFinding,actorCandidate);
   });
 }
 
-function validateEvidenceArray(value: unknown, path: string, source: string | undefined, addFinding: FindingWriter): void {
-  if (!Array.isArray(value) || value.length === 0) {
+function validateEvidenceArray(value: unknown, path: string, source: string | undefined, addFinding: FindingWriter,actorCandidate:boolean): void {
+  if (!Array.isArray(value) || !actorCandidate&&value.length === 0) {
     addFinding('MISSING_EVIDENCE', path, '每个法术或限制都必须至少有一条证据。');
     return;
   }

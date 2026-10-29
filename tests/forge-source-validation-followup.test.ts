@@ -6,7 +6,7 @@ import healingFixture from './fixtures/forge-regenerate-healing.json';
 import {sourceSingleSpellAction} from '@fvtt-json-generator/models/source-rule-facts';
 import {isSourceCandidateReview,isSourceCandidateCounters} from '@fvtt-json-generator/models/source-operations';
 import {sourceOperationFeatureErrors} from '../packages/intake-ai/src/staged-feature-mechanics';
-import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
+import {validateMonsterIntakeIR,auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
 import {buildRatWarlockIr,RAT_WARLOCK_SOURCE} from '../src/core/intake/__tests__/fixtures/rat-warlock';
 import {nativeAreaShape} from '@fvtt-json-generator/models/source-operations';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
@@ -280,7 +280,7 @@ describe('source proof and inert candidate review are independent',()=>{
       expect(sourceOperationFeatureErrors(feature)).toEqual([]);
       const wrong=structuredClone(operations);wrong[0]!.attack!.toHit++;
       expect(sourceOperationErrors(source,wrong).length).toBeGreaterThan(0);
-      expect(sourceOperationFeatureErrors({...feature,damage:[{formula:'99d6',type:'fire'}]}).some(e=>e.field==='damage')).toBe(true);
+      expect(sourceOperationFeatureErrors({...feature,damage:[{formula:'99d6',type:'fire',relationship:'base'}]}).some(e=>e.field==='damage')).toBe(true);
     });
   }
   test('closed review metadata is recognized on a spell group without suppressing its actual findings',()=>{
@@ -292,7 +292,8 @@ describe('source proof and inert candidate review are independent',()=>{
     expect(result.findings.filter(f=>f.code==='UNKNOWN_SPELLCASTING_PROPERTY')).toEqual(baseline.findings.filter(f=>f.code==='UNKNOWN_SPELLCASTING_PROPERTY'));
     expect(result.findings.map(f=>[f.code,f.path])).toEqual(baseline.findings.map(f=>[f.code,f.path]));
     ir.creature.spellcasting![0]!.saveDc=99;
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE,ir).blocking.some(f=>f.path.includes('saveDc'))).toBe(true);
+    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE,ir).blocking.some(f=>f.path.includes('saveDc'))).toBe(false);
+    expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE,ir).blocking.some(f=>f.code==='SPELL_SAVE_DC_EVIDENCE_MISMATCH'&&f.path==='/creature/spellcasting/0/saveDc')).toBe(true);
   });
   test('review metadata cannot smuggle unknown fields or malformed findings',()=>{
     expect(isSourceCandidateReview(review())).toBe(true);
@@ -302,7 +303,8 @@ describe('source proof and inert candidate review are independent',()=>{
     expect(isSourceCandidateCounters([{name:'Unresolved cadence',max:2,recovery:'weekly',execute:'attack'}])).toBe(false);
     const ir=buildRatWarlockIr();
     (ir.creature.spellcasting![0] as any).candidateReview={...review(),execute:'attack'};
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE,ir).findings.some(f=>f.code==='INVALID_CANDIDATE_REVIEW')).toBe(true);
+    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE,ir).blocking.some(f=>f.code==='INVALID_STRUCTURE'&&f.path==='/creature/spellcasting/0/candidateReview')).toBe(true);
+    expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE,ir).blocking.some(f=>f.code==='INVALID_CANDIDATE_REVIEW'&&f.path==='/creature/spellcasting/0/candidateReview')).toBe(true);
   });
 });
 

@@ -2,7 +2,7 @@ import { hashArtifact } from '@fvtt-json-generator/forge-gateway-protocol';
 import { decodeEncounterAssetBytes, hashEncounterBytes } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import { assertPreparedForgeEncounter, type PreparedForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
 import { actorReadbackWarnings, assertExactRuntime, assertGm, MODULE_ID, prepareFoundryImportArtifact, markForgeSpellImportPending, completeForgeSpellImport,type ForgeGameLike } from './runtime';
-import {fixedEncounterCommand,decodeEncounterRuntimeConfiguration} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
+import {fixedEncounterCommand,decodeEncounterRuntimeConfiguration,readFixedEncounterConfiguration} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import {isForgeSpellImportPending} from '@fvtt-json-generator/contracts/forge-import-lifecycle';
 
 export interface EncounterDocument {
@@ -46,6 +46,9 @@ export async function importForgeEncounter(input: {
   if (locks.has(prepared.bundle.id)) throw new Error('这个生物导入文件正在导入，请等待当前操作完成。');
   locks.add(prepared.bundle.id);
   const result:EncounterImportResult={packageId:prepared.bundle.id,packageHash:prepared.hash,documents:[],failures:[]};
+  for(const member of prepared.bundle.actors)if(!prepared.actors.some(actor=>actor.key===member.key)){
+    result.failures.push({key:member.key,kind:'Actor',message:`${member.label}：该角色尚未完成本地生成；来源与原始成员记录仍保留在生物导入文件中。`});
+  }
   const uploadedAssets=new Set<string>();
   try {
     for(const asset of prepared.bundle.assets){
@@ -124,6 +127,8 @@ function createDocumentPlans(prepared:PreparedForgeEncounter,game:EncounterGame,
     }catch(error){failures.push({key:actor.key,kind:'Actor',message:error instanceof Error?error.message:String(error)});}
   }
   for (const macro of prepared.macros) {
+    try{
+    readFixedEncounterConfiguration(macro.command);
     const bindings = Object.fromEntries(Object.entries(macro.bindings).map(([name, actorKey]) => [name,
       `Actor.${encounterDocumentId(bundle.id, 'Actor', actorKey)}`]));
     const context = { packageId: bundle.id, packageHash: hash, actors: bindings, bindingKeys: macro.bindings, covers: macro.covers };
@@ -133,6 +138,7 @@ function createDocumentPlans(prepared:PreparedForgeEncounter,game:EncounterGame,
       img: 'icons/svg/daze.svg', command, ownership: { default: 0 },
       flags: { [MODULE_ID]: { encounter: { ...identity('Macro', macro.key), commandHash: hashEncounterBytes(new TextEncoder().encode(command)), bindings, bindingKeys: macro.bindings, covers: macro.covers } } },
     } });
+    }catch(error){failures.push({key:macro.key,kind:'Macro',message:error instanceof Error?error.message:String(error)});}
   }
   return plans;
 }
@@ -196,8 +202,10 @@ export function validateForgeEncounterMacro(game: EncounterGame, id: string): En
   const macro = game.macros.get(id); const data = macro?.toObject(); const identity = data?.flags?.[MODULE_ID]?.encounter;
   if (!macro?.execute || identity?.version !== 1 || identity.kind !== 'Macro' || data.type !== 'script') throw new Error('未找到已导入的战斗控制宏。');
   if (hashEncounterBytes(new TextEncoder().encode(data.command)) !== identity.commandHash) throw new Error('宏代码在导入后已改变，请重新审阅；没有执行。');
+  const prefix=contextPrefix({packageId:identity.packageId,packageHash:identity.packageHash,actors:identity.bindings,bindingKeys:identity.bindingKeys,covers:identity.covers});
   if (!identity.bindingKeys || !Array.isArray(identity.covers)
-    || !data.command.startsWith(contextPrefix({packageId:identity.packageId,packageHash:identity.packageHash,actors:identity.bindings,bindingKeys:identity.bindingKeys,covers:identity.covers}))) throw new Error('宏绑定或机制声明在导入后已改变。');
+    || !data.command.startsWith(prefix)) throw new Error('宏绑定或机制声明在导入后已改变。');
+  readFixedEncounterConfiguration(data.command.slice(prefix.length));
   for (const [binding,uuid] of Object.entries(identity.bindings ?? {})) {
     if (typeof uuid !== 'string' || !/^Actor\.[a-f0-9]{16}$/.test(uuid)) throw new Error('宏绑定身份无效。');
     const actorKey=identity.bindingKeys[binding];

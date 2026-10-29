@@ -1,6 +1,7 @@
 import {describe,test,expect} from 'bun:test';
 import {OpenAICompatibleMonsterIntakeProvider,INTAKE_PROMPT_VERSIONS} from '@fvtt-json-generator/intake-ai/provider';
 import {buildRatWarlockIr,RAT_WARLOCK_SOURCE} from '../src/core/intake/__tests__/fixtures/rat-warlock';
+import {FULL_IR_SOURCE_OPERATION_SCHEMA,SOURCE_OPERATION_SCHEMA} from '../packages/intake-ai/src/source-operation-contract';
 
 const source=RAT_WARLOCK_SOURCE,candidate={id:'one',label:'Fixture',start:0,end:source.length,quote:source};
 function fixture(stage:'extract'|'review'|'repair',answer:unknown){
@@ -21,7 +22,15 @@ describe('default complete-IR prompts follow the AI/content and program/preserva
   for(const stale of ['firstLineId','lastLineId','clauseId','request.sourceProofClauses','sourceInventory','FEATURE response','manual/facts:{}','MISSING_SOURCE_FEATURES','multiple unqualified spells remain complete manualGrants'])expect(system).not.toContain(stale);
   expect(system).toContain('The literal word Shared/each is not required');
   expect(system).toContain('Unmapped casting qualifiers remain complete GM restrictions');
-  expect(system).toContain('claims:[] and coverage:[]');
+  expect(system).toContain('supplies empty claims/coverage records when omitted');
+  expect(system).toContain(FULL_IR_SOURCE_OPERATION_SCHEMA);
+  expect(system).toContain('target:{type:self|creature|any,count?:number');
+  expect(system).not.toContain('target:{type:self|creature,count:1');
+  expect(system).not.toContain('failureStatuses?:');
+  expect(SOURCE_OPERATION_SCHEMA).toContain('target:{type:self|creature,count:1');
+  expect(SOURCE_OPERATION_SCHEMA).toContain('failureStatuses?:');
+  expect(system).toContain('a wholly manual feature adds activityType:utility,executionMode:gm-manual without sourceOperations');
+  expect(system).not.toContain('ordinary-gear-out-of-scope');
   expect(system).toContain('Use sourceOperations for every executable basic');
   expect(system).toContain('近战攻击检定／远程攻击检定');
   expect(system).not.toContain('Flat attack:');
@@ -29,7 +38,7 @@ describe('default complete-IR prompts follow the AI/content and program/preserva
   // Guard against accidentally appending the complete legacy instructions.
   // This is a character budget, not a token/cost/quality claim.
   expect(system.length).toBeLessThan(20000);
-  expect(INTAKE_PROMPT_VERSIONS.extract).toContain('consolidated-source-operations');
+  expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v54-prompt-consolidation');
  });
  test('review uses program scope even with an empty model coverage ledger',async()=>{
   const ir=buildRatWarlockIr();ir.coverage=[];const {provider,read}=fixture('review',{schemaVersion:1,verdict:'accepted',findings:[]});
@@ -45,6 +54,10 @@ describe('default complete-IR prompts follow the AI/content and program/preserva
   expect(payload.candidate).toEqual({id:candidate.id,label:candidate.label,start:0,end:source.length});
   expect(system).toContain('Return exactly {schemaVersion:1,operations:');expect(system).not.toContain('Return exactly {schemaVersion:1,source:');
   expect(system).toContain('never edit request source identity, final Actor JSON');expect(system).toContain('at most 64');expect(result).toEqual(ir);
+  expect(system).toContain('actual nonempty historical records with valid references');
+  expect(system).toContain('Historical flat Feature fields and failureStatuses remain readable');
+  expect(system).toContain('ordinary-gear-out-of-scope');
+  expect(system).not.toContain('Return the canonical IR');
   expect(system.length).toBeLessThan(21000);
  });
  test('review anchors a quote unique inside the selected candidate even when another creature repeats it',async()=>{

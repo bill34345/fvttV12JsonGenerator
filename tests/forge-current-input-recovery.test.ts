@@ -13,9 +13,8 @@ import captured from './fixtures/forge-current-input-recovery.json';
 import brass from './fixtures/forge-2024-brass-dragon-full-ir-v48.json';
 
 const SOURCE_ID='actor:v1:71ebf592-2eb2-4af3-ad27-f55d86892814' as ForgeSourceId;
-// Complete pre-change formal artifact, frozen before this fix; no Actor fields
-// are removed or rewritten for the comparison.
-const BEFORE_BRASS_HASH='64f9db3b1f98a83a2b8b79836084b588befb6c6623f23614d1c51b09cc03367e';
+const BRASS_BEFORE_OFFICIAL_EFFECTS_HASH='64f9db3b1f98a83a2b8b79836084b588befb6c6623f23614d1c51b09cc03367e';
+const BRASS_OFFICIAL_EFFECTS_V1_HASH='7c9f0548c4762cebd3eea2d1a12bcd10927f72c489d4408318d939bcee209255';
 const source=(id:string)=>captured.cases.find(entry=>entry.id===id)!;
 const stop=async():Promise<never>=>{throw Error('This recovery test forbids model, review and repair calls');};
 const provider={providerName:'frozen-current-first-reply',extractionModel:'frozen',reviewModel:'disabled',discover:stop,extract:stop,review:stop,repair:stop};
@@ -45,13 +44,27 @@ function expectSpellFidelity(actor:any,groups:any[]){
 }
 describe('new current first replies recover through the formal workflow without model calls',()=>{
   test('mechanically selected first source/reply/IR identities remain frozen',()=>{
-    for(const record of captured.cases){expect(hashSource(record.source)).toBe(record.sourceSha256);expect(hashSource(record.rawReply)).toBe(record.rawReplySha256);expect(hashSource(JSON.stringify(record.ir))).toBe(record.irSha256);expect(record.ir.source).toEqual({sha256:record.sourceSha256,length:record.source.length});}
+    for(const record of captured.cases){expect<string>(hashSource(record.source)).toBe(record.sourceSha256);expect<string>(hashSource(record.rawReply)).toBe(record.rawReplySha256);expect<string>(hashSource(JSON.stringify(record.ir))).toBe(record.irSha256);expect(record.ir.source).toEqual({sha256:record.sourceSha256,length:record.source.length});}
   });
   test('existing explicit-lair Brass retains its complete formal Actor artifact',async()=>{
     const result=await formal(brass,'brass-control');expect(result.generated.intakeVerificationStatus).toBe('accepted');expect(result.generated.findings).toEqual([]);
     expect(result.actor.system.resources.legres).toEqual({max:3,spent:0});expect(result.actor.flags.fvttJsonGenerator.sourceLegendaryLedger).toMatchObject({max:3,lairMax:4,resistanceMax:3,resistanceLairMax:4});
-    const artifactHash=hashArtifact(result.actor);
-    expect(artifactHash).toBe(BEFORE_BRASS_HASH);
+    const sleep=result.actor.items[5];expect(sleep.name).toBe('Sleep Breath');
+    const activity=sleep.system.activities.ea765c5d65735a9b;expect(activity.type).toBe('save');
+    expect(sleep.effects).toHaveLength(2);
+    const first=sleep.effects.find((effect:any)=>effect.name==='失能 Incapacitated'),second=sleep.effects.find((effect:any)=>effect.name==='昏迷 Unconscious');
+    expect(first.statuses).toEqual(['incapacitated']);expect(first.duration.seconds).toBeNull();
+    expect(second.statuses).toEqual(['unconscious','incapacitated']);expect(second.duration.seconds).toBe(600);
+    for(const effect of [first,second]){expect(effect.flags.fvttJsonGenerator.sourceOperationId).toBe('sleep-breath-save');expect(effect.flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');}
+    expect(first.flags.fvttJsonGenerator.conditionLifecycle.condition).toContain('Failure:');expect(first.flags.fvttJsonGenerator.conditionLifecycle.condition.replace(/\s+/gu,' ')).toContain('at which point it repeats the save');
+    expect(second.flags.fvttJsonGenerator.conditionLifecycle.condition).toBe('Second Failure: The target has the Unconscious condition for 10 minutes.');
+    expect(second.description).toContain('takes damage');expect(second.description).toContain('wake it');
+    expect(activity.effects).toEqual([{_id:first._id,onSave:false},{_id:second._id,onSave:false}]);
+    // The isolated historical view proves that the approved effect delta is
+    // the only change; it is never delivered as a generated Actor artifact.
+    const historical=structuredClone(result.actor);historical.items[5].effects=[];historical.items[5].system.activities.ea765c5d65735a9b.effects=[];
+    expect<string>(hashArtifact(historical)).toBe(BRASS_BEFORE_OFFICIAL_EFFECTS_HASH);
+    expect<string>(hashArtifact(result.actor)).toBe(BRASS_OFFICIAL_EFFECTS_V1_HASH);
   });
   test('Unicorn first reply preserves native resistance3 without invented lair, all nine abilities and nine spells',async()=>{
     const record=source('unicorn'),before=JSON.stringify(record),result=await formal(record,'unicorn');
@@ -83,12 +96,21 @@ describe('new current first replies recover through the formal workflow without 
     expect(result.generated.calls).toEqual({discovery:0,extraction:0,review:0,repair:0});expect(JSON.stringify(record)).toBe(before);
   });
   for(const id of ['unicorn','spirit-naga'])test(id+' original raw reply also passes the real provider normalizer with only a fake HTTP response',async()=>{
-    const record=source(id);let requests=0;const actual=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://offline.invalid/v1',apiKey:'fake-only',model:'frozen',reviewModel:'disabled',timeoutMs:1000,repairTimeoutMs:1000,maxAttempts:1,
+    const record=source(id),before=structuredClone(record),responses:any[]=[];let requests=0;const actual=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://offline.invalid/v1',apiKey:'fake-only',model:'frozen',reviewModel:'disabled',timeoutMs:1000,repairTimeoutMs:1000,maxAttempts:1,responseEvidence:{record:row=>{responses.push(row);}},
       httpClient:async()=>{requests++;return new Response(JSON.stringify({choices:[{message:{content:record.rawReply}}]}));}});
     const ir=await actual.extract({source:record.source,sourceSha256:record.sourceSha256,candidate:{id,label:id,start:0,end:record.source.length,quote:record.source}});
-    expect(validateMonsterIntakeIR(record.source,ir).blocking).toEqual([]);expect(ir).toEqual(normalizeMonsterIntakeProposal(record.source,record.ir as any));
+    expect(validateMonsterIntakeIR(record.source,ir).findings).toEqual([]);
+    const working=structuredClone(ir),expected=normalizeMonsterIntakeProposal(record.source,record.ir as any),original=JSON.parse(record.rawReply);
+    expect(working.creature.candidateReview?.findings).toEqual([]);
+    expect(working.creature.candidateReview?.proposal).toEqual({prior:null,original});
+    expect(original.creature.traits[0].evidence[0]).toMatchObject({start:-1,end:-1});
+    delete working.creature.candidateReview;if(expected.creature.candidateReview?.findings.length===0)delete expected.creature.candidateReview;
+    expect(working).toEqual(expected);expect(responses[0].content).toBe(record.rawReply);
     const generated=await formal({source:record.source,ir},id+'-raw-first-reply');expect(generated.generated.findings).toEqual([]);expect(generated.generated.intakeVerificationStatus).toBe('accepted');
-    expect(requests).toBe(1);expect(JSON.stringify(record.ir)).toBe(JSON.stringify(source(id).ir));
+    const control=await formal(record,id+'-canonical-control');expect(generated.actor).toEqual(control.actor);
+    expectSpellFidelity(generated.actor,declarations(record));
+    expect(generated.generated.calls).toEqual({discovery:0,extraction:0,review:0,repair:0});
+    expect(requests).toBe(1);expect(record).toEqual(before);
   });
 });
 
@@ -118,7 +140,7 @@ describe('closed normalization and explicit base-only resistance projection',()=
   test('standard resistance field supports LF/CRLF and strict literal positive integer values without guessing text',async()=>{
     const canonical=(value:unknown)=>['---','名称: Counter Control','类型: npc','护甲等级: 14','生命值: 30','传奇抗性次数: '+JSON.stringify(value),'---'].join('\n');
     const parser=new YamlParser();for(const value of [1,3,'9']){const text=canonical(value),parsed=parser.parse(text);expect(parsed.attributes.legres).toEqual({value:Number(value),max:Number(value)});expect(parser.parse(text.replaceAll('\n','\r\n'))).toEqual(parsed);
-      const generated=await convertMarkdownContentToJson({content:text,fvttVersion:'14',effectProfile:'core',iconMode:'off',translationService:null});expect((generated.rawJson as any).system.resources.legres).toEqual({max:Number(value),spent:0});}
+      const generated=await convertMarkdownContentToJson({content:text,fvttVersion:'14',effectProfile:'core',iconOptions:{mode:'off'},translationService:null});expect((generated.rawJson as any).system.resources.legres).toEqual({max:Number(value),spent:0});}
     for(const invalid of [0,-1,1.5,'3/day','3e0','3 uses','',null,true,{},[]]){const parsed=parser.parse(canonical(invalid));expect(parsed.attributes.legres).toBeUndefined();expect(parsed.candidateReview).toBeDefined();}
     const repeated=parser.parse(canonical(3).replace('\n---','\nAttributes:\n  传奇抗性次数: 4\n---'));expect(repeated.attributes.legres).toEqual({value:3,max:3});expect(repeated.candidateReview).toBeDefined();
   });

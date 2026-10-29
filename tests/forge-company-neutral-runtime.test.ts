@@ -1,9 +1,9 @@
 import {describe,test,expect} from 'bun:test';
 import yaml from 'js-yaml';
 import company from './fixtures/forge-company-pdf-recorded-base.json';
-import {splitStagedMonsterSource} from '@fvtt-json-generator/intake-ai/staged-source';
-import {generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
-import {legacyWholeFormProvider,assertDefaultFullIrReplay} from './helpers/forge-legacy-provider';
+import {runStagedMonsterExtraction} from '@fvtt-json-generator/intake-ai/staged-extraction';
+import {createEncounterIntakeProviders,generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
+import {assertDefaultFullIrReplay} from './helpers/forge-legacy-provider';
 import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
 import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
 import srd from './fixtures/forge-template-repeat-v2-srd.json';
@@ -12,6 +12,7 @@ import {writeFileSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {serializeForgeEncounterPackage} from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import {prepareFoundryImportArtifact,assertActorSemantics} from '../foundry-modules/fvtt-json-forge/src/runtime';
+import type {MonsterIntakeAiProvider} from '@fvtt-json-generator/intake-ai/types';
 
 // A new, explicit source-owned response fixture, not a repaired frozen answer.
 // The original 24 frozen answers are replayed separately without these values.
@@ -32,31 +33,48 @@ function fillCompany(form:any,units:any[]){
   Object.assign(find('Strike-Gate'),{使用次数:1,恢复方式:'day',豁免:{DC:16,属性:['cha'],成功结果:'not teleported',目标限制:'Any creature Grappled by it'},距离:[{用途:'teleport destination',尺:120,条件:null}]});
 }
 
-async function runFixedSource<T>(source:string,base:any,fill:(form:any,units:any[])=>void,run:(provider:any,requests:any[])=>Promise<T>,mutate?:(form:any)=>void){
+async function runFixedSource<T>(source:string,base:any,fill:(form:any,units:any[])=>void,run:(provider:MonsterIntakeAiProvider,requests:any[])=>Promise<T>,mutate?:(form:any)=>void){
   const candidate={id:'fixed-source',label:base.creature.identity.name,start:0,end:source.length,quote:source};
-  const plan=splitStagedMonsterSource({source,sourceSha256:hashSource(source),candidate}),priorFetch=globalThis.fetch,requests:any[]=[];
+  const before=structuredClone(base),stages:string[]=[],requests:any[]=[];
+  // Convert the test-owned historical response through its existing offline
+  // converter. The current provider receives the resulting complete IR only.
+  const reply=await runStagedMonsterExtraction({source,sourceSha256:hashSource(source),candidate},async call=>{
+    stages.push(call.stage);await call.onAttempt(1);
+    if(call.stage==='base')return structuredClone(base);
+    if(call.stage!=='feature'||!call.payload.template||!call.payload.units)throw Error('Unexpected offline historical stage');
+    const form=yaml.load(String(call.payload.template));fill(form,call.payload.units as any[]);mutate?.(form);
+    return{markdown:yaml.dump(form,{noRefs:true,lineWidth:-1})};
+  },{baseMode:'facts',featureMode:'whole-v2',preserveCandidates:true});
+  expect(stages).toEqual(['base','feature']);expect(base).toEqual(before);
+  const originalReply=structuredClone(reply),priorFetch=globalThis.fetch;
   globalThis.fetch=Object.assign(async(_url:any,init?:RequestInit)=>{
     const body=JSON.parse(String(init?.body)),payload=JSON.parse(body.messages[1].content);requests.push(payload);
-    let answer:any;
-    if(payload.source===plan.base.quote)answer=structuredClone(base);
-    else if(payload.template&&payload.units){const form=yaml.load(payload.template);fill(form,payload.units);mutate?.(form);answer={markdown:yaml.dump(form,{noRefs:true,lineWidth:-1})};}
-    else throw Error('No real HTTP, repair or automation operation is permitted');
-    return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify(answer)}}]}),{status:200,headers:{'Content-Type':'application/json'}});
-  },{preconnect:priorFetch.preconnect});
+    if(payload.sourceLines){
+      const lines=source.split(/\r\n|\n|\r/u);if(lines.at(-1)==='')lines.pop();
+      expect(payload.sourceSha256).toBe(hashSource(source));
+      expect(payload.sourceLines).toEqual(lines.map((text,index)=>({id:`L${index+1}`,text})));
+      return Response.json({choices:[{message:{content:JSON.stringify({schemaVersion:1,candidates:[{id:'fixed-full-source',label:base.creature.identity.name,
+        firstLineId:payload.sourceLines[0].id,lastLineId:payload.sourceLines.at(-1).id}]})}}]});
+    }
+    expect(payload.source).toBe(source);expect(payload.sourceSha256).toBe(hashSource(source));
+    expect(payload.template).toBeUndefined();expect(payload.units).toBeUndefined();
+    return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify(reply)}}]}),{status:200,headers:{'Content-Type':'application/json'}});
+  },{preconnect:()=>{throw Error('No network preconnect is permitted');}});
   try{
-    const actual=legacyWholeFormProvider({model:'fixed-source-fixture'});
-    const provider={providerName:actual.providerName,extractionModel:actual.extractionModel,reviewModel:actual.reviewModel,
-      discover:async()=>({schemaVersion:1 as const,candidates:[candidate]}),extract:actual.extract.bind(actual),review:actual.review.bind(actual),repair:actual.repair.bind(actual)};
-    return await run(provider,requests);
+    const {provider}=createEncounterIntakeProviders({baseUrl:'https://offline.invalid/v1',apiKey:'fixture-only',model:'fixed-source-fixture',timeoutMs:10000});
+    const result=await run(provider,requests);
+    expect(requests.filter(payload=>!payload.sourceLines)).toHaveLength(1);
+    expect(requests.filter(payload=>payload.sourceLines).length).toBeLessThanOrEqual(1);expect(reply).toEqual(originalReply);
+    return result;
   }finally{globalThis.fetch=priorFetch;}
 }
-const runCompany=<T>(run:(provider:any,requests:any[])=>Promise<T>,mutate?:(form:any)=>void)=>runFixedSource(company.source,company.recordedBase,fillCompany,run,mutate);
+const runCompany=<T>(run:(provider:MonsterIntakeAiProvider,requests:any[])=>Promise<T>,mutate?:(form:any)=>void)=>runFixedSource(company.source,company.recordedBase,fillCompany,run,mutate);
 
 describe('explicit legacy whole-form compatibility; current full-IR controls compare projection only',()=>{
 test('Company and current full-IR replay retain neutral attack and explicit outgoing half through the formal chain',async()=>runCompany(async(provider,requests)=>{
   const result=await generateEncounterFromHumanMarkdown({source:company.source,label:'Forge AB Runtime Company 20261020',provider,reviewPolicy:'deferred',
     automationProvider:{generate:async()=>{throw Error('GM source rules must not manufacture a controller');},review:async()=>({verdict:'accepted',findings:[]})}});
-  expect(result.report.findings).toEqual([]);expect(result.report.status).toBe('ready_for_gm_review');expect(result.prepared?.actors).toHaveLength(1);expect(requests).toHaveLength(2);
+  expect(result.report.findings).toEqual([]);expect(result.report.status).toBe('ready_for_gm_review');expect(result.prepared?.actors).toHaveLength(1);expect(requests).toHaveLength(1);
   const actor=result.prepared!.actors[0]!.artifact as any,shred=actor.items.find((item:any)=>item.flags?.fvttJsonGenerator?.manualRule?.sourceOperations?.some((op:any)=>op.attack?.type==='melee'));
   expect(shred.type).not.toBe('weapon');const activities=Object.values<any>(shred.system.activities);
   expect(activities).toHaveLength(2);const roll=activities.find(a=>a.type==='utility')!,damage=activities.find(a=>a.type==='damage')!;
@@ -76,7 +94,8 @@ test('Company and current full-IR replay retain neutral attack and explicit outg
   expect(adaptedActivities.map(a=>a.type).sort()).toEqual(['damage','utility']);
   for(const activity of adaptedActivities)expect(activity.midiProperties).toMatchObject({otherActivityCompatible:false,triggeredActivityId:'none'});
   expect(()=>assertActorSemantics(adapted,structuredClone(adapted))).not.toThrow();
-  expect(()=>prepareFoundryImportArtifact(actor,{modules:{get:()=>({active:true,version:'unverified'})}})).toThrow('unverified Midi');
+  const warnings:string[]=[],unverified=prepareFoundryImportArtifact(actor,{modules:{get:()=>({active:true,version:'unverified'})}},warnings);
+  expect(warnings.some(message=>message.includes('Midi unverified'))).toBe(true);expect(unverified).toEqual(adapted);
   for(const mutate of [
     (a:any)=>{Object.values<any>(a.system.activities)[0].flags.fvttJsonGenerator.sourceOperation.role='unknown';},
     (a:any)=>{Object.values<any>(a.system.activities)[0].flags.fvttJsonGenerator.sourceOperation.attackKind='ranged';},
@@ -84,7 +103,16 @@ test('Company and current full-IR replay retain neutral attack and explicit outg
     (a:any)=>{Object.values<any>(a.system.activities).find(x=>x.type==='damage')!.flags.fvttJsonGenerator.sourceOperation.relationship='primary';},
     (a:any)=>{const key=Object.keys(a.system.activities)[0]!;a.system.activities.extra=structuredClone(a.system.activities[key]);},
     (a:any)=>{const key=Object.keys(a.system.activities).find(key=>a.system.activities[key].type==='damage')!;delete a.system.activities[key];},
-  ]){const bad=structuredClone(actor);mutate(bad.items[actor.items.indexOf(shred)]);expect(()=>prepareFoundryImportArtifact(bad,midi)).toThrow('Unbound source-operation');}
+  ]){
+    const bad=structuredClone(actor);mutate(bad.items[actor.items.indexOf(shred)]);const before=structuredClone(bad);
+    const retained=prepareFoundryImportArtifact(bad,midi) as any;
+    const originalActivities=bad.items[actor.items.indexOf(shred)].system.activities,retainedActivities=retained.items[actor.items.indexOf(shred)].system.activities;
+    expect(bad).toEqual(before);expect(Object.keys(retainedActivities)).toEqual(Object.keys(originalActivities));
+    for(const key of Object.keys(originalActivities)){
+      expect(retainedActivities[key]).toMatchObject(originalActivities[key]);
+      expect(retainedActivities[key].midiProperties).toMatchObject({otherActivityCompatible:false,triggeredActivityId:'none'});
+    }
+  }
   if(process.env.FORGE_AB_RUNTIME_EVIDENCE_DIR){
     const directory=resolve(process.env.FORGE_AB_RUNTIME_EVIDENCE_DIR);
     if(directory!==resolve('.local/forge-v2-bw-integration-20261020'))throw Error('Runtime evidence must stay in the exact owned directory');
@@ -97,10 +125,14 @@ test('Company and current full-IR replay retain neutral attack and explicit outg
 }));
 
 test('whole Company preserves a missing creature target finding alongside the candidate without repairing the reply',async()=>runCompany(async provider=>{
-  const candidate={id:'company',label:'Company',start:0,end:company.source.length,quote:company.source};
-  const ir=await provider.extract({source:company.source,sourceSha256:hashSource(company.source),candidate});
+  const result=await generateEncounterFromHumanMarkdown({source:company.source,label:'Company missing target candidate',provider,reviewPolicy:'deferred',
+    automationProvider:{generate:async()=>{throw Error('Missing target must not manufacture a controller');},review:async()=>({verdict:'accepted',findings:[]})}});
+  const entry=result.report.actors[0]!,ir=entry.analysis.ir!,actor=entry.generation!.actorProjection as any;
   expect(ir.uncertainties.map(f=>f.code)).toContain('V2_TARGET_OMITTED');
   expect(ir.creature.actions.some(feature=>feature.sourceOperations?.some(op=>op.type==='save'))).toBe(true);
+  expect(entry.analysis.status).toBe('needs_review');expect(entry.generation!.intakeVerificationStatus).toBe('needs_review');
+  expect(entry.generation!.candidateAvailable).toBe(true);expect(actor.type).toBe('npc');
+  expect(actor.items.some((item:any)=>Object.values<any>(item.system.activities).some(activity=>activity.type==='save'))).toBe(true);
 },form=>{Object.values<any[]>(form).flat().find(row=>row.名称==='Weaverot Volley').豁免.目标限制=null;}));
 
 test('a neutral attack and native Save share one source pool while the damage follow-up consumes nothing',async()=>{
@@ -118,6 +150,8 @@ test('a neutral attack and native Save share one source pool while the damage fo
     expect(primary.consumption.targets).toHaveLength(1);expect(save.consumption.targets).toHaveLength(1);
     expect(primary.consumption.targets[0].target).toBe(save.consumption.targets[0].target);expect(primary.consumption.targets[0].value).toBe('1');expect(damage.consumption.targets).toEqual([]);
     expect(shred.system.uses.max).toBe('2');expect(volley.system.uses?.max).not.toBe('2');
+    const entry=result.report.actors[0]!;
+    await assertDefaultFullIrReplay(source,entry.analysis.ir!,{actor,markdown:entry.generation!.markdown!});
   });
 });
 
@@ -137,17 +171,23 @@ for(const reference of ['id','name'] as const)test('historical SRD 5.1 Vampire B
   const item=actor.items.find((i:any)=>i.flags?.fvttJsonGenerator?.manualRule?.sourceOperations?.some((op:any)=>op.attack?.type==='mwak'));
   const activities=Object.values<any>(item.system.activities);expect(activities).toHaveLength(1);expect(activities[0].type).toBe('attack');expect(activities[0].damage.parts).toHaveLength(2);
   expect(actor.items.flatMap((i:any)=>Object.values<any>(i.system.activities)).some((a:any)=>a.type==='heal')).toBe(false);
+  await assertDefaultFullIrReplay(biteSource,ir,{actor,markdown:generation.markdown!,discoveryCalls:1});
   for(const phrase of ['hit point maximum','regains hit points equal','long rest','vampire spawn'])expect(item.system.description.value.replace(/<br>/gu,' ')).toContain(phrase);
   const corrupt=structuredClone(actor),changed=corrupt.items[actor.items.indexOf(item)];Object.values<any>(changed.system.activities)[0].damage.parts[1].number=99;
   expect(verifyMonsterIntake(biteSource,ir,generation.markdown!,corrupt,{start:0,end:biteSource.length}).findings.some(f=>f.blocking)).toBe(true);
 }));
 
 for(const change of ['unbound-owner','wrong-reference','missing-target'])test('historical SRD 5.1 Vampire identity findings survive in a useful unaccepted candidate: '+change,async()=>runFixedSource(biteSource,bases.R4,(form,units)=>fillBite(form,units,'id'),async provider=>{
-  const candidate={id:'bite',label:'Bite',start:0,end:biteSource.length,quote:biteSource};
-  const ir=await provider.extract({source:biteSource,sourceSha256:hashSource(biteSource),candidate});
+  const result=await generateEncounterFromHumanMarkdown({source:biteSource,label:'Vampire identity candidate',provider,reviewPolicy:'deferred',
+    automationProvider:{generate:async()=>{throw Error('An identity finding must not manufacture a controller');},review:async()=>({verdict:'accepted',findings:[]})}});
+  const entry=result.report.actors[0]!,ir=entry.analysis.ir!,actor=entry.generation!.actorProjection as any;
   expect(ir.uncertainties.some(f=>f.blocking)).toBe(true);
   expect(ir.creature.actions[0]!.sourceOperations![0]!.damage).toHaveLength(2);
   expect(ir.creature.actions[0]!.sourceOperations!.some(op=>op.type==='heal')).toBe(false);
+  expect(entry.analysis.status).toBe('needs_review');expect(entry.generation!.intakeVerificationStatus).toBe('needs_review');
+  expect(entry.generation!.candidateAvailable).toBe(true);expect(actor.type).toBe('npc');
+  const activities=actor.items.flatMap((item:any)=>Object.values<any>(item.system.activities)),attack=activities.find((activity:any)=>activity.type==='attack');
+  expect(attack.damage.parts).toHaveLength(2);expect(activities.some((activity:any)=>activity.type==='heal')).toBe(false);
 },form=>{
   const row=form.动作[0];if(change==='unbound-owner')row.治疗[0].目标='吸血鬼';
   if(change==='wrong-reference')row.治疗[0].取值依据='等于目标因该次[Children of the Night]所受死灵伤害的实际数值';

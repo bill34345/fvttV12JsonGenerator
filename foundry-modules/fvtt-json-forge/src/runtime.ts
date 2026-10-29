@@ -2,6 +2,7 @@ import {prepareManualConditionEffectsForMidi} from './manualConditionEffects';
 import {
   decodeForgeActorResponse,
   hashArtifact,
+  isForgeSourceId,
   isUsableActorCandidateArtifact,
   type ForgeActorResponse,
   type ForgeActorResult,
@@ -17,6 +18,7 @@ import {
 import { isForgeCoreVersionSupported } from './mirror-core-compatibility';
 import { FORGE_SPELL_IMPORT_PHASE, isForgeSpellImportPending } from '@fvtt-json-generator/contracts/forge-import-lifecycle';
 import { RESOLVER_MODULE_ID } from '@fvtt-json-generator/spell-manifest-contracts';
+import {parseFragment, serialize} from 'parse5';
 
 export const MODULE_ID = 'fvtt-json-forge' as const;
 export const EXPECTED_FOUNDRY_VERSION = '14.364' as const;
@@ -158,6 +160,7 @@ async function createForgeActorDocument(
   result: { sourceIdentity: ForgeActorResult['sourceIdentity']; artifact: JsonObject; artifactHash: Sha256 },
 ): Promise<ForgeActorCreateResult> {
   throwIfAborted(input.signal);
+  assertActorWriteIdentity(result.sourceIdentity);
 
   const collection = input.game.actors;
   if (!collection) throw new Error('Foundry world Actor collection is unavailable.');
@@ -264,6 +267,12 @@ async function createForgeActorDocument(
         throw new ForgeTemporaryActorCleanupError(created.uuid ?? created.id ?? '[unknown Actor]', error);
       }
     }
+  }
+}
+
+function assertActorWriteIdentity(identity:ForgeActorResult['sourceIdentity']):void{
+  if(!isForgeSourceId(identity.sourceId)||typeof identity.sourceHash!=='string'||!/^[a-f0-9]{64}$/u.test(identity.sourceHash)){
+    throw new Error('Forge Actor source identity is incomplete or invalid; the candidate remains available, but this world write was not started.');
   }
 }
 
@@ -458,7 +467,7 @@ function assertReadback(
 
 export function assertActorSemantics(artifact: JsonObject, readback: unknown): void {
   assertSourceOperationMidiSafety(artifact,readback);
-  const actual = actorSemantics(readback, 'readback');
+  const actual = actorSemantics(readback, 'readback', artifact);
   const expected = actorSemantics(artifact, 'artifact');
   const projected = projectReadbackToExpected(actual, expected);
   if (stableJson(projected) !== stableJson(expected)) {
@@ -473,7 +482,7 @@ export function actorReadbackWarnings(artifact:JsonObject,readback:unknown):stri
   const warnings:string[]=[];
   try{assertSourceOperationMidiSafety(artifact,readback);}catch(error){warnings.push(`活动兼容性需要核对：${error instanceof Error?error.message:String(error)}`);}
   try{
-    const expected=actorSemantics(artifact,'artifact'),actual=projectReadbackToExpected(actorSemantics(readback,'readback'),expected);
+    const expected=actorSemantics(artifact,'artifact'),actual=projectReadbackToExpected(actorSemantics(readback,'readback',artifact),expected);
     const visit=(want:any,got:any,path:string):void=>{
       if(stableJson(want)===stableJson(got))return;
       if(want&&got&&typeof want==='object'&&typeof got==='object'&&Array.isArray(want)===Array.isArray(got)){
@@ -566,13 +575,18 @@ function getForgeIdentity(value: ForgeActorLike | unknown): {
   };
 }
 
-function actorSemantics(value: unknown, effectSource: 'artifact' | 'readback'): unknown {
+function actorSemantics(value: unknown, effectSource: 'artifact' | 'readback', sourceArtifact?:JsonObject): unknown {
   const actor = getRecord(value);
   const system = getRecord(actor.system);
   const attributes = getRecord(system.attributes);
   const details = getRecord(system.details);
   const traits = getRecord(system.traits);
-  const items = Array.isArray(actor.items) ? actor.items.map((item) => itemSemantics(item, effectSource)) : [];
+  const expectedItems=Array.isArray(sourceArtifact?.items)?sourceArtifact.items:[];
+  const manifestId=getRecord(getRecord(getRecord(sourceArtifact).flags)[RESOLVER_MODULE_ID]).spellManifest?.manifestId;
+  const expectedIds=new Set(expectedItems.map(item=>getRecord(item)._id));
+  const items = Array.isArray(actor.items) ? actor.items.filter(item=>!isResolverAddition(item,expectedIds,manifestId,'spell'))
+    .map((item,index) => itemSemantics(item, effectSource,expectedItems.find(expected=>getRecord(expected)._id===getRecord(item)._id)
+      ??(getRecord(expectedItems[index])._id===undefined?expectedItems[index]:undefined),manifestId)) : [];
   return {
     name: actor.name,
     type: actor.type,
@@ -581,7 +595,13 @@ function actorSemantics(value: unknown, effectSource: 'artifact' | 'readback'): 
     cr: details.cr,
     creatureType: details.type,
     size: traits.size,
-    damageVulnerability: traits.dv,
+    damageVulnerability: traitSemantics(traits.dv),
+    damageImmunity: traitSemantics(traits.di),
+    damageResistance: traitSemantics(traits.dr),
+    conditionImmunity: traitSemantics(traits.ci),
+    movement:stripDocumentNoise(attributes.movement),
+    resources:stripDocumentNoise(system.resources),
+    spellManifest:getRecord(getRecord(actor.flags)[RESOLVER_MODULE_ID]).spellManifest,
     senses: attributes.senses ?? traits.senses,
     abilities: system.abilities,
     items,
@@ -589,11 +609,12 @@ function actorSemantics(value: unknown, effectSource: 'artifact' | 'readback'): 
   };
 }
 
-function itemSemantics(value: unknown, effectSource: 'artifact' | 'readback'): unknown {
+function itemSemantics(value: unknown, effectSource: 'artifact' | 'readback',expectedItem?:unknown,manifestId?:string): unknown {
   const item = getRecord(value);
   const system = getRecord(item.system);
   const itemRange = system.range === undefined ? undefined : stripDocumentNoise(system.range);
-  const activities = Object.entries(getRecord(system.activities)).sort(([a], [b]) => a.localeCompare(b)).map(([id, activity]) => ({
+  const expectedIds=new Set(Object.keys(getRecord(getRecord(expectedItem).system).activities??{}));
+  const activities = Object.entries(getRecord(system.activities)).filter(([id,activity])=>!isResolverAddition({...getRecord(activity),_id:id},expectedIds,manifestId,'activity')).sort(([a], [b]) => a.localeCompare(b)).map(([id, activity]) => ({
     id,
     value: projectActivityReadback(activity, itemRange),
   }));
@@ -606,11 +627,35 @@ function itemSemantics(value: unknown, effectSource: 'artifact' | 'readback'): u
     img: item.img,
     activation: system.activation,
     uses: system.uses,
+    description:itemDescriptionSemantics(system.description),
+    sourceRules:getRecord(getRecord(item.flags).fvttJsonGenerator).manualRule,
+    conditionLifecycle:getRecord(getRecord(item.flags).fvttJsonGenerator).conditionLifecycle,
     ...(itemRange === undefined ? {} : { range: itemRange }),
     ...(nativeVersatile?{nativeWeapon:{type:system.type,properties:system.properties,damage:system.damage}}:{}),
     activities,
     effects: Array.isArray(item.effects) ? item.effects.map((effect) => effectSemantics(effect, effectSource)) : [],
   };
+}
+
+function itemDescriptionSemantics(value:unknown):unknown{
+  if(!value||typeof value!=='object'||Array.isArray(value))return value;
+  // The locked Item schema uses HTMLField for value/chat. Inert parsing keeps
+  // encoded text distinct from markup while ignoring native entity spelling.
+  return Object.fromEntries(Object.entries(value).map(([key,entry])=>[
+    key,(key==='value'||key==='chat')&&typeof entry==='string'?serialize(parseFragment(entry)):entry,
+  ]));
+}
+
+function isResolverAddition(value:unknown,expectedIds:ReadonlySet<unknown>,manifestId:string|undefined,kind:'spell'|'activity'):boolean{
+  const document=getRecord(value),owner=getRecord(getRecord(document.flags)[RESOLVER_MODULE_ID]);
+  return !!manifestId&&!expectedIds.has(document._id)&&owner.managed===true&&owner.documentType===kind&&owner.manifestId===manifestId;
+}
+
+function traitSemantics(value:unknown):unknown{
+  if(value===undefined)return undefined;
+  const trait=getRecord(value);
+  const list=(entry:unknown)=>entry instanceof Set||Array.isArray(entry)?[...entry].sort():entry;
+  return{...trait,...(Object.hasOwn(trait,'value')?{value:list(trait.value)}:{}),...(Object.hasOwn(trait,'bypasses')?{bypasses:list(trait.bypasses)}:{})};
 }
 
 function projectActivityReadback(value: unknown, itemRange: unknown): unknown {
@@ -634,6 +679,9 @@ function projectActivityReadback(value: unknown, itemRange: unknown): unknown {
   normalizeInactiveActivityTemplateForComparison(activity);
   const activityRange = getRecord(activity.range);
   const parentRange = getRecord(itemRange);
+  // 5.3.3 ignores the Activity's range payload when it inherits the Item range.
+  // The parent range remains part of the Item comparison below this boundary.
+  if(activityRange.override===false){activity.range={override:false};return activity;}
   const itemReach = parentRange.reach;
   const itemLong = parentRange.long;
   // dnd5e 5.3.3 stores melee reach on the parent weapon's system.range. Its
@@ -711,7 +759,12 @@ function effectSemantics(value: unknown, source: 'artifact' | 'readback'): unkno
       })
       : changes,
     transfer: effect.transfer,
-    statuses: effect.statuses,
+    statuses: effect.statuses instanceof Set||Array.isArray(effect.statuses)?[...effect.statuses].sort():effect.statuses,
+    disabled:effect.disabled,
+    description:effect.description,
+    duration:effect.duration===undefined?undefined:{seconds:getRecord(effect.duration).seconds,rounds:getRecord(effect.duration).rounds,turns:getRecord(effect.duration).turns},
+    conditionLifecycle:getRecord(getRecord(effect.flags).fvttJsonGenerator).conditionLifecycle,
+    sourceDuration:getRecord(getRecord(effect.flags).fvttJsonGenerator).sourceDuration,
   };
 }
 

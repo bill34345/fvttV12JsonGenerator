@@ -5,7 +5,8 @@ import {OpenAICompatibleMonsterIntakeProvider,INTAKE_PROMPT_VERSIONS,type Provid
 import {analyzeBrowserActorSourceWithAi,generateBrowserActorIntakeCandidate} from '@fvtt-json-generator/forge-browser-runtime/ai';
 import {hashSource,hashArtifact,type ForgeSourceId} from '@fvtt-json-generator/forge-gateway-protocol';
 
-globalThis.fetch=(async()=>{throw Error('This evidence export prohibits network access.');}) as typeof fetch;
+globalThis.fetch=Object.assign(async()=>{throw Error('This evidence export prohibits network access.');},
+  {preconnect:()=>{throw Error('This evidence export prohibits network preconnect.');}});
 const frozen=resolve(process.env.FORGE_CHM_FROZEN_ROOT??'H:/CodexData/visualizations/2026/10/27/01a17bee-ceb9-7eb3-8fce-a8320e15295f/forge-four-chm-first-pass-20261027');
 const output=resolve(process.env.FORGE_CHM_FIX_ROOT??'H:/CodexData/visualizations/2026/10/27/01a17bee-ceb9-7eb3-8fce-a8320e15295f/forge-four-chm-fixes-20261027','berserker');
 const originalRunner=resolve(process.env.FORGE_CHM_ORIGINAL_RUNNER??'.local/forge-four-chm-first-pass-20261027/runner.ts');
@@ -20,7 +21,7 @@ const identityJs=new Bun.Transpiler({loader:'ts'}).transformSync(identitySource)
 const sourceId=Function('hashSource',identityJs+';return sourceId("berserker");')(hashSource) as ForgeSourceId;
 const historical=JSON.parse(readFileSync(join(frozen,'results','berserker','response-evidence-1.json'),'utf8'));
 const events:ProviderResponseEvidence[]=[];let syntheticCalls=0;
-const provider=new OpenAICompatibleMonsterIntakeProvider({baseUrl:'https://offline-fixture.invalid',apiKey:'offline-fixture',model:'frozen-visible-excerpt',reviewModel:'disabled',timeoutMs:1000,repairTimeoutMs:1000,maxAttempts:1,
+const provider=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://offline-fixture.invalid',apiKey:'offline-fixture',model:'frozen-visible-excerpt',reviewModel:'disabled',timeoutMs:1000,repairTimeoutMs:1000,maxAttempts:1,
   transport:{protocol:'openai-responses',stream:true},structuredOutput:{mode:'json_object'},responseEvidence:{record:event=>{events.push(event);}},
   httpClient:async()=>{if(++syntheticCalls!==1)throw Error('Only one synthetic response is allowed.');
     const event={type:'response.completed',sequence_number:0,response:{id:'synthetic-excerpt-response',status:'completed',output:[{type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:answer}]}]}};

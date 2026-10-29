@@ -284,6 +284,8 @@ export interface SpecialEffect {
 }
 
 export interface StructuredActionData {
+  /** Explicit projection binding to the Actor's native resistance counter. */
+  actorResource?: 'legres';
   /** Program-owned canonical conversion boundary: never infer mechanics from prose. */
   literalMechanics?: true;
   candidateReview?: import('./sourceOperationTypes').SourceCandidateReview;

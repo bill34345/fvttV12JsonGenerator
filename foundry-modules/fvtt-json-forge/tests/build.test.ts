@@ -26,6 +26,7 @@ describe('FVTT JSON Forge browser build', () => {
       'templates/forge-intake.hbs',
       'templates/forge-item.hbs',
       'templates/forge-workspace.hbs',
+      'third-party-licenses.txt',
     ]);
     const manifest = JSON.parse(await readFile(resolve(result.moduleRoot, 'module.json'), 'utf8')) as Record<string, unknown>;
     validateManifest(manifest);

@@ -261,26 +261,31 @@ function appendTiers(
 }
 
 function firstActivity(item: any, context: string): any {
-  const activities = Object.values(item?.system?.activities ?? {}) as any[];
+  const activities = sourceActivities(item);
   if (activities.length !== 1) {
     throw new Error(`ResourceProjection: "${context}" must resolve to exactly one source Activity, found ${activities.length}.`);
   }
   return activities[0];
 }
 
+function sourceActivities(item:any):any[]{
+  return (Object.values(item?.system?.activities??{}) as any[]).filter(activity=>activity.flags?.[FLAG_SCOPE]?.sourceConditionStage?.version!==1);
+}
+
 function appendFixedBinding(item: any, resourceItemId: string, binding: ActorResourceBinding): void {
   if(binding.source.sourceFeatureId){
     const rule=item.flags?.fvttJsonGenerator?.manualRule;
     if(rule?.mode==='native-with-gm'&&Array.isArray(rule.operations)&&!rule.operations.includes('resource'))rule.operations.push('resource');
-    const activities=Object.values(item.system.activities??{}) as any[];
-    const marked=activities.filter(activity=>activity.flags?.fvttJsonGenerator?.sourceOperation);
+    const activities=sourceActivities(item);
+    const role=(activity:any)=>activity.flags?.fvttJsonGenerator?.sourceOperation?.relationship??activity.flags?.fvttJsonGenerator?.sourceResourceRole;
+    const marked=activities.filter(activity=>role(activity));
     if(marked.length){
       if(marked.length!==activities.length)throw new Error('ResourceProjection: source-operation roles must cover every member Activity.');
-      const primary=marked.filter(activity=>['primary','alternative'].includes(activity.flags.fvttJsonGenerator.sourceOperation.relationship));
-      if(!primary.length||marked.some(activity=>!['primary','alternative','follow-up'].includes(activity.flags.fvttJsonGenerator.sourceOperation.relationship)))throw new Error('ResourceProjection: unsupported source-operation role.');
+      const primary=marked.filter(activity=>['primary','alternative'].includes(role(activity)));
+      if(!primary.length||marked.some(activity=>!['primary','alternative','follow-up'].includes(role(activity))))throw new Error('ResourceProjection: unsupported source-operation role.');
       for(const activity of marked){
         if((activity.consumption?.targets??[]).length)throw new Error('ResourceProjection: shared source member already has independent consumption.');
-        if(activity.flags.fvttJsonGenerator.sourceOperation.relationship==='follow-up')continue;
+        if(role(activity)==='follow-up')continue;
         activity.consumption={targets:[consumptionTarget(resourceItemId,String(binding.amount))],spellSlot:false,scaling:{allowed:false,max:''}};
         activity.flags.fvttJsonGenerator.resourceConsumption={id:binding.id,resourceId:binding.resourceId,mode:binding.mode,amount:binding.amount};
       }

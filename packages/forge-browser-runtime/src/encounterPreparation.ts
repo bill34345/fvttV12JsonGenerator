@@ -3,7 +3,7 @@ import type { IconReviewReport } from '@fvtt-json-generator/contracts/icon-revie
 import { buildForgeActorRequest, convertFinalActorSource } from './index';
 import { decodeForgeEncounterPackageText, encounterPackageHash, encounterPackageFindings, type ForgeEncounterPackage } from './encounterPackage';
 import { readEncounterRuleMarker } from '@fvtt-json-generator/contracts/encounter-rules';
-import { assertEncounterLocalizationIdentity, localizedEncounterPresentation } from './encounterLocalizationProjection';
+import { localizedEncounterPresentation } from './encounterLocalizationProjection';
 import type { ForgeEncounterPackageMacro } from './encounterPackage';
 import {restoreRulePresentationPlan,type RulePresentationPlan} from '@fvtt-json-generator/generation/rule-presentation';
 import {projectReviewedActorLocalization} from '@fvtt-json-generator/generation/reviewed-localization';
@@ -128,10 +128,13 @@ export async function prepareForgeEncounter(text: string, signal?: AbortSignal):
   });
   let presentation:{label:string;macros:readonly ForgeEncounterPackageMacro[]} = {label:bundle.label,macros};
   try {
-    assertEncounterLocalizationIdentity(bundle);
-    const localized = localizedEncounterPresentation(bundle,actors);
+    const {reviewFindings:localizationFindings,...localized} = localizedEncounterPresentation(bundle,actors);
+    findings.push(...localizationFindings);
     presentation = {...localized,macros:localized.macros.filter(macro=>macros.some(ready=>ready.key===macro.key))};
-  } catch(error) {findings.push(`中文展示未完成：${error instanceof Error?error.message:String(error)}；原语言 Actor 保留。`);}
+  } catch(error) {
+    presentation={label:bundle.label,macros:[]};
+    findings.push(`包级中文展示未完成：${error instanceof Error?error.message:String(error)}；已生成 Actor 保留，配套宏未准备，原宏记录保留。`);
+  }
   const result:PreparedForgeEncounter = freeze({bundle,hash:encounterPackageHash(bundle),actors,...presentation,
     requirements:actors.flatMap(actor=>actor.requirements),reviewFindings:[...findings,...actors.flatMap(actor=>(actor.reviewFindings??[]).map(f=>`${actor.name}：${f}`))]});
   preparedProofs.add(result);

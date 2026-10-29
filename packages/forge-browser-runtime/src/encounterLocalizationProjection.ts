@@ -114,8 +114,8 @@ export function assertEncounterLocalizationIdentity(bundle: ForgeEncounterPackag
     throw new TypeError('中文候选身份与语言、角色或审核记录不一致。');
   }
 }
-export function localizedEncounterPresentation(bundle: ForgeEncounterPackage, actors: readonly (EncounterFactActor & { key: string })[]): { label: string; macros: readonly ForgeEncounterPackageMacro[] } {
-  if (!bundle.localization) return { label: bundle.label, macros: bundle.macros };
+export function localizedEncounterPresentation(bundle: ForgeEncounterPackage, actors: readonly (EncounterFactActor & { key: string })[]): { label: string; macros: readonly ForgeEncounterPackageMacro[]; reviewFindings: readonly string[] } {
+  if (!bundle.localization) return retainedActorMacroPresentation(bundle, actors);
   assertEncounterLocalizationIdentity(bundle);
   const request = createEncounterTextRequest(bundle, actors, bundle.localization.packageText.policy);
   assertReviewedLocalization(request, bundle.localization.packageText);
@@ -125,23 +125,65 @@ export function localizedEncounterPresentation(bundle: ForgeEncounterPackage, ac
     const mapping: LocalizedItemName[] = (actor?.artifact as any)?.flags?.fvttJsonGenerator?.localization?.itemNames ?? [];
     const matches = mapping.filter(entry => entry.source === original);
     if (matches.length !== 1) throw new TypeError(`中文控制配置无法唯一绑定能力：${original}`);
-    // The fixed Foundry runtime accepts 256-character bindings; fail before import, never truncate identity.
-    if (matches[0]!.display.length > 256) throw new TypeError('双语能力标题超过固定控制器的256字符上限；请缩短中文译名并重新审核。');
+    assertFixedMacroBindingLength(matches[0]!.display);
     return matches[0]!.display;
   };
-  const macros = bundle.macros.map(macro => {
-    const config = readFixedEncounterConfiguration(macro.command);
-    if (!config) throw new TypeError('中文模式只支持工具编译的固定控制入口，不能改写任意宏。');
-    const localized = { ...config, rules: config.rules.map(rule => ({ ...rule,
-      itemName: nameFor(rule.actorKey, rule.itemName),
-      parameters: rule.kind === 'gm-activity-lock'
-        ? { ...rule.parameters, activityItemNames: (rule.parameters.activityItemNames as string[]).map(name => nameFor(rule.actorKey, name)) }
-        : rule.parameters,
-    })) };
-    const command = fixedEncounterCommand(localized);
-    return { ...macro, name: translated(`${macro.key}:name`, macro.name), notes: translatedNotes(macro), command, commandHash: hashSource(command) };
+  const reviewFindings: string[] = [];
+  const macros = bundle.macros.flatMap(macro => {
+    try {
+      const config = readFixedEncounterConfiguration(macro.command);
+      if (!config) throw new TypeError('中文模式只支持工具编译的固定控制入口，不能改写任意宏。');
+      const localized = { ...config, rules: config.rules.map(rule => ({ ...rule,
+        itemName: nameFor(rule.actorKey, rule.itemName),
+        parameters: rule.kind === 'gm-activity-lock'
+          ? { ...rule.parameters, activityItemNames: (rule.parameters.activityItemNames as string[]).map(name => nameFor(rule.actorKey, name)) }
+          : rule.parameters,
+      })) };
+      const command = fixedEncounterCommand(localized);
+      return [{ ...macro, name: translated(`${macro.key}:name`, macro.name), notes: translatedNotes(macro), command, commandHash: hashSource(command) }];
+    } catch (error) {
+      reviewFindings.push(macroProjectionFinding(macro, error));
+      return [];
+    }
   });
-  return { label: translated('label', bundle.label), macros };
+  return { label: translated('label', bundle.label), macros, reviewFindings };
+}
+
+function retainedActorMacroPresentation(bundle: ForgeEncounterPackage, actors: readonly (EncounterFactActor & { key: string })[]) {
+  const localizedActors = new Map(actors.filter(actor => actor.artifact?.flags?.fvttJsonGenerator?.localization)
+    .map(actor => [actor.key, actor.artifact]));
+  const reviewFindings: string[] = [];
+  if (!localizedActors.size) return { label: bundle.label, macros: bundle.macros, reviewFindings };
+  const macros = bundle.macros.flatMap(macro => {
+    try {
+      const config = readFixedEncounterConfiguration(macro.command);
+      if (config) for (const rule of config.rules) {
+        const actor = localizedActors.get(rule.actorKey);
+        if (!actor) continue;
+        const items = Array.isArray(actor.items) ? actor.items : [];
+        const names = rule.kind === 'gm-activity-lock' ? [rule.itemName, ...(rule.parameters.activityItemNames as string[])] : [rule.itemName];
+        for (const name of names) {
+          if (items.filter((item: { name?: unknown }) => item.name === name).length !== 1)
+            throw new TypeError(`固定控制配置无法唯一绑定当前 Actor 能力：${name}`);
+          assertFixedMacroBindingLength(name);
+        }
+      }
+      return [macro];
+    } catch (error) {
+      reviewFindings.push(macroProjectionFinding(macro, error));
+      return [];
+    }
+  });
+  return { label: bundle.label, macros, reviewFindings };
+}
+
+function assertFixedMacroBindingLength(name: string): void {
+  // The fixed Foundry runtime accepts 256-character bindings; never truncate identity.
+  if (name.length > 256) throw new TypeError('双语能力标题超过固定控制器的256字符上限；请缩短中文译名并重新审核。');
+}
+
+function macroProjectionFinding(macro: ForgeEncounterPackageMacro, error: unknown): string {
+  return `${macro.name}（${macro.key}）：${error instanceof Error ? error.message : String(error)}；宏未准备，Actor 和原宏记录保留。`;
 }
 
 function packageTextProjection(bundle: ForgeEncounterPackage, actors: readonly EncounterFactActor[],

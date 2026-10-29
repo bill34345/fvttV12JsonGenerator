@@ -59,7 +59,7 @@ for(const id of ['N3','N2'] as const){
     const manifest=artifact.flags?.['fvtt-json-generator-spell-resolver']?.spellManifest;
     const row={id,sourceHash:hashSource(source),packageId:bundle.id,packageHash:prepared.hash,actorHash:hashArtifact(artifact),
       analysisStatus:analysis?.status,blocking:analysis?.validation?.blocking??[],formalStatus:prepared.actors[0]!.status,
-      findings:prepared.reviewFindings,requests,corrections:requests.filter(request=>request.correction).length,
+      findings:prepared.reviewFindings??[],requests,corrections:requests.filter(request=>request.correction).length,
       itemCount:artifact.items.length,spellGroups:manifest?.spellcastingGroups,sourceLedger:artifact.flags?.fvttJsonGenerator?.sourceLegendaryLedger,
       items:artifact.items.map((item:any)=>({name:item.name,uses:item.system?.uses,activities:item.system?.activities,flags:item.flags})),liveModelCalls:0};
     cases.push(row);

@@ -1648,7 +1648,7 @@ function normalizeModelIr(ir: MonsterIntakeIR, source: string, normalizeAbsentOp
           for(const field of ['nativeRuleText','manualRemainder'] as const)if(feature[field]===old)feature[field]=quote;
         }
       }
-      applyExplicitTemporaryHitPointMechanics(feature,ir.creature.identity.name);
+      applyExplicitTemporaryHitPointMechanics(feature,ir.creature.identity.name,ir.creature.identity.englishName);
       applyExplicitReferencedSpellMechanics(feature, ir.creature.spellcasting);
       if (feature.activityType === 'attack' && !feature.attack) {
         feature.activityType = feature.damage?.length ? 'damage' : 'utility';
@@ -1828,7 +1828,7 @@ function normalizeLanguageValue(value: string): string {
  * and descriptions that merely mention temporary hit points remain utility.
  */
 function applyExplicitTemporaryHitPointMechanics(
-  feature: MonsterIntakeIR['creature']['traits'][number],actorName?:string,
+  feature: MonsterIntakeIR['creature']['traits'][number],actorName?:string,actorEnglishName?:string,
 ): void {
   const primary=stagedFeatureMechanics(feature.description,feature.name,actorName)?.facts,healing=primary?.healing;
   if(primary?.sourceOperations&&feature.sourceOperations===undefined){
@@ -1876,8 +1876,21 @@ function applyExplicitTemporaryHitPointMechanics(
   const chinese = text.match(/(?:获得|取得)\s*((?:\d+d\d+|\d+)(?:\s*[+-]\s*\d+)?)\s*点?\s*临时生命值/u);
   const formula = (english?.[1] ?? chinese?.[1])?.replace(/\s+/gu, '');
   if (!formula) return;
+  const grant=english??chinese;
+  const subject=text.slice(0,grant!.index).split(/[.!?;\n。！？；，,:]/u).at(-1)!.trim();
+  const names=[actorName,actorEnglishName].filter((name):name is string=>!!name).map(name=>name.toLocaleLowerCase('en-US'));
+  const namedSubject=subject.replace(/^the\s+/iu,'').replace(/(?:将|会|立即|随后|也)+$/u,'').toLocaleLowerCase('en-US');
+  const antecedent=text.slice(0,grant!.index);
+  const otherAntecedent=/\b(?:when|whenever|if|after)\s+(?:(?:(?:the|an?|this|that|one)\s+)?(?:target|ally|allies|enemy|foe|another\s+creature)\b|a\s+creature\b)/iu.test(antecedent)
+    ||/(?:当|每当|若|如果)\s*(?:该|此|一名|一个|那名)?(?:目标|盟友|敌人|另一个生物|另一名生物)/u.test(antecedent);
+  const sourceSelf=/^(?:the|this)\s+creature(?:\s+(?:then|also|immediately))*$/iu.test(subject)
+    ||/^(?:该生物|此生物|自身|自己)(?:将|会|立即|随后|也)*$/u.test(subject)||names.includes(namedSubject)
+    ||!otherAntecedent&&(/^(?:it)(?:\s+(?:then|also|immediately))*$/iu.test(subject)||/^它(?:将|会|立即|随后|也)*$/u.test(subject));
+  // This legacy source reader owns the proven grant subject; an absent target
+  // in other consumers still means unresolved, and explicit recipients survive.
+  const target=feature.healing?.target??(sourceSelf?{type:'self' as const,count:1,special:''}:undefined);
   feature.activityType = 'heal';
-  feature.healing = { formula, type: 'temphp' };
+  feature.healing = { formula, type: 'temphp',...(target?{target}:{}) };
 }
 
 /**

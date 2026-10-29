@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import {
   convertMarkdownContentToJson as convertWithPackageWorkflow,
 } from '@fvtt-json-generator/workflows/single-file-conversion';
+import { YamlParser } from '@fvtt-json-generator/parser/yaml';
 import { adjudicateReview, adjudicateReviewSourceAudit, anchorIrEvidence, anchorIrEvidenceSourceAudit, chunkSource, normalizeDiscovery, partitionDiscoveryCandidates, resumeMonsterIntake, runMonsterIntake } from '../orchestrator';
 import { renderMonsterIntakeMarkdown } from '../renderer';
 import type {
@@ -671,12 +672,16 @@ describe('AI monster intake orchestrator', () => {
     {
       label: 'English',
       description: 'A magical sphere with a 15-foot radius appears at a point within 60 feet. Each creature that starts its turn there is affected by the confusion spell (save DC 13). The sphere lasts for 1 minute while the creature concentrates.',
+      timing: 'starts its turn there',
+      duration: 'lasts for 1 minute while the creature concentrates',
     },
     {
       label: 'Chinese',
       description: '一个半径15英尺的魔法球体出现在60尺内。每个在该区域内开始其回合的生物都受到困惑术 confusion 的影响（豁免 DC 13）。只要保持专注，球体持续1分钟。',
+      timing: '在该区域内开始其回合',
+      duration: '只要保持专注，球体持续1分钟',
     },
-  ])('projects the explicit-audit $label confusion save and retains its GM lifecycle', async ({ description }) => {
+  ])('projects the explicit-audit $label confusion save and retains its complete manual lifecycle text', async ({ description, timing, duration }) => {
     const source = `${LURKER_SOURCE}\n${description}`;
     const ir = buildValidLurkerIr() as any;
     ir.creature.legendaryActions.push({
@@ -692,6 +697,7 @@ describe('AI monster intake orchestrator', () => {
     }, ir);
     const feature = anchored.creature.legendaryActions[0]!;
     const markdown = renderMonsterIntakeMarkdown(anchored);
+    const gmSave = new YamlParser().parse(markdown).structuredActions?.传奇动作?.[0];
     const generated = await convertWithPackageWorkflow({
       content: markdown,
       fvttVersion: '14',
@@ -709,6 +715,13 @@ describe('AI monster intake orchestrator', () => {
       activationCondition: 'Concentration',
       appliedConditions: [{ statuses: [], condition: 'Confused', duration: '1 minute' }],
     });
+    expect(feature.description).toBe(description);
+    expect(gmSave).toMatchObject({
+      type: 'save', DC: 13, ability: 'wis', concentration: true, legendaryCost: 2,
+      describe: description,
+      embeddedEffects: [{ type: 'Confused', statuses: [], condition: 'Confused', duration: '1 minute', describe: description }],
+      failEffects: [{ describe: 'Confused' }],
+    });
     expect((generated.rawJson as any).items.length).toBeGreaterThan(0);
     expect(markdown).toContain('类型: save');
     expect(markdown).toContain('形状: 球形');
@@ -720,11 +733,13 @@ describe('AI monster intake orchestrator', () => {
       target: { template: { type: 'sphere', size: 15, units: 'ft' } },
     });
     expect(item.system.concentration).toBe(true);
+    expect(Object.values(item.system.activities)).toHaveLength(1);
     expect(item.effects).toEqual([]);
     expect(activity.effects ?? []).toEqual([]);
+    expect(item.flags?.fvttJsonGenerator?.conditionLifecycle).toBeUndefined();
     expect(item.system.description.value).toContain(description);
-    expect(item.system.description.value).toContain('Confused');
-    expect(item.system.description.value).toContain('GM');
+    expect(item.system.description.value).toContain(timing);
+    expect(item.system.description.value).toContain(duration);
   });
 
   test.each([
@@ -1712,7 +1727,7 @@ describe('AI monster intake orchestrator', () => {
     const provider = new FakeProvider();
     const original = buildValidLurkerIr();
     const start = LURKER_SOURCE.indexOf('特质Traits'), end = start + '特质Traits'.length;
-    original.coverage = [{ start, end, quote: LURKER_SOURCE.slice(start, end), classification: 'mechanical', claimPaths }];
+    original.coverage = [{ start, end, quote: LURKER_SOURCE.slice(start, end), classification: 'mechanical', claimPaths: [...claimPaths] }];
     provider.extract = async () => structuredClone(original);
     const intake = await runMonsterIntake({ source: LURKER_SOURCE, sourceName: 'coverage.txt', fvttVersion: '14', ...roots() }, provider);
     const creature = intake.creatures[0]!;

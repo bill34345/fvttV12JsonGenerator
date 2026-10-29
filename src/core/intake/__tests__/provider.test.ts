@@ -23,16 +23,16 @@ import { validateMonsterIntakeIR } from '../validator';
 import { buildRatWarlockIr, RAT_WARLOCK_SOURCE } from './fixtures/rat-warlock';
 import { buildValidLurkerIr, LURKER_SOURCE } from './fixtures/lurker';
 import {sourceLineCatalog,sourceProofCatalog,materializeSourceLineReferences} from '../../../../packages/intake-ai/src/source-line-references';
-import {SOURCE_OPERATION_SCHEMA} from '../../../../packages/intake-ai/src/source-operation-contract';
+import {SOURCE_OPERATION_SCHEMA,FULL_IR_SOURCE_OPERATION_SCHEMA} from '../../../../packages/intake-ai/src/source-operation-contract';
 import type {SourceOperation} from '@fvtt-json-generator/models/source-operations';
 
-// Compile-time contract check: a future canonical attack-kind change must
-// update the actual prompt, before another paid model trial discovers drift.
+// Unknown input kinds are retained internally; the prompt requests only known kinds.
 type SplitKinds<S extends string>=S extends `${infer First}|${infer Rest}`?First|SplitKinds<Rest>:S;
 type PromptAttackKinds=typeof SOURCE_OPERATION_SCHEMA extends `${string}attack?:{type:${infer Kinds},toHit:${string}`?SplitKinds<Kinds>:never;
 type MustBeNever<T extends never>=T;
-type _MissingPromptKinds=MustBeNever<Exclude<NonNullable<SourceOperation['attack']>['type'],PromptAttackKinds>>;
-type _InventedPromptKinds=MustBeNever<Exclude<PromptAttackKinds,NonNullable<SourceOperation['attack']>['type']>>;
+type ModelAttackKinds=Exclude<NonNullable<SourceOperation['attack']>['type'],'unclassified'>;
+type _MissingPromptKinds=MustBeNever<Exclude<ModelAttackKinds,PromptAttackKinds>>;
+type _InventedPromptKinds=MustBeNever<Exclude<PromptAttackKinds,ModelAttackKinds>>;
 
 function response(status: number, content: string): HttpResponse {
   return {
@@ -180,20 +180,20 @@ describe('OpenAI-compatible monster intake provider', () => {
     const requests: HttpRequest[] = [];
     const provider = makeProvider(async (_url, init) => {
       requests.push(init);
-      return response(200, '{"schemaVersion":1,"creature":{},"claims":[],"coverage":[],"uncertainties":[]}');
+      return response(200, JSON.stringify(buildValidLurkerIr()));
     });
     await provider.extract({ source: 'monster', sourceSha256: 'hash', candidate: { id: 'monster', label: 'Monster', start: 0, end: 7, quote: 'monster' } });
     const body = JSON.parse(requests[0]!.body), prompt = body.messages[0].content as string;
-    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v49-vulnerability-notes');
-    expect(prompt).toContain(SOURCE_OPERATION_SCHEMA);
+    expect(INTAKE_PROMPT_VERSIONS.extract).toBe('monster-intake-extract-v54-prompt-consolidation');
+    expect(prompt).toContain(FULL_IR_SOURCE_OPERATION_SCHEMA);
     for (const required of [
       'The program checks structure, references and faithful conversion/save',
       'All source mechanical fields are model-owned; the program does not infer them from titles or prose',
-      'Required feature collections are arrays', 'Printed AC stays fixed',
+      'Program-owned fields may be omitted', 'Printed AC stays fixed',
       'EvidenceRef is {start:-1,end:-1,quote:string}',
       'No source-line/clause IDs or manual offsets are requested',
-      'For a new default response, set claims:[] and coverage:[]',
-      'No per-leaf claim proof or whitespace partition is requested',
+      'supplies empty claims/coverage records when omitted',
+      'no per-leaf claim proof or whitespace partition is requested',
       'Interpret resource scope from the whole governing ability and its alternatives',
       'The literal word Shared/each is not required',
       'Do not force a multi-spell ability to manual solely because its daily qualifier is in the title or parent sentence',
@@ -202,16 +202,21 @@ describe('OpenAI-compatible monster intake provider', () => {
       'Conditional or replacement damage requires a separate Damage OP',
       'Follow-ups are GM-invoked helpers and never spend the initial action/resource again',
       'Use sourceOperations for every executable basic',
-      'Timed/staged/conditional consequences without an exact supported native representation stay in GM prose',
+      'Attach official hit or failed-save states to that OP in appliedConditions',
+      'these create optional Effect templates, not an automatic trigger graph',
+      'Do not declare immunity, existing-state prerequisites or condition removal as newly applied states',
       'prepared-cantrip', 'prepared-slots', 'casterLevelEvidence', 'slotsEvidence',
       'manualGrants?:[]', 'aliases:[],restrictions:[],evidence:[]',
       'An all-manual group still has usageGroups:[]',
       'Declare actual unresolved meaning/conflict in your own reading',
       'Do not manufacture bookkeeping/offset/coverage uncertainties',
-      'ordinary-gear-out-of-scope',
+      'Ordinary carried equipment and loot are outside Monster Item output',
+      'a wholly manual feature adds activityType:utility,executionMode:gm-manual without sourceOperations',
+      'proof.damage is a string array parallel to damage',
     ]) expect(prompt).toContain(required);
     for (const obsolete of ['Parent object claims do not support child values', 'partition the full candidate range',
-      'begin with the usage label after optional Markdown', 'EXAMPLE_IR_FRAGMENT_JSON:']) expect(prompt).not.toContain(obsolete);
+      'begin with the usage label after optional Markdown', 'EXAMPLE_IR_FRAGMENT_JSON:',
+      'type:self|creature,count:1', 'Historical nonempty ledgers', 'ordinary-gear-out-of-scope']) expect(prompt).not.toContain(obsolete);
     const payload = JSON.parse(body.messages[1].content);
     expect(payload).toEqual({ source: 'monster', sourceSha256: 'hash', sourceLength: 7, candidate: { id: 'monster', label: 'Monster', start: 0, end: 7 } });
   });
@@ -258,8 +263,8 @@ describe('OpenAI-compatible monster intake provider', () => {
     });
     const repaired = await provider.repair({ stage: 'deterministic-validation', source: LURKER_SOURCE, candidate, ir, deterministicFindings: [] });
     const body = JSON.parse(requests[0]!.body), prompt = body.messages[0].content as string;
-    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v42-vulnerability-notes');
-    expect(prompt).toContain(SOURCE_OPERATION_SCHEMA);
+    expect(INTAKE_PROMPT_VERSIONS.repair).toBe('monster-intake-repair-v44-prompt-consolidation');
+    expect(prompt).toContain(FULL_IR_SOURCE_OPERATION_SCHEMA);
     for (const required of [
       'Repair only the supplied IR problems',
       'Return exactly {schemaVersion:1,operations:[{op:add|replace|remove,path,value?}]}',
@@ -267,12 +272,12 @@ describe('OpenAI-compatible monster intake provider', () => {
       'Paths stay under /creature, /claims, /coverage or /uncertainties',
       'never edit request source identity, final Actor JSON or unrelated data',
       'add/replace require value, remove omits value',
-      'Preserve valid mechanics and complete rule text',
+      'Preserve valid mechanics, complete rule text and actual nonempty historical records',
       'do not delete it merely to obtain an accepted status',
       'repair preserves ir.source',
       'The literal word Shared/each is not required',
       'Do not force a multi-spell ability to manual solely because its daily qualifier is in the title or parent sentence',
-      'For a new default response, set claims:[] and coverage:[]',
+      'Historical flat Feature fields and failureStatuses remain readable',
       'EvidenceRef is {start:-1,end:-1,quote:string}',
     ]) expect(prompt).toContain(required);
     expect(prompt).not.toContain('EXAMPLE_IR_FRAGMENT_JSON:');

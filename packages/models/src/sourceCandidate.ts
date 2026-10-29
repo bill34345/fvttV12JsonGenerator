@@ -8,7 +8,7 @@ const dice=(value:unknown):value is string=>text(value)&&value.length<200&&/^[\d
 
 /** Candidate metadata is data only. It never grants accepted status. */
 export function isSourceCandidateReview(value:unknown):value is SourceCandidateReview{
-  if(!object(value)||value.version!==1||!Array.isArray(value.findings)||!value.findings.length||value.findings.length>4096
+  if(!object(value)||value.version!==1||!Array.isArray(value.findings)||value.findings.length>4096
     ||Object.keys(value).some(key=>!['version','findings','proposal'].includes(key))
     ||value.findings.some(f=>!object(f)||!text(f.code)||!text(f.path)||!text(f.message)
       ||Object.keys(f).some(key=>!['code','path','message'].includes(key)))||!Object.hasOwn(value,'proposal'))return false;
@@ -24,6 +24,11 @@ export function isSourceCandidateReview(value:unknown):value is SourceCandidateR
     return Object.entries(entry).every(([key,child])=>!['__proto__','prototype','constructor'].includes(key)&&valid(child,depth+1));
   };
   return valid(value.proposal,0);
+}
+
+/** Successful normalization may retain only proposal history. */
+export function hasSourceCandidateFindings(review:SourceCandidateReview|undefined):boolean{
+  return !!review?.findings?.length;
 }
 
 /** Inert/manual recovery declarations must not smuggle executable fields. */

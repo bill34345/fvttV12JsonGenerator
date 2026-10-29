@@ -47,16 +47,20 @@ const sharedPoolExample=(()=>{
 
 /** Default complete-IR projection contract. The longer legacy contract above
  * belongs to explicit staged extraction; its source grammar is not a default gate. */
-export const FULL_IR_SOURCE_OPERATION_CONTRACT=`Independent operations use sourceOperations:[OP,...]. OP is ${SOURCE_OPERATION_SCHEMA}.
-Operation IDs, sourceText and an omitted empty proof object are program-owned; omit them when there is no explicit data to provide. Optional condition/target qualifications may be omitted or empty, but preserve every actual restriction and exact nonempty quote. Healing retains its formula, kind and explicit self/creature/any recipient with the stated count; its optional special text does not determine whether the operation can be generated. Do not use null or a wrong type as an empty value.
-Use this carrier for every basic roll in a new complete-IR response. Keep operations in source order with primary, follow-up or alternative relationships. Conditions and timing are model-owned; state them explicitly. Follow-ups are GM-invoked helpers and never spend the initial action/resource again.
-On a sourceOperations feature, omit flat attack/save/damage/healing/aoe/range/targetSpecial/appliedConditions/spellUseRecords/gmTriggeredSave/nativeFailureStatuses. Omit outer activityType, executionMode, nativeRuleText and manualRemainder: the program supplies utility/native-with-gm and the complete description. Each OP declares its own type and mechanics. OP sourceText/evidence/offsets are program-owned; omit them.
+export const FULL_IR_SOURCE_OPERATION_SCHEMA=SOURCE_OPERATION_SCHEMA
+  .replace('type:self|creature,count:1','type:self|creature|any,count?:number')
+  .replace('failureStatuses?:[SUPPORTED_NATIVE_STATUS,...],','');
+export const FULL_IR_SOURCE_OPERATION_CONTRACT=`Use sourceOperations for every executable basic attack, save, damage or healing roll, including a single roll. OP is ${FULL_IR_SOURCE_OPERATION_SCHEMA}.
+On a sourceOperations feature, omit flat attack/save/damage/healing/aoe/range/targetSpecial/appliedConditions/spellUseRecords/gmTriggeredSave/nativeFailureStatuses and outer activityType/executionMode/nativeRuleText/manualRemainder. The program supplies utility/native-with-gm and the complete description; each OP declares its own mechanics. Keep source order and primary/follow-up/alternative relationships. State source triggers, conditions and timing explicitly. The initial operation spends the feature resource once. Follow-ups are GM-invoked helpers and never spend the initial action/resource again.
 Explicit Weapon/Spell attack headers use mwak/rwak/msak/rsak. Unclassified Melee/Ranged Attack Roll, including Chinese 近战攻击检定／远程攻击检定, uses melee/ranged; 武器／法术 must actually be stated to choose Weapon/Spell classification. Do not guess from a name or damage type. Preserve printed reach and range independently, including both modes when present. A neutral hybrid uses attack.type:melee with both reach and range; it is still not a Weapon/Spell classification.
-Attack/Save OP damage contains only unconditional base/additional parts. Conditional or replacement damage requires a separate Damage OP with its condition; it is not added to the primary roll or consumed twice. A Damage OP triggered by a turn/event uses conditional damage and its complete event in condition. Neutral attacks retain separate GM attack and damage rolls.
-Save.outcome is the success result: none, half or full. Save abilities use choice:single with one ability, or choice:target with two alternatives; separately required saves use distinct OPs. A delayed/repeat save is not an initial attack save. Keep unsupported ending rules, movement, dynamic healing/HP changes, summoning and other consequences as complete GM prose alongside the supported basic operations.
-Attach official hit or failed-save states to that OP in appliedConditions:[{statuses,condition?,duration?,escapeDc?,staged?,exhaustionLevels?}]. Preserve exact triggers, ending dependencies and each stage, including timed or conditional states; these create optional Effect templates, not an automatic trigger graph. Native statuses are dead,blinded,charmed,deafened,exhaustion,frightened,grappled,incapacitated,invisible,paralyzed,petrified,poisoned,prone,restrained,stunned,unconscious. exhaustionLevels is only an explicitly supplied increase, never the target total. Do not declare immunity, existing-state prerequisites or condition removal as newly applied states. Legacy failureStatuses remains compatible. A target HP0 condition without a Save never creates a Save. Healing retains its formula, healing/temphp kind and the explicitly stated recipient type and count. Do not change a stated multiple-recipient count to one. Do not invent fixed dice for damage-dependent recovery.
-Quote complete source sentences in the relevant proof.attack/save/healing/range/aoe/target fields. proof.damage is a string array parallel to damage; repeat a complete sentence when it contains multiple parts. Preserve targetSpecial, placement range and area on the OP that uses them. Emanation/光环 uses radius; Sphere/球状 uses sphere; a printed radius is a dimension and does not itself identify an Emanation. Keep exact size/origin; line width and cylinder height use their respective fields. No automatic trigger graph, arbitrary script, Effect configuration or Foundry paths.
-Explicit non-spell shared pools use creature.sourceResourcePools:[{max,period:day|longRest|shortRest|dawn,members:[{collection:traits|actions|bonusActions|reactions|legendaryActions|mythicActions,index,cost:1},...],evidence:EvidenceRef[]}]. Preserve each member's same explicit uses. The program supplies technical pool/member IDs. Distinct spell shared pools use separate groupId/featureName and at most one daily-shared usageGroup per group; model the actual membership, count and recovery, without a duplicate independent pool.`;
+Attack/Save OP damage contains only unconditional base/additional parts. Conditional or replacement damage requires a separate Damage OP with its condition; it is not added to the primary roll or consumed twice. Turn/event-triggered Damage uses conditional damage and its complete event in condition. Neutral attacks retain separate GM attack and damage rolls. One exclusive damage-type choice is one roll, with type equal to its first types entry.
+Save.outcome is the success result: none, half or full. Use choice:single with one ability, or choice:target with two alternatives; separately required saves use distinct OPs. A delayed/repeat save is not an initial attack save. A target HP0 condition without a Save never creates a Save.
+Healing retains its formula, healing/temphp kind and explicit self/creature/any recipient. Keep the source-stated positive count; omit it when no fixed count is supplied. Do not change a stated multiple-recipient count to one or invent fixed dice for damage-dependent recovery. Optional target.special does not determine whether the operation can be generated.
+Attach official hit or failed-save states to that OP in appliedConditions:[{statuses,condition?,duration?,escapeDc?,staged?,exhaustionLevels?}]. Preserve exact triggers, ending dependencies and each stage, including timed or conditional states; these create optional Effect templates, not an automatic trigger graph. Native statuses are dead,blinded,charmed,deafened,exhaustion,frightened,grappled,incapacitated,invisible,paralyzed,petrified,poisoned,prone,restrained,stunned,unconscious. exhaustionLevels is an explicitly supplied increase, never the target total. Do not declare immunity, existing-state prerequisites or condition removal as newly applied states.
+escapeDc means only a source-stated escape DC for an escape check. A repeated saving throw, including a save that ends a condition, is not an escape check: keep its DC in save.dc and its timing, success ending and stages in condition/duration. Never copy a save DC into escapeDc. For example, repeating a DC 13 Constitution save at the end of the next turn has no escapeDc; Grappled (escape DC 15) has escapeDc:15. If both kinds occur, retain their distinct DCs and rules. 中文“重复豁免／豁免成功结束”不等于“逃脱／挣脱检定”。
+Put targetSpecial, placement range and area on the OP that uses them. Emanation/光环 uses radius; Sphere/球状 uses sphere; a printed radius is a dimension and does not itself identify an Emanation. Keep exact size/origin; line width and cylinder height use their respective fields.
+Explicit non-spell shared pools use creature.sourceResourcePools:[{max,period:day|longRest|shortRest|dawn,members:[{collection:traits|actions|bonusActions|reactions|legendaryActions|mythicActions,index,cost:1},...],evidence:EvidenceRef[]}]. Preserve each member's same explicit uses. Distinct spell shared pools use separate groupId/featureName and at most one daily-shared usageGroup per group; model actual membership, count and recovery without a duplicate independent pool.
+Keep unsupported ending rules, movement, dynamic healing/HP changes, summoning and other consequences as complete GM prose alongside supported basic operations and state templates. No automatic trigger graph, arbitrary script, Effect configuration or Foundry paths.`;
 
 const object=(value:unknown):value is Record<string,any>=>!!value&&typeof value==='object'&&!Array.isArray(value);
 const stable=(value:unknown):string|undefined=>JSON.stringify(value,(_key,entry)=>object(entry)?Object.fromEntries(Object.keys(entry).sort().map(key=>[key,entry[key]])):entry);
@@ -124,19 +128,43 @@ export function bindProviderSourceContracts(source:string,value:Record<string,un
   }
   // IDs join already declared structured members; they never infer a pool,
   // a member, a resource amount or a rule from the original text.
-  if(Array.isArray(creature.sourceResourcePools))for(const pool of creature.sourceResourcePools){
+  const featureIds=new Map<string,string>(),assignedFeatures=new Map<string,string>(),poolIds=new Set<string>();
+  const validId=(id:unknown):id is string=>typeof id==='string'&&/^[a-z0-9][a-z0-9-]*$/u.test(id);
+  if(Array.isArray(creature.sourceResourcePools))for(const [poolIndex,pool]of creature.sourceResourcePools.entries()){
     if(!object(pool)||!Array.isArray(pool.members))continue;
-    for(const member of pool.members){
+    for(const [memberIndex,member]of pool.members.entries()){
       if(!object(member)||!SOURCE_FEATURE_COLLECTIONS.includes(member.collection)||!Number.isSafeInteger(member.index))continue;
       const feature=creature[member.collection as typeof SOURCE_FEATURE_COLLECTIONS[number]]?.[member.index];
       if(!feature)continue;
-      const technicalId=sha256(`${ir.source?.sha256}:${member.collection}:${member.index}`).slice(0,16);
-      member.featureId??=feature.sourceFeatureId??technicalId;
-      feature.sourceFeatureId??=member.featureId;
+      const key=member.collection+':'+member.index;
+      let id=assignedFeatures.get(key);
+      if(!id){
+        const supplied=feature.sourceFeatureId??member.featureId;
+        id=validId(supplied)&&(!featureIds.has(supplied)||featureIds.get(supplied)===key)?supplied:sha256(`${ir.source?.sha256}:${key}`).slice(0,16);
+        assignedFeatures.set(key,id);featureIds.set(id,key);
+      }
+      if(member.featureId!==undefined&&member.featureId!==id)retainProgramIdentity(ir,`/creature/sourceResourcePools/${poolIndex}/members/${memberIndex}/featureId`,member.featureId,id);
+      if(feature.sourceFeatureId!==undefined&&feature.sourceFeatureId!==id)retainProgramIdentity(ir,`/creature/${member.collection}/${member.index}/sourceFeatureId`,feature.sourceFeatureId,id);
+      member.featureId=id;feature.sourceFeatureId=id;
     }
-    if(pool.members.every(member=>object(member)&&typeof member.featureId==='string'))pool.id??=sourceResourcePoolIdentity(ir.source.sha256,pool.members.map(member=>member.featureId));
+    if(pool.members.every(member=>object(member)&&typeof member.featureId==='string')){
+      const original=pool.id;
+      if(!validId(pool.id)||poolIds.has(pool.id)){
+        const base=sourceResourcePoolIdentity(ir.source.sha256,pool.members.map(member=>member.featureId));let id=base,suffix=1;
+        while(poolIds.has(id))id=base+'-'+(++suffix);
+        pool.id=id;if(original!==undefined)retainProgramIdentity(ir,`/creature/sourceResourcePools/${poolIndex}/id`,original,id);
+      }
+      poolIds.add(pool.id);
+    }
     pool.name??='Shared uses';
   }
+}
+
+export function retainProgramIdentity(ir:MonsterIntakeIR,path:string,original:unknown,value:string):void{
+  const prior=ir.creature.candidateReview,message='此技术标识由程序重新分配；原有能力和资源关联保持。';
+  ir.creature.candidateReview={version:1,findings:[...(prior?.findings??[]),{code:'FIELD_PROJECTION_INCOMPLETE',path,message}],proposal:{prior:prior?.proposal??null,path,original:structuredClone(original),value}};
+  ir.uncertainties??=[];
+  ir.uncertainties.push({id:'program-identity-'+ir.uncertainties.length,code:'FIELD_PROJECTION_INCOMPLETE',path,message,blocking:false,evidence:[]});
 }
 
 /** Explicit legacy source audit only. Never called by default AI intake. */

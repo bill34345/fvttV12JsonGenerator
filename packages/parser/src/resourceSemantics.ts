@@ -11,6 +11,7 @@ import type {
   ActorResourceSemantics,
   ActorResourceTransition,
 } from '@fvtt-json-generator/models/resource';
+import {sha256} from '@fvtt-json-generator/contracts/hash';
 
 const SAFE_ID = /^[a-z0-9][a-z0-9-]*$/;
 const SAFE_FORMULA = /^(?:\d+|\d+d\d+(?:\s*[+-]\s*\d+)?)$/i;
@@ -308,9 +309,39 @@ function parseTransition(
   };
 }
 
+function normalizeResourceIdentities(raw:Record<string,unknown>,onIssue:ResourceIssue):void{
+  const resourceMap=new Map<string,string[]>(),resourceIds=new Set<string>(),operationIds=new Set<string>(),derivedIds=new Set<string>(),bindingIds=new Set<string>(),transitionIds=new Set<string>();
+  const object=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value);
+  const assign=(entry:Record<string,unknown>,path:string,seen:Set<string>)=>{
+    const original=entry.ID;
+    if(typeof original==='string'&&SAFE_ID.test(original)&&!seen.has(original)){seen.add(original);return original;}
+    const base='record-'+sha256(path+':'+JSON.stringify(entry)).slice(0,16);let next=base,suffix=1;while(seen.has(next))next=base+'-'+(++suffix);
+    entry.ID=next;seen.add(next);onIssue(path+'.ID',original,'资源技术标识已由程序重分配；原有数量和关联保留。');return next;
+  };
+  for(const [index,entry]of (Array.isArray(raw['资源'])?raw['资源']:[]).entries()){
+    if(!object(entry))continue;
+    const original=entry.ID,next=assign(entry,`资源机制.资源[${index}]`,resourceIds);
+    if(typeof original==='string'){const mapped=resourceMap.get(original)??[];mapped.push(next);resourceMap.set(original,mapped);}
+    for(const [key,seen]of [['操作',operationIds],['派生',derivedIds]] as const)
+      for(const [nestedIndex,nested]of (Array.isArray(entry[key])?entry[key]:[]).entries())if(object(nested))assign(nested,`资源机制.资源[${index}].${key}[${nestedIndex}]`,seen);
+  }
+  const reference=(entry:Record<string,unknown>,path:string)=>{
+    const original=entry['资源'];if(typeof original!=='string')return;
+    const mapped=resourceMap.get(original);if(!mapped)return;
+    if(mapped.length===1)entry['资源']=mapped[0];
+    else{onIssue(path+'.资源',original,'同一资源标识对应多个资源；此关联单独保留供核对，不选择任意一个资源。');entry['资源']='unresolved-'+sha256(path).slice(0,16);}
+  };
+  for(const [index,entry]of (Array.isArray(raw['消费'])?raw['消费']:[]).entries())if(object(entry)){const path=`资源机制.消费[${index}]`;assign(entry,path,bindingIds);reference(entry,path);}
+  for(const [index,entry]of (Array.isArray(raw['转换'])?raw['转换']:[]).entries())if(object(entry)){
+    const path=`资源机制.转换[${index}]`;assign(entry,path,transitionIds);
+    for(const [mutationIndex,mutation]of (Array.isArray(entry['变化'])?entry['变化']:[]).entries())if(object(mutation)&&mutation['类型']==='resource')reference(mutation,path+`.变化[${mutationIndex}]`);
+  }
+}
+
 export function parseActorResourceSemantics(value: unknown,onIssue?:ResourceIssue): ActorResourceSemantics {
-  const raw = record(value, '资源机制');
+  const raw = record(onIssue?structuredClone(value):value, '资源机制');
   exactKeys(raw, ['资源', '消费', '转换'], '资源机制');
+  if(onIssue)normalizeResourceIdentities(raw,onIssue);
   const resourceIds = new Set<string>();
   const operationIds = new Set<string>();
   const derivedIds = new Set<string>();

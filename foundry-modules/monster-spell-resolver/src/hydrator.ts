@@ -1,7 +1,7 @@
 import {
   hashManifest,
   RESOLVER_MODULE_ID,
-  validatePortableSpellManifestStructure,
+  validateActorSpellManifestStructure,
   type PortableSpellManifest,
   type SpellHydrationSelection,
 } from '../../../src/core/spell-resolution';
@@ -106,10 +106,10 @@ export function createHydrationJournal(actor: any): HydrationJournal {
 export async function hydrateManagedSelection(input: HydrateManagedSelectionInput): Promise<HydratedSelection> {
   if (!input || input.journal?.actor !== input.actor) throw new TypeError('Hydration journal must belong to the current Actor.');
   if (!FOUNDRY_ID.test(input.transactionId)) throw new TypeError('transactionId must be a 16-character alphanumeric ID.');
-  const validated = validatePortableSpellManifestStructure(input.manifest);
+  const validated = validateActorSpellManifestStructure(input.manifest);
   if (!validated.ok) throw new TypeError('Hydration requires a structurally valid portable spell manifest.');
   const actorManifest = input.actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest;
-  const actorValidation = validatePortableSpellManifestStructure(actorManifest);
+  const actorValidation = validateActorSpellManifestStructure(actorManifest);
   if (!actorValidation.ok || hashManifest(actorValidation.value) !== hashManifest(validated.value)) {
     throw new TypeError('Actor portable spell manifest does not exactly match the hydration manifest.');
   }
@@ -465,9 +465,9 @@ async function projectOwnedSourceCache(input:HydrateManagedSelectionInput,prepar
  * counters, other refs and all official Spell rules remain untouched. */
 export async function completeManagedSourceCache(input:HydrateManagedSelectionInput):Promise<HydratedSelection>{
   if(input.journal?.actor!==input.actor)throw Error('Source cache completion journal belongs to another Actor.');
-  const validation=validatePortableSpellManifestStructure(input.manifest);
+  const validation=validateActorSpellManifestStructure(input.manifest);
   if(!validation.ok)throw Error('Source cache completion requires its valid current manifest.');
-  const current=validatePortableSpellManifestStructure(input.actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
+  const current=validateActorSpellManifestStructure(input.actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
   if(!current.ok||hashManifest(current.value)!==hashManifest(validation.value))throw Error('Source cache completion manifest changed.');
   const group=validation.value.spellcastingGroups.find(group=>group.groupId===input.selection.groupId),ref=group?.spellRefs.find(ref=>ref.refId===input.selection.refId);
   if(!group||!ref)throw Error('Source cache completion requires one current manifest ref.');

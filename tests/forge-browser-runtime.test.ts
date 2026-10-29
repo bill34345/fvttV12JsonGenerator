@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import { createBundledIconResolutionSession } from '@fvtt-json-generator/assets-icons/icon-browser';
 import { iconWorkflowAdapter } from '@fvtt-json-generator/assets-icons/icon-adapter';
 import { readFileSync } from 'node:fs';
@@ -868,7 +869,10 @@ describe('browser Forge Actor runtime', () => {
     expect(result.candidateAvailable).toBe(true);
     expect(result.actorProjection).toBeDefined();
     expect(result.findings).not.toContainEqual(expect.objectContaining({code:'INVALID_STRUCTURE',path:'/creature/legendary'}));
-    expect(result.actorProjection.items.length).toBeGreaterThan(0);
+    const actorProjection = result.actorProjection;
+    assert.ok(actorProjection && typeof actorProjection === 'object' && 'items' in actorProjection);
+    assert.ok(Array.isArray(actorProjection.items));
+    expect(actorProjection.items.length).toBeGreaterThan(0);
     expect(reviewCalls).toBe(0);expect(result.modelReviewStatus).toBe('not_requested');
   });
 

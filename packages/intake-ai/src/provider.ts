@@ -23,8 +23,9 @@ import {NORMALIZED_MONSTER_EMPTY_PATHS,isMonsterSourceAnswer} from './types';
 import type { MonsterIntakeConfig } from './config';
 import { sha256 } from '@fvtt-json-generator/contracts/hash';
 import { captureProviderResponse, failureEvidenceRecorder, type ProviderResponseEvidenceSink, type ProviderJsonFormatRecovery } from './provider-response-evidence';
+import { normalizeDeclaredLanguageList } from './declared-languages';
 import type { StagedExtractionOptions } from './staged-extraction';
-import {bindProviderSourceContracts} from './source-operation-contract';
+import {bindProviderSourceContracts,retainProgramIdentity} from './source-operation-contract';
 import {MONSTER_EXTRACT_PROMPT,MONSTER_REVIEW_PROMPT,MONSTER_REPAIR_PROMPT} from './monster-prompts';
 import {completeSourceFeatureEvidence,completeSourceSpellcastingEvidence} from './source-completeness';
 import { StagedExtractionError } from './staged-source';
@@ -38,9 +39,9 @@ export type { ProviderResponseEvidence, ProviderResponseEvidenceSink } from './p
 
 export const INTAKE_PROMPT_VERSIONS = {
   discover: 'monster-intake-discover-v2-source-lines',
-  extract: 'monster-intake-extract-v52-official-status-effects',
+  extract: 'monster-intake-extract-v54-prompt-consolidation',
   review: 'monster-intake-review-v37-consolidated-full-ir',
-  repair: 'monster-intake-repair-v42-vulnerability-notes',
+  repair: 'monster-intake-repair-v44-prompt-consolidation',
 } as const;
 
 export type MonsterIntakeProviderErrorCode =
@@ -583,7 +584,9 @@ function normalizeStageEvidence(stage: keyof typeof PROMPTS, value: unknown, pay
   }
 
   if (stage !== 'extract' && stage !== 'repair') return next;
-  if(!evidenceOnly)normalizeProjectionContainers(next,source);
+  // Clear untrusted reply history before recording the program's additions.
+  if(stage==='extract'&&!evidenceOnly)delete next.normalizedEmptyFields;
+  if(!evidenceOnly)normalizeProjectionContainers(next,source,bounds);
   if(referenceFailure&&Array.isArray(next.uncertainties))next.uncertainties.push({id:'source-lines-unresolved',code:'SOURCE_LINES_UNRESOLVED',path:'/creature',
     message:'部分来源行引用不能定位；原始字段与生物内容保留。',blocking:false,evidence:[]});
   const sourceIdentity = asObject(next.source) ?? {};
@@ -598,8 +601,6 @@ function normalizeStageEvidence(stage: keyof typeof PROMPTS, value: unknown, pay
   // Proposed data must survive unchanged until its stage verifier rejects it;
   // legacy automation/optional-field normalization must not erase a conflict.
   if (evidenceOnly) return next;
-  // Fresh extraction cannot author the program's normalization history.
-  if(stage==='extract')delete next.normalizedEmptyFields;
   normalizeEmptyMonsterFields(next);
   normalizeDeclaredSpellIdentities(next,source);
   bindProviderSourceContracts(source,next,bounds);
@@ -610,7 +611,7 @@ function normalizeStageEvidence(stage: keyof typeof PROMPTS, value: unknown, pay
  * from the original document; only declared names/IDs and evidence bind. */
 export function normalizeMonsterIntakeProposal(source:string,ir:MonsterIntakeIR,bounds?:{start:number;end:number}):MonsterIntakeIR{
   const next=structuredClone(ir);
-  normalizeProjectionContainers(next as unknown as Record<string,unknown>,source);
+  normalizeProjectionContainers(next as unknown as Record<string,unknown>,source,bounds);
   normalizeEmptyMonsterFields(next as unknown as Record<string,unknown>);
   materializeClaimEvidenceQuotes(source,next as unknown as Record<string,unknown>,bounds);
   normalizeDeclaredSpellIdentities(next as unknown as Record<string,unknown>,source);
@@ -620,12 +621,13 @@ export function normalizeMonsterIntakeProposal(source:string,ir:MonsterIntakeIR,
 
 /** This is the external Monster data boundary. Missing program containers do
  * not erase a readable answer; unprojected values remain on its own proposal. */
-function normalizeProjectionContainers(value:Record<string,unknown>,source:string):void{
+function normalizeProjectionContainers(value:Record<string,unknown>,source:string,bounds?:{start:number;end:number}):void{
   const metadata=new Set(['schemaVersion','source','claims','coverage','uncertainties','normalizedEmptyFields']);
   const payload=asObject(value.creature)??asObject(value.monster)??asObject(value.npc)??asObject(value.actor);
   if(payload?Object.keys(payload).length===0:Object.keys(value).every(key=>metadata.has(key)))
     throw new MonsterIntakeProviderError('invalid_response','AI returned no creature answer.',{retryable:false});
   const original=structuredClone(value),notes:Array<{code:string;path:string;message:string}>=[];
+  let evidenceNormalized=false;
   const note=(path:string,message:string)=>notes.push({code:'FIELD_PROJECTION_INCOMPLETE',path,message});
   const priorSource=asObject(value.source);
   if(priorSource&&(priorSource.sha256!==undefined||priorSource.length!==undefined)&&(priorSource.sha256!==sha256(source)||priorSource.length!==source.length))note('/source','来源技术记录已按本次输入重建；原记录保留。');
@@ -636,6 +638,13 @@ function normalizeProjectionContainers(value:Record<string,unknown>,source:strin
     value.creature=creature;note('/creature','回答的生物资料已接到现有生物入口；原外壳保留。');
   }
   if(value.schemaVersion!==1){value.schemaVersion=1;note('/schemaVersion','内部版本记录由程序整理。');}
+  // Source-derived envelope notation: an unambiguous outer collection belongs
+  // to the single declared creature. Preserve the original wrapper in history.
+  for(const key of ['traits','actions','bonusActions','reactions','legendaryActions','mythicActions','spellcasting']){
+    if(!Object.hasOwn(creature,key)&&Array.isArray(value[key])){
+      creature[key]=value[key];delete value[key];evidenceNormalized=true;
+    }
+  }
   const record=(owner:Record<string,unknown>,key:string,path:string):Record<string,unknown>=>{
     const known=asObject(owner[key]);if(known)return known;
     if(owner[key]!==undefined)note(path,'此栏的原始表示未转换；其他字段继续生成。');
@@ -646,6 +655,25 @@ function normalizeProjectionContainers(value:Record<string,unknown>,source:strin
     if(Array.isArray(owner[key]))return owner[key] as unknown[];
     const supplied=owner[key];if(supplied!==undefined&&supplied!==null){note(path,'单项或其他列表表示由程序整理，原始值保留。');owner[key]=[supplied];}
     else{if(supplied===undefined&&NORMALIZED_MONSTER_EMPTY_PATHS.includes(path as any))value.normalizedEmptyFields=[...new Set([...(Array.isArray(value.normalizedEmptyFields)?value.normalizedEmptyFields:[]),path])];owner[key]=[];}return owner[key] as unknown[];
+  };
+  const evidenceRecords=(owner:Record<string,unknown>,key:string,path:string)=>{
+    const supplied=owner[key];if(supplied===undefined)return;
+    const entries=Array.isArray(supplied)?supplied:[supplied],lower=bounds?.start??0,upper=bounds?.end??source.length;
+    const normalized=entries.flatMap(entry=>{
+      const record=asObject(entry);if(!record)return[];
+      const ref={...record};
+      if(ref.quote===undefined&&Number.isSafeInteger(ref.start)&&Number.isSafeInteger(ref.end)&&Number(ref.start)>=lower&&Number(ref.end)<=upper&&Number(ref.end)>Number(ref.start))ref.quote=source.slice(Number(ref.start),Number(ref.end));
+      normalizeProviderEvidenceRef(source,ref,bounds,false);
+      if(!Number.isSafeInteger(ref.start)||!Number.isSafeInteger(ref.end)||Number(ref.start)<lower||Number(ref.end)>upper||Number(ref.end)<=Number(ref.start)||typeof ref.quote!=='string'||ref.quote!==source.slice(Number(ref.start),Number(ref.end)))return[];
+      return[{start:ref.start,end:ref.end,quote:ref.quote}];
+    });
+    const unchanged=Array.isArray(supplied)&&supplied.length===normalized.length&&supplied.every((entry,index)=>{const ref=asObject(entry),next=normalized[index];return ref&&Object.keys(ref).length===3&&ref.start===next?.start&&ref.end===next?.end&&ref.quote===next?.quote;});
+    if(!unchanged){
+      const allLocated=Array.isArray(supplied)&&supplied.length===normalized.length&&supplied.every(entry=>{const ref=asObject(entry);return ref&&Object.keys(ref).every(key=>['start','end','quote'].includes(key));});
+      if(allLocated)evidenceNormalized=true;
+      else note(path,'此来源引文列表已逐条整理；无法定位的附带记录与原值保留，法术、限制及使用次数继续转换。');
+    }
+    owner[key]=normalized;
   };
   const identity=record(creature,'identity','/creature/identity');
   if(typeof identity.name!=='string'||!identity.name.trim())identity.name=typeof creature.name==='string'?creature.name:source.split(/\r?\n/u).find(line=>line.trim())?.replace(/^#+\s*/u,'').trim()||'生物';
@@ -658,6 +686,7 @@ function normalizeProjectionContainers(value:Record<string,unknown>,source:strin
   const defenses=record(creature,'defenses','/creature/defenses');
   for(const key of ['resistances','immunities','vulnerabilities','conditionImmunities'])array(defenses,key,'/creature/defenses/'+key);
   array(creature.languages as Record<string,unknown>,'values','/creature/languages/values');
+  if(normalizeDeclaredLanguageList(creature.languages as Record<string,unknown>))evidenceNormalized=true;
   for(const section of ['traits','actions','bonusActions','reactions','legendaryActions','mythicActions']){
     if(section==='mythicActions'&&creature[section]===undefined)continue;
     const features=array(creature,section,'/creature/'+section);
@@ -678,9 +707,11 @@ function normalizeProjectionContainers(value:Record<string,unknown>,source:strin
       const group=asObject(entry)??{description:typeof entry==='string'?entry:JSON.stringify(entry)};
       if(typeof group.featureName!=='string')group.featureName=`施法 ${index+1}`;
       if(typeof group.description!=='string')group.description='';
+      for(const key of ['evidence','abilityEvidence','casterLevelEvidence','saveDcEvidence','attackBonusEvidence','manualGrants'])evidenceRecords(group,key,`/creature/spellcasting/${index}/${key}`);
       const usages=array(group,'usageGroups',`/creature/spellcasting/${index}/usageGroups`);
       group.usageGroups=usages.flatMap((entry,usageIndex)=>{
         const usage=asObject(entry);if(!usage){note(`/creature/spellcasting/${index}/usageGroups/${usageIndex}`,'此施法次数组按原始资料由GM处理。');return [];}
+        for(const key of ['evidence','levelEvidence','slotsEvidence'])evidenceRecords(usage,key,`/creature/spellcasting/${index}/usageGroups/${usageIndex}/${key}`);
         if(usage.recovery===undefined&&['daily-each','daily-shared','1/day-each'].includes(String(usage.usage))){
           const recovery=declaredUsageRecovery(usage.evidence);
           if(recovery){usage.recovery=recovery;note(`/creature/spellcasting/${index}/usageGroups/${usageIndex}/recovery`,'恢复周期按此次数组已关联的明确原文整理；次数与成员关系保持。');}
@@ -695,6 +726,8 @@ function normalizeProjectionContainers(value:Record<string,unknown>,source:strin
             if(typeof alias==='string'&&alias.trim())return true;
             note(`/creature/spellcasting/${index}/usageGroups/${usageIndex}/spellRefs/${refIndex}/aliases/${aliasIndex}`,'此法术别名未映射，原值保留；该法术与同组其他法术继续转换。');return false;
           });
+          evidenceRecords(ref,'evidence',`/creature/spellcasting/${index}/usageGroups/${usageIndex}/spellRefs/${refIndex}/evidence`);
+          if(Array.isArray(ref.restrictions))ref.restrictions.forEach((entry,restrictionIndex)=>{const restriction=asObject(entry);if(restriction)evidenceRecords(restriction,'evidence',`/creature/spellcasting/${index}/usageGroups/${usageIndex}/spellRefs/${refIndex}/restrictions/${restrictionIndex}/evidence`);});
           return ref;
         });
         return [usage];
@@ -702,6 +735,11 @@ function normalizeProjectionContainers(value:Record<string,unknown>,source:strin
       if(group.componentWaivers!==undefined&&!Array.isArray(group.componentWaivers)){
         note(`/creature/spellcasting/${index}/componentWaivers`,'此施法成分附注未转换；法术与原始记录保留。');group.componentWaivers=[];
       }
+      if(Array.isArray(group.componentWaivers))group.componentWaivers=group.componentWaivers.filter((entry,waiverIndex)=>{
+        const waiver=asObject(entry);
+        if(waiver&&['vocal','somatic','material'].includes(String(waiver.component))){evidenceRecords(waiver,'evidence',`/creature/spellcasting/${index}/componentWaivers/${waiverIndex}/evidence`);return true;}
+        note(`/creature/spellcasting/${index}/componentWaivers/${waiverIndex}`,'此施法成分附带条目未转换；有效条目、法术和原始记录保留。');return false;
+      });
       return group;
     });
   }
@@ -726,7 +764,7 @@ function normalizeProjectionContainers(value:Record<string,unknown>,source:strin
   value.uncertainties=(value.uncertainties as unknown[]).filter(entry=>asObject(entry)).map((entry,index)=>{
     const finding=asObject(entry)!;return {...finding,id:typeof finding.id==='string'?finding.id:`uncertainty-${index+1}`,code:typeof finding.code==='string'?finding.code:'AI_UNCERTAINTY',path:typeof finding.path==='string'?finding.path:'/creature',message:typeof finding.message==='string'?finding.message:JSON.stringify(entry),evidence:Array.isArray(finding.evidence)?finding.evidence:[]};
   });
-  if(notes.length){
+  if(notes.length||evidenceNormalized){
     const prior=asObject(creature.candidateReview);
     creature.candidateReview={version:1,findings:[...(Array.isArray(prior?.findings)?prior.findings:[]),...notes],proposal:{prior:prior?.proposal??null,original}};
     (value.uncertainties as unknown[]).push(...notes.map((finding,index)=>({id:`input-projection-${index+1}`, ...finding,blocking:false,evidence:[]})));
@@ -811,14 +849,20 @@ function normalizeDeclaredSpellIdentities(value:Record<string,unknown>,source:st
   const refs=groups.flatMap(group=>Array.isArray(group.usageGroups)?group.usageGroups.flatMap(usage=>Array.isArray(asObject(usage)?.spellRefs)?asObject(usage)!.spellRefs as unknown[]:[]):[]).map(asObject).filter((ref):ref is Record<string,unknown>=>!!ref);
   const refIds=new Set(refs.flatMap(ref=>typeof ref.refId==='string'?[ref.refId]:[]));
   const unique=(base:string,ids:Set<string>)=>{let id=base,suffix=1;while(ids.has(id))id=`${base}-${++suffix}`;ids.add(id);return id;};
+  const usedIds=new Set<string>(),identityChanges=new Map<string,Array<{groupId:string;refId:string}>>();
   for(const [index,group]of groups.entries()){
+    const originalGroupId=group.groupId;
     normalizeOptionalSourceText(group,['featureEnglishName']);
     for(const key of ['evidence','abilityEvidence'])if(group[key]===undefined)group[key]=[];
     if(Array.isArray(group.componentWaivers))for(const waiverValue of group.componentWaivers){const waiver=asObject(waiverValue);if(waiver&&waiver.evidence===undefined)waiver.evidence=[];}
     // An omitted list explicitly declares no group waivers. Preserve provided
     // arrays and invalid null/object values; never infer V/S/M from prose here.
     if(!Object.hasOwn(group,'componentWaivers'))group.componentWaivers=[];
-    if(group.groupId===undefined)group.groupId=unique(`casting-${index+1}`,groupIds);
+    if(typeof group.groupId!=='string'||!group.groupId.trim()||usedIds.has(group.groupId)){
+      group.groupId=unique(`casting-${index+1}`,groupIds);
+      if(originalGroupId!==undefined)retainProgramIdentity(value as unknown as MonsterIntakeIR,`/creature/spellcasting/${index}/groupId`,originalGroupId,group.groupId as string);
+    }
+    usedIds.add(group.groupId as string);
     if(typeof group.ability==='string'){const ability=normalizeProviderAbility(group.ability);if(ability)group.ability=ability;}
     // Empty-list notation only: the model has already explicitly selected manual grants.
     if(group.usageGroups===undefined&&Array.isArray(group.manualGrants)&&group.manualGrants.length>0)group.usageGroups=[];
@@ -832,12 +876,22 @@ function normalizeDeclaredSpellIdentities(value:Record<string,unknown>,source:st
         normalizeOptionalSourceText(ref,['englishName','chineseName','identifier']);
         for(const key of ['aliases','restrictions','evidence'])if(ref[key]===undefined)ref[key]=[];
         if(Array.isArray(ref.restrictions))for(const restrictionValue of ref.restrictions){const restriction=asObject(restrictionValue);if(restriction&&restriction.evidence===undefined)restriction.evidence=[];}
-        if(ref.refId===undefined)ref.refId=unique(`spell-${index+1}-${usageIndex+1}-${refIndex+1}`,refIds);
+        const originalRefId=ref.refId;
+        if(typeof ref.refId!=='string'||!ref.refId.trim()||usedIds.has(ref.refId)){
+          ref.refId=unique(`spell-${index+1}-${usageIndex+1}-${refIndex+1}`,refIds);
+          if(originalRefId!==undefined)retainProgramIdentity(value as unknown as MonsterIntakeIR,`/creature/spellcasting/${index}/usageGroups/${usageIndex}/spellRefs/${refIndex}/refId`,originalRefId,ref.refId as string);
+        }
+        usedIds.add(ref.refId as string);
+        if(typeof originalGroupId==='string'&&typeof originalRefId==='string'){
+          const key=JSON.stringify([originalGroupId,originalRefId]),mapped=identityChanges.get(key)??[];
+          mapped.push({groupId:group.groupId as string,refId:ref.refId as string});identityChanges.set(key,mapped);
+        }
         const name=typeof ref.englishName==='string'&&ref.englishName.trim()?ref.englishName:ref.originalName;
         if(ref.identifier===undefined&&typeof name==='string')ref.identifier=name.trim();
       }
     }
   }
+  for(const ref of refs){const reuse=asObject(ref.reuseOf);if(!reuse)continue;const mapped=identityChanges.get(JSON.stringify([reuse.groupId,reuse.refId]));if(mapped?.length===1)ref.reuseOf=mapped[0];}
 }
 
 function normalizeProviderEvidenceTree(
@@ -855,7 +909,8 @@ function normalizeProviderEvidenceTree(
     && (Number.isInteger(record.start) || Number.isInteger(record.end))) {
     normalizeProviderEvidenceRef(source, record, bounds, false);
   }
-  Object.values(record).forEach((entry) => normalizeProviderEvidenceTree(source, entry, bounds));
+  // Retained proposals are inert history, including the original bad offsets.
+  for(const[key,entry]of Object.entries(record))if(key!=='candidateReview')normalizeProviderEvidenceTree(source,entry,bounds);
 }
 
 function normalizeProviderEvidenceRef(
@@ -1247,6 +1302,42 @@ function jsonObjectBoundary(content:string):{end?:number;missingTail?:string}|un
   if(!quoted&&stack.length)return{missingTail:[...stack].reverse().join('')};
 }
 
+/** JSON.parse proves syntax; this additionally prevents recovery from silently
+ * replacing a same-named property, including escaped and nested spellings. */
+function hasUniqueJsonObjectKeys(content:string):boolean{
+  const objects:Array<Set<string>|null>=[];
+  let quoted=false,escaped=false,start=0;
+  for(let index=0;index<content.length;index++){
+    const character=content[index]!;
+    if(quoted){
+      if(escaped)escaped=false;
+      else if(character==='\\')escaped=true;
+      else if(character==='"'){
+        quoted=false;
+        let next=index+1;
+        while(/\s/u.test(content[next]??''))next++;
+        if(content[next]===':'){
+          const keys=objects.at(-1),key=JSON.parse(content.slice(start,index+1)) as string;
+          if(keys?.has(key))return false;
+          keys?.add(key);
+        }
+      }
+    }else if(character==='"'){quoted=true;start=index;}
+    else if(character==='{'||character==='[')objects.push(character==='{'?new Set():null);
+    else if(character==='}'||character===']')objects.pop();
+  }
+  return true;
+}
+
+function joinMonsterAncillaryTail(content:string,end:number):string|undefined{
+  const root=asObject(JSON.parse(content.slice(0,end))),tail=content.slice(end).trim();
+  if(!asObject(root?.creature)||!tail.startsWith(','))return;
+  const ancillary=asObject(JSON.parse('{'+tail.slice(1)));
+  if(!ancillary||!Object.keys(ancillary).length||Object.keys(ancillary).some(key=>!['claims','coverage','uncertainties'].includes(key)||Object.hasOwn(root!,key)))return;
+  const joined=content.slice(0,end-1)+content.slice(end);
+  if(hasUniqueJsonObjectKeys(joined))return joined;
+}
+
 function parseStrictJsonResult(content:string,completeTerminal=false):{value:unknown;formatRecovery?:ProviderJsonFormatRecovery}{
   let cleaned = content.trim();
   const reasoning = /^<(?:think|analysis|reasoning)\b[^>]*>[\s\S]*?<\/(?:think|analysis|reasoning)>\s*/i;
@@ -1275,6 +1366,13 @@ function parseStrictJsonResult(content:string,completeTerminal=false):{value:unk
         return{value,formatRecovery:{version:1,kind:'drop-json-terminal-delimiters',originalResponseHash:sha256(content),
           parsedObjectHash:sha256(candidate),objectLength:candidate.length,removedTail:tail}};
       }catch{/* Malformed or incomplete object bodies cannot be repaired here. */}
+    }
+    if(completeTerminal&&end!==undefined){
+      try{
+        const joined=joinMonsterAncillaryTail(cleaned,end);
+        if(joined)return{value:parseObject(joined),formatRecovery:{version:1,kind:'join-json-ancillary-tail',originalResponseHash:sha256(content),
+          parsedObjectHash:sha256(joined),objectLength:joined.length,removedTail:'',removedRootCloserOffset:end-1}};
+      }catch{/* Ambiguous, duplicate or non-ancillary tails stay on the existing path. */}
     }
     if(completeTerminal&&boundary?.missingTail){
       const completed=cleaned+boundary.missingTail;

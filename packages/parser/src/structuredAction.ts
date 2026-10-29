@@ -1,5 +1,5 @@
 import { splitBilingualName } from '@fvtt-json-generator/models/display-name';
-import { normalizeCreatureFeatureInput,isHealingRecipient,type SourceOperation } from '@fvtt-json-generator/models/source-operations';
+import { normalizeCreatureFeatureInput,isHealingRecipient,isSourceCandidateReview,isSourceCandidateCounters,type SourceOperation } from '@fvtt-json-generator/models/source-operations';
 import type {
   StructuredActionData,
   DamagePart,
@@ -66,6 +66,12 @@ export class StructuredActionParser {
     let describe = (entry as Record<string, unknown>)['描述'] ?? (entry as Record<string, unknown>)['describe'] ?? '';
 
     const record = structuredClone(entry as Record<string, unknown>);
+    const candidateReview = record.candidateReview, candidateCounters = record.candidateCounters;
+    const invalidReview = Object.hasOwn(record,'candidateReview')&&!isSourceCandidateReview(candidateReview);
+    const invalidCounters = Object.hasOwn(record,'candidateCounters')
+      &&!(Array.isArray(candidateCounters)&&candidateCounters.length===0)&&!isSourceCandidateCounters(candidateCounters);
+    if(invalidReview)delete record.candidateReview;
+    if(invalidCounters)delete record.candidateCounters;
     normalizeCreatureFeatureInput(record, describe);
     describe = record.description ?? record['描述'] ?? describe;
     let executionMode = record['执行模式'] ?? record.executionMode;
@@ -97,6 +103,7 @@ export class StructuredActionParser {
     const suppliedType=this.normalizeType(String(type));
     const effectiveType=suppliedType!=='utility'?suppliedType:record['攻击类型']||record.attackType?'attack':record.DC!==undefined?'save':rawHealing?'heal':rawDamage?'damage':'utility';
     const action: StructuredActionData = {
+      ...(record.actorResource==='legres'?{actorResource:'legres' as const}:{}),
       ...(record.candidateReview?{candidateReview:structuredClone(record.candidateReview) as StructuredActionData['candidateReview']}:{}),
       ...(record.candidateCounters?{candidateCounters:structuredClone(record.candidateCounters) as StructuredActionData['candidateCounters']}:{}),
       name: literalName?String(name):this.extractName(String(name)),
@@ -121,6 +128,8 @@ export class StructuredActionParser {
       } : undefined,
       describe: String(describe),
     };
+    if(invalidReview)this.retainActionField(action,'candidateReview',candidateReview,'审阅记录未能读取；原始记录保留，能力内容继续。',false);
+    if(invalidCounters)this.retainActionField(action,'candidateCounters',candidateCounters,'手动次数记录未能读取；原始记录保留，能力内容继续。',false);
     if (rawDamage !== undefined) action.sourceDamageParts = this.parseSourceDamageParts(rawDamage);
     if(action.sourceDamageParts?.some(part=>part.relationship==='conditional'||part.relationship==='replacement'||part.condition))action.literalMechanics=true;
     action.sourceRuleFacts = action.literalMechanics === true || executionMode === 'gm-manual'||executionMode==='native-with-gm' ? [] : parseSupportedRuleFacts(action.describe ?? '');
@@ -248,10 +257,10 @@ export class StructuredActionParser {
     return value.trim();
   }
 
-  private retainActionField(action:StructuredActionData,path:string,value:unknown,message:string):void {
+  private retainActionField(action:StructuredActionData,path:string,value:unknown,message:string,appendSourceNote=true):void {
     const prior=action.candidateReview;
     action.candidateReview={version:1,findings:[...(prior?.findings??[]),{code:'FIELD_PROJECTION_INCOMPLETE',path,message}],proposal:{prior:prior?.proposal??null,value}};
-    action.describe=[action.describe,'GM：'+message+' '+JSON.stringify(value)].filter(Boolean).join('\n\n');
+    if(appendSourceNote)action.describe=[action.describe,'GM：'+message+' '+JSON.stringify(value)].filter(Boolean).join('\n\n');
   }
 
   private parseWeaponConfiguration(value: unknown): WeaponConfiguration | undefined {
@@ -424,6 +433,7 @@ export class StructuredActionParser {
       DC: (s as Record<string, unknown>)['DC'] ? this.parseNumber((s as Record<string, unknown>)['DC']) : undefined,
       ability: (s as Record<string, unknown>)['属性'] ? this.normalizeAbility(String((s as Record<string, unknown>)['属性'])) : undefined,
       damage: this.parseDamageParts((s as Record<string, unknown>)['伤害']),
+      embeddedEffects: this.parseEmbeddedEffects((s as Record<string, unknown>)['内嵌效果']),
       describe: String((s as Record<string, unknown>)['描述'] ?? (s as Record<string, unknown>)['describe'] ?? ''),
     }));
   }

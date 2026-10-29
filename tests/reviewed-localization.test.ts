@@ -5,18 +5,20 @@ import {
   validateLocalizationDraft, FACT_LOCALIZATION_POLICY, LOCALIZATION_TERMS, LEGACY_LOCALIZATION_POLICY, LOCALIZATION_POLICY, localizationHash, decodeEncounterLocalization, type LocalizationPolicy, type LocalizationRequest, type LocalizationDraft,
 } from '@fvtt-json-generator/contracts/localization';
 import { createActorLocalizationRequest, projectReviewedActorLocalization, formatReviewedTitle } from '@fvtt-json-generator/generation/reviewed-localization';
+import type { ReviewedTranslationServicePort } from '@fvtt-json-generator/generation/ports';
 import {createEncounterTextRequest} from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
 import {buildActorVerificationSummaryFromValues} from '@fvtt-json-generator/workflows/actor-verification';
 import {buildBrowserActorVerificationSummary} from '../packages/forge-browser-runtime/src/actorVerification';
 import { buildForgeActorRequest, convertFinalActorSource } from '@fvtt-json-generator/forge-browser-runtime';
 import { prepareForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
 import { assertForgeEncounterLocalizationDraft, approveForgeEncounterLocalization, draftForgeEncounterLocalization,
-  reviewForgeEncounterLocalizationDraft, reviseForgeEncounterLocalizationBody, verifiedEncounterLocalizationProgress } from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
+  reviewForgeEncounterLocalizationDraft, reviseForgeEncounterLocalizationBody, verifiedEncounterLocalizationProgress, type EncounterLocalizationProgress } from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
 import { serializeForgeEncounterPackage, type ForgeEncounterPackage } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import { fixedEncounterCommand, readFixedEncounterConfiguration } from '@fvtt-json-generator/intake-ai/encounter-capabilities';
-import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
+import { hashArtifact, hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
 import { normalizeForgeActorArtifact } from '../packages/forge-browser-runtime/src/artifact';
 import { createReviewedTranslationService } from '@fvtt-json-generator/intake-ai/localization';
+import { localizedEncounterId } from '../packages/forge-browser-runtime/src/encounterLocalizationProjection';
 import foodFailure from './fixtures/localization-food-retention-failure.json';
 import {normalizeLocalizationBodyProse,localizationMeaningFindings} from '@fvtt-json-generator/contracts/localization';
 
@@ -464,6 +466,24 @@ function sourcePackage(): ForgeEncounterPackage {
   return { schema: 'fvtt-json-forge-encounter', version: 1, id: 'localization-fixture', label: 'Guard package', target: { foundry: '14.364', system: 'dnd5e', systemVersion: '5.3.3', effectProfile: 'core' }, primaryActorKey: 'guard',
     actors: [{ key: 'guard', label: 'Marsh Guard', source, sourceHash: hashSource(source) }], macros: [{ key: 'control', name: 'Guard control', command, commandHash: hashSource(command), bindings: { guard: 'guard' }, covers: [], notes: 'GM handles timing.' }], assets: [] };
 }
+function longBindingFixture() {
+  const original = sourcePackage(), name = 'A'.repeat(200);
+  const actorSource = source.replaceAll('Bite', name);
+  const config = readFixedEncounterConfiguration(original.macros[0]!.command)!;
+  config.rules[0]!.itemName = name;
+  const command = fixedEncounterCommand(config);
+  const bundle: ForgeEncounterPackage = { ...original,
+    actors: [{ ...original.actors[0]!, source: actorSource, sourceHash: hashSource(actorSource) }],
+    macros: [{ ...original.macros[0]!, command, commandHash: hashSource(command) }],
+  };
+  const service = { ...fakeService, translate: async (input: LocalizationRequest) => {
+    const draft = fakeTranslation(input);
+    for (const entry of input.texts) if (entry.kind === 'title' && entry.source === name)
+      draft.texts.find(text => text.id === entry.id)!.text = '长'.repeat(60);
+    return draft;
+  } };
+  return { bundle, name, service };
+}
 async function approvedFixture(policy: LocalizationPolicy) {
   const bundle = sourcePackage();
   const original = await prepareForgeEncounter(serializeForgeEncounterPackage(bundle));
@@ -875,26 +895,162 @@ describe('formal source to localized encounter', () => {
   test('does not discard unknown provider IDs when assembling resumed drafts [review disabled]',async()=>{
     await expect(localizeForgeEncounterWithGm({bundle:sourcePackage(),service:{...fakeService,translate:async request=>({texts:[...fakeTranslation(request).texts,{id:'text-'+'f'.repeat(24),text:'未知字段'}]})}})).rejects.toThrow('额外');
   });
-  test('the ordinary Actor entry stays source-language and the workflow rejects a stale localization', async () => {
+  test('the ordinary Actor entry stays source-language and stale localization retains the complete source Actor for review', async () => {
     const input = buildForgeActorRequest({ content: source, displayName: 'Source', requestId: 'language-test', fvttVersion: '14.364', systemVersion: '5.3.3' });
     const before = await convertFinalActorSource(input);
-    if (!('result' in before) || !('artifact' in before.result)) throw new Error('Source generation failed');
-    expect(before.result.artifact!.name).toBe('Marsh Guard');
-    const request = createActorLocalizationRequest(before.result.artifact, input.source.content);
+    if (!('result' in before) || !('artifact' in before.result) || !before.result.artifact) throw new Error('Source generation failed');
+    const originalActor=before.result.artifact;
+    expect(originalActor.name).toBe('Marsh Guard');
+    const request = createActorLocalizationRequest(originalActor, input.source.content);
     const reviewed = acceptLocalization(request, fakeTranslation(request), accepted, 'review');
-    reviewed.texts[0]!.text += '变更';
+    reviewed.texts[0]!.text += '变更';const badText=reviewed.texts[0]!.text;
     const changed = await convertFinalActorSource(input, { reviewedLocalization: reviewed });
-    expect('result' in changed && changed.result.status).toBe('failed');
+    if(!('result' in changed)||!('artifact' in changed.result))throw new Error('Stale localization discarded the generated source Actor');
+    expect(changed.result.status).toBe('needs_review');expect(changed.result.verification.status).toBe('needs_review');
+    expect(changed.result.diagnostics).toContainEqual(expect.objectContaining({code:'LOCALIZATION_PROJECTION_INCOMPLETE'}));
+    expect(changed.result.artifact).toEqual(originalActor);
+    expect(changed.result.artifactHash).toBe(hashArtifact(originalActor));
+    expect(JSON.stringify(changed.result.artifact)).not.toContain(badText);
   });
   test('rejects a bilingual runtime binding over 256 characters during preparation, without shortening source identity [review disabled]', async () => {
-    const name='A'.repeat(200); const bundle:any=sourcePackage();
-    bundle.actors[0].source=source.replaceAll('Bite',name);bundle.actors[0].sourceHash=hashSource(bundle.actors[0].source);
-    const config=readFixedEncounterConfiguration(bundle.macros[0].command)!;config.rules[0]!.itemName=name;
-    bundle.macros[0].command=fixedEncounterCommand(config);bundle.macros[0].commandHash=hashSource(bundle.macros[0].command);
-    await prepareForgeEncounter(serializeForgeEncounterPackage(bundle));
-    const service={...fakeService,translate:async(input:LocalizationRequest)=>{const value=fakeTranslation(input);for(const entry of input.texts)if(entry.kind==='title'&&entry.source===name)value.texts.find(text=>text.id===entry.id)!.text='长'.repeat(60);return value;}};
-    await expect(localizeForgeEncounterWithGm({bundle,service})).rejects.toThrow('256');
+    const { bundle, name, service } = longBindingFixture(), before = structuredClone(bundle);
+    const prepared = await localizeForgeEncounterWithGm({ bundle, service });
+    expect(prepared.actors).toHaveLength(1);
+    expect((prepared.actors[0]!.artifact.items as any[])[0].name).toBe(`${'长'.repeat(60)} ${name}`);
+    expect(prepared.macros).toEqual([]);
+    expect(prepared.reviewFindings?.some(finding => finding.includes('control') && finding.includes('256') && finding.includes('宏未准备'))).toBe(true);
+    expect(prepared.reviewFindings?.join('\n')).not.toContain('原语言 Actor 保留');
+    expect(prepared.bundle.macros).toEqual(before.macros);
+    expect(prepared.bundle.actors).toEqual(before.actors);
+    expect(bundle).toEqual(before);
+    const restored = await prepareForgeEncounter(serializeForgeEncounterPackage(prepared.bundle));
+    expect(restored.macros).toEqual([]);
+    expect(restored.actors.map(actor => actor.artifact)).toEqual(prepared.actors.map(actor => actor.artifact));
   });
+  test('isolates only the failed localized macro while preserving another Actor and its exact ready binding', async () => {
+    const { bundle, service } = longBindingFixture();
+    const allySource = source.replaceAll('Marsh Guard', 'Ally Guard');
+    const allyCommand = fixedEncounterCommand({ version: 1, rules: [
+      { id: 'ally-manual', kind: 'gm-manual', actorKey: 'ally', itemName: 'Bite', parameters: {} },
+    ], legendaryRecovery: [] });
+    const mixed: ForgeEncounterPackage = { ...bundle,
+      actors: [...bundle.actors, { key: 'ally', label: 'Ally Guard', source: allySource, sourceHash: hashSource(allySource) }],
+      macros: [...bundle.macros, { ...bundle.macros[0]!, key: 'ally-control', name: 'Ally control', command: allyCommand,
+        commandHash: hashSource(allyCommand), bindings: { ally: 'ally' } }],
+    };
+    const before = structuredClone(mixed), prepared = await localizeForgeEncounterWithGm({ bundle: mixed, service });
+    expect(prepared.actors.map(actor => actor.key)).toEqual(['guard', 'ally']);
+    expect(prepared.macros.map(macro => macro.key)).toEqual(['ally-control']);
+    const item = (prepared.actors.find(actor => actor.key === 'ally')!.artifact.items as any[])[0];
+    expect(item.name).toBe('译文 Bite');
+    const rule = readFixedEncounterConfiguration(prepared.macros[0]!.command)!.rules[0]!;
+    expect(rule).toMatchObject({ actorKey: 'ally', itemName: item.name, id: 'ally-manual' });
+    expect(prepared.macros[0]!.commandHash).toBe(hashSource(prepared.macros[0]!.command));
+    expect(prepared.reviewFindings?.filter(finding => finding.includes('宏未准备'))).toHaveLength(1);
+    expect(prepared.reviewFindings?.some(finding => finding.includes('control') && finding.includes('256'))).toBe(true);
+    expect(prepared.bundle.macros).toEqual(before.macros);
+    expect(mixed).toEqual(before);
+    const restored = await prepareForgeEncounter(serializeForgeEncounterPackage(prepared.bundle));
+    expect(restored.actors.map(actor => actor.artifact)).toEqual(prepared.actors.map(actor => actor.artifact));
+    expect(restored.macros).toEqual(prepared.macros);
+  });
+  for (const failure of ['identity', 'package-approval'] as const)
+    test(`a failed package localization ${failure} retains translated saved Actors without preparing old-name macros`, async () => {
+      const original = sourcePackage(), prepared = await prepareForgeEncounter(serializeForgeEncounterPackage(original));
+      const actor = prepared.actors[0]!;
+      const saved: ForgeEncounterPackage = { ...original, actors: [{ ...original.actors[0]!, artifact: actor.artifact,
+        artifactHash: hashArtifact(actor.artifact), rulePresentation: actor.rulePresentation }] };
+      const localized = await localizeForgeEncounterWithGm({ bundle: saved, service: fakeService });
+      const localization = { ...localized.bundle.localization!, packageText: { ...localized.bundle.localization!.packageText,
+        requestHash: 'a'.repeat(64) } };
+      const broken: ForgeEncounterPackage = failure === 'identity' ? { ...localized.bundle, id: 'wrong-localization-identity' }
+        : { ...localized.bundle, localization, id: localizedEncounterId(localization.sourcePackageId, localization) };
+      const retained = await prepareForgeEncounter(serializeForgeEncounterPackage(broken));
+      expect(retained.actors.map(entry => entry.artifact)).toEqual(localized.actors.map(entry => entry.artifact));
+      expect(retained.macros).toEqual([]);
+      expect(retained.bundle.macros).toEqual(original.macros);
+      expect(retained.reviewFindings?.some(finding => finding.includes('宏未准备')
+        && finding.includes(failure === 'identity' ? '身份' : '重新审核'))).toBe(true);
+      expect(retained.reviewFindings?.join('\n')).not.toContain('原语言 Actor 保留');
+    });
+  test('invalid localization metadata checks actual saved Actor bindings while source-only matching macros remain ready', async () => {
+    const localized = await localizeForgeEncounterWithGm({ bundle: sourcePackage(), service: fakeService });
+    const saved: ForgeEncounterPackage = { ...localized.bundle,
+      actors: localized.bundle.actors.map(member => {
+        const actor = localized.actors.find(entry => entry.key === member.key)!;
+        expect(actor.artifactHash).toBe(hashArtifact(actor.artifact));
+        expect(member.sourceHash).toBe(hashSource(member.source));
+        return { ...member, artifact: actor.artifact, artifactHash: hashArtifact(actor.artifact) };
+      }),
+      macros: [...localized.bundle.macros, { ...localized.macros[0]!, key: 'ready-control' }],
+    };
+    const malformed = JSON.parse(serializeForgeEncounterPackage(saved));
+    malformed.localization.packageText.version = 99;
+    const retained = await prepareForgeEncounter(JSON.stringify(malformed));
+    expect(retained.bundle.localization).toBeUndefined();
+    expect(retained.actors.map(actor => actor.artifact)).toEqual(localized.actors.map(actor => actor.artifact));
+    expect(retained.macros.map(macro => macro.key)).toEqual(['ready-control']);
+    const itemName = (retained.actors[0]!.artifact.items as any[])[0].name;
+    expect(itemName).toBe('译文 Bite');
+    expect(readFixedEncounterConfiguration(retained.macros[0]!.command)!.rules[0]!.itemName).toBe(itemName);
+    expect(retained.bundle.macros).toEqual(malformed.macros);
+    expect(retained.reviewFindings?.some(finding => finding.includes('control') && finding.includes('宏未准备'))).toBe(true);
+    expect(retained.reviewFindings?.join('\n')).toContain('现有 Actor 产物保留');
+    expect(retained.reviewFindings?.join('\n')).not.toContain('原语言 Actor 保留');
+    const sourceOnly = { ...sourcePackage(), localization: malformed.localization };
+    const originalLanguage = await prepareForgeEncounter(JSON.stringify(sourceOnly));
+    expect(originalLanguage.actors[0]!.name).toBe('Marsh Guard');
+    expect(originalLanguage.macros.map(macro => macro.key)).toEqual(['control']);
+    expect(readFixedEncounterConfiguration(originalLanguage.macros[0]!.command)!.rules[0]!.itemName)
+      .toBe((originalLanguage.actors[0]!.artifact.items as any[])[0].name);
+    expect(originalLanguage.reviewFindings?.some(finding => finding.includes('宏未准备'))).toBe(false);
+  });
+  for (const binding of ['primary', 'additional'] as const)
+    test(`retained localized bindings enforce the fixed 256 character limit for ${binding} names`, async () => {
+      for (const chineseLength of [55, 60]) {
+        const fixture = longBindingFixture();
+        const actorSource = fixture.bundle.actors[0]!.source.replace(
+          'Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6+2) piercing damage.',
+          'Constitution Saving Throw: DC 14, one creature within 30 feet. Failure: 5 (1d6+2) poison damage.',
+        ) + '\n- Controller. The GM resolves this rule.';
+        const bundle: ForgeEncounterPackage = { ...fixture.bundle,
+          actors: [{ ...fixture.bundle.actors[0]!, source: actorSource, sourceHash: hashSource(actorSource) }],
+        };
+        const service = { ...fixture.service, translate: async (request: LocalizationRequest) => {
+          const draft = await fixture.service.translate(request);
+          for (const field of request.texts) if (field.kind === 'title' && field.source === fixture.name)
+            draft.texts.find(text => text.id === field.id)!.text = '长'.repeat(chineseLength);
+          return draft;
+        } };
+        const localized = await localizeForgeEncounterWithGm({ bundle, service });
+        const actor = localized.actors[0]!, items = actor.artifact.items as any[];
+        const longItem = items.find(item => item.name.endsWith(fixture.name))!;
+        const controller = items.find(item => item.name.endsWith('Controller'))!;
+        expect(longItem.name.length).toBe(chineseLength + 201);
+        expect(Object.values<any>(longItem.system.activities).filter(activity => activity.type === 'save')).toHaveLength(1);
+        const rule = binding === 'primary'
+          ? { id: 'manual', kind: 'gm-manual' as const, actorKey: 'guard', itemName: longItem.name, parameters: {} }
+          : { id: 'lock', kind: 'gm-activity-lock' as const, actorKey: 'guard', itemName: controller.name,
+            parameters: { activityItemNames: [longItem.name] } };
+        const command = fixedEncounterCommand({ version: 1, rules: [rule], legendaryRecovery: [] });
+        const { localization: _localization, ...original } = localized.bundle;
+        const saved: ForgeEncounterPackage = { ...original,
+          actors: [{ ...original.actors[0]!, artifact: actor.artifact, artifactHash: hashArtifact(actor.artifact) }],
+          macros: [{ ...original.macros[0]!, command, commandHash: hashSource(command) }],
+        };
+        const prepared = await prepareForgeEncounter(serializeForgeEncounterPackage(saved));
+        expect(prepared.actors[0]!.artifact).toEqual(actor.artifact);
+        expect(prepared.bundle.macros).toEqual(saved.macros);
+        if (chineseLength === 55) {
+          expect(prepared.macros).toHaveLength(1);
+          expect(prepared.macros[0]!.command).toBe(command);
+          expect(prepared.reviewFindings?.some(finding => finding.includes('256'))).toBe(false);
+        } else {
+          expect(prepared.macros).toEqual([]);
+          expect(prepared.reviewFindings?.some(finding => finding.includes('256') && finding.includes('宏未准备'))).toBe(true);
+        }
+      }
+    });
 });
 
 test('both Actor source summaries preserve compound count qualifiers across bracket presentation',()=>{
@@ -908,7 +1064,7 @@ test('both Actor source summaries preserve compound count qualifiers across brac
 /** Test orchestration of the supported UI steps: public draft generation,
  * explicit fixture GM confirmation, then formal regeneration. No model review
  * or copied private localization implementation is used. */
-async function localizeForgeEncounterWithGm(input:{bundle:ForgeEncounterPackage;service:any;signal?:AbortSignal;onReview?:(entry:any)=>void;priorReviews?:readonly any[]}){
+async function localizeForgeEncounterWithGm(input:{bundle:ForgeEncounterPackage;service:ReviewedTranslationServicePort;signal?:AbortSignal;onReview?:(entry:EncounterLocalizationProgress)=>void;priorReviews?:readonly EncounterLocalizationProgress[]}){
   const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(input.bundle),input.signal);
   const draft=await draftForgeEncounterLocalization({prepared,service:input.service,signal:input.signal,
     priorDrafts:input.priorReviews,onReview:input.onReview});

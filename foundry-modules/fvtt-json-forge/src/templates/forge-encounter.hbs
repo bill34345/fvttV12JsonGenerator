@@ -147,6 +147,7 @@
     {{else}}<button type="button" data-action="encounter-localize" {{#if busy}}disabled{{/if}}>生成中文草稿并做本地校验</button><p>使用当前 AI 连接生成显示文本草稿；不会自动请求付费模型审核。中文草稿须经 GM 明确核对批准后才成为正式候选。</p>{{/if}}
     {{#each actors}}<details class="forge-encounter-macro"><summary>{{#if isPrimary}}主角色{{else}}配套角色{{/if}}：<strong>{{name}}</strong>（{{key}}）— HP {{hp}} / AC {{ac}} / CR {{cr}}</summary>
       {{#if assisted}}<p>有配套宏/GM辅助规则，详见下方逐项规则。</p>{{/if}}
+      {{#if previewIssues}}<p>此角色的部分保存字段无法预览；原始 Actor JSON 仍可查看和下载。</p><ul>{{#each previewIssues}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
       <p class="forge-localized-prose">{{biography}}</p>
       {{#each abilities}}<article><h4>{{name}}</h4><p class="forge-localized-prose">{{description}}</p></article>{{/each}}
       <details><summary>保留的原始来源（用于核对）</summary><pre><code>{{source}}</code></pre></details>

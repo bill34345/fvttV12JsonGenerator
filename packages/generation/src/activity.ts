@@ -222,19 +222,21 @@ export class ActivityGenerator {
       };
     } else if (action.type === 'heal' && action.healing) {
       const recipient=action.healing.target;
+      const unresolvedRecipient='GM：治疗目标未提供，请按完整原文确认对象、数量与范围。';
+      const recipientSpecial=recipient?recipient.special??'':unresolvedRecipient;
       activities[id] = {
         _id: id,
         type: 'heal',
         healing: this.formatHealing(action.healing),
-        // schema-derived: missing range defaults to self in dnd5e 5.3.3.
-        // A source-qualified creature recipient has special range, never a
-        // guessed distance or an implicit self-only range.
-        ...(recipient&&recipient.type!=='self'?{range:{units:'spec',special:recipient.special,override:false}}:{}),
+        // schema-derived: RangeField defaults to self. Missing recipients need
+        // an explicit GM boundary instead; prompt controls templates, not a
+        // recipient dialog or automatic source-rule adjudication.
+        ...(recipient?.type!=='self'?{range:{units:'spec',special:recipientSpecial,override:false}}:{}),
         target: {
           override: false,
-          prompt: !!recipient&&recipient.type!=='self',
+          prompt: recipient?.type!=='self',
           template: { count: '', contiguous: false, type: '', size: '', width: '', height: '', units: 'ft' },
-          affects: { count: recipient ? recipient.count===undefined?'':String(recipient.count) : '1', type: recipient?.type??'self', choice: false, special: recipient?.special??'' },
+          affects: { count: recipient?.count===undefined?'':String(recipient.count), type: recipient?.type??'any', choice: false, special: recipientSpecial },
         },
       };
     } else if (action.damage && action.damage.length > 0) {

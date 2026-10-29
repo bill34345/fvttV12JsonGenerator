@@ -1,5 +1,5 @@
 import { displayName } from '@fvtt-json-generator/models/display-name';
-import {isSourceCandidateReview,sourceOperationTargetType,sourceOperationTargetCount,sourceOperationSelfTarget,sourceOperationSelfArea,isNeutralSourceAttack,sourceActorNameMatches} from '@fvtt-json-generator/models/source-operations';
+import {hasSourceCandidateFindings,sourceOperationTargetType,sourceOperationTargetCount,sourceOperationSelfTarget,sourceOperationSelfArea,isNeutralSourceAttack,sourceActorNameMatches} from '@fvtt-json-generator/models/source-operations';
 import {generateGmAttackActivities,sourceAttackActivityRange} from './gm-attack-activities';
 import {applySourceAttackDamageModes} from './source-attack-modes';
 import { ActionParser } from '@fvtt-json-generator/parser/action';
@@ -62,6 +62,7 @@ import {
   extractDelimitedSegment,
   createCustomEffect,
   createRandomId,
+  mapDamageType,
 } from './actor-text';
 import {
   generateConditionEffects,
@@ -79,6 +80,7 @@ import {
   inferredAppliedConditions,
   conditionActivityTargets,
   officialCondition,
+  type InferredAppliedCondition,
 } from './actor-effects';
 import { buildBleedingFlag, extractBleedingSpec, hasDelayedBleedingFormula } from './bleeding';
 import {
@@ -131,6 +133,7 @@ import { applyActorResourceSemantics } from './actor-resource-semantics';
 import { applyActorBehaviorSemantics } from './actor-behavior-semantics';
 import type { GenerationIconResolver } from './ports';
 import { projectWeaponProperties } from './weapon-properties';
+import { projectActorLanguages } from './actor-languages';
 import { createRulePresentationPlan, type ConsumedRuleAction, type RulePresentationPlan } from './rule-presentation';
 import type {GenerationDiagnostic} from '@fvtt-json-generator/contracts/diagnostics';
 
@@ -170,82 +173,6 @@ type GeneratedActionData = ActionData & {
   restRecharge?: 'sr' | 'lr';
   requiresConcentration?: boolean;
   targetCondition?: string;
-};
-
-const LANGUAGE_CODE_MAP: Record<string, string> = {
-  // 中文 → Foundry VTT dnd5e code
-  '通用语': 'common',
-  '通用': 'common',
-  '龙语': 'draconic',
-  '精灵语': 'elvish',
-  '精灵': 'elvish',
-  '矮人语': 'dwarvish',
-  '矮人': 'dwarvish',
-  '巨人语': 'giant',
-  '巨人': 'giant',
-  '地精语': 'goblin',
-  '地精': 'goblin',
-  '兽人语': 'orc',
-  '兽人': 'orc',
-  '深渊语': 'deep',
-  '深渊': 'deep',
-  '炼狱语': 'infernal',
-  '炼狱': 'infernal',
-  '天界语': 'celestial',
-  '天界': 'celestial',
-  '木族语': 'sylvan',
-  '木族': 'sylvan',
-  '地下通用语': 'undercommon',
-  '水族语': 'aquan',
-  '水族': 'aquan',
-  '风族语': 'auran',
-  '风族': 'auran',
-  '火族语': 'ignan',
-  '火族': 'ignan',
-  '土族语': 'terran',
-  '土族': 'terran',
-  '狗头人语': 'draconic',
-  '地底侏儒语': 'gnomish',
-  '半身人语': 'halfling',
-  '半身人': 'halfling',
-  '恐爪怪语': 'deep',
-  '泛语言': 'all',
-  '无': '',
-  // 英文 → Foundry code (pass-through)
-  'common': 'common',
-  'abyssal': 'abyssal',
-  'aarakocra': 'aarakocra',
-  'cant': 'cant',
-  'druidic': 'druidic',
-  'gith': 'gith',
-  'gnoll': 'gnoll',
-  'sign': 'sign',
-  'gnomish': 'gnomish',
-  'halfling': 'halfling',
-  'primordial': 'primordial',
-  'draconic': 'draconic',
-  'elvish': 'elvish',
-  'dwarvish': 'dwarvish',
-  'giant': 'giant',
-  'goblin': 'goblin',
-  'orc': 'orc',
-  'deep': 'deep',
-  'infernal': 'infernal',
-  'celestial': 'celestial',
-  'sylvan': 'sylvan',
-  'undercommon': 'undercommon',
-  'aquan': 'aquan',
-  'auran': 'auran',
-  'ignan': 'ignan',
-  'terran': 'terran',
-};
-
-const V14_LANGUAGE_ALIASES: Record<string, string> = {
-  深渊语: 'abyssal', 深渊: 'abyssal', 深渊魔语: 'abyssal', 深渊魔: 'abyssal',
-  深语: 'deep', 侏儒语: 'gnomish', 原初语: 'primordial',
-  通用手语: 'sign', 手语: 'sign', 盗贼黑话: 'cant', 德鲁伊语: 'druidic',
-  吉斯语: 'gith', 豺狼人语: 'gnoll', 鸟人语: 'aarakocra',
-  'deep speech': 'deep', dwarven: 'dwarvish',
 };
 
 const SKILL_ABILITIES: Record<string, string> = {
@@ -366,7 +293,7 @@ export class ActorGenerator {
     this.resetTokenDefaults(actor);
 
     this.resetActorDefaults(actor);
-    if(parsed.candidateReview){
+    if(hasSourceCandidateFindings(parsed.candidateReview)){
       if(this.reviewDelivery==='document'){
         actor.flags??={};actor.flags.fvttJsonGenerator??={};
         actor.flags.fvttJsonGenerator.candidateReview=structuredClone(parsed.candidateReview);
@@ -521,16 +448,7 @@ export class ActorGenerator {
       actor.system.traits.ci = { value: parsed.traits.ci || [], custom: '' };
       actor.system.traits.dv = { value: parsed.traits.dv || [], custom: parsed.traits.dvCustom ?? '', bypasses };
       if (parsed.traits.dm) actor.system.traits.dm = parsed.traits.dm;
-      actor.system.traits.languages = {
-        // schema-derived: dnd5e 5.3.3 prepareLanguages recognizes the special ALL key.
-        value: (parsed.traits.languages || []).map((lang: string) => {
-          // schema-derived: v14 language labels use case-sensitive system keys; normalize known English aliases only.
-          const v14Alias = this.isV14() ? V14_LANGUAGE_ALIASES[lang.toLowerCase()] : undefined;
-          const code = v14Alias || LANGUAGE_CODE_MAP[lang] || (this.isV14() ? LANGUAGE_CODE_MAP[lang.toLowerCase()] : undefined) || lang;
-          return this.isV14() && /^all$/iu.test(code) ? 'ALL' : code;
-        }).filter((lang: string) => lang !== ''),
-        custom: parsed.traits.languagesCustom || '',
-      };
+      actor.system.traits.languages = projectActorLanguages(parsed.traits.languages||[],parsed.traits.languagesCustom||'',this.isV14());
       
       if (parsed.traits.senses) {
         actor.system.attributes.senses = this.buildSenses(parsed.traits.senses);
@@ -961,6 +879,17 @@ export class ActorGenerator {
     }
   }
 
+  private bindLegendaryResistanceResource(item:any):void {
+    // Schema-derived: 5.3.3's failed-save button and attribute consumption
+    // both spend resources.legres; a separate Item pool would double it.
+    item.system.identifier='legendary-resistance';
+    item.system.uses={spent:0,max:'',recovery:[]};
+    for(const activity of Object.values<any>(item.system.activities)){
+      if(activity.flags?.fvttJsonGenerator?.sourceOperation?.relationship==='follow-up')continue;
+      activity.consumption={targets:[{type:'attribute',target:'resources.legres.value',value:'1',scaling:{mode:'',formula:''}}],spellSlot:false,scaling:{allowed:false,max:''}};
+    }
+  }
+
   private appendActionItems(
     items: any[],
     source: unknown,
@@ -1022,16 +951,20 @@ export class ActorGenerator {
           `structuredActions/${key}/${index}/${action.name}`,
           sectionOverride,
         );
-        if(action.candidateReview){
-          for(const item of this.reviewDelivery==='document'?items.slice(itemStart):[]){
+        if(this.isV14()&&action.actorResource==='legres')for(const item of items.slice(itemStart))this.bindLegendaryResistanceResource(item);
+        if(hasSourceCandidateFindings(action.candidateReview)&&this.reviewDelivery==='document'){
+          for(const item of items.slice(itemStart)){
             item.flags??={};item.flags.fvttJsonGenerator??={};
             item.flags.fvttJsonGenerator.candidateReview=structuredClone(action.candidateReview);
             item.system.description.value='<p><strong>待审候选：规则检查未通过，请对照完整原文核对后决定使用。</strong></p>'+item.system.description.value;
           }
+        }
+        if(action.candidateCounters?.length){
           const item=items[itemStart];
           if(action.sourceOperations&&action.candidateCounters?.length===1){
             const counter=action.candidateCounters[0]!;item.system.uses={spent:0,max:String(counter.max),recovery:[]};
             for(const activity of Object.values(item.system.activities) as any[]){
+              if(activity.flags?.fvttJsonGenerator?.sourceConditionStage)continue;
               if(activity.flags?.fvttJsonGenerator?.sourceOperation?.relationship!=='follow-up')activity.consumption={targets:[{type:'itemUses',target:'',value:'1',scaling:{mode:'',formula:''}}],spellSlot:false,scaling:{allowed:false,max:''}};
             }
             item.system.description.value+='<p>'+formatLiteralHtml('次数恢复由GM按原文手动处理：'+(counter.recovery??'原回复未给恢复方式'))+'</p>';
@@ -1079,7 +1012,7 @@ export class ActorGenerator {
         embeddedEffects: undefined,
         failEffects: action.failEffects?.map(effect => ({ ...effect, describe: undefined })),
         successEffects: action.successEffects?.map(effect => ({ ...effect, describe: undefined })),
-        subActions: action.subActions?.map(sub => ({ ...sub, describe: '' })),
+        subActions: undefined,
       };
       this.appendSingleStructuredAction(items, safe, activationType, activityContext, logicalPath, sectionOverride);
       const item = items.at(-1)!;
@@ -1129,6 +1062,7 @@ export class ActorGenerator {
       }
       // Retain the sanitized consumed record: later lifecycle and presentation
       // passes must not turn the restored display prose back into mechanics.
+      this.attachSubActivities(item,action.subActions);
       return;
     }
     if(action.sourceOperations){
@@ -1152,12 +1086,12 @@ export class ActorGenerator {
       const extra=(type:'attack'|'save'|'damage'|'heal',fields:Record<string,unknown>)=>operations.push({id:uniqueOperationId('flat-'+type),name:action.name,type,relationship:operations.length?'follow-up':'primary',sourceText:source,proof:{},...fields} as typeof operations[number]);
       if(action.attackType&&action.toHit!==undefined&&!operations.some(op=>op.attack&&op.attack.type===action.attackType&&op.attack.toHit===action.toHit))extra('attack',{attack:{type:action.attackType,toHit:action.toHit},damage:action.damage??[]});
       if(action.DC!==undefined&&action.ability&&!operations.some(op=>op.save&&op.save.dc===action.DC&&op.save.abilities.some(ability=>ability===action.ability)))extra('save',{save:{dc:action.DC,abilities:[action.ability],choice:'single',outcome:action.saveOutcome??'none'}});
-      if(action.healing&&!operations.some(op=>JSON.stringify(op.healing)===JSON.stringify(action.healing)))extra('heal',{healing:{...action.healing,target:action.healing.target??{type:'creature',count:1,special:''}}});
-      const additional=(action.damage??[]).filter(part=>!operations.some(op=>op.damage?.some(existing=>existing.formula===part.formula&&existing.type===part.type)));
+      if(action.healing&&!operations.some(op=>JSON.stringify(op.healing)===JSON.stringify(action.healing)))extra('heal',{healing:{...action.healing,target:action.healing.target??{type:'any',special:'GM：治疗目标未提供，请按完整原文确认对象、数量与范围。'}}});
+      const additional=(action.damage??[]).filter(part=>!operations.some(op=>op.damage?.some(existing=>existing.formula.replace(/\s+/gu,'').toLowerCase()===part.formula.replace(/\s+/gu,'').toLowerCase()&&(mapDamageType(existing.type)||existing.type)===(mapDamageType(part.type)||part.type))));
       if(additional.length)extra('damage',{damage:additional.map(part=>({...part,relationship:'additional'}))});
       // Build the existing resource/section carrier without feeding any rule
       // prose into legacy inference. Each child is an explicit clickable roll.
-      const safe:StructuredActionData={...action,sourceOperations:undefined,sourceContext:undefined,executionMode:undefined,nativeRuleText:undefined,manualRemainder:undefined,describe:'',sourceRuleFacts:[]};
+      const safe:StructuredActionData={...action,sourceOperations:undefined,sourceContext:undefined,subActions:undefined,executionMode:undefined,nativeRuleText:undefined,manualRemainder:undefined,describe:'',sourceRuleFacts:[]};
       this.appendSingleStructuredAction(items,safe,activationType,activityContext,logicalPath,sectionOverride);
       const item=items.at(-1)!,base=Object.values(item.system.activities)[0] as any;
       item.system.activities={};item.effects=[];
@@ -1234,7 +1168,9 @@ export class ActorGenerator {
             item.system.activities[ranged._id]=ranged;
           }
         }
-        const selected=(Object.values(item.system.activities) as any[]).filter(activity=>activity.flags?.fvttJsonGenerator?.sourceOperation?.id===op.id&&(!neutral||activity.flags.fvttJsonGenerator.sourceOperation.role==='damage'));
+        const ownActivities=Object.values<any>(item.system.activities).filter(activity=>activity.flags?.fvttJsonGenerator?.sourceOperation?.id===op.id);
+        const hitDamage=ownActivities.filter(activity=>activity.flags.fvttJsonGenerator.sourceOperation.role==='damage');
+        const selected=neutral?(hitDamage.length?hitDamage:ownActivities.filter(activity=>activity.flags.fvttJsonGenerator.sourceOperation.role==='attack-roll')):ownActivities;
         const conditions=operationAppliedConditions(sourceText,op,operations).map(condition=>({...condition,statuses:op.appliedConditions?condition.statuses:condition.statuses.filter(status=>!outerStatuses.has(status)),...(neutral?{condition:[condition.condition,'DM确认此GM攻击已命中后应用状态模板。'].filter(Boolean).join('\n')}: {})})).filter(condition=>condition.statuses.length);
         const before=item.effects.length;
         this.attachConditionTemplates(item,conditions,[contextText,operationConditionSource(sourceText,op,operations)||op.sourceText||sourceText,op.condition].filter(Boolean).join('\n'),logicalPath+'/source-operation/'+op.id,selected);
@@ -1242,6 +1178,7 @@ export class ActorGenerator {
       }
       applySourceAttackDamageModes(item,sourceText,operations,action.name,logicalPath,part=>this.activityGenerator.formatDamage(part));
       if(action.embeddedEffects?.length)attachEmbeddedEffectsExt(item,action.embeddedEffects);
+      this.attachSubActivities(item,action.subActions);
       item.system.description={value:formatMixedRuleHtml([contextText,sourceText].filter(Boolean).join('\n\n'),true,operationKinds),chat:''};
       item.flags.fvttJsonGenerator.manualRule={version:1,mode:'native-with-gm',sourceText,nativeRuleText:action.nativeRuleText,manualRemainder:action.manualRemainder,operations:operationKinds,sourceOperations:operations,sourceContext:action.sourceContext??[],logicalPath};
       const consumed=this.consumedRuleActions.at(-1);if(consumed)consumed.sourceStructured=action;
@@ -1251,7 +1188,7 @@ export class ActorGenerator {
       const sourceText=action.describe??'';
       // Typed primary mechanics do not require the program to parse either
       // the full description or the AI's native-rule presentation text.
-      const safe={...action,literalMechanics:true as const,executionMode:undefined,nativeRuleText:undefined,manualRemainder:undefined,spellUseRecords:undefined,gmTriggeredSave:undefined,nativeFailureStatuses:undefined,describe:'',sourceRuleFacts:[]};
+      const safe={...action,literalMechanics:true as const,subActions:undefined,executionMode:undefined,nativeRuleText:undefined,manualRemainder:undefined,spellUseRecords:undefined,gmTriggeredSave:undefined,nativeFailureStatuses:undefined,describe:'',sourceRuleFacts:[]};
       this.appendSingleStructuredAction(items,safe,activationType,activityContext,logicalPath,sectionOverride);
       const item=items.at(-1)!;
       const conditions=action.embeddedEffects?.length?[]:inferredAppliedConditions(sourceText);
@@ -1293,10 +1230,11 @@ export class ActorGenerator {
         this.attachConditionTemplates(item,save.failureStatuses.map(status=>({statuses:[status],condition:save.trigger})),save.sourceText,logicalPath+'/gm-save',[activity]);
         item.system.activities[activity._id]=activity;
       }
-      this.attachConditionTemplates(item,conditions.filter(condition=>!condition.statuses.every(status=>item.effects.some((effect:any)=>effect.statuses?.includes(status)))),sourceText,logicalPath+'/native-conditions');
+      this.attachConditionTemplates(item,conditions.filter(condition=>condition.sourceStage||!condition.statuses.every(status=>item.effects.some((effect:any)=>effect.statuses?.includes(status)))),sourceText,logicalPath+'/native-conditions');
       const operations=[action.type==='attack'?'attack':'',action.DC!==undefined||action.gmTriggeredSave?'save':'',action.damage?.length?'damage':'',action.uses||action.recharge||action.spellUseRecords?'resource':'',action.aoe?'area':''].filter(Boolean);
       item.system.description={value:formatMixedRuleHtml(sourceText,true,operations),chat:''};
       for(const activity of Object.values(item.system.activities) as any[])activity.description={chatFlavor:formatMixedRuleHtml(sourceText,false,operations)};
+      this.attachSubActivities(item,action.subActions);
       item.flags.fvttJsonGenerator.manualRule={version:1,mode:'native-with-gm',sourceText,nativeRuleText:action.nativeRuleText,manualRemainder:action.manualRemainder,operations,logicalPath};
       const consumed=this.consumedRuleActions.at(-1);if(consumed)consumed.sourceStructured={...safe,literalMechanics:undefined};
       return;
@@ -1372,15 +1310,12 @@ export class ActorGenerator {
         override: false,
         condition: action.activation?.condition ?? '',
       };
+      if(action.sourceFeatureId){activity.flags??={};activity.flags.fvttJsonGenerator??={};activity.flags.fvttJsonGenerator.sourceResourceRole='primary';}
     }
 
     if(action.type==='attack'&&action.DC!==undefined&&action.ability){
       const saves=this.activityGenerator.generate({name:action.name+'（GM豁免）',type:'save',desc:'',logicalPath:logicalPath+'/explicit-save',save:{dc:action.DC,ability:action.ability,dcSourceKind:'literal',outcome:'none'}},{});
-      for(const activity of Object.values(saves) as any[]){activity.name=action.name+'（GM豁免）';activity.activation={type:'special',value:null,override:true,condition:action.saveCondition??action.describe??''};activity.consumption={targets:[],spellSlot:false,scaling:{allowed:false,max:''}};activity.description={chatFlavor:formatLiteralHtml(action.describe??'')};item.system.activities[activity._id]=activity;}
-    }
-
-    if (action.subActions && action.subActions.length > 0) {
-      this.attachSubActivities(item, action.subActions);
+      for(const activity of Object.values(saves) as any[]){activity.name=action.name+'（GM豁免）';activity.activation={type:'special',value:null,override:true,condition:action.saveCondition??action.describe??''};activity.consumption={targets:[],spellSlot:false,scaling:{allowed:false,max:''}};activity.description={chatFlavor:formatLiteralHtml(action.describe??'')};if(action.sourceFeatureId){activity.flags??={};activity.flags.fvttJsonGenerator??={};activity.flags.fvttJsonGenerator.sourceResourceRole='follow-up';}item.system.activities[activity._id]=activity;}
     }
 
     if (action.embeddedEffects && action.embeddedEffects.length > 0) {
@@ -1475,6 +1410,7 @@ export class ActorGenerator {
       markSpellcastingFeatureItem(item, action.spellcastingFeatureKey,action.activation?.explicit?action.activation.type:undefined,activationCost??undefined);
     }
 
+    this.attachSubActivities(item,action.subActions);
     this.consumedRuleActions.push({ logicalPath, itemIndex: items.length,
       action: activityData as ActionData, sourceStructured: action });
     items.push(item);
@@ -1492,8 +1428,22 @@ export class ActorGenerator {
     attachEmbeddedEffectsExt(item, embeddedEffects);
   }
 
-  private attachConditionTemplates(item:any,conditions:import('@fvtt-json-generator/models/source-operations').CanonicalAppliedCondition[],source:string,path:string,selected?:any[]):void{
-    attachEmbeddedEffectsExt(item,conditions.map(condition=>({type:condition.statuses[0]??'Effect',describe:source,...condition})),selected,path);
+  private attachConditionTemplates(item:any,conditions:InferredAppliedCondition[],source:string,path:string,selected?:any[]):void{
+    attachEmbeddedEffectsExt(item,conditions.filter(condition=>!condition.sourceStage).map(condition=>({type:condition.statuses[0]??'Effect',describe:source,...condition})),selected,path);
+    for(const condition of conditions){
+      const {sourceStage,...declaration}=condition;
+      if(!sourceStage)continue;
+      const stagePath=path+'/condition-stage/'+declaration.statuses.join('-');
+      const activity=Object.values<any>(this.activityGenerator.generate({name:'退出时状态 Exit Conditions',type:'utility',desc:sourceStage,logicalPath:stagePath},{}))[0];
+      activity.name='退出时状态 Exit Conditions';
+      activity.activation={type:'special',value:null,override:true,condition:sourceStage};
+      activity.consumption={targets:[],spellSlot:false,scaling:{allowed:false,max:''}};
+      activity.description={chatFlavor:formatLiteralHtml(sourceStage)};
+      const sourceOperationId=selected?.[0]?.flags?.fvttJsonGenerator?.sourceOperation?.id;
+      activity.flags.fvttJsonGenerator.sourceConditionStage={version:1,source:sourceStage,...(sourceOperationId?{sourceOperationId}:{})};
+      item.system.activities[activity._id]=activity;
+      attachEmbeddedEffectsExt(item,[{type:declaration.statuses[0]??'Effect',describe:sourceStage,...declaration}],[activity],stagePath);
+    }
   }
 
   private mapTriggerType(trigger: string): string {

@@ -2,7 +2,8 @@ import { displayName } from '@fvtt-json-generator/models/display-name';
 import yaml from 'js-yaml';
 export {prepareMonsterCandidateDelivery} from './candidate-delivery';
 import {sizeChoiceProgramNote} from './source-size';
-import {nativeAreaShape} from '@fvtt-json-generator/models/source-operations';
+import {legendaryResistanceBinding} from './native-resources';
+import {hasSourceCandidateFindings,nativeAreaShape} from '@fvtt-json-generator/models/source-operations';
 import { composeSourceTextPresentation, sourceTextPresentationBoundary, type SourceTextPresentation } from '@fvtt-json-generator/models/source-text-presentation';
 import type {SourceCandidateReview} from '@fvtt-json-generator/models/source-operations';
 import type {
@@ -59,18 +60,20 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR, source?:string)
   const castingFeatures=(activation?:CanonicalSpellcastingGroup['activationType'])=>(creature.spellcasting??[]).filter(g=>g.activationType===activation).map(renderSpellcastingFeature);
   const biography = renderBiography(creature);
   const sharedIds=new Set(creature.sourceResourcePools?.flatMap(pool=>pool.members.map(member=>member.featureId))??[]);
-  const featureEntry=(feature:CanonicalFeature,section:string)=>renderFeature(feature,section,sharedIds.has(feature.sourceFeatureId??''));
+  const resistance=legendaryResistanceBinding(creature);
+  const resistanceMax=creature.legendary?.resistanceMax??resistance?.max;
+  const featureEntry=(feature:CanonicalFeature,section:string)=>renderFeature(feature,section,sharedIds.has(feature.sourceFeatureId??''),resistance?.feature===feature);
   const data: Record<string, unknown> = {
     // Source-derived boundary: the complete canonical ability inventory is
     // rendered below; biography is literal narrative, not another rule input.
     'intake-biography-mode': 'literal-v1',
-    ...(candidateReview?{'intake-candidate-review':candidateReview}:{}),
+    ...(hasSourceCandidateFindings(candidateReview)?{'intake-candidate-review':candidateReview}:{}),
     ...(biography ? {'intake-biography-presentation':sourceTextPresentationBoundary(biography)} : {}),
     名称: displayName(creature.identity.name, creature.identity.englishName),
     类型: 'npc',
     体型: SIZE_ZH[creature.identity.size],
     集群个体体型: creature.identity.swarmSize ? SIZE_ZH[creature.identity.swarmSize] : undefined,
-    生物类型: TYPE_ZH[creature.identity.creatureType.toLowerCase()] ?? creature.identity.creatureTypeCustom ?? creature.identity.creatureType,
+    生物类型: TYPE_ZH[creature.identity.creatureType.toLowerCase()] ?? creature.identity.creatureType,
     生物类型备注: creature.identity.creatureTypeCustom,
     阵营: creature.identity.alignment ? ALIGNMENT_ZH[creature.identity.alignment.toLowerCase()] ?? creature.identity.alignment : undefined,
     能力: Object.fromEntries(Object.entries(ABILITY_ZH).map(([key, label]) => [label, creature.abilities[key as AbilityKey]])),
@@ -95,8 +98,8 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR, source?:string)
     语言备注: creature.languages.custom,
     传记: biography ? composeSourceTextPresentation(biography) : undefined,
     传奇动作次数: creature.legendary?.max,
-    ...(creature.legendary?.resistanceMax!==undefined&&creature.legendary.resistanceLairMax===undefined
-      ?{'传奇抗性次数':creature.legendary.resistanceMax}:{}),
+    ...(resistanceMax!==undefined&&creature.legendary?.resistanceLairMax===undefined
+      ?{'传奇抗性次数':resistanceMax}:{}),
     ...(creature.legendary?.lairMax?{'intake-legendary-ledger':{
       max:creature.legendary.max,lairMax:creature.legendary.lairMax,recovery:creature.legendary.recovery,
       ...(creature.legendary.resistanceLairMax===undefined?{}:{resistanceMax:creature.legendary.resistanceMax,resistanceLairMax:creature.legendary.resistanceLairMax}),
@@ -126,7 +129,7 @@ export function renderMonsterIntakeMarkdown(ir: MonsterIntakeIR, source?:string)
 }
 
 function renderSpellManifest(ir: MonsterIntakeIR): Record<string, unknown> | undefined {
-  const groups = ir.creature.spellcasting?.filter(group=>['str','dex','con','int','wis','cha'].includes(group.ability)&&group.usageGroups.some(usage=>usage.spellRefs.length));
+  const groups = ir.creature.spellcasting?.filter(group=>group.usageGroups.some(usage=>usage.spellRefs.length));
   if (!groups?.length) return undefined;
   return {
     schemaVersion: 1,
@@ -136,7 +139,7 @@ function renderSpellManifest(ir: MonsterIntakeIR): Record<string, unknown> | und
     spellcastingGroups: groups.map((group) => ({
       groupId: group.groupId,
       featureItemKey: group.groupId,
-      ability: group.ability,
+      ...(['str','dex','con','int','wis','cha'].includes(group.ability)?{ability:group.ability}:{}),
       ...(group.saveDc === undefined ? {} : { saveDc: group.saveDc }),
       ...(group.attackBonus === undefined ? {} : { attackBonus: group.attackBonus }),
       ...(group.recharge?{recharge:group.recharge}:{}),
@@ -225,7 +228,7 @@ function renderSpellcastingFeature(group: CanonicalSpellcastingGroup): Record<st
   return {
     ...renderFeature({
       name: group.featureName,
-      ...(group.candidateReview?{candidateReview:group.candidateReview}:{}),
+      ...(hasSourceCandidateFindings(group.candidateReview)?{candidateReview:group.candidateReview}:{}),
       ...(group.candidateCounters?{candidateCounters:group.candidateCounters}:{}),
       englishName: group.featureEnglishName,
       description: group.description,
@@ -252,7 +255,8 @@ export function renderMonsterFeatureName(feature: Pick<CanonicalFeature, 'name'|
   return qualifier && !baseName.includes(qualifier) ? `${baseName} ${qualifier}` : baseName;
 }
 
-function renderFeature(feature: CanonicalFeature, section: string,sharedPool=false): Record<string, unknown> {
+function renderFeature(feature: CanonicalFeature, section: string,sharedPool=false,nativeResistance=false): Record<string, unknown> {
+  const nativeFeatureUses=nativeResistance&&feature.uses!==undefined;
   const result: Record<string, unknown> = {
     名称: renderMonsterFeatureName(feature),
     // Program-owned projection boundary. Full AI prose remains visible, but
@@ -266,13 +270,16 @@ function renderFeature(feature: CanonicalFeature, section: string,sharedPool=fal
     描述: feature.description,
   };
   if(feature.sourceFeatureId)result.sourceFeatureId=feature.sourceFeatureId;
-  if(feature.candidateReview)result.candidateReview=feature.candidateReview;
+  if(nativeResistance)result.actorResource='legres';
+  if(hasSourceCandidateFindings(feature.candidateReview))result.candidateReview=feature.candidateReview;
   if(feature.candidateCounters)result.candidateCounters=feature.candidateCounters;
-  if (feature.executionMode === 'gm-manual') {
+  // Ledger-only native binding is applied by V14 generation; its manual
+  // carrier must remain intact for older targets.
+  if (feature.executionMode === 'gm-manual'&&!nativeFeatureUses) {
     result['执行模式'] = 'gm-manual';
     result['类型'] = 'utility';
   }
-  if(feature.executionMode==='native-with-gm'){
+  if(feature.executionMode==='native-with-gm'&&!nativeFeatureUses){
     result['执行模式']='native-with-gm';result.nativeRuleText=feature.nativeRuleText;result.manualRemainder=feature.manualRemainder;
     if(feature.spellUseRecords)result.spellUseRecords=feature.spellUseRecords;
     if(feature.gmTriggeredSave)result.gmTriggeredSave=feature.gmTriggeredSave;

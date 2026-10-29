@@ -181,34 +181,40 @@ function normalizeEncounterPackage(value: unknown): Readonly<ForgeEncounterPacka
   const id = slug(root.id, '$.id');
   const label = boundedString(root.label, '$.label', Number.MAX_SAFE_INTEGER, true);
   const target = decodeTarget(root.target, '$.target');
-  let primaryActorKey = slug(root.primaryActorKey, '$.primaryActorKey');
+  let primaryActorKey = typeof root.primaryActorKey === 'string' ? root.primaryActorKey : '';
   const rawActors = boundedArray(root.actors, '$.actors', 1, Number.MAX_SAFE_INTEGER);
   const findings:string[]=Array.isArray(root.reviewFindings)?root.reviewFindings.filter((entry):entry is string=>typeof entry==='string'):[];
   const usedKeys=new Set<string>();
+  const originalKeys=rawActors.map(entry=>entry&&typeof entry==='object'&&!Array.isArray(entry)?(entry as Record<string,unknown>).key:undefined);
+  const reservedKeys=new Set(originalKeys.filter(validActorKey));
+  const ambiguousKeys=new Set(originalKeys.filter((key,index):key is string=>validActorKey(key)&&originalKeys.indexOf(key)!==index));
   const actors=rawActors.map((entry,index)=>{
-    const actor=decodeActor(entry,`$.actors[${index}]`,findings);
-    let key=actor.key;while(usedKeys.has(key))key+=`-${index+1}`;
-    if(key!==actor.key)findings.push(`${actor.label}：重复技术 key 已改为 ${key}；Actor 保留。`);
-    usedKeys.add(key);return key===actor.key?actor:{...actor,key};
+    const original=originalKeys[index];
+    let key=validActorKey(original)&&!usedKeys.has(original)?original:`actor-${index+1}-${hashSource(JSON.stringify(entry)??'undefined').slice(0,12)}`;
+    while(usedKeys.has(key)||key!==original&&reservedKeys.has(key))key+='-next';
+    usedKeys.add(key);
+    return decodeActor(entry,`$.actors[${index}]`,key,findings);
   });
   const actorKeys = new Set(actors.map((actor) => actor.key));
   if(!actorKeys.has(primaryActorKey)){primaryActorKey=actors[0]!.key;findings.push('主要角色 key 未匹配；已保留全部 Actor 并使用首个条目作为列表入口。');}
+  const bindingKeys=new Set([...actorKeys].filter(key=>!ambiguousKeys.has(key)));
+  if(ambiguousKeys.size)findings.push(`重复角色 key ${[...ambiguousKeys].join(', ')} 的配套绑定归属不明确；角色保留，对应宏和素材暂不准备。`);
   const macros:ForgeEncounterPackageMacro[]=[];
   for(const [index,entry] of (Array.isArray(root.macros)?root.macros:[]).entries()){
-    try{const macro=decodeMacro(entry,`$.macros[${index}]`,actorKeys);
+    try{const macro=decodeMacro(entry,`$.macros[${index}]`,bindingKeys);
       if(macros.some(prior=>prior.key===macro.key))throw new TypeError('重复宏 key。');macros.push(macro);}
     catch(error){findings.push(`宏 ${index+1} 未准备：${error instanceof Error?error.message:String(error)}；Actor 保留。`);}
   }
   const assets:ForgeEncounterPackageAsset[]=[];
   for(const [index,entry] of (Array.isArray(root.assets)?root.assets:[]).entries()){
-    try{const asset=decodeAsset(entry,`$.assets[${index}]`,actorKeys);
+    try{const asset=decodeAsset(entry,`$.assets[${index}]`,bindingKeys);
       if(assets.some(prior=>prior.key===asset.key))throw new TypeError('重复素材 key。');assets.push(asset);}
     catch(error){findings.push(`素材 ${index+1} 未准备：${error instanceof Error?error.message:String(error)}；Actor 保留。`);}
   }
   let localization:EncounterLocalization|undefined;
   if(Object.hasOwn(root,'localization')){
     try{localization=decodeEncounterLocalization(root.localization);}
-    catch(error){findings.push(`翻译记录未准备：${error instanceof Error?error.message:String(error)}；原语言 Actor 保留。`);}
+    catch(error){findings.push(`翻译记录未准备：${error instanceof Error?error.message:String(error)}；现有 Actor 产物保留。`);}
   }
   const normalized: ForgeEncounterPackage = {
     schema: FORGE_ENCOUNTER_PACKAGE_SCHEMA,
@@ -237,17 +243,32 @@ function decodeTarget(value: unknown, path: string): ForgeEncounterPackageTarget
   return { ...TARGET };
 }
 
-function decodeActor(value:unknown,path:string,findings:string[]):ForgeEncounterPackageActor{
-  const record = plainRecord(value, path);
+function validActorKey(value:unknown):value is string{return typeof value==='string'&&value.length<=MAX_SLUG_LENGTH&&SLUG_PATTERN.test(value);}
+
+function decodeActor(value:unknown,path:string,key:string,findings:string[]):ForgeEncounterPackageActor{
+  let record:Record<string,unknown>;
+  try{record=plainRecord(value,path);}
+  catch(error){
+    const reviewFindings=[`${path} 未解析：${error instanceof Error?error.message:String(error)}；原始成员记录：${JSON.stringify(value)??'undefined'}`,`${path}.source：没有可转换的来源正文；原始值：undefined`];
+    findings.push(...reviewFindings);
+    return{key,label:`未完成角色 ${key}`,source:'',sourceHash:hashSource(''),reviewFindings};
+  }
   if(Object.keys(record).some(key=>!ACTOR_KEYS.includes(key as typeof ACTOR_KEYS[number])))findings.push(`${path} 含额外记录；Actor 内容保留。`);
-  const key = slug(record.key, `${path}.key`);
-  const label = boundedString(record.label, `${path}.label`, Number.MAX_SAFE_INTEGER, true);
-  const source = boundedUtf8String(record.source, `${path}.source`, Number.MAX_SAFE_INTEGER, true);
+  const reviewFindings=Array.isArray(record.reviewFindings)?record.reviewFindings.filter((entry):entry is string=>typeof entry==='string'):[];
+  const retain=(field:string,message:string)=>{if(reviewFindings.some(finding=>finding.startsWith(`${path}.${field}：`)))return;const finding=`${path}.${field}：${message}；原始值：${JSON.stringify(record[field])??'undefined'}`;reviewFindings.push(finding);findings.push(finding);};
+  if(key!==record.key)retain('key',`技术 key 已重建为 ${key}，角色内容保留`);
+  let artifact:JsonObject|undefined;
+  if(record.artifact!==undefined){
+    try{artifact=plainRecord(record.artifact,`${path}.artifact`) as JsonObject;}
+    catch{retain('artifact','保存的 Actor 无法解析；完整来源保留，可继续本地转换');}
+  }
+  const label=typeof record.label==='string'&&record.label.trim()?record.label:typeof artifact?.name==='string'&&artifact.name.trim()?artifact.name:key;
+  if(label!==record.label)retain('label',`显示名称已恢复为 ${label}`);
+  const source=typeof record.source==='string'?record.source:'';
+  if(!source.trim())retain('source','没有可转换的来源正文；已有 Actor 保留，未完成成员不会标成成功');
   const sourceHash=hashSource(source);
-  if(record.sourceHash!==sourceHash)findings.push(`${label}：sourceHash 与保存来源不一致；正文与 Actor 保留。`);
-  const artifact = record.artifact === undefined ? undefined : plainRecord(record.artifact, `${path}.artifact`) as JsonObject;
-  const reviewFindings=Array.isArray(record.reviewFindings)?record.reviewFindings.filter((entry):entry is string=>typeof entry==='string'):undefined;
-  return { key, label, source, sourceHash, ...(reviewFindings?{reviewFindings}:{}), ...(record.rulePresentation?{rulePresentation:record.rulePresentation as RulePresentationPlan}:{}), ...(artifact ? { artifact, artifactHash: typeof record.artifactHash==='string'?record.artifactHash as Sha256:hashArtifact(artifact) } : {}) };
+  if(record.sourceHash!==sourceHash)retain('sourceHash','sourceHash 与保存来源不一致；正文与 Actor 保留');
+  return { key, label, source, sourceHash, ...(reviewFindings.length||Array.isArray(record.reviewFindings)?{reviewFindings:[...new Set(reviewFindings)]}:{}), ...(record.rulePresentation?{rulePresentation:record.rulePresentation as RulePresentationPlan}:{}), ...(artifact ? { artifact, artifactHash: typeof record.artifactHash==='string'?record.artifactHash as Sha256:hashArtifact(artifact) } : {}) };
 }
 
 function decodeMacro(value: unknown, path: string, actorKeys: ReadonlySet<string>): ForgeEncounterPackageMacro {

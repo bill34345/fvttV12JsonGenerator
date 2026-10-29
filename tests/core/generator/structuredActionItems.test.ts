@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { describe, expect, it } from 'bun:test';
 import { ActorGenerator } from '../../../src/core/generator/actor';
 import type { StructuredActionData } from '../../../src/core/models/action';
@@ -257,8 +258,10 @@ describe('appendStructuredActionItems', () => {
       expect(getActivities(item)[0].effects).toContainEqual(expect.objectContaining({ _id: effect._id }));
       const other = { items: [{ system: { description: { value: 'The target becomes prone. If the source is bloodied, its AC increases by 2.' }, activities: {} }, effects: [{ _id: 'nativeProne00001', statuses: ['prone'], duration: {} }, { _id: 'armorEffect00001', statuses: [], changes: [{ key: 'system.attributes.ac.bonus', value: '2' }] }] }] };
       const unchanged = structuredClone(other); enforceCoreConditionLifecycles(other);
-      expect(other.items[0].effects[1]).toEqual(unchanged.items[0].effects[1]);
-      expect(other.items[0].effects[0]).toMatchObject({ _id: 'nativeProne00001', statuses: ['prone'], disabled: false, transfer: false, flags: { fvttJsonGenerator: { conditionLifecycle: { version: 1, mode: 'native' } } } });
+      const actualItem = other.items[0], originalItem = unchanged.items[0];
+      assert.ok(actualItem && originalItem);
+      expect(actualItem.effects[1]).toEqual(originalItem.effects[1]);
+      expect(actualItem.effects[0]).toMatchObject({ _id: 'nativeProne00001', statuses: ['prone'], disabled: false, transfer: false, flags: { fvttJsonGenerator: { conditionLifecycle: { version: 1, mode: 'native' } } } });
     });
 
     it('keeps unimplemented escape lifecycles GM-owned without losing the native attack', () => {

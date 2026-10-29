@@ -17,9 +17,37 @@ import {OpenAICompatibleMonsterIntakeProvider,parseStrictJson} from '@fvtt-json-
 import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
 import {runStagedMonsterExtraction} from '@fvtt-json-generator/intake-ai/staged-extraction';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
+import {YamlParser} from '@fvtt-json-generator/parser/yaml';
+import {adaptParsedActorToCanonical} from '@fvtt-json-generator/generation/adapters';
+import {verifyGeneratedDocument} from '@fvtt-json-generator/generation/verification';
+import {expectSourceConditionEffects,withoutApprovedConditionEffects,expectFrozenSourceDescriptions} from './helpers/forge-approved-projections';
 
 const input={source:LURKER_SOURCE,sourceName:'candidate fixture',requestId:'candidate-output',fvttVersion:'14.364',systemVersion:'5.3.3'};
 const noCall=async():Promise<never>=>{throw Error('Unexpected model request');};
+
+test('typed native resistance contract verifies count and consumption without an independent pool',async()=>{
+  const ir=buildValidLurkerIr();ir.claims=[];ir.coverage=[];
+  ir.creature.traits=[{name:'Legendary Resistance',description:'If this creature fails a saving throw, it can choose to succeed instead.',activationType:'special',uses:{max:3,period:'day'}}];
+  const provider={...fixture().provider,extract:noCall,discover:noCall,review:noCall,repair:noCall};
+  const generated=await generateBrowserActorIntakeCandidate(input,analyzeBrowserActorIntakeDraft(input,ir,provider),provider);
+  expect(generated.candidateAvailable).toBe(true);
+  const actor=generated.actorProjection as any,canonical=adaptParsedActorToCanonical(new YamlParser().parse(generated.finalSource!));
+  const mechanic=canonical.mechanics.find(entry=>entry.kind==='uses'&&(entry.value as any)?.actorResource==='legres');
+  expect(mechanic).toBeDefined();expect(mechanic!.value).toEqual({max:3,period:'day',actorResource:'legres'});
+  const checked=(output:any)=>verifyGeneratedDocument({canonical,output,target:'14',effectProfile:'core'});
+  expect(checked(actor).mechanicsCoverage.find(entry=>entry.mechanicId===mechanic!.id)?.status).toBe('projected');
+  for(const mutate of [
+    (copy:any)=>{copy.system.resources.legres.max=0;},
+    (copy:any)=>{copy.system.resources.legres.spent=1;},
+    (copy:any)=>{const item=copy.items.find((entry:any)=>entry.system.identifier==='legendary-resistance');item.system.uses.max='3';},
+    (copy:any)=>{const item=copy.items.find((entry:any)=>entry.system.identifier==='legendary-resistance');Object.values<any>(item.system.activities)[0]!.consumption.targets[0].target='resources.legact.value';},
+    (copy:any)=>{const item=copy.items.find((entry:any)=>entry.system.identifier==='legendary-resistance');Object.values<any>(item.system.activities)[0]!.consumption.targets[0].value='2';},
+  ]){
+    const copy=structuredClone(actor);mutate(copy);const result=checked(copy);
+    expect(result.mechanicsCoverage.find(entry=>entry.mechanicId===mechanic!.id)?.status).toBe('missing');
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({code:'GEN_MECHANIC_NOT_PROJECTED',path:mechanic!.path}));
+  }
+});
 
 // Regeneration deliberately adds program-owned literal metadata, deterministic
 // activity IDs and literal HTML. Compare native mechanics separately from those
@@ -36,6 +64,10 @@ function frozenNativeMechanics(value:any):any {
 function expectFrozenMechanics(actual:any,expected:any):void{
   expect(actual.name).toBe(expected.name);expect(actual.items.map((item:any)=>item.name)).toEqual(expected.items.map((item:any)=>item.name));
   expect(frozenNativeMechanics(actual)).toEqual(frozenNativeMechanics(expected));
+  for(const [index,item] of expected.items.entries())for(const [id,activity] of Object.entries<any>(item.system.activities??{}))if(activity.flags?.fvttJsonGenerator?.sourceOperation){
+    expect(actual.items[index].system.activities[id]?._id).toBe(id);
+    expect(actual.items[index].system.activities[id]?.flags).toEqual(activity.flags);
+  }
 }
 
 describe('monster output intentionally omits ordinary inventory',()=>{
@@ -86,13 +118,25 @@ function fixture(){
 // Exact UI IR from the preceding genuine AI run. Never edit the captures or
 // substitute fixture output for a new model reply.
 const gearCapture=process.env.FORGE_GEAR_POLICY_CAPTURE;
-for(const name of ['gladiator','priest'])test.skipIf(!gearCapture)(`saved gear-policy ${name}: source checks clear without changing the Actor`,async()=>{
+for(const name of ['gladiator','priest'])test.skipIf(!gearCapture)(`saved gear-policy ${name}: only source-confirmed conditions change frozen Actor mechanics`,async()=>{
   const read=(suffix:string)=>JSON.parse(readFileSync(`${gearCapture}/${name}-${suffix}.json`,'utf8'));
   const ir=read('source-ir'),source=read('ui-pre')[6],oldActor=read('candidate'),before=JSON.stringify(ir);
   expect(validateMonsterIntakeIR(source,ir).findings).toEqual([]);
   const provider={...fixture().provider,discover:noCall,extract:noCall},current={...input,source,requestId:'gear-check-'+name};
   const result=await generateBrowserActorIntakeCandidate(current,analyzeBrowserActorIntakeDraft(current,ir,provider),provider);
-  expect(result.findings).toEqual([]);expectFrozenMechanics(result.actorProjection,oldActor);expect(JSON.stringify(ir)).toBe(before);
+  const actor=result.actorProjection as any;
+  expect(result.findings).toEqual([]);expectFrozenSourceDescriptions(actor,ir);
+  let historical=actor;
+  if(name==='gladiator'){
+    const shield=actor.items.find((item:any)=>item.name==='Shield Bash'),feature=ir.creature.actions.find((item:any)=>item.name==='Shield Bash');
+    const condition='If the target is a Me-\ndium or smaller creature, it has the Prone condition.';
+    expect(feature.description).toContain(condition);
+    expectSourceConditionEffects(shield,'shield-bash-save',[{id:'1681bb1ed665c371',status:'prone',sourceText:feature.description.slice('Shield Bash. '.length),condition}],
+      {'5d2db9cbdfeb3fa4':[{_id:'1681bb1ed665c371',onSave:false}]});
+    expect(shield.system.activities['5d2db9cbdfeb3fa4'].save).toEqual({ability:['str'],dc:{calculation:'',formula:'15'}});
+    historical=withoutApprovedConditionEffects(actor,[{item:'Shield Bash',ids:['1681bb1ed665c371']}]);
+  }
+  expectFrozenMechanics(historical,oldActor);expect(JSON.stringify(ir)).toBe(before);
   expect(result.calls.extraction).toBe(0);expect(result.calls.review).toBe(0);expect(result.calls.repair).toBe(0);
   if(name==='priest')for(const mutate of [(p:any)=>{p.creature.spellcasting[1].saveDc=14;},(p:any)=>{p.creature.spellcasting[1].ability='cha';},(p:any)=>{p.creature.spellcasting[1].usageGroups[0].count=4;},(p:any)=>{p.creature.spellcasting[1].usageGroups[0].usage='daily-each';},(p:any)=>{p.creature.spellcasting[1].usageGroups[0].spellRefs.pop();}]){
     const changed=structuredClone(ir);mutate(changed);expect(verifyMonsterIntake(source,changed,renderMonsterIntakeMarkdown(changed),oldActor).findings.some(f=>f.blocking)).toBe(true);
@@ -209,7 +253,7 @@ for(const suffix of ['','/repaired'])test.skipIf(!emanationCapture)(`frozen Fire
   activity.range.units='self';activity.range.special='';aura.flags.fvttJsonGenerator.manualRule.sourceOperations[0].proof.aoe=quote[0];
   expectFrozenMechanics(generated.actorProjection,expected);expect(generated.calls).toEqual({discovery:0,extraction:0,review:0,repair:0});
 });
-for(const caseId of ['balor-2024','behir-2024','druid-2024'])test.skipIf(!emanationCapture)(`2024 area representation keeps frozen ${caseId} data and complete non-area fields`,async()=>{
+for(const caseId of ['balor-2024','behir-2024','druid-2024'])test.skipIf(!emanationCapture)(`2024 area representation: frozen ${caseId} preserves other mechanics and complete source text`,async()=>{
   const directory=caseId==='balor-2024'?`${emanationCapture}/balor-2024-third/browser`:`${emanationCapture}/bounded-expansion/new-three-browser/${caseId}`;
   const ir=JSON.parse(readFileSync(`${directory}/source-ir.json`,'utf8')),before=structuredClone(ir),saved=JSON.parse(readFileSync(`${directory}/candidate.json`,'utf8'));
   const pre=JSON.parse(readFileSync(`${directory}/ui-pre.json`,'utf8'));
@@ -218,8 +262,9 @@ for(const caseId of ['balor-2024','behir-2024','druid-2024'])test.skipIf(!emanat
   expect(source).toBeDefined();
   const provider={...fixture().provider,extract:noCall,discover:noCall,review:noCall,repair:noCall},current={...input,source,requestId:'emanation-'+caseId};
   const generated=await generateBrowserActorIntakeCandidate(current,analyzeBrowserActorIntakeDraft(current,ir,provider),provider),actor=generated.actorProjection as any;
-  expect(generated.candidateAvailable).toBe(true);expect(ir).toEqual(before);
+  expect(generated.candidateAvailable).toBe(true);expect(ir).toEqual(before);expectFrozenSourceDescriptions(actor,ir);
   const expected=structuredClone(saved);
+  let historical=actor;
   if(caseId==='balor-2024'){
     for(const name of ['Death Throes','Fire Aura']){
       const original=expected.items.find((item:any)=>item.name===name),native=Object.values<any>(original.system.activities)[0]!;
@@ -230,19 +275,79 @@ for(const caseId of ['balor-2024','behir-2024','druid-2024'])test.skipIf(!emanat
     expect(generated.findings.some(f=>f.path.endsWith('/condition'))).toBe(false);
     const auraPath='/creature/traits/1';
     expect(generated.findings.filter(f=>f.path===auraPath&&['SOURCE_BASIC_OPERATION_OMITTED','MIXED_FEATURE_SOURCE_CONFLICT'].includes(f.code))).toEqual([]);
+    const whip=actor.items.find((item:any)=>item.name==='Flame Whip'),feature=ir.creature.actions.find((item:any)=>item.name==='Flame Whip');
+    const condition='If\nthe target is a Huge or smaller creature, the balor pulls\nthe target up to 25 feet straight toward itself, and the\ntarget has the Prone condition.';
+    expect(feature.description).toContain(condition);
+    expectSourceConditionEffects(whip,'flame-whip-attack',[{id:'43a05c7c8a3a1614',status:'prone',sourceText:feature.description.slice('Flame Whip. '.length),condition:condition+'\nDM确认此GM攻击已命中后应用状态模板。'}],
+      {'c0b4840650927666':[{_id:'43a05c7c8a3a1614'}]});
+    expect(whip.system.activities['f3db14751e1902cd']).toMatchObject({type:'utility',roll:{formula:'1d20+14'},range:{value:30,units:'ft'}});
+    expect(whip.system.activities['c0b4840650927666'].type).toBe('damage');
+    historical=withoutApprovedConditionEffects(actor,[{item:'Flame Whip',ids:['43a05c7c8a3a1614']}]);
+    const resistance=historical.items.find((item:any)=>item.name==='Legendary Resistance (3/Day)');
+    const oldResistance=expected.items.find((item:any)=>item.name==='Legendary Resistance (3/Day)');
+    expect(resistance).toBeDefined();expect(oldResistance).toBeDefined();
+    expect(oldResistance.system.uses).toEqual({max:'3',spent:0,recovery:[{period:'day',type:'recoverAll'}]});
+    expect(actor.system.resources.legres).toEqual({max:3,spent:0});
+    expect(resistance.system.identifier).toBe('legendary-resistance');
+    expect(resistance.system.uses).toEqual({max:'',spent:0,recovery:[]});
+    const resistanceActivities=Object.values<any>(resistance.system.activities);
+    expect(resistanceActivities).toHaveLength(1);
+    expect(resistanceActivities[0]!.consumption).toEqual({targets:[{type:'attribute',target:'resources.legres.value',value:'1',scaling:{mode:'',formula:''}}],spellSlot:false,scaling:{allowed:false,max:''}});
+    expect(generated.findings.filter(f=>f.code==='GEN_MECHANIC_NOT_PROJECTED')).toEqual([]);
+    // Compare the remainder against the untouched historical snapshot after
+    // checking each field of the intentionally unified native resource.
+    historical.system.resources.legres=structuredClone(expected.system.resources.legres);
+    resistance.system.uses=structuredClone(oldResistance.system.uses);
+    delete resistance.system.identifier;
+    resistanceActivities[0]!.consumption=structuredClone(Object.values<any>(oldResistance.system.activities)[0]!.consumption);
   }else if(caseId==='behir-2024'){
     expect(generated.findings.some(f=>f.path.endsWith('/inventory/damage-omitted'))).toBe(false);
     expect(generated.findings.some(f=>f.path.endsWith('/inventory/save-omitted'))).toBe(false);
+    const constrict=actor.items.find((item:any)=>item.name==='Constrict'),constrictSource=ir.creature.actions.find((item:any)=>item.name==='Constrict');
+    const constrictCondition='The target has the\nGrappled condition (escape DC 16), and it has the Restrained condition until the grapple ends.';
+    expect(constrictSource.description).toContain(constrictCondition);
+    expectSourceConditionEffects(constrict,'constrict',[
+      {id:'82fc36ea6f8f24ba',status:'grappled',sourceText:constrictSource.description.slice('Constrict. '.length),condition:constrictCondition},
+      {id:'d41a207ffe287d95',status:'restrained',sourceText:constrictSource.description.slice('Constrict. '.length),condition:constrictCondition},
+    ],{'f9b4ccc58e733c59':[{_id:'82fc36ea6f8f24ba',onSave:false},{_id:'d41a207ffe287d95',onSave:false}]});
+    const swallow=actor.items.find((item:any)=>item.name==='Swallow'),swallowSource=ir.creature.bonusActions.find((item:any)=>item.name==='Swallow');
+    const swallowed='While swallowed, a creature has the Blinded and\nRestrained conditions, has Total Cover against attacks\nand other effects outside the behir, and takes 21 (6d6)\nAcid damage at the start of each of the behir’s turns.';
+    const exit='If the behir takes 30 damage or more on a single turn\nfrom the swallowed creature, the behir must succeed\non a DC 14 Constitution saving throw at the end of that\nturn or regurgitate the creature, which falls in a space\nwithin 10 feet of the behir and has the Prone condition.\nIf the behir dies, a swallowed creature is no longer Restrained and can escape from the corpse by using 15\nfeet of movement, exiting Prone.';
+    expect(swallowSource.description).toContain(swallowed);expect(swallowSource.description).toContain(exit);
+    expectSourceConditionEffects(swallow,'swallow',[
+      {id:'8345b9a062b312d7',status:'restrained',sourceText:swallowSource.description.slice('Swallow. '.length),condition:swallowed},
+      {id:'a6e760feccb4b286',status:'blinded',sourceText:swallowSource.description.slice('Swallow. '.length),condition:swallowed},
+      {id:'c2d84bee0e4827dd',status:'prone',sourceText:exit,condition:exit,staged:true},
+    ],{'150d807673175049':[{_id:'8345b9a062b312d7',onSave:false},{_id:'a6e760feccb4b286',onSave:false}],'627e53c09e4b87be':[{_id:'c2d84bee0e4827dd'}]});
+    expect(swallow.system.activities['150d807673175049'].type).toBe('save');
+    expect(swallow.system.activities['627e53c09e4b87be']).toEqual({_id:'627e53c09e4b87be',type:'utility',name:'退出时状态 Exit Conditions',
+      description:{chatFlavor:'<p>'+exit.replaceAll('\n','<br>')+'</p>'},
+      flags:{fvttJsonGenerator:{sourceLogicalPath:'structuredActions/附赠动作/0/Swallow/source-operation/swallow/condition-stage/prone',sourceConditionStage:{version:1,source:exit,sourceOperationId:'swallow'}}},
+      activation:{type:'special',value:null,override:true,condition:exit},consumption:{targets:[],spellSlot:false,scaling:{allowed:false,max:''}},
+      effects:[{_id:'c2d84bee0e4827dd'}],img:'icons/magic/movement/portal-vortex-orange.webp'});
+    historical=withoutApprovedConditionEffects(actor,[{item:'Constrict',ids:['82fc36ea6f8f24ba','d41a207ffe287d95']},{item:'Swallow',ids:['8345b9a062b312d7','a6e760feccb4b286','c2d84bee0e4827dd']}]);
+    delete historical.items.find((item:any)=>item.name==='Swallow').system.activities['627e53c09e4b87be'];
   }
-  expectFrozenMechanics(actor,expected);expect(generated.calls).toMatchObject({review:0,repair:0});
+  expectFrozenMechanics(historical,expected);expect(generated.calls).toMatchObject({review:0,repair:0});
 });
-for(const caseId of ['gladiator','priest','medusa'])test.skipIf(!officialCapture)(`official ${caseId}: source findings do not veto output or enter Actor JSON`,async()=>{
+for(const caseId of ['gladiator','priest','medusa'])test.skipIf(!officialCapture)(`official ${caseId}: valid source preserves native output without manufactured findings`,async()=>{
   const source=readFileSync(`${officialCapture}/live/${caseId}/source.md`,'utf8');
   const ir=JSON.parse(readFileSync(`${officialCapture}/live/${caseId}/ir.json`,'utf8'));
   const original=JSON.stringify(ir),current={...input,source,requestId:`delivery-${caseId}`};
   const provider={...fixture().provider,extract:noCall,discover:noCall};
   const analysis=analyzeBrowserActorIntakeDraft(current,ir,provider);
-  expect(analysis.ir!.creature).toEqual(ir.creature);
+  const expectedCreature=structuredClone(ir.creature);
+  if(caseId==='medusa'){
+    const operation=expectedCreature.actions.find((feature:any)=>feature.name==='Snake Hair').sourceOperations[0];
+    expect(operation.damage).toEqual([{formula:'1d4+3',type:'piercing',relationship:'base'},{formula:'4d6',type:'poison',relationship:'additional'}]);
+    expect(operation.proof.damage).toHaveLength(1);
+    const quote=operation.proof.damage[0];
+    expect(source.slice(operation.evidence.start,operation.evidence.end)).toBe(operation.evidence.quote);
+    expect(operation.evidence.quote).toContain(quote);
+    expect(quote).toContain('1d4 + 3');expect(quote).toContain('4d6');
+    operation.proof.damage=[quote,quote];
+  }
+  expect(analysis.ir!.creature).toEqual(expectedCreature);
   const result=await generateBrowserActorIntakeCandidate(current,analysis,provider);
   expect(result.candidateAvailable).toBe(true);
   expect(result.status).toBe('ready_for_gm_review');
@@ -251,24 +356,44 @@ for(const caseId of ['gladiator','priest','medusa'])test.skipIf(!officialCapture
   expect(actor.system.attributes.hp.formula.replace(/\s/g,'')).toBe(ir.creature.attributes.hp.formula.replace(/\s/g,''));
   for(const marker of ['candidateReview','deliveryReview','待审候选','ACTOR_LITERAL_DELIVERY'])expect(serialized).not.toContain(marker);
   expect(result.findings.some(f=>f.code==='ACTOR_LITERAL_DELIVERY')).toBe(false);
-  if(caseId!=='lion')expect(result.findings.length).toBeGreaterThan(0);
+  expect(result.findings).toEqual([]);expectFrozenSourceDescriptions(actor,ir);
   if(caseId==='medusa'){
     const snake=actor.items.find((item:any)=>item.name==='Snake Hair');
-    const damage=Object.values(snake.system.activities).flatMap((activity:any)=>activity.damage?.parts??[]);
-    expect(damage.some((part:any)=>part.number===4&&part.denomination===6&&part.types.includes('poison'))).toBe(true);
+    const activities=Object.values<any>(snake.system.activities),damage=activities.filter(activity=>activity.type==='damage');
+    expect(activities.filter(activity=>activity.type==='utility')).toHaveLength(1);
+    expect(activities.find(activity=>activity.type==='utility')).toMatchObject({roll:{formula:'1d20+6'},range:{value:5,units:'ft'}});
+    expect(damage).toHaveLength(1);expect(damage[0].damage.parts).toHaveLength(2);
+    expect(damage[0].damage.parts[0]).toMatchObject({number:1,denomination:4,bonus:'3',types:['piercing']});
+    expect(damage[0].damage.parts[1]).toMatchObject({number:4,denomination:6,bonus:'',types:['poison']});
   }
   if(caseId==='priest'){
     const manifest=actor.flags['fvtt-json-generator-spell-resolver'].spellManifest;
     const casts=manifest.spellcastingGroups.flatMap((group:any)=>group.spellRefs.map((ref:any)=>{
       const feature=actor.items.find((i:any)=>i.flags?.fvttJsonGenerator?.spellcastingFeatureKey===group.featureItemKey);
-      return buildCastActivitySource({manifestId:manifest.manifestId,featureId:feature._id??'PriestFeature001',group,ref,
-        selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop',activationType:feature.flags.fvttJsonGenerator.spellcastingActivationType});
+      return {...buildCastActivitySource({manifestId:manifest.manifestId,featureId:feature._id??'PriestFeature001',group,ref,
+        selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop',activationType:feature.flags.fvttJsonGenerator.spellcastingActivationType}),ref,group,feature};
     }));
     expect(casts).toHaveLength(7);
+    expect(actor.system.abilities.wis.value).toBe(16);
     expect(casts.every((cast:any)=>cast.activity.spell.ability==='wis'&&cast.activity.spell.challenge.save==='13')).toBe(true);
+    expect(casts.map((cast:any)=>cast.ref.refId).sort()).toEqual(['bless','dispel-magic','healing-word','lesser-restoration','light','spirit-guardians','thaumaturgy']);
+    const independent=casts.find((cast:any)=>cast.ref.refId==='spirit-guardians');
+    expect(independent.ref.uses).toEqual({value:1,recovery:'day',shared:false});
+    expect(independent.activity.uses).toEqual({spent:0,max:'1',recovery:[{period:'day',type:'recoverAll'}]});
+    expect(independent.activity.consumption).toEqual({spellSlot:false,targets:[{type:'activityUses',value:'1'}]});
+    expect(independent.activity.activation).toBeUndefined();
+    for(const atWill of casts.filter((cast:any)=>['light','thaumaturgy'].includes(cast.ref.refId))){
+      expect(atWill.activity.uses).toBeUndefined();expect(atWill.activity.consumption).toEqual({spellSlot:false,targets:[]});
+    }
     const aid=casts.filter((cast:any)=>cast.activity.activation?.type==='bonus');
     expect(aid).toHaveLength(4);
-    expect(aid.every((cast:any)=>cast.activity.consumption.targets[0]?.type==='itemUses')).toBe(true);
+    expect(aid.every((cast:any)=>cast.group.groupId==='divine-aid')).toBe(true);
+    for(const cast of aid){
+      expect(cast.ref.uses).toEqual({value:3,recovery:'day',shared:true});
+      expect(cast.feature.system.uses).toEqual({spent:0,max:'3',recovery:[{period:'day',type:'recoverAll'}]});
+      expect(cast.activity.uses).toBeUndefined();expect(cast.activity.consumption).toEqual({spellSlot:false,targets:[{type:'itemUses',value:'1'}]});
+      expect(cast.activity.activation).toEqual({type:'bonus',value:1,override:true});
+    }
     expect(aid.every((cast:any)=>cast.literalRestrictions[0]?.text==='using the same spellcasting ability as Spellcasting.')).toBe(true);
   }
   if(caseId==='gladiator'){
@@ -282,6 +407,8 @@ for(const caseId of ['gladiator','priest','medusa'])test.skipIf(!officialCapture
     expect(rolls.find(a=>a.range.value===20).range.special).toBe('远射程 60 尺');
     expect(activities.every(a=>!Object.hasOwn(a.range,'long'))).toBe(true);
     expect(activities.filter(a=>a.type==='damage')).toHaveLength(1);
+    const damage=activities.find(a=>a.type==='damage').damage.parts;
+    expect(damage).toHaveLength(1);expect(damage[0]).toMatchObject({number:2,denomination:6,bonus:'4',types:['piercing']});
     expect(actorReadbackWarnings(actor,structuredClone(actor))).toEqual([]);
     expect(JSON.stringify(actor)).toBe(serialized);
   }
@@ -289,6 +416,19 @@ for(const caseId of ['gladiator','priest','medusa'])test.skipIf(!officialCapture
   expect(approveBrowserActorIntakeCandidateForGm(current,result,'gm').gmApproval).toBeDefined();
   expect(JSON.stringify(ir)).toBe(original);
   expect(result.calls.review).toBe(0);expect(result.calls.repair).toBe(0);
+});
+
+test.skipIf(!officialCapture)('official priest: a concrete FIXTURE_REVIEW finding preserves the complete deliverable Actor',async()=>{
+  const source=readFileSync(`${officialCapture}/live/priest/source.md`,'utf8'),ir=JSON.parse(readFileSync(`${officialCapture}/live/priest/ir.json`,'utf8'));
+  const current={...input,source,requestId:'official-priest-review-counterexample'},provider={...fixture().provider,extract:noCall,discover:noCall};
+  const baseline=await generateBrowserActorIntakeCandidate(current,analyzeBrowserActorIntakeDraft(current,ir,provider),provider);
+  const disputed=structuredClone(ir);
+  disputed.uncertainties.push({id:'official-priest-hp-review',code:'FIXTURE_REVIEW',path:'/creature/attributes/hp',message:'HP needs source review',blocking:true,evidence:[]});
+  const result=await generateBrowserActorIntakeCandidate(current,analyzeBrowserActorIntakeDraft(current,disputed,provider),provider);
+  expect(result.candidateAvailable).toBe(true);expect(result.status).toBe('ready_for_gm_review');expect(result.intakeVerificationStatus).toBe('needs_review');
+  expect(result.findings.some(f=>f.code==='FIXTURE_REVIEW'&&f.path==='/creature/attributes/hp'&&f.blocking)).toBe(true);
+  expect(result.actorProjection).toEqual(baseline.actorProjection);expect(JSON.stringify(result.actorProjection)).not.toContain('FIXTURE_REVIEW');
+  expect(decodeForgeActorResponse(result.candidateResponse).ok).toBe(true);expect(result.calls).toEqual({discovery:0,extraction:0,review:0,repair:0});
 });
 
 test('a companion projection error retains basic Actor generation and the original proposal',async()=>{

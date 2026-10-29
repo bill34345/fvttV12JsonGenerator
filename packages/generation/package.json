@@ -13,6 +13,7 @@
     "./activity-derivation": "./src/activity-derivation.ts",
     "./adapters": "./src/adapters.ts",
     "./actor": "./src/actor.ts",
+    "./actor-languages": "./src/actor-languages.ts",
     "./actor-behavior-semantics": "./src/actor-behavior-semantics.ts",
     "./actor-effects": "./src/actor-effects.ts",
     "./actor-item-builder": "./src/actor-item-builder.ts",

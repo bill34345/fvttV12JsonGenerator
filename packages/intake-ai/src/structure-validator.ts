@@ -36,6 +36,9 @@ export function validateMonsterIntakeStructure(
   const fail = (code: string, path: string, message: string, origin: IntakeFinding['origin'] = 'schema') => {
     findings.push({ id: `${code.toLowerCase()}:${path}`, code, path, message, origin, blocking: true });
   };
+  const warn = (code: string, path: string, message: string) => {
+    findings.push({ id: `${code.toLowerCase()}:${path}`, code, path, message, origin:'schema', blocking:false });
+  };
   const invalid = (path: string, message: string) => fail('INVALID_STRUCTURE', path, message);
   const shape = (entry: unknown, path: string, keys: readonly string[]): entry is Data => {
     if (!object(entry)) { invalid(path, 'Expected a plain object.'); return false; }
@@ -103,6 +106,7 @@ export function validateMonsterIntakeStructure(
   const healing = (entry: unknown, path: string) => {
     if (!shape(entry, path, ['formula', 'type', 'target'])) return;
     formula(entry.formula, `${path}/formula`); enumeration(entry.type, `${path}/type`, ['healing', 'temphp']);
+    if(entry.target===undefined)warn('HEALING_TARGET_UNSPECIFIED',`${path}/target`,'治疗回复未提供目标；治疗量保留，GM须按完整原文确认对象、数量与范围。');
     if (entry.target !== undefined && shape(entry.target, `${path}/target`, ['type', 'count', 'special'])) {
       if(!isHealingRecipient(entry.target))invalid(`${path}/target`,'Healing requires one explicit self or creature recipient; optional qualifications must be text.');
     }
@@ -168,6 +172,9 @@ export function validateMonsterIntakeStructure(
       if (Array.isArray(entry.sourceOperations)) entry.sourceOperations.forEach((op, index) => {
         if (object(op) && op.evidence !== undefined) evidence(op.evidence, `${path}/sourceOperations/${index}/evidence`);
       });
+      const retained=object(entry.candidateReview)&&Array.isArray(entry.candidateReview.findings)?entry.candidateReview.findings:[];
+      for(const finding of retained)if(object(finding)&&finding.code==='HEALING_TARGET_UNSPECIFIED'&&typeof finding.path==='string'&&finding.path.startsWith('sourceOperations/'))
+        warn('HEALING_TARGET_UNSPECIFIED',`${path}/${finding.path}`,String(finding.message));
       if (entry.executionMode !== 'native-with-gm') invalid(`${path}/executionMode`, 'Independent source operations require the explicit GM execution boundary.');
     }
     if (entry.executionMode === 'gm-manual' && (entry.activityType !== 'utility' || ['attack', 'save', 'damage', 'healing', 'aoe', 'range', 'targetSpecial', 'sourceOperations', 'gmTriggeredSave', 'nativeFailureStatuses'].some(key => entry[key] !== undefined))) invalid(path, 'Manual features cannot carry executable native mechanics.');
@@ -277,7 +284,7 @@ export function validateMonsterIntakeStructure(
     optional(creature, 'biography', '/creature', (e, p) => string(e, p, false));
     optional(creature, 'legendary', '/creature', (entry, path) => {
       if (!shape(entry, path, ['max', 'lairMax', 'recovery', 'resistanceMax', 'resistanceLairMax', 'preamble', 'evidence'])) return;
-      positive(entry.max, `${path}/max`); optional(entry, 'lairMax', path, positive); optional(entry, 'recovery', path, (e, p) => enumeration(e, p, ['own-turn-start'])); string(entry.preamble, `${path}/preamble`,false); evidenceList(entry.evidence, `${path}/evidence`);
+      number(entry.max, `${path}/max`,0); optional(entry, 'lairMax', path, positive); optional(entry, 'recovery', path, (e, p) => enumeration(e, p, ['own-turn-start'])); string(entry.preamble, `${path}/preamble`,false); evidenceList(entry.evidence, `${path}/evidence`);
       if (entry.lairMax !== undefined && entry.lairMax !== (entry.max as number) + 1) invalid(`${path}/lairMax`, 'Native lair capacity is the base capacity plus one.');
       optional(entry,'resistanceMax',path,positive);
       if(entry.lairMax!==undefined&&entry.resistanceMax!==undefined&&entry.resistanceLairMax===undefined)
@@ -291,6 +298,13 @@ export function validateMonsterIntakeStructure(
     });
     for (const collection of COLLECTIONS) if (collection !== 'mythicActions' || creature[collection] !== undefined) array(creature[collection], `/creature/${collection}`, feature);
     optional(creature, 'spellcasting', '/creature', (e, p) => array(e, p, spellGroup));
+    const hasLegendaryCost=COLLECTIONS.some(collection=>Array.isArray(creature[collection])&&(creature[collection] as unknown[]).some(entry=>object(entry)
+      &&(['legendaryActions','mythicActions'].includes(collection)||entry.activationType==='legendary'||typeof entry.legendaryCost==='number'&&entry.legendaryCost>0)))
+      ||Array.isArray(creature.spellcasting)&&creature.spellcasting.some(entry=>object(entry)&&(entry.activationType==='legendary'||typeof entry.legendaryCost==='number'&&entry.legendaryCost>0));
+    if(hasLegendaryCost){
+      if(creature.legendary===undefined)warn('LEGENDARY_BUDGET_UNSPECIFIED','/creature/legendary','存在传奇动作或消耗，但回复未提供传奇次数台账；能力保留，GM须补充明确次数后才能按原生资源使用。');
+      else if(object(creature.legendary)&&creature.legendary.max===0)warn('LEGENDARY_BUDGET_ZERO','/creature/legendary/max','回复明确给出传奇基础次数为0；该值保留，GM须核对可用次数或巢穴模式，程序不改成3次。');
+    }
     for (const entry of spellRefs) if (object(entry.ref.reuseOf)) {
       const reuse = entry.ref.reuseOf, target = spellRefs.find(other => other.groupId === reuse.groupId && other.ref.refId === reuse.refId);
       const profile = (group: Data) => JSON.stringify([group.ability, group.saveDc, group.attackBonus,

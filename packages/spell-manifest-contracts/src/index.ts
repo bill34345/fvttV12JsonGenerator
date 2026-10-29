@@ -12,6 +12,7 @@ export * from './types';
 export {
   validatePortableSpellManifest,
   validatePortableSpellManifestStructure,
+  validateActorSpellManifestStructure,
 } from './validator';
 
 export {conflictingSpellReuseBindings} from './spellReuse';

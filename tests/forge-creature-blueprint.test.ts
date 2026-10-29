@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { describe, expect, test } from 'bun:test';
 import {
   buildForgeActorRequest,
@@ -82,7 +83,9 @@ describe('Forge creature blueprint model', () => {
   });
   test('actor source limits: lineage retains complete component arrays and more than thirty-two changes',()=>{
     const original=authoredBlueprint(),extended=deriveCreatureBlueprint(original,'Extended abilities',DERIVED_SOURCE_ID);
-    extended.components=Array.from({length:40},(_,index)=>({...original.components[0],name:`Attack ${index+1}`}));
+    const component = original.components[0];
+    assert.ok(component);
+    extended.components=Array.from({length:40},(_,index)=>({...component,name:`Attack ${index+1}`}));
     extended.lineage!.changes=diffCreatureBlueprintFields(original,extended);
     expect(parseCreatureBlueprintSource(renderCreatureBlueprintSource(extended))).toEqual(extended);
     const changed=deriveCreatureBlueprint(extended,'Renamed abilities');

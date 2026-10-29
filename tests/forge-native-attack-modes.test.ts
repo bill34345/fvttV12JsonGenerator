@@ -1,6 +1,7 @@
 import {describe,expect,test} from 'bun:test';
 import {modelReply,ordinary,staged,chain,request,requireAcceptedChain as requireAccepted} from './helpers/forge-semantic-chain';
 import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
+import {auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
 import data from './fixtures/forge-native-attack-cases.json';
 import earlier from './fixtures/forge-weird-semantics-research-cases.json';
 import {prepareFoundryImportArtifact,assertActorSemantics} from '../foundry-modules/fvtt-json-forge/src/runtime';
@@ -9,6 +10,14 @@ const parts=(values:any[])=>values.map(part=>({formula:String(part.custom?.enabl
 const expectedPart=(formula:string,type:string)=>({formula,types:[type]});
 const featureName=(name:string)=>name.replace(/\s*\(?Recharge\s+\d[–-]\d\)?/iu,'');
 const control=(c:any,path:string)=>chain(c,()=>path==='ordinary'?ordinary(c,modelReply(c)):staged(c));
+// Source truth is an explicit offline audit; normal generation above keeps
+// its Actor and checks only the declared IR-to-output projection.
+async function sourceAuditChain(c:any,run:()=>Promise<any>){
+ const result=await chain(c,run);
+ if(!result.ir)return result;
+ const audit=auditMonsterIntakeSource(c.source,result.ir,{coverageRange:request(c.source).candidate});
+ return audit.blocking.length?{...result,status:'blocked',stage:'explicit-source-audit',findings:audit.blocking}:result;
+}
 function assertOutput(c:any,result:any){
  requireAccepted(result);
  const e=c.expected,item=result.actor.items.find((i:any)=>featureName(i.name)===featureName(c.features[0].name)),activities=Object.values(item.system.activities) as any[],attacks=activities.filter(a=>a.type==='attack'),saves=activities.filter(a=>a.type==='save');
@@ -54,10 +63,10 @@ function assertOutput(c:any,result:any){
 }
 
 describe('source-backed native damage modes retain their numbers, owner and conditions',()=>{
- for(const id of ['alternative-1-sentinel','guard-spear-sentinel','azer-hammer-sentinel'])for(const path of ['ordinary','staged-auto'])test('source numbers cannot be swapped between ordinary/replacement: '+id+' '+path,async()=>{
+ for(const id of ['alternative-1-sentinel','guard-spear-sentinel','azer-hammer-sentinel'])for(const path of ['ordinary','staged-auto'])test('offline source audit rejects swapped ordinary/replacement numbers: '+id+' '+path,async()=>{
   const c=cases.find(c=>c.id===id),raw=modelReply(c),ops=raw.creature.actions[0].sourceOperations;
   const a=ops.find((op:any)=>op.id==='ordinary').damage[0],b=ops.find((op:any)=>op.id==='replacement').damage[0];[a.formula,b.formula]=[b.formula,a.formula];
-  const result=await chain(c,()=>path==='ordinary'?ordinary(c,raw):staged(c,{path:['actions','0','sourceOperations'],value:ops}));expect(result.status).toBe('blocked');
+  const result=await sourceAuditChain(c,()=>path==='ordinary'?ordinary(c,raw):staged(c,{path:['actions','0','sourceOperations'],value:ops}));expect(result.status).toBe('blocked');
  });
  for(const path of ['ordinary','staged-auto'])test('source may print the conditional branch first and otherwise second '+path,async()=>{
   const c=structuredClone(cases.find(c=>c.id==='alternative-1-sentinel')),f=c.features[0];
@@ -100,22 +109,31 @@ describe('source-backed native damage modes retain their numbers, owner and cond
    expect(verifyMonsterIntake(c.source,result.ir,result.markdown,changed,request(c.source).candidate).findings.some(f=>f.code==='ACTOR_SOURCE_OPERATION_DAMAGE_DRIFT')).toBe(true);
   }
  });
- for(const c of cases.filter(c=>c.expected.kind!=='unchanged'))for(const path of ['ordinary','staged-auto'])test(c.id+' rejects wrong source attack '+path,async()=>{
+ for(const c of cases.filter(c=>c.expected.kind!=='unchanged'))for(const path of ['ordinary','staged-auto'])test('offline source audit: '+c.id+' rejects wrong source attack '+path,async()=>{
   const raw=modelReply(c);raw.creature.actions[0].sourceOperations[0].attack.toHit++;
-  const result=await chain(c,()=>path==='ordinary'?ordinary(c,raw):staged(c,{path:['actions','0','sourceOperations','0','attack','toHit'],value:c.expected.toHit+1}));
+  const result=await sourceAuditChain(c,()=>path==='ordinary'?ordinary(c,raw):staged(c,{path:['actions','0','sourceOperations','0','attack','toHit'],value:c.expected.toHit+1}));
   expect(result.status).toBe('blocked');
  });
- for(const c of cases.filter(c=>c.expected.kind==='conditional'||c.expected.kind==='versatile'))test(c.id+' rejects omitted condition',async()=>{
+ for(const c of cases.filter(c=>c.expected.kind==='conditional'||c.expected.kind==='versatile'))test('offline source audit: '+c.id+' rejects omitted condition',async()=>{
   const raw=modelReply(c),f=raw.creature.actions[0];
   for(const key of ['description','nativeRuleText','manualRemainder'])if(f[key])f[key]=f[key].replace(c.dropText,'');
-  const result=await chain(c,()=>ordinary(c,raw));expect(result.status).toBe('blocked');
+  const result=await sourceAuditChain(c,()=>ordinary(c,raw));expect(result.status).toBe('blocked');
  });
- test('old 24-case research sources remain replayable with corrected native presentation',async()=>{
+ test('old 24-case research sources preserve explicit fields and literal rules',async()=>{
   for(const c of earlier.cases as any[])for(const path of ['ordinary','staged-auto']){
    const result=await control(c,path);requireAccepted(result);
    if(c.id==='half-hp-replacement')expect(Object.values(result.actor.items[0].system.activities).map((a:any)=>a.type)).toEqual(['attack','attack']);
    if(c.id==='two-handed-replacement')expect(result.actor.items[0].type).toBe('weapon');
-   if(c.id==='swarm-individual-size'){expect(result.actor.system.traits.size).toBe('med');expect(result.actor.system.details.type.swarm).toBe('tiny');expect(result.actor.system.details.type.value).toBe('beast');}
+   if(c.id==='swarm-individual-size'){
+    expect(result.ir.creature.identity.swarmSize).toBe(path==='staged-auto'?'tiny':undefined);expect(result.actor.system.traits.size).toBe('med');expect(result.actor.system.details.type.swarm).toBe(path==='staged-auto'?'tiny':'');expect(result.actor.system.details.type.value).toBe('beast');
+    expect(result.actor.items.find((item:any)=>item.name==='Swarm').system.description.value).toContain(c.features[0].text.replaceAll("'",'&#39;'));
+   }
   }
+ });
+ test('an explicit swarm individual size is projected without changing its Actor size',async()=>{
+  const c=(earlier.cases as any[]).find(entry=>entry.id==='swarm-individual-size'),before=JSON.stringify(c),raw=modelReply(c);
+  raw.creature.identity.swarmSize='tiny';
+  const result=await chain(c,()=>ordinary(c,raw));requireAccepted(result);
+  expect(result.actor.system.details.type).toMatchObject({swarm:'tiny',value:'beast'});expect(result.actor.system.traits.size).toBe('med');expect(JSON.stringify(c)).toBe(before);
  });
 });

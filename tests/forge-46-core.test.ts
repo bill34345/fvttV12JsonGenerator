@@ -28,7 +28,7 @@ const damage=(activity:any)=>activity.damage?.parts?.map((part:any)=>({formula:p
 test('46 core: a readable flat creature answer survives its missing wrapper and program records',async()=>{
   const ir=buildValidLurkerIr(),raw={schemaVersion:77,...ir.creature,claims:{note:'keep this record'},extra:'source-owned extra'};
   let requests=0;
-  const actual=new OpenAICompatibleMonsterIntakeProvider({baseUrl:'https://frozen.invalid',apiKey:'fixture',model:'frozen',maxAttempts:1,timeoutMs:1000,repairTimeoutMs:1000,
+  const actual=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://frozen.invalid',apiKey:'fixture',model:'frozen',reviewModel:'frozen',maxAttempts:1,timeoutMs:1000,repairTimeoutMs:1000,
     httpClient:async()=>{requests++;return Response.json({choices:[{message:{content:JSON.stringify(raw)}}]});}});
   const analysis=await analyzeBrowserActorSourceWithAi(input,actual);
   const generation=await generateBrowserActorIntakeCandidate(input,analysis,provider);
@@ -38,7 +38,7 @@ test('46 core: a readable flat creature answer survives its missing wrapper and 
 });
 
 test('46 core: an empty metadata shell is an absent AI answer rather than a fabricated creature',async()=>{
-  const actual=new OpenAICompatibleMonsterIntakeProvider({baseUrl:'https://frozen.invalid',apiKey:'fixture',model:'frozen',maxAttempts:1,timeoutMs:1000,repairTimeoutMs:1000,
+  const actual=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://frozen.invalid',apiKey:'fixture',model:'frozen',reviewModel:'frozen',maxAttempts:1,timeoutMs:1000,repairTimeoutMs:1000,
     httpClient:async()=>Response.json({choices:[{message:{content:'{"schemaVersion":0}'}}]})});
   const analysis=await analyzeBrowserActorSourceWithAi(input,actual);
   expect(analysis.ir).toBeUndefined();expect(analysis.status).toBe('failed');
@@ -51,7 +51,7 @@ for(const answerKind of ['markdown','fenced-markdown','markdown-wrapper','plaint
     const answer=answerKind==='plaintext'?plain:answerKind==='fenced-markdown'?'```markdown\n'+standard+'```':standard;
     const transportText=answerKind==='markdown-wrapper'?JSON.stringify({markdown:answer}):answer;
     let requests=0;const audits:any[]=[];
-    const actual=new OpenAICompatibleMonsterIntakeProvider({baseUrl:'https://frozen.invalid',apiKey:'fixture',model:'frozen',maxAttempts:2,timeoutMs:1000,repairTimeoutMs:1000,audit:event=>audits.push(event),
+    const actual=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://frozen.invalid',apiKey:'fixture',model:'frozen',reviewModel:'frozen',maxAttempts:2,timeoutMs:1000,repairTimeoutMs:1000,audit:event=>audits.push(event),
       httpClient:async()=>{requests++;return Response.json({choices:[{message:{content:transportText}}]});}});
     const analysis=await analyzeBrowserActorSourceWithAi(input,actual);
     expect(analysis.ir).toBeUndefined();expect(analysis.sourceText).toBe(transportText);expect(analysis.rawSource).toBe(input.source);expect(analysis.rawSourceHash).toBe(hashSource(input.source));
@@ -74,7 +74,7 @@ for(const answerKind of ['markdown','fenced-markdown','markdown-wrapper','plaint
 
 test('46 core: unsupported returned text keeps its actual format problem and answer without requesting an IR substitute',async()=>{
   let requests=0;
-  const actual=new OpenAICompatibleMonsterIntakeProvider({baseUrl:'https://frozen.invalid',apiKey:'fixture',model:'frozen',maxAttempts:2,timeoutMs:1000,repairTimeoutMs:1000,
+  const actual=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://frozen.invalid',apiKey:'fixture',model:'frozen',reviewModel:'frozen',maxAttempts:2,timeoutMs:1000,repairTimeoutMs:1000,
     httpClient:async()=>{requests++;return Response.json({choices:[{message:{content:'A readable creature paragraph outside the existing supported text formats.'}}]});}});
   const analysis=await analyzeBrowserActorSourceWithAi(input,actual),generated=await generateBrowserActorIntakeCandidate(input,analysis,provider);
   expect(analysis.sourceText).toContain('readable creature');expect(analysis.ir).toBeUndefined();expect(analysis.canonicalSource).toBeUndefined();
@@ -84,7 +84,7 @@ test('46 core: unsupported returned text keeps its actual format problem and ans
 test('46 core: explicit empty text wrappers are absent answers while an actual creature ignores an empty Markdown annotation',async()=>{
   for(const value of [{markdown:''},{kind:'source-text',sourceText:' \n '},{...buildValidLurkerIr(),markdown:''},{...buildValidLurkerIr().creature,markdown:''}]){
     let requests=0;
-    const actual=new OpenAICompatibleMonsterIntakeProvider({baseUrl:'https://frozen.invalid',apiKey:'fixture',model:'frozen',maxAttempts:2,timeoutMs:1000,repairTimeoutMs:1000,
+    const actual=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://frozen.invalid',apiKey:'fixture',model:'frozen',reviewModel:'frozen',maxAttempts:2,timeoutMs:1000,repairTimeoutMs:1000,
       httpClient:async()=>{requests++;return Response.json({choices:[{message:{content:JSON.stringify(value)}}]});}});
     const analysis=await analyzeBrowserActorSourceWithAi(input,actual);
     if('creature'in value||'identity'in value){const result=await generateBrowserActorIntakeCandidate(input,analysis,provider);expect(result.candidateAvailable).toBe(true);expect(analysis.ir?.creature.actions.length).toBeGreaterThan(0);}
@@ -99,7 +99,7 @@ test('46 core: a normal creature IR takes priority over colliding unknown source
     const baseline=await generate(buildValidLurkerIr());
     for(const annotation of [{sourceText:'补充文字'},{kind:'source-text'},{kind:'source-text',sourceText:'补充文字'}]){
       let requests=0;const audits:any[]=[],ir={...buildValidLurkerIr(),...annotation};
-      const actual=new OpenAICompatibleMonsterIntakeProvider({baseUrl:'https://frozen.invalid',apiKey:'fixture',model:'frozen',maxAttempts:2,timeoutMs:1000,repairTimeoutMs:1000,audit:event=>audits.push(event),
+      const actual=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://frozen.invalid',apiKey:'fixture',model:'frozen',reviewModel:'frozen',maxAttempts:2,timeoutMs:1000,repairTimeoutMs:1000,audit:event=>audits.push(event),
         httpClient:async()=>{requests++;return Response.json({choices:[{message:{content:JSON.stringify(ir)}}]});}});
       const analysis=await analyzeBrowserActorSourceWithAi(input,actual),generated=await generateBrowserActorIntakeCandidate(input,analysis,provider);
       expect(analysis.ir?.creature.actions).toEqual(baseline.analysis.ir?.creature.actions);expect(analysis.sourceText).toBeUndefined();
@@ -122,7 +122,7 @@ test('46 core: one attack status cannot remove its attack, all damage or its fol
   expect(activities.some(activity=>activity.roll?.formula==='1d20+6')).toBe(true);
   expect(activities.some(activity=>activity.type==='damage'&&damage(activity)[0].formula==='2d8+3')).toBe(true);
   expect(activities.some(activity=>activity.type==='save'&&activity.save.dc.formula==='15')).toBe(true);
-  expect(item.system.description.value).toContain('poisoned');expect(JSON.stringify(result.analysis.ir)).toContain('failureStatuses');
+  expect(item.system.description.value).toContain('Poisoned targets save after a Long Rest.');expect(JSON.stringify(result.analysis.ir)).toContain('failureStatuses');
 });
 
 test('46 core: more than twelve parts and one unprojectable part preserve every other roll',async()=>{
@@ -145,7 +145,9 @@ test('46 core: repeated technical operation IDs cannot overwrite distinct attack
   const item=result.actor.items.find((item:any)=>item.name==='Two strikes'),activities=Object.values<any>(item.system.activities);
   expect(activities.filter(activity=>activity.type==='utility').map(activity=>activity.roll.formula)).toEqual(['1d20+4','1d20+7']);
   expect(activities.filter(activity=>activity.type==='damage').map(activity=>damage(activity)[0].formula)).toEqual(['1d6+2','2d8+3']);
-  expect(new Set(result.analysis.ir!.creature.actions[0].sourceOperations!.map(operation=>operation.id)).size).toBe(2);
+  const action=result.analysis.ir!.creature.actions[0];
+  if(!action)throw Error('Expected the preserved two-strike action.');
+  expect(new Set(action.sourceOperations!.map(operation=>operation.id)).size).toBe(2);
   expect(JSON.stringify(result.analysis.ir)).toContain('same');
 });
 
@@ -185,10 +187,10 @@ test('46 core: healing preserves an explicit recipient count and leaves an unres
   }
 });
 
-test('46 core: unsupported statuses remain visible while the known native state and the underlying save survive',async()=>{
+test('46 core: declared official statuses retain templates and the underlying save',async()=>{
   const ir:any=buildValidLurkerIr();ir.creature.actions=[{name:'States',description:'Declared save and states.',sourceOperations:[{name:'Save',type:'save',relationship:'primary',save:{dc:13,abilities:['con'],choice:'single',outcome:'none'},failureStatuses:['prone','exhaustion'],proof:{}}]}];
   const result=await generate(ir),item=result.actor.items.find((item:any)=>item.name==='States');
-  expect(item.effects.flatMap((effect:any)=>effect.statuses)).toEqual(['prone']);expect(item.system.description.value).toContain('exhaustion');expect(JSON.stringify(result.analysis.ir)).toContain('exhaustion');
+  expect(item.effects.flatMap((effect:any)=>effect.statuses)).toEqual(['prone','exhaustion']);expect(JSON.stringify(result.analysis.ir)).toContain('exhaustion');
   expect(Object.values<any>(item.system.activities)[0].save.dc.formula).toBe('13');
 });
 

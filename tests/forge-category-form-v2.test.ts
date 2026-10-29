@@ -432,7 +432,7 @@ test('unchanged frozen 2024 Dragon assembles complete source and reuses one base
  const {entry,plan,base,decode}=frozenPilot('P3'),decoded=decode();
  const ir=completeCategoryFormSpellcasting(plan,assembleStagedMonsterIntake(plan,base,adaptCategoryFormV2(plan,base,decoded),{sourceProvenSelfArea:true}),decoded);
  const markdown=renderMonsterIntakeMarkdown(ir),parsed=new YamlParser().parse(markdown);
- const actor=await new ActorGenerator({fvttVersion:'14',effectProfile:'core',iconMode:'off'}).generate(parsed) as any;
+ const actor=await new ActorGenerator({fvttVersion:'14',effectProfile:'core'}).generate(parsed) as any;
  expect(actor.system.resources.legact).toEqual({max:3,spent:0});expect(actor.system.resources.legres).toEqual({max:3,spent:0});
  expect(actor.system.resources.lair).toMatchObject({value:true,inside:false});
  const resistance=actor.items.find((item:any)=>item.name.startsWith('Legendary Resistance'));

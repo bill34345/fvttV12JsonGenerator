@@ -37,6 +37,7 @@ import iterate50Round10 from './fixtures/forge-iterate50-round10-cases.json';
 import iterate50Round11 from './fixtures/forge-iterate50-round11-cases.json';
 import {stagedSpellcastingGroups} from '../packages/intake-ai/src/staged-spellcasting';
 import {convertMarkdownContentToJson} from '@fvtt-json-generator/workflows/single-file-conversion';
+type RuleChainItem={name:string;type:string;system:{description:{value:string};activities:ReturnType<ActivityGenerator['generate']>;damage?:{base?:unknown}};effects:unknown[]};
 const get=(id:string):any=>structuredClone(corpus.cases.find(c=>c.id===id));
 const raw=(c:any)=>{const ir=modelReply(c);for(const f of c.features)if(f.uses)ir.creature[collections[f.section]!].find((x:any)=>x.name===f.name).uses=f.uses;return ir;};
 const normalize=(s:string)=>s.replace(/<[^>]+>/gu,' ').replace(/&#39;|&apos;/gu,"'").replace(/&amp;/gu,'&').replace(/&quot;/gu,'"').replace(/\s+/gu,' ').trim();
@@ -396,7 +397,7 @@ for(const id of ['r10m-dryad-fey-charm','r10m-cloaker-moan','r10m-druid-quarters
   expect(r.ir.creature.identity.creatureType).toBe('construct');expect(r.actor.items).toHaveLength(1);expect(r.actor.system.attributes.movement.fly).toBe(40);expect(r.actor.system.attributes.movement.burrow??0).toBe(0);
  }
  if(id==='r10r-bag-of-beans'){
-  expect(r.ir.creature.traits[0].healing).toBeUndefined();expect(Object.values(r.actor.items[0].system.activities).some((a:any)=>a.type==='heal')).toBe(false);
+  const trait=r.ir.creature.traits[0];assert.ok(trait);expect(trait.healing).toBeUndefined();expect(Object.values(r.actor.items[0].system.activities).some((a:any)=>a.type==='heal')).toBe(false);
  }
 });
 for(const gender of ['female','male','renamed'])test('gendered range requires the same source Actor and seeing pronoun '+gender,async()=>{
@@ -461,11 +462,19 @@ test('a standalone parent cannot swallow a later explicit feature or split at a 
 
 const round3Case=(id:string):any=>structuredClone(iterate50Round3.cases.find(c=>c.id===id));
 for(const id of ['r12m-srd52-aboleth-legendary-resistance','r12m-srd52-kraken-toxic-ink','r12m-srd52-lich-deathly-teleport','r12m-srd52-sphinx-lore-weight-years','r12m-srd52-tarrasque-world-shaking-movement','r12m-srd52-sphinx-valor-roar','r12r-elemental-fury','r12r-javelin-of-lightning'])for(const path of ['ordinary','staged'])test('third iterative repair '+id+' '+path,async()=>{
- const c=round3Case(id),r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+ const c=round3Case(id),proposal=raw(c);
+ // The current complete-IR control supplies its ledger explicitly. Frozen
+ // missing-ledger replies remain separate negative controls in the boundary suite.
+ if(path==='ordinary'&&c.features[0].section==='legendary'&&!proposal.creature.legendary){
+  const context=c.units.find((unit:any)=>unit.destination==='context'),preamble=context.text.slice(context.text.indexOf('\n')+1).trim(),start=c.source.indexOf(preamble);
+  proposal.creature.legendary={max:3,lairMax:4,recovery:'own-turn-start',preamble,evidence:[{start,end:start+preamble.length,quote:preamble}]};
+  proposal.creature.legendaryActions[0].sourceContext=[context.text];
+ }
+ const r=await chain(c,()=>path==='ordinary'?ordinary(c,proposal):staged(c));requireAcceptedChain(r);
  expect(normalize(r.actor.items[0].system.description.value)).toContain(normalize(c.features[0].text));
- if(id.endsWith('legendary-resistance')){expect(r.ir.creature.traits[0].uses).toBeUndefined();expect(Number(r.actor.items[0].system.uses?.max??0)).toBe(0);}
+ if(id.endsWith('legendary-resistance')){const trait=r.ir.creature.traits[0];assert.ok(trait);expect(trait.uses).toBeUndefined();expect(Number(r.actor.items[0].system.uses?.max??0)).toBe(0);}
  if(c.features[0].section==='legendary'){
-  expect(r.ir.creature.legendaryActions[0].legendaryCost).toBe(1);
+  const action=r.ir.creature.legendaryActions[0];assert.ok(action);expect(action.legendaryCost).toBe(1);
   const fixed=id.includes('world-shaking');expect(r.ir.creature.legendary?.max).toBe(3);expect(r.actor.system.resources.legact.max).toBe(3);
   if(!fixed){expect(r.ir.creature.legendary?.lairMax).toBe(4);expect(r.actor.system.resources.lair).toMatchObject({value:true,inside:false});expect(normalize(r.actor.items[0].system.description.value)).toContain('Legendary Action Uses: 3 (4 in Lair)');}
  }
@@ -495,7 +504,7 @@ test('another Actor shared ledger cannot fund this Actor pool',async()=>{
 
 for(const path of ['ordinary','staged'])test('a translated Actor keeps its source English ledger owner '+path,async()=>{
  const c=round3Case('r12m-srd52-tarrasque-world-shaking-movement');c.creature.identity.englishName=c.creature.identity.name;c.creature.identity.name='撼地兽';c.units[0].text=c.units[0].text.replace('Tarrasque CR 2','撼地兽 (Tarrasque) CR 2');c.source=c.units.map((u:any)=>u.text).join('');
- const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);expect(r.ir.creature.legendary?.max).toBe(3);expect(r.ir.creature.legendaryActions[0].legendaryCost).toBe(1);
+ const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);expect(r.ir.creature.legendary?.max).toBe(3);const action=r.ir.creature.legendaryActions[0];assert.ok(action);expect(action.legendaryCost).toBe(1);
 });
 
 test('ledger shortened owners must retain the Actor noun-phrase head',()=>{
@@ -622,7 +631,7 @@ test('round5 ordinary exact mixed healing receives missing source target but nev
  }
 });
 
-test('round5 Heal parser and Activity preserve proven recipients; legacy input retains its old self target',()=>{
+test('round5 Heal parser and Activity preserve proven recipients; missing legacy targets stay GM-selected',()=>{
  const parser=new StructuredActionParser(),generator=new ActivityGenerator({fvttVersion:'14'});
  for(const s of r5HealingSources){
   const parsed=parser.parseStructuredSection([{名称:s.name,类型:'heal',治疗:{公式:s.formula,类型:s.type,target:s.target}}],'traits')[0]!;
@@ -630,16 +639,20 @@ test('round5 Heal parser and Activity preserve proven recipients; legacy input r
   assert.deepEqual(activity.target,{override:false,prompt:s.target.type==='creature',template:{count:'',contiguous:false,type:'',size:'',width:'',height:'',units:'ft'},affects:{count:'1',type:s.target.type,choice:false,special:s.target.special}});
   assert.deepEqual(activity.range,s.target.type==='creature'?{units:'spec',special:s.target.special,override:false}:undefined);assert.equal(activity.healing.types[0],s.type);
  }
- const legacy=parser.parseStructuredSection([{名称:'Legacy',类型:'heal',治疗:{公式:'1d6',类型:'healing'}}],'traits')[0]!;assert.equal(legacy.healing?.target,undefined);const old:any=Object.values(generator.generate({name:'Legacy',type:'heal',healing:legacy.healing}))[0];assert.deepEqual(old.target.affects,{count:'1',type:'self',choice:false,special:''});assert.equal(old.target.prompt,false);
+ const legacy=parser.parseStructuredSection([{名称:'Legacy',类型:'heal',治疗:{公式:'1d6',类型:'healing'}}],'traits')[0]!;assert.equal(legacy.healing?.target,undefined);const pending:any=Object.values(generator.generate({name:'Legacy',type:'heal',healing:legacy.healing}))[0];assert.deepEqual(pending.target.affects,{count:'',type:'any',choice:false,special:'GM：治疗目标未提供，请按完整原文确认对象、数量与范围。'});assert.equal(pending.target.prompt,true);assert.equal(pending.range.units,'spec');
  const optionalNote=parser.parseStructuredSection([{名称:'Explicit recipient',类型:'heal',治疗:{公式:'1d6',类型:'healing',target:{type:'creature',count:1}}}],'traits')[0]!;assert.deepEqual(optionalNote.healing?.target,{type:'creature',count:1,special:''});
  for(const target of [{type:'creature',count:2,special:'two creatures'},{type:'object',count:1,special:'an object'},{type:'creature',count:1,special:null},{type:'creature',count:1,special:'one creature',range:30}]){const parsed=parser.parseStructuredSection([{名称:'Local recipient detail',类型:'heal',治疗:{公式:'1d6',类型:'healing',target}}],'traits')[0]!;const activity:any=Object.values(generator.generate({name:parsed.name,type:'heal',healing:parsed.healing}))[0];assert.equal(activity.type,'heal');assert.equal(activity.target.affects.count,String(target.count));if(target.type==='object')assert.equal(activity.target.affects.type,'any');}
  const unrelated:any=Object.values(generator.generate({name:'Unrelated',type:'damage',damage:[{formula:'1d6',type:'fire'}]}))[0];assert.equal(unrelated.type,'damage');assert.equal(unrelated.healing,undefined);
 });
 
 for(const id of ['r14m-srd52-aboleth-psychic-drain','r14m-srd52-frost-giant-war-cry'])for(const path of ['ordinary','staged'])test('round5 full-source healing regression '+id+' '+path,async()=>{
- const c:any=structuredClone(iterate50Round5.cases.find(c=>c.id===id)),result=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(result);
+ const c:any=structuredClone(iterate50Round5.cases.find(c=>c.id===id)),proposal=raw(c);
+ if(path==='ordinary')proposal.creature[collections[c.features[0].section]!][0].healing.target=id.includes('psychic')
+  ?{type:'self',count:1,special:'The aboleth'}:{type:'creature',count:1,special:'The giant or one creature of its choice that can see or hear it'};
+ const result=await chain(c,()=>path==='ordinary'?ordinary(c,proposal):staged(c));requireAcceptedChain(result);
  const section=collections[c.features[0].section]!,feature:any=(result.ir.creature as any)[section][0];
- const item=result.actor.items.find((item:any)=>normalize(item.system.description.value).includes(normalize(c.features[0].text))),activity:any=Object.values(item.system.activities)[0];
+ const item:RuleChainItem|undefined=result.actor.items.find((item:RuleChainItem)=>normalize(item.system.description.value).includes(normalize(c.features[0].text)));
+ assert.ok(item);const activity=Object.values(item.system.activities)[0];
  assert.equal(activity.type,'heal');assert.equal(feature.healing.formula,id.includes('psychic')?'1d10':'2d10+5');assert.equal(feature.healing.type,id.includes('psychic')?'healing':'temphp');
  assert.equal(activity.target.affects.type,id.includes('psychic')?'self':'creature');assert.equal(String(activity.target.affects.count),'1');assert.equal(activity.target.affects.special,feature.healing.target.special);
  if(id.includes('war-cry')){assert.equal(item.type,'feat');assert.equal(Object.hasOwn(item.system,'range'),false);assert.equal(activity.target.affects.special,'The giant or one creature of its choice that can see or hear it');assert.equal(activity.range.units,'spec');assert.equal(activity.range.special,feature.healing.target.special);}
@@ -649,7 +662,11 @@ for(const id of ['r14m-srd52-aboleth-psychic-drain','r14m-srd52-frost-giant-war-
   (a:any)=>{a.healing.number=99;},
   (a:any)=>{a.target.affects.type=id.includes('psychic')?'creature':'self';},
   (a:any)=>{a.target.affects.special='one creature';},
- ]){const actor=structuredClone(result.actor),changed=actor.items[result.actor.items.indexOf(item)];mutate(Object.values(changed.system.activities)[0]);const findings=verifyMonsterIntake(c.source,result.ir,result.markdown,actor,request(c.source).candidate).findings;assert.equal(findings.some(f=>f.code==='ACTOR_HEALING_DRIFT'||f.code==='ACTOR_HEALING_TARGET_DRIFT'),true);}
+ ]){
+  const actor=structuredClone(result.actor),changed=actor.items[result.actor.items.indexOf(item)];mutate(Object.values(changed.system.activities)[0]);
+  const findings:ReturnType<typeof verifyMonsterIntake>['findings']=verifyMonsterIntake(c.source,result.ir,result.markdown,actor,request(c.source).candidate).findings;
+  assert.equal(findings.some(f=>f.code==='ACTOR_HEALING_DRIFT'||f.code==='ACTOR_HEALING_TARGET_DRIFT'),true);
+ }
 });
 
 
@@ -854,7 +871,9 @@ test('round9 source-bound legacy Attack stays literal through IR Markdown workfl
  const c:any=structuredClone(iterate50Round9.cases.find(c=>c.id==='r18m-srd52-manticore-multiattack')),r=await chain(c,()=>staged(c));requireAcceptedChain(r);
  const attacks=r.ir.creature.actions.filter(f=>f.attack);assert.equal(attacks.length,2);assert.equal(attacks.every(f=>!f.sourceOperations),true);
  for(const [name,type,range,long] of [['Rend','slashing',5,undefined],['Tail Spike','piercing',100,200]] as const){
-  const item=r.actor.items.find((i:any)=>i.name===name),activity:any=Object.values(item.system.activities)[0];
+  const item:RuleChainItem|undefined=r.actor.items.find((item:RuleChainItem)=>item.name===name);
+  assert.ok(item);
+  const activity:ReturnType<ActivityGenerator['generate']>[string]=Object.values(item.system.activities)[0];
   assert.deepEqual(activity.attack,{ability:'',bonus:'5',flat:true,type:{value:name==='Rend'?'melee':'ranged',classification:'weapon'}});assert.equal(activity.flags?.fvttJsonGenerator?.sourceOperation,undefined);
   assert.deepEqual(activity.damage.parts.map((p:any)=>[p.number,p.denomination,p.bonus,p.types]),[[1,8,'3',[type]]]);assert.equal(item.system.damage?.base,undefined);
   assert.equal(name==='Rend'?activity.range.reach:activity.range.value,range);if(long!==undefined)assert.equal(activity.range.long,long);

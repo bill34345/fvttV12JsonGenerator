@@ -1,7 +1,7 @@
 import {afterAll, describe, expect, test} from 'bun:test';
 import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
+import {createForgeSourceId, hashSource, type ForgeSourceId} from '@fvtt-json-generator/forge-gateway-protocol';
 import {analyzeBrowserActorSourceWithAi, generateBrowserActorIntakeCandidate} from '@fvtt-json-generator/forge-browser-runtime/ai';
 import {OpenAICompatibleMonsterIntakeProvider} from '@fvtt-json-generator/intake-ai/provider';
 import type {PortableSpellManifest, PortableSpellRef} from '@fvtt-json-generator/spell-manifest-contracts';
@@ -15,7 +15,7 @@ const protectedFiles = new Map<string, string>();
 function providerFor(reply: string) {
   let replayRequests = 0;
   const provider = new OpenAICompatibleMonsterIntakeProvider({
-    apiKey: 'offline-fixture', baseUrl: 'https://offline.invalid', model: 'frozen-replay', reviewModel: 'disabled',
+    authMode: 'api-key', apiKey: 'offline-fixture', baseUrl: 'https://offline.invalid', model: 'frozen-replay', reviewModel: 'disabled',
     timeoutMs: 60000, repairTimeoutMs: 60000, maxAttempts: 1,
     httpClient: async () => {
       replayRequests++;
@@ -25,12 +25,12 @@ function providerFor(reply: string) {
   return {provider, replayRequests: () => replayRequests};
 }
 
-async function generate(source: string, reply: string, sourceId = 'actor:v1:957b231f-8e7d-43cc-a3ee-477e785648d7') {
+async function generate(source: string, reply: string, sourceId: ForgeSourceId = createForgeSourceId(() => '957b231f-8e7d-43cc-a3ee-477e785648d7')) {
   const replay = providerFor(reply);
   const allowed = {providerName: replay.provider.providerName, extractionModel: 'frozen-replay', reviewModel: 'disabled',
     discover: forbidden, extract: replay.provider.extract.bind(replay.provider), extractAnswer: replay.provider.extractAnswer.bind(replay.provider), review: forbidden, repair: forbidden};
   const input = {source, sourceName: 'CHM spell projection fixture', sourceScope: 'single' as const,
-    sourceId: sourceId as `actor:v1:${string}`, requestId: 'chm-spell-projection', fvttVersion: '14.368', systemVersion: '5.3.3', autoCorrect: false};
+    sourceId, requestId: 'chm-spell-projection', fvttVersion: '14.368', systemVersion: '5.3.3', autoCorrect: false};
   const analysis = await analyzeBrowserActorSourceWithAi(input, allowed);
   const generation = await generateBrowserActorIntakeCandidate(input, analysis, {...allowed, extract: forbidden, extractAnswer: forbidden});
   expect(replay.replayRequests()).toBe(1);
@@ -131,7 +131,7 @@ test.skipIf(!frozenRoot)('frozen first-answer Night Hag keeps all abilities and 
   };
   const source = read('sources-r2/night-hag.md'), reply = read('results/night-hag/raw-answer.txt');
   const oldActor = JSON.parse(read('results/night-hag/actor.json'));
-  const {analysis, generation, actor} = await generate(source, reply, 'actor:v1:5cf73706-1459-458e-a346-82c3d34d2f0b');
+  const {analysis, generation, actor} = await generate(source, reply, createForgeSourceId(() => '5cf73706-1459-458e-a346-82c3d34d2f0b'));
   expect(actor.items.map((item: any) => item.name)).toEqual(oldActor.items.map((item: any) => item.name));
   expect(actor.system).toEqual(oldActor.system);
   for (const item of oldActor.items.filter((item: any) => !item.flags?.[RESOLVER_MODULE_ID])) {
@@ -155,4 +155,4 @@ test.skipIf(!frozenRoot)('frozen first-answer Night Hag keeps all abilities and 
   }
 });
 
-afterAll(() => { for (const [path, hash] of protectedFiles) { expect(existsSync(path)).toBe(true); expect(hashSource(readFileSync(path, 'utf8'))).toBe(hash); } });
+afterAll(() => { for (const [path, hash] of protectedFiles) { expect(existsSync(path)).toBe(true); expect<string>(hashSource(readFileSync(path, 'utf8'))).toBe(hash); } });

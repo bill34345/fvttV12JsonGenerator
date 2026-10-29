@@ -57,10 +57,11 @@ export function sourceConditionLifecycle(source: string, status: string, declare
   const statusClause = scope.split(/[.!?。；;]/u)[0] ?? '';
   const statusBranch = scope.slice(statusClause.length).split(/[.!?。；;]/u).some(sentence =>
     /\b(?:if|when|unless|while)\b|若|如果|当|仅当|只有/iu.test(sentence) && pattern?.test(sentence));
-  const hasLifecycle = /\b(?:until|unless|while|ends?|expires?|repeat(?:s|ed)?|again)\b|直到|直至|重复|再次|结束|解除|终止|挣脱|脱离/iu.test(scope)
+  const hasLifecycle = /\b(?:until|unless|while|ends?|expires?|repeat(?:s|ed)?|again)\b|直到|直至|除非|重复|再次|结束|解除|终止|挣脱|脱离/iu.test(scope)
     || statusBranch
     || /\b(?:if|when|whenever|provided|only\s+when)\b|若|如果|当|每当|仅当|只有/iu.test(statusClause)
-    || /\b(?:if|unless|while|provided|only\s+when)\b|若|如果|仅当|只有/iu.test(prefix);
+    || /\b(?:if|until|unless|while|provided|only\s+when)\b|若|如果|除非|仅当|只有/iu.test(prefix)
+    || /\b(?:that|which|who)\s+(?:is|are|has|have|was|were)\b/iu.test(prefix);
   // Bind a source interval to this status, never to an attack range or another
   // number elsewhere in the feature. Structured duration cannot override it.
   let afterStatus = normalized.slice(start + (found?.[0].length ?? 0), end);
@@ -80,7 +81,7 @@ export function sourceConditionLifecycle(source: string, status: string, declare
     const nextAlias = /^\s*[（(]([^）)]+)[）)]/u.exec(afterStatus);
     if (nextAlias && next.entry.pattern.test(nextAlias[1]!)) afterStatus = afterStatus.slice(nextAlias[0].length);
   }
-  const after = /^\s*(?:状态|condition)?[,，]?\s*(?:for\s+|持续\s*)(\d+\s*(?:rounds?|minutes?|hours?|days?|轮|分钟|小时|天|日))/iu.exec(afterStatus);
+  const after = /^\s*(?:状态|conditions?)?[,，]?\s*(?:for\s+|持续\s*)(\d+\s*(?:rounds?|minutes?|hours?|days?|轮|分钟|小时|天|日))/iu.exec(afterStatus);
   const before = /(\d+\s*(?:轮|分钟|小时|天|日))(?:的)?\s*$/u.exec(prefix);
   const continuation = /^\s*[.。]\s*(?:(?:this|the|that)\s+(?:condition|effect)\s+lasts?\s+for\s+|(?:该|此)(?:状态|效果)(?:持续|维持)\s*)(\d+\s*(?:rounds?|minutes?|hours?|days?|轮|分钟|小时|天|日))/iu.exec(afterStatus);
   const sourceDuration = simpleConditionDuration(after?.[1] ?? before?.[1] ?? continuation?.[1]);
@@ -104,11 +105,16 @@ function applicationScope(source:string,status:string):string{
   return (/saving throw|\bsave\b|豁免/iu.test(previous)&&!extractExplicitlyInflictedStatuses(previous,true).length?previous+' ':'')+sentences[index];
 }
 
+/** Generation-owned stage provenance; never a new field in the external IR. */
+export interface InferredAppliedCondition extends CanonicalAppliedCondition {sourceStage?:string;}
+
 /** Existing explicit-status extraction supplies templates, not a trigger executor. */
-export function inferredAppliedConditions(source:string):CanonicalAppliedCondition[]{
+export function inferredAppliedConditions(source:string):InferredAppliedCondition[]{
+  const stages=independentExitConditionStages(source);
+  const immediateSource=stages.flatMap(stage=>stage.masks).sort((a,b)=>b.start-a.start).reduce((text,range)=>text.slice(0,range.start)+' '.repeat(range.end-range.start)+text.slice(range.end),source);
   const staged=hasStagedSaveOutcomes(source);
-  const declarations=extractExplicitlyInflictedStatuses(source,true).filter(officialCondition).map(status=>{
-    const scope=applicationScope(source,status),life=sourceConditionLifecycle(source,status);
+  const declarations:InferredAppliedCondition[]=extractExplicitlyInflictedStatuses(immediateSource,true).filter(officialCondition).map(status=>{
+    const scope=applicationScope(immediateSource,status),life=sourceConditionLifecycle(source,status);
     return{statuses:[status],...(life.mode==='gm'||/期间|\bwhile\b/iu.test(scope)||staged?{condition:scope}:{}),...(staged?{staged:true}:{})};
   });
   for(const dependent of [...declarations]){
@@ -119,7 +125,54 @@ export function inferredAppliedConditions(source:string):CanonicalAppliedConditi
       parent.statuses.push(...dependent.statuses);parent.condition=source;declarations.splice(declarations.indexOf(dependent),1);
     }
   }
+  const scopes=new Map<string,string[]>();
+  for(const stage of stages)for(const status of stage.statuses){
+    const own=scopes.get(status)??[];if(!own.includes(stage.source))own.push(stage.source);scopes.set(status,own);
+  }
+  for(const[status,parts]of scopes){const scope=parts.join('\n');declarations.push({statuses:[status],condition:scope,staged:true,sourceStage:scope});}
   return declarations;
+}
+
+/** source-derived: an exit event precedes its separately applied state. This
+ * supplies a GM template and its printed trigger, never an event executor. */
+function independentExitConditionStages(source:string):Array<{source:string;statuses:string[];masks:Array<{start:number;end:number}>}>{
+  const stages:Array<{source:string;statuses:string[];masks:Array<{start:number;end:number}>}>=[];
+  let cursor=0;
+  for(const sentence of source.split(/(?<=[.!?。；;])\s*/u).filter(Boolean)){
+    const offset=source.indexOf(sentence,cursor);cursor=offset+sentence.length;
+    const exit=[...sentence.matchAll(/\b(?:regurgitat(?:e[sd]?|ing)|expel(?:s|led|ling)?|exit(?:s|ed|ing)?|escap(?:e[sd]?|ing))\b|吐出|逃出|离开|脱离/giu)].find(match=>isIndependentExitEvent(sentence,match));
+    if(!exit)continue;
+    const applied=new Set(extractExplicitlyInflictedStatuses(sentence,true).filter(officialCondition));
+    // "Exiting Prone" states a result without an is/has predicate. An escape
+    // mentioned only after a status is its ending, not another application.
+    const exiting=/\bexit(?:s|ing)?\s+([^.!?。；;]+)/iu.exec(sentence);
+    if(exiting)for(const entry of EXPLICIT_STATUS_PATTERNS)if(entry.pattern.exec(exiting[1]!)?.index===0&&officialCondition(entry.status))applied.add(entry.status);
+    const statuses=[...applied].filter(status=>{
+      const pattern=EXPLICIT_STATUS_PATTERNS.find(entry=>entry.status===status)!.pattern;
+      return[...sentence.matchAll(new RegExp(pattern.source,'giu'))].some(match=>match.index>exit.index);
+    });
+    if(statuses.length){
+      const masks=statuses.flatMap(status=>{
+        const pattern=EXPLICIT_STATUS_PATTERNS.find(entry=>entry.status===status)!.pattern;
+        return[...sentence.matchAll(new RegExp(pattern.source,'giu'))].filter(match=>match.index>exit.index).map(match=>({start:offset+match.index,end:offset+match.index+match[0].length}));
+      });
+      stages.push({source:sentence.trim(),statuses,masks});
+    }
+  }
+  return stages;
+}
+
+function isIndependentExitEvent(sentence:string,exit:RegExpMatchArray):boolean{
+  const before=sentence.slice(0,exit.index),after=sentence.slice(exit.index!+exit[0].length);
+  if(/\b(?:until|unless)\b|直到|直至|除非/iu.test(before)
+    ||/(?:\b(?:cannot|can\s+not|can['’]t|does\s+not|doesn['’]t|unable\s+to|never|not)(?:\s+be)?|不能|无法|不可)(?:\s*被)?\s*$/iu.test(before))return false;
+  if(/^(?:吐出|逃出|离开|脱离)$/u.test(exit[0]))return /被\s*$/u.test(before)||/(?:目标|生物|其|它)\s*$/u.test(before)||/^\s*(?:目标|生物|后|时|，|,)/u.test(after);
+  if(/^(?:regurgitat|expel)/iu.test(exit[0]))return /^\s+(?:(?:the|an?|this|that|swallowed)\s+)*(?:target|creature|it|them)\b/iu.test(after)
+    ||/\b(?:target|creature|it|they)\s+(?:is|are|was|were|gets?|got|being)\s*$/iu.test(before);
+  // A finite subject or an explicit participial result proves an exit verb.
+  // Bare "escape DC/checks" and polysemous "leaves a trail" do not.
+  return /\b(?:target|creature|it|they)\s*$/iu.test(before)
+    ||/^(?:exiting|escaping)$/iu.test(exit[0])&&/(?:^|[,;]|\b(?:when|after|while))\s*$/iu.test(before);
 }
 
 export function operationConditionSource(source:string,op:SourceOperation,operations:SourceOperation[]):string{
@@ -133,9 +186,36 @@ export function operationConditionSource(source:string,op:SourceOperation,operat
   }
   return scope;
 }
-export function operationAppliedConditions(source:string,op:SourceOperation,operations:SourceOperation[]):CanonicalAppliedCondition[]{
+
+/** Source-derived: a later pulse can quote the state already owned by entry.
+ * Mask only that repeated persistence declaration for inference; explicit OP
+ * conditions and newly applied states elsewhere in the pulse remain intact. */
+function ongoingConditionInferenceSource(scope:string,op:SourceOperation,operations:SourceOperation[]):string{
+  if(op.type!=='damage'||op.relationship!=='follow-up')return scope;
+  const normalized=(text:string|undefined)=>(text??'').replace(/\s+/gu,' ').trim().replace(/[,.;]+$/u,'').toLowerCase();
+  const trigger=normalized(op.condition);
+  return scope.replace(/\b((?:while|until)\s+[^,.;!?]+),\s*(?:(?:a|the|that|this|each|any)\s+)?(?:target|creature|enemy|foe|it|they)\s+(?:has|have)\s+(?:the\s+)?([a-z]+(?:\s*(?:,\s*(?:(?:and|or)\s+)?|(?:and|or)\s+)[a-z]+)*)\s+conditions?\b(?=\s*[,.;!?]|$)/giu,(declaration:string,qualifier:string,states:string)=>{
+    const persistence=normalized(qualifier);
+    if(trigger!==persistence&&!trigger.startsWith(persistence+','))return declaration;
+    const owned=new Set(operations.filter(other=>other!==op).flatMap(other=>other.appliedConditions??[])
+      .filter(condition=>normalized(condition.condition)===persistence).flatMap(condition=>condition.statuses));
+    let inference=states;
+    for(const entry of EXPLICIT_STATUS_PATTERNS)if(owned.has(entry.status))inference=inference.replace(new RegExp(entry.pattern.source,'giu'),match=>' '.repeat(match.length));
+    const at=declaration.indexOf(states,qualifier.length);
+    return declaration.slice(0,at)+inference+declaration.slice(at+states.length);
+  });
+}
+
+export function operationAppliedConditions(source:string,op:SourceOperation,operations:SourceOperation[]):InferredAppliedCondition[]{
   const scope=operationConditionSource(source,op,operations),staged=op.type==='save'&&hasStagedSaveOutcomes(source);
-  const conditions=op.appliedConditions?structuredClone(op.appliedConditions):inferredAppliedConditions(scope);
+  let conditions:InferredAppliedCondition[]=op.appliedConditions?structuredClone(op.appliedConditions):inferredAppliedConditions(scope);
+  if(!op.appliedConditions){
+    const inference=ongoingConditionInferenceSource(scope,op,operations);
+    if(inference!==scope){
+      const applied=new Set(inferredAppliedConditions(inference).flatMap(condition=>condition.statuses));
+      conditions=conditions.map(condition=>({...condition,statuses:condition.statuses.filter(status=>applied.has(status))})).filter(condition=>condition.statuses.length);
+    }
+  }
   for(const status of op.failureStatuses??[])if(!conditions.some(entry=>entry.statuses.includes(status)))conditions.push({statuses:[status]});
   return conditions.flatMap(condition=>{
     const split=condition.statuses.includes('exhaustion')&&condition.statuses.length>1?[{...condition,statuses:condition.statuses.filter(status=>status!=='exhaustion'),exhaustionLevels:undefined},{...condition,statuses:['exhaustion']}]:[condition];
@@ -146,13 +226,14 @@ export function operationAppliedConditions(source:string,op:SourceOperation,oper
 export function conditionActivityTargets(activities:any,source:string,statuses:string[]):any[]{
   const all=Object.values(activities??{}) as any[],saves=all.filter(activity=>activity.type==='save');
   const hits=all.filter(activity=>activity.type==='attack'||activity.flags?.fvttJsonGenerator?.sourceOperation?.role==='damage');
+  const hitRolls=all.filter(activity=>activity.flags?.fvttJsonGenerator?.sourceOperation?.role==='attack-roll');
   const selected=new Set<any>();
   for(const status of statuses){
     const scope=applicationScope(source,status),at=EXPLICIT_STATUS_PATTERNS.find(entry=>entry.status===status)?.pattern.exec(scope)?.index??scope.length;
     // A later Save in the same sentence does not own an earlier hit result.
     const triggers=[...scope.slice(0,at).matchAll(/\bsaving\s+throw\b|\bsave\b|\bfailure\b|\bhit\b|豁免|失败|命中/giu)];
     const trigger=triggers.at(-1)?.[0],saveResult=trigger!==undefined&&!/^(?:hit|命中)$/iu.test(trigger);
-    for(const activity of saveResult&&saves.length?saves:hits.length?hits:saves.length?saves:all.filter(activity=>activity.flags?.fvttJsonGenerator?.sourceOperation?.role!=='attack-roll'&&activity.type!=='heal'))selected.add(activity);
+    for(const activity of saveResult&&saves.length?saves:hits.length?hits:hitRolls.length?hitRolls:saves.length?saves:all.filter(activity=>activity.type!=='heal'))selected.add(activity);
   }
   return all.filter(activity=>selected.has(activity));
 }
@@ -285,23 +366,30 @@ export function extractExplicitlyInflictedStatuses(text: string,includeStaged=fa
       continue;
     }
 
+    if(includeStaged)for(const modern of sentence.matchAll(/\b(?:has|have)\s+(?:the\s+)?([a-z]+(?:\s*(?:,\s*(?:(?:and|or)\s+)?|(?:and|or)\s+)[a-z]+)*)\s+conditions?\b/giu)){
+      const modernSubject=englishStatusSubject(sentence,modern.index);
+      if(!modernSubject||modern.index-modernSubject.index!>120)continue;
+      const before=sentence.slice(0,modern.index),clause=sentence.slice(Math.max(before.lastIndexOf(','),before.lastIndexOf('，'))+1);
+      if(isEnglishStatusQualifier(modern,sentence)||/^(?:if|while|unless|provided)\s+(?:the\s+)?(?:target|creature|it)\s+(?:is|has|was)\b/iu.test(clause.trim()))continue;
+      for(const status of inflictedPredicateStatuses({text:modern[1]!,allowedStatuses:new Set(Object.keys(SOURCE_NATIVE_FAILURE_LABELS))},clause,includeStaged))statuses.add(status);
+    }
+
     const clauses = sentence.split(/,|\uFF0C|\bbut\b/i).map((part) => part.trim()).filter(Boolean);
     for (const clause of clauses) {
       if(includeStaged&&(/^(?:if|while|unless|provided)\s+(?:the\s+)?(?:target|creature|it)\s+(?:is|has|was)\b/iu.test(clause)||/^(?:若|如果|当|仅当|只有)(?:该)?(?:目标|生物|其|它)(?:已|已经|处于|具有)/u.test(clause)))continue;
-      const predicates: Array<{ text: string; allowedStatuses?: ReadonlySet<string> }> = [];
-      const englishApplication = clause.match(/\b(?:target|creature|enemy|foe|it|they)\b[\s\S]{0,120}?\b(?:is|are|becomes?|be|falls?|starts?)\s+([\s\S]+)/i);
-      if (englishApplication?.[1]) {
-        predicates.push({ text: englishApplication[1] });
+      const predicates: Array<{ text: string; allowedStatuses?: ReadonlySet<string>; parameterized?:boolean; direct?:boolean }> = [];
+      for(const application of clause.matchAll(/\b(?:is|are|becomes?|be|falls?|starts?)\s+([\s\S]*?)(?=\b(?:is|are|becomes?|be|falls?|starts?)\s+|$)/giu)){
+        const englishSubject=englishStatusSubject(clause,application.index);
+        if(!englishSubject||application.index-englishSubject.index!>120||isEnglishStatusQualifier(application,clause))continue;
+        predicates.push({text:application[1]!,direct:true});
       }
-      const modern=includeStaged?/\b(?:target|creature|enemy|foe|it|they)\b[\s\S]{0,120}?\b(?:has|have)\s+(?:the\s+)?([a-z]+)\s+condition\b/iu.exec(clause):undefined;
-      if(modern&&officialCondition(modern[1]!.toLowerCase()))predicates.push({text:modern[1]!});
       if(includeStaged&&!/^\s*(?:if|when|while|after|unless|若|当|每当)/iu.test(clause)&&/\b(?:target|creature|it)\s+(?:immediately\s+)?dies\b|(?:目标|生物|其|它)(?:立即)?死亡/iu.test(clause))predicates.push({text:'dead'});
 
       const gainedParameterizedCondition = clause.match(
         /\b(?:target|creature|enemy|foe|it|they)\b[\s\S]{0,120}?\b(?:gains?|receives?|acquires?)\s+([\s\S]+)/i,
       );
       if (gainedParameterizedCondition?.[1]) {
-        predicates.push({ text: gainedParameterizedCondition[1], allowedStatuses: new Set(['bleeding', 'burning',...(includeStaged?['exhaustion']:[])]) });
+        predicates.push({ text: gainedParameterizedCondition[1], allowedStatuses: new Set(['bleeding', 'burning',...(includeStaged?['exhaustion']:[])]),parameterized:true });
       }
 
       const saveFailureApplication = clause.match(
@@ -314,7 +402,7 @@ export function extractExplicitlyInflictedStatuses(text: string,includeStaged=fa
       const chineseApplication = clause.match(
         /(?:\u9677\u5165|\u53d8\u4e3a|\u6210\u4e3a|\u53d7\u5230|\u5f00\u59cb)([\s\S]+)/,
       );
-      if (chineseApplication?.[1]) {
+      if (chineseApplication?.[1] && !isChineseStatusQualifier(chineseApplication[1],clause.slice(0,chineseApplication.index))) {
         predicates.push({ text: chineseApplication[1] });
       }
 
@@ -322,32 +410,69 @@ export function extractExplicitlyInflictedStatuses(text: string,includeStaged=fa
         /(?:\u76ee\u6807|\u751f\u7269|\u5b83|\u5176)?\s*(?:\u83b7\u5f97|\u7372\u5f97|\u9644\u52a0)\s*([\s\S]+)/,
       );
       if (gainedChineseParameterizedCondition?.[1]) {
-        predicates.push({ text: gainedChineseParameterizedCondition[1], allowedStatuses: new Set(['bleeding', 'burning',...(includeStaged?['exhaustion']:[])]) });
+        predicates.push({ text: gainedChineseParameterizedCondition[1], allowedStatuses: new Set(['bleeding', 'burning',...(includeStaged?['exhaustion']:[])]),parameterized:true });
       }
 
       const chinesePassiveApplication = clause.match(
         /(?:\u76ee\u6807|\u751f\u7269|\u5b83|\u5176)\s*\u88ab(?:\u9b54\u6cd5)?([\s\S]+)/,
       );
-      if (chinesePassiveApplication?.[1]) {
+      if (chinesePassiveApplication?.[1] && !isChineseStatusQualifier(chinesePassiveApplication[1],clause.slice(0,chinesePassiveApplication.index))) {
         predicates.push({ text: chinesePassiveApplication[1] });
       }
 
       for (const predicate of predicates) {
-        if (/^\s*(?:already|not|no\s+longer|immun(?:e|ity)\s+to|unaffected\s+by)\b/i.test(predicate.text)||includeStaged&&/不再|不会|并未|未曾|免疫|解除|移除/u.test(clause.slice(0,clause.indexOf(predicate.text)))) {
-          continue;
-        }
-        for (const entry of EXPLICIT_STATUS_PATTERNS) {
-          if (predicate.allowedStatuses && !predicate.allowedStatuses.has(entry.status)) continue;
-          if(entry.status==='exhaustion'&&predicate.allowedStatuses&&!/^(?:(?:\d+|one|two|three|four|five|six)\s+(?:levels?\s+of\s+)?)?exhaustion\b|^(?:[一二三四五六\d]+(?:级|等级))?力竭/iu.test(predicate.text))continue;
-          if ((includeStaged?entry.pattern:entry.legacyPattern??entry.pattern).test(predicate.text)) {
-            statuses.add(entry.status);
-          }
-        }
+        for(const status of inflictedPredicateStatuses(predicate,clause,includeStaged))statuses.add(status);
       }
     }
   }
 
   return [...statuses];
+}
+
+function inflictedPredicateStatuses(predicate:{text:string;allowedStatuses?:ReadonlySet<string>;parameterized?:boolean;direct?:boolean},clause:string,includeStaged:boolean):string[]{
+  if(/^\s*(?:already|not|never|no\s+longer|immun(?:e|ity)\s+to|unaffected\s+by)\b/iu.test(predicate.text)||includeStaged&&/不再|不会|并未|未曾|免疫|解除|移除/u.test(clause.slice(0,clause.indexOf(predicate.text))))return[];
+  return EXPLICIT_STATUS_PATTERNS.filter(entry=>{
+    if(predicate.allowedStatuses&&!predicate.allowedStatuses.has(entry.status))return false;
+    if(entry.status==='exhaustion'&&predicate.parameterized&&!/^(?:(?:\d+|one|two|three|four|five|six)\s+(?:levels?\s+of\s+)?)?exhaustion\b|^(?:[一二三四五六\d]+(?:级|等级))?力竭/iu.test(predicate.text))return false;
+    const match=(includeStaged?entry.pattern:entry.legacyPattern??entry.pattern).exec(predicate.text);
+    if(!match)return false;
+    if(predicate.direct){
+      // Spatial predicates and a later participant's state are not this
+      // predicate's result. Coordinated result adjectives share their owner.
+      const prefix=predicate.text.slice(0,match.index).split(/,|，|\b(?:and|or|but)\b/iu).at(-1)!.trim();
+      if(!/^(?:(?:also|now|immediately|magically|knocked|rendered|left|made|both|the)\s*)*$/iu.test(prefix))return false;
+    }
+    return true;
+  }).map(entry=>entry.status);
+}
+
+function englishStatusSubject(clause:string,at:number):RegExpMatchArray|undefined{
+  const participants=[...clause.slice(0,at).matchAll(/\b(?:target|creature|enemy|foe|it|they|ally|allies|attacker)\b/giu)],subject=participants.at(-1);
+  if(!subject||!/^(?:ally|allies|attacker)$/iu.test(subject[0]))return subject;
+  const previous=participants.at(-2);
+  if(previous&&!/^(?:ally|allies|attacker)$/iu.test(previous[0])
+    &&/^(?:\s+and\s+)(?:(?:its|their|an?|the)\s+)?$/iu.test(clause.slice(previous.index+previous[0].length,subject.index))
+    &&/(?:^|[.!?;:,])\s*(?:(?:the|an?|this|that)\s+)?$/iu.test(clause.slice(0,previous.index)))return previous;
+  return undefined;
+}
+
+function isEnglishStatusQualifier(application: RegExpMatchArray,clause:string): boolean {
+  const before=clause.slice(0,application.index);
+  const prefix=before+application[0].slice(0,application[0].lastIndexOf(application[1]!));
+  return /\b(?:that|which|who)\s+(?:(?:already|currently|still)\s+)?(?:is|are|has|have|was|were)\s+(?:the\s+)?$/iu.test(prefix)
+    || /\b(?:no\s+longer|not|never|already|currently|still)\s+(?:is|are|has|have|was|were|becomes?|be|falls?|starts?)\s+(?:the\s+)?$/iu.test(prefix)
+    || /\b(?:do|does|did)(?:n['’]t|\s+not)\s+(?:have|be|become|fall|start)\s+(?:the\s+)?$/iu.test(prefix)
+    || /\b(?:if|while|unless|provided(?:\s+that)?)\s+(?:(?:the|a|an|this|that)\s+)?(?:(?:target|creature|enemy|foe|it|they)\s+)?$/iu.test(before);
+}
+
+function isChineseStatusQualifier(predicate: string,prefix:string): boolean {
+  if(/(?:若|如果|当|仅当|只有)(?:该)?(?:目标|生物|其|它)(?:已|已经|处于|具有)?$/u.test(prefix))return true;
+  // A status before 的 qualifies an existing target; it is not this action's
+  // consequence, even when the earlier status was caused by another action.
+  return EXPLICIT_STATUS_PATTERNS.some(entry=>{
+    const status=entry.pattern.exec(predicate);
+    return status?.index===0&&/^(?:状态)?(?:影响)?的(?:[一二三四五六七八九十\d]+(?:名|个|只|位)?|该|此|那|这)?(?:目标|生物|敌人|盟友)/u.test(predicate.slice(status[0].length).trim());
+  });
 }
 
 function hasStagedSaveOutcomes(text: string): boolean {

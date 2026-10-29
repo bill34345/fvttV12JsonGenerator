@@ -9,7 +9,7 @@ import {
   planSpellHydration,
   RESOLVER_MODULE_ID,
   sha256,
-  validatePortableSpellManifestStructure,
+  validateActorSpellManifestStructure,
   type HydrationPreflight,
   type ManagedSpellProjection,
   type PortableSpellManifest,
@@ -241,7 +241,7 @@ function isSavedMapping(value: unknown): value is SavedSpellMapping {
 
 function isEligibleActor(actor: any): boolean {
   if (!isResolverFlaggedActor(actor)) return false;
-  return validatePortableSpellManifestStructure(actor.flags?.[RESOLVER_MODULE_ID]?.spellManifest).ok;
+  return validateActorSpellManifestStructure(actor.flags?.[RESOLVER_MODULE_ID]?.spellManifest).ok;
 }
 
 function isRecoveryRequired(actor:any):boolean {
@@ -310,7 +310,7 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
       }
       if ((current === 'hydrated' || current === 'stale') && isEligibleActor(actor)
         && runtime?.compatibility.supported === true && runtime.canMutate && runtime.sourceIndex) {
-        const manifest = validatePortableSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
+        const manifest = validateActorSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
         if (manifest.ok && !hasStrictHydratedStructure(
           actor,
           manifest.value,
@@ -330,7 +330,7 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
       try {
         const runtime = dependencies.getRuntime();
         const resolution = actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution;
-        const validated = validatePortableSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
+        const validated = validateActorSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
         if (!validated.ok || resolution?.status !== 'hydrated' || typeof resolution.planHash !== 'string'
           || !runtime?.compatibility.supported || !runtime.canMutate || !runtime.sourceIndex) return false;
         if (resolution.manifestHash !== hashManifest(validated.value)) return false;
@@ -353,7 +353,7 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
       }
       if(isForgeSpellImportPending(actor))return;
       if (!actor || typeof actor !== 'object' || active.has(actor)) return;
-      const validation = validatePortableSpellManifestStructure(actor.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
+      const validation = validateActorSpellManifestStructure(actor.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
       if (!validation.ok) {
         if (options.explicit && isResolverFlaggedActor(actor)) {
           dependencies.notify('warn', localizedNotice(dependencies, 'FVTTJSONSPELL.Notification.InvalidManifest'));
@@ -435,7 +435,7 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
         if (error instanceof SelectedSpellValidationError) {
           ephemeral.set(actor, 'needs_review');
           dependencies.notify('warn', error.message);
-          const validation = validatePortableSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
+          const validation = validateActorSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
           const prior = reports.get(actor);
           if (validation.ok && prior) {
             const finding = {
@@ -475,7 +475,7 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
       let report: unknown;
       const resolution = actor?.flags?.[RESOLVER_MODULE_ID]?.spellResolution;
       const runtime = dependencies.getRuntime();
-      const validation = validatePortableSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
+      const validation = validateActorSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
       const committed = validation.ok ? validCommittedHydrationReport(resolution, validation.value) : undefined;
       const persistedHydrated = resolution?.status === 'hydrated';
       const currentStatus = persistedHydrated ? currentCommittedViewStatus(actor, runtime, service) : undefined;
@@ -560,7 +560,7 @@ export function createResolverActorService(dependencies: ResolverActorServiceDep
     },
     async exportDiagnostics(actor) {
       const runtime = dependencies.getRuntime();
-      const validation = validatePortableSpellManifestStructure(
+      const validation = validateActorSpellManifestStructure(
         actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest,
       );
       const value = {
@@ -625,7 +625,7 @@ function hasStaleHydratedResolutionInputs(
   const committed = resolution?.report;
   if (committed?.sourceInventoryHash !== runtime.sourceIndex.sourceInventoryHash
     || committed?.candidateMetadataHash !== runtime.sourceIndex.candidateMetadataHash) return true;
-  const manifest = validatePortableSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
+  const manifest = validateActorSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
   if (!manifest.ok) return true;
   try {
     const current = createPreflight(actor, manifest.value, runtime, dependencies);
@@ -1084,7 +1084,7 @@ function hasStrictHydratedStructure(actor: any, manifest: PortableSpellManifest,
 
 function needsSourceCacheCompletion(actor:any):boolean{
   if(conditionalSourceMaintenanceKeys(actor).size)return true;
-  const validated=validatePortableSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
+  const validated=validateActorSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
   if(!validated.ok)return false;
   for(const expected of expectedPersistedManagedRefs(actor,validated.value).values()){
     const inspected=inspectPersistedManagedPair(actor,validated.value,expected);
@@ -1107,7 +1107,7 @@ function needsSourceCacheCompletion(actor:any):boolean{
 function conditionalSourceMaintenanceKeys(actor:any):Set<string>{
   const keys=new Set<string>(),runtime=(globalThis as any).game;
   if(runtime?.system?.version!=='5.3.3')return keys;
-  const validated=validatePortableSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
+  const validated=validateActorSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
   if(!validated.ok)return keys;
   const midi=runtime.modules?.get?.('midi-qol');
   for(const expected of expectedPersistedManagedRefs(actor,validated.value).values()){
@@ -1198,7 +1198,7 @@ interface UndoSnapshot {
 export async function restoreLastHydration(actor: any): Promise<void> {
   if (!actor || typeof actor !== 'object') throw new TypeError('Undo requires a current Actor.');
   return withUndoMutex(actor, async () => {
-    const validation = validatePortableSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
+    const validation = validateActorSpellManifestStructure(actor?.flags?.[RESOLVER_MODULE_ID]?.spellManifest);
     if (!validation.ok) throw new Error('Undo requires a valid current resolver manifest.');
     const snapshot = actor.flags?.[RESOLVER_MODULE_ID]?.spellResolution?.undoSnapshot;
     if (!isUndoSnapshot(snapshot)) throw new Error('No valid last hydration snapshot is available.');
@@ -1416,7 +1416,7 @@ function isUndoSnapshot(value: unknown): value is UndoSnapshot {
 function validateUndoSnapshot(actor: any, manifest: PortableSpellManifest, snapshot: UndoSnapshot): void {
   const flags = snapshot.resolverFlags;
   if (!isRecord(flags)) throw new Error('Undo snapshot resolver flags are malformed.');
-  const snapshotManifest = validatePortableSpellManifestStructure(flags.spellManifest);
+  const snapshotManifest = validateActorSpellManifestStructure(flags.spellManifest);
   if (!snapshotManifest.ok || hashManifest(snapshotManifest.value) !== hashManifest(manifest)) {
     throw new Error('Undo snapshot manifest does not match the current Actor manifest.');
   }

@@ -5,15 +5,17 @@ const numeric = (value: unknown): number | undefined => typeof value === 'number
 const abilities = ['str','dex','con','int','wis','cha'];
 const statuses = ['dead','blinded','charmed','deafened','exhaustion','frightened','grappled','incapacitated','invisible','paralyzed','petrified','poisoned','prone','restrained','stunned','unconscious'];
 const damageTypes=new Set(['acid','bludgeoning','cold','fire','force','lightning','necrotic','piercing','poison','psychic','radiant','slashing','thunder','强酸','酸蚀','钝击','冷冻','寒冷','火焰','力场','闪电','黯蚀','死灵','暗蚀','穿刺','毒素','毒性','心灵','光耀','挥砍','雷鸣']);
+const missingHealingRecipient='治疗目标未提供，请按完整原文确认对象、数量与范围。';
 
 /** Preserve an unprojected field beside its own ability, without discarding
  * the ability's other rolls. The existing review proposal retains raw data. */
-function retainField(feature: RecordValue, path: string, value: unknown, message: string): void {
+function retainField(feature: RecordValue, path: string, value: unknown, message: string, appendSourceNote = true, code = 'FIELD_PROJECTION_INCOMPLETE'): void {
   const prior = object(feature.candidateReview) ? feature.candidateReview : undefined;
   const findings = Array.isArray(prior?.findings) ? prior.findings : [];
-  if (findings.some(entry => object(entry) && entry.path === path && entry.code === 'FIELD_PROJECTION_INCOMPLETE')) return;
-  feature.candidateReview = {version:1, findings:[...findings,{code:'FIELD_PROJECTION_INCOMPLETE',path,message}],
+  if (findings.some(entry => object(entry) && entry.path === path && entry.code === code)) return;
+  feature.candidateReview = {version:1, findings:[...findings,{code,path,message}],
     proposal:{prior:prior?.proposal??null,field:path,value:structuredClone(value)}};
+  if(!appendSourceNote)return;
   const key = typeof feature.description === 'string' ? 'description' : typeof feature['描述'] === 'string' ? '描述' : 'description';
   feature[key] = [feature[key],`GM：${message} 原始字段 ${path}：${JSON.stringify(value)}`].filter(Boolean).join('\n\n');
 }
@@ -46,7 +48,10 @@ function projectHealing(feature:RecordValue,value:unknown,path:string):RecordVal
   if((typeof formula!=='string'&&typeof formula!=='number')||!String(formula).trim()){retainField(feature,path,value,'此治疗量尚不能转换；其他操作保留。');return;}
   next.formula=String(formula);next.type=kind==='治疗'?'healing':kind==='临时生命值'?'temphp':kind;if(next['类型']!==undefined)next['类型']=next.type;
   if(!['healing','temphp'].includes(String(next.type))){retainField(feature,path+'/type',kind,'治疗种类按原始字段由GM处理。');return;}
-  if(next.target===undefined)return next;
+  if(next.target===undefined){
+    retainField(feature,path==='治疗'?'healing/target':path+'/target',null,missingHealingRecipient,true,'HEALING_TARGET_UNSPECIFIED');
+    return next;
+  }
   if(!object(next.target)){retainField(feature,path+'/target',next.target,'治疗对象按原始字段由GM选择。');next.target={type:'any',special:''};}
   else next.target={...next.target};
   const target=next.target as RecordValue;
@@ -90,7 +95,12 @@ function projectSourceOperations(feature:RecordValue):void {
         if(!['none','half','full'].includes(String(next.outcome)))next.outcome='none';
       }else{
         const projected=projectHealing(feature,value,at+'/healing');
-        if(projected){projected.target??={type:'any',special:''};op.healing=projected;}else delete op.healing;
+        if(projected){
+          if(projected.target===undefined){
+            projected.target={type:'any',special:'GM：'+missingHealingRecipient};
+          }
+          op.healing=projected;
+        }else delete op.healing;
       }
     }
     if(Array.isArray(op.failureStatuses)&&!op.failureStatuses.length)delete op.failureStatuses;
@@ -233,7 +243,10 @@ export function normalizeCreatureFeatureInput(feature: RecordValue, description:
   }
   if (typeof description !== 'string' || !description.trim()) return;
   normalizeOptionalSourceText(feature, ['nativeRuleText', 'manualRemainder']);
-  if (feature.executionMode === undefined) feature.executionMode = 'native-with-gm';
+  if (feature.sourceOperations.length && feature.executionMode !== undefined && feature.executionMode !== 'native-with-gm') {
+    retainField(feature,'executionMode',feature.executionMode,'明确操作保持可执行；与操作冲突的执行模式仅作审阅记录。',false);
+    feature.executionMode = 'native-with-gm';
+  } else if (feature.executionMode === undefined) feature.executionMode = 'native-with-gm';
   if (feature.activityType === undefined) feature.activityType = 'utility';
   if (feature.nativeRuleText === undefined) feature.nativeRuleText = description;
   if (feature.manualRemainder === undefined) feature.manualRemainder = description;

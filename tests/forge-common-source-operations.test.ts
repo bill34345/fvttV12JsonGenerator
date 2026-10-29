@@ -2,7 +2,7 @@ import {describe,test,expect} from 'bun:test';
 import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
 import {runStagedMonsterExtraction,assembleStagedFeature,assembleStagedMonsterIntake,validateStagedBaseFacts} from '../packages/intake-ai/src/staged-extraction';
 import {splitStagedMonsterSource,assembleStagedLinePartition,stagedSourceLines} from '../packages/intake-ai/src/staged-source';
-import {bindSourceOperations,sourceOperationErrors,sourceOperationClauses,sourceFeatureBasicOmissions,sourceFeatureResources,materializeSourceOperationEvidence,sourceOperationTargetType,sourceSpellHeaderRange,sourceSpellHeaderBody,sourceOperationSelfTarget,sourceOperationSelfArea,sourceOperationExistingArea,sourceActorNameMatches,type SourceOperation} from '@fvtt-json-generator/models/source-operations';
+import {bindSourceOperations,sourceOperationErrors,sourceOperationClauses,sourceFeatureBasicOmissions,sourceFeatureResources,materializeSourceOperationEvidence,sourceOperationTargetType,sourceSpellHeaderRange,sourceSpellHeaderBody,sourceOperationSelfTarget,sourceOperationSelfArea,sourceOperationExistingArea,sourceActorNameMatches,sourceDamageUpgradeOperations,type SourceOperation} from '@fvtt-json-generator/models/source-operations';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
 import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
 import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
@@ -29,6 +29,7 @@ import roundEightRules from './fixtures/forge-iterate50-round8-cases.json';
 import roundNineRules from './fixtures/forge-iterate50-round9-cases.json';
 import roundTenRules from './fixtures/forge-iterate50-round10-cases.json';
 import roundElevenRules from './fixtures/forge-iterate50-round11-cases.json';
+import damageUpgrade from './fixtures/forge-damage-upgrade.json';
 import {sourceFailedSaveStatuses,sourceSingleSpellAction} from '@fvtt-json-generator/models/source-rule-facts';
 import {stagedSpellcastingGroups} from '../packages/intake-ai/src/staged-spellcasting';
 import {stagedSpellParentPlan} from './helpers/staged-spell-plan';
@@ -36,10 +37,60 @@ import {newNeutralAttackContractVariant} from './helpers/neutral-source-contract
 import {resolveSpellRef,hashSourceInventoryMetadata,type SpellCandidateMetadata} from '../src/core/spell-resolution';
 import {buildCastActivitySource} from '../foundry-modules/monster-spell-resolver/src/cast-activity';
 
+
+// Historical semantic negatives use the explicit offline audit. The default
+// binder still returns the proposed operations and only prepares their evidence.
+function auditBoundSourceOperations(source:string,operations:unknown):SourceOperation[]{
+  const bound=bindSourceOperations(source,operations),errors=sourceOperationErrors(source,bound);
+  if(errors.length)throw new Error(errors.join(' | '));
+  return bound;
+}
+
+
 const header=cloaker.source.slice(0,cloaker.source.indexOf('Damage Transfer.'));
 const creature={identity:{name:'Cloaker',size:'large',creatureType:'aberration',alignment:'chaotic neutral'},abilities:{str:17,dex:15,con:12,int:13,wis:12,cha:14},attributes:{ac:14,acKind:'natural',hp:{value:78,formula:'12d10+12'},movement:{walk:10,fly:40},cr:8,xp:3900},saves:{},skills:{stealth:5},defenses:{resistances:[],immunities:[],vulnerabilities:[],conditionImmunities:[]},senses:{darkvision:60,passivePerception:11},languages:{values:['deep','undercommon']}};
 const request=(source:string)=>({source,sourceSha256:hashSource(source),candidate:{id:'source',label:'Source',start:0,end:source.length,quote:source}});
 const clauses=(source:string)=>sourceOperationClauses(source);
+
+function expectSourceOperationProof(source:string,operation:SourceOperation){
+  const ownClauses=clauses(operation.sourceText);
+  for(const proof of Object.values(operation.proof)){
+    if(typeof proof==='string')expect(ownClauses).toContain(proof);
+    else if(Array.isArray(proof))for(const quote of proof)expect(ownClauses).toContain(quote);
+    else if(proof!==undefined){
+      expect(source).toContain(proof.sourceText);
+      expect(clauses(proof.sourceText)).toContain(proof.quote);
+    }
+  }
+}
+
+describe('source operation proof union',()=>{
+  test('ordinary clauses and an upgrade object retain their separate same-source parents',()=>{
+    const base=damageUpgrade.case.features[0]!.text,context=damageUpgrade.case.features[1]!.text;
+    const operations=sourceDamageUpgradeOperations(base,[context]);
+    expect(operations).toBeDefined();if(!operations)throw Error('Expected the existing same-source damage upgrade');
+    expect(sourceOperationErrors(base,operations,[context])).toEqual([]);
+    for(const operation of operations){
+      expect(operation.proof.upgrade).toEqual({sourceText:context,quote:damageUpgrade.sources[0]!.completeActualProof});
+      expectSourceOperationProof(damageUpgrade.case.source,operation);
+    }
+  });
+  test('an upgrade cannot borrow its quote from the base parent or a rule outside the source',()=>{
+    const base=damageUpgrade.case.features[0]!.text,context=damageUpgrade.case.features[1]!.text;
+    const operations=sourceDamageUpgradeOperations(base,[context]);
+    expect(operations).toBeDefined();if(!operations)throw Error('Expected the existing same-source damage upgrade');
+    const operation=operations[0]!;
+    expect(operation.proof.upgrade).toBeDefined();if(!operation.proof.upgrade)throw Error('Expected complete upgrade proof');
+    for(const upgrade of [
+      {...operation.proof.upgrade,quote:damageUpgrade.sources[1]!.completeActualProof},
+      {...operation.proof.upgrade,sourceText:context+'\nForeign rule.'},
+    ]){
+      const wrong={...operation,proof:{...operation.proof,upgrade}};
+      expect(()=>expectSourceOperationProof(damageUpgrade.case.source,wrong)).toThrow();
+      expect(sourceOperationErrors(base,[wrong],[context]).length).toBeGreaterThan(0);
+    }
+  });
+});
 
 describe('frozen unclassified attacks and explicit new neutral-contract variants',()=>{
   for(const [corpus,id] of [[roundFourRules,'r13r-apparatus-of-the-crab'],[roundSixRules,'r15m-srd52-giant-seahorse-ram'],[roundSevenRules,'r16m-srd52-ankheg-bite'],[roundEightRules,'r17m-srd52-swarm-venomous-snakes-bites']] as const){
@@ -740,19 +791,19 @@ describe('source-bound cylinder geometry and contextual GM operations',()=>{
   for(const id of ['r13m-srd52-storm-giant-lightning-storm','r13r-lands-aid'])test('preserves the complete frozen failed parent: '+id,()=>{
     const parent=(roundFourRules.cases as any[]).find(c=>c.id===id),before=JSON.stringify(parent),f=parent.features[0],bound=bindSourceOperations(f.text,f.operations);
     expect(sourceOperationErrors(f.text,bound)).toEqual([]);expect(JSON.stringify(parent)).toBe(before);
-    for(const op of bound){expect(op.sourceText).toBe(f.text);expect(op.evidence!.quote).toBe(f.text);for(const q of Object.values(op.proof).flat())expect(clauses(f.text)).toContain(q);}
+    for(const op of bound){expect(op.sourceText).toBe(f.text);expect(op.evidence!.quote).toBe(f.text);expectSourceOperationProof(parent.source,op);}
   });
   test('a Cylinder radius is proven separately from its height and placement range',()=>{
-    for(const [radius,height,range]of [[10,40,500],[12,55,300]])for(const dimensions of [`${radius}-foot-radius, ${height}-foot-high Cylinder`,`${height}-foot-high, ${radius}-foot-radius Cylinder`,`${radius}-foot-radius Cylinder`,`Cylinder with a radius of ${radius} feet and a height of ${height} feet`,`${radius}尺圆柱形`,`半径${radius}尺、高${height}尺的圆柱形`]){
+    for(const [radius,height,range]of [[10,40,500],[12,55,300]] as const)for(const dimensions of [`${radius}-foot-radius, ${height}-foot-high Cylinder`,`${height}-foot-high, ${radius}-foot-radius Cylinder`,`${radius}-foot-radius Cylinder`,`Cylinder with a radius of ${radius} feet and a height of ${height} feet`,`${radius}尺圆柱形`,`半径${radius}尺、高${height}尺的圆柱形`]){
       const save=`Dexterity Saving Throw: DC 18, each creature in a ${dimensions} originating from a point within ${range} feet.`,hit='Failure: 10d10 Lightning damage.',source='Field. '+save+' '+hit+' Success: Half damage.',op:any={id:'field',name:'Field',type:'save',relationship:'primary',save:{dc:18,abilities:['dex'],choice:'single',outcome:'half'},range,aoe:{shape:'cylinder',radius},damage:[{formula:'10d10',type:'lightning',relationship:'base'}],proof:{save,range:save,aoe:save,damage:[hit]}};
-      expect(sourceOperationErrors(source,bindSourceOperations(source,[op]))).toEqual([]);
-      for(const invalidRadius of [1,height,range,radius*10+1]){const wrong=structuredClone(op);wrong.aoe.radius=invalidRadius;expect(()=>bindSourceOperations(source,[wrong])).toThrow('/aoe');}
-      for(const invalidRange of [radius,height]){const wrong=structuredClone(op);wrong.range=invalidRange;expect(()=>bindSourceOperations(source,[wrong])).toThrow('/range');}
-      const wrongShape=structuredClone(op);wrongShape.aoe.shape='sphere';expect(()=>bindSourceOperations(source,[wrongShape])).toThrow('/aoe');
+      expect(sourceOperationErrors(source,auditBoundSourceOperations(source,[op]))).toEqual([]);
+      for(const invalidRadius of [1,height,range,radius*10+1]){const wrong=structuredClone(op);wrong.aoe.radius=invalidRadius;expect(()=>auditBoundSourceOperations(source,[wrong])).toThrow('/aoe');}
+      for(const invalidRange of [radius,height]){const wrong=structuredClone(op);wrong.range=invalidRange;expect(()=>auditBoundSourceOperations(source,[wrong])).toThrow('/range');}
+      const wrongShape=structuredClone(op);wrongShape.aoe.shape='sphere';expect(()=>auditBoundSourceOperations(source,[wrongShape])).toThrow('/aoe');
     }
     for(const dimensions of ['40-foot-high Cylinder','Cylinder originating from a point within 500 feet']){
       const q=`Each creature in a ${dimensions} must make a DC 18 Dexterity saving throw.`,op:any={id:'field',name:'Field',type:'save',relationship:'primary',save:{dc:18,abilities:['dex'],choice:'single',outcome:'none'},aoe:{shape:'cylinder',radius:500},proof:{save:q,aoe:q}};
-      expect(()=>bindSourceOperations('Field. '+q,[op])).toThrow('/aoe');
+      expect(()=>auditBoundSourceOperations('Field. '+q,[op])).toThrow('/aoe');
     }
   });
   const conditional=(q:string,formula='2d6',type='fire'):any=>({id:'damage',name:'GM conditional damage',type:'damage',relationship:'follow-up',damage:[{formula,type,relationship:'conditional'}],proof:{damage:[q]}});
@@ -822,9 +873,9 @@ describe('source-bound cylinder geometry and contextual GM operations',()=>{
 
 describe('source-bound eligible first operations and unique simple dawn recovery',()=>{
   for(const id of ['r14m-srd52-black-pudding-corrosive-form','r14m-srd52-gelatinous-cube-ooze-cube','r14r-demon-armor','r14r-manual-of-golems','r14r-pipes-of-the-sewers','r14m-srd52-adult-bronze-dragon-thunderclap'])test('the complete failed parent keeps its original source-proven operations: '+id,()=>{
-    const parent=(roundFiveRules.cases as any[]).find(c=>c.id===id),before=JSON.stringify(parent),f=parent.features.find(f=>f.operations.length),bound=bindSourceOperations(f.text,f.operations);
+    const parent=(roundFiveRules.cases as any[]).find(c=>c.id===id),before=JSON.stringify(parent),f=parent.features.find((f:typeof roundFiveRules.cases[number]['features'][number])=>f.operations.length),bound=bindSourceOperations(f.text,f.operations);
     expect(sourceOperationErrors(f.text,bound)).toEqual([]);expect(JSON.stringify(parent)).toBe(before);
-    for(const op of bound){expect(op.sourceText).toBe(f.text);expect(op.evidence!.quote).toBe(f.text);for(const q of Object.values(op.proof).flat())expect(clauses(f.text)).toContain(q);}
+    for(const op of bound){expect(op.sourceText).toBe(f.text);expect(op.evidence!.quote).toBe(f.text);expectSourceOperationProof(parent.source,op);}
     if(id.includes('pipes')){expect(bound[0]!.relationship).toBe('follow-up');expect(bound[0]!.save!.dc).toBe(15);expect(sourceFeatureResources(f.name,f.text).uses).toBeUndefined();}
   });
   const gmDamage=(q:string,relationship='conditional'):any=>({id:'roll',name:'GM source-condition damage',type:'damage',relationship:'follow-up',damage:[{formula:'1d8',type:'acid',relationship}],proof:{damage:[q]}});
@@ -925,12 +976,12 @@ describe('recipient eligibility versus event triggers',()=>{
 describe('round six source model gaps',()=>{
   for(const id of ['r15m-srd52-solar-flying-sword','r15r-ammunition-of-slaying','r15r-dagger-of-venom','r15r-feather-token','r15r-horn-of-blasting','r15r-mirror-of-life-trapping','r15r-alchemists-fire','r15r-hunting-trap','r15r-oil'])test('complete failed model parent: '+id,()=>{
     const parent=(roundSixRules.cases as any[]).find(c=>c.id===id),before=JSON.stringify(parent);
-    for(const f of parent.features){if(!f.operations.length)continue;const bound=bindSourceOperations(f.text,f.operations);expect(sourceOperationErrors(f.text,bound)).toEqual([]);for(const op of bound){expect(op.sourceText).toBe(f.text);expect(op.evidence!.quote).toBe(f.text);for(const q of Object.values(op.proof).flat())expect(clauses(f.text)).toContain(q);}}
+    for(const f of parent.features){if(!f.operations.length)continue;const bound=bindSourceOperations(f.text,f.operations);expect(sourceOperationErrors(f.text,bound)).toEqual([]);for(const op of bound){expect(op.sourceText).toBe(f.text);expect(op.evidence!.quote).toBe(f.text);expectSourceOperationProof(parent.source,op);}}
     expect(JSON.stringify(parent)).toBe(before);
   });
   test('a complete independent object or Initiative cooldown belongs to that feature',()=>{
-    for(const [id,name,period]of [['r15r-bowl-of-commanding-water-elementals','Bowl of Commanding Water Elementals','dawn'],['r15r-perfect-focus','Level 2: Uncanny Metabolism','longRest']]){
-      const parent=(roundSixRules.cases as any[]).find(c=>c.id===id),f=parent.features.find(f=>f.name===name);expect(sourceFeatureResources(f.name,f.text,parent.creature.identity.name).uses).toEqual({max:1,period});expect(sourceFeatureResources('Sentinel',f.text,parent.creature.identity.name).uses).toBeUndefined();
+    for(const [id,name,period]of [['r15r-bowl-of-commanding-water-elementals','Bowl of Commanding Water Elementals','dawn'],['r15r-perfect-focus','Level 2: Uncanny Metabolism','longRest']] as const){
+      const parent=(roundSixRules.cases as any[]).find(c=>c.id===id),f=parent.features.find((f:typeof roundSixRules.cases[number]['features'][number])=>f.name===name);expect(sourceFeatureResources(f.name,f.text,parent.creature.identity.name).uses).toEqual({max:1,period});expect(sourceFeatureResources('Sentinel',f.text,parent.creature.identity.name).uses).toBeUndefined();
     }
   });
 });
@@ -970,9 +1021,9 @@ describe('round six narrow proof guards',()=>{
   });
   test('a created-entity THEN attack retains its real bonus and origin without granting an unqualified attack',()=>{
     const f=parent('r15r-feather-token');
-    for(const [from,to]of [['a floating whip takes its place','a floating whip is painted on it'],['a floating whip takes its place','a floating bird takes its place'],['You can then take a Bonus Action','You can take a Bonus Action']]){const changed=rewritten(f.text,f.operations,from,to);expect(()=>bindSourceOperations(changed.source,changed.ops)).toThrow('relationship');}
-    for(const [field,value]of [['toHit',10],['reach',20]]){const ops=structuredClone(f.operations);ops[0].attack[field]=value;expect(()=>bindSourceOperations(f.text,ops)).toThrow('attack/');}
-    const conditioned=rewritten(f.text,f.operations,'On a hit, the target takes 1d6 + 5 Force damage.','On a hit, the target takes 1d6 + 5 Force damage if the target is prone.');expect(()=>bindSourceOperations(conditioned.source,conditioned.ops)).toThrow('damage/0/condition');
+    for(const [from,to]of [['a floating whip takes its place','a floating whip is painted on it'],['a floating whip takes its place','a floating bird takes its place'],['You can then take a Bonus Action','You can take a Bonus Action']] as const){const changed=rewritten(f.text,f.operations,from,to);expect(()=>auditBoundSourceOperations(changed.source,changed.ops)).toThrow('relationship');}
+    for(const [field,value]of [['toHit',10],['reach',20]] as const){const ops=structuredClone(f.operations);ops[0].attack[field]=value;expect(()=>auditBoundSourceOperations(f.text,ops)).toThrow('attack/');}
+    const conditioned=rewritten(f.text,f.operations,'On a hit, the target takes 1d6 + 5 Force damage.','On a hit, the target takes 1d6 + 5 Force damage if the target is prone.');expect(()=>auditBoundSourceOperations(conditioned.source,conditioned.ops)).toThrow('damage/0/condition');
     const omitted=sourceFeatureBasicOmissions(f.text,{name:f.name,description:f.text,executionMode:'gm-manual',activityType:'utility'} as any);expect(omitted).toContain('attack');
   });
   test('variable Save failure and failed check costs retain their result without inventing DCs',()=>{
@@ -1013,10 +1064,13 @@ describe('legacy combined attack compatibility',()=>{
   });
   test('legacy compatibility cannot conceal missing, invented or simultaneous attack modes',()=>{
     const {source,op}=legacy();
-    for(const field of ['reach','range','longRange']){const wrong=structuredClone(op);delete wrong.attack[field];expect(()=>bindSourceOperations(source,[wrong])).toThrow();}
-    for(const [field,value]of [['type','rwak'],['toHit',4],['reach',20],['range',5],['longRange',20]]){const wrong=structuredClone(op);wrong.attack[field]=value;expect(()=>bindSourceOperations(source,[wrong])).toThrow();}
-    const changed=source.replace('Melee or Ranged','Melee and Ranged'),wrong=structuredClone(op);wrong.proof.attack=wrong.proof.attack.replace('Melee or Ranged','Melee and Ranged');expect(()=>bindSourceOperations(changed,[wrong])).toThrow();
-    expect(()=>bindSourceOperations(source,[op,{...structuredClone(op),id:'duplicate'}])).toThrow('duplicate-operation');
+    const proposed=structuredClone(op);proposed.attack.reach=99;
+    const before=structuredClone(proposed),candidate=bindSourceOperations(source,[proposed]);
+    expect(candidate[0]!.attack).toEqual(proposed.attack);expect(proposed).toEqual(before);
+    for(const field of ['reach','range','longRange']){const wrong=structuredClone(op);delete wrong.attack[field];expect(()=>auditBoundSourceOperations(source,[wrong])).toThrow();}
+    for(const [field,value]of [['type','rwak'],['toHit',4],['reach',20],['range',5],['longRange',20]] as const){const wrong=structuredClone(op);wrong.attack[field]=value;expect(()=>auditBoundSourceOperations(source,[wrong])).toThrow();}
+    const changed=source.replace('Melee or Ranged','Melee and Ranged'),wrong=structuredClone(op);wrong.proof.attack=wrong.proof.attack.replace('Melee or Ranged','Melee and Ranged');expect(()=>auditBoundSourceOperations(changed,[wrong])).toThrow();
+    expect(()=>auditBoundSourceOperations(source,[op,{...structuredClone(op),id:'duplicate'}])).toThrow('duplicate-operation');
   });
   test('modern separate modes still need both attacks and cannot merge or stack their damage',()=>{
     const solar=(roundSixRules.cases as any[]).find(c=>c.id==='r15m-srd52-solar-flying-sword').features[0],seahorse=(roundSixRules.cases as any[]).find(c=>c.id==='r15m-srd52-giant-seahorse-ram').features[0];
@@ -1032,7 +1086,7 @@ describe('legacy combined attack compatibility',()=>{
 describe('round seven source model gaps',()=>{
   for(const id of ['r16m-srd52-air-elemental-whirlwind','r16m-srd52-adult-silver-dragon-cold-gale','r16r-thunderous-greatclub','r16r-ball-bearings'])test('complete newly failed source model parent: '+id,()=>{
     const parent=(roundSevenRules.cases as any[]).find(c=>c.id===id),before=JSON.stringify(parent);
-    for(const f of parent.features){if(!f.operations.length)continue;const bound=bindSourceOperations(f.text,f.operations);expect(sourceOperationErrors(f.text,bound)).toEqual([]);for(const op of bound){expect(op.sourceText).toBe(f.text);expect(op.evidence!.quote).toBe(f.text);for(const q of Object.values(op.proof).flat())expect(clauses(f.text)).toContain(q);}if(id.includes('cold-gale'))expect(bound[0]!.aoe).toEqual({shape:'line',radius:60,width:10});}
+    for(const f of parent.features){if(!f.operations.length)continue;const bound=bindSourceOperations(f.text,f.operations);expect(sourceOperationErrors(f.text,bound)).toEqual([]);for(const op of bound){expect(op.sourceText).toBe(f.text);expect(op.evidence!.quote).toBe(f.text);expectSourceOperationProof(parent.source,op);}if(id.includes('cold-gale'))expect(bound[0]!.aoe).toEqual({shape:'line',radius:60,width:10});}
     expect(JSON.stringify(parent)).toBe(before);
   });
   test('fixed long-rest use keeps its own maximum despite a separate optional restore payment',()=>{
@@ -1146,7 +1200,7 @@ describe('source operation explicit native recipient type',()=>{
 describe('source operation explicit recipient kind predicates',()=>{
   const damage=(recipient:string)=>{const q=recipient+' takes 5 Fire damage.',source='Recipient. '+q,op:any={id:'damage',name:'Literal damage',type:'damage',relationship:'primary',damage:[{formula:'5',type:'fire',relationship:'base'}],targetSpecial:recipient,proof:{damage:[q],target:q}};return{source,op};};
   test('known corpus receiver heads preserve mixed sets and exclude qualification nouns',()=>{
-    for(const [recipient,expected]of [['Structures in contact with the ground in that area','object'],['objects it hits that aren’t being worn or carried','object'],['Nonmagical objects in the Cone that aren’t being worn or carried','object'],['Glass or crystal objects in the Cone that aren’t being worn or carried','object'],['one creature or object you can see within 20 feet of yourself','creatureOrObject'],['each creature and each object that isn’t being worn or carried in a 150-foot Cone','creatureOrObject'],['the creature with the object','creature'],['An object carried by a creature','object']]){const {source,op}=damage(recipient),bound=bindSourceOperations(source,[op]);expect(sourceOperationTargetType(source,bound[0]!)).toBe(expected);expect(bound[0]!.targetSpecial).toBe(recipient);}
+    for(const [recipient,expected]of [['Structures in contact with the ground in that area','object'],['objects it hits that aren’t being worn or carried','object'],['Nonmagical objects in the Cone that aren’t being worn or carried','object'],['Glass or crystal objects in the Cone that aren’t being worn or carried','object'],['one creature or object you can see within 20 feet of yourself','creatureOrObject'],['each creature and each object that isn’t being worn or carried in a 150-foot Cone','creatureOrObject'],['the creature with the object','creature'],['An object carried by a creature','object']] as const){const {source,op}=damage(recipient),bound=bindSourceOperations(source,[op]);expect(sourceOperationTargetType(source,bound[0]!)).toBe(expected);expect(bound[0]!.targetSpecial).toBe(recipient);}
     const unknown=damage('A target carrying an object');expect(sourceOperationTargetType(unknown.source,bindSourceOperations(unknown.source,[unknown.op])[0]!)).toBeUndefined();
   });
   for(const [recipient,expected]of [['the creature with the object','creature'],['An object carried by a creature','object'],['one creature or object','creatureOrObject']] as const)test('native target kind follows the receiver rather than qualification words: '+recipient,async()=>{
@@ -1159,7 +1213,7 @@ describe('source operation explicit recipient kind predicates',()=>{
 describe('round eight model source gaps',()=>{
   for(const id of ['r17m-srd52-quasit-scare','r17r-deep-water','r17r-frigid-water','r17r-thin-ice','r17r-environmental-curses','r17r-extreme-heat','r17r-fire-casting-statue','r17r-poisoned-darts','r17r-potion-of-poison','r17r-talisman-of-pure-good'])test('complete frozen failed model parent: '+id,()=>{
     const parent=(roundEightRules.cases as any[]).find(c=>c.id===id),before=JSON.stringify(parent);
-    for(const f of parent.features){if(!f.operations.length)continue;const bound=bindSourceOperations(f.text,f.operations);expect(sourceOperationErrors(f.text,bound)).toEqual([]);for(const op of bound){expect(op.sourceText).toBe(f.text);expect(op.evidence!.quote).toBe(f.text);for(const q of Object.values(op.proof).flat())expect(clauses(f.text)).toContain(q);}if(id.includes('quasit'))expect(bound.flatMap(op=>op.failureStatuses??[])).toEqual([]);}
+    for(const f of parent.features){if(!f.operations.length)continue;const bound=bindSourceOperations(f.text,f.operations);expect(sourceOperationErrors(f.text,bound)).toEqual([]);for(const op of bound){expect(op.sourceText).toBe(f.text);expect(op.evidence!.quote).toBe(f.text);expectSourceOperationProof(parent.source,op);}if(id.includes('quasit'))expect(bound.flatMap(op=>op.failureStatuses??[])).toEqual([]);}
     expect(JSON.stringify(parent)).toBe(before);
   });
 });

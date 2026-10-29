@@ -10,7 +10,7 @@ import {hashSource,type ForgeSourceId} from '@fvtt-json-generator/forge-gateway-
 import {buildValidLurkerIr,LURKER_SOURCE} from '../src/core/intake/__tests__/fixtures/lurker';
 
 const noCall=async():Promise<never>=>{throw Error('This regression forbids model and network requests');};
-const originalFetch=globalThis.fetch;globalThis.fetch=noCall as typeof fetch;afterAll(()=>{globalThis.fetch=originalFetch;});
+const originalFetch=globalThis.fetch;globalThis.fetch=Object.assign(noCall,{preconnect:()=>{throw Error('This regression forbids network preconnect');}});afterAll(()=>{globalThis.fetch=originalFetch;});
 const provider={providerName:'field-policy',extractionModel:'frozen',reviewModel:'disabled',discover:noCall,extract:noCall,review:noCall,repair:noCall};
 const extra='\nRestoration. The creature regains 10 Hit Points.\n';
 const source=LURKER_SOURCE+extra;
@@ -114,11 +114,25 @@ test('input field policy: program operation records are completed without invent
 test('input field policy: only inert empty effect lists are omitted; local operation issues retain their fields as GM notes without rejecting other operations',()=>{
  const attack:any={name:'Strike',description:'Melee Attack Roll: +5. Hit: 1d6 damage.',sourceOperations:[{id:'strike',name:'Strike',type:'attack',relationship:'primary',attack:{type:'melee',toHit:5},damage:[{formula:'1d6',type:'piercing',types:[],relationship:'base'}],failureStatuses:[],proof:{}}],appliedConditions:[],nativeFailureStatuses:[],damage:[],spellUseRecords:[]};
  normalizeCreatureFeatureInput(attack,attack.description);expect(attack.sourceOperations[0].failureStatuses).toBeUndefined();expect(attack.sourceOperations[0].damage[0].types).toBeUndefined();expect(attack.appliedConditions).toBeUndefined();expect(attack.damage).toBeUndefined();expect(sourceOperationStructureErrors(attack.sourceOperations)).toEqual([]);
- const invalid=structuredClone(attack);invalid.sourceOperations[0].failureStatuses=['stunned'];normalizeCreatureFeatureInput(invalid,invalid.description);expect(sourceOperationStructureErrors(invalid.sourceOperations)).toEqual([]);expect(invalid.description).toContain('stunned');expect(invalid.sourceOperations[0].attack.toHit).toBe(5);
+ const supported=structuredClone(attack);supported.sourceOperations[0].failureStatuses=['stunned'];normalizeCreatureFeatureInput(supported,supported.description);expect(sourceOperationStructureErrors(supported.sourceOperations)).toEqual([]);expect(supported.sourceOperations[0].failureStatuses).toEqual(['stunned']);expect(supported.description).toBe(attack.description);expect(supported.sourceOperations[0].attack.toHit).toBe(5);expect(supported.sourceOperations[0].damage).toEqual(attack.sourceOperations[0].damage);
  const empty={name:'No operation',description:'Source still exists',sourceOperations:[]};normalizeCreatureFeatureInput(empty,empty.description);expect(empty.sourceOperations).toBeUndefined();expect(empty.description).toBe('Source still exists');
  const badDamage=structuredClone(attack);badDamage.sourceOperations[0].damage[0].relationship='conditional';badDamage.sourceOperations[0].damage[0].condition='if the target is grappled';expect(sourceOperationStructureErrors(badDamage.sourceOperations)).toContain('0/damage/0/independent-damage-required');
  for(const invalid of [null,{},42]){const wrong=feature('operations',invalid);normalizeCreatureFeatureInput(wrong,wrong.description);expect(wrong.sourceOperations[0].healing.target.special).toBe(JSON.stringify(invalid));expect(wrong.candidateReview).toBeDefined();expect(sourceOperationStructureErrors(wrong.sourceOperations)).toEqual([]);}
  const missingAmount=feature('operations');missingAmount.sourceOperations[0].healing.formula='';normalizeCreatureFeatureInput(missingAmount,missingAmount.description);expect(missingAmount.sourceOperations).toBeUndefined();expect(missingAmount.candidateReview).toBeDefined();
+});
+
+test('input field policy: a supported attack status reaches its own formal Effect and activity links',async()=>{
+ const description='Strike. Melee Attack Roll: +5. Hit: 1d6 piercing damage. The target has the Stunned condition until the end of its next turn.';
+ const actualSource=LURKER_SOURCE+'\n'+description,current={...input,source:actualSource};
+ const ir=buildValidLurkerIr();ir.source={sha256:hashSource(actualSource),length:actualSource.length};
+ ir.creature.actions.push({name:'Strike',description,sourceOperations:[{id:'strike',name:'Strike',sourceText:description,type:'attack',relationship:'primary',attack:{type:'melee',toHit:5},damage:[{formula:'1d6',type:'piercing',relationship:'base'}],failureStatuses:['stunned'],proof:{}}]});
+ const before=structuredClone(ir),result=await generate(ir,current);
+ expect(ir).toEqual(before);expect(result.generation.candidateAvailable).toBe(true);
+ const item=result.actor.items.find((entry:any)=>entry.name==='Strike');expect(item).toBeDefined();
+ const effect=item.effects.find((entry:any)=>entry.statuses.includes('stunned'));expect(effect).toBeDefined();
+ expect(effect.flags.fvttJsonGenerator.sourceOperationId).toBe('strike');expect(effect.statuses).toContain('incapacitated');
+ expect(Object.values<any>(item.system.activities).some(activity=>activity.effects?.some((link:any)=>link._id===effect._id))).toBe(true);
+ expect(item.system.description.value).toContain('Stunned');
 });
 
 const frozen=process.env.FORGE_CONTRACT_FROZEN_ROOT;
@@ -126,7 +140,7 @@ test.skipIf(!frozen)('input field policy: untouched real Shield Guardian first a
  const sourcePath=join(frozen!,'sources/shield-guardian/source.md'),replyPath=join(frozen!,'results/single-shield-guardian/raw-answer.txt');
  const sourceBytes=readFileSync(sourcePath),replyBytes=readFileSync(replyPath),actualSource=sourceBytes.toString('utf8'),raw=replyBytes.toString('utf8');
  let responses=0;const evidence:any[]=[];
- const real=new OpenAICompatibleMonsterIntakeProvider({baseUrl:'https://frozen.invalid',apiKey:'fixture',model:'frozen',maxAttempts:1,timeoutMs:10000,repairTimeoutMs:10000,
+ const real=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://frozen.invalid',apiKey:'fixture',model:'frozen',reviewModel:'frozen',maxAttempts:1,timeoutMs:10000,repairTimeoutMs:10000,
   responseEvidence:{record:row=>{evidence.push(row);}},httpClient:async()=>{responses++;return Response.json({choices:[{message:{content:raw}}]});}});
  const current={...input,source:actualSource,sourceName:'Shield Guardian'},analysis=await analyzeBrowserActorSourceWithAi(current,real),generation=await generateBrowserActorIntakeCandidate(current,analysis,provider),actor=(generation.candidateResponse as any)?.result?.artifact;
  expect(responses).toBe(1);expect(evidence[0].content).toBe(raw);expect(analysis.validation?.blocking).toEqual([]);expect(generation.findings).toEqual([]);expect(generation.candidateAvailable).toBe(true);

@@ -2,6 +2,7 @@ import yaml from 'js-yaml';
 import { nativeAreaShape } from '@fvtt-json-generator/models/source-operations';
 import { renderMonsterFeatureName, renderMonsterIntakeMarkdown } from './renderer';
 import { sourceRuleText } from './source-completeness';
+import {legendaryResistanceBinding} from './native-resources';
 import type { CanonicalFeature, MonsterIntakeIR } from './types';
 
 type FindingWriter = (code: string, path: string, message: string) => void;
@@ -48,6 +49,7 @@ export function verifyMonsterProjectionPreservation(
     }
   }
   const items = records(projection.items);
+  const nativeResistance=legendaryResistanceBinding(creature);
   for (const section of sections) for (const [index, feature] of (creature[section] ?? []).entries()) {
     const path = `/creature/${section}/${index}`;
     const name = renderMonsterFeatureName(feature);
@@ -64,6 +66,8 @@ export function verifyMonsterProjectionPreservation(
     }
     if (feature.sourceFeatureId && found.name !== name) add('ACTOR_FEATURE_IDENTITY_DRIFT', path, 'The feature with this IR identity changed its rendered name.');
 
+    // The native counter and exact attribute cost are checked by verifier.ts.
+    if(nativeResistance?.feature===feature&&found.identifier==='legendary-resistance')continue;
     const pool = creature.sourceResourcePools?.find(pool => pool.members.some(member => member.collection === section && member.index === index));
     const carrier = pool?.members[0]?.featureId === feature.sourceFeatureId;
     const max = pool ? carrier ? pool.max : undefined : feature.uses?.max ?? (feature.recharge ? 1 : undefined);

@@ -8,7 +8,7 @@ export {nativeAreaShape} from './sourceNativeArea';
 import {sourceHealingOperations,sourceHealingOperationErrors} from './sourceHealingOperations';
 export {sourceHealingOperations} from './sourceHealingOperations';
 export type {SourceOperation,SourceOperationAbility,CanonicalAppliedCondition} from './sourceOperationTypes';
-export {isSourceCandidateReview,isSourceCandidateCounters,candidateSourceOperationShapeErrors} from './sourceCandidate';
+export {isSourceCandidateReview,hasSourceCandidateFindings,isSourceCandidateCounters,candidateSourceOperationShapeErrors} from './sourceCandidate';
 export type {SourceCandidateReview,SourceCandidateCounter} from './sourceOperationTypes';
 import {sourceFailedSaveStatuses,sourceGmTriggeredSave} from './sourceRuleFacts';
 import type {CanonicalFeature} from './canonicalMonster';

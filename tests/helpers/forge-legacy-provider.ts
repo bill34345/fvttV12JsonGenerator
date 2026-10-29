@@ -1,7 +1,7 @@
 import {expect,spyOn} from 'bun:test';
 import {OpenAICompatibleMonsterIntakeProvider,type OpenAICompatibleMonsterIntakeOptions} from '@fvtt-json-generator/intake-ai/provider';
 import {createEncounterIntakeProviders,generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
-import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
+import {hashSource,isUsableActorCandidateArtifact} from '@fvtt-json-generator/forge-gateway-protocol';
 import type {MonsterIntakeIR} from '@fvtt-json-generator/intake-ai/types';
 
 /** Test-owned opt-in for the historical base/whole-form protocol. The public
@@ -19,6 +19,7 @@ export function legacyWholeFormProvider(options:Partial<OpenAICompatibleMonsterI
  * controls, exercises the current public factory and real formal workflow on
  * the SAME source. This is projection evidence, never model-quality evidence. */
 export async function assertDefaultFullIrReplay(source:string,ir:MonsterIntakeIR,expected:{actor:unknown;markdown:string;discoveryCalls?:0|1}){
+  if(!isUsableActorCandidateArtifact(expected.actor))throw Error('Expected the complete generated Actor JSON object.');
   const previousFetch=globalThis.fetch,requests:any[]=[],before=structuredClone(ir);
   const sourceId=/^forge-source-id: actor:v1:([a-f0-9-]+)$/mu.exec(expected.markdown)?.[1];expect(sourceId).toBeDefined();
   // Both independent formal runs receive the same test-owned source identity,
@@ -30,7 +31,7 @@ export async function assertDefaultFullIrReplay(source:string,ir:MonsterIntakeIR
     const reply=payload.sourceLines?{schemaVersion:1,candidates:[{id:'fixed-full-source',label:ir.creature.identity.name,
       firstLineId:payload.sourceLines[0].id,lastLineId:payload.sourceLines.at(-1).id}]}:before;
     return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify(reply)}}]}),{headers:{'Content-Type':'application/json'}});
-  },{preconnect:previousFetch.preconnect});
+  },{preconnect:()=>{throw Error('The fixed full-IR replay forbids network preconnect.');}});
   try{
     const providers=createEncounterIntakeProviders({baseUrl:'https://offline.invalid/v1',apiKey:'fixture-only',model:'synthetic-full-ir-control',timeoutMs:10000});
     const result=await generateEncounterFromHumanMarkdown({source,label:'Current default / fixed full IR',...providers,reviewPolicy:'deferred',outputLanguage:'source'});

@@ -2,9 +2,10 @@ import type { EffectProfile } from './effectProfileApplier';
 import { resolveLockedDnd5eV14Spell } from './v14SpellCatalog';
 import { getFoundryTarget, type FvttTargetVersion } from './target';
 import { isFoundryHtmlDescription } from './item-description';
-import { sourceConditionLifecycle, extractExplicitlyInflictedStatuses, simpleConditionDuration, officialCondition } from './actor-effects';
+import { sourceConditionLifecycle, extractExplicitlyInflictedStatuses, simpleConditionDuration, officialCondition,inferredAppliedConditions,operationConditionSource,officialConditionStatuses } from './actor-effects';
 import { readConditionInstance } from '@fvtt-json-generator/contracts/conditions';
-import {RESOLVER_MODULE_ID,validatePortableSpellManifestStructure,hashManifest} from '@fvtt-json-generator/spell-manifest-contracts';
+import {RESOLVER_MODULE_ID,validateActorSpellManifestStructure,hashManifest} from '@fvtt-json-generator/spell-manifest-contracts';
+import {hasSourceCandidateFindings} from '@fvtt-json-generator/models/source-operations';
 import {
   WEAPON_PROPERTIES_MODULE_ID,
   parseWeaponConfiguration,
@@ -32,14 +33,14 @@ export function verifyGeneratedDocument(
   options: VerifyGeneratedDocumentOptions,
 ): GenerationVerification {
   const diagnostics: GenerationDiagnostic[] = [];
-  if(options.canonical.kind==='actor'&&(options.canonical.candidateReview||options.output?.flags?.fvttJsonGenerator?.candidateReview)){
+  if(options.canonical.kind==='actor'&&(hasSourceCandidateFindings(options.canonical.candidateReview)||hasSourceCandidateFindings(options.output?.flags?.fvttJsonGenerator?.candidateReview))){
     diagnostics.push({code:'GEN_SOURCE_CANDIDATE_REVIEW_REQUIRED',severity:'warning',stage:'semantic',path:'actor/candidateReview',
       message:'The complete Actor retains unresolved source findings for user review; candidate delivery does not accept those findings.'});
   }
   if(options.canonical.kind==='actor'){
     const parsed=options.canonical.compatibilitySource;
     for(const [section,actions]of Object.entries(parsed.structuredActions??{}))for(const [index,action]of(actions??[]).entries()){
-      if(action.candidateReview)diagnostics.push({code:'GEN_SOURCE_CANDIDATE_REVIEW_REQUIRED',severity:'warning',stage:'semantic',
+      if(hasSourceCandidateFindings(action.candidateReview))diagnostics.push({code:'GEN_SOURCE_CANDIDATE_REVIEW_REQUIRED',severity:'warning',stage:'semantic',
         path:`actor/structuredActions/${section}/${index}`,message:'This action has unresolved source findings; see the Forge review panel.'});
     }
   }
@@ -70,7 +71,7 @@ export function verifyGeneratedDocument(
 
   for (const [documentIndex, document] of documents.entries()) {
     const candidate=document?.flags?.fvttJsonGenerator?.candidateReview;
-    if(candidate)diagnostics.push({code:'GEN_SOURCE_CANDIDATE_REVIEW_REQUIRED',severity:'warning',stage:'semantic',
+    if(hasSourceCandidateFindings(candidate))diagnostics.push({code:'GEN_SOURCE_CANDIDATE_REVIEW_REQUIRED',severity:'warning',stage:'semantic',
       path:`items/${documentIndex}/candidateReview`,message:'This source and model proposal is available for GM review; its retained semantic findings have not been accepted.'});
     verifyIdsAndLinks(document, documentIndex, diagnostics);
     verifyDnd5eDocumentSchema(document, documentIndex, diagnostics, options.target);
@@ -92,7 +93,10 @@ export function verifyGeneratedDocument(
     }
   }
 
-  const mechanicsCoverage = options.canonical.mechanics.map((mechanic) =>
+  // The ledger-only linkage belongs to V14; older targets retain their
+  // original manual trait and have no such projected mechanic to verify.
+  const mechanicsCoverage = options.canonical.mechanics.filter(mechanic=>options.target==='14'
+    ||!(mechanic.kind==='uses'&&(mechanic.value as {nativeResistanceLedgerOnly?:boolean})?.nativeResistanceLedgerOnly)).map((mechanic) =>
     verifyMechanicCoverage(mechanic, documents, diagnostics, options.target, options.effectProfile,options.canonical.kind==='actor'?options.output:undefined));
 
   verifyTargetMetadata(options.output, options.target, diagnostics);
@@ -330,7 +334,13 @@ function verifyIdsAndLinks(
 
   const activities = Object.values(document?.system?.activities ?? {}) as any[];
   const activityIds = new Set<string>();
+  const stages=conditionStagePlans(document),coveredStages=new Set<ConditionStagePlan>();
   for (const [index, activity] of activities.entries()) {
+    if(activity?.flags?.fvttJsonGenerator?.sourceConditionStage!==undefined){
+      const stage=validConditionStage(activity,document,stages);
+      if(stage&&!coveredStages.has(stage))coveredStages.add(stage);
+      else diagnostics.push(error('GEN_CONDITION_STAGE_INVALID','semantic',`documents/${documentIndex}/system/activities/${index}`,'A condition stage must retain its own source-qualified GM template and have no rolls, automatic effects or resource consumption.'));
+    }
     const id = String(activity?._id ?? '');
     if (id && activityIds.has(id)) {
       diagnostics.push(error(
@@ -353,6 +363,7 @@ function verifyIdsAndLinks(
       }
     }
   }
+  if(stages.some(stage=>!coveredStages.has(stage)))diagnostics.push(error('GEN_CONDITION_STAGE_INVALID','semantic',`documents/${documentIndex}/system/activities`,'A source-qualified condition stage or its complete template is missing.'));
 }
 
 function verifyMechanicCoverage(
@@ -453,19 +464,34 @@ function verifyMechanicCoverage(
   const outputPaths: string[] = [];
   for (const [documentIndex, document] of documents.entries()) {
     const allActivities = Object.values(document?.system?.activities ?? {}) as any[];
-    const activities = activitiesForMechanic(mechanic, allActivities);
+    const scopedActivities = activitiesForMechanic(mechanic, allActivities);
+    const activities = mechanic.kind==='effect'?scopedActivities:scopedActivities.filter(activity=>!validConditionStage(activity,document));
     const structuredUses = mechanic.kind === 'uses' ? readStructuredUses(mechanic.value) : undefined;
     if (mechanic.kind === 'uses' && mechanic.path.startsWith('actor/') && structuredUses) {
       const uses = document?.system?.uses;
       const primary = activities[0];
       const costs = primary?.consumption?.targets ?? [];
       const expectedPeriod = mapStructuredUsesPeriod(structuredUses.period);
-      const value=mechanic.value as {executionMode?:string;sourceText?:string;spellcastingFeatureKey?:string};
+      const value=mechanic.value as {executionMode?:string;sourceText?:string;spellcastingFeatureKey?:string;actorResource?:string};
+      if(target==='14'&&value.actorResource==='legres'){
+        const resource=actor?.system?.resources?.legres;
+        if(structuredUses.period==='day'&&resource?.max===structuredUses.max&&resource.spent===0&&!Object.hasOwn(resource,'value')
+          &&document?.system?.identifier==='legendary-resistance'&&uses?.max===''&&uses.spent===0&&uses.recovery?.length===0
+          &&activities.length===1&&primary?.type==='utility'&&!primary.damage&&!primary.attack&&!primary.save
+          &&!(document.effects??[]).length&&!(primary.effects??[]).length
+          &&primary.consumption?.spellSlot===false&&costs.length===1&&costs[0]?.type==='attribute'
+          &&costs[0]?.target==='resources.legres.value'&&String(costs[0]?.value)==='1'){
+          outputPaths.push('actor/system/resources/legres',`documents/${documentIndex}/system/activities/0/consumption/targets`);
+        }
+        continue;
+      }
       const marker=document?.flags?.fvttJsonGenerator?.manualRule;
       const manual=value.executionMode==='gm-manual'&&marker?.version===1&&marker.mode==='gm-manual'
         &&typeof marker.logicalPath==='string'&&marker.logicalPath.startsWith(mechanic.path.replace(/^actor\//u,'').replace(/\/uses$/u,'/'))
         &&marker.sourceText===value.sourceText&&activities.length===1&&primary?.type==='utility'
-        &&!primary.damage&&!primary.attack&&!primary.save&&!(primary.effects?.length)&&!(document.effects?.length)&&costs.length===0;
+        &&!primary.damage&&!primary.attack&&!primary.save
+        &&(primary.effects??[]).every((link:any)=>(document.effects??[]).some((effect:any)=>effect._id===link._id&&effect.flags?.fvttJsonGenerator?.conditionLifecycle?.mode==='gm'))
+        &&(document.effects??[]).every((effect:any)=>effect.flags?.fvttJsonGenerator?.conditionLifecycle?.mode==='gm')&&costs.length===0;
       if (String(uses?.max) === String(structuredUses.max)
         && uses?.recovery?.length === 1
         && uses.recovery[0]?.period === expectedPeriod
@@ -527,7 +553,7 @@ function verifyMechanicCoverage(
           for(const effect of matching){
             const lifecycle=effect.flags?.fvttJsonGenerator?.conditionLifecycle;
             const links=activities.flatMap(activity=>(activity.effects??[]).filter((link:any)=>link._id===effect._id).map((link:any)=>({activity,link})));
-            if(lifecycle?.version!==1||effect.transfer!==false||effect.disabled===true||!links.length||links.some(({activity,link})=>activity.flags?.fvttJsonGenerator?.sourceOperation?.role==='attack-roll'||(activity.type==='save'?link.onSave!==false:link.onSave!==undefined)))valid=false;
+            if(lifecycle?.version!==1||effect.transfer!==false||effect.disabled===true||!links.length||links.some(({activity,link})=>activity.flags?.fvttJsonGenerator?.sourceOperation?.role==='attack-roll'&&!gmHitRollTemplateValid(activity,effect,allActivities)||(activity.type==='save'?link.onSave!==false:link.onSave!==undefined)))valid=false;
             if(value?.sourceText&&lifecycle?.sourceText!==value.sourceText)valid=false;
             if(manual&&lifecycle?.mode!=='gm'||value?.condition&&!String(effect.description).includes(value.condition)||value?.escapeDc!==undefined&&lifecycle?.escapeDc!==value.escapeDc||value?.staged===true&&lifecycle?.staged!==true||status==='exhaustion'&&value?.exhaustionLevels!==undefined&&lifecycle?.exhaustionLevels!==value.exhaustionLevels)valid=false;
             if(expected&&(effect.duration?.seconds!==(expected.seconds??null)||effect.duration?.rounds!==(expected.rounds??null)))diagnostics.push(error('GEN_CONDITION_DURATION_INVALID','semantic',mechanic.path,'The optional template must preserve its explicit numeric duration.'));
@@ -1148,6 +1174,56 @@ function activitiesForMechanic(mechanic: CanonicalGenerationMechanic, activities
   return scoped;
 }
 
+function gmHitRollTemplateValid(activity:any,effect:any,activities:any[]):boolean{
+  const marker=activity.flags?.fvttJsonGenerator?.sourceOperation,flags=effect.flags?.fvttJsonGenerator,life=flags?.conditionLifecycle;
+  return marker?.role==='attack-roll'&&typeof marker.id==='string'&&flags?.sourceOperationId===marker.id&&life?.version===1&&life.mode==='gm'
+    &&String(effect.description).includes('已命中')&&(effect.statuses??[]).every(officialCondition)
+    &&!activities.some(entry=>entry.flags?.fvttJsonGenerator?.sourceOperation?.id===marker.id&&entry.flags?.fvttJsonGenerator?.sourceOperation?.role==='damage');
+}
+
+interface ConditionStagePlan {sourceStage:string;statuses:string[];owner?:string;key:string;}
+
+function conditionStagePlans(document:any):ConditionStagePlan[]{
+  const rule=document.flags?.fvttJsonGenerator?.manualRule,source=rule?.sourceText??document.flags?.fvttJsonGenerator?.literalMechanics?.description??'';
+  const operations=Array.isArray(rule?.sourceOperations)?rule.sourceOperations:[];
+  const planned:ConditionStagePlan[]=[];
+  const collect=(scope:string,owner?:string)=>{
+    for(const condition of inferredAppliedConditions(scope))if(condition.sourceStage)planned.push({sourceStage:condition.sourceStage,statuses:officialConditionStatuses(condition.statuses),owner,key:condition.statuses.join('-')});
+  };
+  if(operations.length){for(const op of operations)if(!op.appliedConditions)collect(operationConditionSource(source,op,operations),op.id);}
+  else collect(source);
+  return planned;
+}
+
+function validConditionStage(activity:any,document:any,planned=conditionStagePlans(document)):ConditionStagePlan|undefined{
+  const marker=activity.flags?.fvttJsonGenerator?.sourceConditionStage;
+  if(marker?.version!==1||typeof marker.source!=='string'||!marker.source.trim()||activity.type!=='utility'||activity.activation?.type!=='special'
+    ||!String(activity.flags?.fvttJsonGenerator?.sourceLogicalPath??'').includes('/condition-stage/')||activity.flags?.fvttJsonGenerator?.sourceOperation
+    ||conditionStageHasMechanics(activity)||activity.consumption?.spellSlot!==false||activity.consumption?.scaling?.allowed!==false
+    ||!Array.isArray(activity.consumption?.targets)||activity.consumption.targets.length)return undefined;
+  const compact=(value:string)=>value.replace(/\s+/gu,'');
+  if(!Array.isArray(activity.effects)||!activity.effects.length||new Set(activity.effects.map((link:any)=>link._id)).size!==activity.effects.length)return undefined;
+  const effects=activity.effects.map((link:any)=>(document.effects??[]).find((effect:any)=>effect._id===link._id));
+  const signature=(statuses:string[])=>JSON.stringify([...new Set(statuses)].sort());
+  const expected=planned.find(condition=>compact(condition.sourceStage)===compact(marker.source)&&condition.owner===marker.sourceOperationId
+    &&String(activity.flags.fvttJsonGenerator.sourceLogicalPath).endsWith('/condition-stage/'+condition.key)
+    &&signature(effects.flatMap((effect:any)=>effect?.statuses??[]))===signature(condition.statuses));
+  if(!expected)return undefined;
+  const valid=activity.effects.every((link:any)=>link.onSave===undefined)&&effects.every((effect:any)=>{
+    const flags=effect?.flags?.fvttJsonGenerator,life=flags?.conditionLifecycle;
+    return effect&&effect.transfer===false&&effect.disabled!==true&&flags?.sourceOperationId===expected.owner&&life?.version===1&&life.mode==='gm'&&life.staged===true
+      &&compact(String(life.sourceText??''))===compact(marker.source)&&compact(String(effect.description??'')).includes(compact(marker.source));
+  });
+  return valid?expected:undefined;
+}
+
+function conditionStageHasMechanics(activity:any):boolean{
+  const nonempty=(value:any):boolean=>Array.isArray(value)?value.some(nonempty):value&&typeof value==='object'?Object.values(value).some(nonempty):value!==undefined&&value!==null&&value!==''&&value!==false&&value!==0;
+  const uses=activity.uses??{};
+  return ['attack','save','damage','healing'].some(key=>nonempty(activity[key]))||String(activity.roll?.formula??'').trim()!==''
+    ||String(uses.max??'').trim()!==''&&String(uses.max)!=='0'||Number(uses.spent??0)!==0||Array.isArray(uses.recovery)&&uses.recovery.length>0;
+}
+
 type StructuredUsesPeriod = 'day' | 'longRest' | 'shortRest' | 'dawn';
 
 interface StructuredUsesValue {
@@ -1159,7 +1235,7 @@ interface StructuredUsesValue {
  * must remain inert; only the matched resolver-owned Cast spends this pool. */
 function pendingSpellParentUses(actor:any,item:any,key:string|undefined,uses:StructuredUsesValue):boolean{
   if(!key||!['day','longRest','shortRest'].includes(uses.period)||item?.flags?.fvttJsonGenerator?.spellcastingFeatureKey!==key)return false;
-  const owner=actor?.flags?.[RESOLVER_MODULE_ID],checked=validatePortableSpellManifestStructure(owner?.spellManifest);
+  const owner=actor?.flags?.[RESOLVER_MODULE_ID],checked=validateActorSpellManifestStructure(owner?.spellManifest);
   if(!checked.ok||owner?.spellResolution?.status!=='pending'||owner.spellResolution.manifestHash!==hashManifest(checked.value))return false;
   const groups=checked.value.spellcastingGroups.filter(g=>g.featureItemKey===key);
   if(groups.length!==1)return false;

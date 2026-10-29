@@ -3,7 +3,7 @@ import { hashManifest } from '@fvtt-json-generator/spell-manifest-contracts/hash
 import {
   findForbiddenTargetWorldIdentifiers,
   RESOLVER_MODULE_ID,
-  validatePortableSpellManifestStructure,
+  validateActorSpellManifestStructure,
   type PortableSpellManifest,
 } from '@fvtt-json-generator/spell-manifest-contracts';
 
@@ -72,7 +72,7 @@ export function buildActorSpellManifest(
   target: FvttTargetVersion,
 ): void {
   assertSpellManifestTarget(manifest, target);
-  const validation = validatePortableSpellManifestStructure(manifest);
+  const validation = validateActorSpellManifestStructure(manifest);
   if (!validation.ok) {
     const details = validation.findings.map((finding) => `${finding.code} ${finding.path}`).join('; ');
     throw new ActorSpellManifestError('SPELL_MANIFEST_INVALID', details);

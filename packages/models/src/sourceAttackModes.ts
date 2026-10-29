@@ -97,6 +97,6 @@ export function deriveSourceAttackDamageModes(source:string,ops:readonly SourceO
  // Every absorbed operation contains only the identified damage atoms. Any
  // additional save/area/target behaviour remains on its own original OP.
  if(entries.some(entry=>absorbedIds.has(entry.op.id)&&!assigned.has(entry)))return;
- if(ops.some(op=>absorbedIds.has(op.id)&&(op.attack||op.save||op.aoe||op.range!==undefined||op.targetSpecial)))return;
+ if(ops.some(op=>absorbedIds.has(op.id)&&(op.attack||op.save||op.aoe||op.range!==undefined||op.targetSpecial||op.appliedConditions?.length||op.failureStatuses?.length||op.damageAdjustment)))return;
  return{kind,attackId:attack.id,ordinary:ordinary.part,alternative,shared,absorbedIds:[...absorbedIds],weapon:weaponIdentity(name)};
 }

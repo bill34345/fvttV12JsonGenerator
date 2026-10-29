@@ -20,7 +20,7 @@ import type {
 } from './types';
 import { renderMonsterFeatureName, renderPreparedSpellcastingProfile } from './renderer';
 import { formatMixedRuleHtml } from '@fvtt-json-generator/generation/actor-text';
-import { sourceConditionLifecycle, simpleConditionDuration, isGeneratedConditionId,officialCondition } from '@fvtt-json-generator/generation/actor-effects';
+import { sourceConditionLifecycle, simpleConditionDuration, isGeneratedConditionId,officialCondition,inferredAppliedConditions,operationConditionSource,officialConditionStatuses } from '@fvtt-json-generator/generation/actor-effects';
 import { auditMonsterIntakeSource, validateMonsterIntakeIR } from './validator';
 import { hasLiteralDamageHelpers, isLiteralDamageHelperOnly, verifyMonsterProjectionPreservation } from './projection-verifier';
 import { hasManualForcedMovementMechanic, manualForcedMovementRequirements } from './manual-forced-movement';
@@ -29,6 +29,8 @@ import {sourceStatHeader} from './staged-source';
 import {sourceSenseQualifier} from './staged-source-facts';
 import {headerPresentation} from './header-presentation';
 import {sizeChoiceProgramNote} from './source-size';
+import {legendaryResistanceBinding} from './native-resources';
+import {projectActorLanguages} from '@fvtt-json-generator/generation/actor-languages';
 import {sourceAttackDamageModes,sourceFeatureResources,sourceOperationTargetType,sourceOperationTargetCount,sourceLegendaryLairResistance,sourceOperationSelfTarget,sourceOperationSelfArea,isNeutralSourceAttack} from '@fvtt-json-generator/models/source-operations';
 
 export interface IntakeVerificationReport {
@@ -166,9 +168,18 @@ function verifyMonsterIntakeProjection(
   if((expected.defenses.vulnerabilitiesCustom??'')!==projection.vulnerabilitiesCustom)add('ACTOR_VULNERABILITY_NOTE_DRIFT','/creature/defenses/vulnerabilitiesCustom','The complete literal vulnerability note must match the IR without changing its condition.');
   compareSet(add, 'ACTOR_CONDITION_IMMUNITY_DRIFT', '/creature/defenses/conditionImmunities', expected.defenses.conditionImmunities, projection.conditionImmunities, normalizeCondition);
   for (const [sense, value] of Object.entries(expected.senses)) compare(add, 'ACTOR_SENSE_DRIFT', `/creature/senses/${sense}`, value, (projection.senses as Record<string, unknown>)?.[sense]);
-  compareSet(add, 'ACTOR_LANGUAGE_DRIFT', '/creature/languages/values', expected.languages.values, projection.languages, normalizeLanguageFixed);
-  compare(add, 'ACTOR_LANGUAGE_NOTE_DRIFT', '/creature/languages/custom', expected.languages.custom, projection.languageCustom);
-  const featureContext={source,ir,range:coverageRange,auditSource,isV14:/^14(?:\.|$)/u.test(String(asRecord(asRecord(actor)._stats).coreVersion??''))};
+  const isV14=/^14(?:\.|$)/u.test(String(asRecord(asRecord(actor)._stats).coreVersion??''));
+  const languages=isV14?projectActorLanguages(expected.languages.values,expected.languages.custom??'',true)
+    :{value:expected.languages.values,custom:expected.languages.custom};
+  compareSet(add, 'ACTOR_LANGUAGE_DRIFT', '/creature/languages/values', languages.value, projection.languages, normalizeLanguageFixed);
+  compare(add, 'ACTOR_LANGUAGE_NOTE_DRIFT', '/creature/languages/custom', languages.custom, projection.languageCustom);
+  const nativeResistance=isV14?legendaryResistanceBinding(expected):undefined;
+  if(nativeResistance){
+    const resource=asRecord(asRecord(asRecord(asRecord(actor).system).resources).legres);
+    if(resource.max!==nativeResistance.max||resource.spent!==0||Object.hasOwn(resource,'value'))
+      add('ACTOR_LEGENDARY_RESISTANCE_DRIFT','/creature/traits','The explicitly declared resistance count must use the native unspent Actor resource.');
+  }
+  const featureContext={source,ir,range:coverageRange,auditSource,isV14,nativeResistance:nativeResistance?.feature};
   compareFeatureSections(add, expected.traits, projection.items, 'traits',featureContext);
   compareFeatureSections(add, expected.actions, projection.items, 'actions',featureContext);
   compareFeatureSections(add, expected.bonusActions, projection.items, 'bonusActions',featureContext);
@@ -698,6 +709,11 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
       attackData:asRecord(activity.attack),
       rollData:asRecord(activity.roll),
       sourceOperation:asRecord(asRecord(asRecord(activity.flags).fvttJsonGenerator).sourceOperation),
+      ...(asRecord(asRecord(activity.flags).fvttJsonGenerator).sourceConditionStage!==undefined?{
+        sourceConditionStage:asRecord(asRecord(asRecord(activity.flags).fvttJsonGenerator).sourceConditionStage),
+        sourceLogicalPath:asRecord(asRecord(activity.flags).fvttJsonGenerator).sourceLogicalPath,
+        stageHasMechanics:conditionStageHasMechanics(activity),
+      }:{}),
       literalDamage:asRecord(asRecord(asRecord(activity.flags).fvttJsonGenerator).literalDamage),
       onSave:activityDamage.onSave,
       includeBase:activityDamage.includeBase,
@@ -769,6 +785,7 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
         || Array.isArray(activity.effects)&&activity.effects.some(link=>!manualTemplateIds.has(String(asRecord(link)._id)))
         || ((targets:unknown)=>Array.isArray(targets)&&targets.length>0)(asRecord(activity.consumption).targets)),
     uses: projectItemUses(asRecord(system.uses)),
+    identifier:system.identifier,
     useRecovery: Array.isArray(asRecord(system.uses).recovery)?asRecord(system.uses).recovery:[],
   };
 }
@@ -847,7 +864,7 @@ function compareFeatureSections(
   expected: CanonicalFeature[],
   actorItems: unknown,
   section: string,
-  context:{source:string;ir:MonsterIntakeIR;range?:{start:number;end:number};isV14:boolean;auditSource:boolean},
+  context:{source:string;ir:MonsterIntakeIR;range?:{start:number;end:number};isV14:boolean;auditSource:boolean;nativeResistance?:CanonicalFeature},
 ): void {
   const items = Array.isArray(actorItems) ? actorItems.map(asRecord) : [];
   const sectionActivation = section === 'actions' ? 'action'
@@ -873,6 +890,9 @@ function compareFeatureSections(
     }
     const description = String(found.description ?? '');
     const path=`/creature/${section}/${index}`;
+    const allFeatureActivities=Array.isArray(found.activities)?found.activities.map(asRecord):[];
+    const featureEffects=Array.isArray(found.effectDefinitions)?found.effectDefinitions.map(asRecord):[];
+    const sourceActivities=conditionStageSourceActivities(allFeatureActivities,featureEffects,feature,()=>add('ACTOR_CONDITION_STAGE_DRIFT',path,'A separate condition stage must retain its source-qualified GM template, own links and zero execution or consumption.'));
     // The established legendary projection defaults an unlabelled action to
     // one. Verify that value for manual and SourceOP Items as well as explicit
     // Costs-N actions; an omitted IR field must not disable final readback.
@@ -883,6 +903,16 @@ function compareFeatureSections(
     const resourceTarget=sharedPool?String(sharedCarrier?.id??''):'';
     const complete=context.isV14&&(!context.auditSource||completeSourceFeatureEvidence(context.source,context.ir,feature,path,context.range));
     const fullLiteral=Boolean(complete&&sourceRuleText(description).includes(sourceRuleText(feature.description)));
+    if(context.nativeResistance===feature){
+      const activity=sourceActivities[0],targets=asRecord(activity?.consumption).targets;
+      const costs=Array.isArray(targets)?targets.map(asRecord):[];
+      if(!fullLiteral||found.identifier!=='legendary-resistance'||asRecord(found.uses).max!==undefined
+        ||(Array.isArray(found.useRecovery)&&found.useRecovery.length)||sourceActivities.length!==1||activity?.type!=='utility'
+        ||Number(found.effectCount)!==0||costs.length!==1||costs[0]?.type!=='attribute'
+        ||costs[0]?.target!=='resources.legres.value'||String(costs[0]?.value)!=='1')
+        add('ACTOR_NATIVE_RESOURCE_DRIFT',path,'Legendary resistance must preserve its full rule and use the Actor counter without an independent Item pool.');
+      continue;
+    }
     if(feature.executionMode==='gm-manual'){
       const marker=asRecord(found.manualRule);
       // Literal rules escape source HTML as visible text. Do not strip decoded
@@ -892,7 +922,7 @@ function compareFeatureSections(
       if(!manualLiteral || marker.version!==1 || marker.mode!=='gm-manual'
         ||marker.sourceText!==feature.description)
         add('ACTOR_MANUAL_RULE_LOSS',path,'Manual Item must preserve the complete source rule and its source identity.');
-      if(found.manualExecutable || (Array.isArray(found.activities)?found.activities:[]).length!==1)
+      if(found.manualExecutable || sourceActivities.length!==1)
         add('ACTOR_MANUAL_RULE_EXECUTION_DRIFT',path,'Manual Item must have one non-executing Utility and zero automatic effects, rolls or resource consumption.');
       const uses=asRecord(found.uses);
       if(context.auditSource){
@@ -907,9 +937,17 @@ function compareFeatureSections(
       continue;
     }
     if(feature.sourceOperations){
-      const marker=asRecord(found.manualRule),activities=Array.isArray(found.activities)?found.activities.map(asRecord):[];
+      const marker=asRecord(found.manualRule),activities=sourceActivities;
       const contexts=feature.sourceContext??[];
       if(!complete||!fullLiteral||marker.mode!=='native-with-gm'||marker.sourceText!==feature.description||JSON.stringify(marker.sourceOperations)!==JSON.stringify(feature.sourceOperations)||JSON.stringify(marker.sourceContext)!==JSON.stringify(contexts)||contexts.some(context=>!sourceRuleText(description).includes(sourceRuleText(context))))add('ACTOR_SOURCE_OPERATION_RULE_LOSS',path,'Source operations must retain complete rules, shared conditions and their exact source identity.');
+      const definitions=Array.isArray(found.effectDefinitions)?found.effectDefinitions.map(asRecord):[];
+      for(const original of feature.sourceOperations){
+        const declared=[...(original.failureStatuses??[]),...(original.appliedConditions??[]).flatMap(condition=>condition.statuses)].filter(officialCondition);
+        if(!declared.length)continue;
+        const owners=activities.filter(activity=>asRecord(activity.sourceOperation).id===original.id);
+        if(declared.some(status=>!owners.some(activity=>definitions.some(effect=>arrayValues(activity.effectIds).includes(String(effect._id))&&arrayValues(effect.statuses).includes(status)))))
+          add('ACTOR_SOURCE_OPERATION_STATUS_DRIFT',path+'/sourceOperations/'+original.id,'The original operation lost a declared state or its owning Activity link.');
+      }
       const modes=sourceAttackDamageModes(feature.description,feature.sourceOperations,feature.name);
       type ViewOp=NonNullable<CanonicalFeature['sourceOperations']>[number]&{damageMode?:string;nameSuffix?:string;gmDamageOnly?:boolean;gmAttackOnly?:boolean};
       const viewOps:ViewOp[]=feature.sourceOperations.filter(op=>!modes?.absorbedIds.includes(op.id)).flatMap(op=>{
@@ -942,7 +980,7 @@ function compareFeatureSections(
             if(marker.sourceText!==op.sourceText||marker.attackClassification!=='unspecified'||marker.attackKind!==op.attack!.type||marker.relationship!==(damageRole?'follow-up':op.relationship)
               ||entry.type!==(damageRole?'damage':'utility')||entry.name!==op.name+(damageRole?'（命中后伤害）':`（${attackMode==='melee'?'近战 · ':attackMode==='ranged'?`远程 ${op.attack!.range}${op.attack!.longRange!==undefined?'/'+op.attack!.longRange:''} 尺 · `:''}GM攻击检定）`)+(op.nameSuffix??'')||entry.condition!==condition
               ||entry.activation!==(damageRole||op.relationship==='follow-up'?'special':expectedActivation??'')||Object.keys(asRecord(entry.attackData)).length
-              ||Object.keys(asRecord(entry.saveData)).length||!damageRole&&arrayValues(entry.effectIds).length||entry.includeBase!==undefined) add('ACTOR_GM_ATTACK_IDENTITY_DRIFT',path+'/sourceOperations/'+op.id,'A generic GM roll cannot silently become a native weapon/spell Attack or automatic follow-up.');
+              ||Object.keys(asRecord(entry.saveData)).length||!damageRole&&arrayValues(entry.effectIds).length&&!gmHitRollTemplatesValid(entry,featureEffects,activities)||entry.includeBase!==undefined) add('ACTOR_GM_ATTACK_IDENTITY_DRIFT',path+'/sourceOperations/'+op.id,'A generic GM roll cannot silently become a native weapon/spell Attack or automatic follow-up.');
             if(!damageRole&&(roll.formula!=='1d20'+(op.attack!.toHit>=0?'+':'')+op.attack!.toHit||roll.name!=='GM辅助攻击检定'||roll.prompt!==true||roll.visible!==false||parts.length))add('ACTOR_GM_ATTACK_ROLL_DRIFT',path+'/sourceOperations/'+op.id,'GM attack formula must use exactly the source total once, without damage or inferred ability/proficiency.');
             if(damageRole&&(Object.keys(roll).length||parts.length!==(op.damage?.length??0)||parts.some((part,index)=>compact(String(part.formula??''))!==compact(op.damage![index]!.formula)||JSON.stringify(arrayValues(part.types))!==JSON.stringify(op.damage![index]!.types??[op.damage![index]!.type]))))add('ACTOR_SOURCE_OPERATION_DAMAGE_DRIFT',path+'/sourceOperations/'+op.id,'GM-triggered hit damage must retain its one complete source roll.');
             if(range.override!==true||range.units!=='ft'||range.value!==(attackMode==='melee'?op.attack!.reach:op.attack!.range??op.attack!.reach??null)||range.long!==undefined||range.special!==(attackMode==='melee'?'':op.attack!.longRange!==undefined?`远射程 ${op.attack!.longRange} 尺`:'')) add('ACTOR_SOURCE_OPERATION_RANGE_DRIFT',path+'/sourceOperations/'+op.id,'The GM attack and damage must retain the exact source distance, including zero.');
@@ -954,7 +992,7 @@ function compareFeatureSections(
             if(!Array.isArray(costs)||costs.length!==(expectedCost?1:0)||expectedCost&&(asRecord(costs[0]).type!=='itemUses'||asRecord(costs[0]).target!==resourceTarget||String(asRecord(costs[0]).value)!=='1'))add('ACTOR_SOURCE_OPERATION_RESOURCE_DRIFT',path+'/sourceOperations/'+op.id,'GM hit damage cannot consume the attack resource a second time.');
             const consumption=asRecord(entry.consumption),scaling=asRecord(consumption.scaling);
             if(consumption.spellSlot!==false||scaling.allowed!==false||scaling.max!==''||Array.isArray(costs)&&costs.some(cost=>asRecord(asRecord(cost).scaling).mode!==''||asRecord(asRecord(cost).scaling).formula!==''))add('ACTOR_SOURCE_OPERATION_RESOURCE_DRIFT',path+'/sourceOperations/'+op.id,'A generic GM roll cannot add spell-slot consumption or resource scaling.');
-            if(damageRole&&!operationConditionProjectionValid(op,entry,Array.isArray(found.effectDefinitions)?found.effectDefinitions.map(asRecord):[]))add('ACTOR_SOURCE_OPERATION_STATUS_DRIFT',path+'/sourceOperations/'+op.id,'The post-hit state templates lost their declared qualifier, duration or link.');
+            if((damageRole||!op.damage?.length)&&!operationConditionProjectionValid(op,entry,featureEffects))add('ACTOR_SOURCE_OPERATION_STATUS_DRIFT',path+'/sourceOperations/'+op.id,'The post-hit state templates lost their declared qualifier, duration or link.');
           }
           continue;
         }
@@ -1017,7 +1055,7 @@ function compareFeatureSections(
       if(!complete||!literal(description).includes(literal(feature.description))||marker.mode!=='native-with-gm'||marker.sourceText!==feature.description||marker.nativeRuleText!==feature.nativeRuleText||marker.manualRemainder!==feature.manualRemainder)
         add('ACTOR_MIXED_RULE_LOSS',path,'Mixed operations must retain the complete rule, primary facts and explicit GM remainder.');
       if(JSON.stringify(arrayValues(marker.operations))!==JSON.stringify(operations))add('ACTOR_MIXED_OPERATION_LABEL_DRIFT',path,'The displayed native-operation boundary must match the source-declared operations.');
-      const activities=Array.isArray(found.activities)?found.activities.map(asRecord):[];
+      const activities=sourceActivities;
       const records=(value:unknown)=>Array.isArray(value)?value.map(asRecord):[];
       const dual=Boolean(feature.attack?.reach&&feature.attack.range&&/^(?:mwak|msak)$/u.test(feature.attack.type));
       const primary=feature.gmTriggeredSave?activities.filter(a=>a.type!=='save'):activities;
@@ -1084,10 +1122,14 @@ function compareFeatureSections(
       if(heals.length!==1||compact(part.formula)!==compact(feature.healing.formula)||JSON.stringify(arrayValues(part.types))!==JSON.stringify([feature.healing.type]))
         add('ACTOR_HEALING_DRIFT',path+'/healing','The native Heal must retain its one source-proven healing formula and Hit Point kind.');
       const creatureRangeMatches=feature.range!==undefined?range.units==='ft'&&Number(range.value)===feature.range&&String(range.special??'')===''
-        :range.units==='spec'&&range.special===recipient?.special&&(range.value===undefined||range.value===null||range.value==='');
-      if(affects.type!==(recipient?.type??'self')||String(affects.count)!=='1'||String(affects.special??'')!==(recipient?.special??'')
-        ||recipient&&heal?.targetPrompt!==(recipient.type==='creature')
-        ||recipient?.type==='creature'&&!creatureRangeMatches)
+        :range.units==='spec'&&range.special===(recipient?.special??'')&&(range.value===undefined||range.value===null||range.value==='');
+      const unresolvedRecipient='GM：治疗目标未提供，请按完整原文确认对象、数量与范围。';
+      const unspecifiedRangeMatches=feature.range!==undefined?range.units==='ft'&&Number(range.value)===feature.range&&String(range.special??'')===''
+        :range.units==='spec'&&range.special===unresolvedRecipient&&(range.value===undefined||range.value===null||range.value==='');
+      if(affects.type!==(recipient?.type??'any')||String(affects.count)!==(recipient?.count===undefined?'':String(recipient.count))||String(affects.special??'')!==(recipient?recipient.special??'':unresolvedRecipient)
+        ||heal?.targetPrompt!==(recipient?.type!=='self')
+        ||recipient&&recipient.type!=='self'&&!creatureRangeMatches
+        ||!recipient&&!unspecifiedRangeMatches)
         add('ACTOR_HEALING_TARGET_DRIFT',path+'/healing/target','The native Heal must retain its source-proven recipient and complete eligibility; a missing distance cannot become a numeric or self-only range.');
     }
     if (feature.attack) {
@@ -1173,7 +1215,7 @@ function compareFeatureSections(
           if(!matching.length)add(statusDefinitions.length?'ACTOR_CONDITION_GM_METADATA_DRIFT':'ACTOR_CONDITION_DRIFT',conditionPath,'The declared official state lost its optional template or exact qualification.');
           for(const effect of matching){
             const lifecycle=asRecord(asRecord(effect.flags).fvttJsonGenerator).conditionLifecycle,life=asRecord(lifecycle),links=conditionActivities.flatMap(activity=>arrayValues(activity.effectIds).includes(String(effect._id))?[activity]:[]);
-            if(!links.length||effect.disabled===true||effect.transfer!==false||links.some(activity=>asRecord(activity.sourceOperation).role==='attack-roll'))add('ACTOR_CONDITION_LINK_DRIFT',conditionPath,'An official template must be usable from its own result Activity.');
+            if(!links.length||effect.disabled===true||effect.transfer!==false||links.some(activity=>asRecord(activity.sourceOperation).role==='attack-roll'&&!gmHitRollTemplatesValid(activity,definitions,conditionActivities)))add('ACTOR_CONDITION_LINK_DRIFT',conditionPath,'An official template must be usable from its own result Activity.');
             if(life.version!==1||compact(String(life.sourceText??''))!==compact(feature.description)||(applied.condition||applied.escapeDc!==undefined||applied.staged||status==='exhaustion')&&life.mode!=='gm'||applied.condition&&(life.condition!==applied.condition||!String(effect.description).includes(applied.condition))||applied.escapeDc!==undefined&&life.escapeDc!==applied.escapeDc||applied.staged!==undefined&&life.staged!==applied.staged||applied.duration!==undefined&&life.duration!==applied.duration||status==='exhaustion'&&applied.exhaustionLevels!==undefined&&life.exhaustionLevels!==applied.exhaustionLevels)add('ACTOR_CONDITION_GM_METADATA_DRIFT',conditionPath,'The optional template lost its explicit GM qualification.');
             if(duration&&(asRecord(effect.duration).seconds!==(duration.seconds??null)||asRecord(effect.duration).rounds!==(duration.rounds??null)))add('ACTOR_CONDITION_DURATION_DRIFT',conditionPath,'The optional template lost its numeric duration.');
           }
@@ -1560,6 +1602,55 @@ function operationConditionProjectionValid(op:NonNullable<CanonicalFeature['sour
     }
   }
   return true;
+}
+
+function gmHitRollTemplatesValid(activity:Record<string,unknown>,definitions:Record<string,unknown>[],activities:Record<string,unknown>[]):boolean{
+  const marker=asRecord(activity.sourceOperation),ids=arrayValues(activity.effectIds);
+  if(marker.role!=='attack-roll'||typeof marker.id!=='string'||!ids.length
+    ||activities.some(entry=>asRecord(entry.sourceOperation).id===marker.id&&asRecord(entry.sourceOperation).role==='damage'))return false;
+  return ids.every(id=>{
+    const effect=definitions.find(entry=>entry._id===id),flags=asRecord(asRecord(effect?.flags).fvttJsonGenerator),life=asRecord(flags.conditionLifecycle);
+    return effect?.transfer===false&&effect.disabled!==true&&flags.sourceOperationId===marker.id&&life.version===1&&life.mode==='gm'
+      &&String(effect.description).includes('已命中')&&arrayValues(effect.statuses).every(officialCondition);
+  });
+}
+
+function conditionStageHasMechanics(activity:Record<string,unknown>):boolean{
+  const nonempty=(value:unknown):boolean=>Array.isArray(value)?value.some(nonempty):value&&typeof value==='object'?Object.values(value).some(nonempty):value!==undefined&&value!==null&&value!==''&&value!==false&&value!==0;
+  const uses=asRecord(activity.uses);
+  return ['attack','save','damage','healing'].some(key=>nonempty(activity[key]))||String(asRecord(activity.roll).formula??'').trim()!==''
+    ||String(uses.max??'').trim()!==''&&String(uses.max)!=='0'||Number(uses.spent??0)!==0||Array.isArray(uses.recovery)&&uses.recovery.length>0;
+}
+
+function conditionStageSourceActivities(activities:Record<string,unknown>[],definitions:Record<string,unknown>[],feature:CanonicalFeature,invalid:()=>void):Record<string,unknown>[] {
+  const expected:Array<{source:string;statuses:string[];owner?:string;key:string}>=[];
+  const collect=(source:string,owner?:string)=>{
+    for(const condition of inferredAppliedConditions(source))if(condition.sourceStage)expected.push({source:condition.sourceStage,statuses:officialConditionStatuses(condition.statuses),owner,key:condition.statuses.join('-')});
+  };
+  if(feature.sourceOperations){
+    for(const op of feature.sourceOperations)if(!op.appliedConditions)collect(operationConditionSource(feature.description,op,feature.sourceOperations),op.id);
+  }else if(!feature.appliedConditions?.length)collect(feature.description);
+  const valid=new Set<Record<string,unknown>>(),covered=new Set<(typeof expected)[number]>();let malformed=false;
+  const signature=(statuses:string[])=>JSON.stringify([...new Set(statuses)].sort());
+  for(const activity of activities.filter(entry=>entry.sourceConditionStage!==undefined)){
+    const stage=asRecord(activity.sourceConditionStage),consumption=asRecord(activity.consumption),ids=arrayValues(activity.effectIds);
+    const matches=ids.map(id=>definitions.find(effect=>effect._id===id));
+    const statuses=matches.flatMap(effect=>arrayValues(effect?.statuses));
+    const planned=expected.find(entry=>compact(entry.source)===compact(String(stage.source??''))&&entry.owner===stage.sourceOperationId
+      &&String(activity.sourceLogicalPath).endsWith('/condition-stage/'+entry.key)&&signature(statuses)===signature(entry.statuses));
+    const shape=stage.version===1&&planned&&activity.type==='utility'&&activity.activation==='special'&&activity.stageHasMechanics===false
+      &&String(activity.sourceLogicalPath).includes('/condition-stage/')&&!Object.keys(asRecord(activity.sourceOperation)).length
+      &&consumption.spellSlot===false&&Array.isArray(consumption.targets)&&consumption.targets.length===0&&asRecord(consumption.scaling).allowed===false
+      &&ids.length>0&&new Set(ids).size===ids.length
+      &&matches.every(effect=>{const flags=asRecord(asRecord(effect?.flags).fvttJsonGenerator),life=asRecord(flags.conditionLifecycle);return effect?.transfer===false&&effect.disabled!==true
+        &&flags.sourceOperationId===planned.owner&&life.version===1&&life.mode==='gm'&&life.staged===true&&compact(String(life.sourceText??''))===compact(planned.source)
+        &&String(effect.description??'').replace(/\s+/gu,'').includes(planned.source.replace(/\s+/gu,''));})
+      &&(Array.isArray(activity.effectLinksData)?activity.effectLinksData:[]).every(link=>asRecord(link).onSave===undefined);
+    if(shape&&planned&&!covered.has(planned)){valid.add(activity);covered.add(planned);}else malformed=true;
+  }
+  if(expected.some(stage=>!covered.has(stage)))malformed=true;
+  if(malformed)invalid();
+  return activities.filter(activity=>!valid.has(activity));
 }
 
 function dedupe(findings: IntakeFinding[]): IntakeFinding[] {

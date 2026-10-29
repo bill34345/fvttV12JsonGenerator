@@ -31,7 +31,7 @@ export async function run(){
   if(!out||!out.startsWith('H:\\CodexData\\visualizations\\2026\\10\\22\\01a163d8-f3e5-7663-bd1b-25d55bfdac88\\forge-four-2024-'))throw Error('Expected a new exact task evidence directory via --out.');
   mkdirSync(out,{recursive:true});
   const settings=readLocalIntakeSettings('127.0.0.1',undefined),rows=sources();
-  if(INTAKE_PROMPT_VERSIONS.extract!=='monster-intake-extract-v39-source-grant-references')throw Error('Final v39 prompt changed.');
+  if(!['monster-intake-extract-v39-source-grant-references'].includes(INTAKE_PROMPT_VERSIONS.extract))throw Error('Final v39 prompt changed.');
   const intent={baseline:git('rev-parse','HEAD'),branch:git('branch','--show-current'),workflow:'ordinary Forge AI: real discover/extract -> current validation/render/formal workflow/verifier; no staged auto or frozen answers',
     model:settings.model,protocol:settings.protocol,reasoning:settings.reasoning,structuredOutput:settings.structuredOutput,promptVersions:INTAKE_PROMPT_VERSIONS,
     autoCorrect:false,separateReview:false,initialMaximumRequests:rows.length*2,

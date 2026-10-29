@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { describe, expect, test } from 'bun:test';
 import { IndexedDbIntakeCandidateStore, INTAKE_CANDIDATE_MAX_BYTES } from '../foundry-modules/fvtt-json-forge/src/intakeCandidateRecovery';
 
@@ -8,12 +9,16 @@ describe('complete candidate IndexedDB persistence', () => {
     await first.load(); await peer.load();
     await first.put('single', { checksum: 'first' } as any);
     await expect(peer.put('single', { checksum: 'stale' } as any)).rejects.toThrow(/另一窗口/u);
-    expect((await peer.load()).single.checksum).toBe('first');
+    const peerRecord = (await peer.load()).single;
+    assert.ok(peerRecord);
+    expect(peerRecord.checksum).toBe('first');
     factory.failNextPutWithQuota = true;
     await expect(first.put('single', { checksum: 'quota' } as any)).rejects.toThrow(/Quota/u);
     await expect(first.put('single', { checksum: 'revoked' } as any, () => { throw Error('revoked GM'); })).rejects.toThrow(/revoked/u);
     await expect(first.put('single', { checksum: 'x'.repeat(INTAKE_CANDIDATE_MAX_BYTES) } as any)).rejects.toThrow(/8MiB/u);
-    expect((await first.load()).single.checksum).toBe('first');
+    const retainedRecord = (await first.load()).single;
+    assert.ok(retainedRecord);
+    expect(retainedRecord.checksum).toBe('first');
     expect(await new IndexedDbIntakeCandidateStore('world:other', db).load()).toEqual({});
     expect(factory.closedDatabases).toBe(factory.openDatabases);
   });

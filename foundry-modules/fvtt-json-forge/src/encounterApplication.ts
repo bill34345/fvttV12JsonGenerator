@@ -107,10 +107,13 @@ export function createForgeEncounterApplicationClass(environment: {
       const localizedNames=new Map(this.prepared?.bundle.localization?this.prepared.actors.map(actor=>[actor.key,actor.name] as const):[]);
       const candidateActors=navigation.actors.length?navigation.actors.map(actor=>({...actor,label:localizedNames.get(actor.key)??actor.label}))
         :this.prepared?.actors.map(actor=>({key:actor.key,label:actor.name}))??[];
-      const candidateRules=this.prepared?.macros.flatMap(macro=>readFixedEncounterConfiguration(macro.command)?.rules??[])??[];
-      const manualSourceRules=this.prepared?.actors.flatMap(actor=>((actor.artifact.items??[]) as any[])
-        .filter(item=>item.flags?.fvttJsonGenerator?.manualRule?.mode==='gm-manual')
-        .map(item=>({actorKey:actor.key,actorName:actor.name,name:String(item.name),sourceText:String(item.flags.fvttJsonGenerator.manualRule.sourceText)})))??[];
+      const macroConfigurations=this.prepared?.macros.map(macro=>{
+        try{return{macro,config:readFixedEncounterConfiguration(macro.command),issue:undefined};}
+        catch(error){return{macro,config:undefined,issue:message(error)};}
+      })??[];
+      const candidateRules=macroConfigurations.flatMap(row=>row.config?.rules??[]);
+      const actorPreviews=this.prepared?.actors.map(encounterActorPreview)??[];
+      const manualSourceRules=actorPreviews.flatMap(actor=>actor.manualSourceRules);
       const selectedActor=this.actorFilter && candidateActors.some(actor=>actor.key===this.actorFilter)?this.actorFilter:'';
       const issueItems=navigation.issues.map((issue,index)=>{
         const canContinue=issue.action==='translate'?!!this.prepared&&!this.prepared.bundle.localization
@@ -271,15 +274,12 @@ export function createForgeEncounterApplicationClass(environment: {
         reviewEvidenceUnavailable:!!this.prepared&&!this.aiReport?.automation?.selection,
         status:this.status,error:this.error,fileName:this.file?.name,
         label:this.prepared?.label,packageHash:this.prepared?.hash,
-        actors:this.prepared?.actors.filter(a=>(!selectedActor||a.key===selectedActor)&&this.reviewFilter==='all').map(a=>({key:a.key,name:a.name,isPrimary:a.key===this.prepared!.bundle.primaryActorKey,assisted:a.status==='needs_review',
-          hp:(a.artifact as any).system.attributes.hp.max,ac:(a.artifact as any).system.attributes.ac.flat,cr:(a.artifact as any).system.details.cr,
-          biography:displayText((a.artifact as any).system.details.biography?.value),
-          abilities:((a.artifact as any).items??[]).map((item:any)=>({name:item.name,description:displayText(item.system?.description?.value)})),
-          source:this.prepared!.bundle.actors.find(s=>s.key===a.key)!.source,artifact:JSON.stringify(a.artifact,null,2)})),
-        macros:this.prepared?.macros.map(m=>{
-          const config=readFixedEncounterConfiguration(m.command);
+        actors:actorPreviews.filter(actor=>(!selectedActor||actor.key===selectedActor)&&this.reviewFilter==='all').map(actor=>({...actor,
+          isPrimary:actor.key===this.prepared!.bundle.primaryActorKey,
+          source:this.prepared!.bundle.actors.find(source=>source.key===actor.key)!.source})),
+        macros:macroConfigurations.map(({macro:m,config,issue})=>{
           const labels={'save-summon':'能力结算后召唤','turn-start-area':'自己的回合开始触发','staged-corruption':'腐化与力竭分支','threshold-ward':'伤害阈值守护','ward-break':'消耗次数并使守护破裂','save-failure-effect':'豁免失败状态与期限','status-lifecycle':'命中状态与再次豁免','gm-activity-lock':'GM能力可用性控制','gm-manual':'GM裁定（查看来源规则）'};
-          return {...m,fixed:!!config,capabilities:config?.rules.map(r=>({name:labels[r.kind],actor:r.actorKey,item:r.itemName,
+          return {...m,notes:[m.notes,issue?`配套宏未完成：${issue}；角色可继续导入。`:undefined].filter(Boolean).join('\n'),fixed:!!config,capabilities:config?.rules.map(r=>({name:labels[r.kind],actor:r.actorKey,item:r.itemName,
             summary:r.kind==='status-lifecycle'?statusLifecycleSummary(r.parameters):undefined,parameters:JSON.stringify(r.parameters,null,2)})),
             bindingsText:Object.entries(m.bindings).map(([name,key])=>`${name} → ${key}`).join('；')};
         }),
@@ -879,12 +879,13 @@ export function createForgeEncounterApplicationClass(environment: {
       try {
         const configurationWarnings:string[]=[];
         for(const macro of this.prepared.macros){
-          const config=readFixedEncounterConfiguration(macro.command);
-          for(const rule of config?.rules??[])if(rule.kind==='status-lifecycle'){
-            const parameters=decodeStatusLifecycleParameters(rule.parameters);
-            if(parameters.definition)try{configuredConditionsApi(game,parameters.definition);}
-            catch(error){configurationWarnings.push(`${macro.name}：${message(error)}；角色继续导入。`);}
-          }
+          try{
+            const config=readFixedEncounterConfiguration(macro.command);
+            for(const rule of config?.rules??[])if(rule.kind==='status-lifecycle'){
+              const parameters=decodeStatusLifecycleParameters(rule.parameters);
+              if(parameters.definition)configuredConditionsApi(game,parameters.definition);
+            }
+          }catch(error){configurationWarnings.push(`${macro.name}：${message(error)}；角色继续导入。`);}
         }
         this.result=await importForgeEncounter({game,prepared:this.prepared,reviewed:this.reviewed,assets:createEncounterAssetPort(foundry,game)});
         this.error=[...configurationWarnings,...this.result.failures.map(failure=>`${failure.key}：${failure.message}`)].join('\n');
@@ -912,6 +913,35 @@ export function createForgeEncounterApplicationClass(environment: {
 }
 function hasRetainedActorSource(actor:EncounterIntakeReport['actors'][number]):boolean{
   return !!(actor.analysis?.ir||actor.analysis?.sourceText||actor.analysis?.canonicalSource||actor.generation?.candidateAvailable);
+}
+
+/** Saved candidates remain downloadable even when their fields cannot form a complete card. */
+function encounterActorPreview(actor:PreparedForgeEncounter['actors'][number]){
+  const record=(value:unknown):Record<string,any>=>value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,any>:{};
+  const artifact=actor.artifact,system=record(artifact.system),attributes=record(system.attributes),details=record(system.details);
+  const previewIssues:string[]=[];
+  const scalar=(value:unknown,label:string)=>{
+    if(typeof value==='string'&&value.trim()||typeof value==='number'&&Number.isFinite(value))return value;
+    previewIssues.push(`${label}未提供可显示的值。`);return'未提供';
+  };
+  const hp=scalar(record(attributes.hp).max,'生命值'),ac=scalar(record(attributes.ac).flat,'护甲等级'),cr=scalar(details.cr,'挑战等级');
+  const abilities:Array<{name:string;description:string}>=[];
+  const manualSourceRules:Array<{actorKey:string;actorName:string;name:string;sourceText:string}>=[];
+  if(!Array.isArray(artifact.items))previewIssues.push('能力列表无法预览。');
+  for(const[index,value]of(Array.isArray(artifact.items)?artifact.items:[]).entries()){
+    if(!value||typeof value!=='object'||Array.isArray(value)){
+      previewIssues.push(`第 ${index+1} 项能力无法预览；原记录仍在 Actor JSON 中。`);continue;
+    }
+    const item=record(value),itemSystem=record(item.system),manual=record(record(record(item.flags).fvttJsonGenerator).manualRule);
+    const name=typeof item.name==='string'&&item.name.trim()?item.name:`未命名能力 ${index+1}`;
+    abilities.push({name,description:displayText(typeof itemSystem.description==='string'?itemSystem.description:record(itemSystem.description).value)});
+    if(manual.mode==='gm-manual'){
+      if(typeof manual.sourceText!=='string')previewIssues.push(`${name}的手工规则原文无法预览。`);
+      manualSourceRules.push({actorKey:actor.key,actorName:actor.name,name,sourceText:typeof manual.sourceText==='string'?manual.sourceText:''});
+    }
+  }
+  return{key:actor.key,name:actor.name,assisted:actor.status==='needs_review',hp,ac,cr,
+    biography:displayText(record(details.biography).value),abilities,manualSourceRules,previewIssues,artifact:JSON.stringify(artifact,null,2)};
 }
 
 function message(error:unknown):string{return error instanceof Error?error.message:String(error);}

@@ -16,7 +16,7 @@ const sha = (value: string | Buffer) => createHash('sha256').update(value).diges
 const read = (file: string) => readFileSync(file, 'utf8').replace(/^\uFEFF/u, '');
 const readJson = (file: string) => JSON.parse(read(file));
 const arg = process.argv.indexOf('--bundle-hash');
-const bundleHash = arg >= 0 ? process.argv[arg + 1] : 'PARENT_SET_BUNDLE_SHA256';
+const bundleHash = arg >= 0 ? process.argv[arg + 1] ?? '' : 'PARENT_SET_BUNDLE_SHA256';
 if (arg >= 0 && !/^[a-f0-9]{64}$/u.test(bundleHash ?? '')) throw Error('Expected a SHA-256 after --bundle-hash');
 mkdirSync(output, {recursive: true});
 const cases: Record<string, {source: string; rawReply: string; sourceHash: string; replyKind: string; replyOrigin: string}> = {};

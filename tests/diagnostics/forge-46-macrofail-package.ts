@@ -11,10 +11,12 @@ const output=join(evidence,'mirror-fixture'),frozen=join(evidence,'frozen-pass-2
 const originals=new Map<string,string>();
 const sha=(bytes:string|Buffer)=>createHash('sha256').update(bytes).digest('hex');
 const read=(path:string)=>{const bytes=readFileSync(path);originals.set(path,sha(bytes));return JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/u,''));};
-const data=Object.fromEntries(['unicorn','mimic'].map(key=>[key,{actor:read(join(frozen,key,'actor.json')),generation:read(join(frozen,key,'generation.json')),analysis:read(join(frozen,key,'analysis.json'))}]));
+const actorKeys=['unicorn','mimic'] as const;
+const readActorCase=(key:typeof actorKeys[number])=>({actor:read(join(frozen,key,'actor.json')),generation:read(join(frozen,key,'generation.json')),analysis:read(join(frozen,key,'analysis.json'))});
+const data={unicorn:readActorCase('unicorn'),mimic:readActorCase('mimic')};
 const captured=read('H:/CodexData/visualizations/2026/10/25/01a1720b-4563-7511-82df-e8cb00ed7e53/forge-review-disabled-next-batch/browser/first-answer-final-capture.json');
 const rawSources={unicorn:captured.cases.find((entry:any)=>entry.id==='unicorn').capture.source,mimic:data.mimic.analysis.candidate.quote};
-const request={source:rawSources.unicorn+'\n\n'+rawSources.mimic,actors:['unicorn','mimic'].map(key=>({key,source:rawSources[key as keyof typeof rawSources],ir:data[key].analysis.ir,artifact:data[key].actor}))};
+const request={source:rawSources.unicorn+'\n\n'+rawSources.mimic,actors:actorKeys.map(key=>({key,source:rawSources[key],ir:data[key].analysis.ir,artifact:data[key].actor}))};
 const feature=data.unicorn.analysis.ir.creature.traits.find((entry:any)=>entry.name==='Magic Resistance');
 if(!feature)throw Error('Expected the frozen Unicorn Magic Resistance feature');
 const automation=compileEncounterSelection({version:2,name:'Forge46 GM manual control',notes:'This fixed control is prepared only for the authorized macro creation failure acceptance; never execute it.',
@@ -23,13 +25,13 @@ const automation=compileEncounterSelection({version:2,name:'Forge46 GM manual co
 const command=buildEncounterMacroCommand(automation);
 const bundle={schema:'fvtt-json-forge-encounter' as const,version:1 as const,id:'forge46-20261027-macrofail',label:'Forge46 Unicorn and Mimic macro-failure acceptance',
   target:{foundry:'14.364' as const,system:'dnd5e' as const,systemVersion:'5.3.3' as const,effectProfile:'core' as const},primaryActorKey:'unicorn',
-  actors:['unicorn','mimic'].map(key=>({key,label:data[key].actor.name,source:data[key].generation.finalSource,sourceHash:hashSource(data[key].generation.finalSource),
+  actors:actorKeys.map(key=>({key,label:data[key].actor.name,source:data[key].generation.finalSource,sourceHash:hashSource(data[key].generation.finalSource),
     artifact:data[key].actor,artifactHash:hashArtifact(data[key].actor),reviewFindings:data[key].generation.findings.map((entry:any)=>`${entry.code}：${entry.message}`)})),
   macros:[{key:'battle-control',name:automation.name,command,commandHash:hashSource(command),bindings:{unicorn:'unicorn',mimic:'mimic'},covers:[],
     notes:'Existing frozen Actors contain no companion behavior markers. Empty covers makes no invented coverage claim; this valid fixed GM-manual configuration is stored but will not be executed.'}],assets:[]};
 const serialized=serializeForgeEncounterPackage(bundle),prepared=await prepareForgeEncounter(serialized);
 if(prepared.actors.length!==2||prepared.macros.length!==1)throw Error('The normal preparation interface did not retain two Actors and one Macro');
-for(const key of ['unicorn','mimic'])if(!isDeepStrictEqual(prepared.actors.find(actor=>actor.key===key)!.artifact,data[key].actor))throw Error('Actor content changed during cached preparation: '+key);
+for(const key of actorKeys)if(!isDeepStrictEqual(prepared.actors.find(actor=>actor.key===key)!.artifact,data[key].actor))throw Error('Actor content changed during cached preparation: '+key);
 if(!data.unicorn.actor.flags?.['fvtt-json-generator-spell-resolver']?.spellManifest)throw Error('Unicorn has no original spell manifest');
 const unchanged=[...originals].map(([path,hash])=>({path,sha256:hash,unchanged:sha(readFileSync(path))===hash}));
 if(unchanged.some(row=>!row.unchanged))throw Error('An original frozen file changed');

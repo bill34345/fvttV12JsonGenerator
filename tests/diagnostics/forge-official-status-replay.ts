@@ -13,7 +13,8 @@ const oldPair = 'H:/CodexData/visualizations/2026/10/27/01a17adc-866c-7053-9668-
 const medusaRoot = 'H:/CodexData/visualizations/2026/10/22/01a163d8-f3e5-7663-bd1b-25d55bfdac88/forge-four-2024-20261023-dc5545/live/medusa';
 const originals = new Map<string, string>();
 let networkAttempts = 0;
-globalThis.fetch = (async () => { networkAttempts++; throw Error('No external generation requests are permitted.'); }) as typeof fetch;
+globalThis.fetch = Object.assign(async () => { networkAttempts++; throw Error('No external generation requests are permitted.'); },
+  {preconnect: () => { networkAttempts++; throw Error('No external network preconnect is permitted.'); }});
 const noCall = async (): Promise<never> => { throw Error('No discovery, review, repair or extra extraction.'); };
 const sha = (value: Uint8Array | string) => createHash('sha256').update(value).digest('hex');
 const read = (path: string) => { const bytes = readFileSync(path); originals.set(path, sha(bytes)); return bytes.toString('utf8').replace(/^\uFEFF/u, ''); };
@@ -59,7 +60,7 @@ for (const entry of cases.filter(entry => !selectedCases || selectedCases.includ
   const output = join(root, 'replay', entry.id); mkdirSync(output, {recursive: true});
   let syntheticRequests = 0;
   const evidence: unknown[] = [];
-  const provider = new OpenAICompatibleMonsterIntakeProvider({apiKey: 'frozen-only', baseUrl: 'https://offline.invalid', model: 'saved-answer', reviewModel: 'disabled',
+  const provider = new OpenAICompatibleMonsterIntakeProvider({authMode: 'api-key', apiKey: 'frozen-only', baseUrl: 'https://offline.invalid', model: 'saved-answer', reviewModel: 'disabled',
     timeoutMs: 60000, repairTimeoutMs: 60000, maxAttempts: 1,
     httpClient: async () => {syntheticRequests++; return new Response(JSON.stringify({choices: [{message: {content: entry.reply}}]}), {status: 200, headers: {'content-type': 'application/json'}});},
     responseEvidence: {record: event => {evidence.push(event);}},
