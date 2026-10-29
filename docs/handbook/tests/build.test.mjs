@@ -280,9 +280,9 @@ test('delivery policy partitions every real ID and retains all legacy content of
   const full = projectForSurface(root, entries, reviews, 'standalone');
   const foundry = projectForSurface(root, entries, reviews, 'foundry');
   assert.deepEqual(full.content, projectContent(root, entries, reviews));
-  assert.equal(full.content.entries.length, 37);
+  assert.equal(full.content.entries.length, 38);
   assert.equal(foundry.content.entries.length, 28);
-  assert.equal(foundry.projection.omittedEntryIds.length, 9);
+  assert.equal(foundry.projection.omittedEntryIds.length, 10);
   assert.deepEqual(new Set([...foundry.projection.entryIds, ...foundry.projection.omittedEntryIds]), new Set(entries.map(e=>e.id)));
   assert.equal(foundry.content.entries.filter(e=>e.foundryModuleId).length, 17);
   assert.deepEqual(Object.keys(foundry.content.reviews).sort(), foundry.projection.entryIds.toSorted());
@@ -293,7 +293,7 @@ test('delivery policy partitions every real ID and retains all legacy content of
   }
   const referenced = [...new Set(foundry.content.entries.flatMap(e=>e.sources))].sort();
   assert.deepEqual(Object.keys(foundry.content.sources), referenced);
-  for (const id of ['foundry-ops','verification-development','legacy-text','crystalbleed-v12']) {
+  for (const id of ['foundry-ops','verification-development','legacy-text','crystalbleed-v12','foundry-mcp-readiness']) {
     assert.ok(full.content.entries.some(e=>e.id===id));
     assert.ok(!foundry.content.entries.some(e=>e.id===id));
   }
