@@ -36,9 +36,11 @@ describe('FVTT JSON Forge release package', () => {
       'templates/forge-intake.hbs',
       'templates/forge-item.hbs',
       'templates/forge-workspace.hbs',
+      'third-party-licenses.txt',
     ]);
 
     const archive = readStoredZip(secondArchive);
+    expect(new TextDecoder().decode(archive.get('third-party-licenses.txt'))).toBe(await readFile(new URL('../src/third-party-licenses.txt',import.meta.url),'utf8'));
     const archivedManifest = JSON.parse(new TextDecoder().decode(archive.get('module.json'))) as Record<string, unknown>;
     const releaseManifest = JSON.parse(await readFile(second.manifestPath, 'utf8')) as Record<string, unknown>;
     expect(releaseManifest).toEqual(archivedManifest);

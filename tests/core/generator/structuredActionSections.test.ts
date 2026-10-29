@@ -4,6 +4,52 @@ import { convertMarkdownContentToJson } from '../../../src/core/workflow/singleF
 import { buildValidLurkerIr } from '../../../src/core/intake/__tests__/fixtures/lurker';
 
 describe('structured action source sections', () => {
+  for (const fvttVersion of ['12', '13', '14'] as const) {
+    test(`retains separately parsed lair actions with structured actions on v${fvttVersion}`, async () => {
+      const content = `---
+名称: Mixed Sections Fixture
+类型: npc
+力量: 10
+敏捷: 10
+体质: 10
+智力: 10
+感知: 10
+魅力: 10
+护甲等级: 10
+生命值: 10
+挑战等级: 0
+动作:
+  - 名称: Ordinary Action
+    类型: utility
+    描述: An ordinary action.
+巢穴动作:
+  - 'Local Pulse. On initiative count 20, each creature makes a DC 13 Dexterity saving throw. On a failed save it takes 2d6 fire damage. On a successful save it takes half damage.'
+---`;
+      const result = await convertMarkdownContentToJson({ content, fvttVersion, effectProfile: 'core', translationService: null });
+      const actor = result.rawJson as any;
+      expect(actor).toMatchObject({
+        name: 'Mixed Sections Fixture',
+        type: 'npc',
+        _stats: { systemVersion: fvttVersion === '14' ? '5.3.3' : '4.3.9' },
+        system: { resources: { lair: { value: true, initiative: 20 } } },
+      });
+      expect(actor.items).toHaveLength(2);
+      const lair = actor.items.find((item: any) => item.name === 'Local Pulse');
+      const ordinary = actor.items.find((item: any) => item.name === 'Ordinary Action');
+      expect(lair).toMatchObject({ type: 'feat', system: { type: { subtype: 'lair' } } });
+      expect(Object.values(lair.system.activities)).toMatchObject([{ type: 'save', activation: { type: 'lair' }, save: { ability: ['dex'] }, damage: { onSave: 'half', parts: [{ number: 2, denomination: 6, types: ['fire'] }] } }]);
+      expect(Object.values(ordinary.system.activities)).toMatchObject([{ type: 'utility', activation: { type: 'action' } }]);
+
+      // A source without a lair section must retain its complete existing Item graph.
+      const noLair = content.replace(/巢穴动作:[\s\S]*?\n---$/, '---');
+      const withoutLair = await convertMarkdownContentToJson({ content: noLair, fvttVersion, effectProfile: 'core', translationService: null });
+      const unrelated = withoutLair.rawJson as any;
+      const stripTimes = (value: any): any => JSON.parse(JSON.stringify(value, (key, entry) => key === 'createdTime' || key === 'modifiedTime' ? undefined : entry));
+      expect(unrelated.items).toHaveLength(1);
+      expect(stripTimes(unrelated.items[0])).toEqual(stripTimes(ordinary));
+    });
+  }
+
   test('keeps source section independent from explicit Activity activation', async () => {
     const ir = buildValidLurkerIr() as any;
     ir.creature.traits = [{ name: 'Trait Action', englishName: 'Trait Action', description: 'Trait carrier with an explicit action Activity.', activityType: 'utility', activationType: 'action' }];

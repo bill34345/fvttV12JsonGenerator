@@ -34,6 +34,7 @@ export class ThumbnailCache {
   readonly #failed = new Set<string>();
   #clock = 0;
   #generation = 0;
+  #failureCount = 0;
 
   constructor(
     backend: ThumbnailBackend,
@@ -56,7 +57,10 @@ export class ThumbnailCache {
     if (this.#failed.has(key)) return Promise.resolve(undefined);
     const existing = this.#inFlight.get(key);
     if (existing) return existing;
-    const promise = this.#create(key, normalized, maxEdge, quality, this.#generation);
+    const promise = this.#create(key, normalized, maxEdge, quality, this.#generation).finally(() => {
+      // Completion belongs to this request, not a newer request for the same key.
+      if (this.#inFlight.get(key) === promise) this.#inFlight.delete(key);
+    });
     this.#inFlight.set(key, promise);
     return promise;
   }
@@ -66,13 +70,15 @@ export class ThumbnailCache {
     for (const entry of this.#entries.values()) this.#backend.revoke(entry.url);
     this.#entries.clear();
     this.#failed.clear();
+    this.#inFlight.clear();
+    this.#failureCount = 0;
   }
 
   getStats(): ThumbnailStats {
     return {
       entries: this.#entries.size,
       estimatedBytes: Array.from(this.#entries.values()).reduce((sum, entry) => sum + entry.bytes, 0),
-      failures: this.#failed.size,
+      failures: this.#failureCount,
     };
   }
 
@@ -92,20 +98,29 @@ export class ThumbnailCache {
       }
       this.#entries.set(key, { url: created.url, bytes: created.bytes, usedAt: ++this.#clock });
       this.#evict();
-      return created.url;
+      return this.#entries.has(key) ? created.url : undefined;
     } catch (error) {
       if (generation === this.#generation) {
         this.#failed.add(key);
+        this.#failureCount++;
+        while (this.#failed.size > this.#capacity()) {
+          const oldest = this.#failed.values().next().value;
+          if (oldest === undefined) break;
+          this.#failed.delete(oldest);
+        }
         this.#onFailure?.(source, error);
       }
       return undefined;
-    } finally {
-      this.#inFlight.delete(key);
     }
   }
 
+  #capacity(): number {
+    const maximum = this.#maximumEntries();
+    return Number.isFinite(maximum) ? Math.max(0, Math.floor(maximum)) : 0;
+  }
+
   #evict(): void {
-    const maximum = Math.max(0, Math.floor(this.#maximumEntries()));
+    const maximum = this.#capacity();
     while (this.#entries.size > maximum) {
       const oldest = Array.from(this.#entries.entries())
         .sort((left, right) => left[1].usedAt - right[1].usedAt)[0];

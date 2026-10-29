@@ -10,7 +10,7 @@ import {
   type PortableSpellManifest,
 } from '../../spell-resolution';
 import { assertEqualStructure } from '../../utils/assertEqualStructure';
-import { ActorGenerator } from '../actor';
+import { ActorGenerator, actorGenerationDiagnostics } from '../actor';
 
 function baseParsed(name = 'Portable Caster'): ParsedNPC {
   return {
@@ -65,7 +65,7 @@ function spellcastingTrait(featureItemKey: string, name: string, description: st
 }
 
 describe('portable Actor spell manifest boundary', () => {
-  it('fails closed when english localization injects a target-world UUID after generation', async () => {
+  it('retains localized Actor content and reports an english localization target-world UUID', async () => {
     const parsed = baseParsed('Portable English Caster');
     parsed.spellManifest = oneSpellManifest('group-a', 'feature-a');
     parsed.structuredActions = {
@@ -80,9 +80,10 @@ describe('portable Actor spell manifest boundary', () => {
       },
     };
 
-    await expect(new ActorGenerator({ fvttVersion: '14', translationService })
-      .generateForRoute(parsed, 'english'))
-      .rejects.toThrow(/SPELL_ACTOR_FORBIDDEN_TARGET_WORLD_IDENTIFIER.*\/items\/0\/system\/description\/value/);
+    const actor = await new ActorGenerator({ fvttVersion: '14', translationService }).generateForRoute(parsed, 'english');
+    expect(actorGenerationDiagnostics(actor).map(issue => issue.message).join('\n')).toMatch(/SPELL_ACTOR_FORBIDDEN_TARGET_WORLD_IDENTIFIER.*\/items\/0\/system\/description\/value/);
+    expect(actor.items[0].system.description.value).toContain('Compendium.dnd5e.spells.Item.abcdefghijklmnop');
+    expect(actor.flags[RESOLVER_MODULE_ID].spellManifest).toEqual(parsed.spellManifest);
   });
 
   it('keeps ordinary english localization valid for a portable Actor', async () => {
@@ -190,32 +191,38 @@ describe('portable Actor spell manifest boundary', () => {
     ['missing', []],
     ['duplicate', [spellcastingTrait('feature-a', 'One', 'One.'), spellcastingTrait('feature-a', 'Two', 'Two.')]],
     ['unknown', [spellcastingTrait('feature-a', 'Known', 'Known.'), spellcastingTrait('feature-extra', 'Unknown', 'Unknown.')]],
-  ])('fails closed on %s source feature linkage', (_label, traits) => {
+  ])('retains the Actor and reports %s source feature linkage', (_label, traits) => {
     const parsed = baseParsed();
     parsed.spellManifest = oneSpellManifest('group-a', 'feature-a');
     parsed.structuredActions = { 特性: traits };
 
-    expect(() => new ActorGenerator({ fvttVersion: '14' }).generate(parsed, { route: 'chinese' }))
-      .toThrow(/SPELL_FEATURE_LINK_(?:MISSING|DUPLICATE|UNKNOWN)/);
+    const actor = new ActorGenerator({ fvttVersion: '14' }).generate(parsed, { route: 'chinese' });
+    expect(actor.flags.fvttJsonGenerator.candidateReview.findings.map((issue:any)=>issue.message).join('\n')).toContain('SPELL_FEATURE_LINK_'+_label.toUpperCase());
+    expect(actor.flags.fvttJsonGenerator.candidateReview.proposal.unresolved.length).toBeGreaterThan(0);
+    expect(actor.items.map((item:any)=>item.name)).toEqual(traits.map(item=>item.name+' '+item.englishName));
+    expect(actor.items.map((item:any)=>item.system.description.value)).toEqual(traits.map(item=>'<p>'+item.describe+'</p>'));
   });
 
-  it('fails v12 closed before the legacy mapper can create a placeholder', () => {
+  it('retains a v12 Actor without unsupported spell placeholders and reports the target', () => {
     const parsed = baseParsed('Unsupported Caster');
     parsed.spellManifest = oneSpellManifest('group-a', 'feature-a');
     parsed.spellcasting = ['At will: Unknown Spell That Would Become A Placeholder'];
 
-    expect(() => new ActorGenerator({ fvttVersion: '12' }).generate(parsed, { route: 'chinese' }))
-      .toThrow('SPELL_MANIFEST_UNSUPPORTED_TARGET: Portable spell manifests require Foundry v14; requested v12.');
+    const actor = new ActorGenerator({ fvttVersion: '12' }).generate(parsed, { route: 'chinese' });
+    expect(actorGenerationDiagnostics(actor).map(issue=>issue.message).join('\n')).toContain('SPELL_MANIFEST_UNSUPPORTED_TARGET: Portable spell manifests require Foundry v14; requested v12.');
+    expect(actor.name).toBe(parsed.name);
+    expect(actor.items).toEqual([]);
   });
 
-  it('fails closed when source linkage metadata is orphaned without a manifest', () => {
+  it('retains orphaned source feature content and reports missing manifest linkage', () => {
     const parsed = baseParsed('Orphaned Link');
     parsed.structuredActions = {
       特性: [spellcastingTrait('orphaned-feature', 'Orphaned Feature', 'No manifest exists.')],
     };
 
-    expect(() => new ActorGenerator({ fvttVersion: '14' }).generate(parsed, { route: 'chinese' }))
-      .toThrow('SPELL_FEATURE_LINK_ORPHANED');
+    const actor = new ActorGenerator({ fvttVersion: '14' }).generate(parsed, { route: 'chinese' });
+    expect(actorGenerationDiagnostics(actor).map(issue=>issue.message).join('\n')).toContain('SPELL_FEATURE_LINK_ORPHANED');
+    expect(actor.items[0].system.description.value).toContain('No manifest exists.');
   });
 
   it.each([
@@ -226,16 +233,20 @@ describe('portable Actor spell manifest boundary', () => {
         activation: { type: 'special' as const, explicit: true },
       }],
     }, 'SPELL_FEATURE_LINK_INVALID_ACTIVATION'],
-  ])('rejects direct generator linkage on %s', (_label, structuredActions, code) => {
+  ])('retains explicit source linkage on %s without fabricating a Cast', (_label, structuredActions, code) => {
     const parsed = baseParsed('Invalid Link');
     parsed.spellManifest = oneSpellManifest('group-a', 'feature-a');
     parsed.structuredActions = structuredActions;
 
-    expect(() => new ActorGenerator({ fvttVersion: '14' }).generate(parsed, { route: 'chinese' }))
-      .toThrow(code);
+    const actor = new ActorGenerator({ fvttVersion: '14' }).generate(parsed, { route: 'chinese' });
+    expect(actorGenerationDiagnostics(actor)).toEqual([]);
+    expect(actor.flags[RESOLVER_MODULE_ID].spellManifest).toEqual(parsed.spellManifest);
+    expect(actor.items[0].flags[RESOLVER_MODULE_ID]).toMatchObject({featureItemKey:'feature-a',groupId:'group-a'});
+    expect(actor.items[0].system.description.value).toContain(_label==='a legendary section'?'Wrong section.':'Wrong activation.');
+    expect(Object.values<any>(actor.items[0].system.activities).some(activity=>activity.type==='cast')).toBe(false);
   });
 
-  it('rejects a target-world UUID hidden in the linked source feature description', () => {
+  it('preserves and reports a target-world UUID hidden in the linked source feature description', () => {
     const parsed = baseParsed('UUID Description');
     parsed.spellManifest = oneSpellManifest('group-a', 'feature-a');
     parsed.structuredActions = {
@@ -246,11 +257,12 @@ describe('portable Actor spell manifest boundary', () => {
       )],
     };
 
-    expect(() => new ActorGenerator({ fvttVersion: '14' }).generate(parsed, { route: 'chinese' }))
-      .toThrow(/SPELL_ACTOR_FORBIDDEN_TARGET_WORLD_IDENTIFIER: .*\/items\/0\/system\/description\/value/);
+    const actor = new ActorGenerator({ fvttVersion: '14' }).generate(parsed, { route: 'chinese' });
+    expect(actorGenerationDiagnostics(actor).map(issue=>issue.message).join('\n')).toMatch(/SPELL_ACTOR_FORBIDDEN_TARGET_WORLD_IDENTIFIER: .*\/items\/0\/system\/description\/value/);
+    expect(actor.items[0].system.description.value).toContain(parsed.structuredActions!.特性![0]!.describe!);
   });
 
-  it('rejects a bare target-world Actor UUID hidden in generated portable Actor content', () => {
+  it('preserves and reports a bare target-world Actor UUID hidden in generated portable Actor content', () => {
     const parsed = baseParsed('Bare Actor UUID Description');
     parsed.spellManifest = oneSpellManifest('group-a', 'feature-a');
     parsed.structuredActions = {
@@ -261,8 +273,9 @@ describe('portable Actor spell manifest boundary', () => {
       )],
     };
 
-    expect(() => new ActorGenerator({ fvttVersion: '14' }).generate(parsed, { route: 'chinese' }))
-      .toThrow(/SPELL_ACTOR_FORBIDDEN_TARGET_WORLD_IDENTIFIER: .*\/items\/0\/system\/description\/value.*Actor\.abcdefghijklmnop/);
+    const actor = new ActorGenerator({ fvttVersion: '14' }).generate(parsed, { route: 'chinese' });
+    expect(actorGenerationDiagnostics(actor).map(issue=>issue.message).join('\n')).toMatch(/SPELL_ACTOR_FORBIDDEN_TARGET_WORLD_IDENTIFIER: .*\/items\/0\/system\/description\/value.*Actor\.abcdefghijklmnop/);
+    expect(actor.items[0].system.description.value).toContain(parsed.structuredActions!.特性![0]!.describe!);
   });
 
   it('does not reject ordinary item and compendium prose in a linked source feature', () => {

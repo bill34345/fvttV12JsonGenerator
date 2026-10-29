@@ -1,15 +1,18 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { selectSourceContractScope } from './ciSourceContracts';
 
 // CLI integration and the Session Monitor build run in their own public CI steps.
-export const COVERAGE_TEST_PATTERN = '^(?!AI Item Intake CLI|Species Intake CLI|CLI document input|AI monster intake CLI|CLI v14 safe icon mode|CLI item import|CLI plaintext actor import|Session Monitor subprocess build gate)';
+// This real-browser case requires the separate Chrome execution protocol.
+export const DEFERRED_BROWSER_TEST = 'full Chrome restart recovery relaunches a real dedicated Chrome and resumes the same active session';
+export const COVERAGE_TEST_PATTERN = `^(?!AI Item Intake CLI|Species Intake CLI|CLI document input|AI monster intake CLI|CLI v14 safe icon mode|CLI item import|CLI plaintext actor import|Session Monitor subprocess build gate|${DEFERRED_BROWSER_TEST}$)`;
 
 export function partitionCoverageTests(paths: string[], maximumFiles = 30): string[][] {
   if (!Number.isSafeInteger(maximumFiles) || maximumFiles < 1) throw new Error('Invalid shard size.');
   const files = [...new Set(paths.map(path => path.replaceAll('\\', '/')))]
-    .filter(path => /(?:\.|_)(?:test|spec)\.[cm]?[jt]sx?$/.test(path))
+    .filter(path => /(?:\.|_)(?:test|spec)\.[cm]?[jt]sx?$/.test(path) || /(?:^|\/)tests\.[cm]?[jt]sx?$/.test(path))
     .filter(path => !path.split('/').some(part => ['node_modules', 'dist', 'coverage', '.git', '.local'].includes(part)))
     .sort();
   if (files.some(path => path.startsWith('/') || path.includes('..') || /^[A-Za-z]:/.test(path))) throw new Error('Test path escapes the repository.');
@@ -53,11 +56,29 @@ export async function runCoverageShards(): Promise<void> {
   if (discovered.error || discovered.status !== 0) throw discovered.error ?? new Error(discovered.stderr);
   // Bun's aggregate-only function counts cannot be merged across processes.
   // Use the deterministic inventory in ONE process after fixing leaking test state.
-  const shards = [partitionCoverageTests(discovered.stdout.split('\0').filter(Boolean)).flat()];
+  const profile = process.env.FVTT_CI_TEST_PROFILE || 'complete';
+  if (profile !== 'complete' && profile !== 'portable') throw new Error(`Unknown CI test profile: ${profile}`);
+  const scope = selectSourceContractScope(partitionCoverageTests(discovered.stdout.split('\0').filter(Boolean)).flat(), profile, COVERAGE_TEST_PATTERN);
+  const shards = [scope.files];
   const evidenceRoot = await mkdtemp(join(tmpdir(), 'fvtt-coverage-shards-'));
-  const manifest = { status: 'running', evidenceRoot, functionCoverage: 'single-process Bun report; no aggregate merging', shards };
+  const manifest = {
+    status: 'running', profile, evidenceRoot, functionCoverage: 'single-process Bun report; no aggregate merging', shards,
+    deferredBrowserTests: [{ name: DEFERRED_BROWSER_TEST, reason: 'Separate real-Chrome acceptance; not executed by non-browser integration CI.' }],
+    localSourceContracts: scope.deferred.map(contract => ({ ...contract, status: 'NOT_EXECUTED', requiredCommand: 'bun run test:local-source-contracts' })),
+  };
   await mkdir('coverage', { recursive: true });
   await writeFile('coverage/run.json', JSON.stringify(manifest, null, 2));
+  console.log(`Coverage profile: ${profile}; ${scope.deferred.length} historical source-contract groups require the strict local gate.`);
+  for (const contract of scope.deferred) console.log(`Historical source contract ${contract.id}: NOT_EXECUTED; run bun run test:local-source-contracts locally.`);
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    await appendFile(process.env.GITHUB_STEP_SUMMARY, [
+      '## Test acceptance scope', `- Portable coverage profile: **${profile}**.`,
+      '- Dedicated real-Chrome restart acceptance: **NOT_EXECUTED** by this non-browser job.',
+      ...scope.deferred.map(contract => `- Historical source contract \`${contract.id}\`: **NOT_EXECUTED** here. ${contract.reason}`),
+      ...(scope.deferred.length ? ['- Required local command: `bun run test:local-source-contracts`. Missing or mismatched local inputs fail that gate; these are not counted as cloud passes.'] : []),
+      '',
+    ].join('\n'));
+  }
   try {
     let report = '';
     for (const [index, files] of shards.entries()) {
@@ -65,15 +86,15 @@ export async function runCoverageShards(): Promise<void> {
       console.log(`Coverage shard ${index + 1}/${shards.length}: ${files.length} files, starting ${files[0]}`);
       await runCoverageProcess(process.execPath, [
         'test', '--coverage', '--coverage-reporter=lcov', `--coverage-dir=${directory}`, '--max-concurrency=1',
-        '--test-name-pattern', COVERAGE_TEST_PATTERN, ...files.map(file => `./${file}`),
-      // The 368-file inventory took over 300s while making steady progress.
-      // Keep the single-process report and a bounded margin for the final files.
-      ], 450_000);
+        '--test-name-pattern', scope.testNamePattern, ...files.map(file => `./${file}`),
+      // The 443-file integration inventory reached its final file at 450s.
+      // Keep one process and allow a bounded margin for report finalization.
+      ], 600_000);
       report = await readFile(join(directory, 'lcov.info'), 'utf8');
     }
     await writeFile('coverage/lcov.info', report);
     manifest.status = 'passed';
-    console.log('Completed the complete test inventory in one bounded process; coverage report requires no merging.');
+    console.log('Completed the selected non-browser inventory in one bounded process; the manifest records every separate acceptance gate.');
   } catch (error) {
     manifest.status = 'failed';
     throw error;

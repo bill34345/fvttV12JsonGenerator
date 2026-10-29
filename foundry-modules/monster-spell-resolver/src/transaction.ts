@@ -67,6 +67,8 @@ export interface ExecuteHydrationTransactionInput {
   plan: SpellHydrationPlan;
   failureInjector?: (stage: HydrationFailureStage) => void | Promise<void>;
   lifecycleHooks?: ResolverDocumentHookBus;
+  /** Host field-operation port; defaults to Foundry's public ForcedReplacement. */
+  fieldReplacement?: { create(value: unknown): unknown };
 }
 
 export interface HydrationTransactionResult {
@@ -128,7 +130,11 @@ async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<H
   // Keep the exact pre-transaction namespace out-of-band for compensation.
   // The user-facing undo snapshot deliberately omits the previous undo payload,
   // otherwise every successful re-resolution recursively embeds all history.
-  const rollbackResolverFlags = structuredClone(input.actor.flags?.[RESOLVER_MODULE_ID]);
+  const replacement = input.fieldReplacement ?? (globalThis as any).foundry?.data?.operators?.ForcedReplacement;
+  if (typeof replacement?.create !== 'function') throw new Error('Hydration requires public Foundry ForcedReplacement for exact recovery.');
+  // Prepare the exact owned-subtree replacement before any document writes.
+  // Plain object updates merge and would retain fields from a failed commit.
+  const rollbackResolverReplacement = replacement.create(structuredClone(input.actor.flags?.[RESOLVER_MODULE_ID]));
   const snapshot = captureSnapshot(input.actor, input.manifest.manifestId);
   const journal = createHydrationJournal(input.actor);
   const transactionId = nextTransactionId(input.actor, input.plan.planHash);
@@ -193,11 +199,16 @@ async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<H
     };
     phase = 'commit';
     await requireApi(input.actor, 'update')({
-      [`flags.${RESOLVER_MODULE_ID}.spellResolution`]: committedResolution,
+      [`flags.${RESOLVER_MODULE_ID}.spellResolution`]: structuredClone(committedResolution),
     });
+    assertCommittedResolution(input.actor, committedResolution);
+    validateHydratedState(input.actor, input.manifest, input.plan);
+    if (hashProjectionList(projectCurrentManagedContent(input.actor, input.manifest.manifestId)) !== managedProjectionHash) {
+      throw new Error('Managed content changed while saving the hydration commit.');
+    }
     return { status: 'committed', planHash: input.plan.planHash, transactionId, managedProjectionHash };
   } catch (cause) {
-    const residualDifferences = await rollback(input, snapshot, journal, rollbackResolverFlags);
+    const residualDifferences = await rollback(input, snapshot, journal, rollbackResolverReplacement);
     const rollbackSucceeded = residualDifferences.length === 0;
     const diagnostic: HydrationFailureDiagnostic = {
       phase,
@@ -213,6 +224,19 @@ async function executeLocked(input: ExecuteHydrationTransactionInput): Promise<H
     const residualLabel = diagnostic.residualPaths.length ? `; residual paths: ${diagnostic.residualPaths.join(', ')}` : '';
     const message = `Spell hydration failed at ${phaseLabel}: ${errorMessage(cause)}${ownershipLabel}; rollback ${rollbackSucceeded ? 'restored the managed snapshot' : 'left residual differences'}${residualLabel}.`;
     throw new HydrationTransactionError(message, rollbackSucceeded, residualDifferences, { cause }, diagnostic);
+  }
+}
+
+/** A resolved update Promise can mean a vetoed/no-op write in Foundry. */
+function assertCommittedResolution(actor: any, expected: Record<string, unknown>): void {
+  const flags = typeof actor.toObject === 'function' ? actor.toObject().flags : actor.flags;
+  const actual = flags?.[RESOLVER_MODULE_ID]?.spellResolution;
+  if (!isRecord(actual)) throw new Error('Hydration commit was not saved on the Actor.');
+  // Read every field this commit owns, while preserving unrelated extension keys.
+  for (const key of Object.keys(expected)) {
+    if (canonicalStringify(actual[key]) !== canonicalStringify(expected[key])) {
+      throw new Error(`Hydration commit readback differs at ${key}.`);
+    }
   }
 }
 
@@ -398,7 +422,7 @@ async function rollback(
   input: ExecuteHydrationTransactionInput,
   snapshot: ManagedSnapshot,
   journal: HydrationJournal,
-  rollbackResolverFlags: unknown,
+  rollbackResolverReplacement: unknown,
 ): Promise<ResidualDifference[]> {
   const rollbackErrors: string[] = [];
   rollbackErrors.push(...journal.lifecycleFailures.map((entry) => `Unresolved native Activity lifecycle: ${entry}`));
@@ -508,7 +532,7 @@ async function rollback(
     }, rollbackErrors);
   }
   await safeRollback(async () => {
-    await requireApi(input.actor, 'update')({ [`flags.${RESOLVER_MODULE_ID}`]: structuredClone(rollbackResolverFlags) });
+    await requireApi(input.actor, 'update')({ [`flags.${RESOLVER_MODULE_ID}`]: rollbackResolverReplacement });
   }, rollbackErrors);
 
   const after = captureSnapshot(input.actor, input.manifest.manifestId);

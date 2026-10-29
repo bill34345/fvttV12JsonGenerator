@@ -71,7 +71,10 @@ export async function buildChatMemoryGuardPackage(
   packageRoot = import.meta.dir,
 ): Promise<ChatMemoryGuardBuildResult> {
   const paths = chatMemoryGuardPaths(packageRoot);
-  await rm(paths.outputRoot, { recursive: true, force: true });
+  try { await rm(paths.outputRoot, { recursive: true }); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
   await mkdir(resolve(paths.outputDir, 'scripts'), { recursive: true });
 
   const build = await Bun.build({

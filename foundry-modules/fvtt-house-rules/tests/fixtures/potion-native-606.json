@@ -1,0 +1,512 @@
+{
+  "provenance": {
+    "core": "14.368",
+    "dnd5e": "6.0.6",
+    "evidenceSha256": "8407c31a82fbf83915123fe59be1171f98a70c6c6607807fd8049580becdb044",
+    "scope": "Activities from a task-owned temporary potion; no Actor/world source"
+  },
+  "activities": {
+    "hrPotionQuick": {
+      "_id": "hrPotionQ0000001",
+      "type": "heal",
+      "name": "快速饮用（附赠动作）",
+      "activation": {
+        "type": "bonus",
+        "value": 1,
+        "override": true,
+        "condition": ""
+      },
+      "consumption": {
+        "targets": [],
+        "scaling": {
+          "allowed": false,
+          "max": ""
+        },
+        "spellSlot": false
+      },
+      "description": {
+        "chatFlavor": "",
+        "value": ""
+      },
+      "duration": {
+        "concentration": false,
+        "value": "",
+        "units": "inst",
+        "special": "",
+        "override": false,
+        "expiry": null
+      },
+      "effects": [],
+      "range": {
+        "units": "self",
+        "special": "",
+        "override": true
+      },
+      "target": {
+        "template": {
+          "count": "",
+          "contiguous": false,
+          "type": "",
+          "size": "",
+          "width": "",
+          "height": "",
+          "units": "ft",
+          "stationary": false
+        },
+        "affects": {
+          "count": "",
+          "type": "self",
+          "choice": false,
+          "special": ""
+        },
+        "prompt": true,
+        "override": true
+      },
+      "uses": {
+        "spent": 0,
+        "recovery": [],
+        "max": ""
+      },
+      "healing": {
+        "number": 2,
+        "denomination": 4,
+        "bonus": "2",
+        "types": [
+          "healing"
+        ],
+        "custom": {
+          "enabled": false,
+          "formula": ""
+        },
+        "modifiers": [],
+        "scaling": {
+          "number": 1
+        }
+      },
+      "flags": {
+        "fvtt-house-rules": {
+          "generatedPotionActivity": true,
+          "mode": "quick"
+        }
+      },
+      "img": null,
+      "sort": 0,
+      "behaviors": [],
+      "visibility": {
+        "level": {},
+        "requireAttunement": false,
+        "requireIdentification": false,
+        "requireMagic": false
+      },
+      "useConditionText": "",
+      "useConditionReason": "",
+      "effectConditionText": "",
+      "otherActivityId": null,
+      "macroData": {
+        "name": "",
+        "command": ""
+      },
+      "ignoreTraits": {
+        "idi": false,
+        "idr": false,
+        "idv": false,
+        "ida": false,
+        "idm": false
+      },
+      "midiProperties": {
+        "ignoreTraits": [],
+        "triggeredActivityId": "none",
+        "triggeredActivityConditionText": "",
+        "triggeredActivityTargets": "targets",
+        "triggeredActivityRollAs": "self",
+        "triggeredActivityConsume": true,
+        "triggeredActivityConfigure": true,
+        "autoConsume": false,
+        "forceConsumeDialog": "default",
+        "forceRollDialog": "default",
+        "forceDamageDialog": "default",
+        "confirmTargets": "default",
+        "autoTargetType": "any",
+        "autoTargetAction": "default",
+        "automationOnly": false,
+        "otherActivityCompatible": true,
+        "otherActivityAsParentType": true,
+        "identifier": "",
+        "displayActivityName": false,
+        "rollMode": "default",
+        "chooseEffects": false,
+        "toggleEffect": false,
+        "ignoreFullCover": false,
+        "removeChatButtons": "default",
+        "magicEffect": false,
+        "magicDamage": false,
+        "noConcentrationCheck": false,
+        "skipConcentrationCheck": false,
+        "autoCEEffects": "default"
+      },
+      "isOverTimeFlag": false,
+      "overTimeProperties": {
+        "saveRemoves": true,
+        "rollAs": "target",
+        "preRemoveConditionText": "",
+        "postRemoveConditionText": ""
+      },
+      "regionBehavior": {
+        "enabled": false,
+        "dispositionFilter": -1,
+        "excludeSource": true,
+        "oncePerTurn": true,
+        "wallRestriction": "none",
+        "regionVisibility": 2,
+        "attachToken": "default",
+        "rules": []
+      },
+      "regionLight": {
+        "enabled": false,
+        "dim": 0,
+        "bright": 0,
+        "color": null,
+        "alpha": 0.5,
+        "luminosity": 0.5,
+        "animationType": "",
+        "animationSpeed": 5,
+        "animationIntensity": 5
+      }
+    },
+    "hrPotionMax": {
+      "_id": "hrPotionM0000001",
+      "type": "heal",
+      "name": "谨慎饮用（动作，治疗骰最大）",
+      "activation": {
+        "type": "action",
+        "value": 1,
+        "override": true,
+        "condition": ""
+      },
+      "consumption": {
+        "targets": [],
+        "scaling": {
+          "allowed": false,
+          "max": ""
+        },
+        "spellSlot": false
+      },
+      "description": {
+        "chatFlavor": "",
+        "value": ""
+      },
+      "duration": {
+        "concentration": false,
+        "value": "",
+        "units": "inst",
+        "special": "",
+        "override": false,
+        "expiry": null
+      },
+      "effects": [],
+      "range": {
+        "units": "self",
+        "special": "",
+        "override": true
+      },
+      "target": {
+        "template": {
+          "count": "",
+          "contiguous": false,
+          "type": "",
+          "size": "",
+          "width": "",
+          "height": "",
+          "units": "ft",
+          "stationary": false
+        },
+        "affects": {
+          "count": "",
+          "type": "self",
+          "choice": false,
+          "special": ""
+        },
+        "prompt": true,
+        "override": true
+      },
+      "uses": {
+        "spent": 0,
+        "recovery": [],
+        "max": ""
+      },
+      "healing": {
+        "number": null,
+        "denomination": null,
+        "bonus": "",
+        "types": [
+          "healing"
+        ],
+        "custom": {
+          "enabled": true,
+          "formula": "8 + 2"
+        },
+        "modifiers": [],
+        "scaling": {
+          "number": 1
+        }
+      },
+      "flags": {
+        "fvtt-house-rules": {
+          "generatedPotionActivity": true,
+          "mode": "max"
+        }
+      },
+      "img": null,
+      "sort": 0,
+      "behaviors": [],
+      "visibility": {
+        "level": {},
+        "requireAttunement": false,
+        "requireIdentification": false,
+        "requireMagic": false
+      },
+      "useConditionText": "",
+      "useConditionReason": "",
+      "effectConditionText": "",
+      "otherActivityId": null,
+      "macroData": {
+        "name": "",
+        "command": ""
+      },
+      "ignoreTraits": {
+        "idi": false,
+        "idr": false,
+        "idv": false,
+        "ida": false,
+        "idm": false
+      },
+      "midiProperties": {
+        "ignoreTraits": [],
+        "triggeredActivityId": "none",
+        "triggeredActivityConditionText": "",
+        "triggeredActivityTargets": "targets",
+        "triggeredActivityRollAs": "self",
+        "triggeredActivityConsume": true,
+        "triggeredActivityConfigure": true,
+        "autoConsume": false,
+        "forceConsumeDialog": "default",
+        "forceRollDialog": "default",
+        "forceDamageDialog": "default",
+        "confirmTargets": "default",
+        "autoTargetType": "any",
+        "autoTargetAction": "default",
+        "automationOnly": false,
+        "otherActivityCompatible": true,
+        "otherActivityAsParentType": true,
+        "identifier": "",
+        "displayActivityName": false,
+        "rollMode": "default",
+        "chooseEffects": false,
+        "toggleEffect": false,
+        "ignoreFullCover": false,
+        "removeChatButtons": "default",
+        "magicEffect": false,
+        "magicDamage": false,
+        "noConcentrationCheck": false,
+        "skipConcentrationCheck": false,
+        "autoCEEffects": "default"
+      },
+      "isOverTimeFlag": false,
+      "overTimeProperties": {
+        "saveRemoves": true,
+        "rollAs": "target",
+        "preRemoveConditionText": "",
+        "postRemoveConditionText": ""
+      },
+      "regionBehavior": {
+        "enabled": false,
+        "dispositionFilter": -1,
+        "excludeSource": true,
+        "oncePerTurn": true,
+        "wallRestriction": "none",
+        "regionVisibility": 2,
+        "attachToken": "default",
+        "rules": []
+      },
+      "regionLight": {
+        "enabled": false,
+        "dim": 0,
+        "bright": 0,
+        "color": null,
+        "alpha": 0.5,
+        "luminosity": 0.5,
+        "animationType": "",
+        "animationSpeed": 5,
+        "animationIntensity": 5
+      }
+    },
+    "hrPotionFeed": {
+      "_id": "hrPotionF0000001",
+      "type": "heal",
+      "name": "喂服药水（动作）",
+      "activation": {
+        "type": "action",
+        "value": 1,
+        "override": true,
+        "condition": ""
+      },
+      "consumption": {
+        "targets": [],
+        "scaling": {
+          "allowed": false,
+          "max": ""
+        },
+        "spellSlot": false
+      },
+      "description": {
+        "chatFlavor": "",
+        "value": ""
+      },
+      "duration": {
+        "concentration": false,
+        "value": "",
+        "units": "inst",
+        "special": "",
+        "override": false,
+        "expiry": null
+      },
+      "effects": [],
+      "range": {
+        "value": "5",
+        "units": "ft",
+        "special": "",
+        "override": true
+      },
+      "target": {
+        "template": {
+          "count": "",
+          "contiguous": false,
+          "type": "",
+          "size": "",
+          "width": "",
+          "height": "",
+          "units": "ft",
+          "stationary": false
+        },
+        "affects": {
+          "count": "1",
+          "type": "creature",
+          "choice": true,
+          "special": ""
+        },
+        "prompt": true,
+        "override": true
+      },
+      "uses": {
+        "spent": 0,
+        "recovery": [],
+        "max": ""
+      },
+      "healing": {
+        "number": 2,
+        "denomination": 4,
+        "bonus": "2",
+        "types": [
+          "healing"
+        ],
+        "custom": {
+          "enabled": false,
+          "formula": ""
+        },
+        "modifiers": [],
+        "scaling": {
+          "number": 1
+        }
+      },
+      "flags": {
+        "fvtt-house-rules": {
+          "generatedPotionActivity": true,
+          "mode": "feed"
+        }
+      },
+      "img": null,
+      "sort": 0,
+      "behaviors": [],
+      "visibility": {
+        "level": {},
+        "requireAttunement": false,
+        "requireIdentification": false,
+        "requireMagic": false
+      },
+      "useConditionText": "",
+      "useConditionReason": "",
+      "effectConditionText": "",
+      "otherActivityId": null,
+      "macroData": {
+        "name": "",
+        "command": ""
+      },
+      "ignoreTraits": {
+        "idi": false,
+        "idr": false,
+        "idv": false,
+        "ida": false,
+        "idm": false
+      },
+      "midiProperties": {
+        "ignoreTraits": [],
+        "triggeredActivityId": "none",
+        "triggeredActivityConditionText": "",
+        "triggeredActivityTargets": "targets",
+        "triggeredActivityRollAs": "self",
+        "triggeredActivityConsume": true,
+        "triggeredActivityConfigure": true,
+        "autoConsume": false,
+        "forceConsumeDialog": "default",
+        "forceRollDialog": "default",
+        "forceDamageDialog": "default",
+        "confirmTargets": "default",
+        "autoTargetType": "any",
+        "autoTargetAction": "default",
+        "automationOnly": false,
+        "otherActivityCompatible": true,
+        "otherActivityAsParentType": true,
+        "identifier": "",
+        "displayActivityName": false,
+        "rollMode": "default",
+        "chooseEffects": false,
+        "toggleEffect": false,
+        "ignoreFullCover": false,
+        "removeChatButtons": "default",
+        "magicEffect": false,
+        "magicDamage": false,
+        "noConcentrationCheck": false,
+        "skipConcentrationCheck": false,
+        "autoCEEffects": "default"
+      },
+      "isOverTimeFlag": false,
+      "overTimeProperties": {
+        "saveRemoves": true,
+        "rollAs": "target",
+        "preRemoveConditionText": "",
+        "postRemoveConditionText": ""
+      },
+      "regionBehavior": {
+        "enabled": false,
+        "dispositionFilter": -1,
+        "excludeSource": true,
+        "oncePerTurn": true,
+        "wallRestriction": "none",
+        "regionVisibility": 2,
+        "attachToken": "default",
+        "rules": []
+      },
+      "regionLight": {
+        "enabled": false,
+        "dim": 0,
+        "bright": 0,
+        "color": null,
+        "alpha": 0.5,
+        "luminosity": 0.5,
+        "animationType": "",
+        "animationSpeed": 5,
+        "animationIntensity": 5
+      }
+    }
+  }
+}

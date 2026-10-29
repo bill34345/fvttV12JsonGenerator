@@ -38,9 +38,9 @@ export async function buildSpellResolverPackage(): Promise<SpellResolverBuildRes
 export async function buildSpellResolverPackageForRepo(repoRoot: string): Promise<SpellResolverBuildResult> {
   const paths = assertSpellResolverBuildMutationBoundary(repoRoot);
   assertSpellResolverBuildMutationBoundary(repoRoot);
-  await rm(paths.outputDir, { recursive: true, force: true });
+  await removeBuildOutputIfPresent(paths.outputDir, true);
   assertSpellResolverBuildMutationBoundary(repoRoot);
-  await rm(paths.zipPath, { force: true });
+  await removeBuildOutputIfPresent(paths.zipPath, false);
   assertSpellResolverBuildMutationBoundary(repoRoot);
   await mkdir(resolve(paths.outputDir, 'scripts'), { recursive: true });
   assertSpellResolverBuildMutationBoundary(repoRoot);
@@ -75,6 +75,13 @@ export async function buildSpellResolverPackageForRepo(repoRoot: string): Promis
     zipPath: paths.zipPath,
     archiveEntries,
   };
+}
+
+async function removeBuildOutputIfPresent(path: string, recursive: boolean): Promise<void> {
+  try { await rm(path, { recursive }); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
 }
 
 async function buildBrowserBundleInSubprocess(paths: SpellResolverBuildPaths): Promise<void> {
@@ -123,8 +130,8 @@ async function validateBuiltManifest(outputDir: string): Promise<void> {
   if (manifest.id !== MODULE_ID) throw new Error(`Built module ID must be ${MODULE_ID}.`);
   const systemCompatibility = manifest.relationships?.systems?.find((system) => system.id === 'dnd5e')?.compatibility;
   if (manifest.compatibility?.minimum !== '14.364' || manifest.compatibility?.verified !== '14.364' || manifest.compatibility?.maximum !== '14.368'
-    || systemCompatibility?.minimum !== '5.3.3' || systemCompatibility?.verified !== '5.3.3' || systemCompatibility?.maximum !== '6.0.5') {
-    throw new Error('Built manifest must retain verified 14.364/5.3.3 and admit only through the 14.368/6.0.5 candidate range.');
+    || systemCompatibility?.minimum !== '5.3.3' || systemCompatibility?.verified !== '5.3.3' || systemCompatibility?.maximum !== '6.0.6') {
+    throw new Error('Built manifest must retain verified 14.364/5.3.3 and admit only through the 14.368/6.0.6 candidate range.');
   }
   const referenced = [
     ...(manifest.esmodules ?? []),

@@ -83,8 +83,11 @@ export function createTriggerManagerApplicationClass(api?: TriggerEngineApi, glo
     static async copy(this: any, _event: unknown, target: any) {
       const id = triggerIdFromTarget(target);
       if (!id) return;
-      await this.api.copy(id);
-      await this.render({ force: true });
+      retainEditorInput(this);
+      try {
+        await this.api.copy(id);
+        await this.render({ force: true });
+      } catch (error) { reportManagerError(globals, error); }
     }
 
     static async toggle(this: any, _event: unknown, target: any) {
@@ -92,23 +95,31 @@ export function createTriggerManagerApplicationClass(api?: TriggerEngineApi, glo
       if (!id) return;
       const trigger = this.api.list().find((entry: TriggerDefinition) => entry.id === id);
       if (!trigger) return;
-      await this.api.setEnabled(id, !trigger.enabled);
-      await this.render({ force: true });
+      retainEditorInput(this);
+      try {
+        await this.api.setEnabled(id, !trigger.enabled);
+        await this.render({ force: true });
+      } catch (error) { reportManagerError(globals, error); }
     }
 
     static async delete(this: any, _event: unknown, target: any) {
       const id = triggerIdFromTarget(target);
       if (!id) return;
-      await this.api.delete(id);
-      if (this.editingId === id) {
-        this.editingId = null;
-        this.editorJson = '';
-      }
-      await this.render({ force: true });
+      retainEditorInput(this);
+      try {
+        await this.api.delete(id);
+        if (this.editingId === id) {
+          this.editingId = null;
+          this.editorJson = '';
+        }
+        await this.render({ force: true });
+      } catch (error) { reportManagerError(globals, error); }
     }
 
     static async onSubmit(this: any, _event: unknown, _form: unknown, formData: any) {
       const raw = formData?.object?.definition ?? formData?.definition;
+      if (typeof raw === 'string') this.editorJson = raw;
+      else if (raw !== undefined) this.editorJson = JSON.stringify(raw, null, 2);
       try {
         const definition = typeof raw === 'string' ? JSON.parse(raw) : raw;
         if (this.editingId) await this.api.update(this.editingId, definition);
@@ -117,9 +128,7 @@ export function createTriggerManagerApplicationClass(api?: TriggerEngineApi, glo
         this.editorJson = '';
         await this.render({ force: true });
       } catch (error) {
-        const notification = (globalThis as any).ui?.notifications?.error;
-        if (typeof notification === 'function') notification.call((globalThis as any).ui.notifications, String(error));
-        else console.error(`[${MODULE_ID}] manager save failed`, error);
+        reportManagerError(globals, error);
       }
     }
   };
@@ -137,4 +146,16 @@ function triggerIdFromTarget(target: any): string | undefined {
   if (typeof direct === 'string' && direct) return direct;
   const closest = target?.closest?.('[data-trigger-id]')?.dataset?.triggerId;
   return typeof closest === 'string' && closest ? closest : undefined;
+}
+
+function retainEditorInput(manager: any): void {
+  const value = manager.element?.querySelector?.('[name="definition"]')?.value;
+  if (typeof value === 'string') manager.editorJson = value;
+}
+
+function reportManagerError(globals: any, error: unknown): void {
+  const notifications = globals.ui?.notifications ?? (globalThis as any).ui?.notifications;
+  const message = error instanceof Error ? error.message : String(error);
+  if (typeof notifications?.error === 'function') notifications.error(message);
+  else console.error(`[${MODULE_ID}] manager action failed`, error);
 }

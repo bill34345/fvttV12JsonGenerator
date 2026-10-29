@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { DeckController } from '../src/controller.ts';
 
-const globalKeys = ['CONFIG', 'Hooks', 'canvas', 'foundry', 'fromUuid', 'game', 'ui', 'window'] as const;
+const globalKeys = ['CONFIG', 'Hooks', 'canvas', 'foundry', 'fromUuid', 'game', 'ui', 'window', 'libWrapper'] as const;
 const originalGlobals = new Map(globalKeys.map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
 
 afterEach(() => {
@@ -21,6 +21,25 @@ function installControllerGlobals() {
   const settings = new Map<string, unknown>([
     ['pinnedActors', []], ['hiddenActors', []], ['lastOpenMode', 'panel'], ['cardDensity', 'comfortable'], ['activeTab', 'party'],
   ]);
+  const documents = new Map<string, any>();
+  const resolveDocument = async (uuid: string) => {
+    if (!documents.has(uuid)) {
+      const source = { _id: uuid.split('.').at(-1), name: uuid, system: { attributes: { hp: { value: 20 } } } };
+      documents.set(uuid, {
+        uuid, id: source._id, name: uuid, documentName: 'Actor', constructor: { metadata: { embedded: {} } },
+        toObject: () => structuredClone(source), reset: () => {}, getEmbeddedCollection: () => ({ contents: [] }),
+        update: async (changes: Record<string, unknown>) => {
+          for (const [path, value] of Object.entries(changes)) {
+            const parts = path.split('.');
+            let target: any = source;
+            for (const key of parts.slice(0, -1)) target = target[key] ??= {};
+            target[parts.at(-1)!] = value;
+          }
+        },
+      });
+    }
+    return documents.get(uuid);
+  };
   class ApplicationV2 {
     rendered = false;
     element = { dataset: {}, querySelectorAll: () => [] };
@@ -31,29 +50,79 @@ function installControllerGlobals() {
   const gameFixture = {
     version: '14.364',
     system: { id: 'dnd5e', version: '5.3.3' },
-    user: { isGM: true },
+    user: { id: 'gm', isGM: true },
     world: { id: 'world', title: 'World' },
-    users: [], actors: [], combat: null,
+    users: [], actors: [], combat: null, modules: new Map([['lib-wrapper', { active: true }]]),
     settings: {
       get: (_module: string, key: string) => settings.get(key),
       set: async (_module: string, key: string, value: unknown) => { settings.set(key, value); },
     },
     i18n: { lang: 'en', localize: (key: string) => key },
   };
+  Object.assign(gameFixture.users, { activeGM: gameFixture.user });
   Object.assign(globalThis, {
+    libWrapper: { register: () => 1, unregister: () => {} },
     CONFIG: { statusEffects: [], DND5E: { conditionTypes: { exhaustion: { levels: 6 } } } },
     Hooks: { on: (name: string, callback: () => void) => { hookCallbacks.set(name, callback); } },
     canvas: { scene: { id: 'scene', name: 'Scene' }, dimensions: { size: 100 }, animatePan: async () => {} },
-    foundry: { applications: { api: { ApplicationV2, HandlebarsApplicationMixin: (Base: any) => Base } }, utils: {} },
-    fromUuid: async () => null,
+    foundry: { applications: { api: { ApplicationV2, HandlebarsApplicationMixin: (Base: any) => Base } }, utils: {}, data: { operators: { ForcedDeletion: class {} } } },
+    fromUuid: resolveDocument,
     game: gameFixture,
     ui: { notifications: { info: (message: string) => info.push(message), error: (message: string) => errors.push(message), warn: (message: string) => warnings.push(message) } },
     window: { addEventListener: (name: string, callback: () => void) => { windowCallbacks.set(name, callback); } },
   });
-  return { errors, game: gameFixture, hookCallbacks, info, settings, warnings, windowCallbacks };
+  return { errors, game: gameFixture, hookCallbacks, info, settings, warnings, windowCallbacks, resolveDocument };
 }
 
 describe('DeckController behavior', () => {
+  test('refreshes read-only inventory resources after native item changes', async () => {
+    const fixture=installControllerGlobals(),controller=new DeckController();let builds=0;
+    const original=controller.adapter.buildSnapshot.bind(controller.adapter);
+    controller.adapter.buildSnapshot=()=>{builds++;return original();};
+    await controller.start();
+    for(const hook of ['createItem','updateItem','deleteItem']) {
+      fixture.hookCallbacks.get(hook)!();
+      await new Promise((resolve)=>setTimeout(resolve,0));
+    }
+    expect(builds).toBe(4);
+  });
+  test('panel close and reopen do not add invalidation subscriptions', async () => {
+    const fixture = installControllerGlobals();
+    const controller = new DeckController();
+    let builds = 0;
+    const originalBuild = controller.adapter.buildSnapshot.bind(controller.adapter);
+    controller.adapter.buildSnapshot = () => { builds += 1; return originalBuild(); };
+    controller.panel.open = async () => {};
+    controller.panel.close = async () => {};
+    await controller.start();
+    const hookCount = fixture.hookCallbacks.size;
+    for (let index = 0; index < 3; index += 1) {
+      await controller.openPanel();
+      await controller.close('panel');
+    }
+    expect(fixture.hookCallbacks.size).toBe(hookCount);
+    fixture.hookCallbacks.get('updateActor')!();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(builds).toBe(2);
+  });
+
+  test('help stays outside panel, popout, command, and setting-write paths', async () => {
+    const fixture = installControllerGlobals();
+    const controller = new DeckController();
+    let opens = 0;
+    controller.help.open = async () => { opens += 1; };
+    controller.panel.open = async () => { throw new Error('panel opened'); };
+    controller.popout.open = async () => { throw new Error('popout opened'); };
+    controller.adapter.execute = async () => { throw new Error('command executed'); };
+    fixture.game.settings.set = async () => { throw new Error('setting written'); };
+    await controller.openHelp();
+    expect(opens).toBe(1);
+    expect(fixture.settings.get('lastOpenMode')).toBe('panel');
+    fixture.game.user.isGM = false;
+    await expect(controller.openHelp()).rejects.toThrow('GMs only');
+    expect(opens).toBe(1);
+  });
+
   test('routes panel and popout lifecycle, remembers successful modes, and falls back after blocked or failed popouts', async () => {
     const fixture = installControllerGlobals();
     const controller = new DeckController();
@@ -148,7 +217,7 @@ describe('DeckController behavior', () => {
 
     const command = { id: 'actor.damage' as const, targetUuid: 'Actor.hero', amount: 1 };
     const first = controller.execute(command);
-    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
     await controller.execute(command);
     expect(releases).toBe(1);
     releaseWrite();
@@ -178,5 +247,30 @@ describe('DeckController behavior', () => {
     ]);
 
     expect(sequence).toEqual(['actor.damage:Actor.first', 'actor.damage:Actor.second', 'refresh']);
+  });
+
+  test('shares undo availability between both surfaces and restores the previous value once', async () => {
+    const fixture = installControllerGlobals();
+    const controller = new DeckController();
+    const panelStates: any[] = [], popoutStates: any[] = [];
+    controller.panel.render = (snapshot) => { panelStates.push(snapshot.undo); };
+    controller.popout.render = (snapshot) => { popoutStates.push(snapshot.undo); };
+    const actor = await fixture.resolveDocument('Actor.hero');
+    controller.adapter.execute = async () => {
+      await actor.update({ 'system.attributes.hp.value': 11 });
+      return { messageKey: 'OSD.Notifications.ActorUpdated' };
+    };
+    await controller.start();
+    await controller.execute({ id: 'actor.damage', targetUuid: actor.uuid, amount: 9 });
+    expect(panelStates.at(-1)).toMatchObject({ count: 1, available: true });
+    expect(popoutStates.at(-1)).toEqual(panelStates.at(-1));
+    await controller.undo();
+    expect(actor.toObject().system.attributes.hp.value).toBe(20);
+    expect(panelStates.at(-1)).toMatchObject({ count: 0, available: false });
+    expect(popoutStates.at(-1)).toEqual(panelStates.at(-1));
+    await controller.undo();
+    expect(actor.toObject().system.attributes.hp.value).toBe(20);
+    fixture.game.user.isGM = false;
+    await expect(controller.undo()).rejects.toThrow('GMs only');
   });
 });

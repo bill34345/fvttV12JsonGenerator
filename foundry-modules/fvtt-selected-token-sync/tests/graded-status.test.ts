@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { applyGradedStatusDelta, collectTargets, conditionLevel } from '../src/core.ts';
+import { applyGradedStatusDelta, collectTargets, conditionLevel, planGradedStatusDelta } from '../src/core.ts';
 
 const EFFECT_ID = 'dnd5eexhaustion';
 
@@ -12,7 +12,7 @@ function actor(id: string, level: number, isToken = false) {
     async toggleStatusEffect(_id: string, options: { levels: number }) {
       calls.push(options.levels);
       const current = conditionLevel(this, 'exhaustion', EFFECT_ID);
-      // 6.0.5 ConditionData._applyDelta updates existing effects and deletes at
+      // 6.0.5 and 6.0.6 ConditionData._applyDelta update existing effects and delete at
       // zero. Its Core fallback can create a status when called at zero with -1.
       if (current === 0 && options.levels < 0) throw new Error('negative delta at zero');
       const next = Math.min(6, current + options.levels);
@@ -30,7 +30,26 @@ function targets(...actors: any[]) {
   return collectTargets(actors.map((value, index) => token(String(index), value)), null);
 }
 
-describe('dnd5e 6.0.5 graded HUD status', () => {
+describe('dnd5e 6.0.5/6.0.6 graded HUD status', () => {
+  test('pure desired-level plan sorts world before synthetic without native writes', () => {
+    const world = actor('Actor.world', 1);
+    const synthetic = actor('Scene.test.Token.synthetic.Actor', 3, true);
+    const plan = planGradedStatusDelta(targets(synthetic, world), 'exhaustion', EFFECT_ID, 6, 1);
+    expect(plan.map(({ actor, desired }) => [actor.uuid, desired])).toEqual([
+      ['Actor.world', 2], ['Scene.test.Token.synthetic.Actor', 4],
+    ]);
+    expect([world.calls, synthetic.calls]).toEqual([[], []]);
+    expect([world, synthetic].map((item) => conditionLevel(item, 'exhaustion', EFFECT_ID))).toEqual([1, 3]);
+  });
+  test('6.0.6 candidate keeps per-Actor one-level deltas at the zero and maximum boundaries', async () => {
+    const nearMaximum = actor('Actor.nearMaximum', 5);
+    const zero = actor('Actor.zero', 0);
+    await applyGradedStatusDelta(targets(nearMaximum, zero), 'exhaustion', EFFECT_ID, 6, 1);
+    expect([nearMaximum, zero].map((item) => conditionLevel(item, 'exhaustion', EFFECT_ID))).toEqual([6, 1]);
+    await applyGradedStatusDelta(targets(nearMaximum, zero), 'exhaustion', EFFECT_ID, 6, -1);
+    expect([nearMaximum, zero].map((item) => conditionLevel(item, 'exhaustion', EFFECT_ID))).toEqual([5, 0]);
+    expect([nearMaximum.calls, zero.calls]).toEqual([[1, -1], [1, -1]]);
+  });
   test('each distinct Actor gains and loses one level without copying the source level', async () => {
     const first = actor('Actor.first', 1);
     const second = actor('Actor.second', 3);

@@ -10,5 +10,7 @@
   "FSM.Action.mark": "Jank now",
   "FSM.Action.stop": "Stop & export",
   "FSM.Keybinding.markJank": "Mark Session Monitor jank",
-  "FSM.Keybinding.markJankHint": "Add a jank marker to the active GM session"
+  "FSM.Keybinding.markJankHint": "Add a jank marker to the active GM session",
+  "FSM.Action.help": "Help",
+  "FSM.Error.operation": "Operation could not be completed. Retry or reload."
 }

@@ -25,7 +25,7 @@ export async function verifyInstalledHomebrewSpeciesModule(moduleRootValue: stri
   const fvttVersion: SpeciesTargetVersion = identity.target?.foundry === '12.331' ? '12' : identity.target?.foundry === '14.364' ? '14' : identity.target?.foundry === '14.368' ? '14.368' : fail('Species identity manifest has an unsupported Foundry target.');
   const foundryVersion = fvttVersion === '12' ? '12.331' : fvttVersion === '14.368' ? '14.368' : '14.364';
   const dnd5eVersion = fvttVersion === '12' ? '4.3.9' : fvttVersion === '14.368' ? '6.0.2' : '5.3.3';
-  if (dnd5eRuntimeMaximum !== '6.0.2' && dnd5eRuntimeMaximum !== '6.0.5') throw new Error('Species verifier dnd5e runtime maximum must be 6.0.2 or 6.0.5.');
+  if (!['6.0.2', '6.0.5', '6.0.6'].includes(dnd5eRuntimeMaximum)) throw new Error('Species verifier dnd5e runtime maximum must be 6.0.2, 6.0.5, or 6.0.6.');
   if (fvttVersion !== '14.368' && dnd5eRuntimeMaximum !== '6.0.2') throw new Error('Species dnd5e runtime maximum override is only valid for the ServerNext 14.368 target.');
   const expectedDnd5eMaximum = fvttVersion === '14.368' ? dnd5eRuntimeMaximum : dnd5eVersion;
   if (manifest.id !== MODULE_ID || manifest.version !== MODULE_VERSION || manifest.compatibility?.minimum !== foundryVersion || manifest.compatibility?.verified !== foundryVersion || manifest.compatibility?.maximum !== foundryVersion) throw new Error('Species module manifest identity or Foundry version is invalid.');
@@ -71,7 +71,7 @@ if (import.meta.main) {
   if (!['12', '14', '14.368'].includes(fvttVersion ?? '')) throw new Error('Species module verify --fvtt-version must be 12, 14, or 14.368.');
   const maximumIndex = process.argv.indexOf('--dnd5e-runtime-maximum');
   const dnd5eRuntimeMaximum = maximumIndex >= 0 ? process.argv[maximumIndex + 1] : '6.0.2';
-  if (!['6.0.2', '6.0.5'].includes(dnd5eRuntimeMaximum ?? '')) throw new Error('Species module verify --dnd5e-runtime-maximum must be 6.0.2 or 6.0.5.');
+  if (!['6.0.2', '6.0.5', '6.0.6'].includes(dnd5eRuntimeMaximum ?? '')) throw new Error('Species module verify --dnd5e-runtime-maximum must be 6.0.2, 6.0.5, or 6.0.6.');
   const distRoot = resolve(import.meta.dir, fvttVersion === '12' ? 'dist/v12-candidate' : fvttVersion === '14.368' ? 'dist/v14-368-candidate' : 'dist');
   verifyHomebrewSpeciesArtifact(distRoot, dnd5eRuntimeMaximum as SpeciesNextDnd5eRuntimeMaximum).then((result) => console.log(JSON.stringify(result, null, 2))).catch((error) => { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; });
 }

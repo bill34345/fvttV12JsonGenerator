@@ -38,9 +38,9 @@ export const validateManifest = (manifest: Record<string, any>): void => {
   if (
     compatibility.minimum !== "5.3.3" ||
     compatibility.verified !== "5.3.3" ||
-    compatibility.maximum !== "6.0.5"
+    compatibility.maximum !== "6.0.6"
   ) {
-    throw new Error("dnd5e compatibility range must be 5.3.3–6.0.5 with 5.3.3 verified");
+    throw new Error("dnd5e compatibility range must be 5.3.3–6.0.6 with 5.3.3 verified");
   }
 
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(["scripts/main.js"])) {

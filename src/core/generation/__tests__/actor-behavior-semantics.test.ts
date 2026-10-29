@@ -3,10 +3,17 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ParserFactory } from '../../parser/router';
+import yaml from 'js-yaml';
+import { parseActorBehaviorSemantics } from '@fvtt-json-generator/parser';
 import { convertMarkdownContentToJson } from '../../workflow/singleFileConversion';
 import { assertEqualStructure } from '../../utils/assertEqualStructure';
 
 const fixtureDir = join(import.meta.dir, 'fixtures');
+function strictBehavior(content:string) {
+  const frontmatter=content.match(/^---\r?\n([\s\S]*?)\r?\n---/)![1]!;
+  return parseActorBehaviorSemantics((yaml.load(frontmatter) as Record<string,unknown>)['行为机制']);
+}
+
 
 function fixture(name: string): string {
   return readFileSync(join(fixtureDir, name), 'utf8');
@@ -192,17 +199,23 @@ describe('source-derived Actor behavior semantics', () => {
     }
   });
 
-  it('fails closed on duplicate IDs, dangling local references, automatic claims, and unknown fields', () => {
+  it('strict behavior validation rejects invalid contracts while Actor parsing retains the source and findings', () => {
     const source = fixture('actor-behavior-semantics.md');
-    expect(() => new ParserFactory().parse(source.replace('ID: shell-guard', 'ID: next-hit-force')))
+    expect(() => strictBehavior(source.replace('ID: shell-guard', 'ID: next-hit-force')))
       .toThrow('duplicate ID "next-hit-force"');
-    expect(() => new ParserFactory().parse(source.replace('          - force-primed', '          - missing-state')))
+    expect(() => strictBehavior(source.replace('          - force-primed', '          - missing-state')))
       .toThrow('unknown local state "missing-state"');
-    expect(() => new ParserFactory().parse(source.replace('执行模式: core-operable', '执行模式: automatic')))
+    expect(() => strictBehavior(source.replace('执行模式: core-operable', '执行模式: automatic')))
       .toThrow('automatic behavior requires a separately verified runtime projector');
-    expect(() => new ParserFactory().parse(source.replace(
+    expect(() => strictBehavior(source.replace(
       '      规则来源: source-derived',
       '      规则来源: source-derived\n      猜测机制: true',
     ))).toThrow('猜测机制: unknown field');
+    for(const invalid of [source.replace('ID: shell-guard','ID: next-hit-force'),source.replace('          - force-primed','          - missing-state'),source.replace('执行模式: core-operable','执行模式: automatic'),source.replace('      规则来源: source-derived','      规则来源: source-derived\n      猜测机制: true')]){
+      const parsed=new ParserFactory().parse(invalid) as any;
+      expect(parsed.name).toBe((new ParserFactory().parse(source) as any).name);
+      expect(parsed.candidateReview.findings.length).toBeGreaterThan(0);
+      expect(parsed.details.biography).toContain('GM：');
+    }
   });
 });

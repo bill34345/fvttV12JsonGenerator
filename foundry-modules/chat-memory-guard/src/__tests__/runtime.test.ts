@@ -1,12 +1,40 @@
 import { describe, expect, test } from 'bun:test';
+import { JSDOM } from 'jsdom';
 import {
   calculateMaximumCacheEntries,
   disposeChatAttachment,
   encodeRenderedThumbnail,
   resolveFoundryAvatarContext,
+  ChatMemoryGuardRuntime,
 } from '../runtime';
 
 describe('Foundry runtime avatar resolution', () => {
+  test('thumbnail diagnostics retain counts without logging source URLs or raw errors', async () => {
+    const dom = new JSDOM('<article><div class="message-header"><div class="message-sender"><div class="avatar"><img src="safe.png"></div></div></div></article>');
+    const warnings: unknown[][] = [];
+    const previousWarn = console.warn;
+    const runtime = new ChatMemoryGuardRuntime({
+      game: { user: { isGM: true }, settings: { get: () => undefined } },
+      hooks: { on: () => 1, off: () => {} }, ui: {},
+      thumbnailBackend: { create: async () => { throw new Error('private-error-sentinel'); }, revoke: () => {} },
+    });
+    console.warn = (...args: unknown[]) => { warnings.push(args); };
+    try {
+      runtime.start();
+      await runtime.processAvatar({ isContentVisible: true,
+        speakerActor: { img: 'private-avatar-sentinel.png?token=synthetic-secret' },
+      }, dom.window.document.querySelector('article'));
+      expect(runtime.getStats().thumbnailFailures).toBe(1);
+      expect(warnings).toEqual([['chat-memory-guard | Avatar thumbnail generation failed.']]);
+      expect(JSON.stringify(warnings)).not.toContain('private');
+      expect(JSON.stringify(warnings)).not.toContain('synthetic-secret');
+    } finally {
+      runtime.stop();
+      console.warn = previousWarn;
+      dom.window.close();
+    }
+  });
+
   test('resolves exact speaker token and actor artwork without name guessing', () => {
     const actor = {
       img: 'actor.webp',

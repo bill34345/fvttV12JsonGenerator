@@ -8,8 +8,11 @@
     "test": "bun test src --max-concurrency 4",
     "typecheck": "tsc -p tsconfig.json --pretty false"
   },
+  "dependencies": {
+    "@fvtt-json-generator/suite-handbook": "workspace:*"
+  },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/bun": "1.3.14",
     "typescript": "^5.9.3"
   }
 }

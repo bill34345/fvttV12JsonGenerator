@@ -2,12 +2,14 @@ import { describe, expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { buildModule, createStoredZip, MODULE_VERSION as BUILD_VERSION, validateManifest } from '../build.ts';
 import { MODULE_VERSION as RUNTIME_VERSION } from '../src/constants.ts';
+import manual from '../docs/manual.json';
 
 describe('release contract', () => {
   test('manifest pins Foundry and dnd5e versions and has no hard dependency', async () => {
     const manifest = JSON.parse(await readFile(new URL('../src/module.json', import.meta.url), 'utf8'));
     const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
     expect(() => validateManifest(manifest)).not.toThrow();
+    expect(manifest.relationships.systems[0].compatibility).toEqual({ minimum: '6.0.5', verified: '6.0.5', maximum: '6.0.6' });
     expect([manifest.version, packageJson.version, RUNTIME_VERSION, BUILD_VERSION]).toEqual(['0.2.0', '0.2.0', '0.2.0', '0.2.0']);
     expect(manifest.socket).toBeUndefined();
     expect(manifest.relationships.requires).toBeUndefined();
@@ -40,7 +42,10 @@ describe('release contract', () => {
     expect(browserText).toContain('preUpdateToken');
     expect(browserText).toContain('movementActions');
     expect(browserText).toContain('movementAction');
-    expect(browserText).not.toContain('libWrapper');
+    // The same-source help can mention the absence of libWrapper in prose.
+    expect(browserText).not.toMatch(/\blibWrapper\s*\./);
+    expect(browserText).toContain('selectedTokenSyncHelp');
+    expect(browserText).toContain(manual.summary);
     expect(browserText).not.toContain('system.attributes.movement');
   });
 

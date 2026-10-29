@@ -1,3 +1,5 @@
+import type { InspectorReadouts } from './inspector-readouts.ts';
+
 export type DeckOpenMode = 'panel' | 'popout';
 export type DeckTab = 'party' | 'encounter';
 export type DeckDensity = 'comfortable' | 'compact';
@@ -46,6 +48,7 @@ export interface DeckActorCommands {
   readonly setInitiative: DeckCommandAvailability;
   readonly rollInitiative: DeckCommandAvailability;
   readonly toggleVisibility: DeckCommandAvailability;
+  readonly toggleDefeated: DeckCommandAvailability;
 }
 
 export interface DeckEncounterCommands {
@@ -71,10 +74,12 @@ export interface DeckPartyFolder {
 }
 
 export interface DeckActorCard {
+  readonly inspection?: InspectorReadouts;
   readonly uuid: string;
   readonly id: string;
   readonly name: string;
   readonly img: string;
+  readonly portraitSource?: string;
   readonly type: string;
   readonly players: readonly DeckPlayer[];
   readonly playerNames: string;
@@ -111,6 +116,7 @@ export interface DeckActorCard {
   readonly characterControls?: boolean;
   readonly hidden?: boolean;
   readonly revealed?: boolean;
+  readonly defeated?: boolean;
 }
 
 export interface DeckRosterManagerEntry {
@@ -136,8 +142,11 @@ export interface DeckEncounter {
 }
 
 export interface DeckSnapshot {
+  readonly initiativeIcon?: Readonly<{ icon: string; hover: string }>;
+  readonly undo?: Readonly<{ count: number; label: string; available: boolean; reason?: string }>;
   readonly supported: boolean;
   readonly supportError?: string;
+  readonly coreVersion: string;
   readonly world: Readonly<{ id: string; title: string }>;
   readonly system: Readonly<{ id: string; version: string }>;
   readonly scene: Readonly<{ id: string; name: string }> | null;
@@ -177,6 +186,7 @@ export type DeckCommandId =
   | 'combat.roll-initiative'
   | 'combat.roll-npc-initiative'
   | 'combat.toggle-visibility'
+  | 'combat.toggle-defeated'
   | 'token.locate'
   | 'roster.set-folder'
   | 'roster.toggle-pin'
@@ -206,8 +216,11 @@ export interface DeckCommandResult {
 }
 
 export interface DeckModuleApi {
+  portraitCacheStats(): Promise<import('./portrait-thumbnails.ts').PortraitThumbnailStats | undefined>;
+  undo(): Promise<void>;
   openPanel(): Promise<void>;
   openPopout(): Promise<void>;
+  openHelp(): Promise<void>;
   focusPopout(): boolean;
   close(mode: DeckCloseMode): Promise<void>;
   refresh(): void;

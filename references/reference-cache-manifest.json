@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-01",
+  "generatedAt": "2026-10-12",
   "components": [
     {
       "id": "dnd5e-5.3.3",
@@ -14,8 +14,8 @@
       "id": "dnd5e-current-6",
       "kind": "git",
       "source": "https://github.com/foundryvtt/dnd5e.git",
-      "revision": "3ee48de02f8f6f7b2638c9f6cf3e9540c9c181cc",
-      "target": ".local/references/dnd5e/6.0.5/repo",
+      "revision": "87e94dbd9f930135e0694cd7e7d49f210603cd2c",
+      "target": ".local/references/dnd5e/6.0.6/repo",
       "license": "MIT"
     }
   ]

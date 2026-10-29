@@ -100,6 +100,24 @@ describe('combatTurnStart runtime', () => {
     for (const runtime of runtimes.splice(0)) await runtime.stop();
   });
 
+  test('replays a forward turn after explicit undo reconciliation while retaining same-delivery deduplication',async()=>{
+    const gm={id:'gm',isGM:true,active:true},actors=['a','b'].map(id=>actor(id));
+    const encounter=combat(actors.map(a=>({id:a.id,actor:a})),1,0),globals=globalsFor(gm,actors,[encounter]);
+    const hooks:string[]=[],handlers=new Map<string,any>();globals.Hooks={on:(name:string,fn:any)=>{handlers.set(name,fn);return name;},off:()=>{},callAll:(name:string)=>hooks.push(name)};
+    const runtime=new TriggerEngineRuntime({globals,storage:new MemoryTriggerStorage()});runtimes.push(runtime);await runtime.start();
+    const received:string[]=[];runtime.subscribe(context=>{received.push(`${(context.document as any).id}:${context.phase}`);});
+    const prior={round:1,turn:0,combatantId:'a'},current={round:1,turn:1,combatantId:'b'};
+    const initial={round:0,turn:null,combatantId:null};handlers.get('combatTurnChange')(encounter,initial,prior);await runtime.whenIdle();
+    const checkpoint=runtime.captureCombatUndo(encounter);
+    expect(checkpoint.keys.length).toBeGreaterThan(0);
+    encounter.turn=1;handlers.get('combatTurnChange')(encounter,prior,current);handlers.get('combatTurnChange')(encounter,prior,current);await runtime.whenIdle();
+    expect(received).toEqual(['a:end','b:start']);
+    encounter.turn=0;await runtime.reconcileCombatUndo(encounter,checkpoint);encounter.turn=1;
+    handlers.get('combatTurnChange')(encounter,initial,prior);await runtime.whenIdle();
+    handlers.get('combatTurnChange')(encounter,prior,current);handlers.get('combatTurnChange')(encounter,prior,current);await runtime.whenIdle();
+    expect(received).toEqual(['a:end','b:start','a:end','b:start']);expect(hooks).toContain('fvtt-trigger-engine.combatRewound');
+  });
+
   test.each(['callback', 'subscriber'])('stops Combat delivery after GM handoff in an awaited %s', async (boundary) => {
     const gm = { id: 'gm', isGM: true, active: true };
     const target = actor('target');

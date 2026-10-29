@@ -17,6 +17,7 @@ import {
   type SessionStatus,
 } from './schema';
 import { IndexedDbSessionStore, type SessionStore } from './storage';
+import { openMonitorHelp } from './help';
 
 export const PANEL_POSITION_STORAGE_KEY = 'fvtt-session-monitor.ui-position.v1';
 export const PANEL_POSITION_VERSION = 1;
@@ -184,6 +185,13 @@ interface PanelDragState {
   moved: boolean;
 }
 
+interface EventContext {
+  sceneId: unknown;
+  combatId: unknown;
+  round: number | null;
+  turn: number | null;
+}
+
 export interface SessionMonitorApi {
   startSession(): Promise<SessionStatus>;
   markJank(): Promise<void>;
@@ -210,7 +218,15 @@ export class SessionMonitorRuntime {
   #layoutMutationObserver: MutationObserver | null = null;
   #timer: ReturnType<typeof setInterval> | null = null;
   #nextExpectedAt = 0;
-  #sampling = false;
+  #samplingPromise: Promise<void> | null = null;
+  #startPromise: Promise<SessionStatus> | null = null;
+  #stopPromise: Promise<SessionExport | null> | null = null;
+  #writeQueue: Promise<void> = Promise.resolve();
+  #writeFailure: unknown = null;
+  #accepting = false;
+  #stopEventWritten = false;
+  #limitReached = false;
+  #panelError = false;
   #hookIds: Array<[string, unknown]> = [];
   #eventHandlers: Array<[EventTarget, string, EventListener]> = [];
   #seenGaps = new Set<string>();
@@ -251,10 +267,19 @@ export class SessionMonitorRuntime {
     this.#mountPanel();
     const active = await this.#store.findActiveSession(this.#worldKey());
     if (active) {
+      this.#requireGm();
       this.#meta = active;
+      await this.#reconcileSession(active);
       this.#meta.refreshCount++;
       this.#meta.updatedAt = new Date().toISOString();
       await this.#store.updateSession(this.#meta);
+      this.#requireGm();
+      if (this.#limitReached || this.#stopEventWritten) {
+        await this.stopSession({ download: false });
+        this.#renderPanel();
+        return;
+      }
+      this.#accepting = true;
       this.#beginCollection();
       await this.#recordEvent('session-resume', 'refresh');
     }
@@ -263,10 +288,27 @@ export class SessionMonitorRuntime {
 
   async startSession(): Promise<SessionStatus> {
     this.#requireGm();
-    if (this.#meta?.state === 'active') return this.getStatus();
+    if (this.#startPromise) return this.#startPromise;
+    if (this.#stopPromise) return this.#stopPromise.then(() => this.startSession());
+    if (this.#meta?.state === 'active' && this.#accepting) return this.getStatus();
+    if (this.#meta?.state === 'active' && this.#limitReached) {
+      await this.stopSession({ download: false });
+      return this.getStatus();
+    }
+    if (this.#meta?.state === 'active' && this.#stopEventWritten) {
+      throw new Error('Monitoring stop is incomplete; finish stopSession first.');
+    }
+    const pending = this.#meta?.state === 'active' ? this.#resumeSession() : this.#startSession();
+    this.#startPromise = pending;
+    void pending.finally(() => { if (this.#startPromise === pending) this.#startPromise = null; }).catch(() => {});
+    return pending;
+  }
+
+  async #startSession(): Promise<SessionStatus> {
     const now = new Date().toISOString();
     const environment = await this.#environment();
-    this.#meta = {
+    this.#requireGm();
+    const meta: SessionMeta = {
       id: createSessionId(this.#globals.crypto),
       worldKey: this.#worldKey(),
       state: 'active',
@@ -281,7 +323,16 @@ export class SessionMonitorRuntime {
       aliases: { scenes: {}, combats: {} },
       environment,
     };
-    await this.#store.createSession(this.#meta);
+    await this.#store.createSession(meta);
+    if (this.#globals.game?.user?.isGM !== true) {
+      await this.#store.deleteSession(meta.id);
+      this.#requireGm();
+    }
+    this.#meta = meta;
+    this.#accepting = true;
+    this.#stopEventWritten = false;
+    this.#limitReached = false;
+    this.#writeFailure = null;
     this.#seenGaps.clear();
     this.#beginCollection();
     await this.#recordEvent('session-start');
@@ -291,6 +342,39 @@ export class SessionMonitorRuntime {
     return this.getStatus();
   }
 
+  async #resumeSession(): Promise<SessionStatus> {
+    await this.#writeQueue;
+    this.#requireGm();
+    const stored = await this.#store.getSession(this.#meta!.id);
+    if (!stored) throw new Error('Monitoring session is no longer stored.');
+    this.#meta = stored;
+    if (stored.state !== 'active') return this.getStatus();
+    await this.#reconcileSession(stored);
+    this.#requireGm();
+    this.#writeFailure = null;
+    this.#accepting = true;
+    this.#beginCollection();
+    await this.#recordEvent('session-resume', 'storage-retry');
+    this.#panelError = false;
+    this.#renderPanel();
+    return this.getStatus();
+  }
+
+  async #reconcileSession(meta: SessionMeta): Promise<void> {
+    const exported = await this.#store.exportSession(meta.id);
+    if (!exported) throw new Error('Monitoring session is no longer stored.');
+    this.#limitReached = exported.events.some((event) => event.kind === 'limit-reached');
+    this.#stopEventWritten = exported.events.some((event) => event.kind === 'session-stop');
+    const highest = (rows: Array<{ sequence: number }>) => rows.reduce((value, row) => Math.max(value, row.sequence), 0);
+    const sampleSequence = Math.max(meta.sampleSequence, highest(exported.samples));
+    const eventSequence = Math.max(meta.eventSequence, highest(exported.events));
+    const errorSequence = Math.max(meta.errorSequence, highest(exported.errors));
+    if (sampleSequence === meta.sampleSequence && eventSequence === meta.eventSequence && errorSequence === meta.errorSequence) return;
+    const repaired = { ...meta, sampleSequence, eventSequence, errorSequence };
+    await this.#store.updateSession(repaired);
+    Object.assign(meta, repaired);
+  }
+
   async markJank(): Promise<void> {
     this.#requireActive();
     await this.#recordEvent('jank-marker', 'player-reported');
@@ -298,19 +382,50 @@ export class SessionMonitorRuntime {
   }
 
   async stopSession(options: { download?: boolean } = {}): Promise<SessionExport | null> {
+    this.#requireGm();
+    if (this.#stopPromise) return this.#stopPromise;
+    const pending = this.#stopSession(options);
+    this.#stopPromise = pending;
+    void pending.finally(() => { if (this.#stopPromise === pending) this.#stopPromise = null; }).catch(() => {});
+    return pending;
+  }
+
+  async #stopSession(options: { download?: boolean }): Promise<SessionExport | null> {
+    if (this.#startPromise) await this.#startPromise;
+    this.#requireGm();
     if (!this.#meta) return null;
     if (this.#meta.state === 'active') {
-      await this.#sample();
-      await this.#recordEvent('session-stop');
-      this.#meta.state = 'stopped';
-      this.#meta.endedAt = new Date().toISOString();
-      this.#meta.updatedAt = this.#meta.endedAt;
-      await this.#store.updateSession(this.#meta);
+      this.#accepting = false;
       this.#endCollection();
       this.#clearPanelCollapseTimers();
+      await this.#samplingPromise?.catch(() => {});
+      await this.#writeQueue;
+      if (this.#writeFailure) {
+        throw this.#writeFailure;
+      }
+      this.#requireGm();
+      await this.#sample(true);
+      if (this.#writeFailure) {
+        throw this.#writeFailure;
+      }
+      this.#requireGm();
+      const meta = this.#meta;
+      if (!this.#stopEventWritten) {
+        await this.#persistEvent(meta, 'session-stop');
+        this.#stopEventWritten = true;
+      }
+      this.#requireGm();
+      const endedAt = new Date().toISOString();
+      await this.#store.updateSession({ ...meta, state: 'stopped', endedAt, updatedAt: endedAt });
+      meta.state = 'stopped';
+      meta.endedAt = endedAt;
+      meta.updatedAt = endedAt;
+      this.#requireGm();
     }
     const exported = await this.#store.exportSession(this.#meta.id);
+    this.#requireGm();
     if (exported && options.download !== false) downloadJson(this.#globals, exported);
+    this.#panelError = false;
     this.#renderPanel();
     return exported;
   }
@@ -331,18 +446,24 @@ export class SessionMonitorRuntime {
   }
 
   async exportSession(sessionId = this.#meta?.id): Promise<SessionExport | null> {
+    this.#requireGm();
     if (!sessionId) return null;
-    return this.#store.exportSession(sessionId);
+    const exported = await this.#store.exportSession(sessionId);
+    this.#requireGm();
+    return exported;
   }
 
   async listSessions() {
+    this.#requireGm();
     const sessions = await this.#store.listSessions();
+    this.#requireGm();
     return sessions.map(({ id, state, startedAt, endedAt, sampleSequence }) => ({
       id, state, startedAt, endedAt, sampleSequence,
     }));
   }
 
   async deleteSession(sessionId: string): Promise<void> {
+    this.#requireGm();
     if (this.#meta?.id === sessionId && this.#meta.state === 'active') {
       throw new Error('Cannot delete the active monitoring session.');
     }
@@ -352,6 +473,7 @@ export class SessionMonitorRuntime {
   }
 
   setCompanionHeartbeat(input: { timestamp?: string; version?: string }): SessionStatus {
+    this.#requireGm();
     const parsed = input.timestamp ? Date.parse(input.timestamp) : Date.now();
     this.#companionLastSeenAt = Number.isFinite(parsed) ? new Date(parsed).toISOString() : new Date().toISOString();
     this.#companionVersion = typeof input.version === 'string' ? input.version.slice(0, 40) : null;
@@ -359,49 +481,86 @@ export class SessionMonitorRuntime {
     return this.getStatus();
   }
 
-  async #sample(): Promise<void> {
-    if (!this.#meta || this.#meta.state !== 'active' || this.#sampling) return;
-    if (Date.now() - Date.parse(this.#meta.startedAt) >= MAX_SESSION_MS) {
-      await this.#recordEvent('limit-reached', 'max-duration');
-      await this.stopSession({ download: false });
-      return;
-    }
-    if (this.#meta.sampleSequence >= MAX_SAMPLES) {
-      this.#meta.truncated.samples = true;
-      await this.#recordEvent('limit-reached', 'sample-cap');
-      await this.stopSession({ download: false });
-      return;
-    }
-    this.#sampling = true;
-    try {
-      const sceneAlias = await this.#alias('scene', this.#globals.canvas?.scene?.id ?? this.#globals.game?.scenes?.current?.id);
-      const combatAlias = await this.#alias('combat', this.#globals.game?.combat?.id);
-      const stalls = this.#stalls.take();
+  #sample(final = false): Promise<void> {
+    const meta = this.#meta;
+    if (!meta || this.#limitReached || (!final && !this.#acceptCollection()) || meta.state !== 'active' || this.#samplingPromise) return Promise.resolve();
+    const pending = this.#queueWrite(async () => {
+      if (final && this.#globals.game?.user?.isGM !== true) {
+        this.#pauseCollection();
+        return false;
+      }
+      if (!final && !this.#acceptCollection()) return false;
+      const durationLimit = Date.now() - Date.parse(meta.startedAt) >= MAX_SESSION_MS;
+      const sampleLimit = meta.sampleSequence >= MAX_SAMPLES;
+      if (durationLimit || sampleLimit) {
+        await this.#persistEvent(meta, 'limit-reached', durationLimit ? 'max-duration' : 'sample-cap', {},
+          (draft) => { if (sampleLimit) draft.truncated.samples = true; });
+        this.#limitReached = true;
+        return true;
+      }
+      const draft = structuredClone(meta);
+      const eventContext = this.#eventContext();
+      const sceneAlias = this.#alias(draft, 'scene', this.#globals.canvas?.scene?.id ?? this.#globals.game?.scenes?.current?.id);
+      const combatAlias = this.#alias(draft, 'combat', this.#globals.game?.combat?.id);
       const sample = collectBrowserSample({
         globals: this.#globals,
-        sequence: ++this.#meta.sampleSequence,
-        startedAt: this.#meta.startedAt,
+        sequence: draft.sampleSequence + 1,
+        startedAt: meta.startedAt,
         expectedAt: this.#nextExpectedAt || Date.now(),
         sceneAlias,
         combatAlias,
-        stalls,
+        stalls: this.#stalls.take(),
       });
+      draft.sampleSequence = sample.sequence;
+      draft.updatedAt = sample.timestamp;
+      await this.#store.commitRecord(draft, { kind: 'sample', value: sample });
+      Object.assign(meta, draft);
       this.#recentMaxFrameGapMs = sample.frames.maxMs;
       this.#recentLongTaskMaxMs = sample.longTasks.maxMs;
-      await this.#store.appendSample(this.#meta.id, sample);
-      this.#meta.updatedAt = sample.timestamp;
-      await this.#store.updateSession(this.#meta);
       for (const gap of sample.capabilityGaps) {
         if (this.#seenGaps.has(gap)) continue;
         this.#seenGaps.add(gap);
-        await this.#recordEvent('capability-gap', gap);
+        await this.#persistEvent(meta, 'capability-gap', gap, {}, undefined, eventContext);
       }
-    } catch (error) {
-      await this.#recordError('window-error', error);
-    } finally {
-      this.#sampling = false;
+      return false;
+    }).then((limitReached) => {
+      if (limitReached && this.#meta === meta && this.#globals.game?.user?.isGM === true) {
+        void this.stopSession({ download: false }).catch(() => {});
+      }
+    });
+    this.#samplingPromise = pending;
+    void pending.finally(() => {
+      if (this.#samplingPromise === pending) this.#samplingPromise = null;
       this.#renderPanel();
-    }
+    }).catch(() => {});
+    return pending;
+  }
+
+  #queueWrite<T>(write: () => Promise<T>): Promise<T> {
+    const result = this.#writeQueue.then(() => {
+      if (this.#writeFailure) throw this.#writeFailure;
+      return write();
+    });
+    this.#writeQueue = result.then(() => {}, (error) => {
+      this.#writeFailure ??= error;
+      this.#panelError = true;
+      this.#pauseCollection();
+    });
+    return result;
+  }
+
+  #pauseCollection(): void {
+    this.#accepting = false;
+    this.#endCollection();
+    this.#clearPanelCollapseTimers();
+    this.#renderPanel();
+  }
+
+  #acceptCollection(): boolean {
+    if (!this.#accepting) return false;
+    if (this.#globals.game?.user?.isGM === true) return true;
+    this.#pauseCollection();
+    return false;
   }
 
   #beginCollection(): void {
@@ -413,7 +572,7 @@ export class SessionMonitorRuntime {
       const expected = this.#nextExpectedAt;
       this.#nextExpectedAt += SAMPLE_INTERVAL_MS;
       if (Date.now() - expected > SAMPLE_INTERVAL_MS * 2) this.#nextExpectedAt = Date.now() + SAMPLE_INTERVAL_MS;
-      void this.#sample();
+      void this.#sample().catch(() => {});
     }, SAMPLE_INTERVAL_MS);
   }
 
@@ -433,19 +592,19 @@ export class SessionMonitorRuntime {
       const id = hooks?.on?.(name, callback);
       if (id !== undefined) this.#hookIds.push([name, id]);
     };
-    on('canvasReady', () => { void this.#recordEvent('canvas-ready'); });
-    on('canvasTearDown', () => { void this.#recordEvent('canvas-teardown'); });
-    on('createCombat', (combat: any) => { void this.#recordCombatEvent('combat-create', combat); });
-    on('updateCombat', (combat: any) => { void this.#recordCombatEvent('combat-update', combat); });
-    on('deleteCombat', (combat: any) => { void this.#recordCombatEvent('combat-delete', combat); });
-    on('combatStart', (combat: any) => { void this.#recordCombatEvent('combat-start', combat); });
-    on('combatRound', (combat: any) => { void this.#recordCombatEvent('combat-round', combat); });
-    on('combatTurn', (combat: any) => { void this.#recordCombatEvent('combat-turn', combat); });
+    on('canvasReady', () => { this.#observe(this.#recordEvent('canvas-ready')); });
+    on('canvasTearDown', () => { this.#observe(this.#recordEvent('canvas-teardown')); });
+    on('createCombat', (combat: any) => { this.#observe(this.#recordCombatEvent('combat-create', combat)); });
+    on('updateCombat', (combat: any) => { this.#observe(this.#recordCombatEvent('combat-update', combat)); });
+    on('deleteCombat', (combat: any) => { this.#observe(this.#recordCombatEvent('combat-delete', combat)); });
+    on('combatStart', (combat: any) => { this.#observe(this.#recordCombatEvent('combat-start', combat)); });
+    on('combatRound', (combat: any) => { this.#observe(this.#recordCombatEvent('combat-round', combat)); });
+    on('combatTurn', (combat: any) => { this.#observe(this.#recordCombatEvent('combat-turn', combat)); });
     on('error', (_location: unknown, error: unknown, data: any) => {
-      void this.#recordError('foundry', error, packageIdsFrom(data));
+      this.#observe(this.#recordError('foundry', error, packageIdsFrom(data)));
     });
     on('midi-qol.TroubleShooter.recordError', (detail: any) => {
-      void this.#recordError('midi-qol', detail?.error ?? detail?.message ?? detail, ['midi-qol']);
+      this.#observe(this.#recordError('midi-qol', detail?.error ?? detail?.message ?? detail, ['midi-qol']));
     });
 
     const addEvent = (target: EventTarget | undefined, name: string, handler: EventListener) => {
@@ -454,23 +613,24 @@ export class SessionMonitorRuntime {
       this.#eventHandlers.push([target, name, handler]);
     };
     addEvent(this.#globals.window, 'error', ((event: ErrorEvent) => {
-      void this.#recordError('window-error', event.error ?? event.message);
+      this.#observe(this.#recordError('window-error', event.error ?? event.message));
     }) as EventListener);
     addEvent(this.#globals.window, 'unhandledrejection', ((event: PromiseRejectionEvent) => {
-      void this.#recordError('unhandled-rejection', event.reason);
+      this.#observe(this.#recordError('unhandled-rejection', event.reason));
     }) as EventListener);
     addEvent(this.#globals.document, 'visibilitychange', (() => {
-      void this.#recordEvent('visibility', this.#globals.document?.visibilityState ?? 'unknown');
+      this.#observe(this.#recordEvent('visibility', this.#globals.document?.visibilityState ?? 'unknown'));
     }) as EventListener);
-    addEvent(this.#globals.window, 'pagehide', (() => { void this.#recordEvent('page-hide'); }) as EventListener);
+    addEvent(this.#globals.window, 'pagehide', (() => { this.#observe(this.#recordEvent('page-hide')); }) as EventListener);
   }
 
+  #observe(work: Promise<void>): void { void work.catch(() => {}); }
+
   async #recordCombatEvent(kind: MonitorEventKind, combat: any): Promise<void> {
-    await this.#recordEvent(kind, undefined, {
-      combatAlias: await this.#alias('combat', combat?.id),
-      round: finiteOrNull(combat?.round),
-      turn: finiteOrNull(combat?.turn),
-    });
+    const meta = this.#meta;
+    if (!meta || !this.#acceptCollection() || meta.state !== 'active') return;
+    const context = this.#eventContext(combat);
+    await this.#queueWrite(() => this.#persistEvent(meta, kind, undefined, {}, undefined, context));
   }
 
   async #recordEvent(
@@ -478,27 +638,48 @@ export class SessionMonitorRuntime {
     detail?: string,
     overrides: Partial<Pick<MonitorEvent, 'sceneAlias' | 'combatAlias' | 'round' | 'turn'>> = {},
   ): Promise<void> {
-    if (!this.#meta || this.#meta.state !== 'active') return;
-    if (this.#meta.eventSequence >= MAX_EVENTS) {
-      this.#meta.truncated.events = true;
-      await this.#store.updateSession(this.#meta);
+    const meta = this.#meta;
+    if (!meta || !this.#acceptCollection() || meta.state !== 'active') return;
+    const context = this.#eventContext();
+    await this.#queueWrite(() => this.#persistEvent(meta, kind, detail, overrides, undefined, context));
+  }
+
+  #eventContext(combat = this.#globals.game?.combat): EventContext {
+    return {
+      sceneId: this.#globals.canvas?.scene?.id,
+      combatId: combat?.id,
+      round: finiteOrNull(combat?.round),
+      turn: finiteOrNull(combat?.turn),
+    };
+  }
+
+  async #persistEvent(meta: SessionMeta, kind: MonitorEventKind, detail?: string,
+    overrides: Partial<Pick<MonitorEvent, 'sceneAlias' | 'combatAlias' | 'round' | 'turn'>> = {},
+    mutateDraft?: (draft: SessionMeta) => void, context = this.#eventContext()): Promise<void> {
+    const draft = structuredClone(meta);
+    mutateDraft?.(draft);
+    if (draft.eventSequence >= MAX_EVENTS) {
+      draft.truncated.events = true;
+      await this.#store.updateSession(draft);
+      Object.assign(meta, draft);
       return;
     }
     const timestamp = new Date().toISOString();
     const event: MonitorEvent = {
-      sequence: ++this.#meta.eventSequence,
+      sequence: draft.eventSequence + 1,
       timestamp,
-      elapsedMs: Math.max(0, Date.parse(timestamp) - Date.parse(this.#meta.startedAt)),
+      elapsedMs: Math.max(0, Date.parse(timestamp) - Date.parse(draft.startedAt)),
       kind,
-      sceneAlias: overrides.sceneAlias ?? await this.#alias('scene', this.#globals.canvas?.scene?.id),
-      combatAlias: overrides.combatAlias ?? await this.#alias('combat', this.#globals.game?.combat?.id),
-      round: overrides.round ?? finiteOrNull(this.#globals.game?.combat?.round),
-      turn: overrides.turn ?? finiteOrNull(this.#globals.game?.combat?.turn),
+      sceneAlias: overrides.sceneAlias ?? this.#alias(draft, 'scene', context.sceneId),
+      combatAlias: overrides.combatAlias ?? this.#alias(draft, 'combat', context.combatId),
+      round: overrides.round ?? context.round,
+      turn: overrides.turn ?? context.turn,
       ...(detail ? { detail: detail.slice(0, 80) } : {}),
     };
-    await this.#store.appendEvent(this.#meta.id, event);
-    this.#meta.updatedAt = timestamp;
-    await this.#store.updateSession(this.#meta);
+    draft.eventSequence = event.sequence;
+    draft.updatedAt = timestamp;
+    await this.#store.commitRecord(draft, { kind: 'event', value: event });
+    Object.assign(meta, draft);
     this.#renderPanel();
   }
 
@@ -507,33 +688,34 @@ export class SessionMonitorRuntime {
     error: unknown,
     packageIds: string[] = [],
   ): Promise<void> {
-    if (!this.#meta || this.#meta.state !== 'active') return;
-    if (this.#meta.errorSequence >= MAX_ERRORS) {
-      this.#meta.truncated.errors = true;
-      await this.#store.updateSession(this.#meta);
-      return;
-    }
-    const sanitized = await createSanitizedError({
-      sequence: ++this.#meta.errorSequence,
-      startedAt: this.#meta.startedAt,
-      source,
-      error,
-      sensitiveValues: this.#sensitiveValues,
-      packageIds,
+    const meta = this.#meta;
+    if (!meta || !this.#acceptCollection() || meta.state !== 'active') return;
+    await this.#queueWrite(async () => {
+      const draft = structuredClone(meta);
+      if (draft.errorSequence >= MAX_ERRORS) {
+        draft.truncated.errors = true;
+        await this.#store.updateSession(draft);
+        Object.assign(meta, draft);
+        return;
+      }
+      const sanitized = await createSanitizedError({
+        sequence: draft.errorSequence + 1, startedAt: draft.startedAt,
+        source, error, sensitiveValues: this.#sensitiveValues, packageIds,
+      });
+      draft.errorSequence = sanitized.sequence;
+      draft.updatedAt = sanitized.timestamp;
+      await this.#store.commitRecord(draft, { kind: 'error', value: sanitized });
+      Object.assign(meta, draft);
+      this.#renderPanel();
     });
-    await this.#store.appendError(this.#meta.id, sanitized);
-    this.#meta.updatedAt = sanitized.timestamp;
-    await this.#store.updateSession(this.#meta);
-    this.#renderPanel();
   }
 
-  async #alias(kind: 'scene' | 'combat', raw: unknown): Promise<string | null> {
-    if (!this.#meta || typeof raw !== 'string' || !raw) return null;
-    const collection = kind === 'scene' ? this.#meta.aliases.scenes : this.#meta.aliases.combats;
+  #alias(meta: SessionMeta, kind: 'scene' | 'combat', raw: unknown): string | null {
+    if (typeof raw !== 'string' || !raw) return null;
+    const collection = kind === 'scene' ? meta.aliases.scenes : meta.aliases.combats;
     if (collection[raw]) return collection[raw]!;
     const prefix = kind === 'scene' ? 'scene' : 'combat';
     collection[raw] = `${prefix}-${Object.keys(collection).length + 1}`;
-    await this.#store.updateSession(this.#meta);
     return collection[raw]!;
   }
 
@@ -566,7 +748,7 @@ export class SessionMonitorRuntime {
 
   #requireActive(): void {
     this.#requireGm();
-    if (!this.#meta || this.#meta.state !== 'active') throw new Error('No active monitoring session.');
+    if (!this.#meta || this.#meta.state !== 'active' || !this.#accepting) throw new Error('No active monitoring session.');
   }
 
   #mountPanel(): void {
@@ -585,6 +767,7 @@ export class SessionMonitorRuntime {
           <button type="button" data-action="start"></button>
           <button type="button" data-action="mark"></button>
           <button type="button" data-action="stop"></button>
+          <button type="button" data-action="help"></button>
         </div>
       </div>`;
     const header = panel.querySelector<HTMLElement>('[data-drag-handle]');
@@ -606,7 +789,7 @@ export class SessionMonitorRuntime {
       toggle.setAttribute('aria-controls', 'fvtt-session-monitor-body');
       toggle.setAttribute('aria-label', 'Toggle controls');
     }
-    for (const [action, label] of [['start', 'Start monitoring'], ['mark', 'Mark jank now'], ['stop', 'Stop and export monitoring']] as const) {
+    for (const [action, label] of [['start', 'Start monitoring'], ['mark', 'Mark jank now'], ['stop', 'Stop and export monitoring'], ['help', 'Open monitoring help']] as const) {
       panel.querySelector<HTMLButtonElement>(`[data-action="${action}"]`)?.setAttribute('aria-label', label);
     }
     panel.addEventListener('click', (event) => {
@@ -615,9 +798,10 @@ export class SessionMonitorRuntime {
         return;
       }
       const action = (event.target as HTMLElement)?.closest<HTMLElement>('[data-action]')?.dataset.action;
-      if (action === 'start') void this.startSession();
-      if (action === 'mark') void this.markJank();
-      if (action === 'stop') void this.stopSession();
+      if (action === 'start') this.#runPanelAction(() => this.startSession());
+      if (action === 'mark') this.#runPanelAction(() => this.markJank());
+      if (action === 'stop') this.#runPanelAction(() => this.stopSession());
+      if (action === 'help') this.#runPanelAction(() => openMonitorHelp(this.#globals));
       if (action === 'collapse') this.#togglePanelExpanded();
       if (!action && panel.classList.contains('collapsed')) this.#expandPanelTemporarily();
     });
@@ -636,6 +820,16 @@ export class SessionMonitorRuntime {
     this.#panelPreference = this.#readPanelPreference();
     this.#observePanelLayout();
     this.#layoutPanel();
+  }
+
+  #runPanelAction(work: () => Promise<unknown>): void {
+    void Promise.resolve().then(work).then(() => {
+      if (this.#accepting || this.#meta?.state !== 'active') this.#panelError = false;
+      this.#renderPanel();
+    }, () => {
+      this.#panelError = true;
+      this.#renderPanel();
+    });
   }
 
   #togglePanelExpanded(): void {
@@ -851,11 +1045,14 @@ export class SessionMonitorRuntime {
   #renderPanel(): void {
     if (!this.#panel) return;
     const status = this.getStatus();
-    const active = status.state === 'active';
+    const active = status.state === 'active' && this.#accepting;
+    const canStop = status.state === 'active';
     const companionAge = status.companionLastSeenAt ? Date.now() - Date.parse(status.companionLastSeenAt) : Infinity;
     this.#panel.dataset.state = status.state;
     setText(this.#panel, 'title', localize(this.#globals.game, 'FSM.Title', 'Session Monitor'));
-    const stateLabel = localize(this.#globals.game, `FSM.State.${status.state}`, status.state);
+    const stateLabel = localize(this.#globals.game,
+      canStop && !active ? 'FSM.State.interrupted' : `FSM.State.${status.state}`,
+      canStop && !active ? 'Interrupted' : status.state);
     setText(this.#panel, 'state', stateLabel);
     setText(this.#panel, 'body-state', stateLabel);
     setText(this.#panel, 'elapsed', formatDuration(status.elapsedMs));
@@ -867,14 +1064,13 @@ export class SessionMonitorRuntime {
     const companion = companionAge <= 25_000
       ? localize(this.#globals.game, 'FSM.Companion.connected', 'Companion connected')
       : localize(this.#globals.game, 'FSM.Companion.missing', 'Companion missing');
-    setText(
-      this.#panel,
-      'detail',
-      `${companion} · ${status.samples} samples · max gap ${formatMs(status.recentMaxFrameGapMs)}`,
-    );
+    setText(this.#panel, 'detail', this.#panelError
+      ? localize(this.#globals.game, 'FSM.Error.operation', 'Operation could not be completed. Retry or reload.')
+      : `${companion} · ${status.samples} samples · max gap ${formatMs(status.recentMaxFrameGapMs)}`);
     setButton(this.#panel, 'start', localize(this.#globals.game, 'FSM.Action.start', 'Start'), !active);
     setButton(this.#panel, 'mark', localize(this.#globals.game, 'FSM.Action.mark', 'Jank now'), active);
-    setButton(this.#panel, 'stop', localize(this.#globals.game, 'FSM.Action.stop', 'Stop & export'), active);
+    setButton(this.#panel, 'stop', localize(this.#globals.game, 'FSM.Action.stop', 'Stop & export'), canStop);
+    setButton(this.#panel, 'help', localize(this.#globals.game, 'FSM.Action.help', 'Help'), status.enabled);
     if (!active) this.#panel.classList.remove('collapsed');
     const toggle = this.#panel.querySelector<HTMLButtonElement>('[data-action="collapse"]');
     if (toggle) {

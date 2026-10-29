@@ -41,9 +41,9 @@ describe('locked v14 all-language schema key',()=>{
   });
   test('preserves similar unknown phrases and every unrelated actor field',async()=>{
     const actor=await generated(['Aquan signs','All but Draconic']);
-    expect(actor.system.traits.languages).toEqual({value:['Aquan signs','All but Draconic'],custom:''});
+    expect(actor.system.traits.languages).toEqual({value:[],custom:'Aquan signs; All but Draconic'});
     const baseline=await generated([]);
-    const normalized=structuredClone(actor);normalized.system.traits.languages.value=[];
+    const normalized=structuredClone(actor);normalized.system.traits.languages.custom='';
     expect(normalized).toEqual(baseline);
   });
   test('maps the source word, the canonical code and the existing Chinese label to ALL through the formal workflow',async()=>{
@@ -56,9 +56,9 @@ describe('locked v14 all-language schema key',()=>{
   });
   test('does not treat a partial or unknown language phrase as all languages',async()=>{
     const actor=await generated(['common','All but Draconic','Allied signs']);
-    expect(actor.system.traits.languages.value).toEqual(['common','All but Draconic','Allied signs']);
+    expect(actor.system.traits.languages).toEqual({value:['common'],custom:'All but Draconic; Allied signs'});
     const baseline=await generated(['common']);
-    const normalized=structuredClone(actor);normalized.system.traits.languages.value=['common'];
+    const normalized=structuredClone(actor);normalized.system.traits.languages.custom='';
     expect(normalized).toEqual(baseline);
   });
   test('leaves the legacy target language mapping unchanged',()=>{

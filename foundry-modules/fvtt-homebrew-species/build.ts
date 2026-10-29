@@ -13,7 +13,7 @@ import {
 
 export const MODULE_ID = 'fvtt-homebrew-species' as const;
 export const MODULE_VERSION = '1.0.0' as const;
-export type SpeciesNextDnd5eRuntimeMaximum = '6.0.2' | '6.0.5';
+export type SpeciesNextDnd5eRuntimeMaximum = '6.0.2' | '6.0.5' | '6.0.6';
 
 interface SpeciesAcceptedLedger {
   schemaVersion: 1 | 2;
@@ -194,6 +194,6 @@ if (import.meta.main) {
   if (!['12', '14', '14.368'].includes(fvttVersion ?? '')) throw new Error('Species module build --fvtt-version must be 12, 14, or 14.368.');
   const maximumIndex = process.argv.indexOf('--dnd5e-runtime-maximum');
   const dnd5eRuntimeMaximum = maximumIndex >= 0 ? process.argv[maximumIndex + 1] : undefined;
-  if (dnd5eRuntimeMaximum !== undefined && !['6.0.2', '6.0.5'].includes(dnd5eRuntimeMaximum)) throw new Error('Species module --dnd5e-runtime-maximum must be 6.0.2 or 6.0.5.');
+  if (dnd5eRuntimeMaximum !== undefined && !['6.0.2', '6.0.5', '6.0.6'].includes(dnd5eRuntimeMaximum)) throw new Error('Species module --dnd5e-runtime-maximum must be 6.0.2, 6.0.5, or 6.0.6.');
   buildHomebrewSpeciesModule({ fvttVersion: fvttVersion as SpeciesTargetVersion, ...(dnd5eRuntimeMaximum ? { dnd5eRuntimeMaximum: dnd5eRuntimeMaximum as SpeciesNextDnd5eRuntimeMaximum } : {}) }).then((result) => console.log(JSON.stringify(result, null, 2))).catch((error) => { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; });
 }

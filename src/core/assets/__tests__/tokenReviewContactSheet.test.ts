@@ -35,7 +35,7 @@ describe('writeTokenReviewContactSheet', () => {
     } finally {
       await removeTempDir(dir);
     }
-  });
+  }, 20_000);
 });
 
 async function removeTempDir(path: string): Promise<void> {

@@ -1,4 +1,5 @@
 import { MODULE_ID, TRIGGER_ENGINE_MODULE_ID } from './constants.ts';
+import { isNative6SystemVersion } from './runtime-compatibility.ts';
 import { buildConditionTooltip } from './hud.ts';
 
 const LEGACY_ID = 'fvtt-injury-fading-spirits';
@@ -33,7 +34,7 @@ export function injurySupported(globals: any): boolean {
   return globals.game?.system?.id === 'dnd5e' && (
     (globals.game?.version === '14.364' && globals.game?.system?.version === '5.3.3')
     || (globals.game?.version === '14.368' && globals.game?.system?.version === '5.3.3')
-    || (globals.game?.version === '14.368' && globals.game?.system?.version === '6.0.5')
+    || (globals.game?.version === '14.368' && isNative6SystemVersion(globals.game?.system?.version))
   );
 }
 
@@ -196,7 +197,7 @@ export function applyNineteenCritical(details: Record<string, unknown>, face: nu
   if (face === null || face < 19) return false;
   details.updates = { 'system.attributes.death.success': 0, 'system.attributes.death.failure': 0, 'system.attributes.hp.value': 1 };
   details.chatString = 'DND5E.DeathSaveCriticalSuccess';
-  if (systemVersion === '6.0.5') details.outcome = 'revive';
+  if (isNative6SystemVersion(systemVersion)) details.outcome = 'revive';
   return true;
 }
 
@@ -207,6 +208,7 @@ export class InjuryRuntime {
   readonly internalRevisions = new Map<string, number>();
   readonly hooks: Array<[string, unknown]> = [];
   readonly hudListeners: Array<[string, (event: any) => void]> = [];
+  private socketSubscription: { socket: any; handler: (payload: unknown, senderId: string) => Promise<void> } | undefined;
   started = false;
 
   constructor(globals: any, isActiveGM: () => boolean) { this.globals = globals; this.isActiveGM = isActiveGM; }
@@ -229,14 +231,24 @@ export class InjuryRuntime {
         this.hudListeners.push([name, handler]);
       }
     }
-    this.globals.game?.socket?.on?.(SOCKET, (payload: unknown, senderId: string) =>
-      this.onSocket(payload, senderId).catch((error) => this.report(error)));
+    const socket = this.globals.game?.socket;
+    if (typeof socket?.on === 'function' && typeof socket.off === 'function') {
+      const handler = (payload: unknown, senderId: string) =>
+        this.onSocket(payload, senderId).catch((error) => this.report(error));
+      socket.on(SOCKET, handler);
+      this.socketSubscription = { socket, handler };
+    }
     this.registerStatus();
     if (this.isActiveGM()) void this.importLegacySettings()
       .then(() => this.reconcileActors()).catch((error) => this.report(error));
   }
 
   stop(): void {
+    if (this.socketSubscription) {
+      const { socket, handler } = this.socketSubscription;
+      socket.off(SOCKET, handler);
+      this.socketSubscription = undefined;
+    }
     for (const [name, id] of this.hooks) this.globals.Hooks?.off?.(name, id);
     this.hooks.length = 0;
     for (const [name, handler] of this.hudListeners) this.globals.document?.removeEventListener?.(name, handler, { capture: true });
@@ -598,8 +610,7 @@ export class InjuryRuntime {
     const actor = effect.parent;
     if (!this.managed(actor)) return;
     const stacks = readInjury(actor).stacks;
-    if (stacks > 0) queueMicrotask(() => { void this.resolveActor(actor)
-      .then((current) => this.project(current, readInjury(current).stacks)).catch((error) => this.report(error)); });
+    if (stacks > 0) await this.enqueue(actor, (current) => this.project(current, readInjury(current).stacks));
   }
 
   private async importLegacySettings(): Promise<void> {

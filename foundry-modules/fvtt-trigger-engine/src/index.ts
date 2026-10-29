@@ -61,7 +61,7 @@ export function isSupportedTriggerRuntime(globals: any = globalThis): boolean {
   return game?.system?.id === 'dnd5e' && (
     (game.version === '14.364' && game.system.version === '5.3.3')
     || (game.version === '14.368' && game.system.version === '5.3.3')
-    || (game.version === '14.368' && game.system.version === '6.0.5')
+    || (game.version === '14.368' && (game.system.version === '6.0.5' || game.system.version === '6.0.6'))
   );
 }
 
@@ -98,7 +98,7 @@ export function initializeTriggerEngine(globals: any = globalThis): TriggerEngin
   }
   hooks.once('ready', async () => {
     if (!isSupportedTriggerRuntime(globals)) {
-      if (isActiveGM(globals)) globals.ui?.notifications?.error?.('Trigger Engine supports only Foundry 14.364 / dnd5e 5.3.3 or Foundry 14.368 / dnd5e 5.3.3 or 6.0.5.');
+      if (isActiveGM(globals)) globals.ui?.notifications?.error?.('Trigger Engine supports only Foundry 14.364 / dnd5e 5.3.3 or Foundry 14.368 / dnd5e 5.3.3, 6.0.5 or 6.0.6.');
       return;
     }
     runtime = new TriggerEngineRuntime({ globals, storage: new FoundryTriggerStorage(globals.game) });
@@ -121,8 +121,18 @@ export function attachModuleApi(gameLike: any, moduleApi: TriggerEngineApi | und
 export { createTriggerApi } from './api.ts';
 export { createTriggerManagerApplicationClass, openTriggerManager } from './manager.ts';
 export { TriggerEngineRuntime } from './runtime.ts';
-export * from './evaluator.ts';
-export * from './schema.ts';
+export {
+  getPathValue, extractChangedPaths, pathsAreRelated, watchedPathsMatch,
+  isWatchedPathRelevant, watchedPathsIntersect, evaluateConditionGroup,
+  evaluateCondition, conditionsMatch,
+} from './evaluator.ts';
+export {
+  DEFAULT_TRIGGER_STORE, parseTriggerDefinition, validateTriggerDefinition,
+  isValidTriggerDefinition, isTriggerDefinition, parseTriggerStore,
+  sanitizeTriggerStore, validateTriggerStore, isJsonValue, cloneTrigger,
+  cloneTriggerStore,
+  type ValidationIssue, type ParsedTrigger, type ParsedTriggerStore,
+} from './schema.ts';
 export * from './storage.ts';
 export * from './types.ts';
 

@@ -11,6 +11,13 @@ Large upstream source trees, generated indexes, API mirrors, fonts, icons, and t
 - `references/foundry-v14-api-notes/` preserves the small official Foundry release-note snapshots and their acceptance hashes.
 - Generated v14 Item JSON uses the small locked templates under `references/item-templates/dnd5e-5.3.3`; it does not read the full upstream source tree.
 
+## Historical creature-authoring research
+
+- [2026-09-22 creature, villain and Item authoring research](reviews/2026-09-22-creature-item-authoring-opportunities.md) retains fixed external sources, capability limits and license distinctions. Actor blueprints and readable previews are already implemented; Item recipes and broader villain/lair ideas remain research proposals.
+- [2026-09-24 D&D 2024 statblock presentation sources](reviews/2026-09-24-dnd2024-statblock-preview-reference.md) retains official SRD/conversion-guide references, field order and the rule against inventing missing values. The renderer is already in the unified Forge workbench; visual style is separate from rules and runtime acceptance.
+
+Both records distinguish their original dated snapshots from the implementation status reviewed on 2026-10-08. Archiving them does not introduce commands, dependencies, installs or new development commitments.
+
 ## Local layout
 
 The ignored cache root defaults to `.local/references/`. Set

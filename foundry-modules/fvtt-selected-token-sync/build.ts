@@ -51,8 +51,8 @@ export function validateManifest(manifest: Record<string, any>): void {
   }
   const dnd5e = (manifest.relationships?.systems ?? []).find((entry: any) => entry.id === 'dnd5e');
   const system = dnd5e?.compatibility ?? {};
-  if (system.minimum !== '6.0.5' || system.verified !== '6.0.5' || system.maximum !== '6.0.5') {
-    throw new Error('dnd5e compatibility must be exactly 6.0.5.');
+  if (system.minimum !== '6.0.5' || system.verified !== '6.0.5' || system.maximum !== '6.0.6') {
+    throw new Error('dnd5e compatibility must retain verified 6.0.5 and admit only through 6.0.6.');
   }
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(['scripts/index.js'])) throw new Error('Browser entry contract drifted.');
   if (manifest.socket !== undefined) throw new Error('This module must not declare a socket.');

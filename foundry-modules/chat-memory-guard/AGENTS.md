@@ -18,7 +18,7 @@
 - `bun run test:chat-memory-guard`
 - `bun run build:chat-memory-guard`
 - `bun run typecheck:foundry-modules`
-- 当前 1.1.0 候选的 manifest 范围为 ServerNext Foundry 14.368 / dnd5e 6.0.2–6.0.5，`verified` 保持 6.0.2；在 6.0.5 还需检查设置、聊天渲染、裁剪和 `game.modules.get("chat-memory-guard").api.getStats()`。旧 Mirror 或 6.0.2 验收不替代 6.0.5 读回。
+- 当前1.1.0候选的manifest范围为ServerNext Foundry14.368 / dnd5e6.0.2–6.0.6，`verified`保持6.0.2。6.0.6已有25条世界消息/20张页面卡、禁用/再启用重载与帮助限定接受；真实缩略图、滚动暂停和长时仍待验；旧Mirror、6.0.2和6.0.5证据保留各自目标。
 
 ## 完成标准
 

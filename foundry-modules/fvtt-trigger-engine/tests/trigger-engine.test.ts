@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { createTriggerApi } from '../src/api.ts';
 import { registerTriggerEngineSettings } from '../src/index.ts';
 import { createTriggerManagerApplicationClass } from '../src/manager.ts';
-import { evaluateCondition, evaluateConditionGroup, watchedPathsMatch } from '../src/evaluator.ts';
+import { evaluateCondition, evaluateConditionGroup, triggerMatchesEvent, watchedPathsMatch } from '../src/evaluator.ts';
 import { TriggerEngineRuntime } from '../src/runtime.ts';
 import { MemoryTriggerStorage } from '../src/storage.ts';
 import { parseTriggerDefinition, parseTriggerStore } from '../src/schema.ts';
@@ -85,6 +85,24 @@ describe('trigger schema and watched path evaluator', () => {
     expect(watchedPathsMatch(['system.attributes.hp.value'], { 'system.attributes.hp.value': 4 })).toBeTrue();
     expect(watchedPathsMatch(['system.attributes.hp.value'], { system: { attributes: { ac: { value: 12 } } } })).toBeFalse();
     expect(watchedPathsMatch(['system.attributes.hp.value'], { system: { attributes: { hp: { temp: 3 } } } })).toBeFalse();
+    // dnd5e 6.0.6 writes this Actor flag when a linked token moves.
+    expect(watchedPathsMatch(['system.attributes.hp.value'], { flags: { dnd5e: { lastMovedToken: 'Scene.s.Token.t' } } })).toBeFalse();
+    expect(watchedPathsMatch(['system.attributes.hp.value'], { 'flags.dnd5e.lastMovedToken': 'Scene.s.Token.t' })).toBeFalse();
+    expect(watchedPathsMatch(['flags.dnd5e.lastMovedToken'], { 'flags.dnd5e.lastMovedToken': 'Scene.s.Token.t' })).toBeTrue();
+  });
+
+  test('selects Actor and Combat triggers without mixing watched paths or conditions', () => {
+    const hp = trigger('hp', ['macro'], { conditions: hpAfter(5) });
+    const turn = trigger('turn', ['macro'], {
+      event: { type: 'combatTurnStart', documentType: 'Actor' },
+      conditions: hpAfter(5),
+    });
+    const before = { system: { attributes: { hp: { value: 10 } } } };
+    const after = { system: { attributes: { hp: { value: 5 } } } };
+    expect(triggerMatchesEvent(hp, { type: 'documentUpdate', documentType: 'Actor' }, before, after, { 'flags.dnd5e.lastMovedToken': 'Token.t' })).toBeFalse();
+    expect(triggerMatchesEvent(hp, { type: 'documentUpdate', documentType: 'Actor' }, before, after, { 'system.attributes.hp.value': 5 })).toBeTrue();
+    expect(triggerMatchesEvent(turn, { type: 'combatTurnStart', documentType: 'Actor' }, before, after)).toBeTrue();
+    expect(triggerMatchesEvent(turn, { type: 'combatTurnEnd', documentType: 'Actor' }, before, after)).toBeFalse();
   });
 
   test('evaluates ALL/ANY and all comparison operators over before, after, and literal operands', () => {
@@ -112,6 +130,55 @@ describe('trigger schema and watched path evaluator', () => {
 describe('Actor documentUpdate runtime', () => {
   const runtimes: TriggerEngineRuntime[] = [];
   afterEach(async () => { for (const runtime of runtimes.splice(0)) await runtime.stop(); });
+
+  test('GM undo restoration refreshes snapshots without reapplying rules and a player cannot spoof it',async()=>{
+    const gm={id:'gm',isGM:true,active:true},target=actor(10);
+    const runtime=new TriggerEngineRuntime({globals:globalsFor(gm,[target]),storage:new MemoryTriggerStorage()});runtimes.push(runtime);await runtime.start();
+    const contexts:any[]=[];runtime.subscribe(context=>{contexts.push(context);});
+    target.set('system.attributes.hp.value',9);
+    const restored=await runtime.handleDocumentUpdate(target,{'system.attributes.hp.value':9},{openSessionDeckUndo:true},'gm');
+    expect(restored.skippedReason).toBe('undo-restore');expect(contexts).toHaveLength(0);
+    target.set('system.attributes.hp.value',8);
+    await runtime.handleDocumentUpdate(target,{'system.attributes.hp.value':8},{openSessionDeckUndo:true},'player');
+    expect(contexts).toHaveLength(1);expect(contexts[0].before.system.attributes.hp.value).toBe(9);expect(contexts[0].after.system.attributes.hp.value).toBe(8);
+  });
+
+  test('whenIdle waits for queued listeners and a second document enqueued by them',async()=>{
+    const gm={id:'gm',isGM:true,active:true},first=actor(10,'Actor.first'),second=actor(10,'Actor.second');
+    const runtime=new TriggerEngineRuntime({globals:globalsFor(gm,[first,second]),storage:new MemoryTriggerStorage()});runtimes.push(runtime);await runtime.start();
+    const api=createTriggerApi(()=>runtime,()=>runtime.isActiveGM());
+    let releaseFirst!:()=>void,releaseSecond!:()=>void,finished=false;
+    const gateFirst=new Promise<void>(resolve=>{releaseFirst=resolve;}),gateSecond=new Promise<void>(resolve=>{releaseSecond=resolve;});
+    runtime.subscribe(async context=>{if(context.documentUuid===first.uuid){await gateFirst;void runtime.handleDocumentUpdate(second,{});}else await gateSecond;});
+    void runtime.handleDocumentUpdate(first,{});const idle=api.whenIdle().then(()=>{finished=true;});
+    await new Promise(resolve=>setTimeout(resolve,0));expect(finished).toBeFalse();releaseFirst();
+    await new Promise(resolve=>setTimeout(resolve,0));expect(finished).toBeFalse();releaseSecond();await idle;expect(finished).toBeTrue();
+    expect(api.capabilities.awaitIdle).toBe(1);
+    const player=createTriggerApi(()=>runtime,()=>false);expect(()=>player.whenIdle()).toThrow('active GMs');
+  });
+
+  test('unsubscribe skips a snapshotted Actor listener that has not started', async () => {
+    const gm = { id: 'gm', isGM: true, active: true };
+    const target = actor(10);
+    const runtime = new TriggerEngineRuntime({ globals: globalsFor(gm, [target]), storage: new MemoryTriggerStorage() });
+    runtimes.push(runtime);
+    await runtime.start();
+    let firstStarted!: () => void;
+    let releaseFirst!: () => void;
+    const started = new Promise<void>((resolve) => { firstStarted = resolve; });
+    const gate = new Promise<void>((resolve) => { releaseFirst = resolve; });
+    const calls: string[] = [];
+    runtime.subscribe(async () => { calls.push('first'); firstStarted(); await gate; });
+    const unsubscribe = runtime.subscribe(() => { calls.push('removed'); });
+    runtime.subscribe(() => { calls.push('third'); });
+    target.set('system.attributes.hp.value', 9);
+    const delivery = runtime.handleDocumentUpdate(target, { 'system.attributes.hp.value': 9 });
+    await started;
+    unsubscribe();
+    releaseFirst();
+    await delivery;
+    expect(calls).toEqual(['first', 'third']);
+  });
 
   test('captures native revision before queued subscriber delivery', async () => {
     const gm = { id: 'gm', isGM: true, active: true };
@@ -204,6 +271,7 @@ describe('Actor documentUpdate runtime', () => {
     await runtime.start();
     target.set('system.attributes.ac.value', 12);
     expect((await runtime.handleDocumentUpdate(target, { system: { attributes: { ac: { value: 12 } } } })).results).toHaveLength(0);
+    expect((await runtime.handleDocumentUpdate(target, { 'flags.dnd5e.lastMovedToken': 'Scene.s.Token.t' })).results).toHaveLength(0);
     target.set('system.attributes.hp.value', 6);
     expect((await runtime.handleDocumentUpdate(target, { 'system.attributes.hp.value': 6 })).results.map((entry) => entry.status)).toEqual(['executed']);
     target.set('system.attributes.hp.value', 4);

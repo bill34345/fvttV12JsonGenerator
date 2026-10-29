@@ -1,10 +1,12 @@
 # fvttV12JsonGenerator
 
-把 Obsidian 中的中文 YAML/Markdown、英文 bestiary 文本和批量怪物资料转换成 Foundry VTT dnd5e Actor/Item JSON。项目默认兼容 Foundry v12，同时支持显式生成 Foundry v14 JSON，并提供来源核对、GoddessFantasy 采集流水线、图片处理、Web 工作台和隔离的 Foundry v14 验收环境。
+本仓库包含 Foundry VTT 的资料生成工具与独立跑团模块。中文 YAML/Markdown、英文 bestiary 和正式 Intake 来源通过共享流程生成 dnd5e Actor/Item JSON；Web 工作台与 Forge 提供不同使用入口。
+
+当前主要平台为 Foundry V14，dnd5e 5.3.3 与 6.x 按功能分别适配和验收。CLI 省略版本仍默认 V12，常规生成请显式使用 `--fvtt-version 14 --effect-profile core --icon-mode off`；模块的 6.x 适配不代表生成器全部支持 6.x。详见[当前支持矩阵](docs/acceptance/current-support-matrix.md)和[版本流程](docs/runbooks/dnd5e-version-following.md)。
 
 ## 离线中文工具手册
 
-双击根目录的 [工具手册.html](工具手册.html)，按用途查找转换入口、资料工具、Foundry 模块和维护说明。页面自带全文搜索、操作步骤、命令和选定原始文档，阅读无需联网或启动服务。建议收藏 master 工作区里的文件；单独复制出去的文件是版本快照。
+双击根目录的 [工具手册.html](工具手册.html)，从“开始使用”选择入口，并在“版本与兼容性”核对目标。页面提供按用途的目录、全文搜索、操作步骤、本页导航、命令和可展开的离线原始说明，阅读无需联网或启动服务。建议收藏 master 工作区里的文件；单独复制出去的文件是版本快照。
 
 新功能或用户可见行为变化应在同一分支更新工具说明，人工核对后重新生成页面，与功能一起合并到 master。`bun run handbook:check` 已纳入完整仓库门禁。维护命令、核对记录和合并后步骤见 [手册维护流程](docs/runbooks/handbook-maintenance.md)。
 

@@ -1,4 +1,6 @@
 {
+  "FVTTJSONSPELL.Help.Label": "使用帮助",
+  "FVTTJSONSPELL.Help.Failed": "无法打开法术解析器说明，请确认 GM 身份后重试。",
   "FVTTJSONSPELL.Settings.SourcePriority.Name": "法术来源优先级",
   "FVTTJSONSPELL.Settings.SourcePriority.Hint": "仅在法术身份精确匹配后，按顺序应用包与合集偏好。",
   "FVTTJSONSPELL.Settings.SavedMappings.Name": "已保存的法术映射",

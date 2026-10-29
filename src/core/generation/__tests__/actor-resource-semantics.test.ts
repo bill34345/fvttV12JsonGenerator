@@ -2,10 +2,17 @@ import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ParserFactory } from '../../parser/router';
+import yaml from 'js-yaml';
+import { parseActorResourceSemantics } from '@fvtt-json-generator/parser';
 import { convertMarkdownContentToJson } from '../../workflow/singleFileConversion';
 import { assertEqualStructure } from '../../utils/assertEqualStructure';
 
 const fixtureDir = join(import.meta.dir, 'fixtures');
+function strictResource(content:string) {
+  const frontmatter=content.match(/^---\r?\n([\s\S]*?)\r?\n---/)![1]!;
+  return parseActorResourceSemantics((yaml.load(frontmatter) as Record<string,unknown>)['资源机制']);
+}
+
 
 function fixture(name: string): string {
   return readFileSync(join(fixtureDir, name), 'utf8');
@@ -226,7 +233,7 @@ describe('source-derived Actor resource semantics', () => {
     expect(unrelated.resourceSemantics).toBeUndefined();
   });
 
-  it('fails closed on duplicate IDs and incomplete derived tier coverage', () => {
+  it('strict resource validation rejects duplicate IDs and incomplete derived tiers while Actor parsing retains content', () => {
     const source = fixture('actor-resource-semantics.md');
     const duplicateId = source.replace('ID: spikes', 'ID: shell-energy');
     const incompleteTiers = source.replace(
@@ -234,13 +241,19 @@ describe('source-derived Actor resource semantics', () => {
       '',
     );
 
-    expect(() => new ParserFactory().parse(duplicateId))
+    expect(() => strictResource(duplicateId))
       .toThrow('InvalidResourceSemantics: 资源机制.资源[1].ID: duplicate ID "shell-energy"');
-    expect(() => new ParserFactory().parse(incompleteTiers))
+    expect(() => strictResource(incompleteTiers))
       .toThrow('tiers must cover 0..12 without gaps or overlap');
+    for(const invalid of [duplicateId,incompleteTiers]){
+      const parsed=new ParserFactory().parse(invalid) as any;
+      expect(parsed.name).toBe((new ParserFactory().parse(source) as any).name);
+      expect(parsed.candidateReview.findings.length).toBeGreaterThan(0);
+      expect(parsed.details.biography).toContain('GM：');
+    }
   });
 
-  it('fails closed on unknown nested fields and unsupported variable-scaling bounds', () => {
+  it('reports invalid nested resource fields and retains the original values for review', () => {
     const source = fixture('actor-resource-semantics.md');
     const unknownField = source.replace(
       '      恢复: lr\n',
@@ -251,9 +264,14 @@ describe('source-derived Actor resource semantics', () => {
       '      最小: 2\n      最大: 2\n',
     );
 
-    expect(() => new ParserFactory().parse(unknownField))
+    expect(() => strictResource(unknownField))
       .toThrow('资源机制.资源[1].猜测机制: unknown field');
-    expect(() => new ParserFactory().parse(nonUnitMinimum))
+    expect(() => strictResource(nonUnitMinimum))
       .toThrow('the current native amount-scaling contract requires 1 = min');
+    for(const [invalid,message] of [[unknownField,'猜测机制: unknown field'],[nonUnitMinimum,'requires 1 = min']]){
+      const parsed=new ParserFactory().parse(invalid!) as any;
+      expect(parsed.candidateReview.findings.map((x:any)=>x.message).join('\n')).toContain(message);
+      expect(parsed.details.biography).toContain('GM：');
+    }
   });
 });

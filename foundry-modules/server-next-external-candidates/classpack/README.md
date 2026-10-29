@@ -1,5 +1,7 @@
 # DND5E不全包 ServerNext 6.0.5 候选
 
+2026-10-12新增6.0.6加载清单投影候选：`projectClasspack606LoadManifest()`只接受已核v4.3.4-next.1/Core14.368、21 packs、原upstream/迁移/来源投影身份的6.0.5 manifest，复制后仅提高系统maximum。实际准备还绑定Next原manifest/runtime/baseline SHA；不重建或覆盖已有packs、脚本，不修改迁移修订或verified。既有`preflight/migrate/confirmRecovery`仍在6.0.6数据访问前拒绝，readonly inventory保持原语义。这只准备普通加载前置，6.0.6实际加载/代表内容仍未接受，不能触发旧迁移来“修复兼容”。纯函数反证入口为包内`test:classpack-load-compatibility`；实际状态见[606预检](../../../docs/reviews/2026-10-12-next-606-preflight.md)。
+
 本候选使用官方v4.3.4固定输入，目标Core14.368、dnd5e6.0.5和当前Next的DAE14.0.14+servernext.1／Midi-QOL local.10。输入压缩包SHA-256为`8dceac980d5521c3119141ee166589a0f5ab78c13d9987f61c33f96c72fe22c1`，来源为[固定官方发布](https://api.github.com/repos/HJSmile/classpack/releases/tags/v4.3.4)。保留模块ID、21合集名（包括new-icon）、5655顶层文档和所有既有身份。upstream与dist被Git忽略。
 
 本轮按用户选择完成6.0.5兼容和来源明确的坏链修复。已有V14纯函数修12个独立Macro，按全文原SHA修13个Item的15个嵌入命令。确定内容修复包含传送头盔Cast活动指向现存Teleport，以及神莓、附盖提灯、灯油、工具锤、高档服装、祭袍六组原来源别名的17处引用；MPMM歌利亚的两处链接复用同规则的现存石之坚韧（d12+CON、熟练加值次数、长休恢复）。另将此MPMM特征与原文不符的固定1次上限修为@prof；除该明确次数修复外，其余数值、规则版本、ID和历史溯源保持。Dust Devil缺失召唤Actor、Open Hand／Sun Soul缺失辅助法术和不确定特殊物件单列后续，不创建替代内容。

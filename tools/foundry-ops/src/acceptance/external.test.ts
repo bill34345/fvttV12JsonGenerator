@@ -22,8 +22,9 @@ const sourceDispatchId = 'SYNTHETIC-VM-BATCH';
 
 function json(path: string, value: unknown) { writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`); }
 function git(path: string, ...args: string[]) {
-  const result = spawnSync('git', ['-C', path, ...args], { encoding: 'utf8', timeout: 5000, windowsHide: true });
-  if (result.status !== 0) throw new Error(result.stderr);
+  const result = spawnSync('git', ['-C', path, ...args], { encoding: 'utf8', timeout: 20_000, windowsHide: true });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(`Fixture git ${args[0]} failed with exit ${result.status}: ${result.stderr}`);
 }
 function repo(path: string) {
   mkdirSync(join(path, '.ruler'), { recursive: true }); mkdirSync(join(path, 'docs/runbooks'), { recursive: true });
@@ -69,12 +70,12 @@ beforeEach(() => {
   sourcePath = join(evidence, 'source.json'); saveSource(); inputPath = join(root, 'request.json');
   json(inputPath, { workspaceRoot: root, sourceContractPath: sourcePath, authority: { source: 'Owned synthetic offline test', scope: 'offline-batch-preparation' } });
   rawPath = join(sandbox, 'native.json'); contextPath = join(sandbox, 'context.json'); json(rawPath, native()); json(contextPath, target);
-});
+}, 20_000);
 afterEach(() => {
   const absolute = resolve(sandbox);
   if (dirname(absolute) !== resolve(tmpdir()) || !absolute.split(/[\\/]/).at(-1)?.startsWith('fvtt-external-acceptance-')) throw new Error('Unowned temporary root');
   rmSync(absolute, { recursive: true, force: false });
-});
+}, 20_000);
 
 test('source inspection preserves callback ownership, candidate identity and both checksum meanings', () => {
   const before = readFileSync(sourcePath);

@@ -5,6 +5,7 @@ import type { DeckSnapshot } from '../src/types.ts';
 function snapshot(refreshedAt = 0): DeckSnapshot {
   return {
     supported: true,
+    coreVersion: '14.368',
     world: { id: 'world', title: 'World' },
     system: { id: 'dnd5e', version: '5.3.3' },
     scene: null,

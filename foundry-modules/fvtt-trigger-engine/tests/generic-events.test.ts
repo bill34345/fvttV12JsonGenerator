@@ -5,12 +5,14 @@ import { TriggerEngineRuntime, type ExternalEventLedgerStorage } from '../src/ru
 import { MemoryTriggerStorage } from '../src/storage.ts';
 import type { ExternalEvent } from '../src/types.ts';
 
-test('Actor event runtime is limited to the exact 5.3.3 and 6.0.5 pairs', () => {
+test('Actor event runtime is limited to the exact 5.3.3, 6.0.5 and 6.0.6 pairs', () => {
   const globals: any = { game: { version: '14.364', system: { id: 'dnd5e', version: '5.3.3' } } };
   expect(isSupportedTriggerRuntime(globals)).toBeTrue();
   globals.game.version = '14.368'; globals.game.system.version = '6.0.5';
   expect(isSupportedTriggerRuntime(globals)).toBeTrue();
-  for (const [core, system] of [['14.368', '6.0.2'], ['14.364', '6.0.5'], ['14.368', '6.0.4']]) {
+  globals.game.system.version = '6.0.6';
+  expect(isSupportedTriggerRuntime(globals)).toBeTrue();
+  for (const [core, system] of [['14.368', '6.0.2'], ['14.364', '6.0.5'], ['14.368', '6.0.4'], ['14.364', '6.0.6'], ['14.368', '6.0.7']]) {
     globals.game.version = core; globals.game.system.version = system;
     expect(isSupportedTriggerRuntime(globals)).toBeFalse();
   }
@@ -78,6 +80,30 @@ describe('public external event bridge', () => {
     for (const runtime of runtimes.splice(0)) await runtime.stop();
   });
 
+  test('unsubscribe skips a snapshotted external listener that has not started', async () => {
+    const gm = { id: 'gm', isGM: true, active: true };
+    const runtime = new TriggerEngineRuntime({ globals: globalsFor(gm), storage: new MemoryTriggerStorage(), externalEventStorage: new MemoryExternalEventLedger() });
+    runtimes.push(runtime);
+    await runtime.start();
+    const api = createTriggerApi(() => runtime, () => runtime.isActiveGM());
+    let firstStarted!: () => void;
+    let releaseFirst!: () => void;
+    let finalDelivered!: () => void;
+    const started = new Promise<void>((resolve) => { firstStarted = resolve; });
+    const gate = new Promise<void>((resolve) => { releaseFirst = resolve; });
+    const done = new Promise<void>((resolve) => { finalDelivered = resolve; });
+    const calls: string[] = [];
+    api.subscribeExternal(async () => { calls.push('first'); firstStarted(); await gate; });
+    const unsubscribe = api.subscribeExternal(() => { calls.push('removed'); });
+    api.subscribeExternal(() => { calls.push('third'); finalDelivered(); });
+    expect((await api.publishExternal(event())).status).toBe('published');
+    await started;
+    unsubscribe();
+    releaseFirst();
+    await done;
+    expect(calls).toEqual(['first', 'third']);
+  });
+
   test('exposes the versioned capability while preserving the old trigger API', async () => {
     const gm = { id: 'gm', isGM: true, active: true };
     const runtime = new TriggerEngineRuntime({ globals: globalsFor(gm), storage: new MemoryTriggerStorage() });
@@ -86,7 +112,7 @@ describe('public external event bridge', () => {
     const api = createTriggerApi(() => runtime, () => runtime.isActiveGM());
 
     expect(api.apiVersion).toBe(1);
-    expect(api.capabilities).toEqual({ externalEvents: 1 });
+    expect(api.capabilities).toMatchObject({ externalEvents: 1, awaitIdle: 1, combatRewind: 1 });
     expect(api.list()).toEqual([]);
     expect(api.getStore()).toEqual({ schemaVersion: 1, triggers: [] });
     expect(typeof api.subscribe).toBe('function');
@@ -135,6 +161,81 @@ describe('public external event bridge', () => {
     expect(receivedB).toHaveLength(0);
     expect((await apiB.publishExternal(event())).status).toBe('duplicate');
     expect(receivedB).toHaveLength(0);
+  });
+
+  test('deduplicates by namespace and event ID while preserving distinct producers', async () => {
+    const ledger = new MemoryExternalEventLedger();
+    const gm = { id: 'gm', isGM: true, active: true };
+    const runtime = new TriggerEngineRuntime({ globals: globalsFor(gm), storage: new MemoryTriggerStorage(), externalEventStorage: ledger });
+    runtimes.push(runtime);
+    await runtime.start();
+    const api = createTriggerApi(() => runtime, () => runtime.isActiveGM());
+    const received: string[] = [];
+    api.subscribeExternal((envelope) => { received.push(envelope.namespace); });
+    const first = event({ namespace: 'first-module', eventId: 'same-id' });
+    const second = event({ namespace: 'second-module', eventId: 'same-id' });
+    expect((await api.publishExternal(first)).status).toBe('published');
+    expect((await api.publishExternal(second)).status).toBe('published');
+    expect((await api.publishExternal(first)).status).toBe('duplicate');
+    await flushExternalDelivery();
+    expect(received).toEqual(['first-module', 'second-module']);
+    expect(ledger.read().events.map((entry) => entry.namespace)).toEqual(received);
+  });
+
+  test('invalid data and accessors cause zero persistence and delivery', async () => {
+    let saves = 0;
+    const storage: ExternalEventLedgerStorage = {
+      load: () => JSON.stringify({ schemaVersion: 1, events: [] }),
+      save: () => { saves += 1; },
+    };
+    const gm = { id: 'gm', isGM: true, active: true };
+    const runtime = new TriggerEngineRuntime({ globals: globalsFor(gm), storage: new MemoryTriggerStorage(), externalEventStorage: storage });
+    runtimes.push(runtime);
+    await runtime.start();
+    const api = createTriggerApi(() => runtime, () => runtime.isActiveGM());
+    const received: ExternalEvent[] = [];
+    api.subscribeExternal((envelope) => { received.push(envelope); });
+    let getterCalls = 0;
+    const accessor = Object.defineProperty(event(), 'data', {
+      enumerable: true, get: () => { getterCalls += 1; return { selected: true }; },
+    });
+    await expect(api.publishExternal(accessor)).rejects.toThrow(/data property/);
+    await expect(api.publishExternal(event({ data: { hiddenRoll: 19 } }))).rejects.toThrow(/raw roll/);
+    await flushExternalDelivery();
+    expect(getterCalls).toBe(0);
+    expect(saves).toBe(0);
+    expect(received).toEqual([]);
+  });
+
+  test('failed persistence retains the previous ledger and delivers only a later committed event', async () => {
+    const original = event({ eventId: 'old-id', attackId: 'old-attack' });
+    let serialized = JSON.stringify({ schemaVersion: 1, events: [original] });
+    let failSave = true;
+    const storage: ExternalEventLedgerStorage = {
+      load: () => serialized,
+      save: (value) => {
+        if (failSave) throw new Error('settings write failed');
+        serialized = value;
+      },
+    };
+    const gm = { id: 'gm', isGM: true, active: true };
+    const runtime = new TriggerEngineRuntime({ globals: globalsFor(gm), storage: new MemoryTriggerStorage(), externalEventStorage: storage });
+    runtimes.push(runtime);
+    await runtime.start();
+    const api = createTriggerApi(() => runtime, () => runtime.isActiveGM());
+    const received: string[] = [];
+    api.subscribeExternal((envelope) => { received.push(envelope.eventId); });
+    const next = event({ eventId: 'next-id', attackId: 'next-attack' });
+    await expect(api.publishExternal(next)).rejects.toThrow('settings write failed');
+    await flushExternalDelivery();
+    expect(JSON.parse(serialized).events).toEqual([original]);
+    expect(received).toEqual([]);
+    failSave = false;
+    expect((await api.publishExternal(original)).status).toBe('duplicate');
+    expect((await api.publishExternal(next)).status).toBe('published');
+    await flushExternalDelivery();
+    expect(JSON.parse(serialized).events).toEqual([original, next]);
+    expect(received).toEqual(['next-id']);
   });
 
   test('persists, delivers, and reloads an envelope with optional fields omitted', async () => {

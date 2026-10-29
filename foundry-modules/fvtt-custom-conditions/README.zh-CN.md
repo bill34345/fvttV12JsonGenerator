@@ -2,6 +2,8 @@
 
 本模块在精确14.364／5.3.3、Mirror14.368／5.3.3与Next14.368／6.0.5配对提供十九状态及伤势。Next已接受原生移动／行动／攻击次数／装备动作，以及真实管理器参数提交和简单HUD开关，完整来源恢复成立。候选另增加正向原生武器效果能力与system.changes写入，163项模块检查及类型检查通过；该写入及既存真实卡片的HP／Slow应用、掷骰前取消已获限定实机接受，拥有来源精确恢复。其他版本与交叉配对拒绝运行。
 
+精确14.368／6.0.6已接受Addled／带参数Frozen的施加、启停、真实管理器、普通客户端重载及外来效果保护；自然启用伤势时，原生HP20→0→1产生一次伤势，原生短休清层，并经公开接口同步IFS当前死亡episode，复活历史与旧injury不变。自有对象清理后原世界／设置／用户读回一致；十九状态全部组合、武器攻击、复活结算和多GM不在该接受范围。当前C1/C2明确条件、伤势与武器效果三owner，只订阅已启用且提供API1的Trigger Engine；停止伤势运行时仅解除自身socket监听，stop/restart由局部测试覆盖，未用实机停用API验证。入口、规则参数和持久身份保持。
+
 在上述精确 Next 配对下，候选为 Automated Conditions 5e 14.603.2 的公开 `ac5e.statusEffectsTables` 可选注册自己的无防备目标规则；冻结和震愕复用该投射状态，由既有引擎合并合法优势／劣势，不强制最终骰模式。适配处理 API 延迟就绪，保留已有条目，停止时只删除自己的条目。此适配已通过七项限定原生目标模式复验；其他 AC5e 版本及关闭其状态自动化的组合未验，不自动改变模块设置。
 
 模块内置 Monsters of Drakkenheim 条件目录中的 19 个状态。Bloodied 使用 dnd5e 原生能力；Drakkenheim Madness 与 Contamination 本期不加入目录。
@@ -75,3 +77,7 @@ Immobilized 与 Frozen 会拦截拖拽、方向键等自主移动，也会拦截
 本地 E2E 使用 `F:\FoundryLab\foundry-v14\data\server-mirror`，地址 `127.0.0.1:30001`（外部 Chrome 用 `localhost:30001` 访问同一实例）。真实组合验收进入 `cor-cotn` 并保留原模组组合；历史隔离 E2E 使用 `fvtt-v14-module-matrix`。状态核心规则、来源生成模板、真实结算与解除、页面重载后不重复扣血、Sickened/取消攻击/自主移动修复均已有对应路径的实测证据。键盘长按受当前浏览器工具能力限制，未完成该输入路径验收；鼠标拖拽与玩家 HUD 高度编辑有独立证据。先前 HUD 和伤势联动验收记录于 `docs/reviews/2026-09-22-condition-hud-localization.md`。此后全 19 项在 CoTN 的 HUD 入口可见性已复验通过，自定义「流血」点击后只打开绑定 Actor 的空参数管理器；本轮其余按钮未逐项点击或结算。本轮 ID、点击路径审计及页面证据见 [全 19 项记录](../../docs/reviews/2026-09-24-all-custom-condition-hud-audit.md)，日常操作见 `docs/runbooks/custom-conditions-and-trigger-engine-usage.md`。
 
 构建、测试和类型检查使用仓库根目录的 `bun run build:custom-conditions`、`bun run test:custom-conditions` 与 `bun run typecheck:foundry-modules`。
+
+## 撤回联动
+
+新版 API 的 capabilities.awaitIdle 和 combatRewind 用于操作台撤回。whenIdle() 等待状态、伤势与武器效果队列；伤势投影的自动重建也进入队列。回合恢复后按触发器引擎通知清理对应内存去重并从当前文档重读行动状态，持久化已完成检查点继续生效。普通操作的伤势、状态与回合结算没有停用；恢复投影时沿用 injuryProjection 维护上下文，避免恢复过程重新生成投影。

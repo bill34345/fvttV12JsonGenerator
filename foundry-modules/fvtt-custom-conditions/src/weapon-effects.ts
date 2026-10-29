@@ -1,4 +1,4 @@
-import { genericConditionsSupported } from './runtime-compatibility.ts';
+import { genericConditionsSupported, isNative6SystemVersion } from './runtime-compatibility.ts';
 import {
   buildWeaponEffectFlag,
   createWeaponEffectInstance,
@@ -74,11 +74,15 @@ export class WeaponEffectRuntime {
 
   isNative6Supported(): boolean {
     return this.globals.game?.version === '14.368' && this.globals.game.system?.id === 'dnd5e'
-      && this.globals.game.system.version === '6.0.5';
+      && isNative6SystemVersion(this.globals.game.system.version);
   }
 
   definitions(): Array<{ kind: WeaponEffectKind; label: string }> {
     return (['sap', 'slow', 'vex'] as const).map((kind) => ({ kind, label: LABELS[kind] }));
+  }
+
+  async whenIdle(): Promise<void> {
+    while (this.#queues.size) await Promise.all([...this.#queues.values()]);
   }
 
   stop(): void {
@@ -326,7 +330,7 @@ export class WeaponEffectRuntime {
       /** No legacy ConditionId is placed in statuses for these effects. */
       statuses: [],
       ...(this.isNative6Supported()
-        ? { system: { changes: changesForWeaponEffect(instance, actor, '6.0.5') } }
+        ? { system: { changes: changesForWeaponEffect(instance, actor, this.globals.game.system.version) } }
         : { changes: changesForWeaponEffect(instance, actor) }),
       origin: origin || sourceOrigin(instance) || null,
       description: descriptionFor(instance),
@@ -336,7 +340,7 @@ export class WeaponEffectRuntime {
 
   private async updateInstance(actor: any, id: string, instance: WeaponEffectInstance, disabled: boolean): Promise<void> {
     const changes = instance.effectKind === 'slow' && !disabled
-      ? changesForWeaponEffect(instance, actor, this.isNative6Supported() ? '6.0.5' : undefined)
+      ? changesForWeaponEffect(instance, actor, this.isNative6Supported() ? this.globals.game.system.version : undefined)
       : [];
     const update: Record<string, unknown> = {
       _id: id,
@@ -362,7 +366,7 @@ export class WeaponEffectRuntime {
       .filter((entry) => !entry.disabled || currentChanges(entry).length > 0)
       .map((entry): Record<string, unknown> | undefined => {
         const changes = winner?.id === entry.id
-          ? changesForWeaponEffect(entry.instance, actor, native6 ? '6.0.5' : undefined)
+          ? changesForWeaponEffect(entry.instance, actor, native6 ? this.globals.game.system.version : undefined)
           : [];
         if (sameChanges(currentChanges(entry), changes, native6)) return undefined;
         return { _id: entry.id, [native6 ? 'system.changes' : 'changes']: changes };
@@ -420,7 +424,7 @@ export class WeaponEffectRuntime {
 
   private requireGM(actor: any): void {
     if (!this.isSupported()) {
-      throw new Error('Weapon Mastery effects require an exact reviewed Foundry/dnd5e pair: 14.364/5.3.3, 14.368/5.3.3 or 14.368/6.0.5.');
+      throw new Error('Weapon Mastery effects require an exact reviewed Foundry/dnd5e pair: 14.364/5.3.3, 14.368/5.3.3, 14.368/6.0.5 or 14.368/6.0.6.');
     }
     if (!this.isActiveGM()) throw new Error('仅当前 active GM 可以操作武器临时效果。');
     if (!actor || actor.documentName !== 'Actor') throw new Error('请选择一个 Actor。');
@@ -443,7 +447,7 @@ export function changesForWeaponEffect(
     ? params.movementTypes
     : ['walk', 'burrow', 'climb', 'fly', 'swim'];
   return movementTypes.flatMap<Record<string, unknown>>((movement) => {
-    if (systemVersion === '6.0.5') return [{
+    if (isNative6SystemVersion(systemVersion)) return [{
       key: 'system.attributes.movement.speeds.' + movement,
       type: 'add',
       value: '-' + reduction,

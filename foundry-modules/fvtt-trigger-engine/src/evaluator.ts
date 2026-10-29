@@ -1,4 +1,4 @@
-import type { ConditionGroup, ConditionOperand, TriggerCondition } from './types.ts';
+import type { ConditionGroup, ConditionOperand, TriggerCondition, TriggerContextEvent, TriggerDefinition } from './types.ts';
 
 /** Resolve a dotted path without evaluating expressions or invoking methods. */
 export function getPathValue(source: unknown, path: string): unknown {
@@ -68,6 +68,19 @@ export function watchedPathsMatch(watchedPaths: readonly string[], changed: unkn
 /** Aliases make the small pure helper convenient for external test harnesses. */
 export const isWatchedPathRelevant = watchedPathsMatch;
 export const watchedPathsIntersect = watchedPathsMatch;
+
+/** Pure eligibility decision; the runtime retains GM checks, causal guards and execution order. */
+export function triggerMatchesEvent(
+  trigger: TriggerDefinition,
+  event: TriggerContextEvent,
+  before: unknown,
+  after: unknown,
+  changed?: unknown,
+): boolean {
+  if (!trigger.enabled || trigger.event.type !== event.type || trigger.event.documentType !== event.documentType) return false;
+  if (trigger.event.type === 'documentUpdate' && !watchedPathsMatch(trigger.event.watchedPaths, changed)) return false;
+  return evaluateConditionGroup(trigger.conditions, before, after);
+}
 
 export function evaluateConditionGroup(group: ConditionGroup | null | undefined, before: unknown, after: unknown): boolean {
   if (!group) return true;

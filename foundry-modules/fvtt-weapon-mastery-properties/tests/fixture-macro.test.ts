@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 // This macro intentionally runs against browser globals. Restore their exact
 // descriptors so later suites cannot mistake this mock world for a live client.
 const fixtureGlobals = ['game', 'canvas', 'fromUuid', 'ChatMessage', 'Scene', 'Actor', 'Combat',
-  'WMP_E2E', '__midiUse', '__FVTT_WMP_DAMAGE_DIAGNOSTICS__', '__FVTT_WMP_DAMAGE_DIAGNOSTICS_LOG__'];
+  'Hooks', 'WMP_E2E', 'WMP_E2E_INSTALL', '__midiUse', '__FVTT_WMP_DAMAGE_DIAGNOSTICS__', '__FVTT_WMP_DAMAGE_DIAGNOSTICS_LOG__'];
 let originalGlobals: Array<[string, PropertyDescriptor | undefined]> = [];
 beforeEach(() => {
   originalGlobals = fixtureGlobals.map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]);
@@ -13,6 +13,13 @@ afterEach(() => {
     if (descriptor) Object.defineProperty(globalThis, key, descriptor);
     else Reflect.deleteProperty(globalThis, key);
   }
+});
+
+test('installs its ready GM world when another suite has registered ready Hooks', () => {
+  (globalThis as any).Hooks = { once() {} };
+  const fixture = world();
+  expect(fixture.api?.ensureBatch).toBeFunction();
+  expect(fixture.api?.create).toBeFunction();
 });
 
 test('combat preparation creates one linked encounter and reuses it without touching the original', async () => {
@@ -211,7 +218,7 @@ function world() {
     return document;
   }
   (globalThis as any).game = {
-    world: { id: 'cor-cotn' }, version: '14.364', system: { id: 'dnd5e', version: '5.3.3' },
+    ready: true, world: { id: 'cor-cotn' }, version: '14.364', system: { id: 'dnd5e', version: '5.3.3' },
     user: { id: 'gm', isGM: true, active: true }, users: { activeGM: { id: 'gm' } },
     modules, scenes, actors, messages, combats, combat: originalCombat,
   };

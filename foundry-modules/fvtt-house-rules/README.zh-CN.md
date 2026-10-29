@@ -1,6 +1,6 @@
 # 本团村规（`fvtt-house-rules`）
 
-这是一个独立的 Foundry VTT 模块。既有完整运行验收针对 Foundry VTT `14.364` / dnd5e `5.3.3`；`0.1.3` 在历史 ServerNext `14.368` / `6.0.2` 上通过了药水预览、应用、手改保护、恢复和整页重载读回。新增的精确配对 `14.368` / `6.0.5` 是待运行验收候选；此结果不自动覆盖其它村规功能或 Midi 暴击联动。6.0.5 的 optional Midi-QOL、DAE、Dice So Nice 组合未作版本确认时会失败关闭。运行时仅接受这三组精确 Foundry／dnd5e 版本对，交叉和未列版本被拒绝。它不依赖 `fvtt-injury-fading-spirits`，也不导入项目其他模块的私有实现。
+这是一个独立的 Foundry VTT 模块。既有完整运行验收针对 Foundry VTT `14.364` / dnd5e `5.3.3`；`0.1.3` 在历史 ServerNext `14.368` / `6.0.2` 上通过了药水预览、应用、手改保护、恢复和整页重载读回。运行时另接受 `14.368/5.3.3` 与 `14.368/6.0.5`，各自的实际能力范围以原验收记录为准。2026-10-25 已在 `14.368/6.0.6` 接受修复后的药水应用、三条治疗 Activity、完整快照、手改保护、恢复与普通重载；弹药、聊天卡或其它村规没有因此获得新的实机接受。`6.0.5`、`6.0.6` 的 optional Midi-QOL、DAE、Dice So Nice 组合未作版本确认时仍失败关闭。运行时只接受这些精确 Foundry／dnd5e 版本对，交叉和未列版本被拒绝。它不依赖 `fvtt-injury-fading-spirits`，也不导入项目其他模块的私有实现。
 
 ## 语言
 
@@ -93,3 +93,11 @@ bun run verify:artifact
 `build` 生成 browser-targeted `dist/scripts/module.js`，同步 manifest/语言/样式，并生成固定排序、固定时间戳的 `release/fvtt-house-rules-0.1.3.zip`。`verify:artifact` 核对 package、源 manifest、构建 manifest、必要文件和 ZIP 内容。
 
 `install:local-lab` 与 `verify:local-lab` 仅接受精确 `FVTT_OPS_LAB_ROOT=F:\FoundryLab\foundry-v14`。安装还要求显式 `HOUSE_RULES_LOCAL_LAB_INSTALL=1`，拒绝远程/生产环境变量、链接目标和已有模块目录，且从不覆盖安装。它们只证明文件安装，不等于真实 E2E。
+
+## 本地重构候选：药水事务
+
+药水规则计划保留在纯规则层；`potion-transaction.ts` 单独处理同一 Item 的串行应用/恢复、快照和写后读回。保存期间新增或手改 Activity、失去活动GM权限、出现无法确认的系统规范化时均拒绝继续，保留恢复记录。原值与应用后基线不会吸收外来的手改。
+
+若恢复已还原 Activity 但清除快照暂时失败，可在同一页面对同一 Item 重试；只有 UUID、完整快照和原始 Activity 均未变化时才清理剩余标记，不重复写 Activity。重新加载后或外部手改使该临时证明失效时，不自动猜测恢复。
+
+原候选75项本地测试与类型通过；6.0.6 实机暴露了原生 Activity 默认字段使计划比对失败的问题，现已在首次写入前通过当前注册模型生成完整预期数据，缺模型或异常时零写拒绝。新增反例与受影响药水检查通过后，真实 Apply、schema2 快照、三条 Activity、手改拒绝、Restore 和普通重载已完成限定接受。世界文档与设置恢复一致；旧测试工具未保存 User 分项原像，无法证明该账号历史状态精确恢复，用户已明确选择保留当前账号状态继续，原始 REVIEW 保留。精确证据见[执行总账](../../docs/plans/2026-10-11-fvtt-suite-refactor/EXECUTION_LEDGER.md)。6.0.5/6.0.6的可选Midi/DAE/Dice So Nice组合仍未确认，继续按现有精确版本门拒绝未知适配；不会因本次Core药水修复而放宽。

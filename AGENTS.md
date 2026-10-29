@@ -11,6 +11,7 @@
 
 - 涉及 D&D 的规则解释、资料选择、生成、开发、对照和验收，一律使用 2024 版 D&D 规则及对应官方资料作为规则基准。规则年份与 Foundry/dnd5e 软件版本分别核对，不以旧版规则或旧版 Actor 作为当前标准。
 - 最终 JSON 必须走来源 → CLI/Web → `@fvtt-json-generator/workflows` → parser/generation → verifier，不手写或修补最终 JSON。生物生成与检查结论分开：只有AI没正常返回才能阻止整只Actor生成，其他问题不挡住产物获取或删掉已有能力；候选照常交付且不伪称accepted。正式登记和目标覆盖保持各自写入边界；Item/Species契约独立。用户原话与46项范围见`docs/acceptance/2026-10-27-forge-generation-delivery-remediation.md`。
+- 生物名称，以及生物身上显示为独立栏位的所有特性（feature、action、reaction、bonus action等）和物品，必须使用 `中文 English`：中文后接一个空格和英文，中英文之间不加括号。保留来源英文名称用于检索及名称匹配。
 - 用户未指定目标时，代理显式使用 `--fvtt-version 14 --effect-profile core --icon-mode off`，按 Foundry `14.364` / dnd5e `5.3.3` 验证；用户明确指定受支持目标时遵从。CLI/workflow 省略版本仍默认 v12，Web 初始仍为 v14。图标 safe/override 仅在用户明确要求时启用。
 - 系统版本相关开发按 `docs/runbooks/dnd5e-version-following.md`：5.x 固定 5.3.3，ServerNext 跟随官方最新稳定 6.x。先核官方发布、本地系统及已启用模块全集的清单／代码版本门，再用 Context7 导航并对照目标 tag／提交的本地源码；查询中的版本限定不保证返回已锁版本。Next 落后时按已有本地升级授权先更新并窄验收，不连带升级 Core、Mirror 或生产，不把旧 PASS 自动推广到新版本。
 - 每次正式生成都按 `docs/generated-actor-verification.md` 对照来源；schema、测试和 verifier 通过不能代替语义验收。
@@ -35,7 +36,9 @@
 | 解析、生成、workflow、Intake、采集、图片 | `packages/AGENTS.md` 与对应 package 的 AGENTS |
 | CLI / Web | `apps/AGENTS.md`、`apps/cli/AGENTS.md`、`apps/web/AGENTS.md` |
 | Foundry 模块 | `foundry-modules/AGENTS.md` 与模块自己的 AGENTS |
+| 中文 Babele 补丁维护、更新上游汉化、合并自有译文 | `docs/runbooks/babele-zh-maintenance.md`，实际维护项目为 `I:\OpenCode\fvtt-babele-zh-maintenance`；先读取该项目 AGENTS 与架构后在对应目录执行，继续使用当前 Codex 项目交流 |
 | Lab、资产和运维 | `tools/AGENTS.md`、`tools/foundry-ops/AGENTS.md` |
+| 需要通过本地 Mirror / Next MCP 开发或验收 | `docs/runbooks/foundry-mcp-readiness.md`：准备所选实例与任务专用 GM 页，实际读回世界后判定连接就绪 |
 | 新外部接口、跨模块/版本/客户端、迁移、重复失败 | `docs/runbooks/development-feedback-loop.md` |
 
 - 影响产品含义、验收出口、功能归属或写入授权的歧义先向用户澄清，之后才执行依赖该选择的工作；可查的技术事实先调查，可逆实现细节自行决定。已有明确授权不重复索取。

@@ -1,0 +1,68 @@
+{
+  "id": "fvtt-homebrew-species",
+  "title": "自制种族内容",
+  "category": "library",
+  "summary": "提供 accepted homebrew Species 的纯内容 Item 合集；V14 是运行目标，V12 产物只作为明确标记的静态候选。",
+  "when": "需要在精确 dnd5e v14 世界浏览或使用已接受的自制种族与种族特性时使用；V12 仅用于静态审阅。",
+  "requires": [
+    "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
+    "Foundry VTT 14.364 + dnd5e 5.3.3（运行包）",
+    "Foundry VTT 12.331 + dnd5e 4.3.9 + 2024 规则（仅 V12 static candidate）",
+    "新增精确Foundry14.368/dnd5e6.0.6受限Ogre原生授予/升级接受；内容身份、verified与其他环境边界保持不变。"
+  ],
+  "steps": [
+    {
+      "title": "启用 V14 内容包",
+      "text": "在 Foundry 14.364 / dnd5e 5.3.3 世界启用模块，打开 Compendium 目录确认“Homebrew Species / 自制种族”和“Species Features / 种族特性”两个 Item pack 可读。"
+    },
+    {
+      "title": "浏览种族与特性",
+      "text": "在两个 Item pack 中查看 Species 和 features；这是 content-only 模块，没有浏览器 JavaScript、socket、设置菜单、自动迁移或世界扫描。"
+    },
+    {
+      "title": "按系统流程使用",
+      "text": "在 dnd5e 角色卡使用 Add Species（添加种族）流程，选择本模块的种族条目，再按提示应用特性。已授予角色的特性是快照，更新合集不会自动替换。"
+    },
+    {
+      "title": "检查 V12 静态候选",
+      "text": "维护者需要 V12 候选时可运行下面的构建命令；构建会写入 dist/v12-candidate，不能称为只读操作。它不调用安装器，也不证明 V12 角色流程可用。",
+      "command": "bun run build:homebrew-species:v12-candidate"
+    },
+    {
+      "title": "核对 V14 构建",
+      "text": "维护者可从仓库根目录运行 V14 构建检查；ledger、Markdown 和 target hash 任一过期都会 fail-closed。",
+      "command": "bun run build:homebrew-species"
+    }
+  ],
+  "outputs": [
+    "species Item pack 和 features Item pack",
+    "V14 target-specific 的文档、UUID、logical hash、coverage ledger 与确定性 ZIP",
+    "V12/12.331 candidate 构建及 supportStatus: static-candidate 身份标记"
+  ],
+  "limits": [
+    "V14 产物精确绑定 Foundry 14.364 / dnd5e 5.3.3；V12 候选精确绑定 Foundry 12.331 / dnd5e 4.3.9 / Core / 2024",
+    "V12 candidate build/verify 不调用安装器，也不证明 Add Species、升级、HP/AC、次数、Long Rest 或重开读回",
+    "没有浏览器运行时、socket、自动迁移和世界扫描；ItemGrant 依赖本模块 features pack，已嵌入 Actor 的 Feature 不会自动更新",
+    "ledger、Markdown、package 或 target hash 过期时拒绝构建；静态构建与 LevelDB 校验不等于 Foundry runtime、生产或长期跑团验收",
+    "内容投影身份保持原已接受的 dnd5e 6.0.2，6.0.5 是本轮运行兼容目标；更新保留现有合集数据库，不重复生成或迁移。",
+    "Next 14.368／6.0.5 本轮只验证来源／内容身份和现有两合集读取；Add Species、升级和全部玩法未扩大验收。",
+    "14.368/6.0.6候选已从accepted ledger经正式Species构建/校验；Ogre的Large、零级授予、每级HP、速度、AC、暗视、脱困资源、长休和普通重载代表链已接受，内容身份与verified仍6.0.2。ASI授予存在但未观察属性分配生效，六项属性在本证据中仍为10；不宣称力量加值或完整升级自动化。"
+  ],
+  "keywords": [
+    "自制种族",
+    "Species",
+    "种族特性",
+    "Compendium",
+    "ItemGrant",
+    "V14",
+    "V12 candidate"
+  ],
+  "sources": [
+    "foundry-modules/fvtt-homebrew-species/README.zh-CN.md",
+    "docs/reviews/2026-10-01-next-605-custom-module-restoration.md"
+  ],
+  "watch": [
+    "foundry-modules/fvtt-homebrew-species/"
+  ],
+  "module": "fvtt-homebrew-species"
+}

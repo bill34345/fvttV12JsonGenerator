@@ -30,12 +30,14 @@ export const EXACT_DND5E_VERSION = '5.3.3' as const;
 export const SERVER_NEXT_FOUNDRY_VERSION = '14.368' as const;
 export const SERVER_NEXT_DND5E_VERSION = '6.0.2' as const;
 export const SERVER_NEXT_DND5E_CANDIDATE_VERSION = '6.0.5' as const;
+const SERVER_NEXT_DND5E_606_CANDIDATE_VERSION = '6.0.6' as const;
 
 const SUPPORTED_RUNTIME_PAIRS = [
   { foundry: EXACT_FOUNDRY_VERSION, dnd5e: EXACT_DND5E_VERSION },
   { foundry: SERVER_NEXT_FOUNDRY_VERSION, dnd5e: EXACT_DND5E_VERSION },
   { foundry: SERVER_NEXT_FOUNDRY_VERSION, dnd5e: SERVER_NEXT_DND5E_VERSION },
   { foundry: SERVER_NEXT_FOUNDRY_VERSION, dnd5e: SERVER_NEXT_DND5E_CANDIDATE_VERSION },
+  { foundry: SERVER_NEXT_FOUNDRY_VERSION, dnd5e: SERVER_NEXT_DND5E_606_CANDIDATE_VERSION },
 ] as const;
 
 export interface ResolverFoundryAdapter extends FoundrySpellSourceAdapter {
@@ -65,13 +67,13 @@ export function evaluateRuntimeCompatibility(versions: ResolverRuntimeVersions):
     if (!supportedDnd5e) {
       diagnostics.push({
         code: 'UNSUPPORTED_DND5E_VERSION',
-        message: `dnd5e ${versions.dnd5e} is unsupported; only exact versions ${EXACT_DND5E_VERSION}, ${SERVER_NEXT_DND5E_VERSION}, and ${SERVER_NEXT_DND5E_CANDIDATE_VERSION} are allowed.`,
+        message: `dnd5e ${versions.dnd5e} is unsupported; only exact versions ${EXACT_DND5E_VERSION}, ${SERVER_NEXT_DND5E_VERSION}, ${SERVER_NEXT_DND5E_CANDIDATE_VERSION}, and ${SERVER_NEXT_DND5E_606_CANDIDATE_VERSION} are allowed.`,
       });
     }
     if (supportedFoundry && supportedDnd5e && !SUPPORTED_RUNTIME_PAIRS.some((pair) => pair.foundry === versions.foundry && pair.dnd5e === versions.dnd5e)) {
       diagnostics.push({
         code: 'UNSUPPORTED_RUNTIME_PAIR',
-        message: `Foundry ${versions.foundry} with dnd5e ${versions.dnd5e} is unsupported; only ${EXACT_FOUNDRY_VERSION}/${EXACT_DND5E_VERSION}, ${SERVER_NEXT_FOUNDRY_VERSION}/${EXACT_DND5E_VERSION}, ${SERVER_NEXT_FOUNDRY_VERSION}/${SERVER_NEXT_DND5E_VERSION}, and ${SERVER_NEXT_FOUNDRY_VERSION}/${SERVER_NEXT_DND5E_CANDIDATE_VERSION} are allowed.`,
+        message: `Foundry ${versions.foundry} with dnd5e ${versions.dnd5e} is unsupported; only ${EXACT_FOUNDRY_VERSION}/${EXACT_DND5E_VERSION}, ${SERVER_NEXT_FOUNDRY_VERSION}/${EXACT_DND5E_VERSION}, ${SERVER_NEXT_FOUNDRY_VERSION}/${SERVER_NEXT_DND5E_VERSION}, ${SERVER_NEXT_FOUNDRY_VERSION}/${SERVER_NEXT_DND5E_CANDIDATE_VERSION}, and ${SERVER_NEXT_FOUNDRY_VERSION}/${SERVER_NEXT_DND5E_606_CANDIDATE_VERSION} are allowed.`,
       });
     }
   }

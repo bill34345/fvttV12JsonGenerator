@@ -4,8 +4,11 @@ import type { DeckModuleApi } from '../src/types.ts';
 
 function target(calls: string[]): DeckModuleApi {
   return {
+    portraitCacheStats: async () => { calls.push('portraitCacheStats'); return undefined; },
+    undo: async () => { calls.push('undo'); },
     openPanel: async () => { calls.push('openPanel'); },
     openPopout: async () => { calls.push('openPopout'); },
+    openHelp: async () => { calls.push('openHelp'); },
     focusPopout: () => { calls.push('focusPopout'); return true; },
     close: async (mode) => { calls.push(`close:${mode}`); },
     refresh: () => { calls.push('refresh'); },
@@ -17,8 +20,11 @@ describe('public module API', () => {
     let resolutions = 0;
     const api = createDeckApi(() => { resolutions += 1; return target([]); }, () => false);
     for (const invoke of [
+      () => api.portraitCacheStats(),
+      () => api.undo(),
       () => api.openPanel(),
       () => api.openPopout(),
+      () => api.openHelp(),
       () => api.focusPopout(),
       () => api.close('all'),
       () => api.refresh(),
@@ -33,11 +39,14 @@ describe('public module API', () => {
     expect(() => api.openPanel()).toThrow('not ready');
 
     controller = target(calls);
+    await api.portraitCacheStats();
+    await api.undo();
     await api.openPanel();
     await api.openPopout();
+    await api.openHelp();
     expect(api.focusPopout()).toBeTrue();
     await api.close('popout');
     api.refresh();
-    expect(calls).toEqual(['openPanel', 'openPopout', 'focusPopout', 'close:popout', 'refresh']);
+    expect(calls).toEqual(['portraitCacheStats', 'undo', 'openPanel', 'openPopout', 'openHelp', 'focusPopout', 'close:popout', 'refresh']);
   });
 });

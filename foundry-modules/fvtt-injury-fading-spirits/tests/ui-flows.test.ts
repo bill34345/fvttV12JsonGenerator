@@ -175,9 +175,55 @@ describe('Injury/Fading Spirits Foundry UI flows', () => {
     expect(notifications).toContain('warn:IFS.Errors.InjuryMoved');
     expect(writes).toHaveLength(0);
     let target: any;
-    globals.game.modules = new Map([['fvtt-custom-conditions', { api: { openManager: async (context: any) => { target = context.actor; } } }]]);
+    globals.game.modules = new Map([['fvtt-custom-conditions', { active: true, api: { openManager: async (context: any) => { target = context.actor; } } }]]);
     await openSetInjuryDialog(actor);
     expect(target).toBe(actor);
+  });
+
+  test('inactive or unknown-active CC with retained APIs cannot hide standalone actions or receive writes', async () => {
+    for (const active of [false, undefined]) {
+      const { actor } = actorFixture(`Actor.inactive-${String(active)}`);
+      const calls = { enabled: 0, manager: 0, suppression: 0 };
+      globals.game.modules = new Map([['fvtt-custom-conditions', {
+        ...(active === undefined ? {} : { active }),
+        api: {
+          injury: {
+            isEnabled: () => { calls.enabled++; return true; },
+            suppressNextRecovery: async () => { calls.suppression++; },
+          },
+          openManager: async () => { calls.manager++; },
+        },
+      }]]);
+      dialogResults.push('close');
+      await openActorDashboard(actor);
+      expect(dialogConfigs.at(-1)?.buttons.map((button: AnyRecord) => button.action)).toContain('beginEpisode');
+      await openSetInjuryDialog(actor);
+      expect(notifications).toContain('warn:IFS.Errors.InjuryMoved');
+      dialogResults.push({ mode: 'rapid', abilityMod: '4', soulWilling: 'on' });
+      await openResurrectionWizard(actor);
+      expect(actor.flags[MODULE_ID].fadingSpirits.attemptHistory.at(-1)?.result).toBe('success');
+      expect(calls).toEqual({ enabled: 0, manager: 0, suppression: 0 });
+    }
+  });
+
+  test('active CC public APIs remain available to dashboard, editor, and successful resurrection', async () => {
+    const { actor } = actorFixture('Actor.active-cc');
+    const calls = { enabled: 0, manager: 0, suppression: 0 };
+    globals.game.modules = new Map([['fvtt-custom-conditions', { active: true, api: {
+      injury: {
+        isEnabled: () => { calls.enabled++; return true; },
+        suppressNextRecovery: async () => { calls.suppression++; },
+      },
+      openManager: async () => { calls.manager++; },
+    } }]]);
+    dialogResults.push('close');
+    await openActorDashboard(actor);
+    expect(dialogConfigs.at(-1)?.buttons.map((button: AnyRecord) => button.action)).not.toContain('beginEpisode');
+    await openSetInjuryDialog(actor);
+    dialogResults.push({ mode: 'rapid', abilityMod: '4', soulWilling: 'on' });
+    await openResurrectionWizard(actor);
+    expect(calls).toEqual({ enabled: 1, manager: 1, suppression: 1 });
+    expect(actor.flags[MODULE_ID].fadingSpirits.attemptHistory.at(-1)?.result).toBe('success');
   });
 
   test('offers an explicit GM death-episode recovery action without Custom Conditions', async () => {
@@ -206,6 +252,35 @@ describe('Injury/Fading Spirits Foundry UI flows', () => {
     expect(audit!.content).toContain('IFS.Fading.BlindDieNotice');
     expect(audit!.content).not.toContain(String(rollTotal));
     expect([...messages.values()].some((message) => message.flags?.[MODULE_ID]?.resolutionLock)).toBeFalse();
+  });
+
+  test.each(['normal', 'final', 'rapid'] as const)('IFS final blind roll provenance binds %s to its claimed Actor and attempt without die metadata', async (mode) => {
+    const { actor } = actorFixture(`Actor.provenance-${mode}`);
+    if (mode === 'final') actor.flags[MODULE_ID].fadingSpirits.conventionalResurrectionLocked = true;
+    const attemptId = `resurrection:${actor.uuid}:death-1:${mode}:1`;
+    dialogResults.push({ mode, abilityMod: '4', soulWilling: 'on' });
+    await openResurrectionWizard(actor, mode === 'final' ? 'final' : undefined);
+    if (mode !== 'rapid') {
+      expect(actor.flags[MODULE_ID].fadingSpirits.pendingRitual?.id).toBe(attemptId);
+      dialogResults.push({ soulWilling: 'on' });
+      await openResolveRitualDialog(actor, attemptId);
+    }
+
+    const nativeBlindMessages = createdMessages.filter((message) => message.roll && message.options.rollMode === 'blindroll');
+    expect(nativeBlindMessages).toHaveLength(1);
+    expect(nativeBlindMessages[0]!.flags?.[MODULE_ID]).toEqual({ finalRoll: { actorUuid: actor.uuid, attemptId } });
+    expect(nativeBlindMessages[0]!.formula).toBe(mode === 'rapid' ? '1d20 + @mod' : '1d20');
+    expect(nativeBlindMessages[0]!.data).toEqual(mode === 'rapid' ? { mod: 4 } : {});
+    expect(nativeBlindMessages[0]!.speaker).toEqual({ actor: undefined, user: 'gm' });
+
+    const history = actor.flags[MODULE_ID].fadingSpirits.attemptHistory;
+    expect(history).toHaveLength(1);
+    expect(history[0]).toMatchObject({ id: attemptId, mode, result: 'success' });
+    expect(Object.keys(history[0]).sort()).toEqual([
+      'at', 'contributionFailures', 'contributionSuccesses', 'dc', 'gmId', 'id', 'mode', 'result',
+    ]);
+    const audit = createdMessages.find((message) => message.flags?.[MODULE_ID]?.card === 'audit');
+    expect(Object.keys(audit!.flags[MODULE_ID]).sort()).toEqual(['card', 'dc', 'failures', 'mode', 'result', 'successes']);
   });
 
   test('resolves miracle and soul-refusal branches without exposing the blind die', async () => {

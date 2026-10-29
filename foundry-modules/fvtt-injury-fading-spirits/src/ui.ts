@@ -5,8 +5,13 @@ import type { RitualContributor } from './state.ts';
 
 interface FormValues { [key: string]: FormDataEntryValue }
 
+function activeConditionsApi(): any | undefined {
+  const module = game.modules?.get?.('fvtt-custom-conditions');
+  return module?.active === true ? module.api : undefined;
+}
+
 async function suppressNextRecovery(actor: any, id: string, reason: string): Promise<void> {
-  const injury = game.modules?.get?.('fvtt-custom-conditions')?.api?.injury;
+  const injury = activeConditionsApi()?.injury;
   if (typeof injury?.suppressNextRecovery === 'function') await injury.suppressNextRecovery(actor, id, reason);
 }
 
@@ -22,7 +27,7 @@ export async function openActorDashboard(actor: any): Promise<void> {
     <p>${label('IFS.Fading.SuccessfulReturns')}: ${state.fadingSpirits.successfulReturns}; DC +${state.fadingSpirits.permanentDcPenalty}</p>
     <p>${label('IFS.Fading.ConventionalLock')}: ${state.fadingSpirits.conventionalResurrectionLocked ? '✓' : '—'}; ${label('IFS.Fading.FinalUsed')}: ${state.fadingSpirits.finalChanceUsed ? '✓' : '—'}</p>
   </div>`;
-  const injuryEnabled = game.modules?.get?.('fvtt-custom-conditions')?.api?.injury?.isEnabled?.() === true;
+  const injuryEnabled = activeConditionsApi()?.injury?.isEnabled?.() === true;
   const canBeginEpisode = !injuryEnabled && Number(actor.system?.attributes?.hp?.value) === 0 && isActiveGmWriter();
   const action = await dialogWait({
     window: { title: label('IFS.Title') },
@@ -40,7 +45,7 @@ export async function openActorDashboard(actor: any): Promise<void> {
 }
 
 export async function openSetInjuryDialog(actor: any): Promise<void> {
-  const api = game.modules?.get?.('fvtt-custom-conditions')?.api;
+  const api = activeConditionsApi();
   if (typeof api?.openManager !== 'function') return notify('warn', 'IFS.Errors.InjuryMoved');
   await api.openManager({ actor });
 }
@@ -160,7 +165,7 @@ export async function openResolveRitualDialog(actor: any, ritualId: string): Pro
   for (let index = 0; index < pending.contributors.length; index += 1) if (values[`outcome${index}`] === 'success') successes += 1;
   const failures = pending.contributors.length - successes;
   const dc = resurrectionDc(stateForResolution.fadingSpirits, successes, failures);
-  const roll = await blindRoll('1d20', {}, `Fading Spirits final check — DC ${dc}`);
+  const roll = await blindRoll('1d20', {}, `Fading Spirits final check — DC ${dc}`, { actorUuid: actor.uuid, attemptId: pending.id });
   const beforeResolve = readActorState(actor);
   if (!isActiveGmWriter() || !beforeResolve.fadingSpirits.pendingRitual
     || beforeResolve.fadingSpirits.pendingRitual.id !== pending.id
@@ -265,7 +270,7 @@ async function resolveRapid(actor: any, modifier: number, soulWilling: boolean):
     resolutionToken = claimed.fadingSpirits.resolutionInProgress?.token ?? null;
     if (!resolutionToken) return notify('warn', 'IFS.Errors.ResolutionInProgress');
     const dc = rapidResurrectionDc(claimed.fadingSpirits);
-  const roll = await blindRoll('1d20 + @mod', { mod: modifier }, `Rapid resurrection — DC ${dc}`);
+  const roll = await blindRoll('1d20 + @mod', { mod: modifier }, `Rapid resurrection — DC ${dc}`, { actorUuid: actor.uuid, attemptId: id });
   const beforeResolve = readActorState(actor);
   const inFlight = beforeResolve.fadingSpirits.resolutionInProgress;
   if (!isActiveGmWriter() || stableAttemptId(actor, beforeResolve, 'rapid') !== id
@@ -518,9 +523,13 @@ function observedRequestResult(requestId: string | null): { total: number | null
   return { total: Number.isFinite(total) ? total : null, actorName: actor?.name ?? null };
 }
 
-async function blindRoll(formula: string, data: Record<string, unknown>, flavor: string): Promise<any> {
+async function blindRoll(formula: string, data: Record<string, unknown>, flavor: string, source: { actorUuid: string; attemptId: string }): Promise<any> {
   const roll = await new Roll(formula, data).evaluate();
-  await roll.toMessage({ flavor, speaker: ChatMessage.getSpeaker({ user: game.user }) }, { rollMode: 'blindroll' });
+  await roll.toMessage({
+    flavor,
+    speaker: ChatMessage.getSpeaker({ user: game.user }),
+    flags: { [MODULE_ID]: { finalRoll: { actorUuid: source.actorUuid, attemptId: source.attemptId } } },
+  }, { rollMode: 'blindroll' });
   return roll;
 }
 

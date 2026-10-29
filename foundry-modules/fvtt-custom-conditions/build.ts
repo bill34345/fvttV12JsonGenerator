@@ -49,7 +49,7 @@ export function validateManifest(manifest: Record<string, any>): void {
   if (core.minimum !== '14.364' || core.verified !== '14.364' || core.maximum !== '14.368') throw new Error('Foundry compatibility must span 14.364 to 14.368 with verification at 14.364.');
   const dnd5e = (manifest.relationships?.systems ?? []).find((entry: any) => entry.id === 'dnd5e');
   const system = dnd5e?.compatibility ?? {};
-  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '6.0.5') throw new Error('dnd5e compatibility must span 5.3.3 to 6.0.5 with verification at 5.3.3.');
+  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '6.0.6') throw new Error('dnd5e compatibility must span 5.3.3 to 6.0.6 with verification at 5.3.3.');
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(['scripts/index.js']) || manifest.socket !== true) throw new Error('Manifest browser/socket contract drifted.');
   if (!manifest.relationships?.requires?.some((entry: any) => entry.id === 'fvtt-trigger-engine')) throw new Error('Trigger Engine dependency is missing.');
 }

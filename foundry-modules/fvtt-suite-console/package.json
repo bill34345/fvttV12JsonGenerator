@@ -1,0 +1,15 @@
+{
+  "name": "@fvtt-json-generator/suite-console",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun run build.ts",
+    "release": "bun run release.ts",
+    "test": "bun test tests --max-concurrency 1",
+    "typecheck": "tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@fvtt-json-generator/suite-handbook": "workspace:*"
+  }
+}

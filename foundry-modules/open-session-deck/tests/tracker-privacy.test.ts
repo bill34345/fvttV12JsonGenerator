@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { MODULE_ID } from '../src/constants.ts';
-import { friendlyInitiativeIsRevealed, isFriendlyActor, registerTrackerPrivacyHooks } from '../src/tracker-privacy.ts';
+import { friendlyInitiativeIsRevealed, isFriendlyActor, registerTrackerPrivacyHooks, waitForTrackerPrivacyWrites } from '../src/tracker-privacy.ts';
 
 const originalGame = Object.getOwnPropertyDescriptor(globalThis, 'game');
 const originalHooks = Object.getOwnPropertyDescriptor(globalThis, 'Hooks');
@@ -31,6 +31,29 @@ function installGame(options: { includeDescendants?: boolean } = {}) {
 }
 
 describe('official Combat Tracker privacy', () => {
+  test('awaits its own flag writes and does not reapply them while restoring undo data', async () => {
+    const fixture = installGame();
+    const callbacks = new Map<string, (...args: any[]) => void>();
+    (globalThis as any).Hooks = { on: (name: string, callback: (...args: any[]) => void) => callbacks.set(name, callback) };
+    registerTrackerPrivacyHooks();
+    let release!: () => void, writes = 0, finished = false;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const combatant = { actor: { uuid: 'Actor.party', ownership: {}, folder: fixture.party }, getFlag: () => undefined, setFlag: async () => { await gate; writes += 1; }, updateSource: () => { throw new Error('Undo must preserve the original source'); } };
+    const options = { openSessionDeckUndo: true };
+    callbacks.get('preCreateCombatant')!(combatant, {}, options);
+    callbacks.get('createCombatant')!(combatant, options);
+    callbacks.get('updateCombat')!({ combatant }, {}, options);
+    expect(writes).toBe(0);
+    callbacks.get('updateCombat')!({ combatant }, {}, {});
+    const waiting = waitForTrackerPrivacyWrites().then(() => { finished = true; });
+    await Promise.resolve();
+    expect(finished).toBeFalse();
+    release();
+    await waiting;
+    expect(finished).toBeTrue();
+    expect(writes).toBe(1);
+  });
+
   test('reveals first-round friendlies only through the current turn, then handles later joins', () => {
     expect(friendlyInitiativeIsRevealed({ round: 1, joinedRound: 1, hasActed: false, actedThisRound: false })).toBeFalse();
     expect(friendlyInitiativeIsRevealed({ round: 1, joinedRound: 1, hasActed: false, actedThisRound: true })).toBeTrue();

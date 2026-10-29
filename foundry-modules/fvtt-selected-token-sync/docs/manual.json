@@ -1,0 +1,73 @@
+{
+  "id": "fvtt-selected-token-sync",
+  "title": "框选 Token 同步",
+  "category": "play",
+  "summary": "把一个 Token HUD 发起的核心状态和 Foundry v14 movementAction 同步到当前选中的其他 Token。",
+  "when": "需要对一组 Token 同时切换状态或移动方式，并希望保留每位用户独立的开关时使用。",
+  "requires": [
+    "Foundry VTT 14.368",
+    "dnd5e6.0.5–6.0.6的0.2.0 Next候选；606 GM HUD/帮助限定切片已接受，角色与第二客户端仍有边界",
+    "至少两个可控制且可更新的 Token",
+    "当前用户拥有对应 Actor/Token 权限"
+  ],
+  "steps": [
+    {
+      "title": "启用模块",
+      "text": "在精确支持版本的世界启用 Selected Token Sync；模块不会要求 libWrapper，也不修改 Foundry 或 dnd5e 原型。"
+    },
+    {
+      "title": "打开同步开关",
+      "text": "在 Token 场景控制栏打开“框选 Token 同步”。这是每位用户独立保存的 client setting，默认关闭；开关打开时模块会拒绝与已启用的 multistatus 同时工作。"
+    },
+    {
+      "title": "查阅帮助",
+      "text": "点击 Token 控制栏的“框选 Token 同步帮助”问号按钮。GM 在统一操作手册合集已启用且接口可用时定位本条目；玩家或合集不可用时打开随包只读说明。同步关闭或 multistatus 冲突时也能阅读，帮助不会切换开关或修改角色/Token。"
+    },
+    {
+      "title": "框选同步集合",
+      "text": "在画布上选中需要同步的多个 Token；模块以点击 HUD 时的选择为准，并对同一个 linked Actor 去重。"
+    },
+    {
+      "title": "从一个 HUD 发起操作",
+      "text": "打开选中集合中一个 Token 的 HUD，点击普通状态图标或 movementAction。疲乏等分级状态左键使每个不同 Actor 各加一级、右键各减一级，保留原有等级差异并限制在 0 到系统上限。"
+    },
+    {
+      "title": "关闭并核对字段",
+      "text": "再次关闭工具栏开关即可恢复单Token行为；选择“默认”时TokenDocument的movementAction为null，角色各移动速度保持原值。"
+    }
+  ],
+  "outputs": [
+    "选中 Token 的普通 Active Effect 状态和 overlay 同步；分级状态按各 Actor 增减一级",
+    "选中 Token 的 movementAction 批量更新",
+    "按 Token/Actor 去重并带权限失败提示的同步事务",
+    "统一手册中的本模块条目，或模块随包的同源只读说明"
+  ],
+  "limits": [
+    "仅处理 Token HUD 核心状态按钮和 v14 movementAction；物品、法术、DAE、MIDI-QOL 或其他模块直接产生的 ActiveEffect 不会触发同步",
+    "移动同步只更新 TokenDocument movementAction，不修改 Actor 移动速度；分级状态调用 dnd5e 正常 API，由系统同步状态数据",
+    "同步由发起操作的当前客户端执行，权限不足或对象不唯一时会停止；multistatus 启用时模块会拒绝同步模式",
+    "0.2.0 候选仅声明Foundry14.368与dnd5e6.0.5–6.0.6；单测、构建和安装检查不代替真实HUD/多客户端回放，旧0.1.0安装不随之更改。",
+    "运行上限扩至6.0.6，verified保持6.0.5；每Actor分级边界、普通/叠层状态、fly/default-null movementAction、GM帮助、同GM两客户端状态同步和玩家帮助可读/权限拒绝边界已在限定切片接受；当前实装帮助文本尚未同步最新验收说明。完整玩家同步写入和长时会话仍未验收。日历原位置缺失，当前核对位置已保留并记录缺口，不能说已恢复；该选择只涉及侧栏/窗口尺寸/日历位置等纯界面偏好，不涉及角色数据、功能设置、权限或Hotbar。",
+    "本轮候选在首次创建力竭效果后等待原生同步，避免快速连续加级被覆盖；同步未完成时暂停后续分级操作。先核对角色当前状态，再关闭并重新打开同步开关；这项修复的局部测试、6.0.6限定GM HUD/同GM第二客户端读回和玩家权限边界已分别记录，不能代替玩家写入或完整角色矩阵。",
+    "统一合集窗口目前仅供GM使用；玩家直接阅读本模块随包说明，不因此获得同步或文档权限。6.0.6 GM帮助入口、同GM两客户端状态同步和玩家帮助可读/权限拒绝边界已在限定切片读回；当前实装帮助文本尚未同步最新验收说明，完整玩家同步写入和完整角色矩阵仍待。"
+  ],
+  "keywords": [
+    "Token",
+    "HUD",
+    "框选",
+    "状态",
+    "overlay",
+    "movementAction",
+    "multistatus",
+    "帮助",
+    "统一手册"
+  ],
+  "sources": [
+    "foundry-modules/fvtt-selected-token-sync/README.zh-CN.md"
+  ],
+  "watch": [
+    "foundry-modules/fvtt-selected-token-sync/",
+    "packages/suite-handbook/"
+  ],
+  "module": "fvtt-selected-token-sync"
+}

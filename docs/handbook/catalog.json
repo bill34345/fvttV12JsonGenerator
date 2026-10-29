@@ -90,22 +90,22 @@
       "明确的条件性易伤备注可由中文“伤害易伤备注”或英文damage_vulnerabilities_custom传入原生伤害易伤自定义栏，普通易伤类型列表独立保持；由GM判断条件，不自动检测祝福术或攻击来源。"
     ],
     "limits": [
-      "来源明确附加的官方状态形成 Item ActiveEffect 并链接对应 Activity：命中、失败豁免及中性攻击的命中后伤害分别关联。额外条件、阶段、逃脱DC或复杂结束规则保留可选模板与原文，不删除效果或基本操作；可确定期限进入Effect，其余由GM判断。麻痹／石化／震慑／昏迷带失能；力竭保留独立模板及来源增加量。未知非官方状态不伪造成系统状态。 CLI／Web core产物包含模板与关联；Midi世界经Forge正常导入完成局部自动施加适配。已有世界Actor不自动迁移。",
-      "v14的SourceOP活动按目标系统支持的RangeField保存距离：普通距离在value，远射程在special文字，不再写入会被系统丢弃的Activity long字段。明确同时给出近战触及和远程射程时保留独立入口；GM辅助检定不自动执行远射程劣势、命中或暴击。CLI其他输入／武器流程保持各自契约。",
-      "v14明确互斥替换伤害在同一Item提供普通/替代Attack选项，由GM二选一，不自动监视血量。明确单双手换骰使用原生Weapon/Versatile，保留来源固定命中、多骰及共同无条件附伤；独立限定附伤与第三分支仍交GM。集群个体体型独立映射原生type.swarm，不能覆盖整体体型；旧卡不自动迁移，本批候选未安装或完成实机验收。",
       "CLI 省略版本默认 v12；本手册的示例不改变这个产品默认值。",
       "v14 锁定 Foundry 14.364 / dnd5e 5.3.3。core 不输出专属 modded 字段；不同模块组合的兼容性需单独核实。",
-      "v14 对照锁定dnd5e5.3.3全部已登记语言叶子key，统一已知英文名、大小写及已有中文别名，例如Aquan→aquan、Abyssal／深渊语→abyssal；未知短语保留原文。程序生成的内置状态标题按ID与既有目录确定，自定义名称及v12旧行为保持；仍须核对实际原生显示。",
       "结构化来源的分区决定 Item 显示分区；动作分区中回合开始自动触发的 special Activity 仍显示在动作分区，特性分区中显式 action 也不迁移分区。",
-      "v14反应／附赠攻击在已解析原生属性伤害及明确长射程时，采用武器条目保存原生射程字段，原分区、激活、数值和效果保持；未知或不支持的范围不因这项兼容修复放行，仍须核对实际原生读回。",
       "结构化目标的数量、类型和字面限制投影到Activity受影响目标，独立于范围模板；单一生物目标不自动生成AoE模板。",
-      "明确2024式FAILURE:普通失败伤害分支，以及已支持的明确普通／首次失败状况可对应成功无伤害；同一句内的PDF单次换行亦可识别。句末、空段、否定／免疫、未知SUCCESS:成功分支、仅失败差值或第二次失败、缺少失败分支仍需审阅。来源文字与原生Activity投影不证明特殊状态生命周期已自动实现。",
       "Bleeding / Burning 模板从特性明确给出的骰式、伤害类型和时机取值，默认回合结束，重复施加统一采用较高值。19 种 Custom Conditions 的生成状态 ID 统一使用 fvtt-custom-conditions.<条件 ID>，与 dnd5e 的 bleeding/burning 及其他模块的 dazed 分开；flags 中的规则参数条件 ID 仍是 bleeding、burning 等语义 ID。自定义 Dazed / Shocked 模板采用本项目的移动、动作、附赠动作三选一说明；生成的文本和状态 ID 不代替 Foundry 内的实际回合限制。普通命中伤害和相邻其他状态不能代替缺失参数；在 FVTT 中自动执行需要 Custom Conditions 与 Trigger Engine，JSON 导入不等于状态自动命中或 E2E 通过。",
       "状态模板 Effect ID 使用稳定的来源动作身份；重复生成保持本地引用一致，同一 Item 内的独立动作也有不同身份。生成时间戳可变化，不保证整份 JSON 字节完全相同。",
       "武器来源可显式提供原生精通与 weapon-properties 配置；core 仅投影可原生表达的 Deadly 等字段，精确 Fatal／重击流血保持需复核说明，modded-v14 才输出武器模块配置。独立 Item 使用 workflow 的值级 verifier；verify:actor 仅用于 Actor。",
+      "不可手工修补最终 JSON 来绕过生成或审查。",
+      "来源明确附加的官方状态形成 Item ActiveEffect 并链接对应 Activity：命中、失败豁免及中性攻击的命中后伤害分别关联。额外条件、阶段、逃脱DC或复杂结束规则保留可选模板与原文，不删除效果或基本操作；可确定期限进入Effect，其余由GM判断。麻痹／石化／震慑／昏迷带失能；力竭保留独立模板及来源增加量。未知非官方状态不伪造成系统状态。 CLI／Web core产物包含模板与关联；Midi世界经Forge正常导入完成局部自动施加适配。已有世界Actor不自动迁移。",
+      "v14的SourceOP活动按目标系统支持的RangeField保存距离：普通距离在value，远射程在special文字，不再写入会被系统丢弃的Activity long字段。明确同时给出近战触及和远程射程时保留独立入口；GM辅助检定不自动执行远射程劣势、命中或暴击。CLI其他输入／武器流程保持各自契约。",
+      "v14明确互斥替换伤害在同一Item提供普通/替代Attack选项，由GM二选一，不自动监视血量。明确单双手换骰使用原生Weapon/Versatile，保留来源固定命中、多骰及共同无条件附伤；独立限定附伤与第三分支仍交GM。集群个体体型独立映射原生type.swarm，不能覆盖整体体型；旧卡不自动迁移，本批候选未安装或完成实机验收。",
+      "v14 对照锁定dnd5e5.3.3全部已登记语言叶子key，统一已知英文名、大小写及已有中文别名，例如Aquan→aquan、Abyssal／深渊语→abyssal；未知短语保留原文。程序生成的内置状态标题按ID与既有目录确定，自定义名称及v12旧行为保持；仍须核对实际原生显示。",
+      "v14反应／附赠攻击在已解析原生属性伤害及明确长射程时，采用武器条目保存原生射程字段，原分区、激活、数值和效果保持；未知或不支持的范围不因这项兼容修复放行，仍须核对实际原生读回。",
+      "明确2024式FAILURE:普通失败伤害分支，以及已支持的明确普通／首次失败状况可对应成功无伤害；同一句内的PDF单次换行亦可识别。句末、空段、否定／免疫、未知SUCCESS:成功分支、仅失败差值或第二次失败、缺少失败分支仍需审阅。来源文字与原生Activity投影不证明特殊状态生命周期已自动实现。",
       "v14结构化伤害保留基础、追加、条件与替代关系；带条件的追加伤害、条件或替代伤害不并入无条件原生伤害。未知条件保留完整来源并明确GM核对，不能视为已自动执行。",
       "结构化能力只有完整GM正文而未给出明确机械字段时，不凭gm-manual标签推断攻击、豁免或资源消费；若已给出明确sourceOperations或后续豁免，则保留这些操作并单独记录模式冲突。仍须核对全文、效果归属及原生读回。",
-      "不可手工修补最终 JSON 来绕过生成或审查。",
       "普通Failure伤害／Success减半标签仅在完整来源无额外前提、骰式与类型顺序一致时归一化。条件或替代伤害保留事实及完整原文供GM核对，不并入无条件伤害；攻击降至0生命值后才触发的豁免及失败状态不挂到普通命中。完整coverage与正文、精确引文及相邻边界一致时贯穿事实恢复、配置请求和编译；HTML显示包装不代替缺文与冲突检查。",
       "新生成/本次同步的中英文别名用空格连接，不自动加英文括号；原名自带括号保留。已存在的卡和文件不因格式政策被自动迁移或覆盖。",
       "v14/core的标准状态须准确表达持续和结束规则；未知时长、挣脱、盟友援助、受伤再次豁免、来源死亡或距离等额外结束条件完整交给GM，基础攻击、伤害、豁免与次数仍保留。明确的一分钟、两轮、一日等简单时长保留原生数值，独立状态分别核对。modded及已有自定义状态执行器按各自审核范围处理，旧卡不自动迁移。",
@@ -125,7 +125,9 @@
       "治疗目标未提供时保留Heal及完整原文，用不限数量的待GM确认目标和特殊范围说明表达缺口，不默认为仅自身；明确目标继续保留。原生模板prompt不代表目标选择对话框或自动结算。",
       "来源明确自身的旧临时生命规则保留self，未知受者继续保留Heal和GM目标提示，不把目标／盟友的代词当自身。否定与盟友状态前置不新增效果，真实并列施加保留；无伤害攻击的GM模板关联本操作攻击检定。吐出／逃出后状态提供独立“退出时状态 Exit Conditions”GM活动及完整条件，不与初始状态混施、不额外扣主能力次数，不自动监听退出。成功引文坐标整理仅留正常历史，未定位或坏记录继续提示，原答保持。既有世界Actor不自动迁移，具体检查与未验层级见五类修复验收。",
       "合法的成功整理历史保留原提案和旧坐标，不产生假结构错误或待审提示，不进入Actor审阅flags。真实问题仍具体报告；坏审阅记录与坏计数保留原值和已有Actor，合法次数、恢复和消费保持。详见24项修复验收；冻结对照不替代新模型或Foundry运行验收。",
-      "v14已登记语言保留原生栏位；未登记名称及带限定的语言文字进入可见自定义栏，并保留完整原备注。旧Actor不自动迁移；v12沿用原行为。"
+      "v14已登记语言保留原生栏位；未登记名称及带限定的语言文字进入可见自定义栏，并保留完整原备注。旧Actor不自动迁移；v12沿用原行为。",
+      "来源同时包含结构化动作和巢穴动作时，两部分都生成对应 Item；巢穴动作不会因普通动作采用结构化写法而遗漏。实际巢穴规则的运行仍需按目标 Foundry 环境另行验收。",
+      "Actor及英文翻译后发现世界专属引用，或施法来源键没有对应法术组时，仍保留已有内容并列出具体问题；获取产物不代表该清单已可在目标世界水合。"
     ],
     "keywords": [
       "生成器",
@@ -704,7 +706,7 @@
       },
       {
         "title": "预览 ServerNext 自有模块首次安装",
-        "text": "先完成候选构建及目标归属核对，在本进程显式设置 FVTT_OPS_LAB_ROOT=F:/FoundryLab/foundry-v14。此命令默认只核对清单，只有加入 --apply 才首次安装到 ServerNext；拒绝已有目标、链接、陈旧 manifest 或缺失资源，不创建备份。白名单支持 TE、CC、WMP 及 Selected Token Sync 首次安装；IFS 既有包升级须走单独的完整旧树校验流程。安装不等于启用或玩法接受。",
+        "text": "先完成候选构建及目标归属核对，在本进程显式设置 FVTT_OPS_LAB_ROOT=F:/FoundryLab/foundry-v14。此命令默认只核对清单，只有加入 --apply 才首次安装到 ServerNext；拒绝已有目标、链接、陈旧 manifest 或缺失资源，不创建备份。白名单支持TE、CC、WMP、Selected Token Sync及fvtt-suite-console首次安装；IFS 既有包升级须走单独的完整旧树校验流程。安装不等于启用或玩法接受。",
         "command": "bun run foundry:ops lab install-server-next-owned-module --module-id=fvtt-trigger-engine --version=0.2.0"
       },
       {
@@ -743,6 +745,7 @@
     ],
     "limits": [
       "本机与线上均不创建备份；旧文档里会创建快照、备份或迁移副本的路径不作为本手册的推荐操作。",
+      "本地launcher使用精确小写--nobackups，旧--noBackups仅在传参时规范化，显式禁用或冲突参数会拒绝；修正只对新启动生效。已有服务须在其owner批准的维护范围核对实际备份控件，不能仅凭命令中出现字符串声称生效。",
       "server-mirror 按用户要求常驻至关机，E2E 只复用并清理自己的测试对象，不自行启停 Foundry；核对实际 dataPath、端口和活动世界，启动参数使用连续的 --key=value。",
       "不得编辑运行中世界 LevelDB；本地检查不证明线上环境正常。",
       "手册不执行运维命令，安装、重启、迁移和清理都需要按各自范围处理。",
@@ -812,7 +815,7 @@
       },
       {
         "title": "到整合边界运行完整门禁",
-        "text": "明确要求全仓整合检查，或变化的共享依赖／接口需要该覆盖时运行。保留已有相关通过结果；局部修复先完成同类定点检查，再运行所需整合门禁。",
+        "text": "明确要求全仓整合检查，或变化的共享依赖／接口需要该覆盖时运行。保留已有相关通过结果；局部修复先完成同类定点检查，再运行所需整合门禁。公共GitHub Actions显式使用portable profile执行全部可移植检查；未设置profile的本地入口仍使用完整库存。云端会把独立历史源码组标为NOT_EXECUTED，不把云端绿色推广为本地源码或Foundry接受。",
         "command": "bun run ci:verify"
       },
       {
@@ -939,19 +942,46 @@
         "title": "核对完整提取与显式纠错提示词",
         "text": "用注入式本地固定回复捕获实际请求装配，核对来源范围、完整资料与补丁两种输出协议、治疗目标、手动能力、状态DC及历史记录边界。不访问模型服务，不生成Actor；静态文案和请求检查不证明真实模型提取改善。",
         "command": "bun run test:forge-prompt-consolidation"
+      },
+      {
+        "title": "准备历史ServerNext测试输入",
+        "text": "主工作区一次性准备独立输入库后，当前和新worktree自动读取固定材料；在已有输入库的checkout核对哈希和Git身份，再运行受影响回归。sibling worktree核对共享库时给prepare命令指定--target-root及已准备库所在checkout绝对路径。来源缺失不能跳过为PASS，现有本机参考环境依赖仍按历史版本保留。",
+        "command": "bun run legacy-next-inputs:prepare -- --check\nbun run test:legacy-next-inputs"
+      },
+      {
+        "title": "运行严格本地历史源码门",
+        "text": "按明确清单执行依赖第三方原包、合集、私有分析数据及本机固定Core/Node的原有真实回归，保持版本、哈希和断言。来源缺失、身份不符或测试失败均非零退出，结果写入coverage/local-source-contracts.json。混合文件的普通用例仍保留在公共CI中；原始材料留在Git外。",
+        "command": "bun run test:local-source-contracts"
+      },
+      {
+        "title": "查阅生物创作研究依据",
+        "text": "历史研究保留外部工具的固定来源、能力与许可边界，以及2024资料块的官方呈现依据。Actor蓝图和可读预览已进入主线；Item配方、CR设计辅助及反派/巢穴等仍是研究提案，不因归档新增开发任务。"
+      },
+      {
+        "title": "验证共享手册或导出同源内容",
+        "text": "维护阅读视图或静态宿主时使用。以与CI一致的Bun 1.3.14验证局部状态、生命周期与宿主边界；来源人工核对有效后才导出JSON。导出供后续Foundry模块构建使用，本身不安装模块或连接世界。",
+        "command": "bun run test:suite-handbook\nbun run typecheck:handbook\nbun run handbook:export"
+      },
+      {
+        "title": "准备两种手册交付",
+        "text": "人工核对delivery策略与来源后生成完整离线HTML和Foundry用户投影，再准备模块ZIP、独立manifest/HTML及校验清单。模块ZIP不带完整工程HTML；这些命令不安装、不启动服务或发布，先通过手册同步门。",
+        "command": "bun run handbook:build\nbun run handbook:export\nbun run handbook:export:foundry\nbun run release:suite-console\nbun run verify-release:suite-console"
+      },
+      {
+        "title": "只读核对独立模块包",
+        "text": "维护者使用共用校验器检查指定stage与ZIP的CRC、路径、manifest身份和逐文件字节；可额外指定模块owner的白名单。结果仅证明本地包一致性，不安装模块，也不证明实机兼容或发行许可。",
+        "command": "python tools/module-artifacts/verify.py --help"
       }
     ],
     "outputs": [
       "与具体改动对应的检查证据和来源语义结论。",
-      "随代码合并更新的 工具手册.html，可直接离线打开。"
+      "随代码合并更新的 工具手册.html，可直接离线打开。",
+      "dist/handbook/content.json：与HTML同源的内容构建产物，供后续Foundry手册使用。"
     ],
     "limits": [
-      "Monster Intake默认verify:intake核对结构、身份、精确引用及IR→Markdown／Actor保真；原文语义审计改为显式SourceAudit，不会默认重判AI理解。Item／Species、翻译及其他独立验证器的范围不随之放宽。",
       "ci:verify 包含手册一致性检查，但不自动写说明，也不保证任何发布权限。",
-      "CI 固定 Bun 1.3.14；本机运行相同门禁应使用该版本。全仓覆盖率保留完整测试清单、单进程报告和既有阈值；总进程有 450 秒 watchdog，单案与子操作限额继续保留。CLI 子进程同时读取标准输出与错误输出，并在超时后回收。已通过的实机 E2E 可按产物与环境身份复用。",
       "本手册是版本快照；单独复制到其他位置的 HTML 不会自动跟随 master 更新。",
-      "内部 package 是共享能力，不是每个都需要单独启动；Forge 浏览器 runtime、法术契约与血猎手数据包由对应产品入口使用。",
-      "ServerNext当前收尾以2026-10-05收尾记录及迁移总表的最新续记为准。历史源码与框选同步增量纳入本轮本地整合；本地合并、远端推送、包安装与实机接受分别核对。6.0.2专属运行合同不能直接用于6.0.5。",
+      "Monster Intake默认verify:intake核对结构、身份、精确引用及IR→Markdown／Actor保真；原文语义审计改为显式SourceAudit，不会默认重判AI理解。Item／Species、翻译及其他独立验证器的范围不随之放宽。",
       "可显式运行bun run test:forge-statblock-semantics，用本地注入回复核对基础数字、怪异排版、错误与OCR猜值、技能总加值/旧倍率、移动与豁免。来源与Actor的感官限制正文须保留。既有诊断脚本仍为按需运行；不联网模型、不安装hook，各测试组有重叠，不能将数量简单累加。",
       "历史分步／来源审核记录：2024式同文多次豁免按实际出现分别绑定；逗号加or的伤害类型保留单份骰式选择。条件次数完整保留；Forge V2/BW只在2024来源完整证明同一本体的基础3／巢穴4账本时绑定原生巢穴开关，其余条件预算仍交GM。传奇费用与恢复分别核对，不猜额外次数。标题括号呈现差异不制造缺项，完整原文和机械字段仍须分别核对。 在v14/core怪物SourceOP路径中，分别核对区域尺寸与远程落点：aoe.width只用于Line宽度，aoe.height只用于Cylinder高度。同一完整来源唯一证明当前区域的尺寸时可补齐缺值，显式错值仍拒绝，不按来源悄悄改正。旧rectangle只在来源明确为正方形时投影原生square，真实长方形没有新增支持。原生宽/高元数据不代表三维自动执行；未给出的尺寸不猜，完整空间规则仍交GM。未知Save DC不能猜填，明确失败/成功分支中的固定伤害可保留独立GM掷骰；紧邻测量前提和表格Up/Down同一行的互斥攻击须有完整来源依据。reduce/prevent/absorb及其关系从句表示输入减伤，不能成为输出伤害；同句后续真实伤害仍独立核对。 当前AI生物生成已统一为完整IR入口，程序不再默认执行上述原文语义门禁或回填；标准资料、Item和Species各自契约保持，历史运行证据不推广为新默认通过。",
       "手动启用的扩样诊断仅在同源、同提取路径的正确控制已通过，且错误提案接受后的完整IR.creature与Actor实际回到正确控制时，才计为来源纠正；只剔除Actor顶层生成时间。局部字段相同或返回accepted不够。此为opt-in diagnostic判据，不是新增hook或生产检查，也不证明真实模型或Foundry实机通过。",
@@ -959,7 +989,10 @@
       "本worktree后续这类Forge功能验收包含真实AI处理步骤：保存实际来源、提示词版本、模型回复和初始失败，按结果检查与优化提示词。固定回复可用于程序回归，但不能代替这类功能验收的真实AI环节；本批已经实际调用得到的同一份新回复可在程序修正后复验及交给Foundry，须说明这一分段边界，不把它算成再次联网或首轮完美通过。真实调用沿用任务已有明确授权，其他范围不因此自动获准。",
       "46项统一整改的历史目标与实际通过范围按日期记录；2026-10-28复审仍发现删除能力、退成文字、错误新增效果及交付边界缺口，修复结果见最新验收。已有Actor应保持可获取，局部诊断和GM采用分别记录；原历史PASS不覆盖后续发现。",
       "2026-10-28对46项复审发现的10类缺陷及2项边界逐项修复，使用原样冻结回复、单变量派生与机制反例分别验证。修后独立复审发现三处残留并关闭。真实Mirror只验证本轮列明的导入、配置、刷新和精确恢复；没有新增模型或战斗调用。原答与失败产物原位保持，不把局部通过推广为任意文本、全部46项组合或其他版本通过。",
-      "107条既有类型错误在类型修复阶段已清零；该阶段发现的22项行为失败另经逐项复审与消融实验，续修采用独立窄入口，原答和失败原件保留。宽入口还可能包含范围外旧断言失败，不能将窄组通过写成全仓CI通过；具体结果以本轮验收为准。"
+      "107条既有类型错误在类型修复阶段已清零；该阶段发现的22项行为失败另经逐项复审与消融实验，续修采用独立窄入口，原答和失败原件保留。宽入口还可能包含范围外旧断言失败，不能将窄组通过写成全仓CI通过；具体结果以本轮验收为准。",
+      "CI固定Bun 1.3.14；本机运行相同门禁应使用该版本。覆盖率按明确profile选择测试清单，保留单进程报告和既有阈值；总进程有600秒watchdog，单案与子操作限额继续保留。CLI子进程同时读取标准输出与错误输出，并在超时后回收。已通过的实机E2E可按产物与环境身份复用。",
+      "内部 package 是共享能力，不是每个都需要单独启动；共享手册、Forge 浏览器 runtime、法术契约与血猎手数据包由对应产品入口使用。",
+      "ServerNext历史收尾见2026-10-05记录及迁移总表，当前渐进重构和6.0.6前置见合集执行总账/支持矩阵。历史源码与框选同步增量已纳入本地整合；本地合并、远端推送、包安装与实机接受分别核对。6.0.2专属运行合同不能直接用于6.0.5或6.0.6。"
     ],
     "keywords": [
       "测试",
@@ -990,7 +1023,9 @@
       "docs/acceptance/2026-10-29-forge-five-mechanism-fixes.md",
       "docs/acceptance/2026-10-29-forge-24-failure-fixes.md",
       "docs/acceptance/2026-10-29-forge-four-compatibility-fixes.md",
-      "docs/acceptance/2026-10-29-forge-three-followup-fixes.md"
+      "docs/acceptance/2026-10-29-forge-three-followup-fixes.md",
+      "docs/reviews/2026-09-22-creature-item-authoring-opportunities.md",
+      "docs/reviews/2026-09-24-dnd2024-statblock-preview-reference.md"
     ],
     "watch": [
       "package.json",
@@ -998,7 +1033,16 @@
       "scripts/",
       "packages/forge-browser-runtime/",
       "packages/spell-manifest-contracts/",
-      "packages/blood-hunter-v14/"
+      "packages/blood-hunter-v14/",
+      "packages/suite-handbook/",
+      "docs/handbook/build.mjs",
+      "docs/handbook/delivery.json",
+      "docs/handbook/standalone.ts",
+      "docs/handbook/client.js",
+      "docs/handbook/template.html",
+      "docs/handbook/style.css",
+      "docs/handbook/tsconfig.json",
+      "tools/module-artifacts/"
     ]
   },
   {
@@ -1260,7 +1304,7 @@
       },
       {
         "title": "测试并构建历史锁定候选",
-        "text": "这些入口仍绑定原6.0.2来源，不是完整local.10构建路线。维护原来源时从锁定源码重建依赖、比较补丁前后诊断并打包；已有同一候选源码时直接测试。不得使用外部dirty checkout产物，也不得用结果覆盖当前6.0.5安装。 历史测试还需按README取得并校验固定6.0.2分发源，存于忽略的test-sources缓存；测试不读取现行系统文件。",
+        "text": "这些入口仍绑定原6.0.2来源，不是完整local.10构建路线。维护原来源时从锁定源码重建依赖、比较补丁前后诊断并打包；历史回归可直接使用已核对的独立测试输入库，当前与新worktree自动定位，不再指向旧迁移树。不得用结果覆盖当前6.0.5安装；固定6.0.2分发源不替换为现行系统文件。",
         "command": "bun run midi-qol:build\nbun run midi-qol:test"
       },
       {
@@ -1301,12 +1345,250 @@
     "sources": [
       "foundry-modules/midi-qol/README.md",
       "docs/runbooks/midi-qol-source-patch-build-install.md",
+      "docs/runbooks/legacy-next-test-inputs.md",
       "docs/plan/midi-qol-dnd6-bugfix-development.md",
       "docs/reviews/2026-10-01-next-605-midi-request-bonus-gap.md"
     ],
     "watch": [
       "foundry-modules/midi-qol/",
       "docs/plan/midi-qol-dnd6-bugfix-development.md"
+    ]
+  },
+  {
+    "id": "version-selection",
+    "title": "选择 Foundry 与 dnd5e 版本",
+    "category": "maintain",
+    "summary": "先确认 Foundry V14 与 dnd5e 的组合，再查看所需工具是否支持；5.3.3 与 6.x 的验收分别记录。",
+    "when": "第一次使用、升级系统，或不确定某个模块能否在当前世界运行时先看这里。",
+    "requires": [
+      "当前世界的 Foundry Core 版本、游戏系统名称和 dnd5e 版本。",
+      "准备使用的具体工具；同一合集中的模块可能有不同支持范围。"
+    ],
+    "steps": [
+      {
+        "title": "确认两个版本号",
+        "text": "Foundry V14 是平台版本，dnd5e 5.3.3 或 6.x 是游戏系统版本，两者不能互相代替。查看当前世界的设置/系统信息，并记录完整版本号。"
+      },
+      {
+        "title": "选择对应系统线",
+        "text": "5.x 固定使用 5.3.3；6.x 按官方稳定发布逐项适配。已有运行记录包括 14.364/5.3.3、Mirror 14.368/5.3.3 和 Next 14.368/6.0.5；Next 已完成 14.368/6.0.6 系统更新与启动读回，具体模块功能仍按各自接受记录判断，见下方支持矩阵。"
+      },
+      {
+        "title": "生成资料时显式选择 V14",
+        "text": "常规生成使用 V14、core 和关闭图标匹配。CLI 省略版本仍默认 V12，Web 初始选择 V14；V14 输出不能据此视为已支持 dnd5e 6.x。将示例路径替换为真实来源。",
+        "command": "bun run src/index.ts \"path/to/source.md\" -o \"path/to/output.json\" --fvtt-version 14 --effect-profile core --icon-mode off"
+      },
+      {
+        "title": "升级前核对具体功能",
+        "text": "先看准备使用的工具的“开始前准备”和“适用范围”，再查支持矩阵。安装成功或部分玩法通过，不能代替整个模块组合的实际接受。升级和迁移按对应流程单独处理。"
+      }
+    ],
+    "outputs": [
+      "明确的 Core/系统组合，以及所需工具的已接受范围和待核对项。"
+    ],
+    "limits": [
+      "V14 是当前主要平台；V12 保留历史兼容实现，本页不改变 CLI 默认值或删除旧功能。",
+      "当前 Forge 正式生成目标仍为 dnd5e 5.3.3；6.x 的模块适配不代表全部生成、导入或玩法已经支持。",
+      "文中精确组合来自已有支持记录，不表示本轮查到的最新官方版本或你当前世界的实装版本。"
+    ],
+    "keywords": [
+      "版本",
+      "兼容性",
+      "V14",
+      "V12",
+      "5.3.3",
+      "6.x",
+      "ServerNext",
+      "Mirror"
+    ],
+    "sources": [
+      "docs/runbooks/dnd5e-version-following.md",
+      "docs/acceptance/current-support-matrix.md"
+    ],
+    "watch": [
+      "docs/runbooks/dnd5e-version-following.md",
+      "docs/acceptance/current-support-matrix.md"
+    ]
+  },
+  {
+    "id": "legacy-next-test-inputs",
+    "title": "ServerNext 历史回归测试输入",
+    "category": "maintain",
+    "summary": "独立保存固定版本测试材料，让主工作区和新 worktree 不再依赖旧迁移树。",
+    "when": "运行历史 Midi、DAE、Classpack 或外部候选回归，或检查本地测试材料是否完整时使用。",
+    "requires": [
+      "接收目录是项目 Git checkout；准备来源须持有清单内全部合法来源文件。",
+      "材料只存入忽略的本地测试目录；仓库不分发原始大包和私有分析数据。"
+    ],
+    "steps": [
+      {
+        "title": "检查已准备材料",
+        "text": "在已准备输入库的checkout执行完整哈希与Git身份校验。sibling worktree核对主区共享库时，给prepare命令指定--target-root及主checkout绝对路径。校验不读取旧迁移树，也不启动Foundry。",
+        "command": "bun run legacy-next-inputs:prepare -- --check"
+      },
+      {
+        "title": "缺少材料时一次准备",
+        "text": "按来源文档填写绝对来源路径；默认只读计划，显式 --apply 才写入新输入库。写前及写后均核对清单；拒绝覆盖已有库。主工作区准备后，新 sibling worktree 自动共享。"
+      },
+      {
+        "title": "运行当前候选回归",
+        "text": "清除非空的历史输入根覆盖后运行当前候选；测试、补丁、锁定和报告来自当前 checkout，材料来自独立输入库。",
+        "command": "bun run test:legacy-next-inputs\nbun run midi-qol:test\nbun run test:classpack-next"
+      },
+      {
+        "title": "运行严格本地历史源码门",
+        "text": "公共CI只运行可移植检查，历史源码组在云端明确标记NOT_EXECUTED。这个本地入口运行清单中的全部原有来源回归，来源缺失、身份不符或断言失败均非零退出；报告写入coverage/local-source-contracts.json，材料继续留在Git外。",
+        "command": "bun run test:local-source-contracts"
+      }
+    ],
+    "outputs": [
+      "170 个已核对输入文件、固定 Midi Git 对象/索引与 ready 标记。",
+      "本地 .local/legacy-next-test-inputs/data 测试目录及只读校验结果。"
+    ],
+    "limits": [
+      "只消除旧 worktree 依赖；现有 F 盘 Core、Node、系统方法、TCoE 来源和部分接受收据依赖仍保留。",
+      "非空 FVTT_LEGACY_NEXT_INPUT_ROOT 仍优先；默认回归应按来源说明清除它。",
+      "离线回归不代表现行版本玩法、安装或部署接受；不操作运行中世界或服务。"
+    ],
+    "keywords": [
+      "ServerNext",
+      "测试",
+      "worktree",
+      "Midi",
+      "Classpack",
+      "历史输入"
+    ],
+    "sources": [
+      "docs/runbooks/legacy-next-test-inputs.md"
+    ],
+    "watch": [
+      "tools/legacy-next-inputs/",
+      "tests/helpers/legacy-next-inputs.mjs"
+    ]
+  },
+  {
+    "id": "babele-zh-maintenance",
+    "title": "中文 Babele 汉化维护",
+    "category": "maintain",
+    "summary": "在当前 Codex 项目交流，按需更新独立维护项目的上游中文补丁并保留自有译文。",
+    "when": "讨论中文 Babele 补丁更新、第三方合集译文增补或自用合并安装包时使用。",
+    "requires": [
+      "独立维护项目位于 I:/OpenCode/fvtt-babele-zh-maintenance，已准备锁定的上游输入。",
+      "Python 3.11+；维护工具只用标准库，无需另建 Codex 项目。"
+    ],
+    "steps": [
+      {
+        "title": "查看维护现状",
+        "text": "默认按脚本路径定位独立维护项目，当前工作目录不改变目标。先核对上游版本与本地增补。",
+        "command": "python -B \"I:/OpenCode/fvtt-babele-zh-maintenance/maintain.py\" status"
+      },
+      {
+        "title": "按需检查或更新上游",
+        "text": "check-upstream 只查一次最新正式版；明确要求更新时运行 update。无冲突则构建读回后切换维护版本；冲突输出三方内容，等用户逐项选择。",
+        "command": "python -B \"I:/OpenCode/fvtt-babele-zh-maintenance/maintain.py\" check-upstream\npython -B \"I:/OpenCode/fvtt-babele-zh-maintenance/maintain.py\" update"
+      },
+      {
+        "title": "读取交付记录",
+        "text": "先看独立项目docs/current-state.md，集中核对当前包、已验范围、接续用法和遗留项；初建验收页仅为历史快照。后续构建使用命令输出的zip和receipt；冲突决策格式及参数见README与--help。"
+      },
+      {
+        "title": "查看包含哪些内容",
+        "text": "双击 I:/OpenCode/fvtt-babele-zh-maintenance/中文Babele内容目录.html，离线搜索、筛选并展开合集。版本栏分别列出dnd5e系统兼容声明、2014/2024规则证据、FVTT官网Verified与原包Core声明；本包规则和原包当前规则可独立筛选。未知及未声明明确标识，不能据声明推断汉化已实机适配。"
+      },
+      {
+        "title": "翻译前查术语",
+        "text": "先读独立项目glossary/README.md、core-terms.md及overrides.csv；扩展名词按英文、类别、规则版次和原书查terms.csv，多义项查variants.csv。Force伤害类型为力场，名称英文尾部和系统机器键保留原值。"
+      }
+    ],
+    "outputs": [
+      "保留来源、上游锁定版本和自有译文的同模块 ID 安装包，以及 ZIP 哈希与读回记录。",
+      "按原内容目标归并的单文件离线内容目录，含逐项来源与格式说明。",
+      "水晶浩劫本地增补：21法术、16怪物及162嵌入条目，另含潘多拉2篇关联规则和晶蚀涌动表。",
+      "发生同处不同修改时，生成绑定精确输入的冲突计划与逐项选择示例。",
+      "CHM来源的AI术语对照：244个核心英文及扩展条目索引，保留版本、类别、出处和多译名。"
+    ],
+    "limits": [
+      "只在明确命令触发时访问上游，无后台监听或定时任务。",
+      "自用包取消上游更新地址，后续经维护项目更新；构建不自动安装 Foundry 或发布 Git。",
+      "第三干净环境http://babele-clean.localhost:30003用于水晶浩劫法术和怪物汉化验收；已验范围见独立项目docs/clean-lab-acceptance.md与docs/crystal-monsters.md。独立主机名隔离登录Cookie，Next/Mirror未改动。",
+      "本次不覆盖施法/战斗自动化、整本Adventure或全部上游译文；蓝宝石尘显示适配器限定Core14/dnd5e6.0.6，升级后需复核。",
+      "本手册仅维护外部项目入口；该项目源码、测试与架构在其独立仓库维护。",
+      "生物及所有独立特性/动作/物品名称必须为中文后空格接英文；当前水晶浩劫已按此修正，保留英文不等于所有动画精确匹配已兼容，详见独立项目docs/bilingual-names.md。",
+      "术语表不会自动修改FVTT系统标签；正文已译力场而自动伤害标签仍显示Force时，应单独核对系统语言资源。"
+    ],
+    "keywords": [
+      "Babele",
+      "Babel",
+      "中文补丁",
+      "汉化",
+      "水晶浩劫",
+      "上游",
+      "三方合并"
+    ],
+    "sources": [
+      "docs/runbooks/babele-zh-maintenance.md"
+    ],
+    "watch": [
+      "docs/runbooks/babele-zh-maintenance.md"
+    ]
+  },
+  {
+    "id": "foundry-mcp-readiness",
+    "title": "本地 Foundry MCP 开发准备",
+    "category": "maintain",
+    "summary": "按需准备本地 Foundry 和专用 GM 页面，实际读取正确世界后再开始依赖 MCP 的工作。",
+    "when": "开发或验收需要通过 Mirror / ServerNext MCP 读取游戏资料，或出现模块未连接时使用。",
+    "requires": [
+      "Bun1.3.14、本地 Lab 路径与当前 worktree 的 .codex/config.toml 绝对路径。",
+      "正常登录的任务专用 GM 页面；与现有任务协调共享实例占用。"
+    ],
+    "steps": [
+      {
+        "title": "准备所选环境",
+        "text": "正确运行的服务复用；只在身份核对且端口、数据目录没有进程占用时启动缺失服务。替换为当前工作树的配置路径。",
+        "command": "bun run foundry:mcp prepare --instance next --lab-root F:\\FoundryLab\\foundry-v14 --config I:\\OpenCode\\fvttV12JsonGenerator\\.codex\\config.toml --apply"
+      },
+      {
+        "title": "接续专用 GM 页面",
+        "text": "输出 browserAction 时，由官方 Chrome 执行代理进入自己的 Next GM 页面 localhost:30002/game；保持 Bridge 和页面在线，保留原有写入权限设置。CLI 本身不登录浏览器。"
+      },
+      {
+        "title": "实际读取确认",
+        "text": "检查成功后再由当前聊天的对应原生 MCP 读取世界；首次接入或恢复验收再读取既有角色或合集。",
+        "command": "bun run foundry:mcp check --instance next --lab-root F:\\FoundryLab\\foundry-v14 --config I:\\OpenCode\\fvttV12JsonGenerator\\.codex\\config.toml --apply"
+      },
+      {
+        "title": "必要时安装恢复适配器",
+        "text": "只接受已核实的 Bridge0.8.4 字节；先移除 --apply 看计划，安装后仅重载本任务页面。",
+        "command": "bun run foundry:mcp:install-recovery --instance next --lab-root F:\\FoundryLab\\foundry-v14 --apply"
+      }
+    ],
+    "outputs": [
+      "明确的服务、后台、GM连接、身份或读取状态，以及正确世界的最小身份信息。",
+      "每个实例自己的 readiness.jsonl 与 current-readiness.json；GM页可读取最多64条客户端连接事件。"
+    ],
+    "limits": [
+      "Mirror与Next分别保留安装及运行验收，按各自记录确认可用；一套的通过不能替代另一套。",
+      "后台与Foundry进程在线不足以接通；GM页面关闭后需要重新准备。",
+      "--apply才允许本地启动和审计写入；不停止或重启已有服务，不处理生产。",
+      "日志记录实际观察，不是持续在线率监控；恢复适配器尊重显式停止和自动重连偏好。"
+    ],
+    "keywords": [
+      "MCP",
+      "Next",
+      "Mirror",
+      "GM",
+      "连接",
+      "自动重连",
+      "日志"
+    ],
+    "sources": [
+      "docs/runbooks/foundry-mcp-readiness.md",
+      "tools/foundry-mcp/README.md"
+    ],
+    "watch": [
+      "tools/foundry-mcp/",
+      "docs/runbooks/foundry-mcp-readiness.md"
     ]
   }
 ]

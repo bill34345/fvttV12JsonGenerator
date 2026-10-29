@@ -2,7 +2,7 @@
   "id": "open-session-deck",
   "title": "Open Session Deck / 开放式跑团副屏",
   "description": "A GM-only party and encounter dashboard that can pop out to a second display without another Foundry login. / 无需额外 Foundry 登录的 GM 队伍与遭遇副屏。",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "compatibility": {
     "minimum": "14.364",
     "verified": "14.364",
@@ -23,7 +23,7 @@
         "compatibility": {
           "minimum": "5.3.3",
           "verified": "5.3.3",
-          "maximum": "6.0.5"
+          "maximum": "6.0.6"
         }
       }
     ]

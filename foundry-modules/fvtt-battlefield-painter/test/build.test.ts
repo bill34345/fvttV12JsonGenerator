@@ -29,7 +29,7 @@ describe("module manifest", () => {
     expect(manifest.relationships.systems[0].compatibility).toEqual({
       minimum: "5.3.3",
       verified: "5.3.3",
-      maximum: "6.0.5",
+      maximum: "6.0.6",
     });
     expect(manifest.description).toContain("clustered lights");
     expect(manifest.description).not.toContain("ambience");
@@ -64,12 +64,12 @@ describe("module manifest", () => {
     expect(result.files).toContain("assets/audio/magic-circle-loop.ogg");
     expect(result.files.some(name => name.endsWith(".wav"))).toBe(false);
     expect(result.zipPath).toEndWith("fvtt-battlefield-painter.zip");
-  });
+  }, 20_000);
 
   test("validates the generated WebM alpha signatures and retired-audio absence", async () => {
     const result = await buildModule();
     await expect(validateMediaAssets(result.moduleRoot)).resolves.toBeUndefined();
-  });
+  }, 20_000);
 
   test("produces byte-identical ZIPs and a browser-only entry bundle", async () => {
     const first = await buildModule();

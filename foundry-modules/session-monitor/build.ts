@@ -19,11 +19,19 @@ const V1_1_1_DEPLOYED_TERMINAL_NEWLINES = new Map<string, number>([
   ['lang/en.json', 2],
 ]);
 const BROWSER_BUNDLE_SOURCE_LABELS = [
+  ...['model', 'view', 'module-manual'].map((source) => ({
+    pattern: new RegExp(`^// (?:.*[\\\\/])?packages[\\\\/]suite-handbook[\\\\/]src[\\\\/]${source}[.]ts\\r?$`, 'gm'),
+    canonical: `// @fvtt-json-generator/suite-handbook/${source}.ts`,
+  })),
+  {
+    pattern: /^\/\/ (?:.*[\\/])?docs[\\/]manual[.]json\r?$/gm,
+    canonical: '// docs/manual.json',
+  },
   {
     pattern: /^\/\/ (?:.*[\\/])?packages[\\/]contracts[\\/]src[\\/]hash[.]ts\r?$/gm,
     canonical: '// @fvtt-json-generator/contracts/hash.ts',
   },
-  ...['schema', 'metrics', 'storage', 'runtime', 'index'].map((source) => ({
+  ...['schema', 'metrics', 'storage', 'runtime', 'index', 'help'].map((source) => ({
     pattern: new RegExp(`^// (?:.*[\\\\/])?src[\\\\/]${source}[.]ts\\r?$`, 'gm'),
     canonical: `// src/${source}.ts`,
   })),
@@ -77,7 +85,12 @@ export async function buildSessionMonitorPackage(
   packageRoot = import.meta.dir,
 ): Promise<SessionMonitorBuildResult> {
   const paths = sessionMonitorPaths(packageRoot);
-  await rm(paths.outputRoot, { recursive: true, force: true });
+  assertNoReparsePath(paths.outputRoot, 'Session Monitor build output');
+  try {
+    await rm(paths.outputRoot, { recursive: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
   await mkdir(resolve(paths.outputDir, 'scripts'), { recursive: true });
 
   const build = await Bun.build({

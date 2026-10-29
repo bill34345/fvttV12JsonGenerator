@@ -16,6 +16,7 @@ import {
   createDeterministicZip,
   projectEffectForFoundryV14Pack,
   projectRuntimeDocuments,
+  projectBloodHunterServerNext606Manifest,
   validateManifest,
   writeLevelDbPack,
 } from '../build.ts';
@@ -62,17 +63,54 @@ describe('module release contract', () => {
     validateManifest(manifest);
     const serverNext = structuredClone(manifest);
     serverNext.compatibility = { minimum: '14.368', verified: '14.368', maximum: '14.368' };
-    serverNext.relationships.systems[0].compatibility = { minimum: '6.0.2', verified: '6.0.2', maximum: '6.0.5' };
+    serverNext.relationships.systems[0].compatibility = { minimum: '6.0.2', verified: '6.0.2', maximum: '6.0.6' };
     validateManifest(serverNext);
-    expect(serverNext.relationships.systems[0].compatibility).toEqual({ minimum: '6.0.2', verified: '6.0.2', maximum: '6.0.5' });
+    expect(serverNext.relationships.systems[0].compatibility).toEqual({ minimum: '6.0.2', verified: '6.0.2', maximum: '6.0.6' });
     const priorServerNext = structuredClone(serverNext);
     priorServerNext.relationships.systems[0].compatibility.maximum = '6.0.2';
     validateManifest(priorServerNext);
-    serverNext.relationships.systems[0].compatibility.maximum = '6.0.6';
+    priorServerNext.relationships.systems[0].compatibility.maximum = '6.0.5';
+    validateManifest(priorServerNext);
+    serverNext.relationships.systems[0].compatibility.maximum = '6.0.7';
     expect(() => validateManifest(serverNext)).toThrow(/projection version and reviewed runtime maximum/);
-    serverNext.relationships.systems[0].compatibility.maximum = '6.0.5';
+    serverNext.relationships.systems[0].compatibility.maximum = '6.0.6';
     serverNext.relationships.systems[0].compatibility.verified = '5.3.3';
     expect(() => validateManifest(serverNext)).toThrow(/projection version and reviewed runtime maximum/);
+  });
+
+  test('projects only the ServerNext dnd5e maximum without mutating existing module metadata', async () => {
+    const legacy = JSON.parse(await Bun.file(resolve(import.meta.dir, '../src/module.json')).text()) as Record<string, any>;
+    for (const maximum of ['6.0.2', '6.0.5']) {
+      const source = structuredClone(legacy);
+      source.compatibility = { minimum: '14.368', verified: '14.368', maximum: '14.368' };
+      source.relationships.systems[0].compatibility = { minimum: '6.0.2', verified: '6.0.2', maximum };
+      const before = JSON.stringify(source);
+      const projected = projectBloodHunterServerNext606Manifest(source) as Record<string, any>;
+      const expected = structuredClone(source);
+      expected.relationships.systems[0].compatibility.maximum = '6.0.6';
+      expect(projected).toEqual(expected);
+      expect(JSON.stringify(source)).toBe(before);
+      expect(projected.relationships.systems[0].compatibility.verified).toBe('6.0.2');
+      expect(projected.packs).toEqual(source.packs);
+      expect(projected.esmodules).toEqual(source.esmodules);
+    }
+  });
+
+  test('rejects foreign, crossed, duplicate, or future manifest inputs before overlay', async () => {
+    const base = JSON.parse(await Bun.file(resolve(import.meta.dir, '../src/module.json')).text()) as Record<string, any>;
+    base.compatibility = { minimum: '14.368', verified: '14.368', maximum: '14.368' };
+    base.relationships.systems[0].compatibility = { minimum: '6.0.2', verified: '6.0.2', maximum: '6.0.5' };
+    const invalid: Array<Record<string, any>> = [];
+    const change = (mutate: (value: Record<string, any>) => void) => { const value = structuredClone(base); mutate(value); invalid.push(value); };
+    change((value) => { value.id = 'foreign-blood-hunter'; });
+    change((value) => { value.compatibility = { minimum: '14.364', verified: '14.364', maximum: '14.364' }; });
+    change((value) => { value.relationships.systems[0].compatibility.verified = '6.0.5'; });
+    change((value) => { value.relationships.systems[0].compatibility.maximum = '6.0.6'; });
+    change((value) => { value.relationships.systems[0].compatibility.maximum = '6.0.7'; });
+    change((value) => { value.relationships.systems.push(structuredClone(value.relationships.systems[0])); });
+    change((value) => { value.relationships.systems.push({ id: 'pathfinder2e', type: 'system' }); });
+    change((value) => { value.relationships.systems[0].id = 'pathfinder2e'; });
+    for (const value of invalid) expect(() => projectBloodHunterServerNext606Manifest(value)).toThrow();
   });
 
   test('release count constants reflect the frozen public compiler output without pinning logicalHash', () => {

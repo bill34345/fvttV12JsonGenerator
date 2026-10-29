@@ -1,4 +1,6 @@
 {
+  "CMG.Help.Label": "Usage help",
+  "CMG.Help.Failed": "Chat Memory Guard help could not open. Please try again later.",
   "CMG.Settings.MenuName": "Chat Memory Guard",
   "CMG.Settings.MenuLabel": "Configure Chat Memory Guard",
   "CMG.Settings.MenuHint": "Bounds chat-card and avatar-thumbnail retention in this browser without deleting world chat records.",

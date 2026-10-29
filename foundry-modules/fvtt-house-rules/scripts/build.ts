@@ -21,8 +21,8 @@ if (manifest.id !== MODULE_ID || manifest.version !== MODULE_VERSION) throw new 
 const coreCompatibility = manifest.compatibility ?? {};
 const dnd5eCompatibility = (manifest.relationships?.systems ?? []).find((entry: any) => entry.id === "dnd5e")?.compatibility ?? {};
 if (coreCompatibility.minimum !== "14.364" || coreCompatibility.verified !== "14.364" || coreCompatibility.maximum !== "14.368"
-  || dnd5eCompatibility.minimum !== "5.3.3" || dnd5eCompatibility.verified !== "5.3.3" || dnd5eCompatibility.maximum !== "6.0.5") {
-  throw new Error("Manifest compatibility must retain verified 14.364/5.3.3 and admit only through the 14.368/6.0.5 candidate range");
+  || dnd5eCompatibility.minimum !== "5.3.3" || dnd5eCompatibility.verified !== "5.3.3" || dnd5eCompatibility.maximum !== "6.0.6") {
+  throw new Error("Manifest compatibility must retain verified 14.364/5.3.3 and admit only through the 14.368/6.0.6 candidate range");
 }
 try {
   await rm(dist, { recursive: true, force: false });

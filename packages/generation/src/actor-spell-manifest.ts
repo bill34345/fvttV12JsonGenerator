@@ -148,6 +148,9 @@ export function buildActorSpellManifest(
     }catch(error){unresolved.push({group,message:error instanceof Error?error.message:String(error)});}
   }
 
+  for(const featureItemKey of itemsByFeature.keys()){
+    if(!groupsByFeature.has(featureItemKey))unresolved.push({group:{featureItemKey},message:`SPELL_FEATURE_LINK_UNKNOWN: Generated feature key ${featureItemKey} has no matching manifest group.`});
+  }
   actor.flags = actor.flags ?? {};
   if(unresolved.length){actor.flags.fvttJsonGenerator??={};const prior=actor.flags.fvttJsonGenerator.candidateReview;actor.flags.fvttJsonGenerator.candidateReview={version:1,findings:[...(prior?.findings??[]),...unresolved.map(entry=>({code:'FIELD_PROJECTION_INCOMPLETE',path:'spellManifest',message:entry.message}))],proposal:{prior:prior?.proposal??null,unresolved}};
     actor.system.details.biography.value+='\n<p>GM 未连接法术组：'+unresolved.map(entry=>entry.message).join('；')+'</p>';

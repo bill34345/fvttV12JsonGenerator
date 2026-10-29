@@ -52,7 +52,7 @@ interface AttachedChat extends DisposableChatAttachment {
 export function disposeChatAttachment(attachment: DisposableChatAttachment): void {
   attachment.observer.disconnect();
   attachment.scrollElement.removeEventListener('scroll', attachment.scrollHandler);
-  if (attachment.retryTimer) clearTimeout(attachment.retryTimer);
+  if (attachment.retryTimer !== undefined) clearTimeout(attachment.retryTimer);
 }
 
 export class ChatMemoryGuardRuntime {
@@ -62,6 +62,10 @@ export class ChatMemoryGuardRuntime {
   readonly #cache: ThumbnailCache;
   readonly #attached = new Map<any, AttachedChat>();
   #settings: ChatMemoryGuardDefaults = { ...DEFAULT_SETTINGS };
+  #started = false;
+  #generation = 0;
+  readonly #hookIds: Array<{ name: string; id: unknown }> = [];
+  readonly #beforeUnload = () => this.stop();
 
   constructor({ game, hooks, ui, thumbnailBackend }: {
     game: any;
@@ -75,37 +79,56 @@ export class ChatMemoryGuardRuntime {
     this.#cache = new ThumbnailCache(
       thumbnailBackend ?? createBrowserThumbnailBackend(),
       () => calculateMaximumCacheEntries(this.#settings.retainedMessages),
-      (source, error) => console.warn(`${MODULE_ID} | Failed to generate avatar thumbnail for ${source}`, error),
+      () => console.warn(`${MODULE_ID} | Avatar thumbnail generation failed.`),
     );
   }
 
   start(): void {
+    if (this.#started) return;
+    if (typeof this.#hooks?.on !== 'function' || typeof this.#hooks?.off !== 'function') {
+      throw new Error('Chat Memory Guard requires public Hook registration and removal.');
+    }
     this.#settings = readEffectiveSettings(this.#game.settings as FoundrySettingsApi);
+    this.#started = true;
+    this.#generation++;
     const avatarHooks = createAvatarHookHandlers((message, card) => this.processAvatar(message, card));
-    this.#hooks.on('renderChatMessageHTML', avatarHooks.renderChatMessageHTML);
-    this.#hooks.on('dnd5e.renderChatMessage', avatarHooks.dnd5eRenderChatMessage);
-    this.#hooks.on('renderChatLog', (application: any) => this.attachChat(application));
-    this.#hooks.on('closeChatLog', (application: any) => this.detachChat(application));
-    this.attachChat(this.#ui.chat);
-    if (this.#ui.chat?.popout?.rendered) this.attachChat(this.#ui.chat.popout);
-    globalThis.addEventListener?.('beforeunload', () => this.stop(), { once: true });
+    try {
+      this.#listen('renderChatMessageHTML', avatarHooks.renderChatMessageHTML);
+      this.#listen('dnd5e.renderChatMessage', avatarHooks.dnd5eRenderChatMessage);
+      this.#listen('renderChatLog', (application: any) => this.attachChat(application));
+      this.#listen('closeChatLog', (application: any) => this.detachChat(application));
+      this.attachChat(this.#ui.chat);
+      if (this.#ui.chat?.popout?.rendered) this.attachChat(this.#ui.chat.popout);
+      globalThis.addEventListener?.('beforeunload', this.#beforeUnload, { once: true });
+    } catch (error) {
+      this.stop();
+      throw error;
+    }
   }
 
   async refresh(): Promise<void> {
+    if (!this.#started) return;
+    const generation = ++this.#generation;
     this.#settings = readEffectiveSettings(this.#game.settings as FoundrySettingsApi);
     this.#cache.clear();
-    for (const [chat, attachment] of this.#attached) {
+    windows: for (const [chat, attachment] of this.#attached) {
+      if (attachment.retryTimer !== undefined) clearTimeout(attachment.retryTimer);
+      attachment.retryTimer = undefined;
       const ids = readMessageIds(chat);
       for (const id of ids) {
+        if (!this.#started || generation !== this.#generation) return;
+        if (this.#attached.get(chat) !== attachment) continue windows;
         const message = this.#game.messages?.get?.(id);
         if (message && typeof chat.updateMessage === 'function') await chat.updateMessage(message, { notify: false });
       }
-      if (this.#settings.enabled) await attachment.controller.reconcile();
+      if (!this.#started || generation !== this.#generation) return;
+      if (this.#attached.get(chat) !== attachment) continue;
+      if (this.#settings.enabled) await this.#reconcileWithRetry(attachment);
     }
   }
 
   attachChat(chat: any): void {
-    if (!chat?.rendered || this.#attached.has(chat)) return;
+    if (!this.#started || !chat?.rendered || this.#attached.has(chat)) return;
     const log = chat.element?.querySelector?.('.chat-log') as HTMLElement | null;
     const scroll = chat.element?.querySelector?.('.chat-scroll') as HTMLElement | null;
     if (!log || !scroll) return;
@@ -114,6 +137,8 @@ export class ChatMemoryGuardRuntime {
       isAtBottom: () => chat.isAtBottom === true,
       deleteMessage: (id) => chat.deleteMessage(id),
       retainedMessages: () => this.#settings.enabled ? this.#settings.retainedMessages : Number.MAX_SAFE_INTEGER,
+      isActive: () => this.#started && this.#settings.enabled && this.#attached.get(chat) === attachment,
+      generation: () => this.#generation,
     });
     const attachment: AttachedChat = {
       controller,
@@ -124,6 +149,7 @@ export class ChatMemoryGuardRuntime {
       },
     };
     attachment.observer = new MutationObserver((records) => {
+      if (!this.#started || this.#attached.get(chat) !== attachment) return;
       for (const record of records) {
         for (const node of record.addedNodes) {
           if (node instanceof HTMLElement && node.matches('.message')) {
@@ -132,7 +158,7 @@ export class ChatMemoryGuardRuntime {
           }
         }
       }
-      if (this.#settings.enabled) void attachment.controller.onDomMutation();
+      void attachment.controller.onDomMutation();
     });
     attachment.observer.observe(log, { childList: true });
     scroll.addEventListener('scroll', attachment.scrollHandler, { passive: true });
@@ -147,12 +173,14 @@ export class ChatMemoryGuardRuntime {
   detachChat(chat: any): void {
     const attachment = this.#attached.get(chat);
     if (!attachment) return;
+    attachment.controller.dispose();
     disposeChatAttachment(attachment);
     this.#attached.delete(chat);
   }
 
   async processAvatar(message: any, card: any): Promise<void> {
-    if (!this.#settings.enabled) return;
+    if (!this.#started || !this.#settings.enabled) return;
+    const generation = this.#generation;
     await applyAvatarToCard({
       message,
       card,
@@ -160,6 +188,7 @@ export class ChatMemoryGuardRuntime {
       resolveContext: (systemAvatar) => resolveFoundryAvatarContext(this.#game, message, systemAvatar),
       thumbnail: this.#cache,
       defaultAvatar: (globalThis as any).CONST?.DEFAULT_TOKEN,
+      isCurrent: () => this.#started && generation === this.#generation,
     });
   }
 
@@ -180,17 +209,32 @@ export class ChatMemoryGuardRuntime {
   }
 
   stop(): void {
+    if (!this.#started) return;
+    this.#started = false;
+    this.#generation++;
+    for (const { name, id } of this.#hookIds) this.#hooks.off(name, id);
+    this.#hookIds.length = 0;
+    globalThis.removeEventListener?.('beforeunload', this.#beforeUnload);
     for (const chat of Array.from(this.#attached.keys())) this.detachChat(chat);
     this.#cache.clear();
   }
 
+  #listen(name: string, callback: (...args: any[]) => unknown): void {
+    this.#hookIds.push({ name, id: this.#hooks.on(name, callback) });
+  }
+
   async #reconcileWithRetry(attachment: AttachedChat): Promise<void> {
+    const generation = this.#generation;
+    const current = () => this.#started && this.#settings.enabled && generation === this.#generation
+      && Array.from(this.#attached.values()).includes(attachment);
+    if (!current()) return;
     await attachment.controller.reconcile();
+    if (!current()) return;
     if (!attachment.controller.getStats().pendingRemovals) return;
     if (attachment.retryTimer) clearTimeout(attachment.retryTimer);
     attachment.retryTimer = setTimeout(() => {
       attachment.retryTimer = undefined;
-      if (this.#settings.enabled) void this.#reconcileWithRetry(attachment);
+      if (current()) void this.#reconcileWithRetry(attachment);
     }, 1_050);
   }
 }

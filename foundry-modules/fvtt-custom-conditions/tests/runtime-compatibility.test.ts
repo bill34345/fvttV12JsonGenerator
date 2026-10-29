@@ -17,6 +17,10 @@ test('Mirror generic and injury gates admit the reviewed Core patch with pinned 
   const next = { version: '14.368', system: { id: 'dnd5e', version: '6.0.5' } };
   expect(genericConditionsSupported(next)).toBeTrue();
   expect(injurySupported({ game: next })).toBeTrue();
+  const current = { version: '14.368', system: { id: 'dnd5e', version: '6.0.6' } };
+  expect(genericConditionsSupported(current)).toBeTrue();
+  expect(injurySupported({ game: current })).toBeTrue();
+  expect(genericConditionsSupported({ version: '14.368', system: { id: 'dnd5e', version: '6.0.7' } })).toBeFalse();
   expect(genericConditionsSupported({ version: '14.368', system: { id: 'other-system', version: '5.3.3' } })).toBeFalse();
 });
 
@@ -24,8 +28,10 @@ test.each([
   ['14.364', '5.3.3', true, false],
   ['14.368', '5.3.3', true, false],
   ['14.368', '6.0.5', true, true],
+  ['14.368', '6.0.6', true, true],
   ['14.364', '6.0.5', false, false],
-  ['14.368', '6.0.6', false, false],
+  ['14.364', '6.0.6', false, false],
+  ['14.368', '6.0.7', false, false],
 ])('init mappings and ready public APIs agree on %s/%s', (core, system, supported, native6) => {
   const once = new Map<string, () => void>();
   const module: any = { id: 'fvtt-custom-conditions', active: true };

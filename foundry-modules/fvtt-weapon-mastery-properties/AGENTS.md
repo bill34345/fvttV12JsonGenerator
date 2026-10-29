@@ -4,11 +4,14 @@
 
 This directory is the owner of the standalone `fvtt-weapon-mastery-properties`
 module. Runtime gates accept only Foundry `14.364` / dnd5e `5.3.3`, Mirror
-`14.368` / `5.3.3`, or Next `14.368` / `6.0.5`. Core `14.368` alone does not
+`14.368` / `5.3.3`, or Next `14.368` / `6.0.5` or `6.0.6`. Core `14.368` alone does not
 select native6 adapters. Each pair retains its own bounded acceptance evidence.
 Next requires CC's positive `weaponEffects.capabilities.native6Effects === 1`.
 Native6 identities come from message `system`, and Midi support is pinned to
 `14.6.0-beta.4338eeab.local.10`; incomplete or unreviewed cards fail closed.
+The `6.0.6` pair has scoped single-GM Sap cancellation, Club hit/damage/Slow,
+duplicate settlement prevention, reload and owned-cleanup acceptance. Retain
+`6.0.5` as the manifest verified value; the full mastery/role matrix is unaccepted.
 
 The browser entry must remain browser safe. `src/core` contains pure,
 source-driven eligibility, critical-damage, and settlement helpers. It may

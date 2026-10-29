@@ -1,7 +1,76 @@
 import { describe, expect, test } from 'bun:test';
-import { ThumbnailCache } from '../thumbnail-cache';
+import { ThumbnailCache, type CreatedThumbnail } from '../thumbnail-cache';
 
 describe('session thumbnail cache', () => {
+  test('a new session does not reuse an old request or lose its own pending request when the old one finishes', async () => {
+    const pending: Array<(value: CreatedThumbnail) => void> = [];
+    const revoked: string[] = [];
+    let released = 0;
+    const cache = new ThumbnailCache({
+      create: () => new Promise(resolve => pending.push(resolve)),
+      revoke: url => revoked.push(url),
+    }, () => 2);
+    const old = cache.get('same.png', 128, 75);
+    cache.clear();
+    const fresh = cache.get('same.png', 128, 75);
+    try {
+      expect(fresh).not.toBe(old);
+      expect(pending).toHaveLength(2);
+      pending[0]!({ url: 'blob:old', bytes: 10, releaseSource: () => { released++; } });
+      expect(await old).toBeUndefined();
+      expect(cache.get('same.png', 128, 75)).toBe(fresh);
+      expect(pending).toHaveLength(2);
+      pending[1]!({ url: 'blob:fresh', bytes: 10, releaseSource: () => { released++; } });
+      expect(await fresh).toBe('blob:fresh');
+      expect(revoked).toEqual(['blob:old']);
+      expect(released).toBe(2);
+      expect(cache.getStats()).toEqual({ entries: 1, estimatedBytes: 10, failures: 0 });
+    } finally {
+      pending.forEach((finish, index) => finish({ url: `blob:cleanup-${index}`, bytes: 0 }));
+      await Promise.allSettled([old, fresh]);
+      cache.clear();
+    }
+  });
+
+  test('bounds remembered failed sources while retaining an accurate failure count', async () => {
+    let attempts = 0;
+    const cache = new ThumbnailCache({
+      create: async () => { attempts++; throw new Error('unavailable'); },
+      revoke: () => {},
+    }, () => 2);
+    for (const source of ['bad-1.png', 'bad-2.png', 'bad-3.png']) await cache.get(source, 128, 75);
+    await cache.get('bad-3.png', 128, 75);
+    expect(attempts).toBe(3);
+    await cache.get('bad-1.png', 128, 75);
+    expect(attempts).toBe(4);
+    expect(cache.getStats().failures).toBe(4);
+    cache.clear();
+    expect(cache.getStats().failures).toBe(0);
+  });
+
+  test('a synchronously throwing backend leaves no stale pending request after clear', async () => {
+    let attempts = 0;
+    const cache = new ThumbnailCache({
+      create() { attempts++; throw new Error('synchronous backend failure'); },
+      revoke: () => {},
+    }, () => 2);
+    expect(await cache.get('bad.png', 128, 75)).toBeUndefined();
+    cache.clear();
+    expect(await cache.get('bad.png', 128, 75)).toBeUndefined();
+    expect(attempts).toBe(2);
+  });
+
+  test('zero capacity releases a newly created thumbnail without returning its revoked URL', async () => {
+    const revoked: string[] = [];
+    const cache = new ThumbnailCache({
+      create: async () => ({ url: 'blob:uncached', bytes: 10 }),
+      revoke: url => revoked.push(url),
+    }, () => 0);
+    expect(await cache.get('a.png', 128, 75)).toBeUndefined();
+    expect(revoked).toEqual(['blob:uncached']);
+    expect(cache.getStats().entries).toBe(0);
+  });
+
   test('deduplicates concurrent requests and closes source bitmaps', async () => {
     let generated = 0;
     let closed = 0;

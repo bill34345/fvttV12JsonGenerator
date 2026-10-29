@@ -78,6 +78,7 @@ describe('canonical generation contract', () => {
   it('adapts Actor and Item compatibility inputs into one discriminated union', () => {
     const actor = adaptParsedActorToCanonical({
       name: 'Contract Actor',
+      type: 'npc', abilities: {}, attributes: {}, details: {}, traits: {}, skills: {}, saves: [], items: [],
       structuredActions: {
         动作: [{
           name: 'Arc Bolt',

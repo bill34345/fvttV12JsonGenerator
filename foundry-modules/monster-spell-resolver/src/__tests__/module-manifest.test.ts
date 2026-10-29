@@ -36,7 +36,7 @@ describe('Foundry companion module contract', () => {
       { lang: 'zh-CN', name: '简体中文', path: 'lang/zh-CN.json' },
     ]);
     expect(manifest.relationships).toEqual({
-      systems: [{ id: 'dnd5e', type: 'system', compatibility: { minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.5' } }],
+      systems: [{ id: 'dnd5e', type: 'system', compatibility: { minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.6' } }],
     });
     expect(manifest.socket).toBe(false);
     expect(manifest.scripts ?? []).toEqual([]);
@@ -272,6 +272,8 @@ describe('Foundry companion module contract', () => {
     [{ foundry: '14.368', dnd5e: '6.0.3' }, 'UNSUPPORTED_DND5E_VERSION'],
     [{ foundry: '14.368', dnd5e: '6.0.4' }, 'UNSUPPORTED_DND5E_VERSION'],
     [{ foundry: '14.364', dnd5e: '6.0.5' }, 'UNSUPPORTED_RUNTIME_PAIR'],
+    [{ foundry: '14.364', dnd5e: '6.0.6' }, 'UNSUPPORTED_RUNTIME_PAIR'],
+    [{ foundry: '14.368', dnd5e: '6.0.7' }, 'UNSUPPORTED_DND5E_VERSION'],
     [{ foundry: '', dnd5e: '5.3.3' }, 'MISSING_RUNTIME_VERSION'],
     [{ foundry: '14.364', dnd5e: '' }, 'MISSING_RUNTIME_VERSION'],
   ] as const)('fails closed for runtime %j', async (versions, code) => {
@@ -288,6 +290,7 @@ describe('Foundry companion module contract', () => {
     { foundry: '14.368', dnd5e: '5.3.3' },
     { foundry: '14.368', dnd5e: '6.0.2' },
     { foundry: '14.368', dnd5e: '6.0.5' },
+    { foundry: '14.368', dnd5e: '6.0.6' },
   ] as const)('permits only the exact source-reviewed runtime pair %j', async (versions) => {
     expect(evaluateRuntimeCompatibility(versions)).toEqual({ ...versions, supported: true, diagnostics: [] });
     const adapter = new FakeRuntimeAdapter(versions);
@@ -361,6 +364,7 @@ describe('Foundry companion module contract', () => {
     ['5.3.3', false],
     ['6.0.2', true],
     ['6.0.5', true],
+    ['6.0.6', true],
   ] as const)('merges exact dnd5e %s Item defaults without conflicting source paths or losing rules', async (dnd5eVersion, hasSourceDefault) => {
     // Item core defaults: common/documents/item.mjs; dnd5e additions:
     // 5.3.3 dnd5e.mjs:82397, 6.0.2 dnd5e.mjs:95916. Foundry 14.368

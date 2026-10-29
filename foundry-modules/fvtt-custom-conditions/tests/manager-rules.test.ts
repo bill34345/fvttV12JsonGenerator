@@ -27,7 +27,8 @@ describe('Condition manager rule controls', () => {
   test.each([
     ['14.364', '5.3.3', 'dnd5e', true],
     ['14.368', '6.0.5', 'dnd5e', true],
-    ['14.368', '6.0.6', 'dnd5e', false],
+    ['14.368', '6.0.6', 'dnd5e', true],
+    ['14.368', '6.0.7', 'dnd5e', false],
     ['14.367', '6.0.5', 'dnd5e', false],
     ['14.368', '5.3.3', 'dnd5e', true],
     ['14.364', '5.3.3', 'pf2e', false],

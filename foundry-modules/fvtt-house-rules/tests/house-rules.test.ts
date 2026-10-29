@@ -293,6 +293,9 @@ test("MIDI adapter is isolated to exactly 14.0.11 and tolerates matching DAE onl
   });
   expect(inspectMidiAdapter(new Map([["midi-qol", { active: true, version: "14.6.0-beta.4338eeab.local.9" }]]), "14.368", "6.0.5").reason)
     .toBe("unsupported-midi-version");
+  expect(inspectMidiAdapter(new Map(), "14.368", "6.0.6")).toEqual({ enabled: false, supported: true, reason: "absent" });
+  expect(inspectMidiAdapter(new Map([["midi-qol", { active: true, version: "14.6.0-beta.4338eeab.local.9" }]]), "14.368", "6.0.6").reason)
+    .toBe("unsupported-midi-version");
   next.set("midi-qol", { active: true, version: "14.6.0-beta.4338eeab.local.8" });
   expect(inspectMidiAdapter(next, "14.368", "6.0.2").reason).toBe("unsupported-midi-version");
   expect(inspectMidiAdapter(next, "14.364", "5.3.3").supported).toBeFalse();
@@ -367,7 +370,7 @@ describe("critical first-die display contract", () => {
   });
 });
 
-function ammoRuntimeFixture({ destroy = false, dnd6 = false } = {}): { actor: any; item: any; activity: any; message: any; packet: any; restore: () => void } {
+function ammoRuntimeFixture({ destroy = false, dnd6 = false, dnd6Version = "6.0.2" } = {}): { actor: any; item: any; activity: any; message: any; packet: any; restore: () => void } {
   const priorGame = (globalThis as any).game;
   const priorFromUuid = (globalThis as any).fromUuid;
   const users = new Map([
@@ -440,7 +443,7 @@ function ammoRuntimeFixture({ destroy = false, dnd6 = false } = {}): { actor: an
   ]);
   (globalThis as any).game = {
     version: dnd6 ? "14.368" : "14.364",
-    system: { id: "dnd5e", version: dnd6 ? "6.0.2" : "5.3.3" },
+    system: { id: "dnd5e", version: dnd6 ? dnd6Version : "5.3.3" },
     user: users.get("gm"),
     users: userCollection,
     messages: new Map([[message.id, message]]),
@@ -517,14 +520,14 @@ describe("runtime ammunition trust and fallback", () => {
     }
   });
 
-  test("dnd5e 6 records a consumed shot from the typed attack card and rejects mismatched sources", async () => {
-    const fixture = ammoRuntimeFixture({ dnd6: true });
+  test.each(["6.0.2", "6.0.5", "6.0.6"])("dnd5e %s records a consumed shot from the typed attack card and rejects mismatched sources", async (dnd6Version) => {
+    const fixture = ammoRuntimeFixture({ dnd6: true, dnd6Version });
     try {
       expect(await __testing.stageAmmoPacket(fixture.packet, "player")).toBe(true);
       fixture.item.system.quantity = 1;
       expect(await __testing.commitAmmoPacket({ ...fixture.packet, type: "ammo-commit" }, "player")).toBe(true);
       expect(Object.keys(fixture.actor.flags[MODULE_ID].ammoLedger.shots)).toHaveLength(1);
-      const other = ammoRuntimeFixture({ dnd6: true });
+      const other = ammoRuntimeFixture({ dnd6: true, dnd6Version });
       try {
         other.message.system.activity.uuid = "Actor.actor.Item.other.Activity.attack";
         expect(await __testing.stageAmmoPacket(other.packet, "player")).toBe(false);
@@ -541,8 +544,8 @@ describe("runtime ammunition trust and fallback", () => {
     } finally { fixture.restore(); }
   });
 
-  test("dnd5e 6 deleted ammunition requires the exact matching system delta", async () => {
-    const fixture = ammoRuntimeFixture({ dnd6: true, destroy: true });
+  test.each(["6.0.2", "6.0.5", "6.0.6"])("dnd5e %s deleted ammunition requires the exact matching system delta", async (dnd6Version) => {
+    const fixture = ammoRuntimeFixture({ dnd6: true, dnd6Version, destroy: true });
     try {
       expect(await __testing.stageAmmoPacket(fixture.packet, "player")).toBe(true);
       fixture.actor.items.delete("ammo");

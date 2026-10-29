@@ -1,7 +1,7 @@
 {
   "FVTT_HOUSE_RULES": {
     "FirstRun": "House Rules is installed. All modifying features are OFF. A GM can enable only the desired rules in Configure Settings.",
-    "UnsupportedRuntime": "House Rules is fail-closed: only Foundry 14.364 / dnd5e 5.3.3 or Foundry 14.368 / dnd5e 6.0.2 or 6.0.5 is supported.",
+    "UnsupportedRuntime": "House Rules is fail-closed: only Foundry 14.364 / dnd5e 5.3.3 or Foundry 14.368 / dnd5e 5.3.3, 6.0.2, 6.0.5 or 6.0.6 is supported.",
     "LowAbility": "Selected character has one or more ability scores at or below the configured reminder threshold.",
     "Dismiss": "Dismiss",
     "Nat1": {

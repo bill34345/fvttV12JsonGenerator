@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
   hashManagedProjection,
   logicalSpellRefKey,
@@ -13,11 +13,31 @@ import { generatedResolverDocumentId,computeManagedSourceHash } from '../cast-ac
 import { createResolverActorService } from '../hooks';
 import {conditionalSpellFixture} from './conditional-spell-fixture';
 import {
-  executeHydrationTransaction,
+  executeHydrationTransaction as executeHydrationTransactionRuntime,
   projectCurrentManagedContent,
   HydrationTransactionError,
   type HydrationFailureStage,
+  type ExecuteHydrationTransactionInput,
 } from '../transaction';
+
+// These FakeActors run outside Foundry, even when another suite installed a fake client.
+const fixtureGlobalNames = ['game', 'foundry', 'Hooks'] as const;
+let originalGlobals: Array<[string, PropertyDescriptor | undefined]> = [];
+beforeEach(() => {
+  originalGlobals = fixtureGlobalNames.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
+  for (const name of fixtureGlobalNames) Reflect.deleteProperty(globalThis, name);
+});
+afterEach(() => {
+  for (const [name, descriptor] of originalGlobals) {
+    if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+    else Reflect.deleteProperty(globalThis, name);
+  }
+});
+
+const fieldReplacement = { create: (value: unknown) => ({ __forcedReplacement: value }) };
+function executeHydrationTransaction(input: ExecuteHydrationTransactionInput) {
+  return executeHydrationTransactionRuntime({ fieldReplacement, ...input });
+}
 
 // Foundry 14.364 common/abstract/document.mjs 863-905 is the public Actor
 // create/update/delete embedded-document contract. dnd5e.mjs 23830-23835 is
@@ -200,6 +220,73 @@ describe('Actor-local atomic hydration transaction', () => {
     await expect(executeHydrationTransaction({actor,manifest:inputManifest,plan:readyPlan(actor,undefined,undefined,inputManifest),completeSourceCache:true})).rejects.toMatchObject({rollbackSucceeded:true,residualDifferences:[]});
     expect(actor.fullProjection()).toEqual(before);expect(actor.rawItemProjection()).toEqual(raw);
   });
+  test('requires exact field recovery before any document write', async () => {
+    const actor = new TransactionActor();
+    const before = actor.fullProjection();
+    await expect(executeHydrationTransactionRuntime({
+      actor, manifest: manifest(), plan: readyPlan(), fieldReplacement: {} as any,
+    })).rejects.toThrow('ForcedReplacement');
+    await expect(executeHydrationTransaction({
+      actor, manifest: manifest(), plan: readyPlan(), fieldReplacement: { create() { throw new Error('replacement unavailable'); } },
+    })).rejects.toThrow('replacement unavailable');
+    expect(actor.calls).toEqual([]);
+    expect(actor.fullProjection()).toEqual(before);
+  });
+
+  test.each(['veto', 'missing-report'] as const)('rejects an unconfirmed final commit (%s) and restores the prior state', async (mode) => {
+    const actor = new TransactionActor();
+    const before = actor.fullProjection();
+    const foreignBefore = actor.foreignProjection();
+    const update = actor.update.bind(actor);
+    const commitKey = `flags.${RESOLVER_MODULE_ID}.spellResolution`;
+    let commitAttempts = 0;
+    Object.assign(actor, { update: async (change: Record<string, any>) => {
+      if (Object.hasOwn(change, commitKey)) {
+        commitAttempts++;
+        expect(actor.managedActivities()).toHaveLength(2);
+        // Core 14.368 filters vetoed preUpdate requests and may resolve undefined.
+        if (mode === 'veto') return undefined;
+        // A pre-update adapter may also mutate its input: expected commit data
+        // must be kept separately rather than blessed by that same mutation.
+        delete change[commitKey].report;
+        return update(change);
+      }
+      return update(change);
+    } });
+
+    const result = await executeHydrationTransaction({ actor, manifest: manifest(), plan: readyPlan() })
+      .then(value => ({ value, error: undefined }), error => ({ value: undefined, error }));
+    expect(result.value).toBeUndefined();
+    expect(result.error).toBeInstanceOf(HydrationTransactionError);
+    expect(result.error.rollbackSucceeded).toBe(true);
+    expect(result.error.diagnostic.phase).toBe('commit');
+    expect(commitAttempts).toBe(1);
+    expect(actor.fullProjection()).toEqual(before);
+    expect(actor.foreignProjection()).toEqual(foreignBefore);
+  });
+
+  test('rejects managed content drift during final commit and restores the prior state', async () => {
+    const actor = new TransactionActor();
+    const before = actor.fullProjection();
+    const foreignBefore = actor.foreignProjection();
+    const update = actor.update.bind(actor);
+    Object.assign(actor, { update: async (change: Record<string, any>) => {
+      const result = await update(change);
+      if (Object.hasOwn(change, `flags.${RESOLVER_MODULE_ID}.spellResolution`)) {
+        actor.managedActivities()[0]!.spell.challenge.attack = '99';
+      }
+      return result;
+    } });
+    const result = await executeHydrationTransaction({ actor, manifest: manifest(), plan: readyPlan() })
+      .then(value => ({ value, error: undefined }), error => ({ value: undefined, error }));
+    expect(result.value).toBeUndefined();
+    expect(result.error).toBeInstanceOf(HydrationTransactionError);
+    expect(result.error.rollbackSucceeded).toBe(true);
+    expect(result.error.diagnostic.phase).toBe('commit');
+    expect(actor.fullProjection()).toEqual(before);
+    expect(actor.foreignProjection()).toEqual(foreignBefore);
+  });
+
   test.each([[false], [true]] as const)('commits atomically with native auto-cache=%s, serializes, and use spending is a no-op', async (autoCache) => {
     const actor = new TransactionActor(autoCache);
     const foreignBefore = actor.foreignProjection();
@@ -883,6 +970,18 @@ class TransactionHookBus {
   }
 }
 
+// Foundry's ObjectField applies ordinary object updates recursively. Only the
+// public ForcedReplacement operation replaces the exact target subtree.
+function mergeActorFlagValue(current: any, patch: any): any {
+  if (patch && typeof patch === 'object' && Object.hasOwn(patch, '__forcedReplacement')) {
+    return structuredClone(patch.__forcedReplacement);
+  }
+  if (!patch || typeof patch !== 'object' || Array.isArray(patch)) return structuredClone(patch);
+  const result = current && typeof current === 'object' && !Array.isArray(current) ? structuredClone(current) : {};
+  for (const [key, value] of Object.entries(patch)) result[key] = mergeActorFlagValue(result[key], value);
+  return result;
+}
+
 class TransactionActor {
   readonly id = 'ActorTransact001';
   get uuid() { return `Actor.${this.id}`; }
@@ -1051,9 +1150,9 @@ class TransactionActor {
     await this.withMutation(async () => {
       this.calls.push(['update', structuredClone(change)]);
       const resolution = change[`flags.${RESOLVER_MODULE_ID}.spellResolution`];
-      if (resolution !== undefined) this.flags[RESOLVER_MODULE_ID].spellResolution = structuredClone(resolution);
+      if (resolution !== undefined) this.flags[RESOLVER_MODULE_ID].spellResolution = mergeActorFlagValue(this.flags[RESOLVER_MODULE_ID].spellResolution, resolution);
       const resolver = change[`flags.${RESOLVER_MODULE_ID}`];
-      if (resolver !== undefined) this.flags[RESOLVER_MODULE_ID] = structuredClone(resolver);
+      if (resolver !== undefined) this.flags[RESOLVER_MODULE_ID] = mergeActorFlagValue(this.flags[RESOLVER_MODULE_ID], resolver);
     });
     return this;
   }

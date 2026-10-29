@@ -30,6 +30,8 @@ export interface ConditionManagerOpenContext {
 }
 
 export interface CustomConditionsApi {
+  readonly capabilities: Readonly<{ combatRewind: 1; awaitIdle: 1 }>;
+  whenIdle(): Promise<void>;
   definitions(): ReturnType<ConditionRuntime['definitions']>;
   list(actor: any): ConditionEntry[];
   apply(actor: any, conditionId: ConditionId, params: ConditionParams, options?: ConditionApplyOptions): Promise<any>;
@@ -70,6 +72,8 @@ export function createConditionsApi(runtime: ConditionRuntime, openManager: (con
   const weaponEffects = createWeaponEffectsApi(runtime.weaponEffects);
   const configured = new ConfiguredConditionRuntime(runtime.globals, runtime.isActiveGM, runtime);
   return Object.freeze({
+    capabilities: Object.freeze({ combatRewind: 1 as const, awaitIdle: 1 as const }),
+    whenIdle: () => runtime.whenIdle(),
     definitions: () => runtime.definitions(),
     list: (actor: any) => runtime.list(actor),
     apply: (actor: any, conditionId: ConditionId, params: ConditionParams, options?: ConditionApplyOptions) => runtime.apply(actor, conditionId, params, options),

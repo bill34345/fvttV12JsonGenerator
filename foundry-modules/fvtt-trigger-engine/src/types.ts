@@ -161,6 +161,8 @@ export interface TriggerEventContext {
 
 export type TriggerEventListener = (context: TriggerEventContext) => Promise<void> | void;
 
+export interface CombatUndoCheckpoint { combatUuid: string; keys: string[] }
+
 export interface TriggerContext {
   triggerId: string;
   triggerName: string;
@@ -207,7 +209,7 @@ export interface DocumentUpdateReport {
   documentUuid: string;
   matchedTriggerIds: string[];
   results: TriggerExecutionResult[];
-  skippedReason?: 'inactive-gm' | 'recursion-guard' | 'unsupported-document';
+  skippedReason?: 'inactive-gm' | 'recursion-guard' | 'unsupported-document' | 'undo-restore';
 }
 
 export interface CombatUpdateReport {

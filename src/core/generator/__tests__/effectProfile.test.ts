@@ -587,12 +587,15 @@ describe('ActorGenerator effect profiles', () => {
     expect(coreActor.name).toBe('Damage-Bound Warden');
     expect(moddedActor.name).toBe(coreActor.name);
     expect(moddedActor.items.map((item: any) => item.name)).toEqual(coreActor.items.map((item: any) => item.name));
-    expect(coreEffect).toBeUndefined();
-    expect(coreBrandActivity.effects ?? []).toEqual([]);
+    expect(coreEffect?.statuses).toEqual(['frightened']);
+    expect(coreEffect?.flags?.fvttJsonGenerator?.conditionLifecycle?.mode).toBe('gm');
+    expect(coreEffect?.flags?.dae).toBeUndefined();
+    expect(coreBrandActivity.effects).toEqual([{_id:coreEffect._id}]);
     expect(coreBrand.flags.fvttJsonGenerator.conditionLifecycle.statuses).toEqual(['frightened']);
     expect(coreBrand.system.description.value).toContain('until it takes damage');
+    const {duration:_gmDuration,...nativeLifecycle}=coreEffect.flags.fvttJsonGenerator.conditionLifecycle;
     expect(moddedEffect?.flags).toEqual({
-      fvttJsonGenerator: { sourceDuration: 'untilDamaged' },
+      fvttJsonGenerator: { sourceDuration: 'untilDamaged', conditionLifecycle:nativeLifecycle },
       dae: { specialDuration: ['isDamaged'] },
     });
     expect(coreBrandActivity?.duration?.units).toBe('spec');

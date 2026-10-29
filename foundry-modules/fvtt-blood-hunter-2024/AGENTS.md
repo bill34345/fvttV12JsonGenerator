@@ -2,7 +2,7 @@
 
 ## 范围
 
-- 本目录保留 Foundry VTT 14.364 / dnd5e 5.3.3 的旧构建入口。显式 `--target=server-next` 仍按固定 14.368 / dnd5e 6.0.2 编译内容，并生成 `minimum/verified=6.0.2, maximum=6.0.5` 的运行时兼容 manifest；构建通过不能宣称 6.0.5 运行时已验收，旧 Lab 安装器仍只指向 server-mirror。
+- 本目录保留14.364/5.3.3旧构建入口。显式`--target=server-next`仍按14.368/6.0.2编译内容，manifest保持minimum/verified6.0.2、maximum6.0.6。仅元数据投影也须核现装owned marker和源hash；不重造pack或改变内容身份。6.0.6只接受四个新建3级角色的职业/子职授予、重载和清理；旧角色仅只读Preview，不执行Copy/Apply或备份，完整升级/选择/迁移未接受，既有installer仍服务旧Mirror目标。
 - 模块只消费冻结的 `packages/blood-hunter-v14/src/index.ts` 公共接口；不得复制、改写或在浏览器端重建编译器匹配规则。
 - 所有构建、安装、迁移和测试代码必须留在本模块目录；根 `scripts/`、`package.json`、`tools/` 和 `docs/` 不属于本模块 worker 的写入范围。
 

@@ -1,4 +1,4 @@
-import { DND5E_VERSION, FOUNDRY_VERSION, NEXT_DND5E_VERSION, NEXT_FOUNDRY_VERSION, MODULE_ID } from '../constants.ts';
+import { DND5E_VERSION, FOUNDRY_VERSION, NEXT_FOUNDRY_VERSION, MODULE_ID, isNative6Dnd5eVersion } from '../constants.ts';
 import { collection, moduleRecord } from './foundry.ts';
 import { NEXT_MIDI_VERSION } from './dnd5e-message.ts';
 
@@ -43,8 +43,15 @@ function supportedDependencyVersion(version: string | undefined): boolean {
   return version !== undefined && (/^0\.1\.[1-9][0-9]*$/.test(version) || version === '0.2.0');
 }
 
+function native6Runtime(globals: any): boolean {
+  const foundry = globals?.game?.version ?? globals?.game?.release?.version ?? globals?.game?.foundry?.version;
+  const system = globals?.game?.system?.version ?? globals?.game?.system?.data?.version;
+  return foundry === NEXT_FOUNDRY_VERSION && isNative6Dnd5eVersion(system);
+}
+
 function conditionsStatus(globals: any, native6: boolean): DependencyStatus {
   const module = moduleRecord(globals, CUSTOM_CONDITIONS_MODULE_ID);
+  const active = module?.active === true;
   const api = module?.api;
   const version = moduleVersion(module);
   const versionMatch = supportedDependencyVersion(version);
@@ -57,14 +64,15 @@ function conditionsStatus(globals: any, native6: boolean): DependencyStatus {
     requiredVersion: '0.1.1',
     ...(version === undefined ? {} : { installedVersion: version }),
     ...(api?.weaponEffects?.version === undefined ? {} : { apiVersion: api.weaponEffects.version }),
-    available: Boolean(module && api),
-    compatible: Boolean(module && versionMatch && apiMatch && writerMatch),
-    ...(!module ? { reason: 'module-not-active' } : !versionMatch ? { reason: 'unsupported-module-version' } : !apiMatch ? { reason: 'weapon-effects-api-unavailable' } : !writerMatch ? { reason: 'native6-weapon-writer-unavailable' } : {}),
+    available: Boolean(active && api),
+    compatible: Boolean(active && versionMatch && apiMatch && writerMatch),
+    ...(!active ? { reason: 'module-not-active' } : !versionMatch ? { reason: 'unsupported-module-version' } : !apiMatch ? { reason: 'weapon-effects-api-unavailable' } : !writerMatch ? { reason: 'native6-weapon-writer-unavailable' } : {}),
   };
 }
 
 function triggerStatus(globals: any): DependencyStatus {
   const module = moduleRecord(globals, TRIGGER_ENGINE_MODULE_ID);
+  const active = module?.active === true;
   const api = module?.api;
   const version = moduleVersion(module);
   const versionMatch = supportedDependencyVersion(version);
@@ -77,15 +85,15 @@ function triggerStatus(globals: any): DependencyStatus {
     requiredVersion: '0.1.1',
     ...(version === undefined ? {} : { installedVersion: version }),
     ...(api?.apiVersion === undefined ? {} : { apiVersion: api.apiVersion }),
-    available: Boolean(module && api),
-    compatible: Boolean(module && versionMatch && apiMatch),
-    ...(!module ? { reason: 'module-not-active' } : !versionMatch ? { reason: 'unsupported-module-version' } : !apiMatch ? { reason: 'external-events-api-unavailable' } : {}),
+    available: Boolean(active && api),
+    compatible: Boolean(active && versionMatch && apiMatch),
+    ...(!active ? { reason: 'module-not-active' } : !versionMatch ? { reason: 'unsupported-module-version' } : !apiMatch ? { reason: 'external-events-api-unavailable' } : {}),
   };
 }
 
 function conflictModules(globals: any): string[] {
   return collection(globals?.game?.modules)
-    .filter((module) => module?.active !== false && (module?.id === WM5E_MODULE_ID || module?.name === WM5E_MODULE_ID))
+    .filter((module) => module?.active === true && (module?.id === WM5E_MODULE_ID || module?.name === WM5E_MODULE_ID))
     .map((module) => String(module?.id ?? module?.name));
 }
 
@@ -94,16 +102,16 @@ export function inspectDependencies(globals: any = globalThis): DependencyReport
   const systemVersion = globals?.game?.system?.version ?? globals?.game?.system?.data?.version;
   // Mirror and Next share the same Core. Only the exact Next system pair
   // requires native6 CC effects and the native6 Midi adapter.
-  const native6 = foundryValue === NEXT_FOUNDRY_VERSION && systemVersion === NEXT_DND5E_VERSION;
+  const native6 = native6Runtime(globals);
   const foundry = exactOrUnknown(foundryValue, FOUNDRY_VERSION);
   foundry.compatible = foundry.value === FOUNDRY_VERSION || foundry.value === NEXT_FOUNDRY_VERSION;
-  const expectedSystem = native6 ? NEXT_DND5E_VERSION : DND5E_VERSION;
+  const expectedSystem = native6 ? String(systemVersion) : DND5E_VERSION;
   const dnd5e = exactOrUnknown(systemVersion, expectedSystem);
   const systemId = globals?.game?.system?.id;
   const runtimeCompatible = foundry.compatible && dnd5e.compatible && systemId === 'dnd5e';
   const modules = [conditionsStatus(globals, native6), triggerStatus(globals)];
   const midi = moduleRecord(globals, 'midi-qol');
-  if (native6 && midi) modules.push({
+  if (native6 && midi?.active === true) modules.push({
     id: 'midi-qol', requiredVersion: NEXT_MIDI_VERSION, installedVersion: midi.version,
     available: true, compatible: midi.version === NEXT_MIDI_VERSION,
     ...(midi.version === NEXT_MIDI_VERSION ? {} : { reason: 'unsupported-native6-midi-version' }),
@@ -129,11 +137,12 @@ export function inspectDependencies(globals: any = globalThis): DependencyReport
 }
 
 export function customConditionsApi(globals: any): any | undefined {
-  return moduleRecord(globals, CUSTOM_CONDITIONS_MODULE_ID)?.api?.weaponEffects;
+  return conditionsStatus(globals, native6Runtime(globals)).compatible
+    ? moduleRecord(globals, CUSTOM_CONDITIONS_MODULE_ID)?.api?.weaponEffects : undefined;
 }
 
 export function triggerEngineApi(globals: any): any | undefined {
-  return moduleRecord(globals, TRIGGER_ENGINE_MODULE_ID)?.api;
+  return triggerStatus(globals).compatible ? moduleRecord(globals, TRIGGER_ENGINE_MODULE_ID)?.api : undefined;
 }
 
 export function isWeaponMasteryModule(module: any): boolean {
