@@ -17,7 +17,6 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 20
     env:
-      FVTT_REFERENCE_CACHE_ROOT: ${{ runner.temp }}/fvtt-reference-cache
       FVTT_CI_TEST_PROFILE: portable
     steps:
       - name: Check out repository
@@ -66,6 +65,12 @@ jobs:
             throw "Prepared classic-level entry is missing: $entry"
           }
           "FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY=$entry" >> $env:GITHUB_ENV
+
+      - name: Configure independent reference cache
+        shell: pwsh
+        run: |
+          $cacheRoot = Join-Path $env:RUNNER_TEMP 'fvtt-reference-cache'
+          "FVTT_REFERENCE_CACHE_ROOT=$cacheRoot" >> $env:GITHUB_ENV
 
       - name: Acquire immutable reference cache
         run: bun run references bootstrap
