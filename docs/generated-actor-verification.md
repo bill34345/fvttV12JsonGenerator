@@ -4,7 +4,17 @@
 
 Actor产物存在与检查通过分别记录。生物AI入口只有在AI没有正常返回时才允许本次整只无产物；可读回答的格式、字段、引文、内部IR／协议及检查问题只影响对应字段或操作的表达。完整可读Markdown回答沿同一入口复用已有文本转换；原始输入、AI全文及规范源分别保留。不得删除已有能力，或用整项／整只说明文字代替已有攻击、伤害、豁免、法术和次数。
 
-下文的来源比较与验收标准用于判断正确性，不控制已有Actor的查看、下载或正常采用。已有Actor在验证、图标、摘要、报告、恢复记录或响应附带数据失败时仍交付，并明确列出尚未完成或不一致之处。正式登记、真实GM权限、文档归属及覆盖冲突只约束对应写入；独立Item／Species保持自身契约。当前46项整改及Mirror实际验收进度见[执行记录](acceptance/2026-10-27-forge-generation-delivery-remediation.md)。
+下文的来源比较与验收标准用于判断正确性，不控制已有Actor的查看、下载或正常采用。已有Actor在验证、图标、摘要、报告、恢复记录或响应附带数据失败时仍交付，并明确列出尚未完成或不一致之处。正式登记、真实GM权限、文档归属及覆盖冲突只约束对应写入；独立Item／Species保持自身契约。46项历史整改见[原执行记录](acceptance/2026-10-27-forge-generation-delivery-remediation.md)，其后代码复审确认的10类缺陷及2项边界补修见[2026-10-28验收](acceptance/2026-10-28-forge-preservation-fixes.md)。历史PASS不能代替后续发现的保留缺口。
+
+本轮核对须逐一检查完整操作、法术引用、共享资源的实际消费方以及父子／替代分支的效果链接，不能只数Actor或Effect对象。怪物附带引文缺省、模式冲突或内部编号修复不应删除已有机械数据；坏列表成员与坏宏独立报告。原样冻结回复、单变量派生反例和机制构造反例分别标明，不能将派生规则归给官方来源。
+
+世界读回覆盖原生资源、di/dr/ci、movement、portable manifest、Item说明及Effect期限／启停／生命周期。只对HTMLField按HTML片段规范表示比较，并忽略显式override=false的Activity范围冗余值；父Item范围、纯文本及其他机械差异仍检查。Resolver拥有的合法缓存和Cast新增不算生成内容丢失。sourceId／sourceHash校验在共用Actor世界写入边界执行；无效身份仍可查看候选，但不能借此覆盖世界文档。
+
+官方状态须同时核对施加主体、否定和阶段。“盟友未失能”等优势前提不生成目标状态；“目标同时目盲与耳聋”等真实并列结果均保留。无伤害攻击的GM状态模板可关联该攻击本身的检定，不能虚构Damage，也不能把相邻Save或其他操作的效果移来。吐出、从尸体逃出等真实后续事件的状态使用独立“退出时状态 Exit Conditions”GM活动，保留完整条件，不混入初始吞入效果，不额外消耗主能力次数。逃脱DC、逃脱检定、否定退出及Until／除非结束边界不是新的施加事件；这些规则仍由GM按原文裁定，不承诺自动监听或执行。
+
+旧平铺临时生命消费者仅在完整来源明确证明自身受者时补齐self；目标或盟友的代词回指不能变成自身，明确已有受者不覆盖。真正未知受者继续保留Heal、原文及GM确认提示。精确引文已成功定位且仅修正旧坐标／引文时保留原答和整理历史，不再冒报FIELD_PROJECTION_INCOMPLETE；未定位、坏记录及真实不支持内容仍逐项提示。五类修复的冻结对照、独立审查与未验证层级见[本轮验收](acceptance/2026-10-29-forge-five-mechanism-fixes.md)。
+
+引文整理成功后保留的合法空问题历史，不表示还有待核对问题。原提案与旧坐标仍在分析IR中；纯历史不写入规范机械来源、角色审阅flags或待审提示。顶层、能力及施法组共用此含义，document与external交付一致。真正坏的审阅记录或手动计数在解析入口保留原值并列出具体问题，不取消已有Actor；合法手动次数、恢复说明及消费保持。24项旧失败的逐项修复与验证边界见[2026-10-29修复验收](acceptance/2026-10-29-forge-24-failure-fixes.md)。
 
 ## Source-backed replacement damage and swarm identity
 
@@ -33,6 +43,8 @@ For each generated Actor JSON, manually compare the generated output against the
 - A supported two-event healing parent must retain both Heal operations in one Item: the initial printed formula and the same recipient's later turn-based formula. Compare each healing kind, single-recipient qualification and complete event proof. The follow-up is a GM-triggered special Activity with no repeated resource cost; full duration, initial casting instructions and remaining consequences stay in source text. Do not merge formulas, default a touched target to self, infer 5 feet from Touch, or treat roll helpers as automatic healing/expiry or a granted Spell. Extra source-explicit operations must not be hidden behind this bounded two-Heal contract.
 - Compare the final Activity's range and template separately. An area placed at a visible point 120 feet away must retain that placement range; its own radius does not make the range self or become the Actor's range. A source-centred area without a placement distance remains self. Target eligibility negation does not negate an otherwise explicit Attack. Ability abbreviations must be whole tokens: the consequence verb in "saving throw or contract a disease" is not a second Constitution choice.
 - Legendary, reaction, and bonus actions: count, cost, activation type, and descriptions.
+- If a Monster reply omits a healing recipient, retain the Heal and source text while reporting the missing target. The native Activity uses an unspecified-count `any` target and a special GM-confirmed range, not a source-confirmed self-only target. Check the actual target, range and GM note together; `target.prompt` controls measured templates and does not promise a recipient dialog or automatic adjudication. Explicit recipients must remain unchanged.
+- Legendary actions without an explicit budget retain their abilities and zero native capacity with a non-blocking configuration finding. An explicit zero remains zero; an explicit base-zero/lair-one ledger retains both values and its recovery rule. Do not infer three uses from prose, or treat a diagnostic as proof that the original action is usable. Legendary activation already consumes its native action resource in dnd5e 5.3.3, so a second target for the same pool must not be added.
 - A source-explicit shared legendary-action budget must match the Actor's native resource maximum, even when its complete actions are GM manual. Conditional/unknown budgets remain literal GM context; manual Activities still have no automatic consumption. Do not repeat the same source preamble in biography when retaining the counter metadata.
 - Spellcasting: spell list, spell save DC, spell attack bonus, preparation or innate-casting rules, and linked UUIDs where expected.
 - For English casting prose, independently introduced creatures that appear, emerge, or are summoned/created remain separate source entities. A later cast by the same definite noun phrase does not grant that creature's spells to the carrier. Inspect every list: an earlier external or negative list must not hide a later genuine own grant. These bounded source checks do not replace full ownership or translation review; ambiguous casting remains unresolved.
