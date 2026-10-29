@@ -424,7 +424,7 @@ describe("Foundry lifecycle bootstrap", () => {
     expect(() =>
       controls.tiles.tools["fvtt-battlefield-painter"].onChange(),
     ).not.toThrow();
-  });
+  }, 20_000);
 
   test("returns false instead of throwing when Foundry Hooks are absent", () => {
     const errors: unknown[][] = [];

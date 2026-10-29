@@ -37,9 +37,9 @@ describe('full Chrome restart recovery',()=>{
     }
   });
   test('partitions every eligible file exactly once with deterministic owner boundaries', () => {
-    const files = ['tests/c.test.ts', 'packages/a/b.spec.ts', 'tests/a.test.ts', 'tests/b.test.ts', 'tests/a.test.ts', 'dist/generated.test.js', 'src/core_test.ts', 'src/foo.ts'];
+    const files = ['tests/c.test.ts', 'packages/a/b.spec.ts', 'tests/a.test.ts', 'tests/b.test.ts', 'tests/a.test.ts', 'dist/generated.test.js', 'src/core_test.ts', 'src/foo.ts', 'foundry-modules/external/tests.mjs', 'node_modules/external/tests.mjs', '.local/external/tests.mjs', 'coverage/tests.mjs', 'dist/tests.mjs', '.git/tests.mjs', 'tools/contest.mjs'];
     const result = partitionCoverageTests(files, 2);
-    expect(result).toEqual([['packages/a/b.spec.ts'], ['src/core_test.ts'], ['tests/a.test.ts', 'tests/b.test.ts'], ['tests/c.test.ts']]);
+    expect(result).toEqual([['foundry-modules/external/tests.mjs'], ['packages/a/b.spec.ts'], ['src/core_test.ts'], ['tests/a.test.ts', 'tests/b.test.ts'], ['tests/c.test.ts']]);
     expect(result).toEqual(partitionCoverageTests([...files].reverse(), 2));
     expect(() => partitionCoverageTests(['../outside.test.ts'])).toThrow('escapes');
     expect(() => partitionCoverageTests([])).toThrow('No tests');

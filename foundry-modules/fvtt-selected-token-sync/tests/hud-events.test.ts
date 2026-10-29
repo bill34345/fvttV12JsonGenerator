@@ -1,16 +1,24 @@
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 const ownedGlobalNames = ['Element', 'HTMLElement', 'Hooks', 'CONFIG', 'game', 'canvas', 'ui', 'TokenDocument'] as const;
-const originalGlobalDescriptors = new Map(ownedGlobalNames.map(name =>
+const captureGlobals = () => new Map(ownedGlobalNames.map(name =>
   [name, Object.getOwnPropertyDescriptor(globalThis, name)] as const));
+let originalGlobalDescriptors = captureGlobals();
 
-afterAll(() => {
-  for (const [name, descriptor] of originalGlobalDescriptors) {
+function restoreGlobals(descriptors: ReturnType<typeof captureGlobals>) {
+  for (const [name, descriptor] of descriptors) {
     if (descriptor) Object.defineProperty(globalThis, name, descriptor);
     else Reflect.deleteProperty(globalThis, name);
   }
-  originalGlobalDescriptors.clear();
+}
+
+beforeEach(() => {
+  originalGlobalDescriptors = captureGlobals();
+  installFixtureGlobals();
+  errors.length = 0;
+  warnings.length = 0;
 });
+afterEach(() => restoreGlobals(originalGlobalDescriptors));
 
 const hooks = new Map<string, Map<number, (...args: any[]) => any>>();
 let hookId = 0;
@@ -58,7 +66,7 @@ class ElementStub {
   }
 }
 
-Object.assign(globalThis, {
+const installFixtureGlobals = () => Object.assign(globalThis, {
   Element: ElementStub, HTMLElement: ElementStub,
   Hooks: {
     on: addHook,
@@ -86,7 +94,14 @@ Object.assign(globalThis, {
   ui: { notifications: { error: (message: string) => errors.push(message), warn: (message: string) => warnings.push(message) } },
 });
 
-await import('../src/index.ts');
+// Keep the registered module handlers without leaving the import's fake world installed.
+const importGlobals = captureGlobals();
+try {
+  installFixtureGlobals();
+  await import('../src/index.ts');
+} finally {
+  restoreGlobals(importGlobals);
+}
 
 function makeActor(id: string, level: number, editable = true) {
   const effects = new Map<string, any>();

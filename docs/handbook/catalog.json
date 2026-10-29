@@ -68,7 +68,7 @@
     "steps": [
       {
         "title": "检查已准备材料",
-        "text": "在主工作区执行完整哈希与 Git 身份校验。校验不再读取旧迁移树，也不启动 Foundry。",
+        "text": "在已准备输入库的checkout执行完整哈希与Git身份校验。sibling worktree核对主区共享库时，给prepare命令指定--target-root及主checkout绝对路径。校验不读取旧迁移树，也不启动Foundry。",
         "command": "bun run legacy-next-inputs:prepare -- --check"
       },
       {
@@ -79,6 +79,11 @@
         "title": "运行当前候选回归",
         "text": "清除非空的历史输入根覆盖后运行当前候选；测试、补丁、锁定和报告来自当前 checkout，材料来自独立输入库。",
         "command": "bun run test:legacy-next-inputs\nbun run midi-qol:test\nbun run test:classpack-next"
+      },
+      {
+        "title": "运行严格本地历史源码门",
+        "text": "公共CI只运行可移植检查，历史源码组在云端明确标记NOT_EXECUTED。这个本地入口运行清单中的全部原有来源回归，来源缺失、身份不符或断言失败均非零退出；报告写入coverage/local-source-contracts.json，材料继续留在Git外。",
+        "command": "bun run test:local-source-contracts"
       }
     ],
     "outputs": [
@@ -820,13 +825,18 @@
       },
       {
         "title": "到整合边界运行完整门禁",
-        "text": "明确要求全仓整合检查，或变化的共享依赖／接口需要该覆盖时运行。保留已有相关通过结果；局部修复先完成同类定点检查，再运行所需整合门禁。",
+        "text": "明确要求全仓整合检查，或变化的共享依赖／接口需要该覆盖时运行。保留已有相关通过结果；局部修复先完成同类定点检查，再运行所需整合门禁。公共GitHub Actions显式使用portable profile执行全部可移植检查；未设置profile的本地入口仍使用完整库存。云端会把独立历史源码组标为NOT_EXECUTED，不把云端绿色推广为本地源码或Foundry接受。",
         "command": "bun run ci:verify"
       },
       {
         "title": "准备历史ServerNext测试输入",
-        "text": "主工作区一次性准备独立输入库后，当前和新worktree自动读取固定材料；先完整核对哈希和Git身份，再运行受影响回归。来源缺失不能跳过为PASS，现有本机参考环境依赖仍按历史版本保留。",
+        "text": "主工作区一次性准备独立输入库后，当前和新worktree自动读取固定材料；在已有输入库的checkout核对哈希和Git身份，再运行受影响回归。sibling worktree核对共享库时给prepare命令指定--target-root及已准备库所在checkout绝对路径。来源缺失不能跳过为PASS，现有本机参考环境依赖仍按历史版本保留。",
         "command": "bun run legacy-next-inputs:prepare -- --check\nbun run test:legacy-next-inputs"
+      },
+      {
+        "title": "运行严格本地历史源码门",
+        "text": "按明确清单执行依赖第三方原包、合集、私有分析数据及本机固定Core/Node的原有真实回归，保持版本、哈希和断言。来源缺失、身份不符或测试失败均非零退出，结果写入coverage/local-source-contracts.json。混合文件的普通用例仍保留在公共CI中；原始材料留在Git外。",
+        "command": "bun run test:local-source-contracts"
       },
       {
         "title": "核对Forge蓝图与目标映射",
@@ -879,7 +889,7 @@
     ],
     "limits": [
       "ci:verify 包含手册一致性检查，但不自动写说明，也不保证任何发布权限。",
-      "CI 固定 Bun 1.3.14；本机运行相同门禁应使用该版本。全仓覆盖率保留完整测试清单、单进程报告和既有阈值；总进程有 450 秒 watchdog，单案与子操作限额继续保留。CLI 子进程同时读取标准输出与错误输出，并在超时后回收。已通过的实机 E2E 可按产物与环境身份复用。",
+      "CI固定Bun 1.3.14；本机运行相同门禁应使用该版本。覆盖率按明确profile选择测试清单，保留单进程报告和既有阈值；总进程有600秒watchdog，单案与子操作限额继续保留。CLI子进程同时读取标准输出与错误输出，并在超时后回收。已通过的实机E2E可按产物与环境身份复用。",
       "本手册是版本快照；单独复制到其他位置的 HTML 不会自动跟随 master 更新。",
       "内部 package 是共享能力，不是每个都需要单独启动；共享手册、Forge 浏览器 runtime、法术契约与血猎手数据包由对应产品入口使用。",
       "ServerNext历史收尾见2026-10-05记录及迁移总表，当前渐进重构和6.0.6前置见合集执行总账/支持矩阵。历史源码与框选同步增量已纳入本地整合；本地合并、远端推送、包安装与实机接受分别核对。6.0.2专属运行合同不能直接用于6.0.5或6.0.6。"

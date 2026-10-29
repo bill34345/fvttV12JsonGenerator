@@ -5,9 +5,9 @@
     "note": "已核合并后的支持矩阵与实际入口：正式生成仍14.364/5.3.3/core，CLI默认V12，Forge/Intake目标不扩大；606模块限定代表接受及旧User/Calendar/归档缺口保留。新增Babele独立维护入口不改变生成行为。"
   },
   "legacy-next-test-inputs": {
-    "fingerprint": "08a1e772f66a92314a36ae10574cf1f466bce95ef84fae113a590264703c6737",
-    "reviewedOn": "2026-10-08",
-    "note": "已对照准备入口、170文件清单、默认定位与历史版本边界；201项受影响离线测试通过，Classpack临时夹具查询后原输入清单及字节保持不变；主线测试不依赖旧迁移树，保留本机F盘参考环境限制。"
+    "fingerprint": "df607f03dc6e15b581879ae038a26468133798833fdbe5b3b74405ac70f8069d",
+    "reviewedOn": "2026-10-29",
+    "note": "已对照公共workflow、源码清单和严格本地入口：云端portable保留可移植用例，历史来源在云端标NOT_EXECUTED，本地原断言及缺失来源失败保留；补充共享库核对路径和当前600秒watchdog。"
   },
   "web-workbench": {
     "fingerprint": "48bcc04dcc1ecea8b1a474f7b8e6773850e464c1c5becf108afd4088281f6827",
@@ -70,9 +70,9 @@
     "note": "已对照精确Core14.364/14.368配置与14.368纯parseArgs：CLI只消费小写nobackups；共用launcher修正/规范化并拒绝禁用，176项安全测试与tools类型通过。入口、路径、权限与无备份限制保持，新增仅新启动生效/需真实控件读回；原Setup失败保留，新34112真实控件0限定通过。 本次只纳入源码，不运行launcher/安装器，不操作Lab或生产。"
   },
   "verification-development": {
-    "fingerprint": "054512b0a6a3da0e2c54dfb41950a85880122dedeaf4d02a61b36ca36288e190",
-    "reviewedOn": "2026-10-25",
-    "note": "已人工对照新增本地MCP脚本、Ruler流程指针与手册目录：增加目标实例准备和真实读回入口，既有测试选择、来源语义验收及发布权限保持原约定。完整目录新增工程条目后38项、Foundry投影28项，维护说明同步。"
+    "fingerprint": "1bc84cc7e48c1e9b24c5c61b2782e034f0462813c03616a80f107f54ddfb124c",
+    "reviewedOn": "2026-10-29",
+    "note": "已对照公共workflow、源码清单和严格本地入口：云端portable保留可移植用例，历史来源在云端标NOT_EXECUTED，本地原断言及缺失来源失败保留；补充共享库核对路径和当前600秒watchdog。"
   },
   "human-encounter-intake": {
     "fingerprint": "b547a9a9b37125d162d137d004906a9deb98a1f1a3f791705ff568fef1a21972",
@@ -85,9 +85,9 @@
     "note": "人工核对新tracked AGENTS两目录登记及Scope/Verification标题，显式清单32→34，作用域/功能/版本/权限未变，检查器19回归及production类型通过；运行模块代码和build输入无变化。"
   },
   "midi-qol-server-next-patch": {
-    "fingerprint": "051b0f1910e4c32f0fd847f5ce546c8d9429ca7d90e75c20312923c4141da225",
-    "reviewedOn": "2026-10-08",
-    "note": "已对照准备入口、170文件清单、默认定位与历史版本边界；201项受影响离线测试通过，Classpack临时夹具查询后原输入清单及字节保持不变；主线测试不依赖旧迁移树，保留本机F盘参考环境限制。"
+    "fingerprint": "d36a2f117326064afb2839b2b21651814605b8fc82576ad0ecb141f79eb54c05",
+    "reviewedOn": "2026-10-29",
+    "note": "已核对本次来源runbook增补仅改变公共CI与本地历史回归出口；三个条目的固定版本、历史构建安装入口及现行玩法接受限制仍准确，不改变或扩大其运行接受。"
   },
   "babele-zh-maintenance": {
     "fingerprint": "1b9623a7ea556db39772d7316f302f30eb1fee823778a96a894bb94cc07ed269",
@@ -175,14 +175,14 @@
     "note": "已核源码active/API/能力门和持久marker，并对照总账WMP R5/R6：606单GM Sap预约取消、Club伤害/Slow、重复提交零重复结算、重载/清理已接受。README/手册/AGENTS统一该范围，manifest verified仍605；旧User UNKNOWN与完整精通/玩家/多GM/长时/生产缺口保留。"
   },
   "midi-qol": {
-    "fingerprint": "440e5e28a279a80de552f6f05a67d7cb6290d48c5e8e102a48de48fd89a7bb38",
-    "reviewedOn": "2026-10-08",
-    "note": "已对照准备入口、170文件清单、默认定位与历史版本边界；201项受影响离线测试通过，Classpack临时夹具查询后原输入清单及字节保持不变；主线测试不依赖旧迁移树，保留本机F盘参考环境限制。"
+    "fingerprint": "06d01017f0a319ea1d277b8ed08423e1517bcd96948920b61a1129f9b31e1ba4",
+    "reviewedOn": "2026-10-29",
+    "note": "已核对本次来源runbook增补仅改变公共CI与本地历史回归出口；三个条目的固定版本、历史构建安装入口及现行玩法接受限制仍准确，不改变或扩大其运行接受。"
   },
   "server-next-external-candidates": {
-    "fingerprint": "d61f5777f275d31d535fbfccf23d982102ca18b8c8dafa690812ce438cbf21de",
-    "reviewedOn": "2026-10-25",
-    "note": "已逐项核对只扩606 maximum及现有入口；Chat/Babele/Monitor仅局部非浏览器证据，Species正式accepted构建身份仍602，BloodHunter缺受保护来源只作manifest投影，Classpack只加载且迁移API仍拒绝606，既有ItemPiles602限制保留。不得覆盖packs/scripts或据此宣称玩法/会话/升级通过。 本次保留这份静态分发边界；Species/BH后续原生代表链另按各owner记录，不推广外部候选全玩法。"
+    "fingerprint": "e167870ef80339cf0cda88f0d3c7259699b7009ce6605ccb062c1377dad51035",
+    "reviewedOn": "2026-10-29",
+    "note": "已核对本次来源runbook增补仅改变公共CI与本地历史回归出口；三个条目的固定版本、历史构建安装入口及现行玩法接受限制仍准确，不改变或扩大其运行接受。"
   },
   "fvtt-suite-console": {
     "fingerprint": "6d510771fee36ddb07e1d6fc8621f64f3133accd1bdff1abbeb117fa5e6ffb93",

@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
   hashManagedProjection,
   logicalSpellRefKey,
@@ -18,6 +18,20 @@ import {
   type HydrationFailureStage,
   type ExecuteHydrationTransactionInput,
 } from '../transaction';
+
+// These FakeActors run outside Foundry, even when another suite installed a fake client.
+const fixtureGlobalNames = ['game', 'foundry', 'Hooks'] as const;
+let originalGlobals: Array<[string, PropertyDescriptor | undefined]> = [];
+beforeEach(() => {
+  originalGlobals = fixtureGlobalNames.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
+  for (const name of fixtureGlobalNames) Reflect.deleteProperty(globalThis, name);
+});
+afterEach(() => {
+  for (const [name, descriptor] of originalGlobals) {
+    if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+    else Reflect.deleteProperty(globalThis, name);
+  }
+});
 
 const fieldReplacement = { create: (value: unknown) => ({ __forcedReplacement: value }) };
 function executeHydrationTransaction(input: ExecuteHydrationTransactionInput) {

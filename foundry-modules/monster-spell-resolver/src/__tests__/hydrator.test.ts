@@ -1,8 +1,22 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { logicalSpellRefKey, RESOLVER_MODULE_ID, type PortableSpellManifest, type SpellHydrationSelection } from '../../../../src/core/spell-resolution';
 import { buildCastActivitySource, computeManagedSourceHash, generatedResolverDocumentId } from '../cast-activity';
 import { createHydrationJournal, hydrateManagedSelection } from '../hydrator';
 import { resolverDocumentHooks } from '../native-cache-lifecycle';
+
+// These FakeActors run outside Foundry, even when another suite installed a fake client.
+const fixtureGlobalNames = ['game', 'foundry', 'Hooks'] as const;
+let originalGlobals: Array<[string, PropertyDescriptor | undefined]> = [];
+beforeEach(() => {
+  originalGlobals = fixtureGlobalNames.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
+  for (const name of fixtureGlobalNames) Reflect.deleteProperty(globalThis, name);
+});
+afterEach(() => {
+  for (const [name, descriptor] of originalGlobals) {
+    if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+    else Reflect.deleteProperty(globalThis, name);
+  }
+});
 
 // dnd5e.mjs 17937-17940 resolves cachedSpell through actor.sourcedItems and
 // cachedFor===relativeUUID. Lines 18004-18026 define the public native cache
