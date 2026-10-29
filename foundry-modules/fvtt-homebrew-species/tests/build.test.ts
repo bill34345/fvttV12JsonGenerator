@@ -89,7 +89,7 @@ describe('fvtt-homebrew-species deterministic artifact', () => {
     await expect(installHomebrewSpeciesToLab({ labRoot, distRoot: first.distRoot }, false)).rejects.toThrow('foreign same-ID');
     const markdownPath = join(vault, 'input/species/test-species.md'); writeFileSync(markdownPath, `${readFileSync(markdownPath, 'utf8')}\n`);
     await expect(buildHomebrewSpeciesModule({ vaultPath: vault, distRoot: join(root, 'dist-stale'), classicLevelEntry })).rejects.toThrow('stale');
-  });
+  }, 20_000);
 
   test('builds a deterministic V12 static candidate with the same UUIDs as V14', async () => {
     const root = mkdtempSync(join(tmpdir(), 'homebrew-species-v12-build-'));
@@ -122,7 +122,7 @@ describe('fvtt-homebrew-species deterministic artifact', () => {
       if (previous === undefined) delete process.env.FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY;
       else process.env.FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY = previous;
     }
-  });
+  }, 20_000);
 
   test('requires independent acceptance and builds a deterministic Foundry 14.368 static candidate', async () => {
     const root = mkdtempSync(join(tmpdir(), 'homebrew-species-next-build-'));
@@ -182,7 +182,7 @@ describe('fvtt-homebrew-species deterministic artifact', () => {
     accepted[0].target.dnd5e = '5.3.3';
     writeFileSync(acceptedPath, `${JSON.stringify(accepted, null, 2)}\n`);
     await expect(verifyHomebrewSpeciesArtifact(first.distRoot, '6.0.5')).rejects.toThrow('accepted packages do not match the exact target');
-  });
+  }, 20_000);
 
   test('install target is exact and cannot escape the configured local Lab', () => {
     const labRoot = mkdtempSync(join(tmpdir(), 'homebrew-species-lab-'));

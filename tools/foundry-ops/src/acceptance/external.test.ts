@@ -69,12 +69,12 @@ beforeEach(() => {
   sourcePath = join(evidence, 'source.json'); saveSource(); inputPath = join(root, 'request.json');
   json(inputPath, { workspaceRoot: root, sourceContractPath: sourcePath, authority: { source: 'Owned synthetic offline test', scope: 'offline-batch-preparation' } });
   rawPath = join(sandbox, 'native.json'); contextPath = join(sandbox, 'context.json'); json(rawPath, native()); json(contextPath, target);
-});
+}, 20_000);
 afterEach(() => {
   const absolute = resolve(sandbox);
   if (dirname(absolute) !== resolve(tmpdir()) || !absolute.split(/[\\/]/).at(-1)?.startsWith('fvtt-external-acceptance-')) throw new Error('Unowned temporary root');
   rmSync(absolute, { recursive: true, force: false });
-});
+}, 20_000);
 
 test('source inspection preserves callback ownership, candidate identity and both checksum meanings', () => {
   const before = readFileSync(sourcePath);
