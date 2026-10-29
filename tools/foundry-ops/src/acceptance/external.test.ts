@@ -22,8 +22,9 @@ const sourceDispatchId = 'SYNTHETIC-VM-BATCH';
 
 function json(path: string, value: unknown) { writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`); }
 function git(path: string, ...args: string[]) {
-  const result = spawnSync('git', ['-C', path, ...args], { encoding: 'utf8', timeout: 5000, windowsHide: true });
-  if (result.status !== 0) throw new Error(result.stderr);
+  const result = spawnSync('git', ['-C', path, ...args], { encoding: 'utf8', timeout: 20_000, windowsHide: true });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(`Fixture git ${args[0]} failed with exit ${result.status}: ${result.stderr}`);
 }
 function repo(path: string) {
   mkdirSync(join(path, '.ruler'), { recursive: true }); mkdirSync(join(path, 'docs/runbooks'), { recursive: true });
