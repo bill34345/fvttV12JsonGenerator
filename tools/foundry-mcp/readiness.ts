@@ -81,9 +81,8 @@ export async function loadTarget(options: Options): Promise<Target> {
   let config: Record<string, unknown>;
   try { config = object(Bun.TOML.parse((await readFile(options.configPath, 'utf8')).replace(/^\uFEFF/, ''))); }
   catch { throw new Error('Cannot parse the selected MCP configuration; its contents were not logged'); }
-  const entry = object(object(config.mcp_servers)[`foundry-${options.instance}`]);
-  assert(entry.enabled === true, 'The selected MCP service is explicitly disabled or missing');
-  const env = object(entry.env) as Record<string, string>; const expected = fixed[options.instance];
+  const { env, runtimeEntry } = await loadConfiguredEnvironment(config, options);
+  const expected = fixed[options.instance];
   const required = ['MCP_INSTANCE_ID', 'MCP_CONTROL_PORT', 'FOUNDRY_PORT', 'FOUNDRY_WEBRTC_PORT', 'MCP_STATE_DIR', 'MCP_EXPECTED_ORIGIN', 'MCP_EXPECTED_WORLD_ID', 'MCP_EXPECTED_SYSTEM_ID', 'MCP_EXPECTED_SYSTEM_VERSION', 'MCP_READ_ONLY', 'MCP_DISABLE_MAP_SERVICE'];
   for (const key of required) assert(typeof env[key] === 'string' && env[key] !== '' && env[key] === env[key]!.trim(), 'The selected local MCP configuration is incomplete');
   assert(env.MCP_INSTANCE_ID === options.instance && env.MCP_EXPECTED_ORIGIN === expected.origin, 'Unexpected local instance or origin');
@@ -93,8 +92,6 @@ export async function loadTarget(options: Options): Promise<Target> {
   assert(['true', 'false'].includes(env.MCP_READ_ONLY!) && env.MCP_DISABLE_MAP_SERVICE === 'true', 'Unexpected MCP permissions or map service configuration');
   const stateDir = join(options.labRoot, 'tools', 'foundry-mcp', 'instances', options.instance);
   assert(normalized(env.MCP_STATE_DIR!) === normalized(stateDir), 'MCP state directory is outside the selected local instance');
-  const runtimeEntry = join(options.labRoot, 'tools', 'foundry-mcp', 'v0.8.4-multi1', 'index.js');
-  assert(entry.command === 'node' && Array.isArray(entry.args) && entry.args.length === 1 && typeof entry.args[0] === 'string' && normalized(entry.args[0]) === normalized(runtimeEntry), 'Unexpected MCP runtime entry');
   const nodePath = join(options.labRoot, 'runtime', 'node-v24.17.0-win-x64', 'node.exe');
   const appRoot = join(options.labRoot, 'app', '14.368'); const mainPath = join(appRoot, 'main.js');
   const dataPath = join(options.labRoot, 'data', `server-${options.instance}`);
@@ -107,6 +104,39 @@ export async function loadTarget(options: Options): Promise<Target> {
   const world = object(JSON.parse(await readFile(join(dataPath, 'Data', 'worlds', 'cor-cotn', 'world.json'), 'utf8')));
   assert(world.id === 'cor-cotn' && world.system === 'dnd5e', 'Installed world does not match the selected MCP configuration');
   return { instance: options.instance, labRoot: options.labRoot, origin: expected.origin, port: expected.port, worldId: 'cor-cotn', systemId: 'dnd5e', systemVersion: env.MCP_EXPECTED_SYSTEM_VERSION!, controlPort: expected.control, bridgePort: expected.bridge, webrtcPort: expected.bridge + 1, stateDir, fingerprint: runtimeFingerprint(env), nodePath, mainPath, dataPath, coreVersion: '14.368' };
+}
+
+async function loadConfiguredEnvironment(config: Record<string, unknown>, options: Options): Promise<{ env: Record<string, string>; runtimeEntry: string }> {
+  const servers = object(config.mcp_servers);
+  const legacy = object(servers[`foundry-${options.instance}`]);
+  const unified = object(servers.foundry);
+  const runtimeRoot = join(options.labRoot, 'tools', 'foundry-mcp');
+  if (unified.enabled === true) {
+    assert(legacy.enabled !== true, 'Both unified and legacy Foundry entries are enabled');
+    assert(unified.command === 'node' && Array.isArray(unified.args) && unified.args.length === 1 && typeof unified.args[0] === 'string', 'Unexpected unified MCP runtime entry');
+    const runtimeEntry = unified.args[0];
+    const pairs = [
+      ['on-demand-v1', 'v0.8.4-multi1'],
+      ['v0.8.5-on-demand.1', 'v0.8.5-on-demand.1'],
+    ];
+    const pair = pairs.find(([entryDirectory]) => normalized(runtimeEntry) === normalized(join(runtimeRoot, entryDirectory!, 'unified.bundle.cjs')));
+    assert(pair, 'Unexpected unified MCP runtime entry');
+    const registryPath = object(unified.env).FOUNDRY_MCP_CONFIG;
+    assert(typeof registryPath === 'string' && isAbsolute(registryPath), 'Unified Foundry registry must be an absolute path');
+    await assertOrdinaryPath(registryPath, 'file');
+    const registry = object(JSON.parse(await readFile(registryPath, 'utf8')));
+    assert(registry.version === 1 && Array.isArray(registry.targets), 'Unsupported unified Foundry registry');
+    const backendPath = join(runtimeRoot, pair[1]!, 'backend.bundle.cjs');
+    assert(typeof registry.backendPath === 'string' && normalized(registry.backendPath) === normalized(backendPath), 'Unexpected unified Foundry backend');
+    await assertOrdinaryPath(backendPath, 'file');
+    const targets = registry.targets.map(object).filter(target => target.id === options.instance);
+    assert(targets.length === 1, 'Selected environment is missing or duplicated in unified Foundry registry');
+    return { env: object(targets[0]!.env) as Record<string, string>, runtimeEntry };
+  }
+  assert(legacy.enabled === true, 'The selected MCP service is explicitly disabled or missing');
+  const runtimeEntry = join(runtimeRoot, 'v0.8.4-multi1', 'index.js');
+  assert(legacy.command === 'node' && Array.isArray(legacy.args) && legacy.args.length === 1 && typeof legacy.args[0] === 'string' && normalized(legacy.args[0]) === normalized(runtimeEntry), 'Unexpected MCP runtime entry');
+  return { env: object(legacy.env) as Record<string, string>, runtimeEntry };
 }
 
 const commandTokens = (value: string): string[] => [...value.matchAll(/(?:[^\s"]+|"[^"]*")+/g)].map(match => match[0].replaceAll('"', ''));

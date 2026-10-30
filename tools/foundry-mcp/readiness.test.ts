@@ -60,6 +60,48 @@ test('linked configuration ancestor is refused', async () => {
   await expect(loadTarget({ ...f.options, configPath: join(alias, 'config.toml') })).rejects.toThrow('linked');
 });
 
+test('unified registry preserves the selected environment and rejects dual enablement', async () => {
+  const f = await fixture();
+  const runtimeRoot = join(f.lab, 'tools', 'foundry-mcp');
+  const entry = join(runtimeRoot, 'on-demand-v1', 'unified.bundle.cjs');
+  const backendPath = join(runtimeRoot, 'v0.8.4-multi1', 'backend.bundle.cjs');
+  const registryPath = join(runtimeRoot, 'on-demand-v1', 'targets.json');
+  await mkdir(dirname(entry), { recursive: true }); await writeFile(entry, ''); await writeFile(backendPath, '');
+  await writeFile(registryPath, JSON.stringify({ version: 1, backendPath, targets: [{ id: 'next', env: f.env }] }));
+  const section = `[mcp_servers.foundry]\nenabled = true\ncommand = "node"\nargs = [${JSON.stringify(entry)}]\nenv = { FOUNDRY_MCP_CONFIG = ${JSON.stringify(registryPath)} }\n`;
+  await f.saveConfig({}, false); await writeFile(f.config, (await readFile(f.config, 'utf8')) + section);
+  expect(await loadTarget(f.options)).toEqual(f.target);
+  await f.saveConfig(); await writeFile(f.config, (await readFile(f.config, 'utf8')) + section);
+  await expect(loadTarget(f.options)).rejects.toThrow('Both unified and legacy');
+});
+
+test('unified registry cannot substitute a missing target or an unrelated backend', async () => {
+  const f = await fixture(); const runtimeRoot = join(f.lab, 'tools', 'foundry-mcp');
+  const entry = join(runtimeRoot, 'on-demand-v1', 'unified.bundle.cjs');
+  const backendPath = join(runtimeRoot, 'v0.8.4-multi1', 'backend.bundle.cjs');
+  const registryPath = join(dirname(entry), 'targets.json');
+  await mkdir(dirname(entry), { recursive: true }); await writeFile(entry, ''); await writeFile(backendPath, '');
+  await writeFile(f.config, `[mcp_servers.foundry]\nenabled = true\ncommand = "node"\nargs = [${JSON.stringify(entry)}]\nenv = { FOUNDRY_MCP_CONFIG = ${JSON.stringify(registryPath)} }\n`);
+  await writeFile(registryPath, JSON.stringify({ version: 1, backendPath, targets: [] }));
+  await expect(loadTarget(f.options)).rejects.toThrow('missing or duplicated');
+  await writeFile(registryPath, JSON.stringify({ version: 1, backendPath: join(f.root, 'other.cjs'), targets: [{ id: 'next', env: f.env }] }));
+  await expect(loadTarget(f.options)).rejects.toThrow('Unexpected unified Foundry backend');
+});
+
+test('v0.8.5 candidate accepts its matching runtime pair and rejects an old backend path', async () => {
+  const f = await fixture(); const runtimeRoot = join(f.lab, 'tools', 'foundry-mcp');
+  const directory = join(runtimeRoot, 'v0.8.5-on-demand.1');
+  const entry = join(directory, 'unified.bundle.cjs'), backendPath = join(directory, 'backend.bundle.cjs');
+  const registryPath = join(directory, 'targets.json');
+  await mkdir(directory, { recursive: true }); await writeFile(entry, ''); await writeFile(backendPath, '');
+  await writeFile(f.config, `[mcp_servers.foundry]\nenabled = true\ncommand = "node"\nargs = [${JSON.stringify(entry)}]\nenv = { FOUNDRY_MCP_CONFIG = ${JSON.stringify(registryPath)} }\n`);
+  const registry = { version: 1, backendPath, targets: [{ id: 'next', env: f.env }] };
+  await writeFile(registryPath, JSON.stringify(registry));
+  expect(await loadTarget(f.options)).toEqual(f.target);
+  await writeFile(registryPath, JSON.stringify({ ...registry, backendPath: join(runtimeRoot, 'v0.8.4-multi1', 'backend.bundle.cjs') }));
+  await expect(loadTarget(f.options)).rejects.toThrow('Unexpected unified Foundry backend');
+});
+
 test('service reuse requires exact executable, target arguments, creation time and loopback owner', async () => {
   const { target } = await fixture(); expect(classifyService(target, running(target))).toBe('running');
   const variants: ServiceSnapshot[] = [
