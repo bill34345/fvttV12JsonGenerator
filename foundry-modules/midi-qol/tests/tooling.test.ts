@@ -54,7 +54,7 @@ describe('ServerNext install identity gate', () => {
     const forwardRoot = root.replaceAll('\\', '/');
     ownedRoots.push(root);
     await mkdir(root, { recursive: true });
-    const child = Bun.spawn([process.execPath, '-e', 'setTimeout(() => {}, 5000)', forwardRoot], {
+    const child = Bun.spawn([process.execPath, '-e', 'setInterval(() => {}, 1000)', forwardRoot], {
       stdout: 'ignore', stderr: 'ignore',
     });
     try {
@@ -70,7 +70,7 @@ describe('ServerNext install identity gate', () => {
       child.kill();
       await child.exited;
     }
-  });
+  }, 15_000);
 
   test('rejects a modules junction and preserves the external sentinel', async () => {
     const root = resolve(tmpdir(), `midi-qol-junction-${crypto.randomUUID()}`);
@@ -152,5 +152,5 @@ describe('candidate archive gate', () => {
     const tar = Bun.spawn(['tar', '-a', '-cf', zip, 'midi-qol'], { cwd: root, stdout: 'pipe', stderr: 'pipe' });
     expect(await tar.exited).toBe(0);
     await expect(verifyArchive(zip, 'test-version')).rejects.toThrow('missing file: missing.css');
-  });
+  }, 15_000);
 });

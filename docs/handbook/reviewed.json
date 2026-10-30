@@ -35,9 +35,9 @@
     "note": "已对照本条入口/限制及合并后的README：README仅更新仓库定位、版本分流和手册导航，本条对应实现无双方业务冲突。原命令、独立写入/备份限制及精确版本接受保持；共同生成链已验但不作为本条新增实机接受。"
   },
   "goddessfantasy-crawl": {
-    "fingerprint": "383bf40140900701b90d4c2056516bd1808dba0f4db5e33e35079df47574954c",
-    "reviewedOn": "2026-10-29",
-    "note": "已对照本条入口/限制及合并后的README：README仅更新仓库定位、版本分流和手册导航，本条对应实现无双方业务冲突。原命令、独立写入/备份限制及精确版本接受保持；共同生成链已验但不作为本条新增实机接受。"
+    "fingerprint": "0af0f20ab06581bee88bdb3c859037234e446b3086a98015c04f9d254f1a54cf",
+    "reviewedOn": "2026-10-30",
+    "note": "已对照锁定 Crawlee 3.17.0 的实际存储实现：本轮请求队列使用内存，增量仍从 records.json 恢复，来源HTML、记录、失败与manifest保持；并发完整采集、同目录增量恢复、CLI和Web均经真实链核对。远端600秒实际截断后覆盖率watchdog改为720秒；用例、顺序、阈值和20分钟job上限保持。Midi仅修两个真实Windows子进程测试的夹具寿命及独立时限，安装保护未改。"
   },
   "artwork-icons": {
     "fingerprint": "3742da69daac8653221efe7ee8a2c5f74cff4ac06c7123c30d79f632b8191c9c",
@@ -60,9 +60,9 @@
     "note": "已逐项对照运维条目与worktree来源：来源只新增纯个人资料在仓库外转换的分流，仓库开发、资产保留检查、清理授权及运维命令和权限保持。此更新不构成Foundry或生产运行验收。"
   },
   "verification-development": {
-    "fingerprint": "4d0834993563d3f972db598b1d5a6635461076ca75e6eef3095503ea5a7fcd91",
+    "fingerprint": "89b1df1c802333e5769d18af211a965bfe07221891bb47b56408bdbf47d47463",
     "reviewedOn": "2026-10-30",
-    "note": "已对照真实 White Tusk 多行来源与既有 project-robustness 回归；离线 smoke 仅将能力清单和恢复查找改为保留短休或长休后缀的来源全名。转换实现、公共入口、支持版本与使用步骤保持。"
+    "note": "已对照锁定 Crawlee 3.17.0 的实际存储实现：本轮请求队列使用内存，增量仍从 records.json 恢复，来源HTML、记录、失败与manifest保持；并发完整采集、同目录增量恢复、CLI和Web均经真实链核对。远端600秒实际截断后覆盖率watchdog改为720秒；用例、顺序、阈值和20分钟job上限保持。Midi仅修两个真实Windows子进程测试的夹具寿命及独立时限，安装保护未改。"
   },
   "human-encounter-intake": {
     "fingerprint": "bfd91ddaa2b99ec2324897092f8853cbce8a7312d897edf41d4ae445fd9309db",

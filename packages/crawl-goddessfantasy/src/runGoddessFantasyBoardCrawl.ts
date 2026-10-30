@@ -102,6 +102,8 @@ export async function runGoddessFantasyBoardCrawl(
   const config = new Configuration({
     storageClientOptions: {
       localDataDirectory: storageDir,
+      // Incremental state lives in records.json; this queue is local to one run.
+      persistStorage: false,
     },
   });
 

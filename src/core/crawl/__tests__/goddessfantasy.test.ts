@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import * as cheerio from 'cheerio';
@@ -191,6 +191,17 @@ describe('goddessfantasy board crawl modes', () => {
       expect(result.recordsAfter).toBe(3);
       expect(requestedPrintTopics.sort()).toEqual(['100', '101', '102']);
       expect(records.map((record) => record.topicId)).toEqual(['100', '101', '102']);
+      expect(existsSync(join(outDir, '.crawlee-storage', 'request_queues'))).toBe(false);
+      const savedRecords = readFileSync(join(outDir, 'records.json'), 'utf-8');
+      requestedPrintTopics.length = 0;
+      const resumed = await runGoddessFantasyBoardCrawl({
+        boardUrl: boardUrlFor(server.port!), cookieHeader: 'PHPSESSID=test', skipAuthProbe: true,
+        outDir, maxBoardPages: 1, contentType: 'monster', crawlMode: 'incremental', requestDelayMs: 0,
+      });
+      expect(resumed.topicsReused).toBe(3);
+      expect(resumed.topicsCrawled).toBe(0);
+      expect(requestedPrintTopics).toEqual([]);
+      expect(readFileSync(join(outDir, 'records.json'), 'utf-8')).toBe(savedRecords);
     } finally {
       server.stop(true);
       rmSync(outDir, { recursive: true, force: true });
