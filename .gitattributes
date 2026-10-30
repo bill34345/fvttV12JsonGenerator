@@ -36,3 +36,6 @@ docs/reviews/2026-10-15-forge-archivist-grim-source.md -text whitespace=cr-at-eo
 docs/reviews/2026-10-16-native-spell-cache-html-normalization.md -text whitespace=cr-at-eol
 docs/reviews/2026-10-16-native-spell-effect-duration.md -text whitespace=cr-at-eol
 docs/reviews/2026-10-18-forge-broad-rule-expansion.md -text whitespace=cr-at-eol
+
+# Preserve the historical shortcut audit original with mixed line endings.
+docs/reviews/2026-10-27-shortcut-hint-audit.md -text whitespace=cr-at-eol,-blank-at-eof
