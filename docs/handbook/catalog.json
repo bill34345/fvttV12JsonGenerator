@@ -1536,11 +1536,13 @@
     "id": "foundry-mcp-readiness",
     "title": "本地 Foundry MCP 开发准备",
     "category": "maintain",
-    "summary": "按需准备本地 Foundry 和专用 GM 页面，实际读取正确世界后再开始依赖 MCP 的工作。",
+    "summary": "统一 Foundry MCP 只在调用时连接指定环境；按需准备本地服务和专用 GM 页面，实际读取正确世界后再开展工作。",
     "when": "开发或验收需要通过 Mirror / ServerNext MCP 读取游戏资料，或出现模块未连接时使用。",
     "requires": [
       "Bun1.3.14、本地 Lab 路径与当前 worktree 的 .codex/config.toml 绝对路径。",
-      "正常登录的任务专用 GM 页面；与现有任务协调共享实例占用。"
+      "正常登录的任务专用 GM 页面；与现有任务协调共享实例占用。",
+      "统一入口从 FOUNDRY_MCP_CONFIG 读取环境清单；本机该仓库的新 worktree 自动继承主目录配置。旧工作区尚未集成新版准备工具时，使用已部署的独立 codex-readiness.ts 入口。",
+      "首次安装 worktree 初始化器需要 Git、Python3.11及以上，以及主目录已启用 foundry、禁用原三入口的本机配置。"
     ],
     "steps": [
       {
@@ -1554,13 +1556,18 @@
       },
       {
         "title": "实际读取确认",
-        "text": "检查成功后再由当前聊天的对应原生 MCP 读取世界；首次接入或恢复验收再读取既有角色或合集。",
+        "text": "检查成功后由当前聊天调用 mirror__get-world-info 或 next__get-world-info，核对固定环境身份；首次接入或恢复验收再读取既有角色或合集。列工具本身不连接环境。",
         "command": "bun run foundry:mcp check --instance next --lab-root F:\\FoundryLab\\foundry-v14 --config I:\\OpenCode\\fvttV12JsonGenerator\\.codex\\config.toml --apply"
       },
       {
         "title": "必要时安装恢复适配器",
         "text": "只接受已核实的 Bridge0.8.4 字节；先移除 --apply 看计划，安装后仅重载本任务页面。",
         "command": "bun run foundry:mcp:install-recovery --instance next --lab-root F:\\FoundryLab\\foundry-v14 --apply"
+      },
+      {
+        "title": "首次安装 worktree 初始化器",
+        "text": "先移除 --apply 查看计划。确认后只安装本仓库 Git hooks，供以后新 worktree 继承配置；不立即改已有配置或重启服务。",
+        "command": "bun run foundry:mcp:install-worktree-init --repo I:\\OpenCode\\fvttV12JsonGenerator --apply"
       }
     ],
     "outputs": [
@@ -1571,7 +1578,11 @@
       "Mirror与Next分别保留安装及运行验收，按各自记录确认可用；一套的通过不能替代另一套。",
       "后台与Foundry进程在线不足以接通；GM页面关闭后需要重新准备。",
       "--apply才允许本地启动和审计写入；不停止或重启已有服务，不处理生产。",
-      "日志记录实际观察，不是持续在线率监控；恢复适配器尊重显式停止和自动重连偏好。"
+      "日志记录实际观察，不是持续在线率监控；恢复适配器尊重显式停止和自动重连偏好。",
+      "统一入口保留各环境权限，production-readonly 只公开读工具；关闭某聊天不停止其他聊天使用的共享后台。",
+      "准备工具同时识别原统一入口组合和 v0.8.5-on-demand.1 的匹配入口/后台；候选安装不等于活跃后台与 GM Bridge 已升级，切换需另核实际版本。",
+      "已加载聊天可能保留旧目录；配置替换后在任务可中断时正常重载或重启 Codex，不用归档聊天或批量结束进程来刷新。",
+      "worktree 安装器保护未知已有 hook、不同 helper 和自定义 hooksPath；真实环境配置仍保留在本机。"
     ],
     "keywords": [
       "MCP",
