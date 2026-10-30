@@ -4,6 +4,23 @@
 
 当前实现支持独立选择 Mirror 或 Next。Next阶段完成后，用户已恢复Mirror实施；两套分别保留安装与运行验收，不能由其中一套的结果推定另一套可用。最新结果见各自实施记录。
 
+统一入口安装后，`mcp_servers.foundry` 的 `FOUNDRY_MCP_CONFIG` 保存各环境清单位置；本工具读取所选环境的原配置并保持身份校验。旧的三个 MCP 条目保持禁用，避免每个聊天重复启动接入进程。原生工具改为 `mirror__get-world-info`、`next__get-world-info` 等固定环境前缀。列工具不会唤起环境，实际调用才连接；已经由其他聊天使用的环境继续运行。
+
+现有旧 worktree 尚未集成新版 readiness 源码时，应使用下方独立本机入口；它已能识别统一清单。工具源码的提交/合并与外部运行配置部署分别记录，不把部署完成写成已合并。
+
+本机该仓库的现有 worktree 均已切换统一入口；以后按正常 Git 流程新建 worktree，会由本仓库 post-checkout 脚本继承主目录的统一 MCP 配置，并保留 `.worktreeinclude` 中的配置文件登记。
+
+版本升级时，准备工具接受原 `on-demand-v1` / `v0.8.4-multi1` 组合与 `v0.8.5-on-demand.1` 的匹配入口/后台。文件路径正确不代表旧进程已替换：共享后台会被复用，GM 页面也不会自动加载新 JS。候选可先独立交付，真实切换需在任务空闲时核对后台进程、Bridge 与世界读回；不要为了更新版本打断其他任务。
+
+首次拉取仓库或换电脑时，先在主目录准备统一 MCP 本机配置，再安装版本管理中的初始化器。需要 Git 和 Python 3.11及以上；不带 `--apply` 时只显示计划：
+
+```powershell
+bun run foundry:mcp:install-worktree-init --repo I:\OpenCode\fvttV12JsonGenerator
+bun run foundry:mcp:install-worktree-init --repo I:\OpenCode\fvttV12JsonGenerator --apply
+```
+
+安装只写本仓库共用的 Git hooks，后续新建 worktree 自动继承。已有未知 hook、不同 helper 或自定义 hooksPath 会拒绝，不能直接覆盖；安装不会重启 MCP 或立即修改任何 worktree 配置。源码、解释器选择和冲突边界见 [准备工具说明](../../tools/foundry-mcp/README.md#安装-worktree-配置初始化)。
+
 ## 日常准备顺序
 
 1. 选择当前任务实际需要的实例，核对共享占用。使用 CI 锁定的 Bun 1.3.14；配置取当前 worktree 的 `.codex/config.toml` 绝对路径。

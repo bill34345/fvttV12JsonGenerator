@@ -70,9 +70,9 @@
     "note": "已对照精确Core14.364/14.368配置与14.368纯parseArgs：CLI只消费小写nobackups；共用launcher修正/规范化并拒绝禁用，176项安全测试与tools类型通过。入口、路径、权限与无备份限制保持，新增仅新启动生效/需真实控件读回；原Setup失败保留，新34112真实控件0限定通过。 本次只纳入源码，不运行launcher/安装器，不操作Lab或生产。"
   },
   "verification-development": {
-    "fingerprint": "1bc84cc7e48c1e9b24c5c61b2782e034f0462813c03616a80f107f54ddfb124c",
-    "reviewedOn": "2026-10-29",
-    "note": "已对照公共workflow、源码清单和严格本地入口：云端portable保留可移植用例，历史来源在云端标NOT_EXECUTED，本地原断言及缺失来源失败保留；补充共享库核对路径和当前600秒watchdog。"
+    "fingerprint": "e20ec005729bd34c30c698d4993a7c32231d5a3d42377c66f54b460527a568cb",
+    "reviewedOn": "2026-10-30",
+    "note": "相对远端基线仅增加三个Foundry MCP安装和测试命令；既有开发验证说明及其他命令未变。"
   },
   "human-encounter-intake": {
     "fingerprint": "b547a9a9b37125d162d137d004906a9deb98a1f1a3f791705ff568fef1a21972",
@@ -95,9 +95,9 @@
     "note": "首版收尾已对照独立项目当前交付页、包与验收记录：增加current-state接续入口，历史验收明确为快照；命令、版本及安装授权边界不变，Force标签和动画精确匹配仍列待办。"
   },
   "foundry-mcp-readiness": {
-    "fingerprint": "339bed9320925a8a0555671f6790e16dd0354bd07cfbbfcd031b47bc8facce1b",
-    "reviewedOn": "2026-10-26",
-    "note": "已对照Mirror新增实际接受：原自动重连false经正常UI改true、写权限保留、专用页/原生世界及既有角色读取、断线恢复和显式停止保持均通过。Next旧阶段记录按历史范围复用；CLI启动等待由45延长90秒，保留超时进程与日志，说明不宣称重复冷启验收。"
+    "fingerprint": "7e8d576ad8db9201a3cf0df5470518770f925e3b08c3b7775843eaee5c0ee2f3",
+    "reviewedOn": "2026-10-30",
+    "note": "在远端基线上只核对MCP初始化器、统一配置与新版候选边界；真实Git和readiness聚焦测试通过。"
   },
   "chat-memory-guard": {
     "fingerprint": "778ebb668dd7af6a0a92cf198b10ccd4b0e8258a75cf2764535623938626a07d",

@@ -2,6 +2,37 @@
 
 这个入口只处理本地 Mirror 和 ServerNext。它分别核对 Foundry 进程、MCP 后台身份与一次真实世界读取，避免把进程在线或工具列表可见误报成连接就绪。使用与项目 CI 一致的 Bun 1.3.14。
 
+## 统一入口与按需连接
+
+配置采用 `[mcp_servers.foundry]` 时，`FOUNDRY_MCP_CONFIG` 指向外部环境清单。此准备工具会从清单读取所选 Mirror 或 Next 的原有身份、端口和权限，并继续执行原有校验。统一入口与所选旧入口同时启用会拒绝，避免重复启动。
+
+本机该仓库的主目录与现有 worktree 已统一配置。新建 worktree 时，本仓库 Git 初始化脚本从主目录复制统一入口和禁用的旧条目；环境清单仍共用，不需为每个新任务重复配置。
+
+统一 MCP 在聊天初始化和列工具时不连接任何环境；调用 `mirror__get-world-info` 或 `next__get-world-info` 才连接对应后台。`production-readonly__` 只公开读工具。后台仍按环境共享，退出一个聊天不停止其他聊天使用的后台。Foundry 世界与 GM 页面的准备步骤保持不变。
+
+配置切换后，尚未载入的聊天使用统一入口；已载入聊天可能仍持有旧工具目录，需要在任务可中断时通过正常设置重载或完整重启 Codex。不要为了刷新目录归档聊天或按进程名批量结束 Node。
+
+旧工作区的源码尚未集成新版准备工具时，使用部署的独立入口 `F:\FoundryLab\foundry-v14\tools\foundry-mcp\codex-readiness.ts`，传入该工作区的实际 `--config`，不要运行尚不识别统一清单的旧版准备脚本。
+
+维护源码位于个人 fork [bill34345/foundry-vtt-mcp](https://github.com/bill34345/foundry-vtt-mcp)，稳定定制线为 `main`。readiness 接受原 `on-demand-v1` / `v0.8.4-multi1` 组合，以及新版 `v0.8.5-on-demand.1` 中匹配的统一入口和后台。新版候选交付不会自动切换已有后台或 GM 页面；空闲时切换后仍需核对实际进程与 Bridge 版本。生产环境保持单独的权限与部署边界。
+
+## 安装 worktree 配置初始化
+
+`worktree_init.py` 是 Git `post-checkout` 初始化器的源码。它从主目录的 `.codex/config.toml` 提取统一 `foundry` 入口和三个禁用旧条目，补到新 worktree，并登记 `.worktreeinclude`。已有相同配置保持原样，已有不同 Foundry 配置会拒绝；其他配置和环境参数不改。
+
+换电脑或重新拉取仓库后，先准备主目录的本机配置：启用 `foundry`，显式禁用 `foundry-mirror`、`foundry-next`、`foundry-production-readonly`。真实地址和凭据保留在本机。安装需要 Git 与 Python 3.11 及以上版本；下面的 `python` 必须指向准备供 hook 使用的解释器。
+
+```powershell
+bun run foundry:mcp:install-worktree-init --repo I:\OpenCode\fvttV12JsonGenerator
+bun run foundry:mcp:install-worktree-init --repo I:\OpenCode\fvttV12JsonGenerator --apply
+```
+
+第一条只检查和输出计划。第二条才把源码和启动器安装到该仓库共用的 `.git/hooks`；`--repo` 也可指向其中一个已有 worktree，配置来源仍为主目录。启动器使用本次安装的 Python 绝对路径，源码不固定某台电脑的路径。解释器位置改变后重新运行安装器即可。
+
+安装器不会对已有 worktree 立即执行初始化，也不会重写 MCP 配置或重启服务。以后正常创建 worktree 或切换分支时由 Git 触发。未知已有 hook、不同的 helper 或自定义 `core.hooksPath` 会拒绝，供维护者先处理冲突；不会覆盖另一套 hook 或创建备份。
+
+聚焦检查使用真实隔离 Git fixture：`bun run test:foundry-mcp-worktree-init`。
+
 ## 检查连接
 
 在当前 worktree 中执行，`--config` 使用该 worktree 的绝对配置路径：
