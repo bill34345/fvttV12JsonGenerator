@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, test as bunTest } from 'bun:test';
-import { spawnSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -19,15 +20,16 @@ let source: string;
 let input: string;
 let request: AcceptanceRequest;
 
-function git(...args: string[]) {
-  const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8', timeout: 5000, windowsHide: true });
-  if (result.status !== 0) throw new Error(result.stderr);
+const execFileAsync = promisify(execFile);
+async function git(...args: string[]) {
+  const { stdout } = await execFileAsync('git', ['-C', root, ...args], { encoding: 'utf8', timeout: 5000, windowsHide: true });
+  return stdout.trim();
 }
 function saveRequest() { writeFileSync(input, JSON.stringify(request)); }
 async function prepare() { saveRequest(); return prepareAcceptance(input); }
 async function execute() { const contract = await prepare(); const receipt = await executeAcceptance(contract.contractAbsolutePath); return { contract, receipt, path: join(dirname(contract.contractAbsolutePath), 'receipt.json') }; }
 
-beforeEach(() => {
+beforeEach(async () => {
   sandbox = mkdtempSync(join(tmpdir(), 'fvtt-acceptance-test-'));
   root = join(sandbox, 'worktree');
   mkdirSync(join(root, '.ruler'), { recursive: true });
@@ -37,11 +39,11 @@ beforeEach(() => {
   writeFileSync(join(root, 'docs/runbooks/development-feedback-loop.md'), 'fixture feedback rule\n');
   source = join(root, 'check.js');
   writeFileSync(source, 'console.log(JSON.stringify({ok: true}));\n');
-  git('init', '-b', 'codex/fixture');
-  git('config', 'user.email', 'fixture@example.invalid');
-  git('config', 'user.name', 'Acceptance fixture');
-  git('add', '--', 'AGENTS.md', '.ruler/AGENTS.md', 'docs/runbooks/development-feedback-loop.md', 'check.js');
-  git('commit', '-m', 'fixture baseline');
+  await git('init', '-b', 'codex/fixture');
+  await git('config', 'user.email', 'fixture@example.invalid');
+  await git('config', 'user.name', 'Acceptance fixture');
+  await git('add', '--', 'AGENTS.md', '.ruler/AGENTS.md', 'docs/runbooks/development-feedback-loop.md', 'check.js');
+  await git('commit', '-m', 'fixture baseline');
   input = join(root, 'request.json');
   request = {
     goal: 'Verify the local check result', acceptance: ['ok:true exits zero', 'missing proof stays incomplete'], caseId: 'local-json-check', workspaceRoot: root,
@@ -49,13 +51,13 @@ beforeEach(() => {
     preflight: [{ id: 'syntax', argv: [node!, '--check', source], timeoutMs: 5000 }],
     operation: { id: 'check', argv: [node!, source], timeoutMs: 5000 }, adapter: 'json-ok',
   };
-});
+}, 15_000);
 
 afterEach(() => {
   const absolute = resolve(sandbox);
   if (dirname(absolute) !== resolve(tmpdir()) || !absolute.split(/[\\/]/).at(-1)?.startsWith('fvtt-acceptance-test-')) throw new Error('Unowned cleanup target');
   rmSync(absolute, { recursive: true, force: false });
-});
+}, 15_000);
 
 test('real syntax exit 1 blocks dispatch and never runs a later successful check', async () => {
   // Historical mapping: wmp-process.md M:6015 -> M:6020 (failed syntax check followed by dispatch).
@@ -124,7 +126,7 @@ test('candidate or instruction drift blocks the callback', async () => {
 
 test('branch and HEAD drift cannot reuse a contract', async () => {
   const contract = await prepare();
-  git('switch', '-c', 'codex/other');
+  await git('switch', '-c', 'codex/other');
   expect(() => requireReady(contract.contractAbsolutePath)).toThrow('branch, HEAD');
 });
 

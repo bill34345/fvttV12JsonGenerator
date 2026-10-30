@@ -102,3 +102,13 @@ Crawlee full 模式原例本地连续 10 次通过，没有复现远端 `EPERM`�
 MIDI 生产查询仍保持 10 秒预算及失败关闭。CI 增加独立 Windows 准备步骤，用实际 powershell.exe 查询其自身 PID 的 Win32_Process，要求 PID 相同且 CommandLine 非空；WMI 操作 30 秒、外层步骤 1 分钟，失败中止，不重试或跳过。正式三 PID、近似路径排除及安装拒绝断言照常执行。此步骤区分 runner 查询能力准备与功能用例，但自 PID 查询比 CommandLine LIKE 更轻，冷启动根因尚未证实，不能据此宣称生产首次冷查询一定小于 10 秒。若准备通过后原查询仍超时，继续定位查询阶段，不再增加生产预算。
 
 本机执行同一准备脚本成功，三个原失败用例定点 3 pass、0 fail、12 次断言，均使用随机临时根及独立进程；没有使用持久 Lab 作破坏性 fixture。独立审查认可该前置与预算范围。手册 status 显示全部 38 项与来源一致；此次只改 CI 准备和测试预算，用户入口、输出、支持版本及生产保护不变，未改说明正文或刷新无关 review。后续仍须取得新提交实际完整 CI 成功。
+
+## 第七轮远端：真实 Git fixture 钩子与同步计时
+
+`907d60be` 的 [GitHub CI 41066603646](https://github.com/bill34345/fvttV12JsonGenerator/actions/runs/41066603646) 用时 12 分 1 秒，coverage 8248 pass、83 skip、1 fail，8332 用例、576 文件、490.20 秒。Windows 准备步骤成功，MIDI 1209.63ms、Blood Hunter 1321.10ms、Spell Resolver 281.72ms 通过；大报告 7828.78ms 通过。唯一失败明确标为 beforeEach/afterEach hook 超时：inspection 的 missing recovery 用例 5046.01ms。用例主体已经是 15 秒，真实 Git 初始化及目录清理 hook 仍为默认 5 秒，原日志保留。
+
+本地给该文件钩子独立预算后 20 项通过，但同类 workflow/selection 检查又出现 Git 准备在 13.56ms 返回空 Error 的失败，不能只靠扩大钩子预算关闭。最小对照复现：固定 Bun 1.3.14 同步 git --version 热身后等待 6000ms，再用 5000ms timeout 调用，5.86ms 就返回 ETIMEDOUT、SIGTERM、null status 及空输出；1000ms/1600ms 组合也在约 6ms 误判。相同 5000ms 预算、相同 6000ms 等待的异步 execFile 对照 39.17ms 正常退出。这与已核对的 [Bun #33932](https://github.com/oven-sh/bun/issues/33932) 和 [PR #33935](https://github.com/oven-sh/bun/pull/33935) 的隔离同步事件循环陈旧时钟机制一致；初始上游 SSH 报告曾未能用紧邻的简单命令复现，PR 和本机 idle 对照补齐了触发条件。
+
+最终只把 inspection/workflow/selection 三个测试 fixture 的 Git helper 改为 execFile 异步调用，保留每条 Git 5000ms 预算、顺序及实际仓库操作；inspection 的每次 HEAD 仍实时读取，未缓存身份。三组真实 Git 准备／清理 hook 各 15 秒，已有 external 测试的 20 秒预算不改。全部数据保持、文件模式、来源身份、权限和拒绝断言保留；生产同步 API、全局测试预算与 Bun 版本不改，不将此次规避写成 Bun 本体已修复。
+
+公共安全入口完整三文件 53 pass、0 fail、216 次断言；工具类型及 diff 检查通过。独立审查确认实际命令及返回值均已等待，未见 Promise 伪结果或断言削弱。手册监测的 38 项仍一致；此次仅测试准备层变化，用户入口、产物和限制不变，不改正文或无关 review。完整远端门禁继续单独取得结论。

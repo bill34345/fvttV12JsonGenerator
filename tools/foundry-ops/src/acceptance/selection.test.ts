@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, expect, test as bunTest } from 'bun:test';
-import { spawnSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -17,23 +18,24 @@ let source: string;
 let sequence = 0;
 const context = { target: 'synthetic-file-check', interface: 'v1' };
 function save(path: string, value: unknown) { writeFileSync(path, JSON.stringify(value, null, 2) + '\n'); return fileIdentity(path); }
-function git(...args: string[]) {
-  const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8', timeout: 5000, windowsHide: true });
-  if (result.status !== 0) throw new Error(result.stderr);
+const execFileAsync = promisify(execFile);
+async function git(...args: string[]) {
+  const { stdout } = await execFileAsync('git', ['-C', root, ...args], { encoding: 'utf8', timeout: 5000, windowsHide: true });
+  return stdout.trim();
 }
-beforeAll(() => {
+beforeAll(async () => {
   sandbox = mkdtempSync(join(tmpdir(), 'fvtt-selection-test-')); root = join(sandbox, 'worktree');
   mkdirSync(join(root, '.ruler'), { recursive: true }); mkdirSync(join(root, 'docs/runbooks'), { recursive: true });
   for (const path of ['AGENTS.md', '.ruler/AGENTS.md', 'docs/runbooks/development-feedback-loop.md']) writeFileSync(join(root, path), 'Synthetic fixture instructions\n');
   source = join(root, 'check.js'); writeFileSync(source, 'console.log(JSON.stringify({ok:true}));\n');
-  git('init', '-b', 'codex/fixture'); git('config', 'user.email', 'fixture@example.invalid'); git('config', 'user.name', 'Selection fixture');
-  git('add', '--', 'AGENTS.md', '.ruler/AGENTS.md', 'docs/runbooks/development-feedback-loop.md', 'check.js'); git('commit', '-m', 'synthetic baseline');
-});
+  await git('init', '-b', 'codex/fixture'); await git('config', 'user.email', 'fixture@example.invalid'); await git('config', 'user.name', 'Selection fixture');
+  await git('add', '--', 'AGENTS.md', '.ruler/AGENTS.md', 'docs/runbooks/development-feedback-loop.md', 'check.js'); await git('commit', '-m', 'synthetic baseline');
+}, 15_000);
 afterAll(() => {
   const absolute = resolve(sandbox);
   if (dirname(absolute) !== resolve(tmpdir()) || !absolute.split(/[\\/]/).at(-1)?.startsWith('fvtt-selection-test-') || lstatSync(absolute).isSymbolicLink()) throw new Error('Unowned fixture cleanup');
   rmSync(absolute, { recursive: true, force: false });
-});
+}, 15_000);
 function fixture() {
   const directory = join(root, `case-${++sequence}`); mkdirSync(directory);
   const rawPath = join(directory, 'raw.json'); const raw = save(rawPath, { business: 'PASS', export: 'INCOMPLETE', restoration: 'NOT_EXECUTED' });
