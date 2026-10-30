@@ -5,9 +5,9 @@
     "note": "已核Web协议与Item/Species独立入口：仅新增精确原生legres报告路径；Monster语言投影/verifier及Monster提取/显式纠错prompt变化不改连接配置、Item或Species流程/版本/验收边界。现有说明保持。"
   },
   "markdown-convert": {
-    "fingerprint": "fedea82b61d6ee62d5689d447b0ee3131d8b5616e9a367e9f947ddd844303101",
-    "reviewedOn": "2026-10-29",
-    "note": "已对照合并后的structured/lair生成顺序、语言可见栏位及两项诊断补齐；Actor和英文翻译后的世界引用、未知施法来源键只报具体问题，产物/正文保持。287项生成与十答完整Actor对照通过；CLI版本、覆盖边界不变。"
+    "fingerprint": "0159a9ae9e6c97ff9adeed8c4039a50eaa556018c0ce768c5727dabba39ec881",
+    "reviewedOn": "2026-10-30",
+    "note": "已对照CLI绝对路径读取、workflow显式输出和来源验证：纯个人资料转换复用主工作区，数据写入仓库外固定目录，不建worktree或纳入Git；工具默认路径、版本和生成/检查契约不变。同步外部路径示例，仅修改规范与说明，不重新生成生物或执行Foundry验收。"
   },
   "monster-intake": {
     "fingerprint": "afe5e1ae0d2788e518f09b93d1ad6ad868d74136e256818cb3c2130ebac005bd",
@@ -55,14 +55,14 @@
     "note": "已对照本条入口/限制及合并后的README：README仅更新仓库定位、版本分流和手册导航，本条对应实现无双方业务冲突。原命令、独立写入/备份限制及精确版本接受保持；共同生成链已验但不作为本条新增实机接受。"
   },
   "foundry-ops": {
-    "fingerprint": "79cb7dc9aa59b8297002f4809362b741dcf518b0e17f01ee7ff6dc9d90344036",
-    "reviewedOn": "2026-10-25",
-    "note": "已对照精确Core14.364/14.368配置与14.368纯parseArgs：CLI只消费小写nobackups；共用launcher修正/规范化并拒绝禁用，176项安全测试与tools类型通过。入口、路径、权限与无备份限制保持，新增仅新启动生效/需真实控件读回；原Setup失败保留，新34112真实控件0限定通过。 本次只纳入源码，不运行launcher/安装器，不操作Lab或生产。"
+    "fingerprint": "ce95c09cb8d8416259136c9e8e1c3d2d4ade442891a7e23f890066ae8cb23113",
+    "reviewedOn": "2026-10-30",
+    "note": "已逐项对照运维条目与worktree来源：来源只新增纯个人资料在仓库外转换的分流，仓库开发、资产保留检查、清理授权及运维命令和权限保持。此更新不构成Foundry或生产运行验收。"
   },
   "verification-development": {
-    "fingerprint": "bc3d46492886da8ce4c32d1048ff5fa5c9861874f0c04849d5478826fd2372f2",
+    "fingerprint": "e53be9d8b7bf87bc8dc203c98bbefb38040d39543f7a238754bc99a510b05805",
     "reviewedOn": "2026-10-30",
-    "note": "package.json 仅新增 Foundry worktree 初始化安装命令和既有隔离运行器包装的定点测试；已有验证命令、结果层级和限制未变。安装与权限说明已归入 Foundry MCP 条目。"
+    "note": "工程修改继续使用worktree；纯个人资料转换及其来源核对可在主工作区运行并写入仓库外目录。原检查入口、验证层级和生成契约保持，此次只改资料存放与工作区规范。"
   },
   "human-encounter-intake": {
     "fingerprint": "151692089f2c6f5de38359a6ae6f75177c3d9356e20750629d6ab25010485439",

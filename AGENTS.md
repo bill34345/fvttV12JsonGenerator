@@ -7,7 +7,7 @@
 
 ## 正式生成
 
-本项目把中文 YAML/Markdown、英文 bestiary 和正式 Intake 接受的文本转换为 Foundry dnd5e Actor/Item JSON。默认来源与输出在 `obsidian/dnd数据转fvttjson/input`、`obsidian/dnd数据转fvttjson/output`。
+本项目把中文 YAML/Markdown、英文 bestiary 和正式 Intake 接受的文本转换为 Foundry dnd5e Actor/Item JSON。工具默认来源与输出在 `obsidian/dnd数据转fvttjson/input`、`obsidian/dnd数据转fvttjson/output`。
 
 - 涉及 D&D 的规则解释、资料选择、生成、开发、对照和验收，一律使用 2024 版 D&D 规则及对应官方资料作为规则基准。规则年份与 Foundry/dnd5e 软件版本分别核对，不以旧版规则或旧版 Actor 作为当前标准。
 - 最终 JSON 必须走来源 → CLI/Web → `@fvtt-json-generator/workflows` → parser/generation → verifier，不手写或修补最终 JSON。生物生成与检查结论分开：只有AI没正常返回才能阻止整只Actor生成，其他问题不挡住产物获取或删掉已有能力；候选照常交付且不伪称accepted。正式登记和目标覆盖保持各自写入边界；Item/Species契约独立。用户原话与46项范围见`docs/acceptance/2026-10-27-forge-generation-delivery-remediation.md`。
@@ -18,7 +18,8 @@
 
 ## 工作区与权限
 
-- 只读可在主工作区进行。仓库修改按 `docs/runbooks/worktree-development.md` 使用唯一 sibling worktree 和 `codex/<timestamp>-<task-slug>` 分支；先查 status/worktree，从已提交 master 建立。若依赖主区未提交成果，交由用户决定如何整合；不自动 stash、提交或丢弃用户改动。
+- 只读与仅使用现有工具的个人资料转换可在主工作区进行。个人输入、生成结果及相关诊断存放在仓库外固定目录 `I:\OpenCode\fvttV12JsonGenerator-data`，不创建 worktree，不纳入 Git；布局与命令见 `docs/runbooks/worktree-development.md` 的“纯资料转换”。
+- 修改仓库代码、提示词、配置、模板、测试或文档时，按 `docs/runbooks/worktree-development.md` 使用唯一 sibling worktree 和 `codex/<timestamp>-<task-slug>` 分支；先查 status/worktree，从已提交 master 建立。若依赖主区未提交成果，交由用户决定如何整合；不自动 stash、提交或丢弃用户改动。
 - commit、合并和 push 需要明确发布授权。发布前确认主索引为空、改动与既有 dirty/untracked 路径不重叠且用户基线可保持；不从其他 worktree 背后移动 master。仅当本任务 worktree clean、已按授权集成并推送且无人使用时清理。
 - 已有 tracked 文件的删除需明确授权；未知既有 untracked 文件保留。本任务临时产物核对绝对路径和归属后可清理，遵守全局禁止强制删除规则。
 - 本机和线上不创建备份，不以副本、隐藏目录或回滚目录绕过。已授权生产操作不以在线人数为零作门槛；记录目标、前后清单、SHA-256、进程、端口与日志。失败时停止并报告，等待新的修复授权。

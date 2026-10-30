@@ -12,7 +12,7 @@
 
 ## 仓库开发
 
-- [短寿命 Worktree 开发与发布](worktree-development.md)：所有仓库修改、生成、测试、commit 与发布闭环。
+- [短寿命 Worktree 开发与发布](worktree-development.md)：仓库开发、测试、commit 与发布闭环，以及无需 worktree 的仓库外个人资料转换。
 
 ## Foundry 内容传输和 Adventure
 

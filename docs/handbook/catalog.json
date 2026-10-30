@@ -65,7 +65,8 @@
     "when": "来源已经是项目支持的结构化 Markdown，想直接生成单文件或合集时使用。杂乱 TXT 先看 AI Intake。",
     "requires": [
       "符合项目契约的来源 Markdown，可先参照 templates/npc-example.md。",
-      "明确 Foundry 目标与效果模式；下面示例显式选择 v14/core，并关闭图标替换。"
+      "明确 Foundry 目标与效果模式；下面示例显式选择 v14/core，并关闭图标替换。",
+      "仅转换个人资料时，在主工作区使用现有工具；来源、结果及相关诊断统一放在仓库外 I:\\OpenCode\\fvttV12JsonGenerator-data，不创建 worktree，不纳入 Git。"
     ],
     "steps": [
       {
@@ -74,14 +75,14 @@
         "command": "bun run cli:help"
       },
       {
-        "title": "生成示例 Actor",
-        "text": "示例来源在仓库中；正式使用时替换来源和输出名称，保持原文可追溯。",
-        "command": "bun run src/index.ts \"templates/npc-example.md\" -o \"obsidian/dnd数据转fvttjson/output/example-v14.json\" --fvtt-version 14 --effect-profile core --icon-mode off"
+        "title": "转换本地个人资料",
+        "text": "先在主工作区打开终端，将 example 替换为本次生物目录，并准备好 source.md；输入与输出均显式指定仓库外路径，保留原文可追溯性。",
+        "command": "bun run src/index.ts \"I:/OpenCode/fvttV12JsonGenerator-data/creatures/example/source.md\" -o \"I:/OpenCode/fvttV12JsonGenerator-data/creatures/example/actor.json\" --fvtt-version 14 --effect-profile core --icon-mode off"
       },
       {
         "title": "对照来源验证",
         "text": "运行来源验证，并人工核对属性、动作、豁免、效果与施法；修改来源或生成逻辑后重新生成。",
-        "command": "bun run verify:actor \"templates/npc-example.md\" \"obsidian/dnd数据转fvttjson/output/example-v14.json\""
+        "command": "bun run verify:actor \"I:/OpenCode/fvttV12JsonGenerator-data/creatures/example/source.md\" \"I:/OpenCode/fvttV12JsonGenerator-data/creatures/example/actor.json\""
       }
     ],
     "outputs": [
@@ -147,7 +148,8 @@
       "docs/acceptance/2026-10-28-forge-22-behavior-fixes.md",
       "docs/acceptance/2026-10-29-forge-five-mechanism-fixes.md",
       "docs/acceptance/2026-10-29-forge-24-failure-fixes.md",
-      "docs/acceptance/2026-10-29-forge-three-followup-fixes.md"
+      "docs/acceptance/2026-10-29-forge-three-followup-fixes.md",
+      "docs/runbooks/worktree-development.md"
     ],
     "watch": [
       "apps/cli/",
@@ -785,7 +787,7 @@
     "summary": "查阅来源验证、测试、支持矩阵和锁定版本参考资料，也用于持续维护本手册。",
     "when": "需要知道“通过”具体指哪一层，或完成新功能后更新项目说明时使用。",
     "requires": [
-      "工程工作先遵守 worktree 规则；按改动范围选择检查。",
+      "修改仓库代码、提示词、配置、模板、测试或文档时遵守 worktree 规则；纯个人资料转换复用主工作区并写入仓库外目录，按改动范围选择检查。",
       "测试绿色、文件存在、真实 Foundry 操作和生产验收分别记录。"
     ],
     "steps": [

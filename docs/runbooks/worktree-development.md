@@ -1,6 +1,31 @@
 # 短寿命 Worktree 开发与发布
 
-本手册适用于所有会修改本仓库文件的任务。只读审计可以留在主工作区；开发、生成、测试和 topic commit 必须在独立 worktree 中完成。
+修改仓库代码、提示词、配置、模板、测试或文档，以及相关构建、测试和 topic commit，使用独立 worktree。只读审计与仅使用现有工具的个人资料转换可以留在主工作区。
+
+## 纯资料转换
+
+个人资料统一保存在仓库外的固定目录 `I:\OpenCode\fvttV12JsonGenerator-data`。每只生物按名称建立子目录，保存来源和生成结果；有用的诊断也放在对应目录，不纳入 Git：
+
+```text
+I:\OpenCode\fvttV12JsonGenerator-data\
+  creatures\
+    <creature-slug>\
+      source.md
+      actor.json
+```
+
+在主工作区复用现有程序和依赖，显式指定仓库外的输入与输出。将 `<creature-slug>` 替换为本次生物名称，并先准备好来源 `source.md`：
+
+```powershell
+Set-Location 'I:\OpenCode\fvttV12JsonGenerator'
+$taskData = 'I:\OpenCode\fvttV12JsonGenerator-data\creatures\<creature-slug>'
+bun run src/index.ts "$taskData\source.md" -o "$taskData\actor.json" --fvtt-version 14 --effect-profile core --icon-mode off
+bun run verify:actor "$taskData\source.md" "$taskData\actor.json"
+```
+
+这类任务不创建 worktree 或分支。工具原有默认路径不变；来源 → CLI/Web → workflow → parser/generation → verifier 的生成链和来源语义核对继续执行。目标版本与效果模式仍遵从任务要求。
+
+转换中发现工具问题时，保留本地输入、产物和诊断；需要修改仓库实现时，再按下面的开发流程处理。个人转换资料不因工具修复而自动纳入 Git，回归 fixture 单独按开发范围维护。
 
 ## 1. 建立可靠基线
 
@@ -41,7 +66,7 @@ git worktree add -b $branch $worktreePath master
 
 ## 3. 开发和验证
 
-- 只在 topic worktree 修改、生成和测试。
+- 仓库修改及其构建、测试只在 topic worktree 进行；纯资料转换按上节复用主工作区并写入仓库外目录。
 - 只暂存任务范围内路径；不使用 broad staging。
 - 记录相关 focused checks、完整门禁和人工语义样本。机械绿色不能替代真实验收。
 - 用户尚未授权发布时，不 commit、merge 或 push。
