@@ -13,3 +13,8 @@ foundry-modules/server-next-external-candidates/*.patch whitespace=-blank-at-eol
 foundry-modules/server-next-external-candidates/item-piles/register-target-first.js whitespace=-blank-at-eof
 # Preserve the captured Guard source's terminal blank line and source SHA.
 tests/fixtures/forge-heading-coverage/guard.md whitespace=-blank-at-eof
+
+# Preserve the archived research original, including its CRLF line endings.
+docs/reviews/2026-10-13-forge-reliability-direction.md -text whitespace=cr-at-eol
+# Preserve the other historical report's original terminal blank line.
+docs/reviews/2026-10-12-forge-current-status.md whitespace=-blank-at-eof
