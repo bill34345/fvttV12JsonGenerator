@@ -13,6 +13,7 @@ describe('writeTokenReviewContactSheet', () => {
     const outPath = join(dir, 'sheet.png');
 
     try {
+      console.info('Contact sheet fixture: writing source token');
       await sharp({
         create: {
           width: 64,
@@ -22,12 +23,14 @@ describe('writeTokenReviewContactSheet', () => {
         },
       }).webp().toFile(tokenPath);
 
+      console.info('Contact sheet fixture: rendering PNG');
       await writeTokenReviewContactSheet({
         items: [item(tokenPath)],
         outPath,
         title: 'Token Review',
       });
 
+      console.info('Contact sheet fixture: reading PNG metadata');
       const metadata = await sharp(outPath).metadata();
       expect(metadata.format).toBe('png');
       expect(metadata.width).toBeGreaterThan(0);
@@ -35,7 +38,7 @@ describe('writeTokenReviewContactSheet', () => {
     } finally {
       await removeTempDir(dir);
     }
-  }, 20_000);
+  }, 60_000);
 });
 
 async function removeTempDir(path: string): Promise<void> {

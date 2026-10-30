@@ -29,6 +29,8 @@ const SAMPLE_LCOV = [
   'end_of_record',
 ].join('\n');
 
+const SAMPLE_INVENTORY = ['packages/generation/src/actor.ts', 'apps/web/src/server/api.ts'];
+
 describe('production coverage gate', () => {
   it('excludes test implementation records and reports production totals by subsystem', () => {
     const result = evaluateProductionCoverage(SAMPLE_LCOV, {
@@ -49,10 +51,14 @@ describe('production coverage gate', () => {
     const low = evaluateProductionCoverage(SAMPLE_LCOV, {
       minimumLines: 0.9,
       minimumFunctions: 0.9,
+    }, {
+      productionSourceInventory: SAMPLE_INVENTORY,
     });
     const empty = evaluateProductionCoverage('TN:\nSF:tests\\only.test.ts\nLF:1\nLH:1\nFNF:1\nFNH:1\nend_of_record', {
       minimumLines: 0,
       minimumFunctions: 0,
+    }, {
+      productionSourceInventory: SAMPLE_INVENTORY,
     });
 
     expect(low.failures).toEqual([
@@ -101,6 +107,12 @@ describe('production coverage gate', () => {
     const result = evaluateProductionCoverage(lcov, {
       minimumLines: 0,
       minimumFunctions: 0,
+    }, {
+      productionSourceInventory: [
+        'packages/generation/src/actor.ts',
+        'packages/parser/src/itemParser.ts',
+        'packages/models/src/item.ts',
+      ],
     });
 
     expect(result.productionFiles).toBe(2);
