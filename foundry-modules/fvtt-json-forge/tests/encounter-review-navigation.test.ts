@@ -128,8 +128,11 @@ describe('encounter review navigation',()=>{
     visibleReport.actors[0].analysis.findings=[{code:'SOURCE_BLOCKED',path:'/name',message:'Need GM check <script>alert(1)</script>',blocking:true,
       evidence:[{start:0,end:firstName.length,quote:firstName}]}];
     const app:any=new App();app.humanSource=source;app.aiReport=visibleReport;app.translationReport=[];app.reviewed=true;
-    app.prepared={hash:'fixed-hash',label:'fixture',bundle:{label:'fixture',actors:bundle.actors,assets:[],macros:[],primaryActorKey:'actor-1'},actors:[],macros:[],requirements:[]};
+    app.prepared={hash:'fixed-hash',label:'fixture',bundle:{schema:'fvtt-json-forge-encounter',version:1,id:'navigation-fixture',label:'fixture',
+      target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},
+      actors:bundle.actors.map((actor:any)=>({...actor,sourceHash:hashSource(actor.source)})),assets:[],macros:[],primaryActorKey:'actor-1'},actors:[],macros:[],requirements:[]};
     const candidate=app.prepared;
+    const candidateBefore=structuredClone(candidate);
     const currentReport=app.currentReportText();
     app.reportDownload={url:'blob:prior-review',name:'review.json',byteLength:42};app.reportDownloadText=currentReport;
     app.textView={kind:'report',name:'review.json',text:currentReport};
@@ -163,31 +166,38 @@ describe('encounter review navigation',()=>{
     input.oninput!(new document.defaultView!.Event('input'));
     expect(document.activeElement).toBe(input);expect(input.selectionStart).toBe(9);
     expect(renders).toBe(renderBeforeEdit);
-    expect(root.querySelector('[data-encounter-current-result]')?.childElementCount).toBe(0);
-    expect(root.querySelector('[data-encounter-report-controls]')?.childElementCount).toBe(0);
-    for(const selector of ['.forge-encounter-issue','[data-report-download]','[data-encounter-view-text]',
-      '[data-action="encounter-import"]','.forge-error','[data-encounter-progress]'])expect(root.querySelector(selector)).toBeNull();
-    expect(root.querySelector('[data-encounter-status]')?.textContent).toContain('旧候选与审核记录已撤下');
-    expect(revoked).toEqual(['blob:prior-review']);
-    expect(()=>app.currentReportText()).toThrow();expect(()=>app.currentPackageText()).toThrow();
+    expect(root.querySelector('[data-encounter-current-result]')?.childElementCount).toBeGreaterThan(0);
+    expect(root.querySelector('[data-encounter-report-controls]')?.childElementCount).toBeGreaterThan(0);
+    expect((root.querySelector('[data-action="encounter-import"]') as HTMLButtonElement).disabled).toBe(true);
+    expect((root.querySelector('[name="encounterReviewed"]') as HTMLInputElement).checked).toBe(false);
+    for(const selector of ['.forge-error','[data-encounter-progress]'])expect(root.querySelector(selector)).toBeNull();
+    expect(root.querySelector('[data-encounter-status]')?.textContent).toContain('已有候选继续绑定原来源快照');
+    expect(revoked).toEqual([]);
+    expect(()=>app.currentReportText()).toThrow('来源已改变');
+    expect(JSON.parse(app.currentPackageText())).toEqual(candidate.bundle);
     input.blur();
     expect(renders).toBe(renderBeforeEdit);
     const changed=await app._prepareContext();
     expect(changed.reviewNavigation.visibleIssues).toEqual([]);
-    expect(changed.reviewNavigation.selectedActor).toBe('');
-    expect(app.prepared).toBeUndefined();expect(app.aiReport).toBeUndefined();expect(app.reviewed).toBe(false);
+    expect(changed.reviewNavigation.selectedActor).toBe('actor-2');
+    expect(app.prepared).toBe(candidate);expect(app.prepared).toEqual(candidateBefore);
+    expect(app.aiReport).toBe(visibleReport);expect(app.reviewed).toBe(false);
+    expect(revoked).toEqual(['blob:prior-review']);
     for(const name of ['humanLabel','outputLanguage']){
-      app.humanSource=source;app.aiReport=visibleReport;app.prepared=candidate;app.reviewed=true;app.error='old error';app.progressDetail='old progress';
+      app.humanSource=source;app.aiReport=visibleReport;app.prepared=candidate;app.reviewed=true;app.actorFilter='';app.error='old error';app.progressDetail='old progress';
       root.innerHTML=template(await app._prepareContext());app._onRender();
       expect(root.querySelector('.forge-encounter-issue')).toBeTruthy();
       const control=root.querySelector(`[name="${name}"]`) as HTMLInputElement|HTMLSelectElement;
       if(name==='humanLabel'){control.focus();control.value='New label';control.dispatchEvent(new document.defaultView!.Event('input'));expect(document.activeElement).toBe(control);}
       else{control.value='zh-CN';control.dispatchEvent(new document.defaultView!.Event('change'));}
-      expect(root.querySelector('[data-encounter-current-result]')?.childElementCount).toBe(0);
-      expect(root.querySelector('[data-encounter-report-controls]')?.childElementCount).toBe(0);
-      expect(root.querySelector('[data-action="encounter-report-view"]')).toBeNull();
+      expect(root.querySelector('[data-encounter-current-result]')?.childElementCount).toBeGreaterThan(0);
+      expect(root.querySelector('[data-encounter-report-controls]')?.childElementCount).toBeGreaterThan(0);
+      expect(root.querySelector('[data-action="encounter-report-view"]')).toBeTruthy();
+      expect((root.querySelector('[data-action="encounter-import"]') as HTMLButtonElement).disabled).toBe(true);
+      expect((root.querySelector('[name="encounterReviewed"]') as HTMLInputElement).checked).toBe(false);
       expect(root.querySelector('.forge-error')).toBeNull();expect(root.querySelector('[data-encounter-progress]')).toBeNull();
-      expect(app.prepared).toBeUndefined();expect(app.aiReport).toBeUndefined();
+      expect(app.prepared).toBe(candidate);expect(app.prepared).toEqual(candidateBefore);
+      expect(app.aiReport).toBe(visibleReport);expect(app.reviewed).toBe(false);
       if(name==='humanLabel')expect(control.onblur).toBeNull();
     }
     expect(aiCalls).toBe(0);expect(worldWrites).toBe(0);

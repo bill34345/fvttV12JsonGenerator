@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import yaml from 'js-yaml';
 import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
 import { decodeStatusLifecycleParameters, type StatusLifecycleParameters } from '@fvtt-json-generator/contracts/status-lifecycle';
-import { compileEncounterSelection, decodeEncounterAutomation, renderEncounterActorSource } from '@fvtt-json-generator/intake-ai/encounter-automation';
+import { compileEncounterSelectionSourceAudit, decodeEncounterAutomation, renderEncounterActorSource } from '@fvtt-json-generator/intake-ai/encounter-automation';
 import { renderMonsterIntakeMarkdown } from '@fvtt-json-generator/intake-ai/renderer';
 import { convertMarkdownContentToJson } from '../src/core/workflow/singleFileConversion';
 import { buildForgeActorRequest, convertFinalActorSource } from '@fvtt-json-generator/forge-browser-runtime';
@@ -23,6 +23,7 @@ async function fixture(entry: { status: string; ability: string; abilityName: st
   const unit = entry.duration.unit === 'minute' ? 'minutes' : 'rounds';
   const quote = `Venom Strike. Melee Weapon Attack: +5 to hit. Hit: The target is ${entry.status} for ${entry.duration.value} ${unit}. At the end of each of its turns, the target ${entry.optional ? 'can' : 'must'} make a DC ${entry.dc} ${entry.abilityName} saving throw, ending the effect on a success.`;
   const source = `${LURKER_SOURCE}\n${quote}`;
+  ir.source = { sha256: hashSource(source), length: source.length };
   const start = source.indexOf(quote);
   ir.creature.actions = [{ name: 'Venom Strike', description: quote, activityType: 'attack',
     attack: { type: 'mwak', toHit: 5, reach: 5 },
@@ -40,11 +41,11 @@ async function fixture(entry: { status: string; ability: string; abilityName: st
   return { request, selection, quote };
 }
 
-describe('generic native status lifecycle', () => {
+describe('explicit offline native status lifecycle audit', () => {
   test('all fourteen pinned native conditions compile and formally project without duplicate embedded effects', async () => {
     for (const condition of nativeConditions.conditions) {
       const { request, selection, quote } = await fixture({ ...cases[0], status: condition.id });
-      const compiled = compileEncounterSelection(selection, request);
+      const compiled = compileEncounterSelectionSourceAudit(selection, request);
       expect(compiled.command).toContain(`"status":"${condition.id}"`);
       const source = renderEncounterActorSource(request.actors[0]!.ir,
         compiled.rules.map(rule => ({ ...rule, mechanicId: 'lifecycle-condition', capabilityKind: 'status-lifecycle' })), request.source);
@@ -57,7 +58,8 @@ describe('generic native status lifecycle', () => {
       if (!Array.isArray(items)) throw Error('Formal conversion returned no Items');
       const item = items.find((entry: any) => entry.name === 'Venom Strike') as any;
       expect(item).toBeTruthy();
-      expect(item.effects ?? []).toHaveLength(0);
+      expect(item.effects).toHaveLength(1);
+      expect(item.effects[0].flags.fvttJsonGenerator.conditionLifecycle).toMatchObject({ version: 1, mode: 'gm', statuses: [condition.id] });
       expect((yaml.load(source.slice(4, -4)) as any).动作[0].描述).toBe(quote);
     }
   });
@@ -65,7 +67,7 @@ describe('generic native status lifecycle', () => {
   test('accepts four native statuses with source-explicit repeat saves and suppresses embedded auto effects in final source', async () => {
     for (const entry of cases) {
       const { request, selection, quote } = await fixture(entry);
-      const compiled = compileEncounterSelection(selection, request);
+      const compiled = compileEncounterSelectionSourceAudit(selection, request);
       expect(compiled.command).toContain('"kind":"status-lifecycle"');
       const source = renderEncounterActorSource(request.actors[0]!.ir,
         compiled.rules.map(rule => ({ ...rule, mechanicId: 'lifecycle-condition', capabilityKind: 'status-lifecycle' })), request.source);
@@ -84,7 +86,8 @@ describe('generic native status lifecycle', () => {
         if (!Array.isArray(items)) throw Error('Formal Actor conversion returned no Items');
         const item = items.find((entry:any) => entry.name === 'Venom Strike') as any;
         expect(item).toBeTruthy();
-        expect(item.effects ?? []).toHaveLength(0);
+        expect(item.effects).toHaveLength(1);
+        expect(item.effects[0].flags.fvttJsonGenerator.conditionLifecycle).toMatchObject({ version: 1, mode: 'gm', statuses: [entry.status] });
         const bundle:any = { schema: 'fvtt-json-forge-encounter', version: 1, id: 'native-lifecycle-test',
           label: 'Native lifecycle', target: { foundry: '14.364', system: 'dnd5e', systemVersion: '5.3.3', effectProfile: 'core' },
           primaryActorKey: 'creature', actors: [{ key: 'creature', label: 'Source creature', source, sourceHash: hashSource(source) }],
@@ -110,12 +113,13 @@ describe('generic native status lifecycle', () => {
       feature.appliedConditions = [{ statuses: [label!], duration: '1分钟' }];
       feature.evidence = [{ start: source.indexOf(quote), end: source.length, quote }];
       request.source = source; request.actors[0]!.source = source;
+      request.actors[0]!.ir.source = { sha256: hashSource(source), length: source.length };
       request.actors[0]!.artifact = (await convertMarkdownContentToJson({ content: renderMonsterIntakeMarkdown(request.actors[0]!.ir),
         fvttVersion: '14', effectProfile: 'core', translationService: null })).rawJson;
       selection.rules[0]!.featureName = '毒刺'; selection.rules[0]!.quote = quote;
-      expect(compileEncounterSelection(selection, request).command).toContain(`"status":"${status}"`);
+      expect(compileEncounterSelectionSourceAudit(selection, request).command).toContain(`"status":"${status}"`);
       selection.rules[0]!.parameters.status = 'blinded';
-      expect(() => compileEncounterSelection(selection, request)).toThrow();
+      expect(() => compileEncounterSelectionSourceAudit(selection, request)).toThrow();
     }
   });
 
@@ -149,21 +153,23 @@ describe('generic native status lifecycle', () => {
     feature.appliedConditions = [{ statuses: ['中毒'], duration: '1分钟' }];
     feature.evidence = [{ start: source.indexOf(quote), end: source.length, quote }];
     request.source = source; request.actors[0]!.source = source;
+    request.actors[0]!.ir.source = { sha256: hashSource(source), length: source.length };
     request.actors[0]!.artifact = (await convertMarkdownContentToJson({ content: renderMonsterIntakeMarkdown(request.actors[0]!.ir),
       fvttVersion: '14', effectProfile: 'core', translationService: null })).rawJson;
     selection.rules[0]!.featureName = '毒刺'; selection.rules[0]!.quote = quote;
     selection.rules[0]!.parameters.status = 'poisoned';
-    expect(compileEncounterSelection(selection, request).command).toContain('"status":"poisoned"');
+    expect(compileEncounterSelectionSourceAudit(selection, request).command).toContain('"status":"poisoned"');
     const withDamage = quote.replace('命中时，', '命中时，造成8（1d6+5）点挥砍伤害，');
     const damagedSource = `${LURKER_SOURCE}\n${withDamage}`;
     feature.description = withDamage;
     feature.damage = [{ formula: '1d6+5', type: 'slashing', relationship: 'base' }];
     feature.evidence = [{ start: damagedSource.indexOf(withDamage), end: damagedSource.length, quote: withDamage }];
     request.source = damagedSource; request.actors[0]!.source = damagedSource;
+    request.actors[0]!.ir.source = { sha256: hashSource(damagedSource), length: damagedSource.length };
     request.actors[0]!.artifact = (await convertMarkdownContentToJson({ content: renderMonsterIntakeMarkdown(request.actors[0]!.ir),
       fvttVersion: '14', effectProfile: 'core', translationService: null })).rawJson;
     selection.rules[0]!.quote = withDamage;
-    expect(compileEncounterSelection(selection, request).command).toContain('"status":"poisoned"');
+    expect(compileEncounterSelectionSourceAudit(selection, request).command).toContain('"status":"poisoned"');
   });
 
   test('binds quoted native hit damage before the target status in inline and separate sentences', async () => {
@@ -180,17 +186,18 @@ describe('generic native status lifecycle', () => {
       feature.damage = [{ formula: '1d6+5', type: 'slashing', relationship: 'base' }];
       feature.evidence = [{ start: source.indexOf(quote), end: source.length, quote }];
       local.source = source; local.actors[0]!.source = source;
+      local.actors[0]!.ir.source = { sha256: hashSource(source), length: source.length };
       local.actors[0]!.artifact = (await convertMarkdownContentToJson({ content: renderMonsterIntakeMarkdown(local.actors[0]!.ir),
         fvttVersion: '14', effectProfile: 'core', translationService: null })).rawJson;
       const selected = structuredClone(selection); selected.rules[0]!.quote = quote;
-      expect(compileEncounterSelection(selected, local).command).toContain('"status":"blinded"');
+      expect(compileEncounterSelectionSourceAudit(selected, local).command).toContain('"status":"blinded"');
       for (const damage of [
         [{ formula: '1d6+4', type: 'slashing', relationship: 'base' }],
         [{ formula: '1d6+5', type: 'fire', relationship: 'base' }],
       ]) {
         const mismatch = structuredClone(local);
         mismatch.actors[0]!.ir.creature.actions[0]!.damage = damage as any;
-        expect(() => compileEncounterSelection(selected, mismatch)).toThrow('quoted native damage');
+        expect(() => compileEncounterSelectionSourceAudit(selected, mismatch)).toThrow('quoted native damage');
       }
     }
   });
@@ -203,10 +210,11 @@ describe('generic native status lifecycle', () => {
     feature.description = quote.slice('Venom Strike. '.length);
     feature.evidence = [{ start: source.indexOf(full), end: source.length, quote: full }];
     request.source = source; request.actors[0]!.source = source;
+    request.actors[0]!.ir.source = { sha256: hashSource(source), length: source.length };
     for (const proposed of [feature.description, quote.slice(quote.indexOf('Hit:'))]) {
       const selected = structuredClone(selection);
       selected.rules[0]!.quote = proposed;
-      const result = compileEncounterSelection(selected, request);
+      const result = compileEncounterSelectionSourceAudit(selected, request);
       expect(result.selection?.rules[0]?.quote).toBe(full);
       expect(result.rules[0]?.quote).toBe(full);
       expect(decodeEncounterAutomation(result, request).selection?.rules[0]?.quote).toBe(full);
@@ -221,27 +229,30 @@ describe('generic native status lifecycle', () => {
     const feature = request.actors[0]!.ir.creature.actions[0]!;
     feature.evidence = [{ start: source.indexOf(full), end: source.length, quote: full }];
     request.source = source; request.actors[0]!.source = source;
+    request.actors[0]!.ir.source = { sha256: hashSource(source), length: source.length };
     const selected = structuredClone(selection);
     selected.rules[0]!.quote = quote.slice(quote.indexOf('Hit:'), quote.indexOf('At the end'));
-    expect(() => compileEncounterSelection(selected, request)).toThrow();
+    expect(() => compileEncounterSelectionSourceAudit(selected, request)).toThrow();
     const bright = `${quote.replace('the target can make', 'the target can make, only while in bright light,')}\n`;
     const brightSource = `${LURKER_SOURCE}\n${bright}`;
     feature.evidence = [{ start: brightSource.indexOf(bright), end: brightSource.length, quote: bright }];
     request.source = brightSource; request.actors[0]!.source = brightSource;
-    expect(() => compileEncounterSelection(selected, request)).toThrow();
+    request.actors[0]!.ir.source = { sha256: hashSource(brightSource), length: brightSource.length };
+    expect(() => compileEncounterSelectionSourceAudit(selected, request)).toThrow();
 
     const ambiguous = structuredClone(request);
     const prefix = 'Prelude. ';
     const suffix = ' Trailer.';
     ambiguous.source = `${LURKER_SOURCE}\n${prefix}${quote}${suffix}`;
     ambiguous.actors[0]!.source = ambiguous.source;
+    ambiguous.actors[0]!.ir.source = { sha256: hashSource(ambiguous.source), length: ambiguous.source.length };
     const at = ambiguous.source.indexOf(quote);
     ambiguous.actors[0]!.ir.creature.actions[0]!.evidence = [
       { start: at - prefix.length, end: at + quote.length, quote: `${prefix}${quote}` },
       { start: at, end: at + quote.length + suffix.length, quote: `${quote}${suffix}` },
     ];
     const fullSelection = structuredClone(selection); fullSelection.rules[0]!.quote = quote;
-    expect(() => compileEncounterSelection(fullSelection, ambiguous)).toThrow('no unique complete source evidence span');
+    expect(() => compileEncounterSelectionSourceAudit(fullSelection, ambiguous)).toThrow('no unique complete source evidence span');
 
     const overlap = structuredClone(request);
     overlap.actors[0]!.ir.creature.actions[0]!.description = bright.trim();
@@ -252,7 +263,7 @@ describe('generic native status lifecycle', () => {
     other.evidence = [{ start: fullRef.start + 1, end: fullRef.end, quote: overlap.source.slice(fullRef.start + 1, fullRef.end) }];
     const overlapSelection = structuredClone(selection);
     overlapSelection.rules[0]!.quote = selected.rules[0]!.quote;
-    expect(() => compileEncounterSelection(overlapSelection, overlap)).toThrow('overlaps another source feature');
+    expect(() => compileEncounterSelectionSourceAudit(overlapSelection, overlap)).toThrow('overlaps another source feature');
   });
 
   test('separate valid same-feature evidence cannot hide a lifecycle qualifier', async () => {
@@ -264,17 +275,18 @@ describe('generic native status lifecycle', () => {
     const first = { start, end: start + quote.length, quote };
     const second = { start: qualifierStart, end: qualifierStart + qualifier.length, quote: qualifier };
     request.source = source; request.actors[0]!.source = source;
+    request.actors[0]!.ir.source = { sha256: hashSource(source), length: source.length };
     const feature = request.actors[0]!.ir.creature.actions[0]!;
     const selected = structuredClone(selection);
     selected.rules[0]!.quote = quote.slice(quote.indexOf('Hit:'), quote.indexOf('At the end'));
     feature.evidence = [first, second];
-    expect(() => compileEncounterSelection(selected, request)).toThrow('no unique complete source evidence span');
+    expect(() => compileEncounterSelectionSourceAudit(selected, request)).toThrow('no unique complete source evidence span');
     feature.evidence = [first];
     request.actors[0]!.ir.claims.push({ path: '/creature/actions/0', valueKind: 'explicit', confidence: 'high', evidence: [second] });
-    expect(() => compileEncounterSelection(selected, request)).toThrow('no unique complete source evidence span');
+    expect(() => compileEncounterSelectionSourceAudit(selected, request)).toThrow('no unique complete source evidence span');
     request.actors[0]!.ir.claims.pop();
     feature.evidence = [first, { ...second, start: second.start + 1 }];
-    expect(compileEncounterSelection(selected, request).selection?.rules[0]?.quote).toBe(quote);
+    expect(compileEncounterSelectionSourceAudit(selected, request).selection?.rules[0]?.quote).toBe(quote);
   });
 
   test('rejects changed source facts, conditional application and non-Attack carriers', async () => {
@@ -286,11 +298,11 @@ describe('generic native status lifecycle', () => {
       (rule:any) => { rule.parameters.repeatSave.dc = 15; },
       (rule:any) => { rule.parameters.repeatSave.ability = 'wis'; },
       (rule:any) => { rule.parameters.repeatSave.optional = false; },
-    ]) expect(() => compileEncounterSelection(changed(patch), request)).toThrow();
+    ]) expect(() => compileEncounterSelectionSourceAudit(changed(patch), request)).toThrow();
     const utility = structuredClone(request);
     const item = (utility.actors[0]!.artifact as any).items.find((candidate:any) => candidate.name === 'Venom Strike');
     item.system.activities = { only: { type: 'utility' } };
-    expect(() => compileEncounterSelection(selection, utility)).toThrow('native Attack Activity');
+    expect(() => compileEncounterSelectionSourceAudit(selection, utility)).toThrow('native Attack Activity');
     for (const wording of [
       quote.replace('Hit:', 'Miss:'),
       quote.replace('Hit: The target is blinded', 'Hit: If the target fails a save, the target is blinded'),
@@ -306,11 +318,12 @@ describe('generic native status lifecycle', () => {
       const at = local.source.length + 1;
       local.source += `\n${wording}`;
       local.actors[0]!.source = local.source;
+      local.actors[0]!.ir.source = { sha256: hashSource(local.source), length: local.source.length };
       local.actors[0]!.ir.creature.actions[0]!.description = wording;
       local.actors[0]!.ir.creature.actions[0]!.evidence = [{ start: at, end: at + wording.length, quote: wording }];
       const selected = structuredClone(selection);
       selected.rules[0]!.quote = wording;
-      expect(() => compileEncounterSelection(selected, local)).toThrow();
+      expect(() => compileEncounterSelectionSourceAudit(selected, local)).toThrow();
     }
   });
 
@@ -328,11 +341,12 @@ describe('generic native status lifecycle', () => {
       const start = local.source.length + 1;
       local.source += `\n${wording}`;
       local.actors[0]!.source = local.source;
+      local.actors[0]!.ir.source = { sha256: hashSource(local.source), length: local.source.length };
       local.actors[0]!.ir.creature.actions[0]!.description = wording;
       local.actors[0]!.ir.creature.actions[0]!.evidence = [{ start, end: start + wording.length, quote: wording }];
       const selected = structuredClone(selection);
       selected.rules[0]!.quote = wording;
-      expect(() => compileEncounterSelection(selected, local)).toThrow();
+      expect(() => compileEncounterSelectionSourceAudit(selected, local)).toThrow();
     }
   });
 });

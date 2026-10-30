@@ -303,6 +303,10 @@ export function createForgeEncounterApplicationClass(environment: {
         this.status=this.prepared||this.aiReport?'输入已改变；已有候选继续绑定原来源快照，可查看或下载。':'资料已改变，请生成或预览。';
         if(!this.prepared&&!this.aiReport)this.queueRecoverySave();
         for(const status of root.querySelectorAll('[data-encounter-status], [data-encounter-secondary-status]'))status.textContent=this.status;
+        for(const prior of root.querySelectorAll('.forge-error, [data-encounter-progress]'))prior.remove();
+        root.querySelector('[data-encounter-clear-control]')?.toggleAttribute('hidden',
+          !this.recoveryStore||!(this.humanSource||this.recoveryReport||this.recoveryPackage));
+        const reviewed=root.querySelector<HTMLInputElement>('[name="encounterReviewed"]');if(reviewed)reviewed.checked=false;
         const button=root.querySelector<HTMLButtonElement>('[data-action="encounter-import"]');if(button)button.disabled=true;
       };
       const source=root.querySelector<HTMLTextAreaElement>('[name="humanSource"]');

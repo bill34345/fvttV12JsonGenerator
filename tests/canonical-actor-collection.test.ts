@@ -61,7 +61,7 @@ describe('canonical Actor collection workflow', () => {
     expect(actor.system?.attributes?.hp?.value).toBe(180);
     expect(actor.system?.abilities?.str?.value).toBe(18);
     expect(actor.img).toContain('yithian.jpg');
-    const multiattack = actor.items?.find((item) => item.name === '多重攻击 (Multiattack)');
+    const multiattack = actor.items?.find((item) => item.name === '多重攻击 Multiattack');
     const activities = Object.values(multiattack?.system?.activities ?? {});
     expect(activities.some((activity) => activity.type === 'damage'
       && activity.damage?.parts?.some((part) => part.number === 4

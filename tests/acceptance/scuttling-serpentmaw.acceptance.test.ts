@@ -38,10 +38,10 @@ function getActivities(item: GeneratedActor['items'][number]): any[] {
 }
 
 function findItem(actor: GeneratedActor, englishName: string) {
-  const item = actor.items.find((candidate) => candidate.name.includes(`(${englishName})`));
+  const item = actor.items.find((candidate) => candidate.name.endsWith(` ${englishName}`));
   expect(item).toBeDefined();
   if (!item) {
-    throw new Error(`Expected item containing (${englishName})`);
+    throw new Error(`Expected bilingual item ending in ${englishName}`);
   }
   return item;
 }

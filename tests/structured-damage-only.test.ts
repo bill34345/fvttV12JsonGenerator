@@ -6,7 +6,7 @@ const fixtureRoot = 'tests/fixtures';
 const damageFixture = `${fixtureRoot}/structured-damage-only.md`;
 
 function actionByName(actor: any, name: string): { item: any; activity: any } {
-  const item = actor.items.find((candidate: any) => candidate.name === name || candidate.name.startsWith(`${name} (`));
+  const item = actor.items.find((candidate: any) => candidate.name === name || candidate.name.startsWith(`${name} `));
   expect(item).toBeDefined();
   const activities = Object.values(item.system.activities ?? {}) as any[];
   expect(activities).toHaveLength(1);
@@ -37,11 +37,12 @@ describe('explicit structured damage-only actions', () => {
     expect(sections['动作']![1]).toMatchObject({ type: 'save', DC: 12, damage: [{ formula: '1d4', type: 'cold' }] });
   });
 
-  test('does not promote utility text, conditional or replacement parts, or missing mechanical damage', async () => {
+  test('preserves explicit damage beside conflicting utility prose and keeps deferred or missing damage separate', async () => {
     const source = await Bun.file(`${fixtureRoot}/structured-damage-only-near-misses.md`).text();
     const actions = new ParserFactory().parse(source).structuredActions!['动作']!;
-    expect(actions.map((action) => action.type)).toEqual(['utility', 'damage', 'damage']);
-    expect(actions.map((action) => action.damage)).toEqual([undefined, undefined, undefined]);
+    expect(actions.map((action) => action.type)).toEqual(['damage', 'damage', 'damage']);
+    expect(actions.map((action) => action.damage)).toEqual([[{formula:'2d8',type:'necrotic'}], undefined, undefined]);
+    expect(actions[1]!.sourceDamageParts).toEqual([{formula:'3d6',type:'fire',relationship:'conditional'},{formula:'4d6',type:'lightning',relationship:'replacement'}]);
     expect(actions[0]!.describe).toContain('2d8 necrotic damage');
   });
 

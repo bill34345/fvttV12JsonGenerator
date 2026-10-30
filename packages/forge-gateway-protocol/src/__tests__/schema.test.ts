@@ -10,6 +10,7 @@ import {
   decodeForgeSourceCreateResult,
   FORGE_INPUT_ISSUE_TO_ERROR_CODE,
   hashArtifact,
+  hashSource,
   mapForgeInputIssueToErrorCode,
   projectForgeVerification,
   type ForgeSourceId,
@@ -159,7 +160,7 @@ describe('Forge protocol schemas', () => {
     expect(rejected.issues.map((issue) => issue.code)).not.toContain('SOURCE_HASH_MISMATCH');
   });
 
-  test('applies the same byte limit to Actor requests at the exact boundary', () => {
+  test('preserves Actor content above the legacy source-creation byte limit', () => {
     const source = actorRequest().source as Record<string, unknown>;
     const encoder = new TextEncoder();
     const padToBytes = (prefix: string, bytes: number): string => {
@@ -177,9 +178,10 @@ describe('Forge protocol schemas', () => {
     const tooLarge = decodeForgeActorRequest(actorRequest({
       source: { ...source, content: tooLargeContent, utf8Sha256: sha256(tooLargeContent) },
     }));
-    expect(tooLarge.ok).toBe(false);
-    if (tooLarge.ok) throw new Error('Expected an over-limit Actor source to be rejected.');
-    expect(tooLarge.issues.map((issue) => issue.code)).toContain('INPUT_TOO_LARGE');
+    expect(tooLarge.ok).toBe(true);
+    if (!tooLarge.ok) throw new Error('Expected the complete Actor source to remain available.');
+    expect(tooLarge.value.source.content).toBe(tooLargeContent);
+    expect(tooLarge.value.source.utf8Sha256).toBe(hashSource(tooLargeContent));
   });
 
   test('projects workflow verification without copying path-like internal fields', () => {
@@ -256,116 +258,63 @@ describe('Forge protocol schemas', () => {
       verification: SAFE_VERIFICATION,
       actorVerification: SAFE_ACTOR_VERIFICATION,
     };
-    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
-      ...base,
-      status: 'accepted',
-      artifact: { name: 'Test Actor' },
-      artifactHash: hashArtifact({ name: 'Test Actor' }),
-    } }).ok).toBe(true);
-    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
-      ...base,
-      diagnostics: [WARNING_DIAGNOSTIC],
-      verification: { status: 'needs_review', mechanicsCoverage: [] },
-      status: 'needs_review',
-      artifact: { name: 'Test Actor' },
-    } }).ok).toBe(true);
-    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
-      ...base,
-      diagnostics: [ERROR_DIAGNOSTIC],
-      verification: { status: 'failed', mechanicsCoverage: [] },
-      status: 'failed',
-    } }).ok).toBe(true);
-    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
-      ...base,
-      diagnostics: [ERROR_DIAGNOSTIC],
-      verification: { status: 'failed', mechanicsCoverage: [] },
-      status: 'failed',
-      artifact: { name: 'must-not-write' },
-    } }).ok).toBe(false);
-    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
-      ...base,
-      status: 'accepted',
-      artifact: { name: 'Test Actor' },
-    } }).ok).toBe(false);
-    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
-      ...base,
-      verification: { status: 'needs_review', mechanicsCoverage: [] },
-      status: 'needs_review',
-      artifact: { name: 'Test Actor' },
-    } }).ok).toBe(false);
-    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
-      ...base,
-      diagnostics: [ERROR_DIAGNOSTIC],
-      verification: { status: 'needs_review', mechanicsCoverage: [] },
-      status: 'needs_review',
-      artifact: { name: 'Test Actor' },
-    } }).ok).toBe(false);
-    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
-      ...base,
-      status: 'failed',
-    } }).ok).toBe(false);
-    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
-      ...base,
-      artifact: { name: 'changed' },
-      status: 'accepted',
-      artifactHash: hashArtifact({ name: 'Test Actor' }),
-    } }).ok).toBe(false);
-    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
-      ...base,
-      diagnostics: [WARNING_DIAGNOSTIC],
-      status: 'accepted',
-      artifact: { name: 'Test Actor' },
-      artifactHash: hashArtifact({ name: 'Test Actor' }),
-    } }).ok).toBe(false);
-    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
-      ...base,
-      actorVerification: { ...SAFE_ACTOR_VERIFICATION, warnings: ['review'] },
-      status: 'accepted',
-      artifact: { name: 'Test Actor' },
-      artifactHash: hashArtifact({ name: 'Test Actor' }),
-    } }).ok).toBe(false);
-    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
-      ...base,
-      verification: { status: 'failed', mechanicsCoverage: [] },
-      status: 'accepted',
-      artifact: { name: 'Test Actor' },
-      artifactHash: hashArtifact({ name: 'Test Actor' }),
-    } }).ok).toBe(false);
-    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
-      ...base,
-      verification: { ...SAFE_VERIFICATION, sourcePath: 'C:\\secret' },
-      status: 'accepted',
-      artifact: { name: 'Test Actor' },
-      artifactHash: hashArtifact({ name: 'Test Actor' }),
-    } }).ok).toBe(false);
-    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
-      ...base,
-      actorVerification: { ...SAFE_ACTOR_VERIFICATION, actorPath: 'C:\\secret' },
-      status: 'accepted',
-      artifact: { name: 'Test Actor' },
-      artifactHash: hashArtifact({ name: 'Test Actor' }),
-    } }).ok).toBe(false);
-    const safeMechanic = {
-      mechanicId: 'attack-1',
-      kind: 'attack',
-      sourceField: 'actor.actions',
-      status: 'projected',
-      outputPaths: ['documents/0/system/activities/0'],
-    };
-    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
-      ...base,
-      verification: { status: 'accepted', mechanicsCoverage: [{ ...safeMechanic, outputPaths: ['/tmp/secret'] }] },
-      status: 'accepted',
-      artifact: { name: 'Test Actor' },
-      artifactHash: hashArtifact({ name: 'Test Actor' }),
-    } }).ok).toBe(false);
-    expect(decodeForgeActorResponse({ protocolVersion: 1, requestId: 'request-1', result: {
-      ...base,
-      verification: { status: 'accepted', mechanicsCoverage: [{ ...safeMechanic, outputPaths: ['documents/../secret'] }] },
-      status: 'accepted',
-      artifact: { name: 'Test Actor' },
-      artifactHash: hashArtifact({ name: 'Test Actor' }),
-    } }).ok).toBe(false);
+    const decode = (result: Record<string, unknown>) => decodeForgeActorResponse({
+      protocolVersion: 1, requestId: 'request-1', result: { ...base, ...result },
+    });
+    const artifact = { name: 'Test Actor' };
+    const accepted = decode({ status: 'accepted', artifact });
+    expect(accepted.ok).toBe(true);
+    if (!accepted.ok || !('result' in accepted.value)) throw new Error('Expected an Actor result.');
+    expect(accepted.value.result).toMatchObject({ status: 'accepted', artifact, artifactHash: hashArtifact(artifact) });
+    expect(decode({ status: 'accepted', artifact, artifactHash: hashArtifact(artifact) }).ok).toBe(true);
+
+    for (const status of ['needs_review', 'failed'] as const) {
+      const diagnostic = status === 'failed' ? ERROR_DIAGNOSTIC : WARNING_DIAGNOSTIC;
+      const decoded = decode({ status, diagnostics: [diagnostic], verification: { status, mechanicsCoverage: [] }, artifact });
+      expect(decoded.ok).toBe(true);
+      if (!decoded.ok || !('result' in decoded.value)) throw new Error('Expected a retained candidate.');
+      expect(decoded.value.result).toMatchObject({ status, artifact, artifactHash: hashArtifact(artifact), diagnostics: [diagnostic] });
+    }
+    for (const diagnostics of [[], [ERROR_DIAGNOSTIC]]) {
+      const decoded = decode({ status: 'needs_review', verification: { status: 'needs_review', mechanicsCoverage: [] }, artifact, diagnostics });
+      expect(decoded.ok).toBe(true);
+      if (!decoded.ok || !('result' in decoded.value)) throw new Error('Expected the review candidate to remain available.');
+      expect(decoded.value.result).toMatchObject({ status: 'needs_review', artifact, diagnostics });
+    }
+    const failedWithoutArtifact = decode({ status: 'failed', diagnostics: [ERROR_DIAGNOSTIC], verification: { status: 'failed', mechanicsCoverage: [] } });
+    expect(failedWithoutArtifact.ok).toBe(true);
+    if (!failedWithoutArtifact.ok || !('result' in failedWithoutArtifact.value)) throw new Error('Expected a failure report.');
+    expect(failedWithoutArtifact.value.result).not.toHaveProperty('artifact');
+    expect(decode({ status: 'failed' }).ok).toBe(false);
+    expect(decode({ status: 'accepted' }).ok).toBe(false);
+
+    for (const [override, code, expectedStatus] of [
+      [{ diagnostics: [WARNING_DIAGNOSTIC] }, 'ACCEPTED_WITH_DIAGNOSTICS', 'needs_review'],
+      [{ diagnostics: [ERROR_DIAGNOSTIC] }, 'ACCEPTED_WITH_DIAGNOSTICS', 'failed'],
+      [{ actorVerification: { ...SAFE_ACTOR_VERIFICATION, warnings: ['review'] } }, 'ACCEPTED_WITH_WARNINGS', 'needs_review'],
+      [{ verification: { status: 'failed', mechanicsCoverage: [] } }, 'STATUS_MISMATCH', 'needs_review'],
+      [{ verification: { ...SAFE_VERIFICATION, sourcePath: 'C:\\secret' } }, 'UNKNOWN_FIELD', 'needs_review'],
+      [{ actorVerification: { ...SAFE_ACTOR_VERIFICATION, actorPath: 'C:\\secret' } }, 'UNKNOWN_FIELD', 'needs_review'],
+      [{ artifactHash: hashArtifact({ name: 'changed' }) }, 'ARTIFACT_HASH_MISMATCH', 'needs_review'],
+    ] as const) {
+      const decoded = decode({ status: 'accepted', artifact, ...override });
+      expect(decoded.ok).toBe(true);
+      if (!decoded.ok || !('result' in decoded.value)) throw new Error('Expected an ancillary report failure to retain the Actor.');
+      const result = decoded.value.result;
+      expect(result).toMatchObject({ status: expectedStatus, verification: { status: expectedStatus }, artifact, artifactHash: hashArtifact(artifact) });
+      expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: 'FORGE_REPORT_INCOMPLETE', message: expect.stringContaining(code) }));
+      expect(JSON.stringify(result)).not.toMatch(/sourcePath|actorPath|C:\\/u);
+    }
+    for (const outputPath of ['/tmp/secret', 'documents/../secret']) {
+      const decoded = decode({ status: 'accepted', artifact, verification: { status: 'accepted', mechanicsCoverage: [{
+        mechanicId: 'attack-1', kind: 'attack', sourceField: 'actor.actions', status: 'projected', outputPaths: [outputPath],
+      }] } });
+      expect(decoded.ok).toBe(true);
+      if (!decoded.ok || !('result' in decoded.value)) throw new Error('Expected the report to retain its candidate.');
+      expect(decoded.value.result).toMatchObject({ status: 'needs_review', artifact });
+      expect(decoded.value.result.diagnostics).toContainEqual(expect.objectContaining({ code: 'FORGE_REPORT_INCOMPLETE', message: expect.stringContaining('INVALID_OUTPUT_PATH') }));
+      expect(JSON.stringify(decoded.value.result)).not.toContain(outputPath);
+    }
   });
 
   test('validates health and the closed error-code union', () => {
@@ -419,14 +368,26 @@ describe('Forge protocol schemas', () => {
     expect(decoded.ok).toBe(true);
     if (!decoded.ok || !('result' in decoded.value)) throw new Error('Expected candidate result.');
     expect(decoded.value.result).toMatchObject({ status: 'failed', artifact, diagnostics: [ERROR_DIAGNOSTIC], verification: { status: 'failed' } });
-    expect(decoded.value.result).not.toHaveProperty('artifactHash');
-    for (const invalid of [
+    expect(decoded.value.result.artifactHash).toBe(hashArtifact(artifact));
+    for (const incomplete of [
       { ...artifact, system: null }, { ...artifact, items: ['unreadable'] }, { ...artifact, type: 'Item' },
-      { ...artifact, system: { hp: Infinity } }, { ...artifact, effects: [undefined] },
       { ...artifact, system: JSON.parse('{"__proto__":{"polluted":true}}') },
+    ]) {
+      const retained = decodeForgeActorResponse({ ...response, result: { ...result, artifact: incomplete } });
+      expect(retained.ok).toBe(true);
+      if (!retained.ok || !('result' in retained.value)) throw new Error('Expected a readable candidate.');
+      expect(retained.value.result).toMatchObject({ status: 'failed', artifact: incomplete });
+    }
+    expect(Object.prototype).not.toHaveProperty('polluted');
+    for (const invalid of [
+      { ...artifact, system: { hp: Infinity } }, { ...artifact, effects: [undefined] },
       { ...artifact, system: Object.create({ inherited: true }) },
     ]) expect(decodeForgeActorResponse({ ...response, result: { ...result, artifact: invalid } }).ok).toBe(false);
-    expect(decodeForgeActorResponse({ ...response, result: { ...result, status: 'accepted' } }).ok).toBe(false);
+    const falseAcceptance = decodeForgeActorResponse({ ...response, result: { ...result, status: 'accepted' } });
+    expect(falseAcceptance.ok).toBe(true);
+    if (!falseAcceptance.ok || !('result' in falseAcceptance.value)) throw new Error('Expected the candidate to remain available.');
+    expect(falseAcceptance.value.result).toMatchObject({ status: 'failed', artifact });
+    expect(falseAcceptance.value.result.diagnostics).toContainEqual(expect.objectContaining({ code: 'FORGE_REPORT_INCOMPLETE' }));
   });
 
   test('decodes the closed capability descriptors and rejects unknown capability fields', () => {

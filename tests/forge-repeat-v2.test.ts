@@ -1,3 +1,4 @@
+import {existsSync} from 'node:fs';
 import {test,expect} from 'bun:test';
 import yaml from 'js-yaml';
 import {makeBatches,decodeReply,prompt,type Unit} from './diagnostics/forge-template-batches-v2';
@@ -39,7 +40,7 @@ test('legendary cost and pool remain distinct from daily uses',()=>{
  const f=form();Object.assign(f.动作[0],{传奇动作消耗:2,共享资源:{名称:'传奇动作',上限:3,恢复:'自身回合开始',限制:'其他生物回合结束'}});
  const r=decodeReply(reply(f),batch).rows[0];expect(passes(r,{kind:'legendary',cost:2,pool:3})).toBe(true);expect(passes(r,{kind:'uses',max:3})).toBe(false);
 });
-test('all 24 paired candidates and 45 unique predetermined HTTP tasks; source crops/identities match',()=>{
+test.skipIf(!existsSync('.local/forge-ab-high-first-pass-20261019/S1-A/source.md'))('all 24 paired candidates and 45 unique predetermined HTTP tasks; source crops/identities match',()=>{
  const cases=prepareCases();expect(cases.map(c=>c.units.length)).toEqual([3,7,10,14]);
  const tasks=schedule();expect(tasks).toHaveLength(24);
  let calls=0;const identities=new Set<string>();

@@ -67,7 +67,7 @@ const response=(content:string)=>new Response(JSON.stringify({choices:[{message:
 test('one local recovery records the full original response and verifiable syntax receipt without another request',async()=>{
   const value={schemaVersion:1 as const,candidates:[]},prefix=JSON.stringify(value),raw=prefix+"'}",events:ProviderResponseEvidence[]=[],audits:IntakeProviderAuditEvent[]=[];let calls=0;
   const provider=new OpenAICompatibleMonsterIntakeProvider({...connection,httpClient:async()=>{calls++;return response(raw);},responseEvidence:{record:event=>{events.push(event);}},audit:event=>{audits.push(event);}});
-  expect(await provider.discover(request)).toEqual(value);expect(calls).toBe(1);expect(events).toHaveLength(1);
+  expect(await provider.discover(request)).toMatchObject({...value,findings:[expect.objectContaining({code:'DISCOVERY_NO_SELECTION',blocking:false})]});expect(calls).toBe(1);expect(events).toHaveLength(1);
   expect(events[0]).toMatchObject({content:raw,responseHash:sha256(raw),attempt:1,truncated:false,redacted:false,
     formatRecovery:{version:1,kind:'drop-json-terminal-delimiters',originalResponseHash:sha256(raw),parsedObjectHash:sha256(prefix),objectLength:prefix.length,removedTail:"'}"}});
   expect(JSON.stringify(audits)).not.toContain('formatRecovery');expect(JSON.stringify(audits)).not.toContain(raw);
@@ -77,7 +77,7 @@ test('unmodified and rejected JSON still capture the original text once and have
   for(const raw of ['{"schemaVersion":1,"candidates":[]}','{"schemaVersion":1} prose','{"schemaVersion":']){
     const events:ProviderResponseEvidence[]=[];let calls=0;
     const provider=new OpenAICompatibleMonsterIntakeProvider({...connection,httpClient:async()=>{calls++;return response(raw);},responseEvidence:{record:event=>{events.push(event);}}});
-    if(raw.endsWith('[]}'))await expect(provider.discover(request)).resolves.toEqual({schemaVersion:1,candidates:[]});else await expect(provider.discover(request)).rejects.toThrow(MonsterIntakeProviderError);
+    if(raw.endsWith('[]}'))await expect(provider.discover(request)).resolves.toMatchObject({schemaVersion:1,candidates:[],findings:[expect.objectContaining({code:'DISCOVERY_NO_SELECTION',blocking:false})]});else await expect(provider.discover(request)).rejects.toThrow(MonsterIntakeProviderError);
     expect(calls).toBe(1);expect(events).toHaveLength(1);expect(events[0]!.content).toBe(raw);expect(events[0]!.responseHash).toBe(sha256(raw));expect(events[0]!.formatRecovery).toBeUndefined();
   }
 });

@@ -166,28 +166,29 @@ describe('Forge Intake review state and safe export', () => {
     };
     for (const status of [
       'empty', 'analyzing', 'ready_to_generate', 'generating_and_reviewing', 'repairing',
-      'regenerating', 'needs_review', 'failed', 'rejected',
+      'regenerating', 'needs_review', 'failed', 'rejected', 'committing_and_reading_back',
     ] as const) {
-      expect(() => buildForgeIntakeReviewBundle({ ...base, status, candidateResponse: acceptedResponse })).toThrow(/forbidden.*top-level/u);
+      const retained=buildForgeIntakeReviewBundle({ ...base, status, candidateResponse: acceptedResponse });
+      expect(retained.status).toBe(status);expect(retained.candidateResponse).toEqual(acceptedResponse);
     }
-    for (const status of ['accepted', 'committing_and_reading_back'] as const) {
+    for (const status of ['accepted'] as const) {
       expect(buildForgeIntakeReviewBundle({ ...base, status, candidateResponse: acceptedResponse }).candidateResponse).toEqual(acceptedResponse);
-      expect(() => buildForgeIntakeReviewBundle({ ...base, status })).toThrow(/requires one accepted candidate response/u);
-      expect(() => buildForgeIntakeReviewBundle({
+      expect(buildForgeIntakeReviewBundle({ ...base, status }).status).toBe('needs_review');
+      expect(buildForgeIntakeReviewBundle({
         ...base,
         status,
         candidateResponse: { ...acceptedResponse, status: 'needs_review', verificationStatus: 'needs_review' },
-      })).toThrow(/requires accepted response, verification, and artifactHash/u);
-      expect(() => buildForgeIntakeReviewBundle({
+      }).deterministicFindings).toContainEqual(expect.objectContaining({code:'FORGE_REVIEW_ACCEPTANCE_CONFLICT',blocking:true}));
+      expect(buildForgeIntakeReviewBundle({
         ...base,
         status,
         candidateResponse: { ...acceptedResponse, artifactHash: undefined },
-      })).toThrow(/requires accepted response, verification, and artifactHash/u);
-      expect(() => buildForgeIntakeReviewBundle({
+      }).deterministicFindings).toContainEqual(expect.objectContaining({code:'FORGE_REVIEW_ARTIFACT_HASH_MISSING',path:'/candidateResponse/artifactHash',blocking:true}));
+      expect(buildForgeIntakeReviewBundle({
         ...base,
         status,
         candidateResponse: { ...acceptedResponse, requestId: 'other-request' },
-      })).toThrow(/requestId does not match/u);
+      }).deterministicFindings).toContainEqual(expect.objectContaining({code:'FORGE_REVIEW_REQUEST_ID_MISMATCH',path:'/candidateResponse/requestId',blocking:true}));
     }
   });
 });

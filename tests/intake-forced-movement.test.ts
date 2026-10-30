@@ -1,15 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import captured from './fixtures/forge-gazer-forced-movement-intake.json';
 import { generateEncounterFromHumanMarkdown } from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
-import { compileEncounterSelection, renderEncounterActorSource, manualForcedMovementRequirements } from '@fvtt-json-generator/intake-ai/encounter-automation';
+import { compileEncounterSelectionSourceAudit as compileEncounterSelection, renderEncounterActorSource, manualForcedMovementRequirements } from '@fvtt-json-generator/intake-ai/encounter-automation';
 import type { MonsterIntakeIR } from '@fvtt-json-generator/intake-ai/types';
 import { convertMarkdownContentToJson } from '@fvtt-json-generator/workflows';
-import { verifyMonsterIntake } from '@fvtt-json-generator/intake-ai/verifier';
+import { auditMonsterIntakeSourceProjection as verifyMonsterIntake } from '@fvtt-json-generator/intake-ai/verifier';
 import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
-import { prepareForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
-import { serializeForgeEncounterPackage } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
-import { buildForgeActorRequest, convertFinalActorSource } from '@fvtt-json-generator/forge-browser-runtime';
-import { normalizeMonsterSourceFacts } from '@fvtt-json-generator/intake-ai/source-facts';
 
 const original = captured.ir as MonsterIntakeIR;
 function selection(source: string, ir: MonsterIntakeIR): any {
@@ -38,57 +34,32 @@ describe('source-bound failed-save forced movement', () => {
     expect(result.report.status).toBe('ready_for_gm_review');
     expect(result.prepared).toBeDefined();
     expect(result.reviewCalls).toBe(0);
+    const value=selection(captured.source,original);value.rules[0].quote=value.rules[0].quote.replace(/^4\. Force Ray\. /u,'');
+    const compiled=compileEncounterSelection(value,{source:captured.source,actors:[{key:'actor-1',source:captured.source,ir:structuredClone(original),artifact:result.prepared!.actors[0]!.artifact}]});
+    expect(compiled.rules[0]!.quote).toBe(value.rules[0].quote);
+    expect(compiled.rules[0]!.gmSteps.join(' ')).toContain('25 (1d10 x 5) feet away');
   });
-  test('saved Gazer IR reaches GM preparation while preserving the native STR/DC12 save', async () => {
-    const before = structuredClone(original);
-    const plain = await convertMarkdownContentToJson({ content: renderEncounterActorSource(original, [], captured.source), fvttVersion: '14', effectProfile: 'core', translationService: null });
-    expect(plain.verification?.mechanicsCoverage.some(entry => entry.kind === 'save' && entry.status === 'literal-only')).toBe(true);
-    const result = await generate();
-    expect(result.report.status).toBe('ready_for_gm_review');
-    expect(result.prepared).toBeDefined();
-    expect(result.automationCalls).toBe(1);
-    expect(result.reviewCalls).toBe(0);
-    expect(original).toEqual(before);
-    const actor: any = result.prepared!.actors[0]!.artifact;
-    const normalizedBaseline=structuredClone(original);
-    normalizeMonsterSourceFacts(normalizedBaseline,captured.source,{start:0,end:captured.source.length});
-    const baseline = await convertFinalActorSource(buildForgeActorRequest({content:renderEncounterActorSource(normalizedBaseline, [], captured.source),displayName:'Gazer',requestId:'forced-movement-baseline',fvttVersion:'14.364',systemVersion:'5.3.3'}));
-    if (!('result' in baseline) || !('artifact' in baseline.result)) throw new Error('Formal baseline failed.');
-    const plainActor: any = baseline.result.artifact;
-    const item = actor.items.find((item: any) => item.name === 'Force Ray');
-    const oldItem = plainActor.items.find((item: any) => item.name === 'Force Ray');
-    expect(actor.items.filter((item: any) => item.name !== 'Force Ray')).toEqual(plainActor.items.filter((item: any) => item.name !== 'Force Ray'));
-    const native = Object.values(item.system.activities).filter((activity: any) => activity.type === 'save') as any[];
-    const oldNative: any = Object.values(oldItem.system.activities)[0];
-    // The normalized save outcome participates in its stable ID. Compare the
-    // entire activity with that one deterministic identity difference explicit.
-    expect(native).toEqual([{...oldNative,_id:native[0]._id}]);
-    expect(native[0]._id).toMatch(/^[a-z0-9]{16}$/u);
-    expect(native[0].save).toEqual({ability:['str'],dc:{calculation:'',formula:'12'}});
-    expect(item.effects).toEqual([]);
-    const manual = Object.values(item.system.activities).filter((activity: any) => activity.flags?.fvttJsonGenerator?.behaviorOperation) as any[];
-    expect(manual).toHaveLength(1);
-    expect(manual[0].flags.fvttJsonGenerator.behaviorOperation.kind).toBe('manual');
-    expect(manual[0].effects ?? []).toEqual([]);
-    expect(manual[0].description.chatFlavor.replace(/\s+/gu, ' ')).toContain(selection(captured.source, original).rules[0].quote.replace(/\s+/gu, ' '));
-    // Full Item shape: explicit identity changes and the declared manual
-    // behavior/utility activity are the only differences.
-    const restored = structuredClone(item);
-    delete restored.system.activities[manual[0]._id];
-    delete restored.system.activities[native[0]._id];
-    restored.system.activities[oldNative._id] = {...native[0],_id:oldNative._id};
-    delete restored.flags.fvttJsonGenerator.behaviorMechanics;
-    expect(restored).toEqual({...oldItem,_id:item._id});
-    expect(item._id).toMatch(/^[a-z0-9]{16}$/u);
-    expect(result.report.actors[0]!.generation!.findings.map(finding => finding.code)).toEqual(['ACTOR_FORCED_MOVEMENT_REQUIRES_GM']);
-    const bundle: any = structuredClone(result.prepared!.bundle);
-    bundle.macros[0].covers = [];
-    await expect(prepareForgeEncounter(serializeForgeEncounterPackage(bundle))).rejects.toThrow('唯一配套宏');
-    const damaged = structuredClone(actor);
-    const damagedItem = damaged.items.find((item: any) => item.name === 'Force Ray');
-    damagedItem.system.activities[manual[0]._id].description.chatFlavor = 'GM resolves the push.';
-    const findings = verifyMonsterIntake(captured.source, original, result.prepared!.bundle.actors[0]!.source, damaged).findings;
-    expect(findings.some(finding => finding.code === 'ACTOR_FORCED_MOVEMENT_UNBOUND')).toBe(true);
+  test('saved Gazer IR retains the native STR/DC12 save and complete manual rule without an automatic compiler call', async () => {
+    const before=structuredClone(original),result=await generate();
+    expect(result.report.status).toBe('ready_for_gm_review');expect(result.prepared).toBeDefined();
+    expect(result.automationCalls).toBe(0);expect(result.reviewCalls).toBe(0);expect(original).toEqual(before);
+    const actor:any=result.prepared!.actors[0]!.artifact,item=actor.items.find((item:any)=>item.name==='Force Ray');
+    const native=Object.values<any>(item.system.activities).filter(activity=>activity.type==='save');
+    expect(native).toHaveLength(1);expect(native[0].save).toEqual({ability:['str'],dc:{calculation:'',formula:'12'}});
+    expect(item.system.description.value.replace(/\s+/gu,' ')).toContain(original.creature.actions[4]!.description.replace(/\s+/gu,' '));
+    expect(result.prepared!.macros).toEqual([]);expect(result.report.actors[0]!.generation!.candidateAvailable).toBe(true);
+    const request={source:captured.source,actors:[{key:'actor-1',source:captured.source,ir:structuredClone(original),artifact:actor}]};
+    const compiled=compileEncounterSelection(selection(captured.source,original),request);
+    expect(compiled.selection!.rules[0]!.kind).toBe('gm-manual');expect(compiled.rules[0]!.quote).toContain('25 (1d10 x 5) feet away');
+    const prepared=await convertMarkdownContentToJson({content:renderEncounterActorSource(original,compiled.rules.map((rule,index)=>({...rule,mechanicId:`manual-${index+1}`})),captured.source),fvttVersion:'14',effectProfile:'core',translationService:null});
+    const explicit:any=(prepared.rawJson as any).items.find((entry:any)=>entry.name==='Force Ray');
+    const helpers=Object.values<any>(explicit.system.activities).filter(activity=>activity.flags?.fvttJsonGenerator?.behaviorOperation);
+    expect(helpers).toHaveLength(1);expect(helpers[0].effects??[]).toEqual([]);
+    expect(helpers[0].description.chatFlavor.replace(/\s+/gu,' ')).toContain(compiled.rules[0]!.quote.replace(/\s+/gu,' '));
+    const damaged=structuredClone(prepared.rawJson) as any;const changed=damaged.items.find((entry:any)=>entry.name==='Force Ray');
+    changed.system.activities[helpers[0]._id].description.chatFlavor='GM resolves the push.';
+    expect(verifyMonsterIntake(captured.source,original,renderEncounterActorSource(original,compiled.rules.map((rule,index)=>({...rule,mechanicId:`manual-${index+1}`})),captured.source),damaged).findings)
+      .toContainEqual(expect.objectContaining({code:'ACTOR_FORCED_MOVEMENT_UNBOUND'}));
   });
 
   test.each([
@@ -98,13 +69,13 @@ describe('source-bound failed-save forced movement', () => {
     const data = variant(description, Number(dc), String(ability), String(name));
     const result = await generate(data.ir, data.source);
     expect(result.report.status).toBe('ready_for_gm_review');
-    expect(result.automationCalls).toBe(1);
+    expect(result.automationCalls).toBe(0);
     expect(result.reviewCalls).toBe(0);
     const item: any = (result.prepared!.actors[0]!.artifact.items as any[]).find(item => item.name === name);
     const native = Object.values(item.system.activities).filter((activity: any) => activity.type === 'save') as any[];
     expect(native).toHaveLength(1);
     expect(native[0].save).toEqual({ability:[ability],dc:{calculation:'',formula:String(dc)}});
-    expect(native[0].description.chatFlavor.replace(/\s+/gu, ' ')).toBe(String(description).replace(/\s+/gu, ' '));
+    expect(native[0].description.chatFlavor.replace(/<[^>]*>/gu,' ').replace(/\s+/gu, ' ').trim()).toBe(String(description).replace(/\s+/gu, ' '));
     expect(item.effects).toEqual([]);
   });
 
@@ -120,8 +91,11 @@ describe('source-bound failed-save forced movement', () => {
       const data = variant(description);
       expect(manualForcedMovementRequirements(data.ir, data.source)).toEqual([]);
       const result = await generate(data.ir, data.source);
-      expect(result.prepared).toBeUndefined();
-      expect(result.report.status).toBe('needs_review');
+      expect(result.prepared).toBeDefined();
+      expect(result.prepared!.macros).toEqual([]);
+      expect(result.report.actors[0]!.generation!.candidateAvailable).toBe(true);
+      expect(result.report.status).toBe('ready_for_gm_review');
+      expect(result.report.findings.length).toBeGreaterThan(0);
       expect(result.automationCalls).toBe(0);
     }
     for (const edit of [
@@ -134,13 +108,16 @@ describe('source-bound failed-save forced movement', () => {
       const ir = structuredClone(original); edit(ir);
       expect(manualForcedMovementRequirements(ir, captured.source)).toEqual([]);
       const result = await generate(ir);
-      expect(result.prepared).toBeUndefined();
-      expect(result.report.status).toBe('needs_review');
+      expect(result.prepared).toBeDefined();
+      expect(result.prepared!.macros).toEqual([]);
+      expect(result.report.actors[0]!.generation!.candidateAvailable).toBe(true);
+      expect(result.report.status).toBe('ready_for_gm_review');
+      expect(result.report.findings.length).toBeGreaterThan(0);
       expect(result.automationCalls).toBe(0);
     }
   });
 
-  test('missing, partial, wrong carrier and non-manual final rules remain blocked', async () => {
+  test('missing final rules remain unmet and incompatible rules are rejected without losing the Actor', async () => {
     for (const edit of [
       (value: any) => { value.rules = []; },
       (value: any) => { value.rules[0].quote = 'FAILURE: The target is\npushed 25 (1d10 x 5) feet away from the gazer.'; },
@@ -148,10 +125,17 @@ describe('source-bound failed-save forced movement', () => {
       (value: any) => { value.rules[0].featureName = 'Fear Ray'; },
       (value: any) => { value.rules[0].kind = 'save-failure-effect'; value.rules[0].parameters = {effect:'blinded',expiry:'next-source-turn-start',minFailureMargin:1,removeOnDamage:false}; },
     ]) {
+      const value=selection(captured.source,original);edit(value);
+      const plain=await convertMarkdownContentToJson({content:renderEncounterActorSource(original,[],captured.source),fvttVersion:'14',effectProfile:'core',translationService:null});
+      const compile=()=>compileEncounterSelection(value,{source:captured.source,actors:[{key:'actor-1',source:captured.source,ir:structuredClone(original),artifact:plain.rawJson}]});
+      if(value.rules.length===0){expect(compile().rules).toEqual([]);expect(manualForcedMovementRequirements(original,captured.source)).toHaveLength(1);}
+      else expect(compile).toThrow();
       const result = await generate(structuredClone(original), captured.source, edit);
-      expect(result.prepared).toBeUndefined();
-      expect(result.report.status).not.toBe('ready_for_gm_review');
-      expect(result.automationCalls).toBe(1);
+      expect(result.prepared).toBeDefined();
+      expect(result.prepared!.macros).toEqual([]);
+      expect(result.report.actors[0]!.generation!.candidateAvailable).toBe(true);
+      expect(result.report.status).toBe('ready_for_gm_review');
+      expect(result.automationCalls).toBe(0);
       expect(result.reviewCalls).toBe(0);
     }
   });

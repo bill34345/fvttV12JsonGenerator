@@ -3,6 +3,7 @@ import { MonsterIntakeProviderError } from '@fvtt-json-generator/intake-ai/provi
 import { retryEncounterStage } from '../packages/forge-browser-runtime/src/encounterStageRetry';
 import { createEncounterIntakeProviders, retryingAutomationProvider, retryingMonsterProvider } from '../packages/forge-browser-runtime/src/encounterIntake';
 import type { MonsterIntakeAiProvider } from '@fvtt-json-generator/intake-ai/types';
+import { buildValidLurkerIr } from '../src/core/intake/__tests__/fixtures/lurker';
 
 const retryableNetwork = () => new MonsterIntakeProviderError('network', 'safe network failure', { retryable: true });
 
@@ -136,7 +137,8 @@ describe('local Encounter bridge stage retry', () => {
     expect(retries).toBe(0);
   });
 
-  test('retries only the failed later Actor stage and does not replay an accepted earlier review', async () => {
+  test('retries only the failed Actor extraction and keeps AI review disabled', async () => {
+    const extracted=buildValidLurkerIr();
     let reviewCalls = 0;
     let extractCalls = 0;
     const attemptSignals: AbortSignal[] = [];
@@ -148,19 +150,19 @@ describe('local Encounter bridge stage retry', () => {
         extract: async () => {
           extractCalls += 1;
           if (extractCalls === 1) throw retryableNetwork();
-          return { repaired: true } as any;
+          return extracted;
         },
         review: async () => { reviewCalls += 1; return { schemaVersion: 1, verdict: 'accepted', findings: [] }; },
-        repair: async () => ({ repaired: true } as any),
+        repair: async () => extracted,
       };
     };
     const identity = factory(new AbortController().signal);
     const provider = retryingMonsterProvider(identity, factory, { budgetMs: 100 });
-    await provider.review({} as any);
-    await provider.extract({} as any);
-    expect(reviewCalls).toBe(1);
+    await expect(provider.review({} as any)).rejects.toThrow('AI 内容复核已暂时关闭');
+    await expect(provider.extract({} as any)).resolves.toEqual(extracted);
+    expect(reviewCalls).toBe(0);
     expect(extractCalls).toBe(2);
-    expect(attemptSignals.length).toBe(4);
+    expect(attemptSignals.length).toBe(3);
     expect(attemptSignals[1]).not.toBe(attemptSignals[2]);
   });
 
@@ -190,7 +192,7 @@ describe('local Encounter bridge stage retry', () => {
     await expect(retryEncounterStage('discover', { budgetMs: Number.NaN }, async () => 'never')).rejects.toThrow('safe integer');
   });
 
-  test('applies the same bounded retry to automation generation without retrying its review', async () => {
+  test('applies bounded retry to automation generation while rejecting AI review without a provider call', async () => {
     let generateCalls = 0;
     let reviewCalls = 0;
     const factory = () => ({
@@ -202,10 +204,10 @@ describe('local Encounter bridge stage retry', () => {
       review: async () => { reviewCalls += 1; return { verdict: 'accepted' as const, findings: [] }; },
     });
     const provider = retryingAutomationProvider(factory(), () => factory(), { budgetMs: 100 });
-    await provider.generate({} as any);
-    await provider.review({} as any);
+    await expect(provider.generate({} as any)).resolves.toMatchObject({ version: 1, name: 'fixture', rules: [] });
+    await expect(provider.review({} as any)).rejects.toThrow('AI 内容复核已暂时关闭');
     expect(generateCalls).toBe(2);
-    expect(reviewCalls).toBe(1);
+    expect(reviewCalls).toBe(0);
   });
 });
 

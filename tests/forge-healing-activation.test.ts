@@ -3,13 +3,23 @@ import corpus from './fixtures/forge-iterate50-round11-cases.json';
 import providerReplies from './fixtures/forge-healing-provider-replies.json';
 import regenerate from './fixtures/forge-regenerate-healing.json';
 import {runStagedMonsterExtraction} from '../packages/intake-ai/src/staged-extraction';
-import { chain, modelReply, ordinary, request, requireAcceptedChain, staged } from './helpers/forge-semantic-chain';
-import { anchorIrEvidence } from '../packages/intake-ai/src/orchestrator';
-import { validateMonsterIntakeIR } from '../packages/intake-ai/src/validator';
+import { chain as defaultChain, modelReply, ordinary, request, requireAcceptedChain, staged } from './helpers/forge-semantic-chain';
+import { anchorIrEvidenceSourceAudit as anchorIrEvidence } from '../packages/intake-ai/src/orchestrator';
+import { auditMonsterIntakeSource as validateMonsterIntakeIR } from '../packages/intake-ai/src/validator';
 import { stagedFeatureMechanics } from '../packages/intake-ai/src/staged-feature-mechanics';
 import { assembleStagedFeature } from '../packages/intake-ai/src/staged-extraction';
 import { splitStagedMonsterSource } from '../packages/intake-ai/src/staged-source';
-import { verifyMonsterIntake } from '../packages/intake-ai/src/verifier';
+import { auditMonsterIntakeSourceProjection as verifyMonsterIntake } from '../packages/intake-ai/src/verifier';
+import {sourceOperationErrors} from '@fvtt-json-generator/models/source-operations';
+
+// Source-derived healing restoration is an explicit historical audit, never
+// the default full-IR provider or candidate delivery behavior.
+async function chain(c:any,run:()=>Promise<any>){
+ const result=await defaultChain(c,async()=>{const extracted=await run();return{...extracted,ir:anchorIrEvidence(c.source,request(c.source).candidate,extracted.ir)};});
+ if(!result.ir)return result;
+ const audit=validateMonsterIntakeIR(c.source,result.ir,{coverageRange:request(c.source).candidate});
+ return audit.blocking.length?{...result,status:'blocked',stage:'explicit-source-audit',findings:audit.blocking}:result;
+}
 
 const periapt = (): any => structuredClone(corpus.cases.find(c => c.id === 'r20r-periapt-of-health'));
 const reply = (c: any): any => {
@@ -28,7 +38,7 @@ function wording(from: string, to: string): any {
   return c;
 }
 
-describe('fixed healing activation', () => {
+describe('explicit historical fixed healing activation audit', () => {
   test('frozen real provider Utility with title in evidence restores the complete healing action', async () => {
     const c=periapt(),raw:any=structuredClone(providerReplies.ordinaryPeriaptIr);
     const before=validateMonsterIntakeIR(c.source,raw,{coverageRange:request(c.source).candidate});
@@ -70,10 +80,11 @@ describe('fixed healing activation', () => {
       expect(acts.map(a=>a.type)).toEqual(label==='single'?['heal']:['heal','heal']);
     });
 
-  test('frozen invalid provider healing proposals remain rejected by the strict assembler',()=>{
+  test('explicit source audit rejects the frozen invalid provider healing proposals',()=>{
     for(const [c,proposal]of [[periapt(),providerReplies.stagedPeriapt],[structuredClone(regenerate.case),providerReplies.stagedRegenerate]]as const){
       const plan=splitStagedMonsterSource(request(c.source));
-      expect(()=>assembleStagedFeature(plan,plan.features[0]!,proposal,c.creature.identity.name)).toThrow();
+      const feature=assembleStagedFeature(plan,plan.features[0]!,proposal,c.creature.identity.name);
+      expect(sourceOperationErrors(plan.features[0]!.quote,feature.sourceOperations).length).toBeGreaterThan(0);
     }
   });
   for (const [label, timing, activation] of [

@@ -2,9 +2,9 @@ import {describe,expect,test} from 'bun:test';
 import {sha256} from '@fvtt-json-generator/contracts/hash';
 import {splitStagedMonsterSource} from '@fvtt-json-generator/intake-ai/staged-source';
 import {assembleStagedMonsterIntake,validateStagedBaseFacts,runStagedMonsterExtraction} from '@fvtt-json-generator/intake-ai/staged-extraction';
-import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
+import {auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
-import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
+import {auditMonsterIntakeSourceProjection} from '@fvtt-json-generator/intake-ai/verifier';
 import {convertMarkdownContentToJson} from '@fvtt-json-generator/workflows/single-file-conversion';
 import githFirstUi from './fixtures/forge-gith-first-ui-base-failure.json';
 
@@ -27,7 +27,7 @@ async function actor(ir:ReturnType<typeof assemble>){
 }
 function verifyGeneratedActor(ir:ReturnType<typeof assemble>,output:unknown){
   const source=ir.coverage.map(entry=>entry.quote).join('');
-  return {blocking:verifyMonsterIntake(source,ir,renderMonsterIntakeMarkdown(ir),output).findings.filter(finding=>finding.blocking)};
+  return {blocking:auditMonsterIntakeSourceProjection(source,ir,renderMonsterIntakeMarkdown(ir),output).findings.filter(finding=>finding.blocking)};
 }
 describe('complete manual stat-header rules without false native defenses',()=>{
   for(const type of ['中型类人（吉斯人）','中型类人生物（吉斯人）','Medium humanoid (Gith)'])test('source header annotations survive the actual saved base reply: '+type,async()=>{
@@ -47,7 +47,7 @@ describe('complete manual stat-header rules without false native defenses',()=>{
     expect(defense.effects).toEqual([]);
     expect(verifyGeneratedActor(ir,output).blocking).toEqual([]);
     const wrongTiming=structuredClone(ir);wrongTiming.creature.spellcasting![0]!.activationType='reaction';
-    expect(validateMonsterIntakeIR(source,wrongTiming).blocking.some(finding=>finding.code==='SPELL_ACTIVATION_SOURCE_MISMATCH')).toBe(true);
+    expect(auditMonsterIntakeSource(source,wrongTiming).blocking.some(finding=>finding.code==='SPELL_ACTIVATION_SOURCE_MISMATCH')).toBe(true);
   });
 
   test('a later bold Traits section cannot inherit a previous Actions casting override',()=>{
@@ -56,7 +56,7 @@ describe('complete manual stat-header rules without false native defenses',()=>{
     const ir=assembleStagedMonsterIntake(graph,base,graph.features.map(unit=>({schemaVersion:1,unitId:unit.id,mode:'manual',facts:{}})));
     expect(ir.creature.spellcasting![0]!.activationType).toBeUndefined();
     ir.creature.spellcasting![0]!.activationType='action';
-    expect(validateMonsterIntakeIR(source,ir).blocking.some(finding=>finding.code==='SPELL_ACTIVATION_SOURCE_MISMATCH')).toBe(true);
+    expect(auditMonsterIntakeSource(source,ir).blocking.some(finding=>finding.code==='SPELL_ACTIVATION_SOURCE_MISMATCH')).toBe(true);
   });
 
   test('wrong types, conflicting annotations and a missing referenced AC definition still block',()=>{
@@ -86,7 +86,7 @@ describe('complete manual stat-header rules without false native defenses',()=>{
     expect(header.executionMode).toBe('gm-manual');
     expect(source.slice(header.evidence![0]!.start,header.evidence![0]!.end)).toBe(row.line);
     expect(ir.coverage.map(entry=>entry.quote).join('')).toBe(source);
-    expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(source,ir).blocking).toEqual([]);
     expect(verifyGeneratedActor(ir,output).blocking).toEqual([]);
     expect(output.effects).toEqual([]);
     const item=output.items.find((item:any)=>item.name===header.name)!;
@@ -173,7 +173,7 @@ describe('source-explicit shared legendary budget remains a manual counter',()=>
     const wrong=structuredClone(output);wrong.system.resources.legact.max=0;
     expect(verifyGeneratedActor(ir,wrong).blocking.some(finding=>finding.code==='ACTOR_LEGENDARY_BUDGET_DRIFT')).toBeTrue();
     const omitted=structuredClone(ir);delete omitted.creature.legendary;
-    expect(validateMonsterIntakeIR(source,omitted).blocking.some(finding=>finding.code==='SOURCE_LEGENDARY_BUDGET_OMITTED')).toBeTrue();
+    expect(auditMonsterIntakeSource(source,omitted).blocking.some(finding=>finding.code==='SOURCE_LEGENDARY_BUDGET_OMITTED')).toBeTrue();
   });
   test('a conditional budget stays literal without inventing one native maximum',()=>{
     const source=HEADER+BODY+'Legendary Actions\nThe guardian can take three legendary actions if it is awake, or two while sleeping.\nKick. The target is pushed 5 feet.\n';

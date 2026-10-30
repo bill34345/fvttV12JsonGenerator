@@ -30,6 +30,7 @@ describe('source-labelled failed-save damage', () => {
         const actor=structuredClone(output.artifact) as any;
         for(const item of actor.items){
           item.system.description.value='';
+          for(const effect of item.effects??[]){expect(effect.description.replace(/\s+/gu,' ')).toContain(description.replace(/\s+/gu,' '));effect.description='';}
           item.system.activities=Object.fromEntries(Object.entries(item.system.activities).map(([id,value],index)=>{
             const activity=value as any;
             expect(activity._id).toBe(id);
@@ -38,7 +39,8 @@ describe('source-labelled failed-save damage', () => {
             activity._id=`source-activity-${index}`;activity.description.chatFlavor='';return [activity._id,activity];
           }));
         }
-        return actor;
+        const normalize=(value:any):any=>Array.isArray(value)?value.map(normalize):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([key,entry])=>[key,key==='_id'?'<document-id>':['sourceText','description'].includes(key)&&typeof entry==='string'?entry.replace(/\s+/gu,' '):normalize(entry)])):value;
+        return normalize(actor);
       });
       expect(normalized[0]).toEqual(normalized[1]);
     }
@@ -75,6 +77,7 @@ describe('source-labelled failed-save damage', () => {
           // keep this comparison on the complete mechanical document shape.
           item.img='content-icon';
           item.system.description.value='';
+          for(const effect of item.effects??[]){expect(effect.description.replace(/\s+/gu,' ')).toContain(description.replace(/\s+/gu,' '));effect.description='';}
           item.system.activities=Object.fromEntries(Object.entries(item.system.activities).map(([id,value],index)=>{
             const activity=value as any;expect(id).toMatch(/^[0-9a-z]{16}$/);expect(activity._id).toBe(id);
             expect(activity.save).toEqual({ability:['dex'],dc:{calculation:'',formula:'15'}});
@@ -84,7 +87,8 @@ describe('source-labelled failed-save damage', () => {
             activity._id=`source-activity-${index}`;activity.description.chatFlavor='';return [activity._id,activity];
           }));
         }
-        return actor;
+        const normalize=(value:any):any=>Array.isArray(value)?value.map(normalize):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([key,entry])=>[key,key==='_id'?'<document-id>':['sourceText','description'].includes(key)&&typeof entry==='string'?entry.replace(/\s+/gu,' '):normalize(entry)])):value;
+        return normalize(actor);
       });
       expect(normalized[0]).toEqual(normalized[1]);
     }

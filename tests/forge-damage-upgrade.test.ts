@@ -3,14 +3,23 @@ import fixture from './fixtures/forge-damage-upgrade.json';
 import realReplies from './fixtures/forge-damage-upgrade-provider-replies.json';
 import freshFirstReplies from './fixtures/forge-a-fresh-first-replies.json';
 import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
-import {OpenAICompatibleMonsterIntakeProvider} from '@fvtt-json-generator/intake-ai/provider';
-import {chain,modelReply,ordinary,staged,requireAcceptedChain,request} from './helpers/forge-semantic-chain';
+import {legacyStagedProvider} from './helpers/forge-legacy-provider';
+import {chain as defaultChain,modelReply,ordinary,staged,requireAcceptedChain,request} from './helpers/forge-semantic-chain';
+import {anchorIrEvidenceSourceAudit} from '@fvtt-json-generator/intake-ai/orchestrator';
 import {sourceDamageUpgradeOperations,sourceOperationErrors} from '@fvtt-json-generator/models/source-operations';
-import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
-import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
+import {auditMonsterIntakeSourceProjection as verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
+import {auditMonsterIntakeSource as validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
 import {splitStagedMonsterSource} from '@fvtt-json-generator/intake-ai/staged-source';
 import {assembleStagedFeature} from '@fvtt-json-generator/intake-ai/staged-extraction';
 
+// These historical reconstruction controls opt into source auditing; the
+// current full-IR route is compared independently below without restoration.
+async function chain(c:any,run:()=>Promise<any>){
+ const result=await defaultChain(c,async()=>{const extracted=await run();return{...extracted,ir:anchorIrEvidenceSourceAudit(c.source,request(c.source).candidate,extracted.ir)};});
+ if(!result.ir)return result;
+ const audit=validateMonsterIntakeIR(c.source,result.ir,{coverageRange:request(c.source).candidate});
+ return audit.blocking.length?{...result,status:'blocked',stage:'explicit-source-audit',findings:audit.blocking}:result;
+}
 const run=(c:any,route:string)=>chain(c,()=>route==='ordinary'?ordinary(c,modelReply(c)):staged(c));
 function reshape(change:(c:any)=>void){
  const c:any=structuredClone(fixture.case);change(c);
@@ -100,7 +109,8 @@ for(const route of ['ordinary','staged'])test(`${route} conflicting explicit bas
    // Known pairs no longer ask for an already proven feature proposal.
    // Keep this negative on the actual strict proposal consumer.
    const plan=splitStagedMonsterSource(request(c.source)),unit=plan.features[0]!;
-   expect(()=>assembleStagedFeature(plan,unit,{schemaVersion:1,unitId:unit.id,mode:'native-with-gm',facts:{sourceOperations:c.features[0].operations}},c.creature.identity.name)).toThrow();
+   const feature=assembleStagedFeature(plan,unit,{schemaVersion:1,unitId:unit.id,mode:'native-with-gm',facts:{sourceOperations:c.features[0].operations}},c.creature.identity.name);
+   expect(sourceOperationErrors(unit.quote,feature.sourceOperations).length).toBeGreaterThan(0);
   }else expect((await run(c,route)).status).toBe('blocked');
  }
 });
@@ -121,14 +131,15 @@ test('recorded first ordinary real reply restores two complete parents despite s
  ]){const raw:any=structuredClone(realReplies.ordinaryIr);mutate(raw);expect((await chain(c,()=>ordinary(c,raw))).status).toBe('blocked');}
 });
 
-test('current staged chain consumes only the saved real base reply for the independently proven complete pair',async()=>{
+test('explicit historical staged chain consumes only the saved real base reply for the independently proven complete pair',async()=>{
  let calls=0;
- const provider=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',apiKey:'offline',baseUrl:'https://offline.invalid/v1',model:'saved-real-base',reviewModel:'saved-real-base',maxAttempts:1,timeoutMs:10000,repairTimeoutMs:10000,stagedExtraction:{baseMode:'facts',featureMode:'auto'},httpClient:async()=>{
+ const provider=legacyStagedProvider({authMode:'api-key',apiKey:'offline',baseUrl:'https://offline.invalid/v1',model:'saved-real-base',reviewModel:'saved-real-base',maxAttempts:1,timeoutMs:10000,repairTimeoutMs:10000,stagedExtraction:{baseMode:'facts',featureMode:'auto'},httpClient:async()=>{
   if(++calls>1)throw Error('Unnecessary feature proposal');return{ok:true,status:200,json:async()=>({choices:[{message:{content:JSON.stringify(realReplies.stagedBaseResponse)}}]})};
  }});
  const r=await chain(fixture.case,async()=>({ir:await provider.extract(request(fixture.case.source))}));expectUpgrade(r,fixture.case);expect(calls).toBe(1);
  const plan=splitStagedMonsterSource(request(fixture.case.source));
- expect(()=>assembleStagedFeature(plan,plan.features[0]!,realReplies.invalidStagedFeature,fixture.case.creature.identity.name)).toThrow();
+ const invalid=assembleStagedFeature(plan,plan.features[0]!,realReplies.invalidStagedFeature,fixture.case.creature.identity.name);
+ expect(sourceOperationErrors(plan.features[0]!.quote,invalid.sourceOperations).length).toBeGreaterThan(0);
 });
 
 test('independent validator exposes the old Utility-only real result instead of treating it as upgraded native success',()=>{
@@ -155,26 +166,35 @@ test('source validation rejects a forged/dropped relation and Actor verification
 
 test('upgrade restoration cannot erase explicit conflicting carrier fields',async()=>{
  const c:any=structuredClone(fixture.case);
- for(const change of [
-  (f:any)=>{f.nativeRuleText='Unconditionally deal 99d8 damage';f.manualRemainder='';},
-  (f:any)=>{f.executionMode='gm-manual';},
- ]){
-  const raw=modelReply(c);change(raw.creature.traits[0]);
-  const result=await chain(c,()=>ordinary(c,raw));expect(result.status).toBe('blocked');
- }
+ const raw=modelReply(c);raw.creature.traits[0].nativeRuleText='Unconditionally deal 99d8 damage';raw.creature.traits[0].manualRemainder='';
+ const result=await chain(c,()=>ordinary(c,raw));expect(result.status).toBe('blocked');
  const plan=splitStagedMonsterSource(request(c.source)),unit=plan.features[0]!;
  expect(()=>assembleStagedFeature(plan,unit,{schemaVersion:1,unitId:unit.id,mode:'native-with-gm',facts:{sourceOperations:c.features[0].operations,nativeRuleText:'Unconditionally deal 99d8 damage'}},c.creature.identity.name)).toThrow();
 });
 
+test('default full IR keeps its declared damage and complete candidate before an explicit source upgrade audit',async()=>{
+ const c:any=structuredClone(fixture.case),raw=modelReply(c);
+ raw.creature.traits[0].executionMode='gm-manual';
+ const extracted=await ordinary(c,raw),before=structuredClone(extracted.ir);
+ const retained=await defaultChain(c,async()=>extracted);requireAcceptedChain(retained);
+ expect(retained.ir).toEqual(before);expect(extracted.ir).toEqual(before);
+ expect(raw.creature.traits[0].executionMode).toBe('gm-manual');
+ expect(retained.ir.creature.traits[0]!.sourceOperations![0]!.damage![0]!.formula).toBe('1d8');
+ expect(retained.actor.items).toHaveLength(2);
+ expect(Object.values<any>(retained.actor.items[0].system.activities)[0].damage.parts[0].number).toBe(1);
+ expect(validateMonsterIntakeIR(c.source,before).blocking.some(finding=>finding.code==='SOURCE_DAMAGE_UPGRADE_OMITTED')).toBe(true);
+ expectUpgrade(await chain(c,async()=>extracted),c);
+});
+
 // A-baseline behavior records: an expected rejection here is explicitly not
 // a successful ordinary generation or an overall product acceptance verdict.
-test('A baseline preserves the latest fresh ordinary empty-spellcasting rejection with its correct intermediate damage',async()=>{
+test('explicit source audit retains the historical empty-spellcasting finding and generated Actor',async()=>{
  expect(String(hashSource(fixture.case.source))).toBe(freshFirstReplies.sourceSha256);
  expect(String(hashSource(freshFirstReplies.ordinary.content))).toBe(freshFirstReplies.ordinary.contentSha256);
  const r=await chain(fixture.case,()=>ordinary(fixture.case,JSON.parse(freshFirstReplies.ordinary.content)));
- expect(r.status).toBe('blocked');expect(r.stage).toBe('validator');
+ expect(r.status).toBe('blocked');expect(r.stage).toBe('explicit-source-audit');
  expect(r.findings?.map((f:any)=>f.code)).toEqual(['INVALID_SPELLCASTING_GROUPS']);
- expect(r.actor).toBeUndefined();
+ expect(r.actor).toBeDefined();
  const op=r.ir!.creature.traits[0]!.sourceOperations![0]!;
  expect(op.damage![0]).toMatchObject({formula:'2d8',types:['cold','fire','lightning','thunder']});
  expect(op.condition).toContain('Once on each of your turns');
@@ -184,7 +204,7 @@ test('A baseline preserves the latest fresh ordinary empty-spellcasting rejectio
 test('A baseline replays the latest fresh staged base response through the full conditional damage chain',async()=>{
  expect(String(hashSource(freshFirstReplies.staged.content))).toBe(freshFirstReplies.staged.contentSha256);
  let calls=0;
- const provider=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',apiKey:'offline',baseUrl:'https://offline.invalid/v1',model:'frozen-fresh-A-base',reviewModel:'frozen-fresh-A-base',maxAttempts:1,timeoutMs:10000,repairTimeoutMs:10000,stagedExtraction:{baseMode:'facts',featureMode:'auto'},httpClient:async()=>{
+ const provider=legacyStagedProvider({authMode:'api-key',apiKey:'offline',baseUrl:'https://offline.invalid/v1',model:'frozen-fresh-A-base',reviewModel:'frozen-fresh-A-base',maxAttempts:1,timeoutMs:10000,repairTimeoutMs:10000,stagedExtraction:{baseMode:'facts',featureMode:'auto'},httpClient:async()=>{
   if(++calls>1)throw Error('Unexpected feature request');return{ok:true,status:200,json:async()=>({choices:[{message:{content:freshFirstReplies.staged.content}}]})};
  }});
  const r=await chain(fixture.case,async()=>({ir:await provider.extract(request(fixture.case.source))}));

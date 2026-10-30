@@ -219,7 +219,7 @@ export async function convertFinalActorSource(request: ForgeActorRequest, option
     }
     // A strict semantic failure remains a failure. Keep the generated candidate
     // so delivery and an explicit GM decision do not depend on that verdict.
-    return withActorSourceReviews({ protocolVersion: 1, requestId: value.requestId, result: { ...base, status: 'failed', artifact, artifactHash:hashArtifact(artifact), verification: finalVerification } },parsed);
+    return withActorSourceReviews(withActorRulePresentation({ protocolVersion: 1, requestId: value.requestId, result: { ...base, status: 'failed', artifact, artifactHash:hashArtifact(artifact), verification: finalVerification } },generated.rulePresentation),parsed);
   } catch (error) {
     return failedWorkflowResponse(value, error, retainedArtifact);
   }

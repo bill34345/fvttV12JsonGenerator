@@ -40,7 +40,7 @@ describe('native-with-gm preserves explicit IR instead of rebuilding from prose'
     expect(all.map(activity => activity.type)).toEqual(['attack', 'save']);
     expect(all[0].attack.bonus).toBe('19');
     expect(all[1]).toMatchObject({ save: { ability: ['int'], dc: { formula: '17' } }, activation: { type: 'special', condition: record.gmTriggeredSave.trigger }, consumption: { targets: [] } });
-    expect(item.effects.map((effect: any) => effect.statuses)).toEqual([['stunned']]);
+    expect(item.effects.map((effect: any) => effect.statuses)).toEqual([['stunned','incapacitated']]);
     expect(all[0].effects ?? []).toEqual([]); expect(all[1].effects).toHaveLength(1);
   });
 
@@ -96,7 +96,7 @@ describe('literal flat features retain fields and keep prose out of legacy infer
     expect(item.name).toBe(record.名称); expect(item.system.uses).toMatchObject({ max: '3', recovery: [{ period: 'day', type: 'recoverAll' }] });
     expect(all).toHaveLength(1); expect(all[0]).toMatchObject({ type: 'save', save: { ability: ['wis'], dc: { formula: '17' } }, damage: { onSave: 'half' }, activation: { type: 'bonus' } });
     expect(all[0].damage.parts).toHaveLength(1); expect(all[0].target.affects).toMatchObject({ count: 2, type: 'creature', special: 'AI指定目标' });
-    expect(item.effects.map((effect: any) => effect.statuses)).toEqual([['prone']]); expect(item.effects[0].description).toBe(prose);
+    expect(item.effects.map((effect: any) => effect.statuses)).toEqual([['prone']]); expect(item.effects[0].description).toContain(prose);
     expect(item.flags.fvttJsonGenerator.conditionLifecycle).toBeUndefined();
     expect(item.system.description.value).toContain('99d6'); expect(all[0].description.chatFlavor).toContain('99d6');
     expect(item.flags.fvttJsonGenerator.literalMechanics.description).toBe(prose);
@@ -126,12 +126,14 @@ describe('literal flat features retain fields and keep prose out of legacy infer
     expect(item.flags.fvttJsonGenerator.literalMechanics.sourceDamageParts).toEqual(action.sourceDamageParts);
   });
 
-  test('a conditional-only damage feature keeps its actual Damage button', () => {
+  test('a conditional-only damage feature keeps its timing carrier and actual Damage button', () => {
     const action = parse({ 名称: '条件灵光', literalMechanics: true, 类型: 'damage', 描述: prose,
       伤害: [{ 公式: '3d8', 类型: 'fire', 关系: 'conditional', 条件: '回合开始时' }] });
     const item = generate(action).items[0];
-    expect(activities(item)).toHaveLength(1); expect(activities(item)[0].type).toBe('damage');
-    expect(activities(item)[0].activation.condition).toBe('回合开始时'); expect(activities(item)[0].consumption.targets).toEqual([]);
+    expect(activities(item).map(activity=>activity.type)).toEqual(['utility','damage']);
+    expect(activities(item)[0].damage).toBeUndefined();
+    expect(activities(item)[1]).toMatchObject({activation:{type:'special',condition:'回合开始时'},damage:{parts:[{number:3,denomination:8,types:['fire']}]}});
+    expect(activities(item)[1].consumption.targets).toEqual([]);
   });
 
   test('retains a linked spell rule-reader identity and the complete visible rule', () => {

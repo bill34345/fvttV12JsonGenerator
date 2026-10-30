@@ -1,12 +1,23 @@
 import {expect,test} from 'bun:test';
 import fixture from './fixtures/forge-regenerate-healing.json';
 import providerReplies from './fixtures/forge-healing-provider-replies.json';
-import {chain,modelReply,ordinary,staged,requireAcceptedChain} from './helpers/forge-semantic-chain';
-import {sourceHealingOperations,bindSourceOperations} from '@fvtt-json-generator/models/source-operations';
-import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
+import {chain as defaultChain,modelReply,ordinary,staged,requireAcceptedChain} from './helpers/forge-semantic-chain';
+import {sourceHealingOperations,bindSourceOperations,sourceOperationErrors} from '@fvtt-json-generator/models/source-operations';
+import {auditMonsterIntakeSourceProjection as verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
+import {anchorIrEvidenceSourceAudit} from '@fvtt-json-generator/intake-ai/orchestrator';
+import {auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
 import {request} from './helpers/forge-semantic-chain';
 import {assembleStagedFeature} from '@fvtt-json-generator/intake-ai/staged-extraction';
 import {splitStagedMonsterSource} from '@fvtt-json-generator/intake-ai/staged-source';
+
+// This suite explicitly audits historical source reconstruction. Normal
+// generation continues to preserve the supplied complete IR and Actor.
+async function chain(c:any,run:()=>Promise<any>){
+ const result=await defaultChain(c,async()=>{const extracted=await run();return{...extracted,ir:anchorIrEvidenceSourceAudit(c.source,request(c.source).candidate,extracted.ir)};});
+ if(!result.ir)return result;
+ const audit=auditMonsterIntakeSource(c.source,result.ir,{coverageRange:request(c.source).candidate});
+ return audit.blocking.length?{...result,status:'blocked',stage:'explicit-source-audit',findings:audit.blocking}:result;
+}
 
 test('recorded real repair keeps exact source healing with dice whitespace and separately named title',async()=>{
   const raw:any=structuredClone(providerReplies.ordinaryRegenerateRepairedIr);
@@ -73,7 +84,7 @@ test('two-event healing binding rejects altered, omitted, reordered or invented 
     x=>{x[1].relationship='primary';},x=>{x[1].proof.healing=x[0].proof.healing;},
     x=>{x[1].range=5;},x=>{x[1].healing.extra=true;},
   ];
-  for(const change of mutations){const wrong=structuredClone(ops);change(wrong);expect(()=>bindSourceOperations(source,wrong)).toThrow();}
+  for(const change of mutations){const wrong=structuredClone(ops);change(wrong);expect(sourceOperationErrors(source,wrong).length).toBeGreaterThan(0);}
   for(const text of [source.replace('the target regains','another creature regains'),source.replace('each of its turns','each of your turns'),source+' The healing is doubled.',source.replace('regains 1 Hit Point','regains 1 Hit Point per level')])expect(sourceHealingOperations(text)).toBeUndefined();
 });
 
@@ -98,7 +109,8 @@ for(const path of ['ordinary','staged'])test(`explicit wrong healing proposals r
   // proposal. Exercise the actual proposal consumer directly for this path.
   if(path==='staged'){
     const plan=splitStagedMonsterSource(request(c.source));
-    expect(()=>assembleStagedFeature(plan,plan.features[0]!,{schemaVersion:1,unitId:plan.features[0]!.id,mode:'native-with-gm',facts:{sourceOperations:c.features[0].operations}},c.creature.identity.name)).toThrow();
+    const feature=assembleStagedFeature(plan,plan.features[0]!,{schemaVersion:1,unitId:plan.features[0]!.id,mode:'native-with-gm',facts:{sourceOperations:c.features[0].operations}},c.creature.identity.name);
+    expect(sourceOperationErrors(plan.features[0]!.quote,feature.sourceOperations).length).toBeGreaterThan(0);
     return;
   }
   const r=await chain(c,()=>path==='ordinary'?ordinary(c,modelReply(c)):staged(c));expect(r.status).toBe('blocked');

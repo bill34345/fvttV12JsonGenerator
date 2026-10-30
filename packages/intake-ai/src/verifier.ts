@@ -22,7 +22,7 @@ import { renderMonsterFeatureName, renderPreparedSpellcastingProfile } from './r
 import { formatMixedRuleHtml } from '@fvtt-json-generator/generation/actor-text';
 import { sourceConditionLifecycle, simpleConditionDuration, isGeneratedConditionId,officialCondition,inferredAppliedConditions,operationConditionSource,officialConditionStatuses } from '@fvtt-json-generator/generation/actor-effects';
 import { auditMonsterIntakeSource, validateMonsterIntakeIR } from './validator';
-import { hasLiteralDamageHelpers, isLiteralDamageHelperOnly, verifyMonsterProjectionPreservation } from './projection-verifier';
+import { hasLiteralDamageHelpers, verifyMonsterProjectionPreservation } from './projection-verifier';
 import { hasManualForcedMovementMechanic, manualForcedMovementRequirements } from './manual-forced-movement';
 import { completeSourceFeatureEvidence, sourceFeatureLegendaryCost, sourceRuleText } from './source-completeness';
 import {sourceStatHeader} from './staged-source';
@@ -169,7 +169,13 @@ function verifyMonsterIntakeProjection(
   compareSet(add, 'ACTOR_CONDITION_IMMUNITY_DRIFT', '/creature/defenses/conditionImmunities', expected.defenses.conditionImmunities, projection.conditionImmunities, normalizeCondition);
   for (const [sense, value] of Object.entries(expected.senses)) compare(add, 'ACTOR_SENSE_DRIFT', `/creature/senses/${sense}`, value, (projection.senses as Record<string, unknown>)?.[sense]);
   const isV14=/^14(?:\.|$)/u.test(String(asRecord(asRecord(actor)._stats).coreVersion??''));
-  const languages=isV14?projectActorLanguages(expected.languages.values,expected.languages.custom??'',true)
+  // The parser resolves known aliases before native/custom classification;
+  // unknown language labels keep their original spelling in custom text.
+  const languageValues=expected.languages.values.map(value=>{
+    const normalized=normalizeLanguageFixed(value);
+    return normalized===value.trim().toLowerCase()?value:normalized;
+  });
+  const languages=isV14?projectActorLanguages(languageValues,expected.languages.custom??'',true)
     :{value:expected.languages.values,custom:expected.languages.custom};
   compareSet(add, 'ACTOR_LANGUAGE_DRIFT', '/creature/languages/values', languages.value, projection.languages, normalizeLanguageFixed);
   compare(add, 'ACTOR_LANGUAGE_NOTE_DRIFT', '/creature/languages/custom', languages.custom, projection.languageCustom);
@@ -377,7 +383,7 @@ function verifyPortableSpellResolution(
         ? [{ item, itemIndex }]
         : [];
     });
-    const expectedGroup = ir.creature.spellcasting?.[groupIndex];
+    const expectedGroup = ir.creature.spellcasting?.find(candidate=>candidate.groupId===group.groupId&&candidate.groupId===group.featureItemKey);
     const sourceAssociated = expectedGroup ? items.flatMap((item, itemIndex) => {
       const itemRecord = asRecord(item);
       return isGeneratedSpellcastingSourceFeature(itemRecord, group.featureItemKey, group.groupId)
@@ -650,6 +656,7 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
   const range=activityRange.override===false&&Object.keys(itemRange).length
     ?{...itemRange,...activityRange,reach:activityRange.reach??itemRange.reach,value:activityRange.value??itemRange.value,long:activityRange.long??itemRange.long}
     :Object.keys(activityRange).length?activityRange:itemRange;
+  const gmLongRange=/^远射程 (\d+) 尺$/u.exec(String(range.special??''));
   const save = asRecord(firstActivity.save);
   const saveDc = asRecord(save.dc);
   const damageBase = asRecord(asRecord(system.damage).base);
@@ -744,7 +751,7 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
     : [];
   const manualTemplateIds=new Set((Array.isArray(item.effects)?item.effects:[]).filter(effect=>{
     const data=asRecord(effect),life=asRecord(asRecord(asRecord(data.flags).fvttJsonGenerator).conditionLifecycle);
-    return life.version===1&&life.mode==='gm'&&arrayValues(data.statuses).every(officialCondition);
+    return life.version===1&&life.mode==='gm'&&hasOnlyEmptyEffectChanges(data.changes,asRecord(data.system).changes)&&arrayValues(data.statuses).every(officialCondition);
   }).map(effect=>String(asRecord(effect)._id)));
   return {
     name: item.name,
@@ -763,7 +770,7 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
     reach: range.reach,
     range: range.value,
     targetSpecial: asRecord(asRecord(firstActivity.target).affects).special,
-    longRange: range.long,
+    longRange: range.long??numericOrUndefined(gmLongRange?.[1]),
     damageFormula,
     ...(damageFormula || additionalDamageFormulas.length > 0 || supplementalDamageFormulas.length > 0
       ? { damageFormulas: [damageFormula, ...additionalDamageFormulas, ...supplementalDamageFormulas].filter((value): value is string => Boolean(value)) }
@@ -778,7 +785,7 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
     literalMechanics: asRecord(asRecord(itemFlags.fvttJsonGenerator).literalMechanics),
     nativeWeapon:{properties:arrayValues(system.properties),type:asRecord(system.type),range:asRecord(system.range),damage:asRecord(system.damage)},
     effectCount: Array.isArray(item.effects)?item.effects.length:0,
-    effectDefinitions:Array.isArray(item.effects)?item.effects.map(effect=>({_id:asRecord(effect)._id,statuses:arrayValues(asRecord(effect).statuses),duration:asRecord(asRecord(effect).duration),flags:asRecord(asRecord(effect).flags),description:asRecord(effect).description,disabled:asRecord(effect).disabled,transfer:asRecord(effect).transfer})):[],
+    effectDefinitions:Array.isArray(item.effects)?item.effects.map(effect=>({_id:asRecord(effect)._id,statuses:arrayValues(asRecord(effect).statuses),changes:asRecord(effect).changes,systemChanges:asRecord(asRecord(effect).system).changes,duration:asRecord(asRecord(effect).duration),flags:asRecord(asRecord(effect).flags),description:asRecord(effect).description,disabled:asRecord(effect).disabled,transfer:asRecord(effect).transfer})):[],
     conditionLifecycle:asRecord(itemFlags.fvttJsonGenerator).conditionLifecycle,
     manualExecutable: (Array.isArray(item.effects) && item.effects.some(effect=>!manualTemplateIds.has(String(asRecord(effect)._id))))
       || Object.values(activities).map(asRecord).some(activity=>activity.type!=='utility' || activity.attack || activity.save || activity.damage
@@ -875,7 +882,7 @@ function compareFeatureSections(
           : undefined;
   for (const [index, feature] of expected.entries()) {
     const expectedActivation = feature.activationType ?? sectionActivation;
-    const expectedItemActivation=feature.sourceOperations?.[0]?.relationship==='follow-up'||!context.auditSource&&isLiteralDamageHelperOnly(feature)?'special':expectedActivation;
+    const expectedItemActivation=feature.sourceOperations?.[0]?.relationship==='follow-up'?'special':expectedActivation;
     const named = items.filter((item) => featureNamesMatch(item, feature, context.auditSource));
     const found = named.find((item) => !expectedItemActivation || item.activation === expectedItemActivation) ?? named[0];
     if (!found) {
@@ -939,8 +946,9 @@ function compareFeatureSections(
     if(feature.sourceOperations){
       const marker=asRecord(found.manualRule),activities=sourceActivities;
       const contexts=feature.sourceContext??[];
-      if(!complete||!fullLiteral||marker.mode!=='native-with-gm'||marker.sourceText!==feature.description||JSON.stringify(marker.sourceOperations)!==JSON.stringify(feature.sourceOperations)||JSON.stringify(marker.sourceContext)!==JSON.stringify(contexts)||contexts.some(context=>!sourceRuleText(description).includes(sourceRuleText(context))))add('ACTOR_SOURCE_OPERATION_RULE_LOSS',path,'Source operations must retain complete rules, shared conditions and their exact source identity.');
+      if(!complete||!fullLiteral||marker.mode!=='native-with-gm'||marker.sourceText!==feature.description||!canonicalEqual(marker.sourceOperations,feature.sourceOperations)||!canonicalEqual(marker.sourceContext,contexts)||contexts.some(context=>!sourceRuleText(description).includes(sourceRuleText(context))))add('ACTOR_SOURCE_OPERATION_RULE_LOSS',path,'Source operations must retain complete rules, shared conditions and their exact source identity.');
       const definitions=Array.isArray(found.effectDefinitions)?found.effectDefinitions.map(asRecord):[];
+      if(definitions.some(effect=>!hasOnlyEmptyEffectChanges(effect.changes,effect.systemChanges)))add('ACTOR_SOURCE_OPERATION_AUTOMATION_DRIFT',path,'Source-operation condition templates cannot add undeclared Effect changes.');
       for(const original of feature.sourceOperations){
         const declared=[...(original.failureStatuses??[]),...(original.appliedConditions??[]).flatMap(condition=>condition.statuses)].filter(officialCondition);
         if(!declared.length)continue;
@@ -1107,8 +1115,19 @@ function compareFeatureSections(
         }
         return maximum===undefined&&!sharedPool?costs.length!==0:costs.length!==1||costs[0]!.type!=='itemUses'||costs[0]!.target!==resourceTarget||String(costs[0]!.value)!=='1';
       });
+      const definitions=records(found.effectDefinitions);
+      const templates=new Set(definitions.filter(effect=>{
+        const life=asRecord(asRecord(asRecord(effect.flags).fvttJsonGenerator).conditionLifecycle),statuses=arrayValues(effect.statuses);
+        return effect.transfer===false&&effect.disabled===false&&hasOnlyEmptyEffectChanges(effect.changes,effect.systemChanges)
+          &&life.version===1&&life.mode==='gm'&&compact(String(life.sourceText??''))===compact(feature.description)
+          &&statuses.length>0&&statuses.every(officialCondition)&&canonicalEqual(statuses,officialConditionStatuses(arrayValues(life.statuses)));
+      }).map(effect=>effect._id));
+      const wrongEffectLinks=activities.some(activity=>records(activity.effectLinksData).some(link=>
+        !definitions.some(effect=>effect._id===link._id)
+        ||!((feature.gmTriggeredSave||feature.nativeFailureStatuses)&&activity.type==='save')
+          &&(!templates.has(link._id)||(activity.type==='save'?link.onSave!==false:link.onSave!==undefined))));
       if(uses.max!==maximum||!correctRecovery||wrongConsumption
-        ||activities.some(activity=>Number(activity.effectLinks)>0&&!((feature.gmTriggeredSave||feature.nativeFailureStatuses)&&activity.type==='save')))
+        ||definitions.some(effect=>!hasOnlyEmptyEffectChanges(effect.changes,effect.systemChanges))||wrongEffectLinks)
         add('ACTOR_MIXED_RESOURCE_DRIFT',path,'Mixed activity consumption, recovery and effect links must exactly match the source-declared primary operation.');
     }
     const significant = sourceRuleText(feature.description).replace(/\s+/g, '').slice(0, 24);
@@ -1190,6 +1209,17 @@ function compareFeatureSections(
         add(native?'ACTOR_CONDITIONAL_SAVE_DRIFT':'ACTOR_CONDITIONAL_SAVE_REQUIRES_GM',path+'/save',
           native?`${feature.name} incorrectly projects its post-damage0HP Save as an immediate native Save.`
             :`${feature.name} retains the complete post-damage0HP Save for GM adjudication; the initial attack does not execute it.`);
+      }else if(!context.auditSource&&feature.attack){
+        const saves=sourceActivities.filter(activity=>activity.type==='save'),helper=saves[0];
+        const saveData=asRecord(helper?.saveData),consumption=asRecord(helper?.consumption),uses=asRecord(helper?.uses);
+        compare(add,'ACTOR_SAVE_DC_DRIFT',path+'/save/dc',feature.save.dc,numericOrUndefined(asRecord(saveData.dc).formula));
+        if(JSON.stringify(arrayValues(saveData.ability))!==JSON.stringify([feature.save.ability]))add('ACTOR_SAVE_ABILITY_DRIFT',path+'/save/ability',`${feature.name} lost its independent save ability ${feature.save.ability}.`);
+        if(saves.length!==1||helper?.activation!=='special'||helper.activationValue!==null||helper.activationOverride!==true
+          ||String(helper.condition??'').trim()!==(feature.save.condition??'').trim()
+          ||!sourceRuleText(String(helper.description??'')).includes(sourceRuleText(feature.description))
+          ||!Array.isArray(consumption.targets)||consumption.targets.length!==0||consumption.spellSlot!==false
+          ||uses.max!==undefined&&uses.max!==null&&uses.max!==''||uses.spent!==undefined&&uses.spent!==0)
+          add('ACTOR_SAVE_HELPER_BOUNDARY_DRIFT',path+'/save','An attack follow-up Save must remain one separately triggered GM roll with its complete source rule and no repeated resource cost.');
       }else{
         compare(add, 'ACTOR_SAVE_DC_DRIFT', `/creature/${section}/${index}/save/dc`, feature.save.dc, found.saveDc);
         if (!arrayValues(found.saveAbilities).includes(feature.save.ability)) add('ACTOR_SAVE_ABILITY_DRIFT', `/creature/${section}/${index}/save/ability`, `${feature.name} lost save ability ${feature.save.ability}.`);
@@ -1386,6 +1416,11 @@ function compact(value: unknown): string | undefined {
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function hasOnlyEmptyEffectChanges(changes:unknown,systemChanges:unknown):boolean{
+  const carriers=[changes,systemChanges];
+  return carriers.some(Array.isArray)&&carriers.every(carrier=>carrier===undefined||Array.isArray(carrier)&&carrier.length===0);
 }
 
 const SKILL_KEYS: Record<string, string> = {

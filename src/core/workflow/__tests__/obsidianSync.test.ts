@@ -384,6 +384,7 @@ describe("ObsidianSyncWorkflow", () => {
 
 		const result = await workflow.sync({ vaultPath });
 
+		expect(result.failures).toEqual([]);
 		expect(result.failed).toBe(0);
 		expect(result.processed).toBe(2);
 		expect(existsSync(join(vaultPath, "output", "items", "骑士之盾.json"))).toBe(true);

@@ -85,9 +85,12 @@ describe('source skill totals have an explicit Markdown meaning distinct from le
     });
   }
 
-  test.each(['{总加值: "1"}', '{总加值: 1.5}', '{总加值: .inf}', '{总加值: .nan}', '{总加值: 1, 熟练: 2}', '{总加植: 1}', '{}'])('rejects an ambiguous or malformed explicit total rather than inventing half proficiency: %s', value => {
+  test.each(['{总加值: "1"}', '{总加值: 1.5}', '{总加值: .inf}', '{总加值: .nan}', '{总加值: 1, 熟练: 2}', '{总加植: 1}', '{}'])('retains a malformed explicit total with its finding and other skills: %s', value => {
     const markdown = fixture.legacyYaml.replace('  运动: 1', `  运动: ${value}`);
-    expect(() => new YamlParser().parse(markdown)).toThrow('InvalidSkillTotal');
+    const parsed = new YamlParser().parse(markdown);
+    expect(parsed.skills).toEqual({ acr: 2, arc: 1, dec: 2, prc: 0.5, ste: 0.5, sur: 0 });
+    expect(parsed.candidateReview?.findings).toContainEqual(expect.objectContaining({ code: 'FIELD_PROJECTION_INCOMPLETE', path: '技能/运动' }));
+    expect((parsed.candidateReview?.proposal as any).value).toEqual(yaml.load(value));
   });
 
   test('a listed total cannot mask a later IR total changed without changing its source', async () => {

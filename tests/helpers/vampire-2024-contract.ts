@@ -1,8 +1,9 @@
 import yaml from 'js-yaml';
+import {legacyWholeFormProvider} from './forge-legacy-provider';
 import fixture from '../fixtures/forge-vampire-2024-srd521.json';
 import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
 import {assembleStagedLinePartition,splitStagedMonsterSource,stagedSourceLines,type StagedMonsterSource} from '@fvtt-json-generator/intake-ai/staged-source';
-import {createEncounterIntakeProviders,generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
+import {generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import {makeWholeCategoryForm,decodeCategoryFormV2} from '../../packages/intake-ai/src/category-form-v2';
 import {inspectCategoryFormV2} from '../../packages/intake-ai/src/category-form-v2-adapter';
 import {assembleStagedFeature,validateStagedBaseFacts} from '@fvtt-json-generator/intake-ai/staged-extraction';
@@ -76,10 +77,10 @@ export function fillVampire2024Form(form:any,units:any[]){
   });
   const beguile=find('Beguile');if(beguile)beguile.施法={属性:'cha',豁免DC:17,命中加值:null,无需材料:true,法术:[{名称:'Command',次数:null,恢复:null,限制:null}]};
   const deathless=find('Deathless Strike');if(deathless)deathless.距离=[{用途:'move',尺:20,条件:'up to half its Speed'}];
-  // Conditional 3/4 ledgers have no unconditional finite maximum in V2.
-  // Keep the exact rule, never manufacture a fixed 3/day or fixed 3-use pool.
+  // Fill both printed alternatives; the portable ledger keeps the native
+  // three-use pool and the separate four-use lair choice.
   for(const row of rows){
-    if(row.名称==='Legendary Resistance (3/Day, or 4/Day in Lair)'){row.使用次数=null;row.恢复方式=null;}
+    if(row.名称==='Legendary Resistance (3/Day, or 4/Day in Lair)'){row.使用次数=3;row.恢复方式='daily (4/day in lair)';}
     const unit=units.find(unit=>unit.id===row.编号);if(unit.section==='legendary'){row.传奇动作消耗=1;row.共享资源=null;}
   }
 }
@@ -101,7 +102,7 @@ export async function runVampire2024FormalChain(){
     replies.push(answer);return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify(answer)}}]}),{status:200,headers:{'Content-Type':'application/json'}});
   },{preconnect:priorFetch.preconnect});
   try{
-    const actual=createEncounterIntakeProviders({baseUrl:'https://offline.invalid/v1',apiKey:'fixture-only',model:'vampire-2024-interface-fixture',protocol:'openai-chat',timeoutMs:10000,onExtractionStage:stage=>{stages.push(stage);}}).provider;
+    const actual=legacyWholeFormProvider({baseUrl:'https://offline.invalid/v1',apiKey:'fixture-only',model:'vampire-2024-interface-fixture',timeoutMs:10000,stagedExtraction:{onStage:stage=>{stages.push(stage);}}});
     const provider={providerName:actual.providerName,extractionModel:actual.extractionModel,reviewModel:actual.reviewModel,
       discover:async()=>({schemaVersion:1 as const,candidates:[vampire2024Candidate]}),extract:actual.extract.bind(actual),review:actual.review.bind(actual),repair:actual.repair.bind(actual)};
     const result=await generateEncounterFromHumanMarkdown({source:fixture.source,label:'2024 Vampire / official SRD 5.2.1 / interface retest',provider,reviewPolicy:'deferred',

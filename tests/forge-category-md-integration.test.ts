@@ -6,7 +6,7 @@ import { prepareCategoryMdExtraction, runCategoryMdMonsterExtraction } from '@fv
 import { CATEGORY_MD_LABELS, type CategoryMdBatch } from '@fvtt-json-generator/intake-ai/category-md';
 import { runStagedMonsterExtraction } from '@fvtt-json-generator/intake-ai/staged-extraction';
 import { verifyMonsterIntake } from '@fvtt-json-generator/intake-ai/verifier';
-import { validateMonsterIntakeIR } from '@fvtt-json-generator/intake-ai/validator';
+import { validateMonsterIntakeIR,auditMonsterIntakeSource } from '@fvtt-json-generator/intake-ai/validator';
 import { chain, request, requireAcceptedChain } from './helpers/forge-semantic-chain';
 import sourceOperations from './fixtures/forge-common-source-operations.json';
 import healingCorpus from './fixtures/forge-iterate50-round11-cases.json';
@@ -214,11 +214,13 @@ for (const mutation of ['dc', 'damage', 'target', 'uses'] as const) test(`wrong 
     }
     reply.markdown = yaml.dump(parsed);
   });
-  expect(a.status).toBe('blocked'); expect(b.status).toBe('blocked');
-  // A's OP proposal forbids an explicit resource field at its shape boundary;
-  // B's MD permits it and checks the value against that source-owned resource.
-  expect(a.code).toBe(mutation === 'uses' ? 'UNSUPPORTED_FIELD' : 'FEATURE_FACT_CONFLICT');
-  expect(b.code).toBe('FEATURE_FACT_CONFLICT');
+  if(mutation==='target'){
+    for(const result of [a,b]){expect(result.actor).toBeDefined();expect(auditMonsterIntakeSource(c.source,result.ir).blocking.some(f=>f.code==='SOURCE_OPERATION_FACT_CONFLICT')).toBe(true);}
+  }else{
+    expect(a.status).toBe('blocked');expect(b.status).toBe('blocked');
+    expect(a.code).toBe(mutation==='uses'?'UNSUPPORTED_FIELD':'UNRESTORED_BASIC_OPERATION');
+    expect(b.code).toBe(mutation==='uses'?'FEATURE_FACT_CONFLICT':'UNRESTORED_BASIC_OPERATION');
+  }
 });
 
 test('B does not use manual template rows to recover missing attacks or known healing behind the model', async () => {

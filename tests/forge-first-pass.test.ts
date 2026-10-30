@@ -1,7 +1,7 @@
 import {describe,test,expect} from 'bun:test';
 import {createHash} from 'node:crypto';
 import {singleCreatureSourceCandidate} from '@fvtt-json-generator/intake-ai/discovery';
-import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
+import {auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
 import {projectActor} from '@fvtt-json-generator/intake-ai/verifier';
 import {sourceCompletenessFindings} from '../packages/intake-ai/src/source-completeness';
@@ -9,7 +9,7 @@ import {analyzeBrowserActorSourceWithAi} from '@fvtt-json-generator/forge-browse
 import {normalizeMonsterSourceFacts} from '@fvtt-json-generator/intake-ai/source-facts';
 import {anchorIrEvidence} from '@fvtt-json-generator/intake-ai/orchestrator';
 import {convertMarkdownContentToJson} from '@fvtt-json-generator/workflows/single-file-conversion';
-import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
+import {auditMonsterIntakeSourceProjection} from '@fvtt-json-generator/intake-ai/verifier';
 import {renderEncounterActorSource} from '@fvtt-json-generator/intake-ai/encounter-automation';
 import {generateEncounterFromHumanMarkdown,reviewForgeEncounterCandidate} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import {LURKER_SOURCE,buildValidLurkerIr} from '../src/core/intake/__tests__/fixtures/lurker';
@@ -49,7 +49,7 @@ describe('first-pass source completeness',()=>{
   }
   test.each(['missing','ignored'] as const)('rejects a reference hidden as %s before generation',mode=>{
     const {source,ir}=reference(mode);
-    const findings=validateMonsterIntakeIR(source,ir).findings;
+    const findings=auditMonsterIntakeSource(source,ir).findings;
     const omitted=findings.find(f=>f.code==='SOURCE_DEFINITION_OMITTED')!;
     expect(omitted.blocking).toBe(true);
     expect(source.slice(omitted.evidence![0]!.start,omitted.evidence![0]!.end)).toBe(omitted.evidence![0]!.quote);
@@ -57,7 +57,7 @@ describe('first-pass source completeness',()=>{
   test('accepts a complete literal output landing and leaves unrelated source valid',()=>{
     const {source,ir}=reference('preserved');
     expect(sourceCompletenessFindings(source,ir)).toEqual([]);
-    expect(validateMonsterIntakeIR(LURKER_SOURCE,buildValidLurkerIr()).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(LURKER_SOURCE,buildValidLurkerIr()).blocking).toEqual([]);
   });
   test('handles a separate heading paragraph without dropping its first sentence',()=>{
     const {ir}=reference('missing');
@@ -114,13 +114,17 @@ test('preserves explicit reference bodies through real Forge analysis without an
     extract:async()=>{extracted++;return structuredClone(proposal);},
     repair:async()=>{throw new Error('Literal reference preservation must not require repair.');},
     review:async()=>{reviewed++;throw new Error('Paid review must remain opt-in.');}};
-  expect(validateMonsterIntakeIR(source,proposal).blocking.some(f=>f.code==='SOURCE_DEFINITION_OMITTED')).toBe(true);
+  expect(auditMonsterIntakeSource(source,proposal).blocking.some(f=>f.code==='SOURCE_DEFINITION_OMITTED')).toBe(true);
   const analysis=await analyzeBrowserActorSourceWithAi({source,sourceName:'Reference fixture',requestId:'reference-preservation',fvttVersion:'14.364',systemVersion:'5.3.3'},provider);
   expect(analysis.status).toBe('ready_to_generate');
   expect(analysis.validation?.blocking).toEqual([]);
-  expect(renderMonsterIntakeMarkdown(analysis.ir!)).toContain('This does not apply while the creature is underwater.');
-  expect(sourceCompletenessFindings(source,analysis.ir!)).toEqual([]);
-  expect(analysis.ir!.creature.biography).toContain(body);
+  expect(analysis.candidate!.quote).toContain(body);
+  expect(analysis.ir!.creature).toEqual(proposal.creature);
+  expect(auditMonsterIntakeSource(source,analysis.ir!).blocking.some(f=>f.code==='SOURCE_DEFINITION_OMITTED')).toBe(true);
+  const explicit=structuredClone(analysis.ir!);normalizeMonsterSourceFacts(explicit,source,analysis.candidate!);
+  expect(renderMonsterIntakeMarkdown(explicit)).toContain('This does not apply while the creature is underwater.');
+  expect(sourceCompletenessFindings(source,explicit)).toEqual([]);
+  expect(explicit.creature.biography).toContain(body);
   expect(proposal).toEqual(original);
   expect(extracted).toBe(1);expect(reviewed).toBe(0);
 });
@@ -142,7 +146,7 @@ describe('explicit definition source boundaries',()=>{
     const originalSections=structuredClone(ir.creature);
     normalizeMonsterSourceFacts(ir,source,scope);
     expect(ir.creature.biography).toContain(body);
-    expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(source,ir).blocking).toEqual([]);
     const claim=ir.claims.find(c=>c.valueKind==='preserved-literal'&&c.path==='/creature/biography')!;
     expect(claim.evidence).toHaveLength(1);
     for(const ref of claim.evidence)expect(source.slice(ref.start,ref.end)).toBe(ref.quote);
@@ -150,7 +154,7 @@ describe('explicit definition source boundaries',()=>{
     expect(ir).toEqual(once);
     for(const section of ['traits','actions','bonusActions','reactions','legendaryActions'] as const)expect(ir.creature[section]).toEqual(originalSections[section]);
     ir.creature.biography='';
-    expect(validateMonsterIntakeIR(source,ir).blocking.some(f=>f.code==='SOURCE_DEFINITION_OMITTED')).toBe(true);
+    expect(auditMonsterIntakeSource(source,ir).blocking.some(f=>f.code==='SOURCE_DEFINITION_OMITTED')).toBe(true);
   });
   test('keeps an already complete feature landing and excludes another candidate’s definitions',()=>{
     const {source,ir,scope,body}=fixture();
@@ -174,20 +178,21 @@ describe('explicit definition source boundaries',()=>{
     ir.claims.push({path:'/creature/biography',valueKind:'explicit',confidence:'high',value:'first',evidence:[ir.claims[0]!.evidence[0]!]},
       {path:'/creature/biography',valueKind:'explicit',confidence:'high',value:'second',evidence:[ir.claims[0]!.evidence[0]!]});
     normalizeMonsterSourceFacts(ir,source,scope);
-    const codes=validateMonsterIntakeIR(source,ir).blocking.map(f=>f.code);
+    const codes=auditMonsterIntakeSource(source,ir).blocking.map(f=>f.code);
     expect(codes).toContain('UNSUPPORTED_MECHANIC');expect(codes).toContain('SOURCE_HASH_MISMATCH');expect(codes).toContain('CONFLICTING_CLAIMS');
     const malformed=fixture();
     malformed.ir.claims.push({path:'/creature/biography',valueKind:'explicit',confidence:'high',value:'',evidence:null as any});
     expect(()=>normalizeMonsterSourceFacts(malformed.ir,malformed.source,malformed.scope)).not.toThrow();
-    expect(validateMonsterIntakeIR(malformed.source,malformed.ir).blocking.some(f=>f.code==='MISSING_EVIDENCE')).toBe(true);
+    expect(auditMonsterIntakeSource(malformed.source,malformed.ir).blocking.some(f=>f.code==='MISSING_EVIDENCE')).toBe(true);
   });
   test('retains the source chain through the shared CLI anchor and formal Actor generation',async()=>{
     const {source,ir,scope,title,body}=fixture();
+    normalizeMonsterSourceFacts(ir,source,scope);
     const anchored=anchorIrEvidence(source,scope,ir);
     expect(anchored.creature.biography).toContain(body);
     const markdown=renderMonsterIntakeMarkdown(anchored);
     const generated=await convertMarkdownContentToJson({content:markdown,fvttVersion:'14',effectProfile:'core',translationService:null,iconOptions:{mode:'off'}});
-    const report=verifyMonsterIntake(source,anchored,markdown,generated.rawJson,scope);
+    const report=auditMonsterIntakeSourceProjection(source,anchored,markdown,generated.rawJson,scope);
     expect(report.findings.filter(f=>f.blocking)).toEqual([]);
     const actor=generated.rawJson as any;
     expect(actor.system.details.biography.value).toContain(title);
@@ -198,7 +203,7 @@ describe('explicit definition source boundaries',()=>{
 describe('literal qualified English aliases in GM carriers',()=>{
   test.each([
     ['Whisper','Whisper (Concentration)','Whisper (Concentration)'],
-    ['Echo','Echo(Only if Bloodied)','Echo (Only if Bloodied)'],
+    ['Echo','Echo(Only if Bloodied)','Echo(Only if Bloodied)'],
     ['Lantern','LANTERN (Recharge 5-6)','LANTERN (Recharge 5-6)'],
   ])('retains %s qualified alias without nesting its own name',async(name,englishName,expectedName)=>{
     const ir=buildValidLurkerIr(),quote=`${englishName}. A GM resolves this exact source condition.`;
@@ -215,9 +220,12 @@ describe('literal qualified English aliases in GM carriers',()=>{
     ir.creature.actions.push({name:'回声',englishName:'Echo',description:quote,activityType:'utility'});
     const rule={actorKey:'actor-1',featureName:'回声',section:'action' as const,quote,gmSteps:['GM reads this rule.'],mechanicId:'ordinary-bilingual',capabilityKind:'gm-manual' as const};
     const output=await convertMarkdownContentToJson({content:renderEncounterActorSource(ir,[rule]),fvttVersion:'14',effectProfile:'core',translationService:null,iconOptions:{mode:'off'}});
-    expect((output.rawJson as any).items.some((i:any)=>i.name==='回声 (Echo)')).toBe(true);
+    expect((output.rawJson as any).items.some((i:any)=>i.name==='回声 Echo')).toBe(true);
     ir.creature.actions.at(-1)!.englishName='Different Echo (Concentration)';
-    await expect(convertMarkdownContentToJson({content:renderEncounterActorSource(ir,[rule]),fvttVersion:'14',effectProfile:'core',translationService:null,iconOptions:{mode:'off'}})).rejects.toThrow('BehaviorProjection: expected exactly one Item');
+    const mismatch=await convertMarkdownContentToJson({content:renderEncounterActorSource(ir,[rule]),fvttVersion:'14',effectProfile:'core',translationService:null,iconOptions:{mode:'off'}});
+    expect((mismatch.rawJson as any).items.some((i:any)=>i.name==='回声 Different Echo (Concentration)')).toBe(true);
+    expect(mismatch.status).not.toBe('accepted');
+    expect(mismatch.diagnostics).toContainEqual(expect.objectContaining({code:'GEN_LITERAL_REVIEW_REQUIRED',path:'actor/behaviorSemantics/mechanics/0'}));
   });
 });
 
@@ -225,7 +233,7 @@ test('preserves existing skill totals for case variants emitted by extraction',(
   const ir=buildValidLurkerIr();
   for(const key of ['acrobatics','Acrobatics','ACROBATICS']){
     ir.creature.skills={[key]:5};
-    expect(renderMonsterIntakeMarkdown(ir)).toMatch(/特技: 5/u);
+    expect(renderMonsterIntakeMarkdown(ir)).toMatch(/特技:\s+总加值: 5/u);
   }
 });
 

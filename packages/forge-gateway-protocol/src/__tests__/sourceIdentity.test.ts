@@ -3,6 +3,7 @@ import { sha256 } from '@fvtt-json-generator/contracts/hash';
 import {
   attachForgeSourceId,
   createForgeSourceId,
+  hashSource,
   isForgeSourceId,
   isForgeSourceRef,
   readForgeSourceId,
@@ -51,10 +52,16 @@ describe('Forge source identity', () => {
     });
   });
 
-  test('rejects malformed or duplicate IDs instead of silently repairing identity', () => {
-    expect(() => attachForgeSourceId('---\nforge-source-id: actor:v1:bad\n---\nBody', SOURCE_ID)).toThrow();
-    expect(readForgeSourceId('---\nforge-source-id: actor:v1:bad\n---\nBody').status).toBe('invalid');
-    expect(readForgeSourceId('---\nforge-source-id: ' + SOURCE_ID + '\nforge-source-id: ' + SOURCE_ID + '\n---\nBody').status).toBe('invalid');
+  test('rebuilds an invalid technical ID while preserving the source body, and rejects ambiguous duplicate YAML keys', () => {
+    const source = '---\nforge-source-id: actor:v1:bad\n---\nBody';
+    expect(readForgeSourceId(source).status).toBe('invalid');
+    expect(attachForgeSourceId(source, SOURCE_ID)).toEqual({
+      content: `---\nforge-source-id: ${SOURCE_ID}\n---\nBody`, sourceId: SOURCE_ID,
+      sourceHash: hashSource(`---\nforge-source-id: ${SOURCE_ID}\n---\nBody`), changed: true,
+    });
+    const duplicated = '---\nforge-source-id: ' + SOURCE_ID + '\nforge-source-id: ' + SOURCE_ID + '\n---\nBody';
+    expect(readForgeSourceId(duplicated).status).toBe('invalid');
+    expect(() => attachForgeSourceId(duplicated, SOURCE_ID)).toThrow(/invalid YAML/u);
   });
 
   test('keeps sourceRef opaque and rejects filesystem or URL-shaped values', () => {

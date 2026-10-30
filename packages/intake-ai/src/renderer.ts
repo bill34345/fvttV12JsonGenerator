@@ -238,7 +238,7 @@ function renderSpellcastingFeature(group: CanonicalSpellcastingGroup): Record<st
       ...(group.recharge?{recharge:group.recharge}:{}),
       ...(group.legendaryCost!==undefined?{legendaryCost:group.legendaryCost}:{}),
       ...(shared?.usage==='daily-shared'?{uses:{max:shared.count,period:shared.recovery??'day'}}:{}),
-    }, 'trait'),
+    }, group.activationType==='legendary'?'legendary':'trait'),
     // Source-derived machine linkage; it does not alter the visible description.
     ...(native?{spellcastingFeatureKey: group.groupId}:{}),
   };

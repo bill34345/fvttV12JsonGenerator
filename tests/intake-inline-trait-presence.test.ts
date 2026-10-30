@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { validateMonsterIntakeIR } from '@fvtt-json-generator/intake-ai/validator';
+import { auditMonsterIntakeSource } from '@fvtt-json-generator/intake-ai/validator';
 import { buildValidLurkerIr } from '../src/core/intake/__tests__/fixtures/lurker';
 
 const HEADER = `# Encounter notes
@@ -23,7 +23,7 @@ Claw. Melee Weapon Attack: +7 to hit. Hit: 8 slashing damage.`;
 function missingTraits(source: string): string[] {
   const ir = buildValidLurkerIr();
   ir.creature.traits = [];
-  return validateMonsterIntakeIR(source, ir).findings
+  return auditMonsterIntakeSource(source, ir).findings
     .filter(finding => finding.code === 'MISSING_SOURCE_FEATURES')
     .map(finding => finding.path);
 }
@@ -55,7 +55,7 @@ describe('source inline trait presence', () => {
     }
   });
 
-  test('an explicit Traits section still requires IR traits', () => {
-    expect(missingTraits(`${HEADER}\nTraits\n${ACTIONS}`)).toContain('/creature/traits');
+  test('an empty Traits heading alone does not invent an omitted ability', () => {
+    expect(missingTraits(`${HEADER}\nTraits\n${ACTIONS}`)).not.toContain('/creature/traits');
   });
 });

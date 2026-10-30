@@ -19,11 +19,17 @@ describe('ParserFactory', () => {
     expect(factory.createParser(fixture).type).toBe('english');
   });
 
-  it('keeps chinese strict unknown field behavior in default route', () => {
+  it('keeps unknown Chinese-route fields in review without discarding the Actor', () => {
     const content = ['名称: 测试', 'UnknownField: 123'].join('\n');
 
     const parser = factory.createParser(content);
     expect(parser.type).toBe('chinese');
-    expect(() => parser.parse(content)).toThrow('InvalidField');
+    const parsed = parser.parse(content);
+    expect(parsed.name).toBe('测试');
+    expect(parsed.candidateReview?.findings).toContainEqual(expect.objectContaining({
+      code: 'FIELD_PROJECTION_INCOMPLETE', path: 'UnknownField',
+    }));
+    expect(parsed.candidateReview?.proposal).toEqual(expect.objectContaining({ field: 'UnknownField', value: 123 }));
+    expect(parsed.details.biography).toContain('UnknownField：123');
   });
 });

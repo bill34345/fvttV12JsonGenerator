@@ -50,10 +50,10 @@ describe('exact-quote evidence anchoring', () => {
     expect(requests).toHaveLength(1);
     expect(requests[0]!.url).toBe('https://provider.example/v1/chat/completions');
     const prompt = requests[0]!.body.messages[0].content as string;
-    expect(prompt).toContain('Prioritize exact-quote evidence anchoring.');
-    expect(prompt).toContain('set start and end to -1');
-    expect(prompt).toContain('Never emit a coverage quote that is only repeated whitespace.');
-    expect(prompt.endsWith('All existing IR fields, evidence, coverage, and semantic requirements remain mandatory.')).toBeTrue();
+    expect(prompt).toContain('EvidenceRef is {start:-1,end:-1,quote:string}');
+    expect(prompt).toContain('Copy an exact verbatim source span');
+    expect(prompt).toContain('For a repeated short quote, use a larger unique complete span');
+    expect(prompt).toContain('no per-leaf claim proof or whitespace partition is requested');
     const refs: Record<string, unknown>[] = [];
     visitEvidenceRefs(result, (ref) => refs.push(ref));
     expect(refs.length).toBeGreaterThan(0);
@@ -96,7 +96,7 @@ describe('exact-quote evidence anchoring', () => {
       stage: 'deterministic-validation', source: LURKER_SOURCE, ir, deterministicFindings: [],
     });
 
-    expect(requests[0]!.body.messages[0].content).toContain('Prioritize exact-quote evidence anchoring.');
+    expect(requests[0]!.body.messages[0].content).toContain('EvidenceRef is {start:-1,end:-1,quote:string}');
   });
 
   test('keeps the default extract prompt unchanged when exact-quote anchoring is not requested', async () => {

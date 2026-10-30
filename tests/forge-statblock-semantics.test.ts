@@ -3,7 +3,7 @@ import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
 import {runStagedMonsterExtraction} from '@fvtt-json-generator/intake-ai/staged-extraction';
 import {OpenAICompatibleMonsterIntakeProvider} from '@fvtt-json-generator/intake-ai/provider';
 import {anchorIrEvidence} from '@fvtt-json-generator/intake-ai/orchestrator';
-import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
+import {auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
 import {validateSourceBaseNumbers} from '../packages/intake-ai/src/base-source-numbers';
 import {validateStagedStaticSourceFacts} from '../packages/intake-ai/src/staged-source-facts';
 import data from './fixtures/forge-statblock-semantic-cases.json';
@@ -22,22 +22,22 @@ const leaf=(object:any,path:string[])=>path.reduce((value,key)=>value?.[key],obj
 function change(object:any,path:string[],value:unknown){const parent=path.slice(0,-1).reduce((value,key)=>value[key],object);parent[path.at(-1)!]=structuredClone(value);}
 describe('source facts across ordinary and staged stat blocks',()=>{
   const seed=data.seeds[1]!;
-  for(const mutation of data.mutations)test('ordinary source rejects or source-corrects '+mutation.id,async()=>{
-    const ir=await correct(seed.source,seed.creature),original=leaf(ir.creature,mutation.path);
+  for(const mutation of data.mutations)test('ordinary retains '+mutation.id+' and source audit diagnoses its conflict',async()=>{
+    const ir=await correct(seed.source,seed.creature);
     change(ir.creature,mutation.path,mutation.value);const result=await ordinary(seed.source,ir);
-    const blocked=validateMonsterIntakeIR(seed.source,result,{coverageRange:request(seed.source).candidate}).blocking;
-    expect(blocked.length>0||JSON.stringify(leaf(result.creature,mutation.path))===JSON.stringify(original)).toBe(true);
+    const blocked=auditMonsterIntakeSource(seed.source,result,{coverageRange:request(seed.source).candidate}).blocking;
+    expect(leaf(result.creature,mutation.path)).toEqual(mutation.value);expect(blocked.length).toBeGreaterThan(0);
   });
   for(const[field,value]of[[['attack','toHit'],9],[['attack','range'],300],[['attack','longRange'],600],[['activationType'],'reaction']] as Array<[string[],unknown]>)test('ordinary simple attack keeps source '+field.join('/'),async()=>{
     const ir=await correct(seed.source,seed.creature);change(ir.creature.actions[0],field,value);
     const result=await ordinary(seed.source,ir);
-    expect(validateMonsterIntakeIR(seed.source,result).blocking.length).toBeGreaterThan(0);
+    expect(auditMonsterIntakeSource(seed.source,result).blocking.length).toBeGreaterThan(0);
   });
   test.each(['\n','\r\n'])('fullwidth stat headers retain exact original evidence (%j)',async newline=>{
     const at=seed.source.indexOf('Actions\n');
     const source=(seed.source.slice(0,at).replace(/[0-9()+]/gu,char=>String.fromCharCode(char.charCodeAt(0)+0xfee0))+seed.source.slice(at)).replaceAll('\n',newline);
     const ir=await correct(source,seed.creature);
-    expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(source,ir).blocking).toEqual([]);
     expect(ir.coverage.map(ref=>ref.quote).join('')).toBe(source);
     for(const ref of ir.claims.flatMap(claim=>claim.evidence))expect(source.slice(ref.start,ref.end)).toBe(ref.quote);
   });
@@ -54,7 +54,7 @@ describe('source facts across ordinary and staged stat blocks',()=>{
     ir.creature.attributes.hp.formula='9d12';
     expect(()=>validateSourceBaseNumbers(source,ir,false)).toThrow('BASE_FORMULA_CONFLICT');
     ir.source={sha256:hashSource(source),length:source.length};
-    expect(validateMonsterIntakeIR(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SOURCE_BASE_FORMULA_CONFLICT',path:'/creature/attributes/hp/formula'}));
+    expect(auditMonsterIntakeSource(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SOURCE_BASE_FORMULA_CONFLICT',path:'/creature/attributes/hp/formula'}));
   });
   test('an unfamiliar skill spelling cannot hide an independently readable wrong sense',async()=>{
     const ir=await correct(seed.source,seed.creature),source=seed.source.replace('Skills Perception +5','Skills Unknown Lore +5');
@@ -62,7 +62,7 @@ describe('source facts across ordinary and staged stat blocks',()=>{
     ir.creature.senses.darkvision=120;
     expect(()=>validateStagedStaticSourceFacts(source,ir.creature,'senses')).toThrow('BASE_STATIC_CONFLICT');
     ir.source={sha256:hashSource(source),length:source.length};
-    expect(validateMonsterIntakeIR(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SOURCE_BASE_STATIC_CONFLICT',path:'/creature/senses'}));
+    expect(auditMonsterIntakeSource(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SOURCE_BASE_STATIC_CONFLICT',path:'/creature/senses'}));
   });
 });
 
@@ -78,25 +78,25 @@ describe('optional HP formulas in rendered HTML-entity table cells',()=>{
     const source=seed.source.replace('HP 22 (5d6 + 5) Size Small',`${c.row}\n| ----------------------- |\nSize Small`).replaceAll('\n',newline);
     const creature=structuredClone(seed.creature);creature.attributes.hp=c.hp as typeof creature.attributes.hp;
     const ir=await correct(source,creature);
-    expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(source,ir).blocking).toEqual([]);
     expect(ir.coverage.map(ref=>ref.quote).join('')).toBe(source);
     for(const ref of ir.claims.flatMap(claim=>claim.evidence))expect(source.slice(ref.start,ref.end)).toBe(ref.quote);
     const markdown=renderMonsterIntakeMarkdown(ir),output=await convertMarkdownContentToJson({content:markdown,fvttVersion:'14',effectProfile:'core',iconOptions:{mode:'off'},translationService:null});
     expect(verifyMonsterIntake(source,ir,markdown,output.rawJson).status).toBe('accepted');
     expect(output.rawJson).toMatchObject({system:{attributes:{hp:{value:c.hp.value,max:c.hp.value,formula:c.hp.formula??''}}}});
     const wrong=structuredClone(ir);wrong.creature.attributes.hp.formula=c.hp.formula?'9d12': '3d4';
-    expect(validateMonsterIntakeIR(source,wrong).blocking).toContainEqual(expect.objectContaining({path:'/creature/attributes/hp/formula'}));
-    if(c.hp.formula){delete wrong.creature.attributes.hp.formula;expect(validateMonsterIntakeIR(source,wrong).blocking).toContainEqual(expect.objectContaining({code:'SOURCE_BASE_FORMULA_CONFLICT'}));}
+    expect(auditMonsterIntakeSource(source,wrong).blocking).toContainEqual(expect.objectContaining({path:'/creature/attributes/hp/formula'}));
+    if(c.hp.formula){delete wrong.creature.attributes.hp.formula;expect(auditMonsterIntakeSource(source,wrong).blocking).toContainEqual(expect.objectContaining({code:'SOURCE_BASE_FORMULA_CONFLICT'}));}
     wrong.creature.attributes.hp.value=99;
-    expect(validateMonsterIntakeIR(source,wrong).blocking).toContainEqual(expect.objectContaining({code:'SOURCE_BASE_NUMBER_CONFLICT',path:'/creature/attributes/hp/value'}));
+    expect(auditMonsterIntakeSource(source,wrong).blocking).toContainEqual(expect.objectContaining({code:'SOURCE_BASE_NUMBER_CONFLICT',path:'/creature/attributes/hp/value'}));
   });
   test('a later damage formula cannot supply an absent HP formula',async()=>{
     const source=seed.source.replace('HP 22 (5d6 + 5)','HP 22'),creature=structuredClone(seed.creature);
     delete (creature.attributes.hp as {formula?:string}).formula;
-    const ir=await correct(source,creature);expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+    const ir=await correct(source,creature);expect(auditMonsterIntakeSource(source,ir).blocking).toEqual([]);
     expect(ir.creature.attributes.hp.formula).toBeUndefined();
     ir.creature.attributes.hp.formula='1d4 + 2';
-    expect(validateMonsterIntakeIR(source,ir).blocking).toContainEqual(expect.objectContaining({path:'/creature/attributes/hp/formula'}));
+    expect(auditMonsterIntakeSource(source,ir).blocking).toContainEqual(expect.objectContaining({path:'/creature/attributes/hp/formula'}));
   });
   test('numeric entity decoding is single-pass and leaves invalid/control references literal',()=>{
     for(const reference of ['&#0;','&#10;','&#xD800;','&#x110000;'])expect(headerPresentation(reference)).toBe(reference);

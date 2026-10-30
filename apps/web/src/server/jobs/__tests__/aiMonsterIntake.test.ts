@@ -52,7 +52,7 @@ class WebRatWarlockProvider implements MonsterIntakeAiProvider {
 afterEach(() => resetJobsForTests());
 
 describe('Web AI monster intake job', () => {
-  test('registers formal Actor JSON only for accepted creatures', async () => {
+  test('registers the formal Actor JSON for an accepted creature', async () => {
     const job = createJob('ai-monster-intake', 'test');
     await runJob(job, { type: 'ai-monster-intake', fileName: 'lurker.txt', content: LURKER_SOURCE, options: { fvttVersion: '14', effectProfile: 'core' } }, { monsterIntakeProvider: new WebFakeProvider() });
     const finished = getJob(job.id)!;
@@ -109,7 +109,12 @@ describe('Web AI monster intake job', () => {
     const reportFiles = finished.files.filter((file) => /deterministic-report\.(?:json|md)$/u.test(file.fileName));
 
     expect(finished.status).toBe('needs_review');
-    expect((finished.summary?.creatures as any[])[0]?.calls.repair).toBe(1);
+    expect((finished.summary?.creatures as any[])[0]?.calls).toEqual({ extraction: 1, review: 0, repair: 0 });
+    const actorFile = finished.files.find((file) => file.fileName === 'rat-warlock-actor.json');
+    expect(actorFile).toBeDefined();
+    const actor = JSON.parse(await Bun.file(actorFile!.path).text());
+    expect(actor.name).toBeTruthy();
+    expect(actor.items.length).toBeGreaterThan(0);
     expect(reportFiles).toHaveLength(2);
     for (const file of reportFiles) {
       const content = await Bun.file(file.path).text();
@@ -119,16 +124,20 @@ describe('Web AI monster intake job', () => {
     }
   });
 
-  test('exposes the review bundle and evidence but gates candidate Actor JSON', async () => {
+  test('delivers the Actor without automatically requesting AI review or repair', async () => {
+    const provider = new WebFakeProvider('needs_review');
+    provider.review = async () => { throw new Error('UNEXPECTED_AUTOMATIC_AI_REVIEW'); };
+    provider.repair = async () => { throw new Error('UNEXPECTED_AUTOMATIC_AI_REPAIR'); };
     const job = createJob('ai-monster-intake', 'test');
-    await runJob(job, { type: 'ai-monster-intake', fileName: 'lurker.txt', content: LURKER_SOURCE }, { monsterIntakeProvider: new WebFakeProvider('needs_review') });
+    await runJob(job, { type: 'ai-monster-intake', fileName: 'lurker.txt', content: LURKER_SOURCE }, { monsterIntakeProvider: provider });
     const finished = getJob(job.id)!;
-    expect(finished.status).toBe('needs_review');
-    expect(finished.files.some((file) => file.fileName.endsWith('-actor.json'))).toBe(false);
+    expect(finished.status).toBe('succeeded');
+    expect((finished.summary?.creatures as any[])[0]?.calls).toEqual({ extraction: 1, review: 0, repair: 0 });
+    const actorFile = finished.files.find((file) => file.fileName === 'lurker-actor.json');
+    expect(actorFile).toBeDefined();
+    expect(JSON.parse(await Bun.file(actorFile!.path).text()).items.length).toBeGreaterThan(0);
     expect(finished.files.some((file) => file.fileName.includes('candidate-actor'))).toBe(false);
     expect(finished.files.some((file) => file.fileName.includes('intake-ir'))).toBe(true);
-    expect(JSON.stringify(finished.summary)).toContain('AC 14');
-    expect(finished.logs.at(-1)?.message).toContain('需要人工确认');
   });
 
 });

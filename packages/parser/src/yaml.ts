@@ -39,7 +39,7 @@ export class YamlParser {
   public parse(content: string): ParsedNPC {
     const { frontmatter, body } = this.splitContent(content);
     const rawData = yaml.load(frontmatter) as Record<string, any>;
-    const literalBiography = rawData && Object.hasOwn(rawData, 'intake-biography-mode');
+    const literalBiography = rawData?.['intake-biography-mode'] === 'literal-v1';
 
     const result: ParsedNPC = {
       name: '',
@@ -96,6 +96,9 @@ export class YamlParser {
     if(rawData&&Object.hasOwn(rawData,'intake-candidate-review')){
       if(isSourceCandidateReview(rawData['intake-candidate-review']))result.candidateReview=structuredClone(rawData['intake-candidate-review']);
       else this.retainField(result,'intake-candidate-review',rawData['intake-candidate-review'],'审阅记录未能读取；Actor内容继续。');
+    }
+    if(rawData&&Object.hasOwn(rawData,'intake-biography-mode')&&!literalBiography){
+      this.retainField(result,'intake-biography-mode',rawData['intake-biography-mode'],'InvalidIntakeBiographyMode：无法识别正文模式；来源正文与Actor内容保留。');
     }
     this.traverse(rawData, result, true);
     if(rawData&&Object.hasOwn(rawData,'intake-legendary-ledger')){

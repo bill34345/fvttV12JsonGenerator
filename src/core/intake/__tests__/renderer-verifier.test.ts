@@ -41,15 +41,15 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     ir.creature.actions = [{ name: 'Dread Tether', description, activityType: 'save', activationType: 'bonus', save: { dc: 14, ability: 'wis' }, uses: { max: 1, period: 'shortRest' }, appliedConditions: [{ statuses, duration }] }];
     const markdown = renderMonsterIntakeMarkdown(ir), generated = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null });
     const actor = generated.rawJson as any, item = actor.items.find((entry: any) => entry.name === 'Dread Tether');
-    return { ir, markdown, actor, item, check: () => verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, actor).findings.filter(finding => /ACTOR_CONDITION_(?:LIFECYCLE|DURATION|BOUNDARY)_DRIFT/u.test(finding.code)) };
+    return { ir, markdown, actor, item, check: () => verifyMonsterIntake(RAT_WARLOCK_SOURCE, ir, markdown, actor).findings.filter(finding => /^ACTOR_CONDITION_/u.test(finding.code)) };
   }
 
-  test('rejects the old linked indefinite status even with an accurate sourceDuration hint', async () => {
+  test('reports a linked status that loses its GM qualification even with an accurate sourceDuration hint', async () => {
     const f = await lifecycleFixture('The target makes a DC 14 Wisdom saving throw. On a failure, the target becomes frightened for 1 day. The effect ends if its source dies or is more than 1 mile away. Whenever it takes damage, it repeats the saving throw.', '1 day');
     expect(f.check()).toEqual([]);
     f.item.effects = [{ _id: 'badStatus0000001', statuses: ['frightened'], duration: { seconds: null, rounds: null, turns: null }, flags: { fvttJsonGenerator: { sourceDuration: '1 day' } } }];
     (Object.values(f.item.system.activities)[0] as any).effects = [{ _id: 'badStatus0000001', onSave: false }];
-    expect(f.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_LIFECYCLE_DRIFT' }));
+    expect(f.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_GM_METADATA_DRIFT', path: '/creature/actions/0/appliedConditions/0' }));
   });
 
   test('checks actual native duration and complete GM boundary rather than status or metadata alone', async () => {
@@ -57,20 +57,20 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     expect(simple.check()).toEqual([]); simple.item.effects[0].duration.seconds = null;
     expect(simple.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_DURATION_DRIFT' }));
     const complex = await lifecycleFixture('The target becomes frightened for 1 minute. The effect ends when the target takes damage.', '1 minute');
-    expect(complex.check()).toEqual([]); delete complex.item.flags.fvttJsonGenerator.conditionLifecycle;
-    expect(complex.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_BOUNDARY_DRIFT' }));
+    expect(complex.check()).toEqual([]); delete complex.item.effects[0].flags.fvttJsonGenerator.conditionLifecycle;
+    expect(complex.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_GM_METADATA_DRIFT', path: '/creature/actions/0/appliedConditions/0' }));
   });
 
   test('checks omitted source duration and independent status lifecycles against actual Effects', async () => {
     for (const source of ['The target becomes frightened for one minute.', '目标陷入恐慌，持续一日。']) {
       const f = await lifecycleFixture(source); expect(f.check()).toEqual([]);
       f.item.effects = [{ _id: 'badDuration00001', statuses: ['frightened'], duration: {} }];
-      expect(f.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_LIFECYCLE_DRIFT' }));
+      expect(f.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_GM_METADATA_DRIFT', path: '/creature/actions/0/appliedConditions/0' }));
     }
     const f = await lifecycleFixture('The target is prone. It is poisoned until the end of its next turn.', undefined, ['prone', 'poisoned']);
-    expect(f.item.effects.flatMap((effect: any) => effect.statuses)).toEqual(['prone']); expect(f.check()).toEqual([]);
-    f.item.effects.push({ _id: 'badPoison0000001', statuses: ['poisoned'], duration: {} });
-    expect(f.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_LIFECYCLE_DRIFT' }));
+    expect(f.item.effects.flatMap((effect: any) => effect.statuses)).toEqual(['prone', 'poisoned']); expect(f.check()).toEqual([]);
+    delete f.item.effects.find((effect: any) => effect.statuses.includes('poisoned')).flags.fvttJsonGenerator.conditionLifecycle;
+    expect(f.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_GM_METADATA_DRIFT', path: '/creature/actions/0/appliedConditions/0' }));
   });
 
   test('rejects legacy attack enums inside an existing V14 Activity rather than trusting the matching string', async () => {
@@ -603,14 +603,17 @@ describe('intake Markdown renderer and deterministic verifier', () => {
   test('treats source usage annotations, standard bilingual languages, and standard bilingual statuses as equivalent while keeping a different feature name blocking', async () => {
     const ir = buildValidLurkerIr() as any;
     ir.creature.languages = { values: ['龙语'] };
-    ir.creature.traits = [{ name: '拒绝 [2/日]', englishName: 'Defiance', description: '该生物可以拒绝一次失败。' }];
+    ir.creature.traits = [{ name: '拒绝 [2/日]', englishName: 'Defiance', description: '该生物可以拒绝一次失败。', uses: { max: 2, period: 'day' } }];
     ir.creature.actions = [{
       name: '状态冲击', englishName: 'Status Burst', description: '目标进行豁免，失败时倒地。', activityType: 'save',
-      save: { dc: 13, ability: 'dex' }, appliedConditions: [{ statuses: ['倒地（prone）', '恐慌（frightened）', '恍惚（dazed）'], duration: '1 round' }],
+      save: { dc: 13, ability: 'dex' }, appliedConditions: ['prone', 'frightened', 'dazed'].map(status => ({ statuses: [status], duration: '1 round' })),
     }];
     ir.creature.bonusActions = [];
     ir.creature.reactions = [];
     ir.creature.legendaryActions = [];
+    const replacedFeatureClaim = (path: string) => /^\/creature\/(?:traits|actions|bonusActions|reactions|legendaryActions)\//u.test(path);
+    ir.claims = ir.claims.filter((claim: any) => !replacedFeatureClaim(claim.path));
+    ir.coverage.forEach((entry: any) => { entry.claimPaths = entry.claimPaths.filter((path: string) => !replacedFeatureClaim(path)); });
     const markdown = renderMonsterIntakeMarkdown(ir);
     const generated = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null });
     const actor = generated.rawJson as any;
@@ -622,40 +625,58 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     }));
 
     const report = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
+    expect(report.findings).toEqual([]);
     const codes = new Set(report.findings.map((finding) => finding.code));
     expect(codes).not.toContain('ACTOR_LANGUAGE_DRIFT');
     expect(codes).not.toContain('ACTOR_FEATURE_MISSING');
     expect(codes).not.toContain('ACTOR_FEATURE_COUNT_DRIFT');
     expect(codes).not.toContain('ACTOR_CONDITION_DRIFT');
 
+    const mixedIr = structuredClone(ir);
+    mixedIr.creature.actions[0].appliedConditions = [{ statuses: ['prone', 'frightened', 'dazed'], duration: '1 round' }];
+    const mixedMarkdown = renderMonsterIntakeMarkdown(mixedIr);
+    const mixedGenerated = await convertMarkdownContentToJson({ content: mixedMarkdown, fvttVersion: '14', effectProfile: 'core', translationService: null });
+    const mixedActor = mixedGenerated.rawJson as any;
+    const mixedItem = mixedActor.items.find((item: any) => item.name.includes('Status Burst'));
+    expect(mixedActor.items).toHaveLength(actor.items.length);
+    expect(mixedItem.effects.flatMap((effect: any) => effect.statuses)).toEqual(['prone', 'frightened', projectedConditionStatusId('dazed')]);
+    expect(mixedItem.system.description.value).toContain(ir.creature.actions[0].description);
+    const mixedReport = verifyMonsterIntake(LURKER_SOURCE, mixedIr, mixedMarkdown, mixedActor);
+    expect(mixedReport.status).toBe('needs_review');
+    expect(mixedReport.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_DRIFT', path: '/creature/actions/0/appliedConditions/0' }));
+
     const defiance = actor.items.find((item: any) => item.name.includes('Defiance'));
-    defiance.name = '拒绝 [3/日] (Defiance)';
+    const originalDefianceName = defiance.name;
+    const originalDefianceRecovery = structuredClone(defiance.system.uses.recovery);
+    defiance.name = '拒绝 [3/日] Defiance';
     const countDrift = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
     expect(countDrift.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_FEATURE_MISSING', path: '/creature/traits/0' }));
 
-    defiance.name = '拒绝 (Defiance)';
+    defiance.name = originalDefianceName;
     defiance.system.uses.max = '3';
     const usesDrift = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
-    expect(usesDrift.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_FEATURE_MISSING', path: '/creature/traits/0' }));
+    expect(usesDrift.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_RESOURCE_PROJECTION_DRIFT', path: '/creature/traits/0' }));
 
     defiance.system.uses.max = '2';
     defiance.system.uses.recovery = [];
     const recoveryDrift = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
-    expect(recoveryDrift.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_FEATURE_MISSING', path: '/creature/traits/0' }));
+    expect(recoveryDrift.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_RESOURCE_PROJECTION_DRIFT', path: '/creature/traits/0' }));
 
-    defiance.name = '其他守卫 (Guard)';
+    defiance.system.uses.recovery = originalDefianceRecovery;
+    defiance.name = '其他守卫 Guard';
     const nameDrift = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
     expect(nameDrift.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_FEATURE_MISSING', path: '/creature/traits/0' }));
+    defiance.name = originalDefianceName;
 
     const statusBurst = actor.items.find((item: any) => item.name.includes('Status Burst'));
     const frightened = statusBurst.effects.find((effect: any) => effect.statuses.includes('frightened'));
     frightened.statuses = ['Custom frightened curse'];
     const customEnglish = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
-    expect(customEnglish.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_DRIFT', path: '/creature/actions/0/appliedConditions/0' }));
+    expect(customEnglish.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_DRIFT', path: '/creature/actions/0/appliedConditions/1' }));
 
     frightened.statuses = ['强化恐慌'];
     const customLocalized = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
-    expect(customLocalized.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_DRIFT', path: '/creature/actions/0/appliedConditions/0' }));
+    expect(customLocalized.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_DRIFT', path: '/creature/actions/0/appliedConditions/1' }));
   });
 
   test('projects every activity damage part for multi-type effects', () => {
@@ -752,7 +773,7 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     expect(markdown).toContain('附赠动作:');
   });
 
-  test('normalizes absent optional fields and exposes only explicit actor mechanics to review', async () => {
+  test('retains the complete Actor while reporting null optional fields for review', async () => {
     const ir = buildValidLurkerIr();
     (ir.creature.senses as any).blindsight = null;
     (ir.creature.senses as any).tremorsense = null;
@@ -772,26 +793,33 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     const projectedItems = projection.items as Array<Record<string, unknown>>;
 
     expect(markdown).not.toMatch(/:\s*null\s*$/m);
-    expect(report.findings).toEqual([]);
+    expect(report.status).toBe('needs_review');
+    expect(report.findings.map(({ code, path }) => ({ code, path }))).toEqual([
+      ...['blindsight', 'tremorsense', 'truesight', 'special'].map(field => ({ code: 'INVALID_STRUCTURE', path: `/creature/senses/${field}` })),
+      { code: 'INVALID_STRUCTURE', path: '/creature/biography' },
+    ]);
+    expect(projectedItems).toHaveLength(6);
+    expect(projectedItems.find(item => String(item.name).includes('Claw'))).toMatchObject({ toHit: 6, reach: 10, damageFormulas: ['1d10+4'] });
     expect(Object.keys(projection.skills as Record<string, unknown>).sort()).toEqual([
       'deception', 'intimidation', 'perception', 'stealth',
     ]);
     expect(projectedItems.filter((item) => !String(item.name).includes('Claw')).every((item) => item.toHit === undefined)).toBe(true);
   });
 
-  test('preserves conditional AC, localized values, multiline prose, and attack mechanics through v14 generation', async () => {
+  test('preserves conditional AC, localized damage, multiline prose and attack mechanics in a reviewable v14 candidate', async () => {
     let ir = buildValidLurkerIr();
-    (ir.creature.attributes as unknown as { acKind: string }).acKind = '有法师护甲mage armor时15';
-    (ir.creature.attributes as unknown as { initiative: null }).initiative = null;
+    ir.creature.attributes.acKind = 'flat';
+    ir.creature.attributes.acNote = '有法师护甲mage armor时15';
+    delete ir.creature.attributes.initiative;
     ir.claims = ir.claims.filter((claim) => claim.path !== '/creature/attributes/initiative');
     ir.coverage.forEach((entry) => {
       entry.claimPaths = entry.claimPaths.filter((path) => path !== '/creature/attributes/initiative');
     });
-    ir.creature.languages = { values: ['通用语'], custom: '' };
-    (ir.creature.senses as unknown as { special: string }).special = '';
+    ir.creature.languages = { values: ['通用语'] };
+    delete ir.creature.senses.special;
     ir.creature.traits[0]!.description = '第一段完整说明。\n\n随意：法术甲。\n\n每项1/日：迷踪步。';
-    (ir.creature.actions[1] as unknown as { activityType: string }).activityType = 'action';
-    (ir.creature.traits[2] as unknown as { activityType: string }).activityType = 'bonus';
+    ir.creature.actions[1]!.activityType = 'attack';
+    ir.creature.traits[2]!.activationType = 'bonus';
     ir.creature.actions[1]!.damage![0]!.type = '穿刺';
     ir = anchorIrEvidence(LURKER_SOURCE, {
       id: 'lurker', label: 'lurker', start: 0, end: LURKER_SOURCE.length, quote: LURKER_SOURCE,
@@ -810,7 +838,8 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     expect(markdown).toMatch(/名称: 爪击 Claw[\s\S]*?类型: attack/);
     expect(markdown).toContain('类型: piercing');
     expect(markdown).toContain('激活: bonus');
-    expect(report.findings).toEqual([]);
+    expect(report.status).toBe('needs_review');
+    expect(report.findings).toEqual([expect.objectContaining({ code: 'INVALID_STRUCTURE', path: '/creature/actions/1/damage/0/type' })]);
     const projection = projectActor(generated.rawJson);
     const bonusTrait = (projection.items as Array<Record<string, unknown>>).find((item) => String(item.name).includes('纯真结界'));
     expect(bonusTrait?.activation).toBe('bonus');
@@ -838,10 +867,11 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     const claw = actor.items.find((item: any) => item.name.includes('爪击'));
     claw.system.range.reach = 5;
     const clawActivity = Object.values(claw.system.activities).find((activity:any)=>activity.type==='attack') as any;
-    expect(clawActivity.damage.parts).toHaveLength(1);
-    expect(clawActivity.damage.parts[0]).toMatchObject({number:1,denomination:10,bonus:'4',types:['slashing']});
-    clawActivity.damage.parts[0].denomination = 6;
-    clawActivity.damage.parts[0].types = ['fire'];
+    const damageActivity = Object.values(claw.system.activities).find((activity:any) => activity.damage?.parts?.length === 1) as any;
+    const primaryDamage = damageActivity.damage.parts[0];
+    expect(primaryDamage).toMatchObject({number:1,denomination:10,bonus:'4',types:['slashing']});
+    primaryDamage.denomination = 6;
+    primaryDamage.types = ['fire'];
     clawActivity.range.reach = 5;
     const teleport = actor.items.find((item: any) => item.name.includes('黑暗传送'));
     const teleportActivity = Object.values(teleport.system.activities)[0] as any;

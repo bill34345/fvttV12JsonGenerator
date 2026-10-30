@@ -60,10 +60,16 @@ export function sourceGroupComponentClause(parent:EvidenceRef,_group:CanonicalSp
   const forward=sourceHasSpellList(before)&&/(?:thefollowingspells|以下(?:一道)?法术|下列法术)$/iu.test(withoutCastingProfile(before));
   const global=/^(?:it|its spellcasting|the creature|the monster|它|该生物)(?:\s+casts?)?\s*$/iu.test(before);
   const after=header.slice(clause.match.index+clause.match[0].length).trim();
-  // The only recognized trailing metadata is the independently printed
-  // casting profile. Anything else may narrow the waiver or contradict it.
+  // Only the printed casting profile, duration and a complete same-owner
+  // turn cooldown are independent metadata; other tails may narrow the waiver.
   const single=!first&&!!sourceSingleSpellAction(parent.quote);
-  const remaining=single?after.replace(/,?\s*and the duration is \d+ (?:hours?|minutes?|days?)$/iu,''):after;
+  let remaining=after;
+  if(single){
+    const owner=/\b(the [\p{L}'’ \-]+?|it) casts\b/iu.exec(header.slice(0,clause.match.index))?.[1];
+    const cooldown=/[.。]\s*(the [\p{L}'’ \-]+?|it) (?:cannot|can['’]t) take this action again until the start of its next turn[.。]?$/iu.exec(remaining);
+    if(owner&&cooldown&&owner.replace(/\s+/gu,' ').toLowerCase()===cooldown[1]!.replace(/\s+/gu,' ').toLowerCase())remaining=remaining.slice(0,cooldown.index);
+    remaining=remaining.replace(/,?\s*and the duration is \d+ (?:hours?|minutes?|days?)[.。]?$/iu,'');
+  }
   const ambiguous=clause.ambiguous||!forward&&!global&&!single||!!withoutCastingProfile(remaining);
   const evidence={start:parent.start+clause.match.index,end:parent.start+clause.match.index+clause.match[0].length,quote:clause.match[0]};
   // A model's manual marker cannot cancel a shared preamble for grants that

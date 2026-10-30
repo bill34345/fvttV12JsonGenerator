@@ -64,6 +64,7 @@ describe("ItemTextWorkflow", () => {
       const result = await workflow.run({ sourcePath, vaultPath });
 
       expect(result.ingestion.files).toHaveLength(4);
+      expect(result.sync.failures).toEqual([]);
       expect(result.sync.failed).toBe(0);
       expect(readdirSync(join(vaultPath, "output", "items")).filter((name) => name.endsWith(".md"))).toEqual([]);
 

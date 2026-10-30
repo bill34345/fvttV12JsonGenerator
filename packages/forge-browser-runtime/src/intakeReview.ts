@@ -322,6 +322,11 @@ export interface ForgeIntakeReviewBundleV1 {
 
 export function buildForgeIntakeReviewBundle(input: ForgeIntakeReviewBundleInput): ForgeIntakeReviewBundleV1 {
   assertBundleIdentity(input);
+  const consistencyFindings = actorReviewConsistencyFindings(input);
+  const deterministicFindings = (input.deterministicFindings ?? []).map(projectFinding);
+  for (const finding of consistencyFindings) {
+    if (!deterministicFindings.some(existing => existing.code === finding.code && existing.path === finding.path)) deterministicFindings.push(finding);
+  }
   return structuredClone({
     schema: FORGE_INTAKE_REVIEW_BUNDLE_SCHEMA,
     version: FORGE_INTAKE_REVIEW_BUNDLE_VERSION,
@@ -329,12 +334,12 @@ export function buildForgeIntakeReviewBundle(input: ForgeIntakeReviewBundleInput
     mode: input.mode,
     requestId: input.requestId,
     attemptId: input.attemptId,
-    status: input.objectKind==='actor'&&input.status==='accepted'&&input.candidateResponse?.status!=='accepted'?(input.gmApproval?'reviewed_candidate':'ready_for_gm_review'):input.status,
+    status: consistencyFindings.length && input.status === 'accepted' ? 'needs_review' : input.objectKind==='actor'&&input.status==='accepted'&&input.candidateResponse?.status!=='accepted'?(input.gmApproval?'reviewed_candidate':'ready_for_gm_review'):input.status,
     rawSource: input.rawSource,
     rawSourceHash: input.rawSourceHash,
     ...(input.candidate ? { candidate: projectCandidate(input.candidate) } : {}),
     ...(input.evidence ? { evidence: projectEvidence(input.evidence) } : {}),
-    deterministicFindings: (input.deterministicFindings ?? []).map(projectFinding),
+    deterministicFindings,
     aiReviewFindings: (input.aiReviewFindings ?? []).map(projectFinding),
     ...(input.reviewVerdict ? { reviewVerdict: input.reviewVerdict } : {}),
     ...(input.provider ? { provider: projectProvider(input.provider) } : {}),
@@ -400,6 +405,42 @@ function assertCandidateResponseConsistency(input: ForgeIntakeReviewBundleInput)
   if ((acceptedTopLevel||input.objectKind==='item')&&(response.status !== 'accepted' || response.verificationStatus !== 'accepted' || !response.artifactHash)) {
     throw new Error('Forge Intake accepted review status requires accepted response, verification, and artifactHash.');
   }
+}
+
+function actorReviewConsistencyFindings(input: ForgeIntakeReviewBundleInput): ForgeIntakeFindingProjection[] {
+  if (input.objectKind !== 'actor') return [];
+  const findings: ForgeIntakeFindingProjection[] = [];
+  const add = (code: string, path: string, message: string) => findings.push({
+    id: `${code.toLowerCase()}:${path}`, code, path, message, blocking: true, origin: 'deterministic', evidence: [],
+  });
+  const conflict = (path: string, message: string) => add('FORGE_REVIEW_ACCEPTANCE_CONFLICT', path, message);
+  const response = input.candidateResponse;
+  if (response && response.requestId !== input.requestId) {
+    add('FORGE_REVIEW_REQUEST_ID_MISMATCH', '/candidateResponse/requestId', '候选响应与当前请求标识不一致；原始候选保留，请核对其归属。');
+  }
+  if (response && !response.artifactHash && (input.status === 'accepted' || response.status === 'accepted')) {
+    add('FORGE_REVIEW_ARTIFACT_HASH_MISSING', '/candidateResponse/artifactHash', '候选响应缺少产物哈希；原始候选保留，不能据此确认接受。');
+  }
+  if (input.status !== 'accepted') return findings;
+  // A GM may adopt a non-accepted Actor; that decision remains a reviewed
+  // candidate and must not inherit the strict acceptance checks below.
+  if (input.gmApproval && response?.status !== 'accepted') return findings;
+  if (!response) conflict('/candidateResponse', '接受结论缺少候选响应；来源和已有记录保留。');
+  else {
+    if (response.status !== 'accepted') conflict('/candidateResponse/status', '顶层接受结论与候选响应状态不一致。');
+    if (response.verificationStatus !== 'accepted') conflict('/candidateResponse/verificationStatus', '顶层接受结论与候选检查结论不一致。');
+    if (response.diagnostics.some(diagnostic => diagnostic.severity === 'warning' || diagnostic.severity === 'error'))
+      conflict('/candidateResponse/diagnostics', '候选仍有警告或错误，不能标为接受；原诊断和候选均保留。');
+  }
+  for (const [path, present] of [
+    ['/canonicalSource', !!input.canonicalSource], ['/sourceIdentity', !!input.sourceIdentity], ['/target', !!input.target],
+  ] as const) if (!present) conflict(path, '接受结论缺少对应的来源或目标记录；已有候选和记录保留。');
+  if (input.reviewVerdict && input.reviewVerdict !== 'accepted') conflict('/reviewVerdict', '顶层接受结论与已记录的复核结论不一致。');
+  if (input.modelReviewStatus === 'needs_review' || input.modelReviewStatus === 'failed') conflict('/modelReviewStatus', '已记录的模型复核尚未通过，不能将候选标为接受。');
+  if (input.deterministicFindings?.some(finding => finding.blocking)) conflict('/deterministicFindings', '已有确定性问题仍需核对，不能将候选标为接受。');
+  if (input.aiReviewFindings?.some(finding => finding.blocking)) conflict('/aiReviewFindings', '已有模型复核问题仍需核对，不能将候选标为接受。');
+  if (input.evidence?.uncertainties.some(finding => finding.blocking)) conflict('/evidence/uncertainties', '来源记录仍有待核对的不确定项，不能将候选标为接受。');
+  return findings;
 }
 
 function projectCandidate(value: ForgeIntakeCandidateProjection): ForgeIntakeCandidateProjection {

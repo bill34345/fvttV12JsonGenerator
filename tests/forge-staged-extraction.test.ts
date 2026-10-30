@@ -1,3 +1,4 @@
+import {legacyStagedProvider} from './helpers/forge-legacy-provider';
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -304,7 +305,7 @@ type Captured = { prompt: string; payload: Record<string, any> };
 function provider(options: { onRequest?: (request: Captured, index: number) => unknown; onStage?: (value: StagedExtractionMetadata) => void; signal?: AbortSignal;
   evidence?: Array<any>; requests?: Captured[]; staged?: boolean; baseMode?: StagedExtractionOptions['baseMode']; featureMode?: StagedExtractionOptions['featureMode'] } = {}) {
   let index = 0;
-  return new OpenAICompatibleMonsterIntakeProvider({ authMode: 'api-key', apiKey: 'fake-private-key', baseUrl: 'https://provider.example/v1', model: 'fake', reviewModel: 'fake',
+  return (options.staged === false ? (value:any)=>new OpenAICompatibleMonsterIntakeProvider(value) : legacyStagedProvider)({ authMode: 'api-key', apiKey: 'fake-private-key', baseUrl: 'https://provider.example/v1', model: 'fake', reviewModel: 'fake',
     timeoutMs: 1_000, repairTimeoutMs: 1_000,
     ...(options.staged === false ? {} : { stagedExtraction: { onStage: options.onStage, signal: options.signal, baseMode: options.baseMode, featureMode: options.featureMode } }),
     responseEvidence: { record: evidence => { options.evidence?.push(evidence); } },

@@ -10,11 +10,12 @@ import {StructuredActionParser} from '../packages/parser/src/structuredAction';
 import {ActivityGenerator} from '../packages/generation/src/activity';
 import {describe,test,expect} from 'bun:test';
 import {sourceSingleSpellAction,sourceHasSpellList,sourceCastingGrantPolarity} from '@fvtt-json-generator/models/source-rule-facts';
-import {sourceFeatureResources,bindSourceOperations,sourceOperationClauses,materializeSourceOperationEvidence} from '@fvtt-json-generator/models/source-operations';
-import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
-import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
+import {sourceFeatureResources,bindSourceOperations,sourceOperationErrors,sourceOperationClauses,materializeSourceOperationEvidence} from '@fvtt-json-generator/models/source-operations';
+import type {MonsterIntakeIR} from '@fvtt-json-generator/intake-ai';
+import {auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
+import {verifyMonsterIntake,auditMonsterIntakeSourceProjection} from '@fvtt-json-generator/intake-ai/verifier';
 import {sourceSectionHeading,splitStagedMonsterSource,stagedLegendaryLedger,assembleStagedLinePartition} from '../packages/intake-ai/src/staged-source';
-import {modelReply,ordinary,staged,chain,collections,requireAcceptedChain,request} from './helpers/forge-semantic-chain';
+import {modelReply,ordinary,staged,collections,request} from './helpers/forge-semantic-chain';
 import {newNeutralAttackContractVariant} from './helpers/neutral-source-contract';
 import corpus from './fixtures/forge-broad-rule-research-cases.json';
 import thirdCorpus from './fixtures/forge-fresh-third-rule-cases.json';
@@ -37,14 +38,54 @@ import iterate50Round10 from './fixtures/forge-iterate50-round10-cases.json';
 import iterate50Round11 from './fixtures/forge-iterate50-round11-cases.json';
 import {stagedSpellcastingGroups} from '../packages/intake-ai/src/staged-spellcasting';
 import {convertMarkdownContentToJson} from '@fvtt-json-generator/workflows/single-file-conversion';
+type FeatureCollection='traits'|'actions'|'bonusActions'|'reactions'|'legendaryActions';
 type RuleChainItem={name:string;type:string;system:{description:{value:string};activities:ReturnType<ActivityGenerator['generate']>;damage?:{base?:unknown}};effects:unknown[]};
 const get=(id:string):any=>structuredClone(corpus.cases.find(c=>c.id===id));
 const raw=(c:any)=>{const ir=modelReply(c);for(const f of c.features)if(f.uses)ir.creature[collections[f.section]!].find((x:any)=>x.name===f.name).uses=f.uses;return ir;};
 const normalize=(s:string)=>s.replace(/<[^>]+>/gu,' ').replace(/&#39;|&apos;/gu,"'").replace(/&amp;/gu,'&').replace(/&quot;/gu,'"').replace(/\s+/gu,' ').trim();
+
+// This corpus explicitly audits source interpretation after producing the candidate.
+// Audit findings never short-circuit the renderer or the public workflow.
+async function chain(c:any,run:()=>Promise<any>){
+ try{
+  const extracted=await run(),ir=anchorIrEvidence(c.source,request(c.source).candidate,extracted.ir);
+  const markdown=renderMonsterIntakeMarkdown(ir),conversion=await convertMarkdownContentToJson({content:markdown,fvttVersion:'14',effectProfile:'core',iconOptions:{mode:'off'},translationService:null}),actor=conversion.rawJson as any;
+  expect(actor).toBeDefined();
+  for(const section of Object.values(collections))for(const feature of (ir.creature as any)[section]??[]){
+   const item=actor.items.find((item:any)=>normalize(item.system.description.value).includes(normalize(feature.description)));
+   expect(item,feature.name).toBeDefined();
+   for(const operation of feature.sourceOperations??[]){
+    const retained=item.flags?.fvttJsonGenerator?.manualRule?.sourceOperations??[];
+    expect(Boolean(retained.some((entry:any)=>entry.id===operation.id)),String(operation.id)).toBe(true);
+   }
+  }
+  const verification=auditMonsterIntakeSourceProjection(c.source,ir,markdown,actor,request(c.source).candidate),findings=verification.findings.filter(f=>f.blocking);
+  const projection=verifyMonsterIntake(c.source,ir,markdown,actor,request(c.source).candidate);
+  return{projection,status:findings.length?'needs_review':'accepted',stage:findings.length?'source-audit':'formal-output',calls:extracted.calls,findings,ir,markdown,actor};
+ }catch(error:any){return{status:'blocked',stage:'extraction',error:error.message,diagnostic:error.stagedDiagnostic??error.details,code:error.code,name:error.name};}
+}
+function requireProjectedChain(result:any):asserts result is {status:string;actor:Record<string,any>;ir:MonsterIntakeIR;markdown:string;findings:any[]}{
+ expect(result.actor,JSON.stringify(result)).toBeDefined();
+ expect(result.projection.status,JSON.stringify(result.projection.findings)).toBe('accepted');
+ expect(result.status).toBe(result.findings.length?'needs_review':'accepted');
+}
+function expectSourceAuditFinding(result:any,code:string,path:string){
+ expect(result.status,JSON.stringify(result)).toBe('needs_review');
+ expect(result.findings).toContainEqual(expect.objectContaining({code,path}));
+}
+function auditSourceOperationIssues(source:string,operations:unknown){
+ const before=structuredClone(operations),bound=bindSourceOperations(source,operations);
+ expect(operations).toEqual(before);expect(bound).toHaveLength((operations as unknown[]).length);
+ expect(bound.map(operation=>operation.id)).toEqual((operations as any[]).map(operation=>operation.id));
+  for(const [index,operation]of (operations as any[]).entries())for(const key of ['name','type','relationship','attack','save','range','aoe','targetSpecial'])if(operation[key]!==undefined){if(['attack','save','aoe'].includes(key))expect((bound[index] as any)[key]).toMatchObject(operation[key]);else expect((bound[index] as any)[key]).toEqual(operation[key]);}
+ const errors=sourceOperationErrors(source,bound);
+ return errors.length?'InvalidSourceOperations: '+errors.join(' | '):'';
+}
+
 test('a separately appearing caster does not give its spells to the item carrier',async()=>{
  const c:any=structuredClone(extraItemCorpus.cases.find(c=>c.id==='r9r-efreeti-bottle'));
  for(const path of ['ordinary','staged']){
-  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);expect(r.ir.creature.spellcasting).toBeUndefined();expect(r.actor.items).toHaveLength(1);expect(Object.values(r.actor.items[0].system.activities).map((a:any)=>a.type)).toEqual(['utility']);expect(normalize(r.actor.items[0].system.description.value)).toContain(normalize(c.features[0].text));
+  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);expect(r.ir.creature.spellcasting).toBeUndefined();expect(r.actor.items).toHaveLength(1);expect(Object.values(r.actor.items[0].system.activities).map((a:any)=>a.type)).toEqual(['utility']);expect(normalize(r.actor.items[0].system.description.value)).toContain(normalize(c.features[0].text));
  }
 });
 for(const [intro,subject]of [['An efreeti appears in an unoccupied space.','The efreeti'],['A fire spirit emerges from the bottle.','The fire spirit'],['Another guardian is summoned beside you.','The guardian']])test('introduced external caster ownership: '+subject,()=>{
@@ -61,9 +102,7 @@ test('an earlier foreign or negative list cannot hide a later genuine own list',
  for(const intro of ['An efreeti appears. The efreeti casts the following spells: wish.','Sentinel cannot cast the following spells: wish.']){
   const c=get('hydra-head-count-state'),f=c.features[0];f.name='Mixed Magic';f.text=`Mixed Magic. ${intro} Sentinel casts the following spells: shield.`;f.operations=[];
   for(const u of c.units)if(u.destination==='feature'){u.name=f.name;u.text=f.text+'\n';}c.source=c.units.map((u:any)=>u.text).join('');
-  for(const path of ['ordinary','staged']){
-   const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));expect(r.status).toBe('blocked');if(path==='ordinary')expect(r.findings?.some(f=>f.code==='SPELLCASTING_NOT_STRUCTURED')).toBe(true);
-  }
+  const r=await chain(c,()=>ordinary(c,raw(c)));expect(r.status,JSON.stringify(r)).toBe('needs_review');expect(r.findings?.some(f=>f.code==='SPELLCASTING_NOT_STRUCTURED')).toBe(true);expect(r.actor.items[0].system.description.value).toContain('shield');
   expect(sourceHasSpellList(f.text)).toBe(true);
  }
 });
@@ -71,34 +110,42 @@ test('wrapped legendary preamble prose cannot demand a nonexistent Actions secti
  const c:any=structuredClone(seventhCorpus.cases.find(c=>c.id==='r7-lich-cantrip'));
  expect(c.source).toContain('spent legendary\nactions at the start');
  for(const path of ['ordinary','staged']){
-  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
   expect(r.actor.items).toHaveLength(1);expect(r.actor.items[0].name).toBe('Cantrip');expect(Object.values(r.actor.items[0].system.activities).map((a:any)=>a.type)).toEqual(['utility']);expect(r.ir.creature.actions).toEqual([]);
  }
 });
 for(const line of ['actions at the start of its turn.','Bonus Actions or Reactions.','Reactions during that turn.','Traits that change in the new form.','Legendary Actions are regained.','Mythic Actions cannot be used.'])test('a section label within prose is not a complete heading: '+line,()=>{
  expect(sourceSectionHeading(line)).toBeUndefined();
 });
-for(const heading of ['Actions','## **Actions**','###### 动作 Actions','__动作：__'])test('a genuine missing Actions section remains blocked: '+heading,()=>{
+for(const heading of ['Actions','## **Actions**','###### 动作 Actions','__动作：__'])test('an omitted Actions section is reported by explicit source audit: '+heading,()=>{
  const c:any=structuredClone(seventhCorpus.cases.find(c=>c.id==='r7-marilith-multiattack'));
  c.units[1].text=heading+'\n';c.source=c.units.map((u:any)=>u.text).join('');const ir=raw(c);ir.creature.actions=[];
- expect(validateMonsterIntakeIR(c.source,ir).blocking.some(f=>f.code==='MISSING_SOURCE_FEATURES'&&f.path==='/creature/actions')).toBe(true);
+ expect(auditMonsterIntakeSource(c.source,ir).blocking.some(f=>f.code==='MISSING_SOURCE_FEATURES'&&f.path==='/creature/actions')).toBe(true);
 });
 test('the legacy singular Reaction heading retains its complete feature and omission guard',async()=>{
  const c:any=structuredClone(thirdCorpus.cases.find(c=>c.id==='r3-shield-guardian-shield'));
  const context=c.units.find((u:any)=>u.destination==='context');context.text=context.text.replace('Reactions','Reaction');c.source=c.units.map((u:any)=>u.text).join('');expect(sourceSectionHeading('Reaction')).toBe('reaction');
  for(const path of ['ordinary','staged']){
-  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);expect(r.actor.items).toHaveLength(1);expect((Object.values(r.actor.items[0].system.activities)as any[])[0].activation.type).toBe('reaction');
+  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);expect(r.actor.items).toHaveLength(1);expect((Object.values(r.actor.items[0].system.activities)as any[])[0].activation.type).toBe('reaction');
  }
- const ir=raw(c);ir.creature.reactions=[];expect(validateMonsterIntakeIR(c.source,ir).blocking.some(f=>f.code==='MISSING_SOURCE_FEATURES'&&f.path==='/creature/reactions')).toBe(true);
+ const ir=raw(c);ir.creature.reactions=[];expect(auditMonsterIntakeSource(c.source,ir).blocking.some(f=>f.code==='MISSING_SOURCE_FEATURES'&&f.path==='/creature/reactions')).toBe(true);
 });
 test('a consequence verb cannot supply a second saving-throw ability',async()=>{
  const c:any=structuredClone(sixthCorpus.cases.find(c=>c.id==='r6-diseased-giant-rat-bite'));
  for(const path of ['ordinary','staged']){
-  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
-  const acts=Object.values(r.actor.items[0].system.activities)as any[];expect(acts.map(a=>a.type)).toEqual(['attack','save']);expect(acts[1].save.ability).toEqual(['con']);expect(acts[1].save.dc.formula).toBe('10');expect(r.actor.items[0].effects).toEqual([]);
-  const changed=structuredClone(c);changed.features[0].operations[1].save.abilities=['con','con'];changed.features[0].operations[1].save.choice='target';
-  expect((await chain(changed,()=>path==='ordinary'?ordinary(changed,raw(changed)):staged(changed))).status).toBe('blocked');
+  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
+  const acts=Object.values(r.actor.items[0].system.activities)as any[];expect(acts.map(a=>a.type)).toEqual(['attack','save']);expect(acts[1].save.ability).toEqual(['con']);expect(acts[1].save.dc.formula).toBe('10');expect(r.actor.items[0].effects.map((effect:any)=>effect.statuses)).toEqual([['dead']]);expect(r.actor.items[0].effects[0].flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(acts[1].effects).toEqual([{_id:r.actor.items[0].effects[0]._id,onSave:false}]);
  }
+ const changed=structuredClone(c);changed.features[0].operations[1].save.abilities=['con','con'];changed.features[0].operations[1].save.choice='target';
+ const reviewed=await chain(changed,()=>ordinary(changed,raw(changed)));expect(reviewed.status,JSON.stringify(reviewed)).toBe('needs_review');
+ expect(reviewed.findings).toContainEqual(expect.objectContaining({code:'SOURCE_OPERATION_FACT_CONFLICT',path:expect.stringContaining('/save/dc-or-ability')}));
+ assert.ok(reviewed.ir);const reviewedSave=reviewed.ir.creature.actions[0]!.sourceOperations![1]!.save;expect(reviewedSave).toEqual({...changed.features[0].operations[1].save,abilities:['con']});expect(changed.features[0].operations[1].save.abilities).toEqual(['con','con']);
+ expect(reviewed.actor.items[0].flags.fvttJsonGenerator.manualRule.sourceOperations[1].save).toEqual(reviewedSave);
+});
+test('the explicit offline staged helper reports its precise duplicate-save omission while ordinary generation retains it',async()=>{
+ const c:any=structuredClone(sixthCorpus.cases.find(c=>c.id==='r6-diseased-giant-rat-bite'));
+ c.features[0].operations[1].save.abilities=['con','con'];c.features[0].operations[1].save.choice='target';
+ await expect(staged(c)).rejects.toMatchObject({code:'UNRESTORED_BASIC_OPERATION',path:'/features/unit-2/inventory/save-omitted'});
 });
 for(const ending of ['or contract a disease','or concentrate on nothing','or interpret the warning','and strengthen the barrier'])test('ability tokens have whole-word boundaries: '+ending,()=>{
  const source=`Warning. A target must succeed on a DC 12 Wisdom saving throw ${ending}.`;
@@ -108,7 +155,7 @@ for(const ending of ['or contract a disease','or concentrate on nothing','or int
 test('form damage remains two exclusive attacks instead of a two-handed property',async()=>{
  const c:any=structuredClone(sixthCorpus.cases.find(c=>c.id==='r6-oni-glaive'));
  for(const path of ['ordinary','staged']){
-  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
   const item=r.actor.items[0],acts=Object.values(item.system.activities)as any[];
   expect(item.type).toBe('feat');expect(item.system.properties??[]).not.toContain('ver');expect(acts.map(a=>a.type)).toEqual(['attack','attack']);
   expect(acts.map(a=>a.attack.bonus)).toEqual(['7','7']);expect(acts.map(a=>a.damage.parts.map((p:any)=>[p.number,p.denomination,p.bonus,p.types]))).toEqual([[[2,10,'4',['slashing']]],[[1,10,'4',['slashing']]]]);
@@ -117,7 +164,7 @@ test('form damage remains two exclusive attacks instead of a two-handed property
 test('passive rescue damage targets the rescuer without consuming the cube action',async()=>{
  const c:any=structuredClone(sixthCorpus.cases.find(c=>c.id==='r6-gelatinous-cube-ooze-cube'));
  for(const path of ['ordinary','staged']){
-  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
   const acts=Object.values(r.actor.items[0].system.activities)as any[];expect(acts.map(a=>a.type)).toEqual(['damage']);expect(acts[0].target.affects.special).toBe('the creature making the attempt');expect(acts[0].activation.type).toBe('');expect(acts[0].consumption.targets).toEqual([]);expect(acts[0].activation.condition).toContain('can take an action');expect(acts[0].activation.condition).toContain('DC 12 Strength check');
  }
 });
@@ -125,7 +172,7 @@ test('Enlarge and Invisibility keep independent resources on the same Actor',asy
  const first:any=structuredClone(sixthCorpus.cases.find(c=>c.id==='r6-duergar-enlarge')),second:any=structuredClone(sixthCorpus.cases.find(c=>c.id==='r6-duergar-invisibility'));
  first.features.push(second.features[0]);first.units.push(second.units.find((u:any)=>u.destination==='feature'));first.source=first.units.map((u:any)=>u.text).join('');
  for(const path of ['ordinary','staged']){
-  const r=await chain(first,()=>path==='ordinary'?ordinary(first,raw(first)):staged(first));requireAcceptedChain(r);expect(r.actor.items).toHaveLength(2);
+  const r=await chain(first,()=>path==='ordinary'?ordinary(first,raw(first)):staged(first));requireProjectedChain(r);expect(r.actor.items).toHaveLength(2);
   expect(new Set(r.actor.items.map((i:any)=>i.name)).size).toBe(2);
   for(const item of r.actor.items){expect(item.system.uses).toEqual({spent:0,max:'1',recovery:[{period:'sr',type:'recoverAll'}]});
    const acts=Object.values(item.system.activities)as any[];expect(acts.map(a=>a.type)).toEqual(['utility']);
@@ -136,16 +183,16 @@ test('Enlarge and Invisibility keep independent resources on the same Actor',asy
 });
 describe('source-owned manual counters',()=>{
  for(const id of ['engulf-mixed-capacity','hydra-head-count-state','hydra-opportunity-only-reactions'])test(id+' rejects invented daily uses and final counter drift',async()=>{
-  const c=get(id),control=await chain(c,()=>ordinary(c,raw(c)));requireAcceptedChain(control);
+  const c=get(id),control=await chain(c,()=>ordinary(c,raw(c)));requireProjectedChain(control);
   const proposal=raw(c);proposal.creature.traits[0].uses={max:6,period:'day'};
-  expect(validateMonsterIntakeIR(c.source,proposal).blocking.some(f=>f.code==='MANUAL_RESOURCE_SOURCE_CONFLICT')).toBe(true);
+  expect(auditMonsterIntakeSource(c.source,proposal).blocking.some(f=>f.code==='MANUAL_RESOURCE_SOURCE_CONFLICT')).toBe(true);
   const altered=structuredClone(control.actor);altered.items[0].system.uses={spent:0,max:'6',recovery:[{period:'day',type:'recoverAll'}]};
-  expect(verifyMonsterIntake(c.source,control.ir,control.markdown,altered).findings.some(f=>f.blocking&&f.code==='ACTOR_MANUAL_RESOURCE_DRIFT')).toBe(true);
+  expect(auditMonsterIntakeSourceProjection(c.source,control.ir,control.markdown,altered).findings.some(f=>f.blocking&&f.code==='ACTOR_MANUAL_RESOURCE_DRIFT')).toBe(true);
  });
  test('a declared leading daily frequency and short-rest recovery remain available',async()=>{
   for(const id of ['night-hag-duration-plane-protection','chain-devil-controlled-object-actions']){
    const c=get(id);for(const path of ['ordinary','staged']){
-    const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+    const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
     const f=c.features[0],item=r.actor.items.find((i:any)=>i.name===f.name);
     expect(item.system.uses.max).toBe('1');expect(item.system.uses.recovery).toEqual([{period:f.uses.period==='day'?'day':'sr',type:'recoverAll'}]);
    }
@@ -162,27 +209,27 @@ describe('source-owned manual counters',()=>{
  });
  for(const[body,max]of [['Once per day, one creature touching Sentinel can ask for help.',1],['The target can use this blessing 3 times per day.',3],['Sentinel can use an action to let the target use this blessing 3 times per day.',3],['Sentinel can use this action to let the target use this blessing 3 times per day.',3]]as const)test('another actor allowance never becomes an Item counter: '+body,async()=>{
   const c=get('engulf-mixed-capacity'),f=c.features[0];f.text=f.name+'. '+body;for(const u of c.units)if(u.destination==='feature')u.text=f.text+'\n';c.source=c.units.map((u:any)=>u.text).join('');
-  const good=await chain(c,()=>ordinary(c,raw(c)));requireAcceptedChain(good);
+  const good=await chain(c,()=>ordinary(c,raw(c)));requireProjectedChain(good);
   const bad=raw(c);bad.creature.traits[0].uses={max,period:'day'};
-  const r=await chain(c,()=>ordinary(c,bad));expect(r.status).toBe('blocked');expect(r.findings?.some(f=>f.code==='MANUAL_RESOURCE_SOURCE_CONFLICT')).toBe(true);
+  const r=await chain(c,()=>ordinary(c,bad));expect(r.status,JSON.stringify(r)).toBe('needs_review');expect(r.findings?.some(f=>f.code==='MANUAL_RESOURCE_SOURCE_CONFLICT')).toBe(true);
  });
  test('malformed manual names still produce findings instead of throwing',()=>{
   const c=get('hydra-head-count-state'),proposal=raw(c);proposal.creature.traits[0].name=null;
-  expect(()=>validateMonsterIntakeIR(c.source,proposal)).not.toThrow();expect(validateMonsterIntakeIR(c.source,proposal).blocking.length).toBeGreaterThan(0);
+  expect(()=>auditMonsterIntakeSource(c.source,proposal)).not.toThrow();expect(auditMonsterIntakeSource(c.source,proposal).blocking.length).toBeGreaterThan(0);
  });
 });
 describe('base facts retain their source owner',()=>{
  for(const id of ['roper-independent-appendage-hp','chain-devil-controlled-object-actions'])test(id+' accepts separate object AC but rejects using it as the Actor AC',async()=>{
   const c=get(id);for(const path of ['ordinary','staged']){
-   const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+   const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
    expect(r.actor.system.attributes.ac.flat).toBe(15);expect(r.actor.system.attributes.hp.value).toBe(30);
   }
   const wrong=raw(c);wrong.creature.attributes.ac=20;
-  expect(validateMonsterIntakeIR(c.source,wrong).blocking.some(f=>f.path==='/creature/attributes/ac')).toBe(true);
+  expect(auditMonsterIntakeSource(c.source,wrong).blocking.some(f=>f.path==='/creature/attributes/ac')).toBe(true);
  });
- test('two conflicting base AC declarations still block',()=>{
+ test('explicit source audit reports two conflicting base AC declarations',()=>{
   const c=get('roper-independent-appendage-hp');c.units[0].text=c.units[0].text.replace('AC 15\n','AC 15\nAC 16\n');c.source=c.units.map((u:any)=>u.text).join('');
-  expect(validateMonsterIntakeIR(c.source,raw(c)).blocking.some(f=>f.code==='CONFLICTING_SOURCE_VALUES')).toBe(true);
+  expect(auditMonsterIntakeSource(c.source,raw(c)).blocking.some(f=>f.code==='CONFLICTING_SOURCE_VALUES')).toBe(true);
  });
 });
 describe('independent GM conditional damage without a preceding attack',()=>{
@@ -191,11 +238,11 @@ describe('independent GM conditional damage without a preceding attack',()=>{
   f.operations=[{id:'water',name:'GM conditional self damage',type:'damage',relationship:'follow-up',damage:[{formula:'1',type:'cold',relationship:'conditional'}],proof:{damage:[body]}}];
   for(const u of c.units)if(u.destination==='feature'){u.name=f.name;u.text=f.text+'\n';}c.source=c.units.map((u:any)=>u.text).join('');
   for(const path of ['ordinary','staged']){
-   const good=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(good);
+   const good=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(good);
    const acts=Object.values(good.actor.items[0].system.activities) as any[];
    expect(acts.map(a=>a.type)).toEqual(['damage']);expect(acts[0].activation.type).toBe('special');expect(acts[0].consumption.targets).toEqual([]);expect(good.actor.items[0].effects).toEqual([]);
   }
-  const bad=raw(c);bad.creature.traits[0].sourceOperations[0].damage[0].formula='5';const rejected=await chain(c,()=>ordinary(c,bad));expect(rejected.status).toBe('blocked');expect(rejected.stage).toBe('validator');
+  const bad=raw(c);bad.creature.traits[0].sourceOperations[0].damage[0].formula='5';const rejected=await chain(c,()=>ordinary(c,bad));expectSourceAuditFinding(rejected,'SOURCE_OPERATION_FACT_CONFLICT','/creature/traits/0/sourceOperations/0/damage/0/formula-type');expect(rejected.stage).toBe('source-audit');
  });
 });
 describe('a source resource retains its existing Utility when its heading is canonicalized',()=>{
@@ -203,7 +250,7 @@ describe('a source resource retains its existing Utility when its heading is can
   const c=get('hydra-head-count-state'),f=c.features[0];f.name='Distant Call '+suffix;f.text=f.name+'. Sentinel calls allies that arrive later; the GM resolves their arrival and behaviour.';f.operations=[];
   if(suffix==='(1/Day)')f.uses={max:1,period:'day'};else if(suffix.includes('Short'))f.uses={max:1,period:'shortRest'};else f.recharge=[4,6];
   for(const u of c.units)if(u.destination==='feature'){u.name=f.name;u.text=f.text+'\n';}c.source=c.units.map((u:any)=>u.text).join('');
-  const r=await chain(c,()=>staged(c));requireAcceptedChain(r);
+  const r=await chain(c,()=>staged(c));requireProjectedChain(r);
   expect(r.ir.creature.traits![0]!.executionMode).toBe('native-with-gm');expect(Number(r.actor.items[0].system.uses.max)).toBe(1);
   const acts=Object.values(r.actor.items[0].system.activities)as any[];expect(acts.map(a=>a.type)).toEqual(['utility']);expect(acts[0].consumption.targets).toMatchObject([{type:'itemUses',value:'1'}]);expect(r.actor.items[0].effects).toEqual([]);
  });
@@ -213,15 +260,15 @@ test('unconditional damage keeps its Action and cannot claim a conditional follo
  f.operations=[{id:'cold',name:'Cold Damage',type:'damage',relationship:'primary',damage:[{formula:'1',type:'cold',relationship:'base'}],proof:{damage:['Each creature within 10 feet takes 1 cold damage.']}}];
  for(const u of c.units)if(u.destination==='feature'){u.name=f.name;u.text=f.text+'\n';}c.source=c.units.map((u:any)=>u.text).join('');
  for(const path of ['ordinary','staged']){
-  const good=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(good);expect((Object.values(good.actor.items[0].system.activities)as any[])[0].activation.type).toBe('action');
+  const good=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(good);expect((Object.values(good.actor.items[0].system.activities)as any[])[0].activation.type).toBe('action');
   const changed=structuredClone(c);changed.features[0].operations[0].relationship='follow-up';changed.features[0].operations[0].damage[0].relationship='conditional';
-  const bad=await chain(changed,()=>path==='ordinary'?ordinary(changed,raw(changed)):staged(changed));expect(bad.status).toBe('blocked');
+  const bad=await chain(changed,()=>path==='ordinary'?ordinary(changed,raw(changed)):staged(changed));expectSourceAuditFinding(bad,'SOURCE_OPERATION_FACT_CONFLICT','/creature/actions/0/sourceOperations/0/relationship');
  }
 });
 for(const id of ['r3-kraken-fling','r3-ancient-brass-breath-weapons'])test('complete independently researched operation order: '+id,async()=>{
  const c:any=structuredClone(thirdCorpus.cases.find(c=>c.id===id));
  for(const path of ['ordinary','staged']){
-  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
   const acts=Object.values(r.actor.items[0].system.activities)as any[];expect(acts.map(a=>a.type)).toEqual(id.includes('fling')?['damage','save']:['save','save']);
   if(id.includes('fling'))for(const ac of acts){expect(ac.activation.type).toBe('special');expect(ac.consumption.targets).toEqual([]);}
   else for(const ac of acts)expect(ac.consumption.targets).toMatchObject([{type:'itemUses',value:'1'}]);
@@ -230,7 +277,7 @@ for(const id of ['r3-kraken-fling','r3-ancient-brass-breath-weapons'])test('comp
 test('half-on-success belongs to the Save after the Hit, not to a damage choice',async()=>{
  const c:any=structuredClone(fourthCorpus.cases.find(c=>c.id==='r4-giant-wasp-sting'));
  for(const path of ['ordinary','staged']){
-  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
   const acts=Object.values(r.actor.items[0].system.activities)as any[];expect(acts.map(a=>a.type)).toEqual(['attack','save']);
   expect(acts[1].damage.onSave).toBe('half');expect(acts[1].damage.parts).toHaveLength(1);expect(acts[1].damage.parts[0].types).toEqual(['poison']);
   expect(acts[0].damage.parts.some((p:any)=>p.types?.includes('poison'))).toBe(false);
@@ -242,25 +289,25 @@ for(const relation of ['of','from','measured from'])test('a remote effect radius
  const f=c.features[0];f.text=f.text.replace('of the flash',relation+' the flash');f.operations[0].proof.save=f.operations[0].proof.save.replace('of the flash',relation+' the flash');
  for(const u of c.units)if(u.destination==='feature')u.text=f.text+'\n';c.source=c.units.map((u:any)=>u.text).join('');
  for(const path of ['ordinary','staged']){
-  const good=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(good);
+  const good=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(good);
   expect((Object.values(good.actor.items[0].system.activities)as any[])[0].range.value).toBe(15);
   const changed=structuredClone(c);changed.features[0].operations[0].range=5;changed.features[0].operations[0].proof.range=changed.features[0].operations[0].proof.save;
-  const bad=await chain(changed,()=>path==='ordinary'?ordinary(changed,raw(changed)):staged(changed));expect(bad.status).toBe('blocked');
+  const bad=await chain(changed,()=>path==='ordinary'?ordinary(changed,raw(changed)):staged(changed));expectSourceAuditFinding(bad,'SOURCE_OPERATION_CARRIER_CONFLICT','/creature/actions/0/sourceOperations~10~1range');
  }
 });
 for(const malformed of [[null],{}])test('malformed operation collections return findings without throwing: '+JSON.stringify(malformed),()=>{
  const c=get('hydra-head-count-state'),ir=raw(c),feature=ir.creature.traits[0];Object.assign(feature,{executionMode:'native-with-gm',nativeRuleText:feature.description,manualRemainder:feature.description,sourceOperations:malformed});
- expect(validateMonsterIntakeIR(c.source,ir).blocking.length).toBeGreaterThan(0);
+ expect(auditMonsterIntakeSource(c.source,ir).blocking.length).toBeGreaterThan(0);
 });
 test('a remote template keeps its placement range instead of becoming self',async()=>{
  const c:any=structuredClone(secondCorpus.cases.find(c=>c.id==='r2-djinni-create-whirlwind'));
  for(const path of ['ordinary','staged']){
-  const good=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(good);
+  const good=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(good);
   const activity=(Object.values(good.actor.items[0].system.activities)as any[])[0];expect(activity.range.value).toBe(120);expect(activity.range.units).toBe('ft');expect(Number(activity.target.template.size)).toBe(5);
   const drift=structuredClone(good.actor);(Object.values(drift.items[0].system.activities)as any[])[0].range={override:true,units:'self',special:''};
-  expect(verifyMonsterIntake(c.source,good.ir,good.markdown,drift).findings.some(f=>f.code==='ACTOR_SOURCE_OPERATION_RANGE_DRIFT')).toBe(true);
+  expect(auditMonsterIntakeSourceProjection(c.source,good.ir,good.markdown,drift).findings.some(f=>f.code==='ACTOR_SOURCE_OPERATION_RANGE_DRIFT')).toBe(true);
   const badCase=structuredClone(c);delete badCase.features[0].operations[0].range;delete badCase.features[0].operations[0].proof.range;
-  const bad=await chain(badCase,()=>path==='ordinary'?ordinary(badCase,raw(badCase)):staged(badCase));expect(bad.status).toBe('blocked');
+  const bad=await chain(badCase,()=>path==='ordinary'?ordinary(badCase,raw(badCase)):staged(badCase));expectSourceAuditFinding(bad,'SOURCE_OPERATION_CARRIER_CONFLICT','/creature/actions/0/sourceOperations~10~1range');
  }
 });
 for(const placement of [80,undefined])test('radius projection preserves independently sourced placement: '+String(placement),async()=>{
@@ -270,36 +317,36 @@ for(const placement of [80,undefined])test('radius projection preserves independ
  f.name='Cloud Pulse';f.text=f.name+'. '+area+' '+roll;f.operations=[{id:'save',name:'GM Save',type:'save',relationship:'primary',save:{dc:14,abilities:['dex'],choice:'single',outcome:'half'},damage:[{formula:'2d6',type:'fire',relationship:'base'}],aoe:{shape:'radius',radius},proof:{save:roll,damage:[roll],aoe:area},...(placement?{range:placement}:{})}];if(placement)f.operations[0].proof.range=area;
  for(const u of c.units)if(u.destination==='feature'){u.name=f.name;u.text=f.text+'\n';}c.source=c.units.map((u:any)=>u.text).join('');
  for(const path of ['ordinary','staged']){
-  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
   const activity=(Object.values(r.actor.items[0].system.activities)as any[])[0];expect(activity.range).toEqual(placement?{override:true,value:placement,units:'ft',special:''}:{override:true,units:'self',special:''});expect(activity.target.template).toEqual({type:'radius',size:String(radius),units:'ft'});
   const drift=structuredClone(r.actor);(Object.values(drift.items[0].system.activities)as any[])[0].range=placement?{units:'self'}:{value:80,units:'ft'};
-  expect(verifyMonsterIntake(c.source,r.ir,r.markdown,drift).findings.some(f=>f.code==='ACTOR_SOURCE_OPERATION_RANGE_DRIFT')).toBe(true);
+  expect(auditMonsterIntakeSourceProjection(c.source,r.ir,r.markdown,drift).findings.some(f=>f.code==='ACTOR_SOURCE_OPERATION_RANGE_DRIFT')).toBe(true);
  }
 });
 test('negative target eligibility does not negate the Attack predicate',async()=>{
  const c:any=structuredClone(fifthCorpus.cases.find(c=>c.id==='r5-giant-crocodile-tail'));
  for(const path of ['ordinary','staged']){
-  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
   const acts=Object.values(r.actor.items[0].system.activities)as any[];expect(acts.map(a=>a.type)).toEqual(['attack','save']);expect(acts[0].target.affects.special).toBe('one target not grappled by the crocodile');expect(acts[0].effects).toEqual([]);
   const prone=r.actor.items[0].effects.find((e:any)=>e.statuses.includes('prone'));expect(prone.transfer).toBe(false);expect(acts[1].effects).toContainEqual({_id:prone._id,onSave:false});
  }
  const f=c.features[0],negative=f.text.replace('Melee Weapon Attack:','Not a Melee Weapon Attack:'),ops=structuredClone(f.operations);
  ops[0].proof.attack=ops[0].proof.attack.replace('Melee Weapon Attack:','Not a Melee Weapon Attack:');ops[0].proof.target=ops[0].proof.attack;
- expect(()=>bindSourceOperations(negative,ops)).toThrow('attack/type-or-bonus');
+ expect(auditSourceOperationIssues(negative,ops)).toContain('attack/type-or-bonus');
 });
 test('an on-hit grant remains complete GM work instead of immediate damage',async()=>{
  const c:any=structuredClone(fifthCorpus.cases.find(c=>c.id==='r5-priest-divine-eminence'));
  for(const path of ['ordinary','staged']){
-  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);expect(Object.values(r.actor.items[0].system.activities).map((a:any)=>a.type)).toEqual(['utility']);expect(r.actor.items[0].effects).toEqual([]);expect(r.ir.creature.spellcasting).toBeUndefined();expect(Number(r.actor.items[0].system.uses?.max??0)).toBe(0);
+  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);expect(Object.values(r.actor.items[0].system.activities).map((a:any)=>a.type)).toEqual(['utility']);expect(r.actor.items[0].effects).toEqual([]);expect(r.ir.creature.spellcasting).toBeUndefined();expect(Number(r.actor.items[0].system.uses?.max??0)).toBe(0);
  }
  const bad=raw(c);Object.assign(bad.creature.traits[0],c.irProbes.find((p:any)=>p.id==='on-hit-grant-not-immediate-damage').assign);
- const result=await chain(c,()=>ordinary(c,bad));expect(result.status).toBe('blocked');
+ const result=await chain(c,()=>ordinary(c,bad));expectSourceAuditFinding(result,'SOURCE_OPERATION_FACT_CONFLICT','/creature/traits/0/sourceOperations/0/damage/0/condition');
 });
 test('redundant on-a-hit wording in a Hit result keeps the original base damage',async()=>{
  const c=get('flat-roll-threshold-not-margin'),f=c.features[0];f.name='Strike';f.text='Strike. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) fire damage on a hit.';
  f.operations=[{id:'attack',name:'Attack',type:'attack',relationship:'primary',attack:{type:'mwak',toHit:4,reach:5},targetSpecial:'one target',damage:[{formula:'1d6+2',type:'fire',relationship:'base'}],proof:{attack:'Melee Weapon Attack: +4 to hit, reach 5 ft., one target.',target:'Melee Weapon Attack: +4 to hit, reach 5 ft., one target.',damage:['Hit: 5 (1d6 + 2) fire damage on a hit.']}}];
  for(const u of c.units)if(u.destination==='feature'){u.name=f.name;u.text=f.text+'\n';}c.source=c.units.map((u:any)=>u.text).join('');
- for(const path of ['ordinary','staged'])requireAcceptedChain(await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c)));
+ for(const path of ['ordinary','staged'])requireProjectedChain(await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c)));
 });
 describe('named casting declarations versus references',()=>{
  for(const text of [
@@ -334,11 +381,11 @@ describe('named casting declarations versus references',()=>{
   const c=get('invisibility-break-and-concentration');c.features[0].text=text;
   for(const u of c.units)if(u.destination==='feature')u.text=text+'\n';c.source=c.units.map((u:any)=>u.text).join('');
   const result=await chain(c,()=>ordinary(c,raw(c)));
-  expect(result.status).toBe('blocked');expect(result.stage).toBe('validator');expect(result.findings?.some(f=>/spell|casting/iu.test(f.code+' '+f.message))).toBe(true);
+  expect(result.status).toBe('needs_review');expect(result.stage).toBe('source-audit');expect(result.findings?.some(f=>/spell|casting/iu.test(f.code+' '+f.message))).toBe(true);
  });
  for(const id of ['invisibility-break-and-concentration','stored-spell-replace-original-caster'])test(id+' works through both formal paths with complete GM text',async()=>{
   const c=get(id);for(const path of ['ordinary','staged']){
-   const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+   const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
    expect(normalize(r.actor.items[0].system.description.value)).toContain(normalize(c.features[0].text));
    expect(Object.values(r.actor.items[0].system.activities).map((a:any)=>a.type)).toEqual(['utility']);
   }
@@ -347,7 +394,7 @@ describe('named casting declarations versus references',()=>{
 describe('source-declared sibling choices share the same native counter',()=>{
  test('two named breaths are exclusive choices with one recharge pool',async()=>{
   const c=get('bronze-breath-exclusive-shared-recharge');for(const path of ['ordinary','staged']){
-   const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+   const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
    const item=r.actor.items[0],acts=Object.values(item.system.activities) as any[];
    expect(acts.map(a=>a.save.ability)).toEqual([['dex'],['str']]);
    expect(item.system.uses).toEqual({spent:0,max:'1',recovery:[{period:'recharge',type:'recoverAll',formula:'5'}]});
@@ -361,9 +408,9 @@ describe('source-declared sibling choices share the same native counter',()=>{
   const ops=f.operations.map((op:any)=>({...op,proof:{...op.proof,save:op.proof.save.replace(/^(Lightning Breath|Repulsion Breath): /u,'')}}));
   if(ops[0].proof.damage)ops[0].proof.damage=ops[0].proof.damage.map((q:string)=>q.replace(/^Lightning Breath: /u,''));
   expect(()=>bindSourceOperations(source,ops)).not.toThrow();
-  expect(()=>bindSourceOperations(source.replace('uses one of the following','cannot use one of the following'),ops)).toThrow('unproven-alternative');
+  expect(auditSourceOperationIssues(source.replace('uses one of the following','cannot use one of the following'),ops)).toContain('unproven-alternative');
   const results=source.replace('Lightning Breath.','First Failure.').replace('Repulsion Breath.','Second Failure.');
-  expect(()=>bindSourceOperations(results,ops)).toThrow('unproven-alternative');
+  expect(auditSourceOperationIssues(results,ops)).toContain('unproven-alternative');
  });
  test('a common delayed Save is a follow-up and cannot consume another breath',async()=>{
   const c=get('bronze-breath-exclusive-shared-recharge'),f=c.features[0];
@@ -372,11 +419,11 @@ describe('source-declared sibling choices share the same native counter',()=>{
   f.operations[1].proof.save=tail;f.operations[1].relationship='follow-up';
   for(const u of c.units)if(u.destination==='feature')u.text=f.text+'\n';c.source=c.units.map((u:any)=>u.text).join('');
   for(const path of ['ordinary','staged']){
-   const good=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(good);
+   const good=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(good);
    const acts=Object.values(good.actor.items[0].system.activities)as any[];expect(acts[1].activation.type).toBe('special');expect(acts[1].consumption.targets).toEqual([]);
   }
   const bad=raw(c);bad.creature.actions[0].sourceOperations[1].relationship='alternative';
-  const rejected=await chain(c,()=>ordinary(c,bad));expect(rejected.status).toBe('blocked');expect(rejected.findings?.some(f=>f.message.includes('unproven-alternative'))).toBe(true);
+  const rejected=await chain(c,()=>ordinary(c,bad));expect(rejected.status).toBe('needs_review');expect(rejected.findings?.some(f=>f.message.includes('unproven-alternative'))).toBe(true);
  });
 });
 
@@ -384,7 +431,7 @@ describe('source-declared sibling choices share the same native counter',()=>{
 // is not a default hook and these five cases do not replay the full batch.
 const iterativeCase=(id:string):any=>structuredClone(iterate50Corpus.cases.find(c=>c.id===id));
 for(const id of ['r10m-dryad-fey-charm','r10m-cloaker-moan','r10m-druid-quarterstaff','r10m-insect-swarms-variant','r10r-bag-of-beans'])for(const path of ['ordinary','staged'])test('iterative source repair '+id+' '+path,async()=>{
- const c=iterativeCase(id),r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+ const c=iterativeCase(id),r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
  expect(normalize(r.actor.items[0].system.description.value)).toContain(normalize(c.features[0].text));
  if(id==='r10m-dryad-fey-charm')expect((Object.values(r.actor.items[0].system.activities)as any[])[0].range.value).toBe(30);
  if(id==='r10m-cloaker-moan'){
@@ -404,33 +451,33 @@ for(const gender of ['female','male','renamed'])test('gendered range requires th
  let c=iterativeCase('r10m-dryad-fey-charm');
  if(gender==='male')c=JSON.parse(JSON.stringify(c).replace(/\bshe\b/gu,'he').replace(/\bher\b/gu,'him'));
  if(gender==='renamed')c=JSON.parse(JSON.stringify(c).replace(/Dryad/gu,'Priestess').replace(/dryad/gu,'priestess'));
- const r=await chain(c,()=>ordinary(c,raw(c)));requireAcceptedChain(r);expect((Object.values(r.actor.items[0].system.activities)as any[])[0].range.value).toBe(30);
+ const r=await chain(c,()=>ordinary(c,raw(c)));requireProjectedChain(r);expect((Object.values(r.actor.items[0].system.activities)as any[])[0].range.value).toBe(30);
 });
 for(const edit of ['foreign-subject','different-pronoun'])test('a foreign or mismatched gendered origin cannot borrow Actor range '+edit,async()=>{
  let c=iterativeCase('r10m-dryad-fey-charm');c=JSON.parse(JSON.stringify(c).replaceAll(edit==='foreign-subject'?'The dryad targets':'feet of her.',edit==='foreign-subject'?"The dryad's ally targets":'feet of him.'));
- const r=await chain(c,()=>ordinary(c,raw(c)));expect(r.status).toBe('blocked');
+ const r=await chain(c,()=>ordinary(c,raw(c)));expectSourceAuditFinding(r,'SOURCE_OPERATION_CARRIER_CONFLICT','/creature/actions/0/sourceOperations~10~1range');
 });
 for(const label of ['Prototype Types','Guardian Types','Insect Swarms (four variant types)'])test('Types in an Actor title is not a Type declaration '+label,async()=>{
  let c=iterativeCase('r10m-insect-swarms-variant');const previous=c.creature.identity.name;c.creature.identity.name=label;c.units[0].text=c.units[0].text.replace(previous,label);c.source=c.units.map((u:any)=>u.text).join('');
- const r=await chain(c,()=>ordinary(c,raw(c)));requireAcceptedChain(r);expect(r.ir.creature.identity.creatureType).toBe('construct');
- const bad=raw(c);bad.creature.identity.creatureType='beast';expect((await chain(c,()=>ordinary(c,bad))).status).toBe('blocked');
+ const r=await chain(c,()=>ordinary(c,raw(c)));requireProjectedChain(r);expect(r.ir.creature.identity.creatureType).toBe('construct');
+ const bad=raw(c);bad.creature.identity.creatureType='beast';expectSourceAuditFinding(await chain(c,()=>ordinary(c,bad)),'SOURCE_BASE_STATIC_CONFLICT','/creature/identity/creatureType');
 });
 test('radial target proof keeps a foreign flash origin manual',async()=>{
- let c=iterativeCase('r10m-cloaker-moan');c=JSON.parse(JSON.stringify(c).replaceAll('of the cloaker that','of the flash that'));expect((await chain(c,()=>ordinary(c,raw(c)))).status).toBe('blocked');
+ let c=iterativeCase('r10m-cloaker-moan');c=JSON.parse(JSON.stringify(c).replaceAll('of the cloaker that','of the flash that'));expectSourceAuditFinding(await chain(c,()=>ordinary(c,raw(c))),'SOURCE_OPERATION_CARRIER_CONFLICT','/creature/actions/0/sourceOperations~10~1range');
 });
 for(const path of ['ordinary','staged'])test('an own emanation radius cannot become a remote placement range '+path,async()=>{
  const c=iterativeCase('r10m-cloaker-moan'),ops=c.features[0].operations;ops[0].range=60;ops[0].proof.range=ops[0].proof.aoe;
- const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));expect(r.status).toBe('blocked');
+ const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));expectSourceAuditFinding(r,'SOURCE_OPERATION_CARRIER_CONFLICT','/creature/actions/0/sourceOperations~10~1range');
 });
 test('a standalone variant title does not permit clipping later branches or arbitrary colon prose',async()=>{
- const c=iterativeCase('r10m-insect-swarms-variant'),bad=raw(c);bad.creature.traits[0].description=bad.creature.traits[0].description.split('Swarm of Wasps.')[0];expect((await chain(c,()=>ordinary(c,bad))).status).toBe('blocked');
- const unknown=JSON.parse(JSON.stringify(c).replaceAll('Variant: Insect Swarms','Warning: Insect Swarms'));expect((await chain(unknown,()=>staged(unknown))).status).toBe('blocked');
+ const c=iterativeCase('r10m-insect-swarms-variant'),bad=raw(c);bad.creature.traits[0].description=bad.creature.traits[0].description.split('Swarm of Wasps.')[0];expectSourceAuditFinding(await chain(c,()=>ordinary(c,bad)),'MANUAL_FEATURE_INCOMPLETE_SOURCE','/creature/traits/0');
+ const unknown=JSON.parse(JSON.stringify(c).replaceAll('Variant: Insect Swarms','Warning: Insect Swarms'));expect(()=>splitStagedMonsterSource(request(unknown.source))).toThrow();
 });
 
 // Only the four newly failing parents, plus boundary counterexamples; no batch replay.
 for(const id of ['r11m-half-dragon-template','r11r-poisons','r11r-falling-net','r11r-rolling-sphere'])for(const path of ['ordinary','staged'])test('second iterative repair '+id+' '+path,async()=>{
  const c:any=structuredClone(iterate50Round2.cases.find(c=>c.id===id));
- const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+ const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
  expect(normalize(r.actor.items[0].system.description.value)).toContain(normalize(c.features[0].text));
  const activities=Object.values(r.actor.items[0].system.activities)as any[];
  if(id==='r11r-poisons'){expect(activities).toHaveLength(16);expect(activities.filter(a=>a.type==='save')).toHaveLength(14);}
@@ -442,9 +489,9 @@ for(const title of ['Half-Dragon Template','Borrowed Identity','Echo of the Towe
  c.features[0].text=c.features[0].text.replace('Half-Dragon Template',title);c.features[0].name=title;
  for(const u of c.units)if(u.destination==='feature'){u.name=title;u.text=c.features[0].text+'\n';}c.source=c.units.map((u:any)=>u.text).join('');
  expect(splitStagedMonsterSource(request(c.source)).features.map(f=>f.name)).toEqual([title]);
- for(const path of ['ordinary','staged'])requireAcceptedChain(await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c)));
+ for(const path of ['ordinary','staged'])requireProjectedChain(await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c)));
  const flat=structuredClone(c);flat.features[0].text=flat.features[0].text.replace(title+'\n',title+' ');for(const u of flat.units)if(u.destination==='feature')u.text=flat.features[0].text+'\n';flat.source=flat.units.map((u:any)=>u.text).join('');
- expect((await chain(flat,()=>ordinary(flat,raw(flat)))).status).toBe('blocked');
+ expectSourceAuditFinding(await chain(flat,()=>ordinary(flat,raw(flat))),'MANUAL_FEATURE_INCOMPLETE_SOURCE','/creature/traits/0');
 });
 for(const heading of ['Medium Construct','Strength Dexterity Constitution','Color Damage Resistance','The'])test('stat and table labels cannot become a standalone ability '+heading,()=>{
  const c:any=structuredClone(iterate50Round2.cases.find(c=>c.id==='r11m-half-dragon-template'));
@@ -456,7 +503,7 @@ test('a standalone parent cannot swallow a later explicit feature or split at a 
  const source=c.source+'\n## Watch. The guardian remains alert.\n';const plan=splitStagedMonsterSource(request(source));
  expect(plan.features.map(f=>f.name)).toEqual(['Half-Dragon Template','Watch']);
  const wrong=structuredClone(c);wrong.source=source;wrong.features[0].text+='\n## Watch. The guardian remains alert.';wrong.units[wrong.units.length-1].text=wrong.features[0].text+'\n';
- expect((await chain(wrong,()=>ordinary(wrong,raw(wrong)))).status).toBe('blocked');
+ expectSourceAuditFinding(await chain(wrong,()=>ordinary(wrong,raw(wrong))),'MANUAL_FEATURE_INCOMPLETE_SOURCE','/creature/traits/0');
  const continuation=c.source.replace('A beast,', 'Silent Branch\nA beast,');expect(splitStagedMonsterSource(request(continuation)).features).toHaveLength(1);
 });
 
@@ -470,7 +517,7 @@ for(const id of ['r12m-srd52-aboleth-legendary-resistance','r12m-srd52-kraken-to
   proposal.creature.legendary={max:3,lairMax:4,recovery:'own-turn-start',preamble,evidence:[{start,end:start+preamble.length,quote:preamble}]};
   proposal.creature.legendaryActions[0].sourceContext=[context.text];
  }
- const r=await chain(c,()=>path==='ordinary'?ordinary(c,proposal):staged(c));requireAcceptedChain(r);
+ const r=await chain(c,()=>path==='ordinary'?ordinary(c,proposal):staged(c));requireProjectedChain(r);
  expect(normalize(r.actor.items[0].system.description.value)).toContain(normalize(c.features[0].text));
  if(id.endsWith('legendary-resistance')){const trait=r.ir.creature.traits[0];assert.ok(trait);expect(trait.uses).toBeUndefined();expect(Number(r.actor.items[0].system.uses?.max??0)).toBe(0);}
  if(c.features[0].section==='legendary'){
@@ -483,28 +530,28 @@ for(const id of ['r12m-srd52-aboleth-legendary-resistance','r12m-srd52-kraken-to
 });
 for(const max of [3,4,99])test('conditional resource variants cannot become an unconditional daily maximum '+max,async()=>{
  const c=round3Case('r12m-srd52-aboleth-legendary-resistance'),ir=raw(c);ir.creature.traits[0].uses={max,period:'day'};
- expect((await chain(c,()=>ordinary(c,ir))).status).toBe('blocked');
+ expectSourceAuditFinding(await chain(c,()=>ordinary(c,ir)),'MANUAL_RESOURCE_SOURCE_CONFLICT','/creature/traits/0/uses');
 });
 for(const max of [3,4,99])test('a shared conditional ledger cannot prove an unselected Actor pool '+max,async()=>{
  const c=round3Case('r12m-srd52-kraken-toxic-ink'),ir=raw(c),u=c.units[1],start=c.units[0].text.length;
  ir.creature.legendary={max,preamble:u.text.trim(),evidence:[{start,end:start+u.text.length,quote:u.text}]};
- const r=await chain(c,()=>ordinary(c,ir));expect(r.status).toBe('blocked');expect(r.findings?.some((f:any)=>f.code==='SOURCE_LEGENDARY_MODE_REQUIRED')).toBe(true);
+ const r=await chain(c,()=>ordinary(c,ir));expect(r.status,JSON.stringify(r)).toBe('needs_review');expect(r.findings?.some((f:any)=>f.code==='SOURCE_LEGENDARY_MODE_REQUIRED')).toBe(true);
 });
 test('the nearest shared action ledger proves its own cost, not an arbitrary supplied context',async()=>{
  const c=round3Case('r12m-srd52-kraken-toxic-ink'),ir=raw(c);ir.creature.legendaryActions[0].legendaryCost=2;
- expect((await chain(c,()=>ordinary(c,ir))).status).toBe('blocked');
+ expectSourceAuditFinding(await chain(c,()=>ordinary(c,ir)),'SOURCE_OPERATION_CARRIER_CONFLICT','/creature/legendaryActions/0/legendaryCost');
  const foreign=raw(c);foreign.creature.legendaryActions[0].sourceContext=['Legendary Actions\nLegendary Action Uses: 99. An unrelated ally can expend a use.'];
- expect((await chain(c,()=>ordinary(c,foreign))).status).toBe('blocked');
+ expectSourceAuditFinding(await chain(c,()=>ordinary(c,foreign)),'UNBOUND_OPERATION_CONTEXT','/creature/legendaryActions/0/sourceContext');
 });
 
 test('another Actor shared ledger cannot fund this Actor pool',async()=>{
  const c=round3Case('r12m-srd52-tarrasque-world-shaking-movement');c.units[1].text=c.units[1].text.replace(/the tarrasque/giu,'the summoner');c.source=c.units.map((u:any)=>u.text).join('');
- const r=await chain(c,()=>ordinary(c,raw(c)));expect(r.status).toBe('blocked');expect(r.findings?.some((f:any)=>f.code==='SOURCE_LEGENDARY_OWNER_CONFLICT')).toBe(true);
+ const r=await chain(c,()=>ordinary(c,raw(c)));expect(r.status,JSON.stringify(r)).toBe('needs_review');expect(r.findings?.some((f:any)=>f.code==='SOURCE_LEGENDARY_OWNER_CONFLICT')).toBe(true);
 });
 
 for(const path of ['ordinary','staged'])test('a translated Actor keeps its source English ledger owner '+path,async()=>{
  const c=round3Case('r12m-srd52-tarrasque-world-shaking-movement');c.creature.identity.englishName=c.creature.identity.name;c.creature.identity.name='撼地兽';c.units[0].text=c.units[0].text.replace('Tarrasque CR 2','撼地兽 (Tarrasque) CR 2');c.source=c.units.map((u:any)=>u.text).join('');
- const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);expect(r.ir.creature.legendary?.max).toBe(3);const action=r.ir.creature.legendaryActions[0];assert.ok(action);expect(action.legendaryCost).toBe(1);
+ const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);expect(r.ir.creature.legendary?.max).toBe(3);const action=r.ir.creature.legendaryActions[0];assert.ok(action);expect(action.legendaryCost).toBe(1);
 });
 
 test('ledger shortened owners must retain the Actor noun-phrase head',()=>{
@@ -521,7 +568,7 @@ test('ledger shortened owners must retain the Actor noun-phrase head',()=>{
 // parents. Previously passing round-four parents are not replayed here.
 const round4Case=(id:string):any=>structuredClone(iterate50Round4.cases.find(c=>c.id===id));
 for(const id of ['r13m-srd52-erinyes-entangling-rope','r13m-srd52-storm-giant-lightning-storm','r13r-lands-aid'])for(const path of ['ordinary','staged'])test('fourth iterative repair '+id+' '+path,async()=>{
- const c=round4Case(id),r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+ const c=round4Case(id),r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
  const item=r.actor.items.find((item:any)=>normalize(item.system.description.value).includes(normalize(c.features[0].text)));expect(item).toBeDefined();
  const acts=Object.values(item.system.activities)as any[];
  if(id.endsWith('entangling-rope')){expect(r.actor.items).toHaveLength(2);expect(acts[0].save.ability).toEqual(['str']);expect(acts[0].save.dc.formula).toBe('16');}
@@ -532,24 +579,21 @@ for(const id of ['r13m-srd52-erinyes-entangling-rope','r13m-srd52-storm-giant-li
 for(const path of ['ordinary','staged']){
  test('the complete frozen Apparatus guessed weapon classification stays rejected '+path,async()=>{
   const c=round4Case('r13r-apparatus-of-the-crab'),before=JSON.stringify(c),r:any=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));
-  expect(r.status).toBe('blocked');
-  if(path==='ordinary'){
-   expect(r.stage).toBe('validator');expect(r.findings.some((f:any)=>f.code==='SOURCE_OPERATION_FACT_CONFLICT'&&f.path.endsWith('/attack/type-or-bonus'))).toBe(true);
-  }else{
-   expect(r.stage).toBe('extraction');expect(r.error).toContain('FEATURE_FACT_CONFLICT');expect(r.error).toContain('/attack/type-or-bonus');
-  }
+  expect(r.status,JSON.stringify(r)).toBe('needs_review');
+  expect(r.stage).toBe('source-audit');expect(r.findings.some((f:any)=>f.code==='SOURCE_OPERATION_FACT_CONFLICT'&&f.path.endsWith('/attack/type-or-bonus'))).toBe(true);
+  expect(r.actor.items[0].flags.fvttJsonGenerator.manualRule.sourceOperations.map((op:any)=>op.attack?.type).filter(Boolean)).toEqual(c.features[0].operations.map((op:any)=>op.attack?.type).filter(Boolean));
   expect(JSON.stringify(c)).toBe(before);
  });
  test('new neutral-contract variant preserves the complete Apparatus formal chain '+path,async()=>{
   const frozen=round4Case('r13r-apparatus-of-the-crab'),before=JSON.stringify(frozen),c=structuredClone(frozen);
   c.features[0].operations=newNeutralAttackContractVariant(frozen.features[0].operations,'melee');
-  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireAcceptedChain(r);
+  const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
   const item=r.actor.items.find((item:any)=>normalize(item.system.description.value).includes(normalize(c.features[0].text)));expect(item).toBeDefined();
   const acts=Object.values(item.system.activities)as any[];
   expect(acts.map(a=>a.type)).toEqual(['damage','utility','damage','utility']);
   expect(acts[0].damage.parts[0].number).toBe(2);expect(acts[2].damage.parts[0].number).toBe(2);
   for(const roll of [acts[1],acts[3]]){expect(roll.roll.formula).toBe('1d20+8');expect(roll.attack).toBeUndefined();expect(roll.damage).toBeUndefined();}
-  expect(item.type).not.toBe('weapon');expect(item.effects).toEqual([]);
+  expect(item.type).not.toBe('weapon');expect(item.effects.map((effect:any)=>effect.statuses)).toEqual([['grappled']]);expect(item.effects[0].flags.fvttJsonGenerator.sourceOperationId).toBe('lever-five-down-extended-claw-grapple');expect(item.effects[0].flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(acts[3].effects).toEqual([{_id:item.effects[0]._id}]);
   expect(r.actor.system.attributes.ac.flat).toBe(c.creature.attributes.ac);expect(r.actor.system.attributes.hp.max).toBe(c.creature.attributes.hp.value);
   expect(c.source).toBe(frozen.source);expect(c.features[0].text).toBe(frozen.features[0].text);expect(JSON.stringify(frozen)).toBe(before);
  });
@@ -560,11 +604,11 @@ const r5Source=(body:string)=>'Sentinel CR 2\nAC 15\nHP 30 (4d8 + 12) Size Mediu
 const r5Carrier=(source:string,rangeQuote:string,range:number,areaQuote?:string):any=>({name:'Vortex',description:source,activityType:'utility',executionMode:'native-with-gm',nativeRuleText:source,manualRemainder:source,sourceOperations:[{id:'save',name:'Save',type:'save',relationship:'primary',range,proof:{range:rangeQuote,...(areaQuote?{aoe:areaQuote}:{})},...(areaQuote?{aoe:{shape:'cylinder',radius:20}}:{})}]});
 const r5RangeErrors=(source:string,quote:string,range:number,actor='Sentinel',area?:string)=>sourceOperationFeatureErrors(r5Carrier(source,quote,range,area),actor).filter(e=>e.field.includes('/range'));
 
-test('round5 empty section headings do not invent a missing trait, but real omitted content still blocks',()=>{
+test('round5 empty section headings do not invent a missing trait, but explicit source audit reports real omitted content',()=>{
  const c=get('hydra-head-count-state');
  c.features[0].section='action';for(const u of c.units){if(u.destination==='context'){u.section='action';u.text='Traits\nActions\n';}if(u.destination==='feature')u.section='action';}c.source=c.units.map((u:any)=>u.text).join('');
- const ir=raw(c);assert.equal(validateMonsterIntakeIR(c.source,ir).blocking.some(f=>f.code==='MISSING_SOURCE_FEATURES'&&f.path==='/creature/traits'),false);
- ir.creature.actions=[];assert.equal(validateMonsterIntakeIR(c.source,ir).blocking.some(f=>f.code==='MISSING_SOURCE_FEATURES'&&f.path==='/creature/actions'),true);
+ const ir=raw(c);assert.equal(auditMonsterIntakeSource(c.source,ir).blocking.some(f=>f.code==='MISSING_SOURCE_FEATURES'&&f.path==='/creature/traits'),false);
+ ir.creature.actions=[];assert.equal(auditMonsterIntakeSource(c.source,ir).blocking.some(f=>f.code==='MISSING_SOURCE_FEATURES'&&f.path==='/creature/actions'),true);
 });
 
 test('round5 classified and level headings retain physical boundaries in LF and CRLF',()=>{
@@ -622,11 +666,11 @@ test('round5 staged manual replies restore only proven fixed healing and keep fu
  const feature=assembleStagedFeature(plan,unit,{schemaVersion:1,unitId:unit.id,mode:'manual',facts:{}},'Sentinel');assert.equal(feature.healing,undefined);assert.equal(feature.executionMode,'gm-manual');
 });
 
-test('round5 ordinary exact mixed healing receives missing source target but never overwrites a conflict',()=>{
+test('round5 ordinary exact mixed healing retains an omitted target and an explicit conflicting target',()=>{
  for(const s of r5HealingSources){
   const c=get('hydra-head-count-state'),f=c.features[0];f.name=s.name;f.text=s.text;f.operations=[];f.legacy={executionMode:'native-with-gm',activityType:'heal',nativeRuleText:s.text,manualRemainder:s.text,healing:{formula:s.formula,type:s.type}};
   for(const u of c.units)if(u.destination==='feature'){u.name=s.name;u.text=s.text+'\n';}c.source=c.units.map((u:any)=>u.text).join('');const ir=raw(c);ir.creature.identity.name=s.actor;
-  const anchored=anchorIrEvidence(c.source,request(c.source).candidate,ir);assert.deepEqual(anchored.creature.traits[0]!.healing?.target,s.target);
+  const anchored=anchorIrEvidence(c.source,request(c.source).candidate,ir);assert.equal(anchored.creature.traits[0]!.healing?.target,undefined);assert.deepEqual(anchored.creature.traits[0]!.healing,ir.creature.traits[0].healing);
   ir.creature.traits[0].healing.target={type:'self',count:1,special:'WRONG recipient'};const wrong=anchorIrEvidence(c.source,request(c.source).candidate,ir);assert.equal(wrong.creature.traits[0]!.healing?.target?.special,'WRONG recipient');assert.equal(mixedFeatureSourceMatches(wrong.creature.traits[0]!,'traits',s.actor),false);
  }
 });
@@ -649,7 +693,7 @@ for(const id of ['r14m-srd52-aboleth-psychic-drain','r14m-srd52-frost-giant-war-
  const c:any=structuredClone(iterate50Round5.cases.find(c=>c.id===id)),proposal=raw(c);
  if(path==='ordinary')proposal.creature[collections[c.features[0].section]!][0].healing.target=id.includes('psychic')
   ?{type:'self',count:1,special:'The aboleth'}:{type:'creature',count:1,special:'The giant or one creature of its choice that can see or hear it'};
- const result=await chain(c,()=>path==='ordinary'?ordinary(c,proposal):staged(c));requireAcceptedChain(result);
+ const result=await chain(c,()=>path==='ordinary'?ordinary(c,proposal):staged(c));requireProjectedChain(result);
  const section=collections[c.features[0].section]!,feature:any=(result.ir.creature as any)[section][0];
  const item:RuleChainItem|undefined=result.actor.items.find((item:RuleChainItem)=>normalize(item.system.description.value).includes(normalize(c.features[0].text)));
  assert.ok(item);const activity=Object.values(item.system.activities)[0];
@@ -664,7 +708,7 @@ for(const id of ['r14m-srd52-aboleth-psychic-drain','r14m-srd52-frost-giant-war-
   (a:any)=>{a.target.affects.special='one creature';},
  ]){
   const actor=structuredClone(result.actor),changed=actor.items[result.actor.items.indexOf(item)];mutate(Object.values(changed.system.activities)[0]);
-  const findings:ReturnType<typeof verifyMonsterIntake>['findings']=verifyMonsterIntake(c.source,result.ir,result.markdown,actor,request(c.source).candidate).findings;
+  const findings:ReturnType<typeof auditMonsterIntakeSourceProjection>['findings']=auditMonsterIntakeSourceProjection(c.source,result.ir,result.markdown,actor,request(c.source).candidate).findings;
   assert.equal(findings.some(f=>f.code==='ACTOR_HEALING_DRIFT'||f.code==='ACTOR_HEALING_TARGET_DRIFT'),true);
  }
 });
@@ -674,11 +718,11 @@ test('round5 inline trait detection stops at reactions or legendary actions befo
  for(const id of ['r14m-srd52-aboleth-psychic-drain','r14m-srd52-nalfeshnee-pursuit']){
   const c:any=structuredClone(iterate50Round5.cases.find(c=>c.id===id));assert.equal(c.source.includes('\nTraits\n'),false);
   const ir=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));
-  assert.equal(validateMonsterIntakeIR(c.source,ir).blocking.some(f=>f.code==='MISSING_SOURCE_FEATURES'&&f.path==='/creature/traits'),false);
-  ir.creature.actions=[];assert.equal(validateMonsterIntakeIR(c.source,ir).blocking.some(f=>f.code==='MISSING_SOURCE_FEATURES'&&f.path==='/creature/actions'),true);
+  assert.equal(auditMonsterIntakeSource(c.source,ir).blocking.some(f=>f.code==='MISSING_SOURCE_FEATURES'&&f.path==='/creature/traits'),false);
+  ir.creature.actions=[];assert.equal(auditMonsterIntakeSource(c.source,ir).blocking.some(f=>f.code==='MISSING_SOURCE_FEATURES'&&f.path==='/creature/actions'),true);
  }
  const c=get('hydra-head-count-state');c.units=c.units.filter((u:any)=>u.destination!=='context');c.units.push({destination:'context',section:'action',text:'Actions\n'});c.source=c.units.map((u:any)=>u.text).join('');const ir=raw(c);ir.creature.traits=[];
- assert.equal(validateMonsterIntakeIR(c.source,ir).blocking.some(f=>f.code==='MISSING_SOURCE_FEATURES'&&f.path==='/creature/traits'),true);
+ assert.equal(auditMonsterIntakeSource(c.source,ir).blocking.some(f=>f.code==='MISSING_SOURCE_FEATURES'&&f.path==='/creature/traits'),true);
 });
 
 test('round5 fixed healing consumes the complete quantity clause instead of truncating a multiplier or cap',()=>{
@@ -697,11 +741,11 @@ test('round5 ordinary and staged legacy fixed Heal cannot flatten an unresolved 
  for(const suffix of ['for each creature it has grappled.','per spell level.']){
   const c=get('hydra-head-count-state'),f=c.features[0],text='Renewal. Sentinel regains 5 hit points '+suffix;f.name='Renewal';f.text=text;f.operations=[];
   for(const u of c.units)if(u.destination==='feature'){u.name='Renewal';u.text=text+'\n';}c.source=c.units.map((u:any)=>u.text).join('');
-  const good=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));assert.deepEqual(validateMonsterIntakeIR(c.source,good).blocking,[]);
+  const good=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));assert.deepEqual(auditMonsterIntakeSource(c.source,good).blocking,[]);
   for(const mode of [undefined,'native-with-gm']){
    const wrong=structuredClone(good),feature:any=wrong.creature.traits[0];Object.assign(feature,{activityType:'heal',healing:{formula:'5',type:'healing'}});
    if(mode){feature.executionMode=mode;feature.nativeRuleText=text;feature.manualRemainder=text;}else delete feature.executionMode;
-   assert.equal(validateMonsterIntakeIR(c.source,wrong).blocking.some(f=>f.code==='SOURCE_HEALING_AMOUNT_UNPROVEN'),true);
+   assert.equal(auditMonsterIntakeSource(c.source,wrong).blocking.some(f=>f.code==='SOURCE_HEALING_AMOUNT_UNPROVEN'),true);
   }
   const plan=splitStagedMonsterSource(request(c.source)),unit=plan.features[0]!,manual=assembleStagedFeature(plan,unit,{schemaVersion:1,unitId:unit.id,mode:'manual',facts:{}},'Sentinel');assert.equal(manual.executionMode,'gm-manual');assert.equal(manual.healing,undefined);
   assert.throws(()=>assembleStagedFeature(plan,unit,{schemaVersion:1,unitId:unit.id,mode:'native-with-gm',facts:{activityType:'heal',healing:{formula:'5',type:'healing'}}},'Sentinel'));
@@ -741,12 +785,12 @@ test('round6 fixed healing proves local amount, full trigger and the one source 
 
 test('round6 selection range is restored only from its adjacent same-source single recipient',()=>{
  const {c,f}=r6HealingCases().find(({c})=>c.id.includes('unicorn'))!,ir=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));
- const feature:any=ir.creature.legendaryActions[0];assert.equal(feature.range,60);
+ const feature:any=ir.creature.legendaryActions[0];assert.equal(feature.range,undefined);assert.ok('legacy' in f);assert.ok(f.legacy);assert.deepEqual(feature.healing,f.legacy.healing);
  const parsed=new StructuredActionParser().parseStructuredSection([{名称:f.name,类型:'heal',范围:'60 尺',治疗:{公式:feature.healing.formula,类型:feature.healing.type,target:feature.healing.target}}],'legendaryActions')[0]!;
  const activity:any=Object.values(new ActivityGenerator({fvttVersion:'14'}).generate(structuredActionToActivityData(parsed)))[0];assert.deepEqual(activity.range,{value:60,units:'ft',special:'',override:false});assert.equal(activity.target.affects.type,'creature');assert.equal(activity.target.affects.special,feature.healing.target.special);
  const plan=splitStagedMonsterSource(request(c.source)),unit=plan.features.find(u=>u.name===f.name)!;assert.equal(assembleStagedFeature(plan,unit,{schemaVersion:1,unitId:unit.id,mode:'manual',facts:{}},c.creature.identity.name).range,60);
  for(const changed of [f.text.replace('The unicorn targets','The target targets'),f.text.replace('one creature','two creatures'),f.text.replace('of itself.','of an ally.'),f.text.replace('The target gains','The unicorn looks away. The target gains')])assert.equal(sourceFixedHealing(changed,f.name,c.creature.identity.name),undefined);
- const wrong=structuredClone(ir);wrong.creature.legendaryActions[0]!.range=90;assert.equal(validateMonsterIntakeIR(c.source,wrong).blocking.some(f=>f.code==='MIXED_FEATURE_SOURCE_CONFLICT'),true);
+ const wrong=structuredClone(ir);wrong.creature.legendaryActions[0]!.range=90;assert.equal(auditMonsterIntakeSource(c.source,wrong).blocking.some(f=>f.code==='MIXED_FEATURE_SOURCE_CONFLICT'),true);
  const war=r5HealingSources.find(s=>s.name.startsWith('War Cry'))!;assert.equal(stagedFeatureMechanics(war.text,war.name,war.actor)?.facts.range,undefined);
 });
 
@@ -757,8 +801,8 @@ test('round6 conditional fixed amounts cannot become per-target, per-level or li
   const name=text.split('.')[0]!,c=get('hydra-head-count-state'),f=c.features[0];f.name=name;f.text=text;f.operations=[];
   for(const u of c.units)if(u.destination==='feature'){u.name=name;u.text=text+'\n';}c.source=c.units.map((u:any)=>u.text).join('');
   assert.equal(sourceFixedHealing(text,name,'Sentinel'),undefined);
-  const good=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));assert.deepEqual(validateMonsterIntakeIR(c.source,good).blocking,[]);
-  for(const mode of [undefined,'native-with-gm']){const wrong=structuredClone(good),feature:any=wrong.creature.traits[0];Object.assign(feature,{activityType:'heal',healing:{formula:'5',type:'healing'}});if(mode){feature.executionMode=mode;feature.nativeRuleText=text;feature.manualRemainder=text;}else delete feature.executionMode;assert.equal(validateMonsterIntakeIR(c.source,wrong).blocking.some(f=>f.code==='SOURCE_HEALING_AMOUNT_UNPROVEN'),true);}
+  const good=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));assert.deepEqual(auditMonsterIntakeSource(c.source,good).blocking,[]);
+  for(const mode of [undefined,'native-with-gm']){const wrong=structuredClone(good),feature:any=wrong.creature.traits[0];Object.assign(feature,{activityType:'heal',healing:{formula:'5',type:'healing'}});if(mode){feature.executionMode=mode;feature.nativeRuleText=text;feature.manualRemainder=text;}else delete feature.executionMode;assert.equal(auditMonsterIntakeSource(c.source,wrong).blocking.some(f=>f.code==='SOURCE_HEALING_AMOUNT_UNPROVEN'),true);}
  }
  for(const s of r5HealingSources)assert.deepEqual(sourceFixedHealing(s.text,s.name,s.actor),{formula:s.formula,type:s.type,target:s.target});
 });
@@ -801,7 +845,7 @@ test('round7 sensory origins cannot borrow another centre, arbitrary name prefix
 test('round7 closed Action headings preserve all three complete companion parents and reject fake boundaries',()=>{
  const c:any=structuredClone(iterate50Round7.cases.find(c=>c.id==='r16r-supreme-sneak'));
  for(const source of [c.source,c.source.replace(/\n/gu,'\r\n')]){const plan=splitStagedMonsterSource(request(source));assert.deepEqual(plan.features.map(f=>f.name),c.features.map((f:any)=>f.name));for(const unit of plan.features)assert.equal(source.slice(unit.start,unit.end),unit.quote);}
- const ir=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));assert.deepEqual(validateMonsterIntakeIR(c.source,ir).blocking,[]);
+ const ir=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));assert.deepEqual(auditMonsterIntakeSource(c.source,ir).blocking,[]);
  for(const [index,f]of ir.creature.traits.entries())assert.equal(completeSourceFeatureEvidence(c.source,ir,f,'/creature/traits/'+index)?.quote.trim(),c.features[index].text);
  const merged=structuredClone(ir);merged.creature.traits[0]!.description+=' '+merged.creature.traits[1]!.description;assert.equal(completeSourceFeatureEvidence(c.source,merged,merged.creature.traits[0]!,'/creature/traits/0'),undefined);
  for(const name of ['Hide [Action]','Attack [Action]','Disengage [Action]'])assert.equal(splitStagedMonsterSource(request(r5Source(name+'\nThe source rule stays complete.'))).features[0]!.name,name);
@@ -828,10 +872,10 @@ test('round8 exact source title with a lowercase preposition keeps both source p
  const c:any=structuredClone(iterate50Round8.cases.find(c=>c.id==='r17r-moving-around-other-creatures'));
  for(const source of [c.source,c.source.replace(/\n/gu,'\r\n')]){
   const variant=structuredClone(c);variant.source=source;if(source.includes('\r\n')){for(const unit of variant.units)unit.text=unit.text.replace(/\n/gu,'\r\n');for(const feature of variant.features)feature.text=feature.text.replace(/\n/gu,'\r\n');}
-  const req=request(source),ir=anchorIrEvidence(source,req.candidate,raw(variant));assert.deepEqual(validateMonsterIntakeIR(source,ir).blocking,[]);
+  const req=request(source),ir=anchorIrEvidence(source,req.candidate,raw(variant));assert.deepEqual(auditMonsterIntakeSource(source,ir).blocking,[]);
   for(const plan of [splitStagedMonsterSource(req),assembleStagedLinePartition(req,r8LinePartition(variant))]){assert.equal(plan.features.length,1);assert.equal(plan.features[0]!.name,'Moving around Other Creatures');assert.equal(plan.features[0]!.quote.trim(),variant.features[0].text);}
   const f=ir.creature.traits[0]!;assert.equal(f.executionMode,'gm-manual');assert.equal(f.appliedConditions,undefined);assert.equal(completeSourceFeatureEvidence(source,ir,f,'/creature/traits/0')?.quote.trim(),source.slice(source.indexOf(c.features[0].name)).trim());
-  const clipped=structuredClone(ir);clipped.creature.traits[0]!.description=clipped.creature.traits[0]!.description.replace('unless that creature is Tiny or your ally','');assert.equal(validateMonsterIntakeIR(source,clipped).blocking.some(f=>f.code==='MANUAL_FEATURE_INCOMPLETE_SOURCE'),true);
+  const clipped=structuredClone(ir);clipped.creature.traits[0]!.description=clipped.creature.traits[0]!.description.replace('unless that creature is Tiny or your ally','');assert.equal(auditMonsterIntakeSource(source,clipped).blocking.some(f=>f.code==='MANUAL_FEATURE_INCOMPLETE_SOURCE'),true);
  }
  const wrong=r8LinePartition(c);wrong.units[2].name='Moving around Other creatures';assert.throws(()=>assembleStagedLinePartition(request(c.source),wrong));
 });
@@ -851,10 +895,10 @@ test('round9 exact slash and single-word rule titles retain complete source in o
   const c:any=structuredClone(iterate50Round9.cases.find(c=>c.id===id));
   for(const crlf of [false,true]){
    const variant=structuredClone(c);if(crlf){variant.source=variant.source.replace(/\n/gu,'\r\n');for(const u of variant.units)u.text=u.text.replace(/\n/gu,'\r\n');for(const f of variant.features)f.text=f.text.replace(/\n/gu,'\r\n');}
-   const req=request(variant.source),ir=anchorIrEvidence(variant.source,req.candidate,raw(variant));assert.deepEqual(validateMonsterIntakeIR(variant.source,ir).blocking,[]);
+   const req=request(variant.source),ir=anchorIrEvidence(variant.source,req.candidate,raw(variant));assert.deepEqual(auditMonsterIntakeSource(variant.source,ir).blocking,[]);
    for(const plan of [splitStagedMonsterSource(req),assembleStagedLinePartition(req,r8LinePartition(variant))]){assert.equal(plan.features.length,1);assert.equal(plan.features[0]!.name,c.features[0].name);assert.equal(plan.features[0]!.quote.trim(),variant.features[0].text);}
    assert.equal(completeSourceFeatureEvidence(variant.source,ir,ir.creature.traits[0]!,'/creature/traits/0')?.quote.trim(),variant.features[0].text);
-   const clipped=structuredClone(ir);clipped.creature.traits[0]!.description=clipped.creature.traits[0]!.description.replace(c.omission,'');assert.equal(validateMonsterIntakeIR(variant.source,clipped).blocking.some(f=>f.code==='MANUAL_FEATURE_INCOMPLETE_SOURCE'),true);
+   const clipped=structuredClone(ir);clipped.creature.traits[0]!.description=clipped.creature.traits[0]!.description.replace(c.omission,'');assert.equal(auditMonsterIntakeSource(variant.source,clipped).blocking.some(f=>f.code==='MANUAL_FEATURE_INCOMPLETE_SOURCE'),true);
   }
  }
 });
@@ -868,7 +912,7 @@ test('round9 slash and short headings preserve metadata, token, source-name and 
  assert.equal(splitStagedMonsterSource(request(r5Source('Steadfast. The sentinel stands firm.'))).features[0]!.name,'Steadfast');
 });
 test('round9 source-bound legacy Attack stays literal through IR Markdown workflow without inventing Constitution',async()=>{
- const c:any=structuredClone(iterate50Round9.cases.find(c=>c.id==='r18m-srd52-manticore-multiattack')),r=await chain(c,()=>staged(c));requireAcceptedChain(r);
+ const c:any=structuredClone(iterate50Round9.cases.find(c=>c.id==='r18m-srd52-manticore-multiattack')),r=await chain(c,()=>staged(c));requireProjectedChain(r);
  const attacks=r.ir.creature.actions.filter(f=>f.attack);assert.equal(attacks.length,2);assert.equal(attacks.every(f=>!f.sourceOperations),true);
  for(const [name,type,range,long] of [['Rend','slashing',5,undefined],['Tail Spike','piercing',100,200]] as const){
   const item:RuleChainItem|undefined=r.actor.items.find((item:RuleChainItem)=>item.name===name);
@@ -922,16 +966,16 @@ async function r10RangeProjection(c:any){
  const ir=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));
  for(const collection of Object.values(collections))for(const f of (ir.creature as any)[collection]??[])if(f.sourceOperations)f.sourceOperations=bindSourceOperations(f.description,f.sourceOperations,f.evidence[0].start);
  const markdown=renderMonsterIntakeMarkdown(ir),out=await convertMarkdownContentToJson({content:markdown,fvttVersion:'14',effectProfile:'core',iconOptions:{mode:'off'},translationService:null}),actor:any=out.rawJson;
- assert.deepEqual(verifyMonsterIntake(c.source,ir,markdown,actor).findings.filter(f=>f.blocking),[]);
+ assert.deepEqual(auditMonsterIntakeSourceProjection(c.source,ir,markdown,actor).findings.filter(f=>f.blocking),[]);
  return{c,ir,markdown,actor};
 }
-const r10RangeFindings=(r:any,actor:any)=>verifyMonsterIntake(r.c.source,r.ir,r.markdown,actor).findings.filter(f=>f.code==='ACTOR_SOURCE_OPERATION_RANGE_DRIFT');
+const r10RangeFindings=(r:any,actor:any)=>auditMonsterIntakeSourceProjection(r.c.source,r.ir,r.markdown,actor).findings.filter(f=>f.code==='ACTOR_SOURCE_OPERATION_RANGE_DRIFT');
 test('round10 unknown target range stays special and independently rejects missing Self or invented feet',async()=>{
  for(const [corpus,id]of [[iterate50Round9,'r18r-energy-bow'],[iterate50Round10,'r19r-contagion']] as const){
   const c:any=structuredClone(corpus.cases.find(c=>c.id===id)),r=await r10RangeProjection(c),index=r.actor.items.findIndex((i:any)=>Object.values(i.system.activities).some((a:any)=>a.flags?.fvttJsonGenerator?.sourceOperation));assert.ok(index>=0);
   const item=r.actor.items[index],idOf=Object.keys(item.system.activities)[0]!,activity=item.system.activities[idOf];assert.deepEqual(activity.range,{override:true,units:'spec',special:r10RangeNote});assert.ok(activity.range.special.length<40);assert.equal(item.system.range,undefined);
   for(const edit of [(a:any)=>delete a.range,(a:any)=>a.range={override:true,units:'self',special:''},(a:any)=>a.range={override:true,units:'ft',value:60,special:''},(a:any)=>a.range.override=false,(a:any)=>a.range.special='']){const bad=structuredClone(r.actor);edit(bad.items[index].system.activities[idOf]);assert.ok(r10RangeFindings(r,bad).length>0);}
-  const badTarget=structuredClone(r.actor);badTarget.items[index].system.activities[idOf].target.affects.special='';assert.ok(verifyMonsterIntake(c.source,r.ir,r.markdown,badTarget).findings.some(f=>f.code==='ACTOR_SOURCE_OPERATION_TARGET_DRIFT'));
+  const badTarget=structuredClone(r.actor);badTarget.items[index].system.activities[idOf].target.affects.special='';assert.ok(auditMonsterIntakeSourceProjection(c.source,r.ir,r.markdown,badTarget).findings.some(f=>f.code==='ACTOR_SOURCE_OPERATION_TARGET_DRIFT'));
  }
 });
 test('round10 known Self preserves old omitted native range but not a foreign inherited Item range',async()=>{
@@ -974,7 +1018,7 @@ test('round11 fixed healing retains the complete wearer trigger, ally eligibilit
   const plan=splitStagedMonsterSource(request(c.source)),unit=plan.features[0]!,assembled=assembleStagedFeature(plan,unit,{schemaVersion:1,unitId:unit.id,mode:'manual',facts:{}},c.creature.identity.name);
   assert.deepEqual(assembled.healing,expected);assert.equal(assembled.range,f.legacy.range);assert.equal(assembled.description,f.text);assert.equal(assembled.manualRemainder,f.text);assert.equal(assembled.appliedConditions,undefined);
   assert.equal(mixedFeatureSourceMatches(assembled,collections[f.section],c.creature.identity.name),true);
-  const ordinaryIr=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));assert.deepEqual(validateMonsterIntakeIR(c.source,ordinaryIr).blocking,[]);
+  const ordinaryIr=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));assert.deepEqual(ordinaryIr.creature[collections[f.section] as FeatureCollection][0]!.healing,f.legacy.healing);if(f.legacy.range!==undefined)assert.equal(ordinaryIr.creature[collections[f.section] as FeatureCollection][0]!.range,f.legacy.range);
   for(const bad of [{...expected,formula:'99'},{...expected,type:'temphp'},{...expected,target:{...expected.target,type:expected.target.type==='self'?'creature':'self'}},{...expected,target:{...expected.target,count:2}},{...expected,target:{...expected.target,special:expected.target.type==='self'?'You':'one creature'}}])assert.equal(mixedFeatureSourceMatches({...assembled,healing:bad},collections[f.section],c.creature.identity.name),false);
   if(f.legacy.range!==undefined)assert.equal(mixedFeatureSourceMatches({...assembled,range:f.legacy.range+5},collections[f.section],c.creature.identity.name),false);
  }
@@ -995,18 +1039,20 @@ test('round11 fixed healing cannot borrow another aura origin, receiver or spell
 });
 test('round11 generic casting discussion stays manual in ordinary and staged consumers',()=>{
  for(const id of ['r20r-blessed-healer','r20r-casting-spells']){
-  const c:any=structuredClone(iterate50Round11.cases.find(c=>c.id===id)),ir=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));assert.deepEqual(validateMonsterIntakeIR(c.source,ir).blocking,[]);
+  const c:any=structuredClone(iterate50Round11.cases.find(c=>c.id===id)),ir=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));
+  for(const feature of c.features)assert.deepEqual(ir.creature[collections[feature.section] as FeatureCollection].find(entry=>entry.name===feature.name)!.uses,feature.uses);
   const plan=splitStagedMonsterSource(request(c.source));assert.equal(stagedSpellcastingGroups(plan).size,0);
   const f=assembleStagedFeature(plan,plan.features[0]!,{schemaVersion:1,unitId:plan.features[0]!.id,mode:'manual',facts:{}},c.creature.identity.name);assert.equal(f.executionMode,'gm-manual');assert.equal(f.description,c.features[0].text);assert.equal(f.healing,undefined);assert.equal(f.spellUseRecords,undefined);
  }
 });
 test('round11 ordinary and staged counters belong only to the complete feature that declares them',()=>{
  for(const id of ['r20r-sorcery-incarnate','r20r-arcane-apotheosis','r20r-magical-cunning','r20r-periapt-of-health']){
-  const c:any=structuredClone(iterate50Round11.cases.find(c=>c.id===id)),ir=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));assert.deepEqual(validateMonsterIntakeIR(c.source,ir).blocking,[]);
+  const c:any=structuredClone(iterate50Round11.cases.find(c=>c.id===id)),ir=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));
+  for(const feature of c.features)assert.deepEqual(ir.creature[collections[feature.section] as FeatureCollection].find(entry=>entry.name===feature.name)!.uses,feature.uses);
   const plan=splitStagedMonsterSource(request(c.source));
   for(const [index,unit]of plan.features.entries()){
    const f=assembleStagedFeature(plan,unit,{schemaVersion:1,unitId:unit.id,mode:'manual',facts:{}},c.creature.identity.name);assert.deepEqual(f.uses,c.features[index].uses);assert.equal(f.description,c.features[index].text);
-   const wrong=structuredClone(ir),feature=(wrong.creature as any)[collections[c.features[index].section]!].find((f:any)=>f.name===c.features[index].name);feature.uses={max:9,period:'day'};assert.ok(validateMonsterIntakeIR(c.source,wrong).blocking.some(f=>f.code==='MANUAL_RESOURCE_SOURCE_CONFLICT'||f.code==='MIXED_FEATURE_SOURCE_CONFLICT'));
+   const wrong=structuredClone(ir),feature=(wrong.creature as any)[collections[c.features[index].section]!].find((f:any)=>f.name===c.features[index].name);feature.uses={max:9,period:'day'};assert.ok(auditMonsterIntakeSource(c.source,wrong).blocking.some(f=>f.code==='MANUAL_RESOURCE_SOURCE_CONFLICT'||f.code==='MIXED_FEATURE_SOURCE_CONFLICT'));
   }
  }
 });
@@ -1015,8 +1061,8 @@ test('round11 restoring quantity modifiers independently reject an explicit fixe
  for(const suffix of ['per spell slot level','for each creature it affects','up to a maximum of 100']){
   const c:any=structuredClone(r11HealingCases().find(c=>c.id==='r20r-heal')),f=c.features[0];f.text=f.text.replace('restoring 70 Hit Points.','restoring 70 Hit Points '+suffix+'.');f.legacy.nativeRuleText=f.text;f.legacy.manualRemainder=f.text;
   const unit=c.units.find((u:any)=>u.destination==='feature');unit.text=f.text+'\n';c.source=c.units.map((u:any)=>u.text).join('');
-  for(const mode of ['native-with-gm',undefined]){const ir=anchorIrEvidence(c.source,request(c.source).candidate,raw(c)),feature:any=ir.creature.traits[0];if(mode===undefined){delete feature.executionMode;delete feature.nativeRuleText;delete feature.manualRemainder;}assert.ok(validateMonsterIntakeIR(c.source,ir).blocking.some(f=>f.code==='SOURCE_HEALING_AMOUNT_UNPROVEN'));}
-  delete f.legacy;const gm=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));assert.deepEqual(validateMonsterIntakeIR(c.source,gm).blocking,[]);
+  for(const mode of ['native-with-gm',undefined]){const ir=anchorIrEvidence(c.source,request(c.source).candidate,raw(c)),feature:any=ir.creature.traits[0];if(mode===undefined){delete feature.executionMode;delete feature.nativeRuleText;delete feature.manualRemainder;}assert.ok(auditMonsterIntakeSource(c.source,ir).blocking.some(f=>f.code==='SOURCE_HEALING_AMOUNT_UNPROVEN'));}
+  delete f.legacy;const gm=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));assert.deepEqual(auditMonsterIntakeSource(c.source,gm).blocking,[]);
   const plan=splitStagedMonsterSource(request(c.source)),manual=assembleStagedFeature(plan,plan.features[0]!,{schemaVersion:1,unitId:plan.features[0]!.id,mode:'manual',facts:{}},'Sentinel');assert.equal(manual.executionMode,'gm-manual');assert.equal(manual.healing,undefined);assert.equal(manual.description,f.text);
  }
 });

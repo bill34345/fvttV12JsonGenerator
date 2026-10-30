@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { compileEncounterSelection, createEncounterAutomationProvider, decodeEncounterAutomation } from '@fvtt-json-generator/intake-ai/encounter-automation';
+import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
+import { compileEncounterSelection, compileEncounterSelectionSourceAudit, createEncounterAutomationProvider, decodeEncounterAutomation } from '@fvtt-json-generator/intake-ai/encounter-automation';
 import { readFixedEncounterConfiguration } from '@fvtt-json-generator/intake-ai/encounter-capabilities';
 import { convertMarkdownContentToJson } from '../src/core/workflow/singleFileConversion';
 import { renderMonsterIntakeMarkdown } from '@fvtt-json-generator/intake-ai/renderer';
@@ -24,6 +25,7 @@ async function fixture(sample = samples[0]!) {
   const quote = `Language Strike. ${sample.text}`;
   const source = `${LURKER_SOURCE}\n${quote}`;
   const ir = buildValidLurkerIr();
+  ir.source = { sha256: hashSource(source), length: source.length };
   ir.creature.actions = [{ name: 'Language Strike', description: sample.text, activityType: 'attack', attack: { type: 'mwak', toHit: 5, reach: 5 },
     appliedConditions: [{ statuses: [sample.label], duration: `${sample.value} ${sample.unit}` }],
     evidence: [{ start: source.indexOf(quote), end: source.length, quote }] }];
@@ -42,17 +44,30 @@ async function fixture(sample = samples[0]!) {
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; });
 
-describe('semantic lifecycle source normalization', () => {
+describe('explicit offline semantic lifecycle source audit', () => {
+  test('the default compiler preserves AI-owned lifecycle parameters while explicit source audit reports their disagreement',async()=>{
+    const {request,selection}=await fixture();
+    const changed=structuredClone(selection);
+    changed.rules[0].parameters.duration.value=2;
+    changed.rules[0].parameters.repeatSave.dc=15;
+    const compiled=compileEncounterSelection(changed,request);
+    expect(compiled.selection!.rules[0]!.parameters).toEqual(changed.rules[0].parameters);
+    expect(readFixedEncounterConfiguration(compiled.command)!.rules[0]!.parameters).toEqual(changed.rules[0].parameters);
+    expect(compiled.rules[0]!.quote).toBe(selection.rules[0].quote);
+    expect(()=>compileEncounterSelectionSourceAudit(changed,request)).toThrow();
+    expect(decodeEncounterAutomation(compiled,request)).toEqual(compiled);
+  });
+
   test('English and Chinese paraphrases normalize without requiring the historical sentence grammar', async () => {
     for (const sample of samples) {
       const { request, selection } = await fixture(sample);
-      const compiled = compileEncounterSelection(selection, request);
+      const compiled = compileEncounterSelectionSourceAudit(selection, request);
       expect(compiled.selection?.rules[0]?.sourceEvidence).toEqual(sample.sourceEvidence);
       expect(readFixedEncounterConfiguration(compiled.command)?.rules[0]?.parameters).toEqual(selection.rules[0].parameters);
       expect(compiled.command).not.toContain('sourceEvidence');
       expect(decodeEncounterAutomation(compiled, request)).toEqual(compiled);
       const legacy = structuredClone(selection); delete legacy.rules[0].sourceEvidence;
-      expect(() => compileEncounterSelection(legacy, request)).toThrow();
+      expect(() => compileEncounterSelectionSourceAudit(legacy, request)).toThrow();
     }
   });
 
@@ -64,11 +79,11 @@ describe('semantic lifecycle source normalization', () => {
     const definition = { schemaVersion: 1 as const, id: 'configured.deep-wound', name: '深创 Deep Wound', aliases: ['Deep Wound', '深创'], description: 'Bleeding',
       components: [{ kind: 'builtin-condition' as const, conditionId: 'bleeding' as const, params: { formula: '1d6' } }] };
     const scoped = { ...request, conditionCatalog: [definition] };
-    const compiled = compileEncounterSelection(selection, scoped);
+    const compiled = compileEncounterSelectionSourceAudit(selection, scoped);
     expect(compiled.selection?.rules[0]?.parameters.definition).toBeTruthy();
-    expect(() => compileEncounterSelection(selection, request)).toThrow('unregistered');
+    expect(() => compileEncounterSelectionSourceAudit(selection, request)).toThrow('unregistered');
     const wrong = structuredClone(selection); wrong.rules[0].parameters.status = 'blinded';
-    expect(() => compileEncounterSelection(wrong, scoped)).toThrow();
+    expect(() => compileEncounterSelectionSourceAudit(wrong, scoped)).toThrow();
   });
 
   test('rejects numeric, unit and ability drift within the cited field rather than matching other source numbers', async () => {
@@ -82,7 +97,7 @@ describe('semantic lifecycle source normalization', () => {
         (rule: any) => { rule.sourceEvidence.repeatSave = rule.sourceEvidence.duration; },
       ]) {
         const changed = structuredClone(selection); change(changed.rules[0]);
-        expect(() => compileEncounterSelection(changed, request)).toThrow();
+        expect(() => compileEncounterSelectionSourceAudit(changed, request)).toThrow();
       }
     }
     for (const [duration, dc] of [['10 minutes', 'Constitution save (DC 130)'], ['1.5 minutes', 'Constitution save (DC fourteen)'], ['one or two rounds', 'Constitution save (DC fourteen)'], ['-1 minute', 'Constitution save (DC fourteen)'], ['−1 minute', 'Constitution save (DC fourteen)'], ['负一分钟', 'Constitution save (DC fourteen)'], ['one minute', 'Constitution DC -14'], ['one minute', 'Constitution DC 14.5']]) {
@@ -90,7 +105,7 @@ describe('semantic lifecycle source normalization', () => {
       sample.text = sample.text.replace(sample.sourceEvidence.duration, duration!).replace(sample.sourceEvidence.repeatSave, dc!);
       sample.sourceEvidence.duration = duration!; sample.sourceEvidence.repeatSave = dc!;
       const { request, selection } = await fixture(sample);
-      expect(() => compileEncounterSelection(selection, request)).toThrow();
+      expect(() => compileEncounterSelectionSourceAudit(selection, request)).toThrow();
     }
   });
 
@@ -100,7 +115,7 @@ describe('semantic lifecycle source normalization', () => {
       sample.text = sample.text.replace(sample.sourceEvidence.duration, duration!).replace(sample.sourceEvidence.repeatSave, dc!);
       sample.sourceEvidence.duration = duration!; sample.sourceEvidence.repeatSave = dc!;
       const { request, selection } = await fixture(sample);
-      expect(compileEncounterSelection(selection, request).selection?.rules[0]?.parameters.repeatSave).toMatchObject({dc:14});
+      expect(compileEncounterSelectionSourceAudit(selection, request).selection?.rules[0]?.parameters.repeatSave).toMatchObject({dc:14});
     }
   });
 
@@ -115,11 +130,11 @@ describe('semantic lifecycle source normalization', () => {
       (rule: any) => { rule.parameters.repeatSave.timing = 'source-turn-end'; },
     ]) {
       const changed = structuredClone(selection); change(changed.rules[0]);
-      expect(() => compileEncounterSelection(changed, request)).toThrow();
+      expect(() => compileEncounterSelectionSourceAudit(changed, request)).toThrow();
     }
     const incomplete = structuredClone(selection);
     incomplete.rules[0].quote = samples[0]!.sourceEvidence.application;
-    expect(compileEncounterSelection(incomplete, request).selection?.rules[0]?.quote).toBe(selection.rules[0].quote);
+    expect(compileEncounterSelectionSourceAudit(incomplete, request).selection?.rules[0]?.quote).toBe(selection.rules[0].quote);
   });
 
   test('independent review receives every qualifier outside excerpts and can reject semantic disagreement', async () => {
@@ -142,6 +157,7 @@ describe('semantic lifecycle source normalization', () => {
     expect(seen[1].messages[0].content).toContain('COMPLETE original feature');
     expect(seen[1].messages[0].content).toContain('permission versus obligation');
     expect(seen[0].response_format.json_schema.schema.properties.rules.items.properties.sourceEvidence).toBeTruthy();
-    expect(seen[0].messages[0].content).toContain('Do not rewrite the source into a template');
+    expect(seen[0].messages[0].content).toContain('compiler does not judge their meaning');
+    expect(seen[0].messages[0].content).toContain('source auditing is an explicit offline operation');
   });
 });

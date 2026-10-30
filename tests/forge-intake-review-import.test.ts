@@ -148,7 +148,13 @@ describe('Forge Intake untrusted review bundle import', () => {
       [{ ...base, evidence: { ...base.evidence!, source: { sha256: hashSource('other'), length: base.rawSource.length } } }, /evidence source identity/u],
       [{ ...base, evidence: { ...base.evidence!, claims: [{ ...base.evidence!.claims[0]!, evidence: [{ start: 0, end: 3, quote: 'Rat', cookie: 'secret' }] }] } }, /unknown key/u],
     ];
-    for (const [value, message] of cases) expect(() => decodeObject(value)).toThrow(message);
+    for (const [value, message] of cases) {
+      if(/requestId|artifactHash/u.test(message.source)){
+        const bundle=decodeObject(value).bundle;
+        expect(bundle.status).toBe('needs_review');expect(bundle.candidateResponse).toEqual(JSON.parse(JSON.stringify((value as any).candidateResponse)));
+        expect(bundle.deterministicFindings).toContainEqual(expect.objectContaining({code:message.source==='requestId'?'FORGE_REVIEW_REQUEST_ID_MISMATCH':'FORGE_REVIEW_ARTIFACT_HASH_MISSING',blocking:true}));
+      }else expect(() => decodeObject(value)).toThrow(message);
+    }
   });
 
   test('rejects contradictory accepted history and invalid diagnostic severity', () => {
@@ -163,7 +169,14 @@ describe('Forge Intake untrusted review bundle import', () => {
       [{ ...base, candidateResponse: { ...base.candidateResponse!, diagnostics: [{ severity: 'warning', code: 'WARN', message: 'warning' }] } }, /warning or error/u],
       [{ ...base, candidateResponse: { ...base.candidateResponse!, diagnostics: [{ severity: 'fatalish', code: 'BAD', message: 'bad' }] } }, /unsupported value/u],
     ];
-    for (const [value, message] of cases) expect(() => decodeObject(value)).toThrow(message);
+    for (const [value, message] of cases) {
+      if(message.source==='unsupported value')expect(() => decodeObject(value)).toThrow(message);
+      else{
+        const bundle=decodeObject(value).bundle;
+        expect(bundle.status).toBe('needs_review');expect(bundle.candidateResponse).toEqual(JSON.parse(JSON.stringify((value as any).candidateResponse)));
+        expect(bundle.deterministicFindings).toContainEqual(expect.objectContaining({code:'FORGE_REVIEW_ACCEPTANCE_CONFLICT',blocking:true}));
+      }
+    }
   });
 
   test('never reflects an attacker-controlled unknown key in decoder errors', () => {

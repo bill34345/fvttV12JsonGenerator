@@ -395,8 +395,13 @@ describe('appendStructuredActionItems', () => {
       const activity = getActivities(item)[0];
 
       expect(item.effects).toHaveLength(2);
-      expect(item.effects.map((effect: any) => effect._id)).toHaveLength(2);
-      expect(item.effects.map((effect: any) => effect.description)).toEqual(['First fear lasts 1 minute.', 'Second fear lasts 2 rounds.']);
+      expect(new Set(item.effects.map((effect: any) => effect._id)).size).toBe(2);
+      expect(item.effects.map((effect: any) => effect.description)).toEqual([
+        expect.stringContaining('First fear lasts 1 minute.'),
+        expect.stringContaining('Second fear lasts 2 rounds.'),
+      ]);
+      expect(item.effects[0].description).not.toContain('Second fear');
+      expect(item.effects[1].description).not.toContain('First fear');
       expect(item.effects.map((effect: any) => effect.duration)).toEqual([
         expect.objectContaining({ seconds: 60 }),
         expect.objectContaining({ rounds: 2 }),

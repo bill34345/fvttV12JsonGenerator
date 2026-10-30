@@ -12,6 +12,7 @@ const formalSource=recorded.nativeActivitySchema.formalSource;
 let response:ForgeActorResponse,artifact:any;
 beforeAll(async()=>{response=await convertFinalActorSource(buildForgeActorRequest({content:formalSource,displayName:'Independent source operations',requestId:'midi-independent-source',fvttVersion:'14.364',systemVersion:'5.3.3'}));if(!('result'in response)||response.result.status!=='accepted')throw Error('Formal source did not generate an accepted Actor');artifact=response.result.artifact;});
 const activities=(actor:any)=>actor.items.flatMap((item:any)=>Object.values(item.system?.activities??{})).filter((activity:any)=>activity.flags?.fvttJsonGenerator?.sourceOperation) as any[];
+const nativeActivities=(actor:any)=>activities(actor).map(({midiProperties,otherActivityId,...activity})=>activity);
 const moduleState=(version='14.0.11',active=true)=>({get:(id:string)=>id==='midi-qol'?{active,version}:undefined});
 function runtime(version:string|undefined='14.0.11',drift?:(data:any)=>void){
   function collection(kind:string){const docs=new Map<string,any>();const api={createCount:0,deleteCount:0,get:(id:string)=>docs.get(id),get contents(){return[...docs.values()];},documentClass:{async create(data:any){api.createCount++;const copy=structuredClone(data);drift?.(copy);const doc:any={id:copy._id,uuid:kind+'.'+copy._id,name:copy.name,data:copy,get flags(){return this.data.flags;},toObject(){return structuredClone(this.data);},async update(changes:Record<string,unknown>){for(const[path,value]of Object.entries(changes)){const parts=path.split('.');let owner=this.data;for(const key of parts.slice(0,-1))owner=owner[key]??={};owner[parts.at(-1)!]=value;}return this;},async delete(){api.deleteCount++;docs.delete(this.id);}};docs.set(doc.id,doc);return doc;}}};return api;}
@@ -34,11 +35,15 @@ describe('locked Midi independent source-operation import adapter',()=>{
     const expected=prepareFoundryImportArtifact(artifact,{modules:moduleState()}) as any;
     for(const mutate of [(a:any)=>{activities(a)[0].midiProperties.otherActivityCompatible=true;},(a:any)=>{delete activities(a)[0].midiProperties.otherActivityCompatible;},(a:any)=>{delete activities(a)[0].midiProperties;},(a:any)=>{activities(a)[0].midiProperties.triggeredActivityId='other';},(a:any)=>{delete activities(a)[0].midiProperties.triggeredActivityId;},(a:any)=>{activities(a).find(activity=>activity.type==='attack').otherActivityId='';},(a:any)=>{delete activities(a).find(activity=>activity.type==='attack').otherActivityId;},(a:any)=>{activities(a).find(activity=>activity.type==='save').otherActivityId='other';}]){const changed=structuredClone(expected);mutate(changed);expect(()=>assertActorSemantics(expected,changed)).toThrow('Midi safety');}
   });
-  test('no Midi leaves pure core; unknown active versions fail before creation',async()=>{
+  test('no Midi leaves pure core; unknown active versions retain the Actor and report the unverified adapter',async()=>{
     const plain=prepareFoundryImportArtifact(artifact) as any,inactive=prepareFoundryImportArtifact(artifact,{modules:moduleState('unverified',false)}) as any;
     expect(activities(plain).every(activity=>activity.midiProperties===undefined&&activity.otherActivityId===undefined)).toBe(true);expect(inactive).toEqual(plain);
     const absent=runtime('');await createAcceptedForgeActor({game:absent.game,response});expect(activities(absent.game.actors.contents[0].data).every(activity=>activity.midiProperties===undefined&&activity.otherActivityId===undefined)).toBe(true);
-    const env=runtime('14.0.12');await expect(createAcceptedForgeActor({game:env.game,response})).rejects.toThrow('unverified Midi version');expect(env.game.actors.createCount).toBe(0);
+    const before=hashArtifact(artifact),env=runtime('14.0.12'),created=await createAcceptedForgeActor({game:env.game,response});
+    expect(created.status).toBe('created');expect(created.readbackWarnings?.join(' ')).toContain('Midi 14.0.12');
+    expect(created.readbackWarnings?.join(' ')).toContain('尚未验证');expect(env.game.actors.createCount).toBe(1);expect(env.game.actors.deleteCount).toBe(0);
+    expect(activities(env.game.actors.contents[0].data)).toEqual(activities(prepareFoundryImportArtifact(artifact,{modules:moduleState()})));
+    expect(nativeActivities(env.game.actors.contents[0].data)).toEqual(nativeActivities(artifact));expect(hashArtifact(artifact)).toBe(before);
   });
   test('mixed source Save keeps its damage button and rejects missing or restored hidden-button defaults',()=>{
     const before=JSON.stringify(artifact),adapted=prepareFoundryImportArtifact(artifact,{modules:moduleState()}) as any;
@@ -58,8 +63,14 @@ describe('locked Midi independent source-operation import adapter',()=>{
     const plain=prepareFoundryImportArtifact(unrelated,{modules:moduleState()}) as any;
     expect(plain).toEqual(unrelated);
   });
-  test('an unbound Activity marker cannot receive a guessed compatibility adapter',()=>{const changed=structuredClone(artifact);activities(changed)[0].flags.fvttJsonGenerator.sourceOperation.relationship='follow-up';expect(()=>prepareFoundryImportArtifact(changed,{modules:moduleState()})).toThrow('Unbound source-operation');});
-  test('source-line boundary newlines keep bindings while changed operation text still fails before import',()=>{
+  test('an inconsistent Activity marker retains all original activity fields through the optional compatibility adapter',()=>{
+    const changed=structuredClone(artifact);activities(changed)[0].flags.fvttJsonGenerator.sourceOperation.relationship='follow-up';
+    const before=JSON.stringify(changed),adapted=prepareFoundryImportArtifact(changed,{modules:moduleState()});
+    expect(JSON.stringify(changed)).toBe(before);expect(nativeActivities(adapted)).toEqual(nativeActivities(changed));
+    expect(activities(adapted).every(activity=>activity.midiProperties.otherActivityCompatible===false&&activity.midiProperties.triggeredActivityId==='none')).toBe(true);
+    expect((adapted as any).flags['fvtt-json-generator-spell-resolver']).toEqual(changed.flags['fvtt-json-generator-spell-resolver']);
+  });
+  test('source-line boundary newlines and changed operation annotations preserve activities and source text',()=>{
     const candidate=structuredClone(artifact);
     for(const item of candidate.items){const rule=item.flags?.fvttJsonGenerator?.manualRule;if(rule?.sourceOperations)rule.sourceText='\n'+rule.sourceText.trim()+'\n';}
     const before=JSON.stringify(candidate),adapted=prepareFoundryImportArtifact(candidate,{modules:moduleState()});
@@ -69,7 +80,12 @@ describe('locked Midi independent source-operation import adapter',()=>{
       const wrong=structuredClone(candidate),item=wrong.items.find((entry:any)=>entry.flags?.fvttJsonGenerator?.manualRule?.sourceOperations);
       if(layer==='operation')item.flags.fvttJsonGenerator.manualRule.sourceOperations[0].sourceText+=' Different source rule.';
       else activities(wrong)[0].flags.fvttJsonGenerator.sourceOperation.sourceText+=' Different source rule.';
-      expect(()=>prepareFoundryImportArtifact(wrong,{modules:moduleState()})).toThrow('Unbound source-operation');
+      const original=JSON.stringify(wrong),retained=prepareFoundryImportArtifact(wrong,{modules:moduleState()}) as any;
+      expect(JSON.stringify(wrong)).toBe(original);expect(nativeActivities(retained)).toEqual(nativeActivities(wrong));
+      expect(retained.items.map((entry:any)=>entry.flags?.fvttJsonGenerator?.manualRule))
+        .toEqual(wrong.items.map((entry:any)=>entry.flags?.fvttJsonGenerator?.manualRule));
+      expect(activities(retained).every(activity=>activity.midiProperties.otherActivityCompatible===false&&activity.midiProperties.triggeredActivityId==='none')).toBe(true);
+      expect(retained.flags['fvtt-json-generator-spell-resolver']).toEqual(wrong.flags['fvtt-json-generator-spell-resolver']);
     }
   });
   test('normal single-Actor creation and reuse keep safety and report changed safety fields without migration',async()=>{
@@ -80,7 +96,12 @@ describe('locked Midi independent source-operation import adapter',()=>{
   test('a changed native safety field retains the created Actor and reports the mismatch',async()=>{const env=runtime('14.0.11',data=>{activities(data)[0].midiProperties.otherActivityCompatible=true;});expect((await createAcceptedForgeActor({game:env.game,response})).readbackWarnings?.join(' ')).toContain('Midi safety');expect(env.game.actors.createCount).toBe(1);expect(env.game.actors.deleteCount).toBe(0);expect(env.game.actors.contents).toHaveLength(1);});
   test('Encounter import, all preflight conflicts and reuse use the same safety contract',async()=>{
     const bundle:any=encounterFixture();bundle.id='midi-independent-encounter';bundle.actors=[{key:'main',label:'Independent operations',source:formalSource,sourceHash:hashSource(formalSource)}];bundle.macros=[];const prepared=await prepareForgeEncounter(JSON.stringify(bundle)),sealed=JSON.stringify(prepared);
-    const unknown=runtime('14.0.12');await expect(importForgeEncounter({...unknown,prepared,reviewed:true})).rejects.toThrow('unverified Midi version');expect(unknown.game.actors.createCount).toBe(0);expect(unknown.game.macros.createCount).toBe(0);
+    const unknown=runtime('14.0.12'),unverified=await importForgeEncounter({...unknown,prepared,reviewed:true});
+    expect(unverified.failures).toEqual([]);expect(unverified.documents[0]!.status).toBe('created');
+    expect(unverified.documents[0]!.readbackWarnings?.join(' ')).toContain('Midi 14.0.12');
+    expect(unverified.documents[0]!.readbackWarnings?.join(' ')).toContain('尚未验证');
+    expect(unknown.game.actors.createCount).toBe(1);expect(unknown.game.actors.deleteCount).toBe(0);expect(unknown.game.macros.createCount).toBe(0);
+    expect(nativeActivities(unknown.game.actors.contents[0].data)).toEqual(nativeActivities(prepared.actors[0]!.artifact));expect(JSON.stringify(prepared)).toBe(sealed);
     const env=runtime(),created=await importForgeEncounter({...env,prepared,reviewed:true});expect(created.documents[0]!.status).toBe('created');expect((await importForgeEncounter({...env,prepared,reviewed:true})).documents[0]!.status).toBe('existing');expect(JSON.stringify(prepared)).toBe(sealed);
     const existing=env.game.actors.contents[0],activity=activities(existing.data).find(activity=>activity.type==='damage');activity.midiProperties.otherActivityCompatible=true;const original=JSON.stringify(existing.data);expect((await importForgeEncounter({...env,prepared,reviewed:true})).documents.flatMap(d=>d.readbackWarnings??[]).join(' ')).toContain('Midi safety');expect(JSON.stringify(existing.data)).toBe(original);expect(env.game.actors.createCount).toBe(1);expect(env.game.actors.deleteCount).toBe(0);
   });

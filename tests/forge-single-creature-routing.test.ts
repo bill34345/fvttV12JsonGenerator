@@ -45,16 +45,16 @@ describe('explicit single-creature source routing',()=>{
   const result=await analyzeBrowserActorSourceWithAi({...f.input,sourceScope:'discover'},f.provider);
   expect(result.errorCode).toBe('multiple_entities');expect(result.candidates).toHaveLength(2);expect(f.calls.extract).toBe(0);
  });
- test.each(['invalid-scope','too-long','cancelled'] as const)('%s rejects locally without any provider method',async scenario=>{
+ test.each(['invalid-scope','too-long','cancelled'] as const)('%s keeps its source and the applicable cancellation or scope result',async scenario=>{
   const f=fixture(),controller=new AbortController();
   const input={...f.input,sourceScope:'single' as const};
   if(scenario==='invalid-scope')input.sourceScope='arbitrary' as any;
   if(scenario==='too-long')input.source='x'.repeat(INTAKE_LIMITS.maxCandidateLength+1);
   if(scenario==='cancelled')controller.abort();
   const result=await analyzeBrowserActorSourceWithAi(input,f.provider,controller.signal);
-  expect(result.status).toBe('failed');expect(f.calls).toEqual({discover:0,extract:0,review:0,repair:0});
+  expect(result.status).toBe(scenario==='too-long'?'needs_review':'failed');expect(f.calls).toEqual({discover:0,extract:scenario==='too-long'?1:0,review:0,repair:0});
   if(scenario==='invalid-scope')expect(result.errorCode).toBe('invalid_source');
-  if(scenario==='too-long')expect(result.errorCode).toBe('input_too_large');
+  if(scenario==='too-long'){expect(result.candidate?.quote).toBe(input.source);expect(result.ir).toBeDefined();}
   if(scenario==='cancelled')expect(result.errorCode).toBe('cancelled');
  });
  test('a failed extraction is preserved and never retried through discovery',async()=>{

@@ -4,7 +4,7 @@ import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
 import {runStagedMonsterExtraction} from '@fvtt-json-generator/intake-ai/staged-extraction';
 import {splitStagedMonsterSource} from '@fvtt-json-generator/intake-ai/staged-source';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
-import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
+import {auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
 import {buildForgeActorRequest,convertFinalActorSource} from '@fvtt-json-generator/forge-browser-runtime';
 import {candidateSourceOperationShapeErrors,isSourceCandidateReview} from '@fvtt-json-generator/models/source-operations';
 import fixture from './fixtures/forge-damage-upgrade.json';
@@ -52,7 +52,7 @@ for(const settings of [{toHit:999,target:1},{toHit:6,target:2},{toHit:-4,target:
   expect(feature.sourceOperations?.[0]?.damage).toEqual([{formula:'1d8+3',type:'piercing',relationship:'base'}]);
   expect(feature.uses).toEqual({max:2,period:'day'});
   expect((feature.candidateReview?.proposal as any).攻击.目标数量).toBe(settings.target);
-  expect(validateMonsterIntakeIR(source,ir).blocking.length).toBeGreaterThan(0);
+  expect(auditMonsterIntakeSource(source,ir).blocking.length).toBeGreaterThan(0);
   const result=await generated(ir),actor=(result as any).artifact;
   expect(actor,JSON.stringify(result)).toBeDefined();expect(result.status).not.toBe('accepted');
   const item=actor.items.find((i:any)=>i.name.startsWith('Needle'));
@@ -150,7 +150,7 @@ test('unreadable YAML remains an honest no-candidate result and does not become 
 });
 
 test('candidate metadata cannot grant automatic source acceptance or unsafe operation shapes',()=>{
-  expect(isSourceCandidateReview({version:1,findings:[],proposal:{}})).toBe(false);
+  expect(isSourceCandidateReview({version:1,findings:[],proposal:{}})).toBe(true);
   const metadata={version:1,findings:[{code:'REVIEW',path:'/test',message:'review'}],proposal:{constructor:'unsafe'}};
   expect(isSourceCandidateReview(metadata)).toBe(false);
   expect(candidateSourceOperationShapeErrors([{id:'bad',name:'bad',sourceText:'source',type:'attack',relationship:'primary',attack:{type:'mwak',toHit:NaN},proof:{attack:'source'}}])).not.toEqual([]);

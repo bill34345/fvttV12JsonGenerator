@@ -2,17 +2,31 @@ import {expect,spyOn} from 'bun:test';
 import {OpenAICompatibleMonsterIntakeProvider,type OpenAICompatibleMonsterIntakeOptions} from '@fvtt-json-generator/intake-ai/provider';
 import {createEncounterIntakeProviders,generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import {hashSource,isUsableActorCandidateArtifact} from '@fvtt-json-generator/forge-gateway-protocol';
-import type {MonsterIntakeIR} from '@fvtt-json-generator/intake-ai/types';
+import {runStagedMonsterExtraction,type StagedExtractionCall} from '@fvtt-json-generator/intake-ai/staged-extraction';
+import type {ExtractionRequest,MonsterIntakeIR} from '@fvtt-json-generator/intake-ai/types';
 
 /** Test-owned opt-in for the historical base/whole-form protocol. The public
  * Forge factory deliberately remains on its current single complete-IR route. */
-export function legacyWholeFormProvider(options:Partial<OpenAICompatibleMonsterIntakeOptions>={}){
-  return new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://offline.invalid/v1',apiKey:'fixture-only',
-    model:'legacy-whole-form-control',reviewModel:'legacy-whole-form-control',timeoutMs:10000,repairTimeoutMs:10000,maxAttempts:1,
+export function legacyStagedProvider(options:Partial<OpenAICompatibleMonsterIntakeOptions>={}){
+  const provider=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://offline.invalid/v1',apiKey:'fixture-only',
+    model:'legacy-stage-control',reviewModel:'legacy-stage-control',timeoutMs:10000,repairTimeoutMs:10000,
     evidenceAnchoring:'exact-quotes',transport:{protocol:'openai-chat',authScheme:'bearer',structuredOutput:{mode:'json_object'}},
-    httpClient:(url,init)=>fetch(url,init),...options,
-    stagedExtraction:{baseMode:'facts',featureMode:'whole-v2',preserveCandidates:true,
-      ...(typeof options.stagedExtraction==='object'?options.stagedExtraction:{})}});
+    httpClient:(url,init)=>fetch(url,init),...options});
+  const staged=typeof options.stagedExtraction==='object'?options.stagedExtraction:{};
+  // The test adapter opts into the real legacy assembler and reuses the real
+  // provider transport, evidence capture and retries. Public extract stays full IR.
+  const transport=provider as unknown as {call(stage:'extract',model:string,payload:unknown,override:StagedExtractionCall&{raw:boolean;sourceHash:string;signal?:AbortSignal}):Promise<unknown>};
+  const call=transport.call.bind(provider);
+  const corrections=new WeakMap<ExtractionRequest,0|1>();
+  provider.getExtractionCorrectionCount=request=>corrections.get(request)??0;
+  provider.extract=(request:ExtractionRequest)=>runStagedMonsterExtraction(request,stage=>call('extract',provider.extractionModel,stage.payload,
+    {...stage,raw:stage.stage!=='base'||staged.baseMode==='facts',sourceHash:request.sourceSha256,signal:staged.signal??options.signal}),
+    {...staged,onStage:async event=>{corrections.set(request,event.correctionCount??0);await staged.onStage?.(event);}});
+  return provider;
+}
+export function legacyWholeFormProvider(options:Partial<OpenAICompatibleMonsterIntakeOptions>={}){
+  return legacyStagedProvider({maxAttempts:1,...options,stagedExtraction:{baseMode:'facts',featureMode:'whole-v2',preserveCandidates:true,
+    ...(typeof options.stagedExtraction==='object'?options.stagedExtraction:{})}});
 }
 
 /** A synthetic fixed full-IR reply, assembled from this test's explicit legacy

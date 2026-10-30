@@ -56,16 +56,14 @@ describe('Forge wire safety boundaries', () => {
     const decoded = decodeForgeActorResponse(response({
       verification: verificationWithOutputPath('private/cache/output.json'),
     }));
-    expect(decoded.ok).toBe(false);
-    if (decoded.ok) throw new Error('Expected a repository-relative output path to be rejected.');
-    expect(decoded.issues.map((issue) => issue.code)).toContain('INVALID_OUTPUT_PATH');
+    const retained = retainedReview(decoded, 'INVALID_OUTPUT_PATH');
+    expect(retained.verification.mechanicsCoverage[0]?.outputPaths).toEqual([]);
+    expect(JSON.stringify(retained)).not.toContain('private/cache/output.json');
 
     const prefixedBypass = decodeForgeActorResponse(response({
       verification: verificationWithOutputPath('documents/0/packages/parser/src/yaml.ts'),
     }));
-    expect(prefixedBypass.ok).toBe(false);
-    if (prefixedBypass.ok) throw new Error('Expected a prefixed repository path to be rejected.');
-    expect(prefixedBypass.issues.map((issue) => issue.code)).toContain('INVALID_OUTPUT_PATH');
+    expect(retainedReview(prefixedBypass, 'INVALID_OUTPUT_PATH').verification.mechanicsCoverage[0]?.outputPaths).toEqual([]);
   });
 
   test.each(['literal-only', 'unsupported', 'missing', 'duplicate'] as const)(
@@ -83,9 +81,9 @@ describe('Forge wire safety boundaries', () => {
           }],
         },
       }));
-      expect(decoded.ok).toBe(false);
-      if (decoded.ok) throw new Error(`Expected accepted + ${status} coverage to be rejected.`);
-      expect(decoded.issues.map((issue) => issue.code)).toContain('ACCEPTED_WITH_REVIEW_COVERAGE');
+      expect(retainedReview(decoded, 'ACCEPTED_WITH_REVIEW_COVERAGE').verification.mechanicsCoverage).toEqual([{
+        mechanicId: 'attack-1', kind: 'attack', sourceField: 'actor.actions', status, outputPaths: [],
+      }]);
     },
   );
 
@@ -102,9 +100,9 @@ describe('Forge wire safety boundaries', () => {
         }],
       },
     }));
-    expect(decoded.ok).toBe(false);
-    if (decoded.ok) throw new Error('Expected projected mechanics without output paths to be rejected.');
-    expect(decoded.issues.map((issue) => issue.code)).toContain('ACCEPTED_WITH_REVIEW_COVERAGE');
+    expect(retainedReview(decoded, 'ACCEPTED_WITH_REVIEW_COVERAGE').verification.mechanicsCoverage[0]).toMatchObject({
+      status: 'projected', outputPaths: [],
+    });
   });
 
   test.each([
@@ -126,9 +124,7 @@ describe('Forge wire safety boundaries', () => {
         }],
       },
     }));
-    expect(decoded.ok).toBe(false);
-    if (decoded.ok) throw new Error('Expected review-only mechanic metadata to be rejected.');
-    expect(decoded.issues.map((issue) => issue.code)).toContain('ACCEPTED_WITH_REVIEW_COVERAGE');
+    expect(retainedReview(decoded, 'ACCEPTED_WITH_REVIEW_COVERAGE').verification.mechanicsCoverage[0]).toMatchObject(reviewMetadata);
   });
 
   test('projects and decodes only logical diagnostics without internal paths', () => {
@@ -156,9 +152,8 @@ describe('Forge wire safety boundaries', () => {
       verification: { status: 'needs_review', mechanicsCoverage: [] },
       artifactHash: undefined,
     }));
-    expect(unsafePath.ok).toBe(false);
-    if (unsafePath.ok) throw new Error('Expected an internal diagnostic path to be rejected.');
-    expect(unsafePath.issues.map((issue) => issue.code)).toContain('UNSAFE_DIAGNOSTIC_PATH');
+    const pathResult = retainedReview(unsafePath, 'UNSAFE_DIAGNOSTIC_PATH');
+    expect(JSON.stringify(pathResult)).not.toContain('repo/private/output.json');
 
     const unsafeMessage = decodeForgeActorResponse(response({
       status: 'needs_review',
@@ -166,9 +161,9 @@ describe('Forge wire safety boundaries', () => {
       verification: { status: 'needs_review', mechanicsCoverage: [] },
       artifactHash: undefined,
     }));
-    expect(unsafeMessage.ok).toBe(false);
-    if (unsafeMessage.ok) throw new Error('Expected an internal path in a diagnostic message to be rejected.');
-    expect(unsafeMessage.issues.map((issue) => issue.code)).toContain('UNSAFE_DIAGNOSTIC_MESSAGE');
+    const messageResult = retainedReview(unsafeMessage, 'UNSAFE_DIAGNOSTIC_MESSAGE');
+    expect(JSON.stringify(messageResult)).not.toContain('C:\\repo\\secret.md');
+    expect(messageResult.diagnostics).toContainEqual(expect.objectContaining({ code: 'NEEDS_REVIEW', path: 'actor.actions' }));
   });
 
   test('keeps Gateway errors closed and rejects path-bearing messages', () => {
@@ -208,6 +203,17 @@ describe('Forge wire safety boundaries', () => {
     )).toBe(true);
   });
 });
+
+function retainedReview(decoded: ReturnType<typeof decodeForgeActorResponse>, issueCode: string) {
+  expect(decoded.ok).toBe(true);
+  if (!decoded.ok || !('result' in decoded.value)) throw new Error('Expected an ancillary report issue to retain the candidate.');
+  const result = decoded.value.result;
+  expect(result).toMatchObject({ status: 'needs_review', verification: { status: 'needs_review' },
+    artifact: { name: 'Safe Actor' }, artifactHash: hashArtifact({ name: 'Safe Actor' }) });
+  expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: 'FORGE_REPORT_INCOMPLETE',
+    severity: 'warning', path: 'actor', message: expect.stringContaining(issueCode) }));
+  return result;
+}
 
 function response(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const artifact = { name: 'Safe Actor' };

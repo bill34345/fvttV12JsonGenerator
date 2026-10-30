@@ -4,7 +4,7 @@ import {sourceOperationClauses} from '@fvtt-json-generator/models/source-operati
 import {sourceSharedUseDeclarations,sourceResourcePoolErrors} from '@fvtt-json-generator/models/source-resource-pools';
 import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
-import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
+import {auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
 import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
 import {generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import {YamlParser} from '@fvtt-json-generator/parser/yaml';
@@ -31,7 +31,7 @@ async function extract(options:{omit?:boolean;max?:number;cost?:number;member?:s
 
 test('explicit non-spell members share one native pool; both attack modes consume it and follow-up does not',async()=>{
   const {ir,seen}=await extract();expect(seen).toHaveLength(2);expect(ir.creature.sourceResourcePools).toHaveLength(1);
-  expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+  expect(auditMonsterIntakeSource(source,ir).blocking).toEqual([]);
   const markdown=renderMonsterIntakeMarkdown(ir),actor=new ActorGenerator({fvttVersion:'14',effectProfile:'core'}).generate(new YamlParser().parse(markdown)) as any;
   expect(verifyMonsterIntake(source,ir,markdown,actor).findings.filter(f=>f.blocking)).toEqual([]);
   const [first,second]=actor.items,primary=Object.values(first.system.activities) as any[],secondary=Object.values(second.system.activities) as any[];
@@ -63,7 +63,7 @@ test('every explicitly named shared member must belong to the same pool',async()
 test('pool inventory and every evidence reference stay inside the current candidate',async()=>{
   const outside='Other A and Other B share these four daily uses.',input=source+'\nOther Monster\n'+outside+'\n',range={start:0,end:source.length};
   const {ir}=await extract({},input,range.end);expect(sourceResourcePoolErrors(input,ir.creature,hashSource(input),range)).toEqual([]);
-  expect(validateMonsterIntakeIR(input,ir,{coverageRange:range}).blocking).toEqual([]);
+  expect(auditMonsterIntakeSource(input,ir,{coverageRange:range}).blocking).toEqual([]);
   const changed=structuredClone(ir),start=input.indexOf(outside);changed.creature.sourceResourcePools![0]!.evidence.push({start,end:start+outside.length,quote:outside});
-  expect(validateMonsterIntakeIR(input,changed,{coverageRange:range}).blocking.some(f=>f.code==='SOURCE_SHARED_RESOURCE_CONFLICT')).toBe(true);
+  expect(auditMonsterIntakeSource(input,changed,{coverageRange:range}).blocking.some(f=>f.code==='SOURCE_SHARED_RESOURCE_CONFLICT')).toBe(true);
 });

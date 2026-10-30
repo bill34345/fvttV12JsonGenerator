@@ -49,10 +49,25 @@ describe('source resource recovery periods',()=>{
     const parsed=new YamlParser().parse(source.replace('使用次数: {max: 2, period: day}','每日: 2')) as any;
     const serialized=JSON.stringify(parsed);expect(serialized).toContain('"uses":{"max":2,"period":"day"}');
   });
-  test('rejects invalid and conflicting source counters',()=>{
-    for(const replacement of ['使用次数: {max: 0, period: day}','使用次数: {max: 2, period: never}','使用次数: {max: 2, period: day, extra: true}','使用次数: {max: 2, period: day}\n    充能: [5, 6]',
-      '使用次数: {max: 2, period: [day]}','使用次数: null','使用次数: {max: 2, period: longRest}\n    每日: 3']){
-      expect(()=>new YamlParser().parse(source.replace('使用次数: {max: 2, period: day}',replacement))).toThrow();
+  test('retains invalid and conflicting resource records beside the other abilities',()=>{
+    for(const [replacement,expectedUses,note] of [
+      ['使用次数: {max: 0, period: day}',undefined,'GM 次数与恢复：{"max":0,"period":"day"}'],
+      ['使用次数: {max: 2, period: never}',undefined,'GM 次数与恢复：{"max":2,"period":"never"}'],
+      ['使用次数: {max: 2, period: day, extra: true}',{max:2,period:'day'},null],
+      ['使用次数: {max: 2, period: day}\n    充能: [5, 6]',{max:2,period:'day'},null],
+      ['使用次数: {max: 2, period: [day]}',undefined,'GM 次数与恢复：{"max":2,"period":["day"]}'],
+      ['使用次数: null',undefined,'GM 次数与恢复：null'],
+      ['使用次数: {max: 2, period: longRest}\n    每日: 3',{max:2,period:'longRest'},'GM 另有每日次数：3'],
+    ] as const){
+      const parsed=new YamlParser().parse(source.replace('使用次数: {max: 2, period: day}',replacement));
+      const actions=parsed.structuredActions!.特性!;
+      expect(actions.map(action=>action.name)).toEqual(['每日能力','短休能力','黎明能力','旧长休入口','被动特性']);
+      expect(actions[0]!.uses).toEqual(expectedUses);
+      expect(actions[0]!.describe).toContain('每日可使用两次。确切重置时点由GM决定。');
+      if(note)expect(actions[0]!.describe).toContain(note);
+      if(replacement.includes('充能:'))expect(actions[0]!.recharge).toEqual([5,6]);
+      expect(actions[1]!.uses).toEqual({max:3,period:'shortRest'});
+      expect(actions[2]!.uses).toEqual({max:4,period:'dawn'});
     }
   });
 });

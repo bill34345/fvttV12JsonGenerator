@@ -323,7 +323,9 @@ describe('OpenAI-compatible monster intake provider', () => {
     });
 
     await expect(provider.discover({ source: 'x', sourceSha256: 'h', chunkStart: 0, chunkEnd: 1 }))
-      .resolves.toEqual({ schemaVersion: 1, candidates: [] });
+      .resolves.toEqual({ schemaVersion: 1, candidates: [], findings: [expect.objectContaining({
+        code: 'DISCOVERY_NO_SELECTION', path: '/discovery', blocking: false,
+      })] });
     expect(calls).toBe(2);
   });
 
@@ -358,11 +360,14 @@ describe('OpenAI-compatible monster intake provider', () => {
       uncertainties: [{ id: 'old' }],
     };
 
-    await expect(provider.repair({ stage: 'deterministic-validation', source: '', ir, deterministicFindings: [] } as never))
-      .resolves.toMatchObject({
+    const repaired = await provider.repair({ stage: 'deterministic-validation', source: '', ir, deterministicFindings: [] } as never);
+    expect(repaired).toMatchObject({
         creature: { attributes: { ac: 20 }, actions: [{ name: 'Eye Ray' }] },
-        uncertainties: [],
       });
+    expect(repaired.uncertainties).not.toContainEqual(expect.objectContaining({ id: 'old' }));
+    expect(repaired.uncertainties).toContainEqual(expect.objectContaining({
+      code: 'FIELD_PROJECTION_INCOMPLETE', path: '/source', blocking: false,
+    }));
     expect(ir.creature.attributes.ac).toBe(19);
     expect(ir.creature.actions).toEqual([]);
   });
@@ -496,7 +501,7 @@ describe('OpenAI-compatible monster intake provider', () => {
     }]);
   });
 
-  test('re-anchors exact extraction evidence without replacing an explicitly empty spellcasting group id', async () => {
+  test('re-anchors exact extraction evidence and generates an empty technical spellcasting group id', async () => {
     const source = 'prefix\nInnate Spellcasting. Its spellcasting ability is Charisma.\nAt will: mage armor\nsuffix';
     const quote = 'Innate Spellcasting. Its spellcasting ability is Charisma.';
     const grant = 'At will: mage armor';
@@ -539,8 +544,8 @@ describe('OpenAI-compatible monster intake provider', () => {
       candidate: { id: 'candidate', label: 'Candidate', start: 0, end: source.length, quote: source },
     });
     const group = result.creature.spellcasting![0]!;
-    expect(group.groupId).toBe('');
-    expect(validateMonsterIntakeIR(source, result).blocking).toContainEqual(expect.objectContaining({
+    expect(group.groupId).toBe('casting-1');
+    expect(validateMonsterIntakeIR(source, result).blocking).not.toContainEqual(expect.objectContaining({
       code: 'INVALID_STRUCTURE', path: '/creature/spellcasting/0/groupId',
     }));
     expect(group.evidence).toEqual([{
@@ -570,7 +575,11 @@ describe('OpenAI-compatible monster intake provider', () => {
     });
 
     expect(result.source).toEqual({ sha256: 'request-owned-sha256', length: source.length });
-    expect(result.creature as unknown).toEqual({ spellcasting: [] });
+    expect(result.creature.spellcasting).toEqual([]);
+    expect(result.creature).toMatchObject({ actions: [], traits: [], saves: {}, skills: {}, senses: {} });
+    expect(result.creature.candidateReview).toMatchObject({
+      proposal: { original: { creature: { spellcasting: [] } } },
+    });
   });
 
   test('preserves AI caster levels in both innate and prepared groups without deriving them from prose', async () => {
@@ -671,7 +680,11 @@ describe('OpenAI-compatible monster intake provider', () => {
     });
 
     expect(normalized.source).toEqual({ sha256: buildValidLurkerIr().source.sha256, length: LURKER_SOURCE.length });
-    expect(normalized.creature).toEqual(before.creature);
+    const { candidateReview: _review, ...normalizedCreature } = normalized.creature;
+    expect(normalizedCreature).toEqual(before.creature);
+    expect(normalized.creature.candidateReview).toMatchObject({
+      proposal: { original: { creature: before.creature } },
+    });
     expect(normalized.creature.spellcasting).toEqual([]);
     expect(ir).toEqual(before);
     expect(validateMonsterIntakeIR(LURKER_SOURCE, normalized, { coverageRange: candidate }).blocking).toEqual([]);
@@ -683,7 +696,7 @@ describe('OpenAI-compatible monster intake provider', () => {
     { label: 'empty string', legendary: '' },
     { label: 'empty object', legendary: {} },
     { label: 'invented zero object', legendary: { max: 0, preamble: '', evidence: [] } },
-  ])('preserves invalid AI legendary value $label and reports its structure regardless of prose', async ({ legendary }) => {
+  ])('preserves AI legendary value $label and reports only its actual structure issues', async ({ legendary }) => {
     const source = 'Claw. Melee Weapon Attack: +4 to hit.';
     const provider = makeProvider(async () => response(200, JSON.stringify({
       schemaVersion: 1,
@@ -696,8 +709,16 @@ describe('OpenAI-compatible monster intake provider', () => {
       candidate: { id: 'claw', label: 'Claw', start: 0, end: source.length, quote: source },
     });
 
-    expect((result.creature as any).legendary).toEqual(legendary);
-    expect(validateMonsterIntakeIR(source, result).blocking.some(finding => finding.path.startsWith('/creature/legendary'))).toBe(true);
+    expect((result.creature as any).legendary).toEqual(legendary && typeof legendary === 'object' && !Array.isArray(legendary)
+      ? { ...legendary, preamble: 'preamble' in legendary ? legendary.preamble : '', evidence: 'evidence' in legendary ? legendary.evidence : [] }
+      : legendary);
+    const findings = validateMonsterIntakeIR(source, result).blocking.filter(finding => finding.path.startsWith('/creature/legendary'));
+    if (legendary && typeof legendary === 'object' && !Array.isArray(legendary)) {
+      if ('max' in legendary) expect(findings).toEqual([]);
+      else expect(findings).toContainEqual(expect.objectContaining({ code: 'INVALID_STRUCTURE', path: '/creature/legendary/max' }));
+    } else {
+      expect(findings).toContainEqual(expect.objectContaining({ code: 'INVALID_STRUCTURE', path: '/creature/legendary' }));
+    }
   });
 
   test('reports invalid legendary metadata as a shape error when the prose mentions legendary actions', async () => {
@@ -743,7 +764,7 @@ describe('OpenAI-compatible monster intake provider', () => {
     const provider = makeProvider(async () => response(200, JSON.stringify({
       schemaVersion: 1,
       source: { sha256: 'hash', length: source.length },
-      creature: {},
+      creature: { identity: { name: 'same marker' } },
       claims: [{
         path: '/creature/identity/name', valueKind: 'explicit', confidence: 'high',
         evidence: [{ start: 7, end: 8, quote: 'same marker' }],
@@ -758,9 +779,12 @@ describe('OpenAI-compatible monster intake provider', () => {
       candidate: { id: 'candidate', label: 'Candidate', start: 0, end: source.length, quote: source },
     });
     expect(result.claims[0]!.evidence[0]).toEqual({ start: 7, end: 8, quote: 'same marker' });
+    expect(validateMonsterIntakeIR(source, result).findings).toContainEqual(expect.objectContaining({
+      code: 'EVIDENCE_MISMATCH', path: '/claims/0/evidence/0',
+    }));
   });
 
-  test('formats missing technical IDs, ability notation and evidence without filling omitted AI aliases', async () => {
+  test('formats missing technical IDs, ability notation and evidence with empty alias collections', async () => {
     const ir = buildRatWarlockIr();
     const statblockStart = RAT_WARLOCK_SOURCE.indexOf('鼠神邪术师 Warlock of the Rat God', 1);
     const candidate = {
@@ -800,12 +824,12 @@ describe('OpenAI-compatible monster intake provider', () => {
     expect(normalized.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[1]!.refId).toBe(before.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[1]!.refId);
     expect(normalized.creature.spellcasting![0]!.ability).toBe('cha');
     expect(normalized.creature.spellcasting![0]!.usageGroups.every((usageGroup) => (
-      usageGroup.spellRefs.every((spellRef) => !Object.hasOwn(spellRef, 'aliases'))
+      usageGroup.spellRefs.every((spellRef) => Array.isArray(spellRef.aliases) && spellRef.aliases.length === 0)
     ))).toBe(true);
     const findings = validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, normalized, { coverageRange: candidate }).blocking;
     const refs = normalized.creature.spellcasting![0]!.usageGroups.flatMap(group => group.spellRefs);
-    expect(findings).toHaveLength(refs.length);
-    expect(findings.every(finding => finding.path.endsWith('/aliases') && finding.code === 'INVALID_STRUCTURE')).toBe(true);
+    expect(refs).toHaveLength(10);
+    expect(findings).toEqual([]);
     expect(ir).toEqual(before);
   });
 

@@ -1,12 +1,12 @@
 import { expect, test } from 'bun:test';
 import yaml from 'js-yaml';
 import { sha256 } from '@fvtt-json-generator/contracts/hash';
-import { splitStagedMonsterSource } from '../packages/intake-ai/src/staged-source';
+import { splitStagedMonsterSource, StagedExtractionError } from '../packages/intake-ai/src/staged-source';
 import { assembleStagedFeature, assembleStagedMonsterIntake, validateStagedBaseFacts } from '../packages/intake-ai/src/staged-extraction';
 import { sourceFeatureBasicOmissions, sourceOperationSelfArea, sourceOperationErrors } from '@fvtt-json-generator/models/source-operations';
 import { makeWholeCategoryForm, decodeCategoryFormV2 } from '../packages/intake-ai/src/category-form-v2';
 import { adaptCategoryFormV2, completeCategoryFormSpellcasting,inspectCategoryFormV2 } from '../packages/intake-ai/src/category-form-v2-adapter';
-import { validateMonsterIntakeIR } from '../packages/intake-ai/src/validator';
+import { validateMonsterIntakeIR,auditMonsterIntakeSource } from '../packages/intake-ai/src/validator';
 import type { V2Row } from '../packages/intake-ai/src/category-form-v2';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
 import {YamlParser} from '@fvtt-json-generator/parser/yaml';
@@ -37,6 +37,13 @@ function filledKnife(crlf = false) {
   return data;
 }
 function adapt(data: ReturnType<typeof fixture>) { return adaptCategoryFormV2(data.plan, data.base, decodeCategoryFormV2(data.reply(), data.plan)); }
+function expectSourceRejection(plan:ReturnType<typeof splitStagedMonsterSource>,build:()=>unknown[]){
+  let values:any[];
+  try{values=build();}catch(error){expect(error).toBeInstanceOf(StagedExtractionError);return;}
+  const findings=values.flatMap((value,index)=>value.facts?.sourceOperations?sourceOperationErrors(plan.features[index]!.quote,value.facts.sourceOperations,
+    (plan.features[index]!.contextIds??[]).map(id=>plan.units.find(unit=>unit.id===id)!.quote)):[]);
+  expect(findings).not.toEqual([]);
+}
 function assemble(data: ReturnType<typeof fixture>) {
   const values = adapt(data);
   const ir = assembleStagedMonsterIntake(data.plan, data.base, values);
@@ -111,7 +118,7 @@ test('source-bound outgoing half retains both branches and rejects wrong actor, 
     (r:any)=>{r.伤害[1].生效条件='目标处于Bloodied时';},(r:any)=>{r.伤害[1].生效条件='the beast is not Bloodied';},
     (r:any)=>{r.伤害[1].倍率=0.25;},(r:any)=>{r.伤害[1].公式='5d8+2';},(r:any)=>{r.伤害.pop();},
     (r:any)=>{r.特殊规则='其受到的该攻击伤害减半';},(r:any)=>{r.伤害[0].生效条件=null;},
-  ]){Object.assign(row,structuredClone(original));mutate(row);expect(()=>adapt(data)).toThrow();}
+  ]){Object.assign(row,structuredClone(original));mutate(row);expectSourceRejection(data.plan,()=>adapt(data));}
   const removed=structuredClone(op);delete removed.damageAdjustment;
   expect(sourceOperationErrors(data.plan.features[0]!.quote.trim(),[removed])).toContain('0/damage-adjustment/omitted');
   for(const sourceText of [null,{},1]){
@@ -119,7 +126,8 @@ test('source-bound outgoing half retains both branches and rejects wrong actor, 
     expect(sourceOperationErrors(data.plan.features[0]!.quote.trim(),[corrupt]).length).toBeGreaterThan(0);
   }
   const other=structuredClone(ir);other.creature.identity.name='Other Sentinel';
-  expect(()=>new ActorGenerator({fvttVersion:'14',effectProfile:'core',translationService:null}).generate(new YamlParser().parse(renderMonsterIntakeMarkdown(other)))).toThrow('InvalidSourceDamageAdjustmentActor');
+  const preserved=new ActorGenerator({fvttVersion:'14',effectProfile:'core',translationService:null}).generate(new YamlParser().parse(renderMonsterIntakeMarkdown(other)));
+  expect(preserved.items).toHaveLength(1);expect(auditMonsterIntakeSource(data.source,other).blocking.some(f=>f.path==='/creature/identity/name')).toBe(true);
 });
 
 test('conditional damage before a Save remains an independent GM roll, not Save damage', () => {
@@ -252,7 +260,7 @@ test('a Save target introduced by the named owner remains bound to its original 
   ]){
     const other=fixture('Actions\nCharm. '+body);
     Object.assign(other.form.动作![0]!,{豁免:{DC:12,属性:['wis'],成功结果:'不受影响',目标限制:'30尺内其能看见的一个类人生物'},距离:[{用途:'选择目标',尺:30,条件:null}]});
-    expect(()=>adapt(other)).toThrow('V2_SOURCE_OPERATION_CONFLICT');
+    expectSourceRejection(other.plan,()=>adapt(other));
   }
 });
 
@@ -461,7 +469,7 @@ test('conditional source counts, spell cadences, area recipients and placement r
  ['wrong range',rows=>{rows.find(r=>r.名称==='Noxious Miasma')!.范围!.距离尺=60}],
  ['wrong area',rows=>{rows.find(r=>r.名称==='Noxious Miasma')!.范围!.大小尺=90}],
  ];
- for(const [label,mutate] of cases)expect(()=>adaptCategoryFormV2(plan,base,decode(mutate)),label).toThrow();
+ for(const [label,mutate] of cases)expectSourceRejection(plan,()=>adaptCategoryFormV2(plan,base,decode(mutate)));
 });
 
 test('wrapped known spell introduction is metadata but unknown introductory restrictions remain manual',()=>{

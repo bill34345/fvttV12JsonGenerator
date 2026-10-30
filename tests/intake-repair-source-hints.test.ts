@@ -17,7 +17,7 @@ function repairIr(refs: Array<{ quote: string }>) {
   return {
     schemaVersion: 1,
     source: { sha256: 'not-used-by-provider-stage-shape', length: 0 },
-    creature: {},
+    creature: { identity: { name: 'Repair evidence fixture', size: 'medium', creatureType: 'construct' } },
     claims: refs.map((ref, index) => ({
       path: `/creature/traits/${index}`, valueKind: 'explicit', confidence: 'high',
       evidence: [{ start: -1, end: -1, quote: ref.quote }],
@@ -68,8 +68,8 @@ describe('repair source diagnostic candidates', () => {
     expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({
       code: 'EVIDENCE_OUT_OF_RANGE', path: '/claims/0/evidence/0', blocking: true,
     }));
-    expect(requests[0]!.messages[0].content).toContain('source-comparison suggestions only');
-    expect(requests[0]!.messages[0].content).toContain('An evidence quote is a verbatim citation, not a paraphrase');
+    expect(requests[0]!.messages[0].content).toContain('Copy an exact verbatim source span');
+    expect(requests[0]!.messages[0].content).toContain('Never change the requested schema, call budget');
   });
 
   test('does not provide a hint when the long prefix appears more than once', async () => {

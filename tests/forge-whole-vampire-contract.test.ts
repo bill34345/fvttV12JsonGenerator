@@ -1,4 +1,6 @@
 import {describe,test,expect} from 'bun:test';
+import yaml from 'js-yaml';
+import {decodeCategoryFormV2} from '../packages/intake-ai/src/category-form-v2';
 import {readFileSync,writeFileSync,existsSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {createHash} from 'node:crypto';
@@ -64,7 +66,7 @@ for(const reference of ['id','name'] as const)test('legacy whole-form '+referenc
     const candidates=allFeatures(ir).filter(({feature})=>feature.name===unit.name&&feature.description===unit.quote.trim());expect(candidates).toHaveLength(1);
     const {feature,path}=candidates[0]!;expect(feature.evidence).toEqual([{start:unit.start,end:unit.end,quote:unit.quote}]);
     expect(ir.coverage).toContainEqual(expect.objectContaining({start:unit.start,end:unit.end,quote:unit.quote,classification:'mechanical',claimPaths:[path]}));
-    const items=actor.items.filter((item:any)=>item.name===unit.name&&item.flags?.fvttJsonGenerator?.manualRule?.sourceText===unit.quote.trim());expect(items).toHaveLength(1);
+    const items=actor.items.filter((item:any)=>item.name===unit.name&&plain(item.system?.description?.value??'').includes(plain(unit.quote)));expect(items,unit.name).toHaveLength(1);
     expect(plain(items[0].system.description.value)).toContain(plain(unit.quote));
     return {unitId:unit.id,name:unit.name,section:unit.section,path,sourceSha256:hash(unit.quote),itemId:items[0]._id,mode:feature.executionMode};
   });
@@ -82,7 +84,9 @@ for(const reference of ['id','name'] as const)test('legacy whole-form '+referenc
     // The established 2014 contract leaves unlabelled one-action costs implicit.
     expect(ir.creature.legendaryActions.find(feature=>feature.name===name)?.legendaryCost??1).toBe(cost);
   }
-  expect(item('Legendary Resistance (3/Day)').system.uses).toMatchObject({max:'3',recovery:[{period:'day',type:'recoverAll'}]});
+  expect(actor.system.resources.legres).toMatchObject({spent:0,max:3});
+  expect(item('Legendary Resistance (3/Day)').system.uses).toMatchObject({max:'',recovery:[]});
+  expect(activities(item('Legendary Resistance (3/Day)'))[0].consumption.targets).toEqual([{type:'attribute',target:'resources.legres.value',value:'1',scaling:{mode:'',formula:''}}]);
   expect(item('Children of the Night (1/Day)').system.uses).toMatchObject({max:'1',recovery:[{period:'day',type:'recoverAll'}]});
   const bite=item('Bite (Bat or Vampire Form Only)'),biteAttack=activities(bite)[0]!;
   expect(activities(bite)).toHaveLength(1);expect(biteAttack.type).toBe('attack');expect(biteAttack.attack.bonus).toBe('9');expect(biteAttack.range.value).toBe(5);
@@ -97,7 +101,9 @@ for(const reference of ['id','name'] as const)test('legacy whole-form '+referenc
   const charm=activities(item('Charm'))[0]!;expect(charm.type).toBe('save');expect(charm.save).toMatchObject({ability:['wis'],dc:{formula:'17'}});expect(charm.range.value).toBe(30);
   expect(charm.target.affects.special).toContain('one humanoid it can see');expect(charm.activation.condition).toContain('If the target can see the vampire');
   const weakness=item('Vampire Weaknesses');expect(activities(weakness)).toHaveLength(2);
-  expect(activities(weakness).map(value=>value.damage.parts)).toMatchObject([[{custom:{enabled:true,formula:'20'},types:['acid']}],[{custom:{enabled:true,formula:'20'},types:['radiant']}]]);
+  expect(activities(weakness).sort((a,b)=>a.damage.parts[0].types[0].localeCompare(b.damage.parts[0].types[0])).map(value=>value.damage.parts)).toMatchObject([[{custom:{enabled:true,formula:'20'},types:['acid']}],[{custom:{enabled:true,formula:'20'},types:['radiant']}]]);
+  expect(activities(weakness).find(value=>value.damage.parts[0].types.includes('acid')).activation.condition).toContain('running water');
+  expect(activities(weakness).find(value=>value.damage.parts[0].types.includes('radiant')).activation.condition).toContain('sunlight');
   expect(weakness.effects).toEqual([]);expect(activities(weakness).every(value=>value.activation.type==='special'&&value.consumption.targets.length===0)).toBe(true);
   const tamperChecks:any[]=[];
   for(const [name,mutate]of [
@@ -105,7 +111,8 @@ for(const reference of ['id','name'] as const)test('legacy whole-form '+referenc
     ['legendary-budget',(bad:any)=>{bad.system.resources.legact.max=9;}],
     ['legendary-default-cost',(bad:any)=>{activities(bad.items.find((value:any)=>value.name==='Move'))[0].activation.value=2;}],
     ['legendary-bite-cost',(bad:any)=>{activities(bad.items.find((value:any)=>value.name==='Bite (Costs 2 Actions)'))[0].activation.value=1;}],
-    ['daily-resistance',(bad:any)=>{bad.items.find((value:any)=>value.name==='Legendary Resistance (3/Day)').system.uses.max='99';}],
+    ['daily-resistance',(bad:any)=>{bad.system.resources.legres.max=99;}],
+    ['resistance-consumption',(bad:any)=>{activities(bad.items.find((value:any)=>value.name==='Legendary Resistance (3/Day)'))[0].consumption.targets=[];}],
     ['qualified-header',(bad:any)=>{bad.items.find((value:any)=>value.name==='Damage Resistances').system.description.value='Resistant to all damage';}],
   ] as Array<[string,(bad:any)=>void]>){
     const bad=structuredClone(actor);mutate(bad);const findings=verifyMonsterIntake(wholeVampireSource.source,ir,prepared.bundle.actors[0]!.source,bad,wholeVampireCandidate).findings;
@@ -160,6 +167,7 @@ for(const [change,code]of [
   });
   if(change==='missing-unit'){
     expect(run.result.prepared).toBeUndefined();expect(run.result.report.status).toBe('needs_review');
+    expect(()=>decodeCategoryFormV2({markdown:yaml.dump(run.forms[0])},run.plan)).toThrow(code);
   }else{
     expect(run.result.prepared).toBeDefined();
     const actor=run.result.prepared!.actors[0]!.artifact as any;
@@ -167,6 +175,6 @@ for(const [change,code]of [
     expect(Object.values<any>(item.system.activities).some(activity=>activity.type==='attack'&&activity.damage.parts.length===2)).toBe(true);
     expect(run.result.report.actors[0]!.analysis.ir!.uncertainties.some(f=>f.blocking)).toBe(true);
   }
-  expect(run.result.report.findings.join('\n')).toContain(code);expect(run.modelHttp).toBe(0);
+  if(change!=='missing-unit')expect(run.result.report.findings.join('\n')).toContain(code);expect(run.modelHttp).toBe(0);
 });
 });

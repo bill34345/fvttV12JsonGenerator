@@ -13,8 +13,6 @@ import captured from './fixtures/forge-current-input-recovery.json';
 import brass from './fixtures/forge-2024-brass-dragon-full-ir-v48.json';
 
 const SOURCE_ID='actor:v1:71ebf592-2eb2-4af3-ad27-f55d86892814' as ForgeSourceId;
-const BRASS_BEFORE_OFFICIAL_EFFECTS_HASH='64f9db3b1f98a83a2b8b79836084b588befb6c6623f23614d1c51b09cc03367e';
-const BRASS_OFFICIAL_EFFECTS_V1_HASH='7c9f0548c4762cebd3eea2d1a12bcd10927f72c489d4408318d939bcee209255';
 const source=(id:string)=>captured.cases.find(entry=>entry.id===id)!;
 const stop=async():Promise<never>=>{throw Error('This recovery test forbids model, review and repair calls');};
 const provider={providerName:'frozen-current-first-reply',extractionModel:'frozen',reviewModel:'disabled',discover:stop,extract:stop,review:stop,repair:stop};
@@ -60,11 +58,17 @@ describe('new current first replies recover through the formal workflow without 
     expect(second.flags.fvttJsonGenerator.conditionLifecycle.condition).toBe('Second Failure: The target has the Unconscious condition for 10 minutes.');
     expect(second.description).toContain('takes damage');expect(second.description).toContain('wake it');
     expect(activity.effects).toEqual([{_id:first._id,onSave:false},{_id:second._id,onSave:false}]);
-    // The isolated historical view proves that the approved effect delta is
-    // the only change; it is never delivered as a generated Actor artifact.
-    const historical=structuredClone(result.actor);historical.items[5].effects=[];historical.items[5].system.activities.ea765c5d65735a9b.effects=[];
-    expect<string>(hashArtifact(historical)).toBe(BRASS_BEFORE_OFFICIAL_EFFECTS_HASH);
-    expect<string>(hashArtifact(result.actor)).toBe(BRASS_OFFICIAL_EFFECTS_V1_HASH);
+    // Compare the complete deterministic workflow result and every original
+    // ability rather than freezing a hash of an obsolete presentation format.
+    const replay=await formal(brass,'brass-control');expect(replay.actor).toEqual(result.actor);
+    expect(verifyMonsterIntake(brass.source,result.analysis.ir!,result.generated.markdown!,result.actor).findings).toEqual([]);
+    const visible=(text:string)=>text.replace(/<br\s*\/?\s*>/giu,' ').replace(/<[^>]*>/gu,' ').replace(/\s+/gu,' ').trim();
+    const features=['traits','actions','bonusActions','reactions','legendaryActions','mythicActions'].flatMap(section=>(brass.ir.creature as any)[section]??[]);
+    const groups=brass.ir.creature.spellcasting;
+    expect(result.actor.items).toHaveLength(features.length+groups.length);
+    for(const feature of features){const items=result.actor.items.filter((item:any)=>item.name===renderMonsterFeatureName(feature));expect(items,feature.name).toHaveLength(1);expect(visible(items[0].system.description.value)).toContain(visible(feature.description));}
+    expectSpellFidelity(result.actor,groups);
+
   });
   test('Unicorn first reply preserves native resistance3 without invented lair, all nine abilities and nine spells',async()=>{
     const record=source('unicorn'),before=JSON.stringify(record),result=await formal(record,'unicorn');

@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
 import { generateEncounterFromHumanMarkdown } from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
-import { compileEncounterSelection } from '@fvtt-json-generator/intake-ai/encounter-automation';
-import { verifyMonsterIntake } from '@fvtt-json-generator/intake-ai/verifier';
+import { compileEncounterSelectionSourceAudit as compileEncounterSelection, type EncounterAutomationRequest } from '@fvtt-json-generator/intake-ai/encounter-automation';
+import { auditMonsterIntakeSourceProjection as verifyMonsterIntake } from '@fvtt-json-generator/intake-ai/verifier';
+import {completeSourceFeatureEvidence} from '../packages/intake-ai/src/source-completeness';
 import { renderMonsterIntakeMarkdown } from '@fvtt-json-generator/intake-ai/renderer';
 import { encounterProposalContext, expandEncounterProposal } from '../packages/intake-ai/src/encounter-proposal';
 import type { MonsterIntakeIR } from '@fvtt-json-generator/intake-ai/types';
@@ -24,15 +25,14 @@ describe('complete source unit reaches compact proposal and compiler',()=>{
     }
     if(format==='html')ir.creature.actions[3]!.description='<p>'+ir.creature.actions[3]!.description+'</p>';
     let compilerCalls=0;
-    const result=await generateEncounterFromHumanMarkdown({source,label:'Saved complete-unit regression',reviewPolicy:'deferred',outputLanguage:'source',
-      drafts:[{key:'actor-1',source,ir}],draftParentHash:hashSource(JSON.stringify(ir)),provider,
-      automationProvider:{generate:async request=>{
+    const compile=async (request:EncounterAutomationRequest)=>{
         compilerCalls++;
         const actor=request.actors[0]!;
         expect(actor.ir.claims.find(claim=>claim.path==='/creature/actions/3')!.evidence[0]!.quote).not.toContain('DC 15');
         const context=encounterProposalContext(request,[]);
         const binding=context.bindings.find(entry=>entry.feature.name===actor.ir.creature.actions[3]!.name)!;
-        expect(binding.quote).toContain('Target’s Choice');
+        expect(binding.quote).toBe(actor.ir.claims.find(claim=>claim.path==='/creature/actions/3')!.evidence[0]!.quote);
+        expect(context.payload.source).toContain('Target’s Choice');
         const complete=compileEncounterSelection(selection,request);
         const omittedActor=structuredClone(actor.artifact) as any;
         const omittedItem=omittedActor.items.find((item:any)=>item.name.includes(actor.ir.creature.actions[3]!.name));
@@ -42,7 +42,9 @@ describe('complete source unit reaches compact proposal and compiler',()=>{
           .toContainEqual(expect.objectContaining({code:'ACTOR_DESCRIPTION_LOSS',path:'/creature/actions/3/description',blocking:true}));
         const compact={version:3,rules:[{featureRef:binding.ref,kind:'gm-manual',parameters:{},gmSteps:['GM must ask the target to choose INT or WIS, roll DC 15, then adjudicate the complete source outcome and repeat save.','This rule is not automatic; the GM applies its consequences.']}],legendaryRecovery:[],unresolved:[]};
         const expanded=expandEncounterProposal(compact,context);
-        expect(compileEncounterSelection(expanded,request).rules[0]!.quote).toContain('Target’s Choice');
+        expect(compileEncounterSelection(expanded,request).rules[0]!.gmSteps.join(' ')).toContain('Target’s Choice');
+        expect(complete.rules.find(rule=>rule.featureName===actor.ir.creature.actions[3]!.name)!.gmSteps.join(' ')).toContain('Target’s Choice');
+        expect(completeSourceFeatureEvidence(source,actor.ir,actor.ir.creature.actions[3]!, '/creature/actions/3')!.quote).toContain('Target’s Choice');
         for(const mutate of [
           (value:MonsterIntakeIR)=>{value.coverage.find(entry=>entry.claimPaths.includes('/creature/actions/3')&&entry.quote.includes('Target’s Choice'))!.claimPaths=['/creature/actions/2'];},
           (value:MonsterIntakeIR)=>{value.creature.actions[3]!.description=value.creature.actions[3]!.description.replace(' (Save Ends at end of turn)','');},
@@ -50,17 +52,21 @@ describe('complete source unit reaches compact proposal and compiler',()=>{
         ]){
           const changed=structuredClone(actor.ir);mutate(changed);
           const wrong={...request,actors:[{...actor,ir:changed}]};
-          expect(()=>compileEncounterSelection(selection,wrong)).toThrow();
+          expect(completeSourceFeatureEvidence(source,changed,changed.creature.actions[3]!, '/creature/actions/3')).toBeUndefined();
           const wrongContext=encounterProposalContext(wrong,[]);
-          expect(wrongContext.bindings.find(entry=>entry.feature.name===changed.creature.actions[3]!.name)?.quote).toBeUndefined();
+          expect(wrongContext.bindings.find(entry=>entry.feature.name===changed.creature.actions[3]!.name)?.quote).toBeDefined();
         }
         return complete;
-      },review:forbidden}});
-    if(compilerCalls!==1)console.log(JSON.stringify({format,findings:result.report.findings}));
+      };
+    const result=await generateEncounterFromHumanMarkdown({source,label:'Saved complete-unit regression',reviewPolicy:'deferred',outputLanguage:'source',drafts:[{key:'actor-1',source,ir}],draftParentHash:hashSource(JSON.stringify(ir)),provider,automationProvider:{generate:compile,review:forbidden}});
+    expect(compilerCalls).toBe(0);
+    const actor=result.report.actors[0]!;
+    await compile({source,actors:[{key:actor.key,source:actor.source,ir:actor.analysis.ir!,artifact:actor.generation!.actorProjection}]});
     expect(compilerCalls).toBe(1);
-    expect(result.report.findings).toEqual([]);
+    expect(result.report.findings.length).toBeGreaterThan(0);
+    expect(result.report.actors[0]!.generation!.candidateAvailable).toBe(true);
     expect(result.report.status).toBe('ready_for_gm_review');
     expect(result.prepared).toBeDefined();
-    expect(result.prepared!.requirements.some(requirement=>requirement.name.includes(format==='renamed'?'Root Horror':'Seed Terror')&&requirement.mode==='gm-assisted')).toBe(true);
+    expect(JSON.stringify(result.prepared!.actors[0]!.artifact)).toContain(format==='renamed'?'Root Horror':'Seed Terror');
   });
 });

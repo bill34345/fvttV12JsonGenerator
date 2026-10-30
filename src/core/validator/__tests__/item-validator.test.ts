@@ -70,7 +70,7 @@ describe('ItemValidator', () => {
       };
       const item: ItemDocument = {
         _id: 'bilingual123',
-        name: '骑士之盾 (Shield of the Cavalier)',
+        name: '骑士之盾 Shield of the Cavalier',
         type: 'equipment',
         system: {},
       };

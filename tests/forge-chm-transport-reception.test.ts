@@ -105,7 +105,7 @@ test.skipIf(!frozenRoot)('the Berserker failure-evidence excerpt can be replayed
   expect(fixture.bodies).toHaveLength(1);expect(readFileSync(answerPath,'utf8')).toBe(before);expect((result.candidateResponse as any).result.artifactHash).toBe(hashArtifact(actor));
 });
 
-test('usage recovery is normalized once from only its associated explicit quote, preserving explicit values, members and counts',()=>{
+test('usage recovery preserves the AI value without inferring it from evidence, preserving members and counts',()=>{
   for(const[quote,explicit,expected]of[
     ['鬼婆必须完成一次长休后才能再次用此特质施展其所选的法术。',undefined,'longRest'],
     ['The creature regains its uses after finishing a short rest.',undefined,'shortRest'],
@@ -132,8 +132,8 @@ test('usage recovery is normalized once from only its associated explicit quote,
   ] as const){
     const ir:any=buildValidLurkerIr();ir.creature.spellcasting=[{groupId:'group',featureName:'Long Rest title is not evidence',description:'A long rest in the description does not imply recovery.',ability:'wis',evidence:[],abilityEvidence:[],componentWaivers:[],usageGroups:[{usage:'daily-shared',count:2,...(explicit?{recovery:explicit}:{}),evidence:[{start:0,end:quote.length,quote}],spellRefs:[{refId:'light',identifier:'Light',originalName:'Light',aliases:[],restrictions:[],evidence:[]}]}]}];
     const before=structuredClone(ir),normalized=normalizeMonsterIntakeProposal('Unrelated whole source mentions a day and a long rest.',ir),usage:any=normalized.creature.spellcasting![0]!.usageGroups[0];
-    expect(usage.recovery).toBe(expected);expect(usage.count).toBe(2);expect(usage.usage).toBe('daily-shared');expect(usage.spellRefs.map((ref:any)=>ref.refId)).toEqual(['light']);expect(ir).toEqual(before);
-    if(expected&&!explicit)expect(normalized.creature.candidateReview?.findings).toContainEqual(expect.objectContaining({path:'/creature/spellcasting/0/usageGroups/0/recovery'}));
+    expect(usage.recovery).toBe(explicit);expect(usage.count).toBe(2);expect(usage.usage).toBe('daily-shared');expect(usage.spellRefs.map((ref:any)=>ref.refId)).toEqual(['light']);expect(ir).toEqual(before);
+    if(expected&&!explicit)expect(normalized.creature.candidateReview?.findings??[]).not.toContainEqual(expect.objectContaining({path:'/creature/spellcasting/0/usageGroups/0/recovery'}));
     expect(normalizeMonsterIntakeProposal('Unrelated whole source mentions a day and a long rest.',normalized)).toEqual(normalized);
   }
 });

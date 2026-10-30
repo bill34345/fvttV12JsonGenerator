@@ -5,7 +5,7 @@ import {splitStagedMonsterSource} from '@fvtt-json-generator/intake-ai/staged-so
 import {assembleStagedMonsterIntake,validateStagedBaseFacts,validateStagedBaseIntake} from '@fvtt-json-generator/intake-ai/staged-extraction';
 import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
-import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
+import {auditMonsterIntakeSourceProjection} from '@fvtt-json-generator/intake-ai/verifier';
 import {convertMarkdownContentToJson} from '@fvtt-json-generator/workflows/single-file-conversion';
 import type {CanonicalMonster} from '@fvtt-json-generator/intake-ai/types';
 
@@ -29,7 +29,7 @@ function facts(size:CanonicalMonster['identity']['size']='medium',sourceSize?:st
 function plan(text:string){return splitStagedMonsterSource({source:text,sourceSha256:sha256(text),candidate:{id:'choice-guardian',label:'Choice Guardian',start:0,end:text.length,quote:text}});}
 function assemble(text:string,size:CanonicalMonster['identity']['size']='medium',literal?:string){const graph=plan(text);return assembleStagedMonsterIntake(graph,validateStagedBaseFacts(graph,facts(size,literal)),graph.features.map(unit=>({schemaVersion:1,unitId:unit.id,mode:'manual',facts:{}})));}
 async function generate(ir:ReturnType<typeof assemble>){const markdown=renderMonsterIntakeMarkdown(ir);return{markdown,actor:(await convertMarkdownContentToJson({content:markdown,fvttVersion:'14',effectProfile:'core',iconOptions:{mode:'off'},translationService:null})).rawJson as any};}
-function blocks(text:string,ir:ReturnType<typeof assemble>,markdown:string,actor:unknown){return verifyMonsterIntake(text,ir,markdown,actor).findings.filter(finding=>finding.blocking);}
+function blocks(text:string,ir:ReturnType<typeof assemble>,markdown:string,actor:unknown){return auditMonsterIntakeSourceProjection(text,ir,markdown,actor).findings.filter(finding=>finding.blocking);}
 const NATIVE={tiny:'tiny',small:'sm',medium:'med',large:'lg',huge:'huge',gargantuan:'grg'} as const;
 
 describe('2024 source-explicit size alternatives across the formal Markdown/Actor chain',()=>{

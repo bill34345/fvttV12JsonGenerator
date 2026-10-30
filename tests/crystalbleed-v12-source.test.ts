@@ -25,13 +25,13 @@ describe('Crystalbleed approved source stages', () => {
   });
   it('keeps crystal DEX damage separate from conditional CHA corruption and exhaustion', () => {
     const actor = generate('moonstone-salvo-crystal-v12.md');
-    const spikes = actor.items.find((i: any) => i.name === '月石戳刺 (Moonstone Spikes)');
+    const spikes = actor.items.find((i: any) => i.name === '月石戳刺 Moonstone Spikes');
     const save: any = Object.values(spikes.system.activities).find((a: any) => a.type === 'save');
     expect(save.save).toEqual({ ability: ['dex'], dc: { calculation: '', formula: '18', value: 18 } });
     expect(save.damage.onSave).toBe('none');
     expect(save.effects ?? []).toEqual([]);
     expect(spikes.effects).toEqual([]);
-    const corruption = actor.items.find((i: any) => i.name === '月石腐化 (Moonstone Corruption)');
+    const corruption = actor.items.find((i: any) => i.name === '月石腐化 Moonstone Corruption');
     const followup: any = Object.values(corruption.system.activities).find((a: any) => a.type === 'save');
     expect(followup.save).toEqual({ ability: ['cha'], dc: { calculation: '', formula: '18', value: 18 } });
     expect(followup.effects ?? []).toEqual([]);
@@ -41,13 +41,13 @@ describe('Crystalbleed approved source stages', () => {
   it('uses dazed only for salvo and preserves the new defiance cost rather than AC 15', () => {
     const actor = generate('crystalbleed-drakon-v12-rework.md');
     expect(actor.system.traits.languages.value).toEqual(['common', 'draconic', 'undercommon']);
-    const salvo = actor.items.find((i: any) => i.name === '晶片齐射 (Shard Salvo)');
+    const salvo = actor.items.find((i: any) => i.name === '晶片齐射 Shard Salvo');
     expect(salvo.effects.flatMap((e: any) => e.statuses)).toEqual(['fvtt-custom-conditions.dazed']);
     const save: any = Object.values(salvo.system.activities)[0];
     expect(save.damage.parts).toHaveLength(1);
     expect(save.damage.parts[0]).toMatchObject({ number: 2, denomination: 8, types: ['psychic'] });
     expect(save.activation).toMatchObject({ type: 'legendary', value: 2 });
-    const defiance = actor.items.find((i: any) => i.name === '绯晶拒绝 (Ruidium Defiance)');
+    const defiance = actor.items.find((i: any) => i.name === '绯晶拒绝 Ruidium Defiance');
     expect(defiance.system.uses).toEqual({ spent: 0, max: '2', recovery: [{ period: 'day', type: 'recoverAll' }] });
     expect(defiance.effects.flatMap((e: any) => e.changes)).toEqual([]);
     expect(defiance.effects[0].description).toContain('下一回合开始');

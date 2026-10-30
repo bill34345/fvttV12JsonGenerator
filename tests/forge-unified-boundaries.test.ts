@@ -1,16 +1,16 @@
 import {test,expect} from 'bun:test';
 import yaml from 'js-yaml';
 import {sha256} from '@fvtt-json-generator/contracts/hash';
-import {splitStagedMonsterSource} from '@fvtt-json-generator/intake-ai/staged-source';
+import {splitStagedMonsterSource,StagedExtractionError} from '@fvtt-json-generator/intake-ai/staged-source';
 import {assembleStagedMonsterIntake,validateStagedBaseFacts} from '@fvtt-json-generator/intake-ai/staged-extraction';
 import {makeWholeCategoryForm,decodeCategoryFormV2} from '../packages/intake-ai/src/category-form-v2';
 import {adaptCategoryFormV2,completeCategoryFormSpellcasting} from '../packages/intake-ai/src/category-form-v2-adapter';
 import {sourceGroupComponentClause,stagedSpellcastingGroups} from '../packages/intake-ai/src/staged-spellcasting';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
-import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
-import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
+import {auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
+import {verifyMonsterIntake,auditMonsterIntakeSourceProjection} from '@fvtt-json-generator/intake-ai/verifier';
 import {YamlParser} from '@fvtt-json-generator/parser/yaml';
-import {ActorGenerator} from '@fvtt-json-generator/generation/actor';
+import {ActorGenerator,actorGenerationDiagnostics} from '@fvtt-json-generator/generation/actor';
 import {hashManifest,validatePortableSpellManifestStructure} from '@fvtt-json-generator/spell-manifest-contracts';
 import {buildCastActivitySource} from '../foundry-modules/monster-spell-resolver/src/cast-activity';
 import {readFixedEncounterConfiguration} from '@fvtt-json-generator/intake-ai/encounter-capabilities';
@@ -29,10 +29,10 @@ function assemble(data:ReturnType<typeof fixture>){
   return completeCategoryFormSpellcasting(data.plan,assembleStagedMonsterIntake(data.plan,data.base,adaptCategoryFormV2(data.plan,data.base,decoded)),decoded);
 }
 function generated(data:ReturnType<typeof fixture>){
-  const ir=assemble(data),validation=validateMonsterIntakeIR(data.source,ir);
+  const ir=assemble(data),validation=auditMonsterIntakeSource(data.source,ir);
   expect(validation.findings.filter(finding=>finding.blocking)).toEqual([]);
   const markdown=renderMonsterIntakeMarkdown(ir),actor=new ActorGenerator({fvttVersion:'14',effectProfile:'core',translationService:null}).generate(new YamlParser().parse(markdown));
-  expect(verifyMonsterIntake(data.source,ir,markdown,actor).findings).toEqual([]);
+  expect(auditMonsterIntakeSourceProjection(data.source,ir,markdown,actor).findings).toEqual([]);
   return{ir,markdown,actor};
 }
 const activities=(item:any):any[]=>Object.values(item.system.activities);
@@ -64,7 +64,17 @@ test('modern Save preserves one complete eligible recipient and actual-damage re
   const plan=planVampire2024().plan,base=validateStagedBaseFacts(plan,vampire2024BaseFacts),authored=authorVampire2024Form(plan),decoded=decodeCategoryFormV2(authored.reply,plan);
   const ir=completeCategoryFormSpellcasting(plan,assembleStagedMonsterIntake(plan,base,adaptCategoryFormV2(plan,base,decoded)),decoded);
   const markdown=renderMonsterIntakeMarkdown(ir),actor=new ActorGenerator({fvttVersion:'14',effectProfile:'core',translationService:null}).generate(new YamlParser().parse(markdown));
-  expect(verifyMonsterIntake(plan.source,ir,markdown,actor).findings).toEqual([]);
+  expect(auditMonsterIntakeSourceProjection(plan.source,ir,markdown,actor).findings).toEqual([]);
+  expect(authored.form.特性.find((row:any)=>row.名称.startsWith('Legendary Resistance'))).toMatchObject({使用次数:3,恢复方式:'daily (4/day in lair)'});
+  expect(ir.creature.legendary).toMatchObject({resistanceMax:3,resistanceLairMax:4});expect(actor.system.resources.legres.max).toBe(3);expect(actor.flags.fvttJsonGenerator.sourceLegendaryLedger).toMatchObject({resistanceMax:3,resistanceLairMax:4});
+  const reordered=structuredClone(ir);reordered.creature.spellcasting!.reverse();
+  expect(verifyMonsterIntake(plan.source,reordered,markdown,actor).findings.filter(f=>f.code.startsWith('SPELL_FEATURE_LINK'))).toEqual([]);
+  const wrongGroup=structuredClone(ir);wrongGroup.creature.spellcasting!.find(group=>group.featureName==='Beguile')!.groupId='unrelated-group';
+  expect(verifyMonsterIntake(plan.source,wrongGroup,markdown,actor).findings).toContainEqual(expect.objectContaining({code:'SPELL_FEATURE_LINK_IDENTITY_MISMATCH'}));
+  const wrongKey=structuredClone(actor);wrongKey.flags['fvtt-json-generator-spell-resolver'].spellManifest.spellcastingGroups[0].featureItemKey='unrelated-feature';
+  expect(verifyMonsterIntake(plan.source,ir,markdown,wrongKey).findings).toContainEqual(expect.objectContaining({code:'PORTABLE_SPELL_MANIFEST_DRIFT'}));
+  const unlinked=structuredClone(actor);unlinked.items.find((item:any)=>item.name==='Beguile').flags['fvtt-json-generator-spell-resolver'].featureItemKey='unrelated-feature';
+  expect(verifyMonsterIntake(plan.source,ir,markdown,unlinked).findings).toContainEqual(expect.objectContaining({code:'SPELL_FEATURE_LINK_MISSING'}));
   const bite=actor.items.find((item:any)=>item.name==='Bite (Bat or Vampire Form Only)'),save=activities(bite)[0];
   expect(save.type).toBe('save');expect(save.save).toEqual({ability:['con'],dc:{calculation:'',formula:'17'}});
   expect(save.target.affects.count).toBe('1');expect(save.target.affects.special).toContain('willing or that has the Grappled, Incapacitated, or Restrained condition');
@@ -72,10 +82,14 @@ test('modern Save preserves one complete eligible recipient and actual-damage re
   const row=(Object.values(authored.form).flat() as any[]).find(row=>row.名称==='Bite (Bat or Vampire Form Only)');
   const initial=structuredClone(row);
   for(const mutate of [(row:any)=>{row.豁免.目标限制=null;},(row:any)=>{row.豁免.DC=18;},(row:any)=>{row.伤害=[];},(row:any)=>{row.治疗[0].目标='the target';},(row:any)=>{row.治疗[0].取值依据='等于目标实际受到的穿刺伤害量';},(row:any)=>{row.治疗[0].取值依据='等于目标实际受到的黯蚀伤害量的一半';},(row:any)=>{row.治疗[0].生效条件='[unit-8]目标受到死灵伤害时';}]){
-    Object.assign(row,structuredClone(initial));mutate(row);expect(()=>adaptCategoryFormV2(plan,base,decodeCategoryFormV2({markdown:yaml.dump(authored.form,{lineWidth:-1})},plan))).toThrow();
+    Object.assign(row,structuredClone(initial));mutate(row);
+    let edited:unknown[];const decoded=decodeCategoryFormV2({markdown:yaml.dump(authored.form,{lineWidth:-1})},plan);
+    try{edited=adaptCategoryFormV2(plan,base,decoded);}catch(error){expect(error).toBeInstanceOf(StagedExtractionError);continue;}
+    const candidate=completeCategoryFormSpellcasting(plan,assembleStagedMonsterIntake(plan,base,edited),decoded);
+    expect(auditMonsterIntakeSource(plan.source,candidate).blocking).not.toEqual([]);
   }
   const changed=structuredClone(actor);activities(changed.items.find((item:any)=>item.name===bite.name))[0].target.affects.count='';
-  expect(verifyMonsterIntake(plan.source,ir,markdown,changed).findings.some(finding=>finding.code==='ACTOR_SOURCE_OPERATION_TARGET_DRIFT')).toBe(true);
+  expect(auditMonsterIntakeSourceProjection(plan.source,ir,markdown,changed).findings.some(finding=>finding.code==='ACTOR_SOURCE_OPERATION_TARGET_DRIFT')).toBe(true);
 });
 
 for(const [section,name,body,cost,recharge] of [
@@ -87,13 +101,31 @@ for(const [section,name,body,cost,recharge] of [
   const data=fixture(section+'\n'+context+name+'. '+body),row=data.rows[0]!;
   Object.assign(row,{使用次数:recharge?1:null,恢复方式:recharge?'Recharge 4-6':null,传奇动作消耗:cost??null,共享资源:cost?{名称:'legendary actions',上限:3,恢复:'at the start of its turns',限制:'one action at the end of another creature turn'}:null,
     施法:{属性:'cha',豁免DC:12,命中加值:null,无需材料:recharge||cost?true:false,法术:[{名称:recharge?'Invisibility':'Command',次数:null,恢复:null,限制:recharge?'duration is 2 minutes':null}]}});
-  const {ir,actor}=generated(data),manifest=actor.flags['fvtt-json-generator-spell-resolver'].spellManifest,group=manifest.spellcastingGroups[0],ref=group.spellRefs[0],item=actor.items[0];
+  const {ir,actor}=generated(data);expect(actor.flags['fvtt-json-generator-spell-resolver'],JSON.stringify({ir:ir.creature.spellcasting,diagnostics:actorGenerationDiagnostics(actor)})).toBeDefined();
+  const manifest=actor.flags['fvtt-json-generator-spell-resolver'].spellManifest,group=manifest.spellcastingGroups[0],ref=group.spellRefs[0],item=actor.items[0];
   const activationType=section==='Actions'?'action':section==='Bonus Actions'?'bonus':'legendary';
   const built=buildCastActivitySource({manifestId:manifest.manifestId,featureId:'SourceFeature001',group,ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop',activationType,...(cost?{activationCost:cost}:{})});
   expect(built.activity.type).toBe('cast');expect(built.activity.activation).toEqual(activationType==='action'?undefined:{type:activationType,value:cost??1,override:true});
   expect(built.activity.spell.challenge.save).toBe('12');expect(activities(item)[0].activation.type).toBe('');expect(activities(item)[0].consumption.targets).toEqual([]);
   if(recharge){expect(built.activity.consumption.targets).toEqual([{type:'itemUses',value:'1'}]);expect(built.activity.uses).toBeUndefined();expect(built.activity.duration).toEqual({value:'2',units:'minute',concentration:false,override:true});expect(built.activity.spell.properties).toEqual(['vocal','somatic','material']);}
-  if(cost){expect(built.activity.consumption.targets).toEqual([]);expect(built.activity.description?.chatFlavor).toContain('can’t take this action again');const altered=structuredClone(ir);altered.creature.spellcasting![0]!.legendaryCost=1;expect(validateMonsterIntakeIR(data.source,altered).findings.some(finding=>finding.code==='SPELL_LEGENDARY_COST_SOURCE_MISMATCH')).toBe(true);}
+  if(cost){expect(built.activity.consumption.targets).toEqual([]);expect(built.activity.description?.chatFlavor).toContain('can’t take this action again');const altered=structuredClone(ir);altered.creature.spellcasting![0]!.legendaryCost=1;expect(auditMonsterIntakeSource(data.source,altered).findings.some(finding=>finding.code==='SPELL_LEGENDARY_COST_SOURCE_MISMATCH')).toBe(true);}
+});
+
+for(const newline of ['\n','\r\n'])for(const waiver of ['requiring no spell components','requires no spell components','without any spell components'])test('single Cast component scope retains duration and independent owned cooldown: '+JSON.stringify([newline,waiver]),()=>{
+  const body='Actions'+newline+'Veil. The beast casts Invisibility, '+waiver+' and using Charisma as the spellcasting ability (spell save DC 12),'+newline+'and the duration is 2 minutes.'+newline+'The beast can’t take this action again until the start of its next turn.';
+  const data=fixture(body,newline==='\r\n'),row=data.rows[0]!;
+  Object.assign(row,{施法:{属性:'cha',豁免DC:12,命中加值:null,无需材料:true,法术:[{名称:'Invisibility',次数:null,恢复:null,限制:'duration is 2 minutes'}]}});
+  const {ir,actor}=generated(data),group=actor.flags['fvtt-json-generator-spell-resolver'].spellManifest.spellcastingGroups[0],ref=group.spellRefs[0];
+  expect(ir.creature.spellcasting![0]!.componentWaivers).toHaveLength(1);expect(ref.originalName).toBe('Invisibility');
+  const built=buildCastActivitySource({manifestId:actor.flags['fvtt-json-generator-spell-resolver'].spellManifest.manifestId,featureId:'SourceFeature001',group,ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'});
+  expect(built.activity.duration).toEqual({value:'2',units:'minute',concentration:false,override:true});expect(built.activity.spell.properties).toEqual(['vocal','somatic','material']);
+  expect(ref.restrictions.some((restriction:any)=>restriction.text.includes('can’t take this action again until the start of its next turn'))).toBe(true);
+  expect(actor.items[0].system.description.value.replace(/<br>/gu,' ')).toContain('The beast can’t take this action again until the start of its next turn.');
+});
+for(const cooldown of ['The target can’t take this action again until the start of its next turn.','The beast can’t take this action again until the end of its next turn.','The beast can’t take this action again until the start of its next turn if it is injured.'])test('component scope does not erase a different or conditional cooldown: '+cooldown,()=>{
+  const data=fixture('Actions\nVeil. The beast casts Invisibility, requiring no spell components and using Charisma as the spellcasting ability (spell save DC 12). '+cooldown);
+  Object.assign(data.rows[0]!,{施法:{属性:'cha',豁免DC:12,命中加值:null,无需材料:true,法术:[{名称:'Invisibility',次数:null,恢复:null,限制:null}]}});
+  const {ir,actor}=generated(data);expect(ir.creature.spellcasting![0]!.manualGrants![0]!.quote).toContain(cooldown);expect(actor.flags['fvtt-json-generator-spell-resolver']).toBeUndefined();expect(actor.items[0].system.description.value).toContain(cooldown);
 });
 
 for(const tail of ['; this waiver applies only while in mist form.','. This waiver applies only while in mist form.','; except while in sunlight.','. The spell requires components if the beast is injured.'])test('a later waiver qualifier remains wholly GM: '+tail,()=>{
@@ -123,7 +155,7 @@ test('same 2024 source compiles an owned recovery controller, complete3/4 resour
   expect(actor.system.resources.legact.max).toBe(3);expect(actor.system.resources.legres.max).toBe(3);expect(actor.system.resources.lair).toMatchObject({value:true,inside:false});
   expect(actor.flags.fvttJsonGenerator.sourceLegendaryLedger).toEqual({version:1,max:3,lairMax:4,recovery:'own-turn-start',resistanceMax:3,resistanceLairMax:4});
   expect(prepared.bundle.macros).toHaveLength(1);expect(prepared.bundle.macros[0]!.command).toContain('legendaryRecovery');expect(readFixedEncounterConfiguration(prepared.bundle.macros[0]!.command)!.legendaryRecovery).toEqual([{actorKey:'actor-1',max:3,when:'own-turn-start'}]);
-  for(const mutate of [(actor:any)=>{actor.system.resources.legact.max=4;},(actor:any)=>{actor.system.resources.lair.value=false;},(actor:any)=>{actor.system.resources.legres.max=0;},(actor:any)=>{delete actor.flags.fvttJsonGenerator.sourceLegendaryLedger;}]){const changed=structuredClone(actor);mutate(changed);expect(verifyMonsterIntake(run.plan.source,ir,markdown,changed).findings.length).toBeGreaterThan(0);}
-  const changed=structuredClone(ir);changed.creature.legendary!.lairMax=5;expect(validateMonsterIntakeIR(run.plan.source,changed).findings.some(finding=>finding.blocking)).toBe(true);
-  const altered=yaml.load(markdown.slice(4,markdown.lastIndexOf('\n---'))) as any;altered['intake-legendary-ledger'].max=4;expect(()=>new YamlParser().parse('---\n'+yaml.dump(altered)+'---\n')).toThrow('InvalidSourceLegendaryLedger');
+  for(const mutate of [(actor:any)=>{actor.system.resources.legact.max=4;},(actor:any)=>{actor.system.resources.lair.value=false;},(actor:any)=>{actor.system.resources.legres.max=0;},(actor:any)=>{delete actor.flags.fvttJsonGenerator.sourceLegendaryLedger;}]){const changed=structuredClone(actor);mutate(changed);expect(auditMonsterIntakeSourceProjection(run.plan.source,ir,markdown,changed).findings.length).toBeGreaterThan(0);}
+  const changed=structuredClone(ir);changed.creature.legendary!.lairMax=5;expect(auditMonsterIntakeSource(run.plan.source,changed).findings.some(finding=>finding.blocking)).toBe(true);
+  const altered=yaml.load(markdown.slice(4,markdown.lastIndexOf('\n---'))) as any;altered['intake-legendary-ledger'].max=4;const alteredMarkdown='---\n'+yaml.dump(altered)+'---\n';const preserved=new ActorGenerator({fvttVersion:'14',effectProfile:'core',translationService:null}).generate(new YamlParser().parse(alteredMarkdown));expect(preserved.items).toHaveLength(actor.items.length);expect(auditMonsterIntakeSourceProjection(run.plan.source,ir,alteredMarkdown,preserved).findings.some(f=>f.path.startsWith('/creature/legendary'))).toBe(true);
 });

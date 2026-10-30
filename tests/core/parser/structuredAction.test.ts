@@ -157,7 +157,7 @@ describe('StructuredActionParser', () => {
   });
 
   describe('recharge parsing (奴役 case)', () => {
-    it('should parse recharge array correctly', () => {
+    it('retains recharge while preserving an incomplete save as a reviewable utility action', () => {
       const input = [
         {
           '名称': '奴役',
@@ -171,8 +171,15 @@ describe('StructuredActionParser', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0]!.recharge).toEqual([5, 6]);
-      expect(result[0]!.type).toBe('save');
-      expect(result[0]!.DC).toBe(17);
+      expect(result[0]!.type).toBe('utility');
+      expect(result[0]!.DC).toBeUndefined();
+      expect(result[0]!.candidateReview?.findings).toContainEqual(expect.objectContaining({
+        code: 'FIELD_PROJECTION_INCOMPLETE', path: 'save',
+      }));
+      expect(result[0]!.candidateReview?.proposal).toEqual(expect.objectContaining({
+        value: expect.objectContaining({ dc: 17 }),
+      }));
+      expect(result[0]!.describe).toContain('"dc":17');
     });
   });
 

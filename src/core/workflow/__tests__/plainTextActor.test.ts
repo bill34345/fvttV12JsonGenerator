@@ -155,7 +155,7 @@ describe('PlainTextActorWorkflow', () => {
     ) as { items: Array<{ name: string }> };
 
     expect(
-      actor.items.some((item) => item.name.includes('(Pelagic Screech)') && !item.name.includes('姣忔棩')),
+      actor.items.some((item) => item.name.endsWith(' Pelagic Screech') && !item.name.includes('姣忔棩')),
     ).toBe(true);
     expect(
       actor.items.some((item) => item.name.includes('姣忔棩 1 娆?')),

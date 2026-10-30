@@ -6,6 +6,7 @@ import { ActorGenerator } from '@fvtt-json-generator/generation/actor';
 import { createRulePresentationPlan } from '@fvtt-json-generator/generation/rule-presentation';
 import { actorLocalizationDisplayRows, createActorLocalizationRequest,
   projectActorLocalizationDraft, projectReviewedActorLocalization } from '@fvtt-json-generator/generation/reviewed-localization';
+import { verifyMonsterIntake } from '@fvtt-json-generator/intake-ai/verifier';
 import { renderMonsterIntakeMarkdown } from '@fvtt-json-generator/intake-ai/renderer';
 import { YamlParser, parseSupportedRuleFacts } from '@fvtt-json-generator/parser';
 import type { MonsterIntakeIR } from '@fvtt-json-generator/intake-ai/types';
@@ -210,55 +211,67 @@ describe('same consumed facts render Actor and fixed Chinese rules', () => {
     expect(shortsword).toBeTruthy();
     expect(JSON.stringify(longbow.system)).toContain('1d8');
     expect(JSON.stringify(shortsword.system)).toContain('1d6');
-    expect(plan.blocks.some(block => block.source.includes('Ranged Weapon Attack')
+    expect(plan.blocks.some(block => block.factRefs.some(ref=>ref.includes('Longbow/structured/attack'))
       && block.zh.includes('1d8 + 3') && block.zh.includes('射程150/600尺'))).toBe(true);
-    expect(plan.blocks.some(block => block.source.includes('Melee Weapon Attack')
+    expect(plan.blocks.some(block => block.factRefs.some(ref=>ref.includes('Shortsword/structured/attack'))
       && block.zh.includes('1d6 + 3') && block.zh.includes('触及5尺'))).toBe(true);
     const request = createActorLocalizationRequest(actor, source, FACT_LOCALIZATION_POLICY, plan);
-    expect(request.texts.some(text => text.source.includes('Ranged Weapon Attack'))).toBe(false);
-    expect(request.texts.some(text => text.source.includes('Melee Weapon Attack'))).toBe(false);
+    expect(request.texts.some(text => text.source.includes('Ranged Weapon Attack'))).toBe(true);
+    expect(request.texts.some(text => text.source.includes('Melee Weapon Attack'))).toBe(true);
   });
 
-  test('saved first Mezzoloth IR fixes the complete Shred condition in item and Activity', () => {
+  test('saved Shred preserves its native damage and keeps the Heavy Armor exception available for review', () => {
     const ir = (JSON.parse(readFileSync(savedMezz, 'utf8')) as { ir: MonsterIntakeIR }).ir;
     const { source, actor, plan } = generate(ir);
     const shred = actor.items.find((item: any) => item.name.includes('Shred'));
     expect(shred).toBeTruthy();
     expect(JSON.stringify(shred.system.activities)).toContain('2d8');
     const heavy = plan.blocks.filter(block => block.factRefs.some(ref => ref.includes('heavy-armour-half')));
-    expect(heavy.length).toBeGreaterThanOrEqual(2);
-    expect(heavy.every(block => block.zh.includes('穿着重甲') && block.zh.includes('伤害减半')
-      && block.executionMode === 'gm-assisted')).toBe(true);
+    expect(heavy).toEqual([]);
+    expect(shred.system.description.value).toBe(formatLiteralHtml(ir.creature.bonusActions.find(action=>action.name==='Shred')!.description));
+    expect(plan.blocks.some(block=>block.factRefs.some(ref=>ref.includes('Shred/structured/damage'))&&block.zh.includes('2d8'))).toBe(true);
+    expect(plan.uncoveredMechanics.some(entry=>entry.source.includes('Heavy Armor'))).toBe(true);
     const request = createActorLocalizationRequest(actor, source, FACT_LOCALIZATION_POLICY, plan);
-    expect(request.texts.some(text => text.source.includes('or half as much if'))).toBe(false);
+    expect(request.texts.some(text => text.source.includes('or half as much if'))).toBe(true);
   });
 
-  test('saved Toxic Emission uses its native save, damage and status to fix the entire consequence', () => {
-    const ir = (JSON.parse(readFileSync(savedMezz, 'utf8')) as { ir: MonsterIntakeIR }).ir;
-    const { source, actor, plan } = generate(ir);
-    const toxic = actor.items.find((item: any) => item.name.includes('Toxic Emission'));
-    expect(toxic).toBeTruthy();
-    expect(JSON.stringify(toxic.system.activities)).toContain('4d8');
-    expect(JSON.stringify(toxic.effects).toLowerCase()).toContain('blinded');
-    const blocks = plan.blocks.filter(block => block.factRefs.some(ref => ref.includes('save-damage-status')));
-    expect(blocks.length).toBeGreaterThanOrEqual(2);
-    expect(blocks.every(block => block.zh.includes('10尺内的每个生物')
-      && block.zh.includes('DC 14体质豁免') && block.zh.includes('4d8')
-      && block.zh.includes('目盲') && block.zh.includes('下一回合结束')
-      && block.zh.includes('成功则伤害减半')
-      && block.executionMode === 'gm-assisted')).toBe(true);
-    const request = createActorLocalizationRequest(actor, source, FACT_LOCALIZATION_POLICY, plan);
-    expect(request.texts.some(text => text.source.includes('the creature is Blinded until'))).toBe(false);
-    const changedSave = structuredClone(actor);
-    const changedSaveActivity: any = Object.values(changedSave.items.find((item: any) =>
-      item.name.includes('Toxic Emission')).system.activities)[0];
-    changedSaveActivity.save.dc.formula = '15';
-    expect(() => createActorLocalizationRequest(changedSave, source, FACT_LOCALIZATION_POLICY, plan)).toThrow();
-    const changedEffectLink = structuredClone(actor);
-    const changedLinkActivity: any = Object.values(changedEffectLink.items.find((item: any) =>
-      item.name.includes('Toxic Emission')).system.activities)[0];
-    changedLinkActivity.effects[0]._id = 'another-effect-id';
-    expect(() => createActorLocalizationRequest(changedEffectLink, source, FACT_LOCALIZATION_POLICY, plan)).toThrow();
+  test('saved Toxic Emission retains native Save and damage while leaving its unmapped condition visibly unresolved', () => {
+    const saved=JSON.parse(readFileSync(savedMezz,'utf8')) as {source:string;ir:MonsterIntakeIR};
+    const {source,actor,plan}=generate(saved.ir);
+    const toxic=actor.items.find((item:any)=>item.name.includes('Toxic Emission'));
+    const activity=Object.values(toxic.system.activities)[0] as any;
+    expect(activity.save).toEqual({ability:['con'],dc:{calculation:'',formula:'14'}});
+    expect(activity.damage.parts).toMatchObject([{number:4,denomination:8,types:['poison']}]);
+    expect(toxic.effects).toEqual([]);
+    expect(toxic.system.description.value.startsWith(formatLiteralHtml(saved.ir.creature.actions[3]!.description))).toBe(true);
+    expect(toxic.system.description.value).toContain('适用条件、期限、逃脱与解除依完整原文判断');
+    expect(plan.blocks.filter(block=>block.factRefs.some(ref=>ref.includes('save-damage-status')))).toEqual([]);
+    const report=verifyMonsterIntake(saved.source,saved.ir,source,actor);
+    expect(report.status).toBe('needs_review');
+    expect(report.findings).toContainEqual(expect.objectContaining({code:'INVALID_STRUCTURE',path:'/creature/actions/3/appliedConditions/0/statuses/0'}));
+    expect(createActorLocalizationRequest(actor,source,FACT_LOCALIZATION_POLICY,plan).texts.some(text=>text.source.includes('the creature is Blinded until'))).toBe(true);
+  });
+
+  test('an explicitly typed Toxic Emission status and save outcome bind the native template and approval to the current fields',()=>{
+    const ir=(JSON.parse(readFileSync(savedMezz,'utf8')) as {ir:MonsterIntakeIR}).ir;
+    const action=ir.creature.actions[3]!;
+    action.appliedConditions![0]!.statuses=['blinded'];action.save!.outcome='half';
+    const {source,actor,plan}=generate(ir);
+    const toxic=actor.items.find((item:any)=>item.name.includes('Toxic Emission'));
+    const activity=Object.values(toxic.system.activities)[0] as any;
+    expect(activity.save).toEqual({ability:['con'],dc:{calculation:'',formula:'14'}});
+    expect(activity.damage.onSave).toBe('half');
+    expect(toxic.effects).toHaveLength(1);
+    expect(toxic.effects[0].statuses).toEqual(['blinded']);
+    expect(toxic.effects[0].flags.fvttJsonGenerator.conditionLifecycle).toMatchObject({version:1,mode:'gm',duration:'until the end of its next turn'});
+    expect(activity.effects).toContainEqual(expect.objectContaining({_id:toxic.effects[0]._id}));
+    expect(plan.blocks.some(block=>block.factRefs.some(ref=>ref.endsWith('/effect/status'))&&block.zh.includes('目盲'))).toBe(true);
+    const changedSave=structuredClone(actor);
+    (Object.values(changedSave.items.find((item:any)=>item.name.includes('Toxic Emission')).system.activities)[0] as any).save.dc.formula='15';
+    expect(()=>createActorLocalizationRequest(changedSave,source,FACT_LOCALIZATION_POLICY,plan)).toThrow();
+    const changedEffectLink=structuredClone(actor);
+    (Object.values(changedEffectLink.items.find((item:any)=>item.name.includes('Toxic Emission')).system.activities)[0] as any).effects[0]._id='another-effect-id';
+    expect(()=>createActorLocalizationRequest(changedEffectLink,source,FACT_LOCALIZATION_POLICY,plan)).toThrow();
   });
 
   test('a different structured status duration cannot certify the source rule as fixed', () => {
@@ -290,21 +303,21 @@ describe('same consumed facts render Actor and fixed Chinese rules', () => {
       .some(text => text.source.includes('the cat can see'))).toBe(true);
   });
 
-  test('saved Death Glare fixes status prerequisite, DC, duration and drop-to-zero together', () => {
+  test('saved Death Glare separates native Save and GM status facts from its complete prerequisites and special result', () => {
     const ir = (JSON.parse(readFileSync(savedSea, 'utf8')) as { ir: MonsterIntakeIR }).ir;
     const { source, actor, plan } = generate(ir);
     const glare = actor.items.find((item: any) => item.name.includes('Death Glare'));
     expect(glare).toBeTruthy();
     expect(JSON.stringify(glare.effects).toLowerCase()).toContain('stunned');
     const blocks = plan.blocks.filter(block => block.factRefs.some(ref => ref.includes('save-status')));
-    expect(blocks.length).toBeGreaterThanOrEqual(2);
-    expect(blocks.every(block => block.zh.includes('30尺内一名已处于恐慌状态的生物')
-      && block.zh.includes('DC 15感知豁免') && block.zh.includes('震慑')
-      && block.zh.includes('下一回合结束') && block.zh.includes('失败差值达到5')
-      && block.zh.includes('生命值降至0')
-      && block.executionMode === 'gm-assisted')).toBe(true);
+    expect(blocks).toEqual([]);
+    expect(plan.blocks.some(block=>block.factRefs.some(ref=>ref.includes('Death Glare')&&ref.endsWith('/structured/save'))&&block.zh.includes('DC 15感知豁免'))).toBe(true);
+    const status=glare.effects.find((effect:any)=>effect.statuses.includes('stunned'));
+    expect(status.flags.fvttJsonGenerator.conditionLifecycle).toMatchObject({version:1,mode:'gm',duration:'until the end of its next turn'});
+    expect(glare.system.description.value.startsWith(formatLiteralHtml(ir.creature.bonusActions.find(action=>action.name.includes('Death Glare'))!.description))).toBe(true);
+    expect(glare.system.description.value).toContain('适用条件、期限、逃脱与解除依完整原文判断');
     const request = createActorLocalizationRequest(actor, source, FACT_LOCALIZATION_POLICY, plan);
-    expect(request.texts.some(text => text.source.includes('The creature is Stunned until'))).toBe(false);
+    expect(request.texts.some(text => text.source.includes('The creature is Stunned until'))).toBe(true);
   });
 
   test('conditional and replacement damage survive parser, but never join native base damage', () => {
@@ -324,10 +337,12 @@ describe('same consumed facts render Actor and fixed Chinese rules', () => {
     expect(action?.damage?.map(part => part.formula)).toEqual(['1d8 + 3', '1d4']);
     const actor = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(parsed);
     const item = actor.items.find((entry: any) => entry.name.includes('Claw'));
-    const native = JSON.stringify(item.system);
-    expect(native).toContain('1d8');
-    expect(native).not.toContain('2d6');
-    expect(native).not.toContain('3d6');
+    const native=Object.values(item.system.activities).find((activity:any)=>activity.type==='attack') as any;
+    expect(native.damage.parts).toMatchObject([{number:1,denomination:8,bonus:'3',types:['slashing']}]);
+    expect(native.damage.parts).toHaveLength(1);
+    const helpers=(Object.values(item.system.activities) as any[]).filter(activity=>activity.flags?.fvttJsonGenerator?.literalDamage);
+    expect(helpers.map(helper=>helper.flags.fvttJsonGenerator.literalDamage.part.formula)).toEqual(['1d4','2d6','3d6']);
+    expect(helpers.every(helper=>helper.activation.type==='special'&&helper.consumption.targets.length===0)).toBe(true);
     const legacy = new ActorGenerator({ fvttVersion: '12', effectProfile: 'core' }).generate(parsed);
     const legacyItem = legacy.items.find((entry: any) => entry.name.includes('Claw'));
     const legacyParts = Object.values(legacyItem.system.activities)

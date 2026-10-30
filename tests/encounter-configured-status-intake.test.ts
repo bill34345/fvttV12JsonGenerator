@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'bun:test';
+import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import yaml from 'js-yaml';
 import type { ConfiguredConditionDefinition } from '@fvtt-json-generator/contracts/configured-conditions';
-import { compileEncounterSelection, decodeEncounterAutomation, renderEncounterActorSource } from '@fvtt-json-generator/intake-ai/encounter-automation';
+import { compileEncounterSelection, compileEncounterSelectionSourceAudit, decodeEncounterAutomation, renderEncounterActorSource } from '@fvtt-json-generator/intake-ai/encounter-automation';
 import { renderMonsterIntakeMarkdown } from '@fvtt-json-generator/intake-ai/renderer';
 import { convertMarkdownContentToJson } from '../src/core/workflow/singleFileConversion';
 import { buildForgeActorRequest, convertFinalActorSource } from '@fvtt-json-generator/forge-browser-runtime';
@@ -21,6 +22,7 @@ async function fixture(chinese = false) {
   const quote = quotes[chinese ? 1 : 0]!;
   const source = `${LURKER_SOURCE}\n${quote}`;
   const ir = buildValidLurkerIr();
+  ir.source = { sha256: hashSource(source), length: source.length };
   const name = chinese ? '霜爪' : 'Frost Claw';
   ir.creature.actions = [{ name, description: quote, activityType: 'attack', attack: { type: 'mwak', toHit: 5, reach: 5 },
     appliedConditions: [{ statuses: [chinese ? '霜印' : 'Frost Mark'], duration: '1 minute' }],
@@ -90,10 +92,11 @@ describe('source-scoped configured condition intake', () => {
     const changedQuote = quote.replace('持续1分钟', '直到目标受到火焰伤害，最多持续1分钟');
     qualified.source = qualified.source.replace(quote, changedQuote);
     qualified.actors[0]!.source = qualified.source;
+    qualified.actors[0]!.ir.source = { sha256: hashSource(qualified.source), length: qualified.source.length };
     qualified.actors[0]!.ir.creature.actions[0]!.description = changedQuote;
     qualified.actors[0]!.ir.creature.actions[0]!.evidence = [{ start: qualified.source.indexOf(changedQuote), end: qualified.source.length, quote: changedQuote }];
     const changedSelection = structuredClone(selection);
     changedSelection.rules[0]!.quote = changedQuote;
-    expect(() => compileEncounterSelection(changedSelection, qualified)).toThrow();
+    expect(() => compileEncounterSelectionSourceAudit(changedSelection, qualified)).toThrow();
   });
 });

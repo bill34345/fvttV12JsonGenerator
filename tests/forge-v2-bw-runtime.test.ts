@@ -85,7 +85,8 @@ test('browser diagnostics expose independently blocked features and filter priva
   expect(JSON.stringify(result)).not.toContain('private');expect(Object.isFrozen(error.stagedDiagnostic?.related)).toBe(true);
 }));
 test('human Markdown encounter entry consumes BW provider result without another extraction',async()=>fixture(async({provider,requests})=>{
-  const result=await generateEncounterFromHumanMarkdown({source,label:'Needle',provider,
+  const fixed={providerName:provider.providerName,extractionModel:provider.extractionModel,reviewModel:provider.reviewModel,discover:async()=>({schemaVersion:1 as const,candidates:[candidate]}),extract:provider.extract.bind(provider),review:provider.review.bind(provider),repair:provider.repair.bind(provider)};
+  const result=await generateEncounterFromHumanMarkdown({source,label:'Needle',provider:fixed,
     automationProvider:{generate:async()=>{throw Error('Pure native source must not need invented automation');},review:async()=>({verdict:'accepted',findings:[]})},reviewPolicy:'deferred'});
   expect(result.report.status).toBe('ready_for_gm_review');expect(result.prepared?.actors).toHaveLength(1);expect(requests).toHaveLength(2);
 }));

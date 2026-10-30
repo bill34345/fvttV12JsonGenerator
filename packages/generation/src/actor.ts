@@ -614,6 +614,7 @@ export class ActorGenerator {
     try{this.iconResolver?.resolveActor(actor);}catch(error){recordProjectionIssue(actor,'icons',null,error);}
     try{assertPortableActorHasNoTargetWorldIdentifiers(actor);}catch(error){recordProjectionIssue(actor,'spellManifest',parsed.spellManifest,error);}
 
+    if(this.isV14())for(const item of actor.items)this.appendGmLongRangeNote(item);
     if (!this.deferRulePresentation) this.emitRulePresentation(actor);
     return actor;
   }
@@ -1008,8 +1009,13 @@ export class ActorGenerator {
       // be bypassed by a second unconditional Effect of the same status.
       const manualEffects = embedded.filter(effect => statusesOf(effect).some(status=>manualStatuses.has(status)));
       const templates=embedded.map(effect=>({...effect,statuses:statusesOf(effect).filter(status=>officialCondition(status)||!manualStatuses.has(status))})).filter(effect=>effect.statuses.length);
+      const conditionalParts = (action.sourceDamageParts ?? []).flatMap((part, index) =>
+        (part.relationship === 'base' || part.relationship === 'additional') && !part.condition ? [] : [{ part, index }]);
       const safe: StructuredActionData = {
         ...action, literalMechanics: undefined, name: '', englishName: undefined,
+        // Retain the source timing/resource carrier without an immediate roll
+        // when every damage part belongs to a separately triggered GM helper.
+        ...(conditionalParts.length && action.type === 'damage' && !action.damage?.length ? { type: 'utility' as const } : {}),
         describe: '', nativeRuleText: undefined, manualRemainder: undefined, sourceRuleFacts: [],
         embeddedEffects: undefined,
         failEffects: action.failEffects?.map(effect => ({ ...effect, describe: undefined })),
@@ -1026,10 +1032,7 @@ export class ActorGenerator {
       }
       if(embedded.length)attachEmbeddedEffectsExt(item,templates);
       else this.attachConditionTemplates(item,inferredAppliedConditions(action.describe??''),action.describe??'',logicalPath+'/literal-conditions');
-      const conditionalParts = (action.sourceDamageParts ?? []).flatMap((part, index) =>
-        (part.relationship === 'base' || part.relationship === 'additional') && !part.condition ? [] : [{ part, index }]);
       const base = Object.values(item.system.activities ?? {})[0] as any;
-      if (conditionalParts.length && action.type === 'damage' && !action.damage?.length && !action.uses && !action.recharge && action.perLongRest === undefined) item.system.activities = {};
       for (const { part, index } of conditionalParts) {
         // The explicit relationship chooses a separate GM roll. It never
         // changes the primary roll, spends its resource again or reads prose.
@@ -1621,7 +1624,26 @@ export class ActorGenerator {
         targetVersion: this.fvttVersion,
       });
     }
+    if(this.isV14()&&!isWeapon&&action.attack){
+      const range=this.buildItemRange(action);
+      if(typeof range.value==='number'&&typeof range.long==='number')for(const activity of Object.values(item.system.activities) as any[]){
+        if(activity.type==='attack')activity.range=sourceAttackActivityRange({type:action.attack.type,toHit:action.attack.toHit,range:range.value,longRange:range.long});
+      }
+    }
     return item;
+  }
+
+  private appendGmLongRangeNote(item:any):void{
+    if(item.type!=='feat')return;
+    const notes=new Set<string>();
+    for(const activity of Object.values(item.system.activities??{}) as any[]){
+      if(activity.type!=='attack'||!activity.range?.special?.startsWith('远射程 '))continue;
+      const note=formatLiteralHtml(`GM射程：正常 ${activity.range.value} 尺，${activity.range.special}。远射程由GM按原文判断。`);
+      notes.add(note);
+      activity.description??={chatFlavor:''};
+      activity.description.chatFlavor+=note;
+    }
+    item.system.description.value+=[...notes].join('');
   }
 
   private resolveItemActivationCost(

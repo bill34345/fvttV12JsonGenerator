@@ -4,6 +4,8 @@ import { YamlParser } from '@fvtt-json-generator/parser';
 import { generateActorArtifact } from '@fvtt-json-generator/workflows/generation-pipeline';
 import { buildForgeActorRequest, convertFinalActorSource } from '@fvtt-json-generator/forge-browser-runtime';
 import { verifyGeneratedDocument } from '@fvtt-json-generator/generation/verification';
+import { formatLiteralHtml } from '../packages/generation/src/actor-text';
+import { conditionalAttackSaveTrigger } from '../packages/generation/src/save-outcome';
 
 // All surrounding Actor stats/configuration and the third positive are test-authored.
 // These two source excerpts and their branch annotations reproduce saved-r2
@@ -39,29 +41,41 @@ function completeShape(actor: any): any {
   ]));
 }
 
-describe('save branch labels share one conservative Actor and fixed-Chinese projection', () => {
+describe('literal Save branches and explicit native Save profiles retain independent projection contracts', () => {
   test.each([
     ['saved touch-save excerpt', save(grey, [part('6d10 + 40', 'necrotic')])],
     ['saved area-save excerpt', save(miasma, [part('10d6', 'psychic')], { 属性: '感知', AoE: { 形状: '球形', 范围: 20 } })],
     ['test-authored legendary multi-damage source', save('Intelligence Saving Throw: DC 20. Failure: 7 (2d6) Fire damage plus 3 (1d6) Psychic damage. Success: Half as much damage.',
       [part('2d6', 'fire', 'base', 'Failure'), part('1d6', 'psychic', 'additional', 'on a failed save')], { 属性: '智力', 激活: 'legendary', 传奇动作消耗: 2 })],
-  ] as const)('%s projects the same complete Actor as an unannotated branch', async (_name, action) => {
-    const baseline = structuredClone(action);
-    for (const damage of baseline.伤害) delete damage.条件;
-    const expected = await generate([baseline]);
+  ] as const)('%s retains literal branch rolls until an explicit native Save profile is supplied', async (_name, action) => {
+    let previous:any;
     for (const newline of ['\n', '\r\n']) {
       const result = await generate([action], '动作', '14', newline);
-      expect(result.diagnostics.filter(d => d.severity === 'error')).toEqual([]);
-      expect(completeShape(result.actor)).toEqual(completeShape(expected.actor));
-      const activity = activities(result.actor)[0];
-      expect(activity.type).toBe('save');
-      expect(activity.save.dc).toEqual({ calculation: '', formula: '20' });
-      expect(activity.damage.onSave).toBe('half');
-      expect(activity.damage.parts).toHaveLength(action.伤害.length);
-      expect(result.parsed.structuredActions?.动作?.[0]?.sourceDamageParts?.[0]?.condition).toBe(action.伤害[0].条件);
-      const summaries = result.rulePresentation!.blocks.filter(b => b.factRefs.some(ref => ref.includes('/structured/')));
-      expect(summaries.some(b => b.zh.includes('成功时伤害减半') && !b.zh.includes('触发或替代条件待GM核对'))).toBe(true);
+      expect(result.verification.status).toBe('failed');
+      expect(result.diagnostics).toContainEqual(expect.objectContaining({code:'GEN_SAVE_OUTCOME_MISMATCH'}));
+      const primary=activities(result.actor).find(activity=>activity.type==='save')!;
+      expect(primary.save.dc).toEqual({calculation:'',formula:'20'});
+      expect(primary.damage).toEqual({onSave:'none',parts:[]});
+      const helpers=activities(result.actor).filter(activity=>activity.flags?.fvttJsonGenerator?.literalDamage);
+      expect(helpers).toHaveLength(action.伤害.length);
+      expect(helpers.map(helper=>helper.flags.fvttJsonGenerator.literalDamage.part)).toEqual(
+        action.伤害.map(damage=>({formula:damage.公式,type:damage.类型,relationship:damage.关系,condition:damage.条件})));
+      expect(helpers.every(helper=>helper.activation.type==='special'&&helper.consumption.targets.length===0)).toBe(true);
+      expect(result.actor.items[0].system.description.value).toBe(formatLiteralHtml(action.描述));
+      if(previous)expect(completeShape(result.actor)).toEqual(completeShape(previous));
+      previous=result.actor;
     }
+    // This separate test-authored extraction supplies the native settlement
+    // explicitly; the literal candidate above is not silently rewritten.
+    const native=structuredClone(action) as any;
+    native.literalMechanics=true;native.saveOutcome='half';
+    for(const damage of native.伤害)delete damage.条件;
+    const generated=await generate([native]);
+    const activity=activities(generated.actor).find(activity=>activity.type==='save')!;
+    expect(activity.damage.onSave).toBe('half');
+    expect(activity.damage.parts).toHaveLength(action.伤害.length);
+    expect(generated.diagnostics.filter(diagnostic=>diagnostic.severity==='error')).toEqual([]);
+    expect(generated.rulePresentation!.blocks.some(block=>block.zh.includes('成功时伤害减半'))).toBe(true);
   });
 
   test.each([
@@ -112,7 +126,7 @@ describe('save branch labels share one conservative Actor and fixed-Chinese proj
   });
 
   test('the formal Forge workflow exposes exact Actor values and rejects planted onSave drift', async () => {
-    const generated = await generate([save(grey, [part('6d10 + 40', 'necrotic')])]);
+    const generated = await generate([save(grey, [part('6d10 + 40', 'necrotic','base',null)],{literalMechanics:true,saveOutcome:'half'})]);
     const response = await convertFinalActorSource(buildForgeActorRequest({ content: generated.source,
       displayName: 'Test-authored branch projection Actor', requestId: 'test-authored-branch-projection',
       fvttVersion: '14.364', systemVersion: '5.3.3' }));
@@ -141,27 +155,50 @@ describe('conditional damage and post-attack saves remain complete GM facts', ()
     const result = await generate([{ 名称: 'Test-authored conditional feature', 类型: type,
       描述: condition + ': ' + formula + ' damage.', 伤害: [part(formula, damageType, relationship, condition)] }], '附赠动作');
     expect(result.parsed.structuredActions?.附赠动作?.[0]?.sourceDamageParts).toEqual([{ formula, type: damageType, relationship, condition }]);
-    expect(activities(result.actor).every(a => !a.damage?.parts?.length)).toBe(true);
+    const helpers=activities(result.actor).filter(activity=>activity.flags?.fvttJsonGenerator?.literalDamage);
+    expect(helpers).toHaveLength(1);
+    expect(helpers[0].flags.fvttJsonGenerator.literalDamage.part).toEqual({formula,type:damageType,relationship,condition});
+    expect(helpers[0].activation).toMatchObject({type:'special',override:true,condition});
+    expect(helpers[0].consumption.targets).toEqual([]);
+    expect(helpers[0].damage.parts).toHaveLength(1);
+    const primary=activities(result.actor).filter(activity=>!activity.flags?.fvttJsonGenerator?.literalDamage);
+    expect(primary).toHaveLength(1);
+    expect(primary[0]).toMatchObject({type:'utility',activation:{type:'bonus',override:false}});
+    expect(primary[0].damage?.parts??[]).toEqual([]);
+    expect(primary[0].description.chatFlavor).toContain(formula);
+    expect(primary[0].description.chatFlavor).toContain(condition.replaceAll("'",'&#39;'));
     expect(result.canonical.mechanics.find(m => m.kind === 'damage')).toMatchObject({ projection: 'literal-only', value: { formula, condition, relationship } });
     expect(result.verification.status).toBe('needs_review');
     expect(result.rulePresentation!.uncoveredMechanics.some(entry => entry.details.some(detail => detail.includes(condition)))).toBe(true);
   });
   const consequence = 'The creature shape-shifts into a Lemure Aspirant that is hostile to all creatures until it dies or the effect is dispelled.';
-  const touch = () => ({ 名称: 'Test-authored conditional touch', 类型: 'attack', 攻击类型: 'msak', 命中: 12, 范围: '触及 5 尺',
+  const legacyTouch = () => ({ 名称: 'Test-authored conditional touch', 类型: 'attack', 攻击类型: 'msak', 命中: 12, 范围: '触及 5 尺',
     伤害: [part('8d6 + 6', 'psychic', 'base', null)], DC: 20, 属性: '魅力', dcSourceKind: 'literal',
     描述: 'Melee Spell Attack: +12, reach 5 ft. Hit: 34 (8d6 + 6) Psychic damage. A creature reduced to 0 Hit Points by this damage must make a Charisma Saving Throw: DC 20. Failure: ' + consequence,
     失败效果: [{ 描述: consequence }], 内嵌效果: [{ 类型: consequence, 描述: consequence }] });
+  const touch=()=>{
+    const original=legacyTouch(),description=original.描述;
+    const {DC:_,属性:__,失败效果:___,内嵌效果:____,...attack}=original;
+    return {...attack,执行模式:'native-with-gm',nativeRuleText:description,manualRemainder:description,
+      gmTriggeredSave:{dc:20,ability:'cha',trigger:'A creature reduced to 0 Hit Points by this damage',failureStatuses:[],sourceText:description}};
+  };
   test('the saved 0HP trigger keeps native attack and unlinked GM consequence', async () => {
     const result = await generate([touch()]);
-    expect(result.verification.status).toBe('needs_review');
+    expect(result.verification.status).toBe('accepted');
     expect(result.diagnostics.filter(d => d.severity === 'error')).toEqual([]);
     const activity = activities(result.actor)[0];
     expect(activity).toMatchObject({ type: 'attack', attack: { type: { value: 'melee', classification: 'spell' } }, damage: { parts: [{ number: 8, denomination: 6, bonus: '6', types: ['psychic'] }] } });
-    expect(activities(result.actor).some(a => a.type === 'save')).toBe(false);
+    const saves=activities(result.actor).filter(activity=>activity.type==='save');
+    expect(saves).toHaveLength(1);
+    expect(saves[0].activation).toMatchObject({type:'special',override:true});
+    expect(saves[0].save).toEqual({ability:['cha'],dc:{calculation:'',formula:'20'}});
+    expect(saves[0].consumption.targets).toEqual([]);
     expect(activity.effects ?? []).toEqual([]);
-    expect(result.actor.items[0].effects[0].name).toBe(consequence);
-    expect(result.canonical.mechanics.find(m => m.kind === 'save')).toMatchObject({ projection: 'literal-only', value: { dc: 20, ability: 'cha', condition: 'A creature reduced to 0 Hit Points by this damage' } });
-    expect(result.rulePresentation!.blocks.some(b => b.zh.includes('仅当本次攻击伤害使目标生命值降至0时') && b.executionMode === 'gm-assisted')).toBe(true);
+    expect(result.actor.items[0].effects).toEqual([]);
+    expect(result.parsed.structuredActions!.动作![0]!.gmTriggeredSave).toMatchObject({dc:20,ability:'cha',trigger:'A creature reduced to 0 Hit Points by this damage',failureStatuses:[]});
+    expect(result.actor.items[0].system.description.value).toContain(consequence);
+    expect(saves[0].activation.condition).toContain('A creature reduced to 0 Hit Points by this damage');
+    expect(saves[0].description.chatFlavor).toContain(consequence);
   });
   test.each([
     ['rwak', 'Dexterity', '敏捷', 'prone', 'The creature is Prone.'],
@@ -171,23 +208,29 @@ describe('conditional damage and post-attack saves remain complete GM facts', ()
     action.攻击类型 = attackType;
     action.属性 = ability;
     action.描述 = `Hit: 34 (8d6 + 6) Psychic damage. The target reduced to 0 Hit Points by this damage must make a ${abilityWord} Saving Throw: DC 20. Failure: ${failure}`;
-    action.失败效果 = [{ 状态: status, 描述: failure }];
-    action.内嵌效果 = [{ 类型: status, 描述: failure }, { 类型: 'Test-authored immediate mark', 描述: 'Applies on the initial hit.' }];
+    action.gmTriggeredSave={dc:20,ability:abilityWord==='Dexterity'?'dex':'con',trigger:'The target reduced to 0 Hit Points by this damage',failureStatuses:[status],sourceText:action.描述};
+    action.nativeRuleText=action.描述;action.manualRemainder=action.描述;
+    action.内嵌效果 = [{ 类型: 'Test-authored immediate mark', 描述: 'Applies on the initial hit.' }];
     const result = await generate([action]);
-    expect(result.verification.status).toBe('needs_review');
+    expect(result.verification.status).toBe('accepted');
     expect(result.diagnostics.filter(d => d.severity === 'error')).toEqual([]);
     const item = result.actor.items[0], activity = activities(result.actor)[0];
     expect(activity.type).toBe('attack');
     expect(activity.damage.parts).toHaveLength(1);
-    expect(activities(result.actor).some(a => a.type === 'save')).toBe(false);
+    const saves=activities(result.actor).filter(activity=>activity.type==='save');
+    expect(saves).toHaveLength(1);expect(saves[0].activation).toMatchObject({type:'special',override:true});
+    expect(saves[0].save).toEqual({ability:[abilityWord==='Dexterity'?'dex':'con'],dc:{calculation:'',formula:'20'}});
+    expect(saves[0].activation.condition).toBe('The target reduced to 0 Hit Points by this damage');
+    expect(saves[0].consumption.targets).toEqual([]);
     const conditional = item.effects.find((e: any) => e.statuses.includes(status));
     const immediate = item.effects.find((e: any) => e.name === 'Test-authored immediate mark');
     expect(conditional).toBeTruthy(); expect(immediate).toBeTruthy();
     expect(activity.effects.some((e: any) => e._id === conditional._id)).toBe(false);
     expect(activity.effects.some((e: any) => e._id === immediate._id)).toBe(true);
+    expect(saves[0].effects.some((effect:any)=>effect._id===conditional._id)).toBe(true);
   });
-  test.each(['no redundant fields', 'embedded effect only', 'failure effect only'])('test-authored 0HP poisoned source with %s never applies the delayed status on the attack', async shape => {
-    const action: any = touch();
+  test.each(['no redundant fields', 'embedded effect only', 'failure effect only'])('legacy 0HP poisoned source with %s retains its state and lifecycle diagnostics without applying it on the attack', async shape => {
+    const action: any = legacyTouch();
     action.属性 = '体质';
     action.描述 = 'Melee Spell Attack: +12, reach 5 ft. Hit: 34 (8d6 + 6) Psychic damage. A creature reduced to 0 Hit Points by this damage must make a Constitution Saving Throw: DC 20. Failure: The creature is Poisoned.';
     delete action.失败效果; delete action.内嵌效果;
@@ -200,7 +243,8 @@ describe('conditional damage and post-attack saves remain complete GM facts', ()
     const delayedIds = new Set(item.effects.filter((e: any) => e.statuses.includes('poisoned')).map((e: any) => e._id));
     expect(delayedIds.size).toBeGreaterThan(0);
     expect((activity.effects ?? []).some((e: any) => delayedIds.has(e._id))).toBe(false);
-    expect(result.verification.status).toBe('needs_review');
+    expect(result.verification.status).toBe(shape==='embedded effect only'?'failed':'needs_review');
+    if(shape==='embedded effect only')expect(result.diagnostics).toContainEqual(expect.objectContaining({code:'GEN_CONDITION_LIFECYCLE_INVALID',path:'actor/structuredActions/动作/0/effects/0'}));
     const response = await convertFinalActorSource(buildForgeActorRequest({content:result.source,
       displayName:'Test-authored sparse delayed save',requestId:'test-authored-sparse-review-fix',
       fvttVersion:'14.364',systemVersion:'5.3.3'}));
@@ -211,7 +255,7 @@ describe('conditional damage and post-attack saves remain complete GM facts', ()
     expect(activities(response.result.artifact).every(a => !(a.effects ?? []).some((e: any) => formalDelayedIds.has(e._id)))).toBe(true);
   });
   test('test-authored distinct immediate status remains linked while the source-proven delayed status is unlinked', async () => {
-    const action: any = touch(); action.属性 = '体质';
+    const action: any = legacyTouch(); action.属性 = '体质';
     action.描述 = 'Hit: 34 (8d6 + 6) Psychic damage and the target is Grappled. A creature reduced to 0 Hit Points by this damage must make a Constitution Saving Throw: DC 20. Failure: The creature is Poisoned.';
     delete action.失败效果; delete action.内嵌效果;
     const result = await generate([action]);
@@ -222,39 +266,54 @@ describe('conditional damage and post-attack saves remain complete GM facts', ()
     expect(activity.effects.some((e: any) => e._id === immediate._id)).toBe(true);
     expect(activity.effects.some((e: any) => e._id === delayed._id)).toBe(false);
   });
-  test('test-authored ambiguous immediate/delayed status identity blocks the formal workflow', async () => {
-    const action: any = touch(); action.属性 = '体质';
+  test('test-authored ambiguous status identity retains the candidate and its literal-review finding', async () => {
+    const action: any = legacyTouch(); action.属性 = '体质';
     action.描述 = 'Hit: 34 (8d6 + 6) Psychic damage and the target is Poisoned. A creature reduced to 0 Hit Points by this damage must make a Constitution Saving Throw: DC 20. Failure: The creature is Poisoned.';
     delete action.失败效果; delete action.内嵌效果;
-    await expect(generate([action])).rejects.toThrow('ConditionalAttackSaveEffectAmbiguous');
+    const generated=await generate([action]);
+    expect(generated.verification.status).toBe('needs_review');
+    expect(generated.diagnostics).toEqual([expect.objectContaining({code:'GEN_LITERAL_REVIEW_REQUIRED',path:'actor/structuredActions/动作/0/save'})]);
+    expect(activities(generated.actor)[0].damage.parts).toHaveLength(1);
     const response = await convertFinalActorSource(buildForgeActorRequest({content:markdown([action]),
       displayName:'Test-authored ambiguous delayed status',requestId:'test-authored-ambiguous-review-fix',
       fvttVersion:'14.364',systemVersion:'5.3.3'}));
     expect('result' in response).toBe(true);
     if (!('result' in response)) throw new Error('Missing ambiguous formal result');
-    expect(response.result.status).toBe('failed');
-    expect('artifact' in response.result ? response.result.artifact : undefined).toBeUndefined();
+    expect(response.result.status).toBe('needs_review');
+    expect(response.result.diagnostics).toContainEqual(expect.objectContaining({code:'GEN_LITERAL_REVIEW_REQUIRED'}));
+    expect(response.result.artifact).toBeTruthy();
+    expect(activities(response.result.artifact)[0].damage.parts).toHaveLength(1);
   });
-  test.each(['wrong DC', 'wrong ability', 'missing trigger', 'conflicting trigger'])('%s never gets the conditional-save exception', async kind => {
-    const action = touch();
+  test.each(['wrong DC', 'wrong ability', 'missing trigger', 'conflicting trigger'])('%s preserves its explicit Save profile without guessing from the source', async kind => {
+    const action = legacyTouch();
     if (kind === 'wrong DC') action.DC = 21;
     if (kind === 'wrong ability') action.属性 = '感知';
     if (kind === 'missing trigger') action.描述 = action.描述.replace('A creature reduced to 0 Hit Points by this damage must', 'The target must');
     if (kind === 'conflicting trigger') (action as any).豁免条件 = 'Whenever the target is hit';
     const result = await generate([action]);
-    expect(result.verification.status).toBe('failed');
-    expect(result.diagnostics.some(d => d.code === 'GEN_MECHANIC_NOT_PROJECTED')).toBe(true);
+    expect(conditionalAttackSaveTrigger(result.parsed.structuredActions!.动作![0]!)).toBeUndefined();
+    const saves=activities(result.actor).filter(activity=>activity.type==='save');
+    expect(saves).toHaveLength(1);
+    expect(saves[0].save).toEqual({ability:[kind==='wrong ability'?'wis':'cha'],dc:{calculation:'',formula:kind==='wrong DC'?'21':'20'}});
+    expect(saves[0].activation.type).toBe('special');
+    expect(result.verification.status).toBe('accepted');
   });
   test('unrelated native attacks and v12 saves keep their complete Actor shape', async () => {
-    const action = save('Charisma Saving Throw: DC 20. Failure: 7 (2d6) Fire damage. Success: Half damage.', [part('2d6', 'fire', 'base', null)]);
+    const action = save('Charisma Saving Throw: DC 20. Failure: 7 (2d6) Fire damage. Success: Half damage.', [part('2d6', 'fire', 'base', null)],{literalMechanics:true,saveOutcome:'half'});
     for (const version of ['12', '14'] as const) {
       const result = await generate([action], '动作', version);
       const annotated = structuredClone(action); annotated.伤害[0].条件 = branch;
       const replay = await generate([annotated], '动作', version);
-      expect(completeShape(replay.actor)).toEqual(completeShape(result.actor));
+      if(version==='12'){
+        expect(activities(replay.actor).find(activity=>activity.type==='save')!.damage.parts).toHaveLength(1);
+      }else{
+        expect(activities(replay.actor).find(activity=>activity.type==='save')!.damage.parts).toEqual([]);
+        expect(activities(replay.actor).filter(activity=>activity.flags?.fvttJsonGenerator?.literalDamage)).toHaveLength(1);
+      }
+      expect(activities(result.actor).find(activity=>activity.type==='save')!.damage.parts).toHaveLength(1);
       expect(activities(result.actor)[0].damage.onSave).toBe('half');
     }
-    const attack = touch(); delete (attack as any).DC; delete (attack as any).属性;
+    const attack = legacyTouch(); delete (attack as any).DC; delete (attack as any).属性;
     attack.描述 = 'Melee Spell Attack: +12, reach 5 ft. Hit: 34 (8d6 + 6) Psychic damage.';
     attack.失败效果 = []; attack.内嵌效果 = [];
     const native = await generate([attack]);

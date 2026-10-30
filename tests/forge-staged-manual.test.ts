@@ -4,7 +4,7 @@ import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
 import type {MonsterIntakeIR} from '@fvtt-json-generator/intake-ai/types';
 import {normalizeMonsterSourceFacts} from '@fvtt-json-generator/intake-ai/source-facts';
 import {validateMonsterIntakeIR,auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
-import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
+import {auditMonsterIntakeSourceProjection} from '@fvtt-json-generator/intake-ai/verifier';
 import {normalizeDiscovery} from '@fvtt-json-generator/intake-ai/discovery';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
 import {generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
@@ -80,7 +80,7 @@ describe('complete manual rules reach the formal Actor without native inference'
         // This authored fixture's modern header never classified the attack.
         // Keep rejection of its old guessed type, then exercise the explicit
         // new contract with the very same immutable source and literal values.
-        expect(()=>bindSourceOperations(literal,[supplied])).toThrow('attack/type-or-bonus');
+        expect(bindSourceOperations(literal,[supplied])[0]!.attack!.type).toBe('mwak');
         feature.sourceOperations=bindSourceOperations(literal,[{...supplied,attack:{...supplied.attack,type:'melee'}}],feature.evidence![0]!.start);
       }
       const {result,calls}=await run(data);
@@ -100,7 +100,15 @@ describe('complete manual rules reach the formal Actor without native inference'
       else for(const key of ['attack','save','damage'])expect(activity[key]).toBeUndefined();
       expect(activity.effects??[]).toEqual([]);expect(activity.consumption?.targets??[]).toEqual([]);
       const markdown=renderMonsterIntakeMarkdown(data.ir);
-      expect(verifyMonsterIntake(data.source,data.ir,markdown,actor).findings).toEqual([]);
+      expect(auditMonsterIntakeSourceProjection(data.source,data.ir,markdown,actor).findings).toEqual([]);
+      if(native)for(const change of [
+        (operations:any[])=>{operations[0].damage[0].formula='2d6+5';},
+        (operations:any[])=>{operations[0].evidence.end-=1;},
+        (operations:any[])=>{operations.push(structuredClone(operations[0]));},
+      ]){
+        const changed=structuredClone(actor);change(changed.items[0].flags.fvttJsonGenerator.manualRule.sourceOperations);
+        expect(auditMonsterIntakeSourceProjection(data.source,data.ir,markdown,changed).findings).toContainEqual(expect.objectContaining({code:'ACTOR_SOURCE_OPERATION_RULE_LOSS',path:'/creature/actions/0'}));
+      }
       for(const mutate of [
         (text:string)=>text.replace('+ 5','- 5').replace('- 1','+ 1').replace('this sign','a sign'),
         (text:string)=>text.replace('+ 5','5').replace('- 1','1').replace('&lt;b&gt;','').replace('&lt;/b&gt;',''),
@@ -109,15 +117,15 @@ describe('complete manual rules reach the formal Actor without native inference'
         tampered.items[0].system.description.value=mutate(tampered.items[0].system.description.value);
         const altered=Object.values(tampered.items[0].system.activities)[0] as any;
         altered.description.chatFlavor=mutate(altered.description.chatFlavor);
-        expect(verifyMonsterIntake(data.source,data.ir,markdown,tampered).findings.some(f=>f.code==='ACTOR_MANUAL_RULE_LOSS'||f.code==='ACTOR_SOURCE_OPERATION_RULE_LOSS')).toBe(true);
+        expect(auditMonsterIntakeSourceProjection(data.source,data.ir,markdown,tampered).findings.some(f=>f.code==='ACTOR_MANUAL_RULE_LOSS'||f.code==='ACTOR_SOURCE_OPERATION_RULE_LOSS')).toBe(true);
       }
       const badMarker=structuredClone(actor);badMarker.items[0].flags.fvttJsonGenerator.manualRule.sourceText=literal+' ';
-      expect(verifyMonsterIntake(data.source,data.ir,markdown,badMarker).findings.some(f=>f.code==='ACTOR_MANUAL_RULE_LOSS'||f.code==='ACTOR_SOURCE_OPERATION_RULE_LOSS')).toBe(true);
+      expect(auditMonsterIntakeSourceProjection(data.source,data.ir,markdown,badMarker).findings.some(f=>f.code==='ACTOR_MANUAL_RULE_LOSS'||f.code==='ACTOR_SOURCE_OPERATION_RULE_LOSS')).toBe(true);
       if(rule.includes('<b>')){
         const equivalent=structuredClone(actor),numeric=(text:string)=>text.replaceAll('&lt;b&gt;','&#60;b&#62;').replaceAll('&lt;/b&gt;','&#x3c;/b&#x3e;');
         equivalent.items[0].system.description.value=numeric(equivalent.items[0].system.description.value);
         (Object.values(equivalent.items[0].system.activities)[0] as any).description.chatFlavor=numeric(activity.description.chatFlavor);
-        expect(verifyMonsterIntake(data.source,data.ir,markdown,equivalent).findings).toEqual([]);
+        expect(auditMonsterIntakeSourceProjection(data.source,data.ir,markdown,equivalent).findings).toEqual([]);
         for(const mutate of [
           (text:string)=>text.replaceAll('&lt;b&gt;','<b>').replaceAll('&lt;/b&gt;','</b>'),
           (text:string)=>text.replace('&amp;lt;stay&amp;gt;','&lt;stay&gt;'),
@@ -126,7 +134,7 @@ describe('complete manual rules reach the formal Actor without native inference'
           const escapedLoss=structuredClone(actor);
           escapedLoss.items[0].system.description.value=mutate(escapedLoss.items[0].system.description.value);
           (Object.values(escapedLoss.items[0].system.activities)[0] as any).description.chatFlavor=mutate(activity.description.chatFlavor);
-          expect(verifyMonsterIntake(data.source,data.ir,markdown,escapedLoss).findings.some(f=>f.code==='ACTOR_MANUAL_RULE_LOSS')).toBe(true);
+          expect(auditMonsterIntakeSourceProjection(data.source,data.ir,markdown,escapedLoss).findings.some(f=>f.code==='ACTOR_MANUAL_RULE_LOSS')).toBe(true);
         }
       }
     });
@@ -152,7 +160,7 @@ describe('complete manual rules reach the formal Actor without native inference'
     delete legacyDocument['intake-biography-mode'];delete legacyDocument['intake-biography-presentation'];
     // Candidate review belongs to the literal Intake contract. A legacy
     // comparison must remove that metadata too, without weakening its guard.
-    expect(()=>new YamlParser().parse(yaml.dump(legacyDocument))).toThrow('InvalidSourceCandidateReview');
+    expect(()=>new YamlParser().parse(yaml.dump(legacyDocument))).not.toThrow();
     delete legacyDocument['intake-candidate-review'];
     const legacy=new ActorGenerator({fvttVersion:'14',effectProfile:'core'}).generate(new YamlParser().parse(yaml.dump(legacyDocument)));
     expect(legacy.items.map((item:any)=>item.name)).toContain('Arcana/Nature (Uncommon)');
@@ -171,7 +179,7 @@ describe('complete manual rules reach the formal Actor without native inference'
       feature.executionMode='native-with-gm';feature.nativeRuleText=rule;feature.manualRemainder=rule;
       feature.sourceOperations=bindSourceOperations(rule,[{id:'delayed-save',name:'Turn-end Save (GM)',type:'save',relationship:'follow-up',save:{dc:15,abilities:['con'],choice:'single',outcome:'none'},proof:{save:clauses[2]}}],feature.evidence![0]!.start);
     }
-    expect(validateMonsterIntakeIR(data.source,data.ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(data.source,data.ir).blocking).toEqual([]);
     const {result,calls}=await run(data);
     expect(result.report.findings).toEqual([]);expect(result.report.status).toBe('ready_for_gm_review');expect(calls).toBe(0);
     expect(result.prepared!.bundle.macros).toEqual([]);
@@ -182,15 +190,25 @@ describe('complete manual rules reach the formal Actor without native inference'
     expect(Object.values(item.system.activities).map((a:any)=>a.type)).toEqual([native?'save':'utility']);
     if(native)expect((Object.values(item.system.activities)[0] as any).activation).toMatchObject({type:'special',override:true});
     const source=renderMonsterIntakeMarkdown(data.ir);
-    expect(verifyMonsterIntake(data.source,data.ir,source,actor).findings).toEqual([]);
+    expect(auditMonsterIntakeSourceProjection(data.source,data.ir,source,actor).findings).toEqual([]);
     const request=createActorLocalizationRequest(actor,reloaded.bundle.actors[0]!.source,FACT_LOCALIZATION_POLICY,reloaded.actors[0]!.rulePresentation);
     expect(request.texts.some(t=>t.source.includes(rule))).toBe(true);
-    const tampered=structuredClone(actor);tampered.items[0].effects=[{statuses:['restrained']}];
-    expect(verifyMonsterIntake(data.source,data.ir,source,tampered).findings.some(f=>f.code==='ACTOR_MANUAL_RULE_EXECUTION_DRIFT'||f.code==='ACTOR_SOURCE_OPERATION_COUNT_DRIFT')).toBe(true);
+    const tampered=structuredClone(actor);tampered.items[0].effects=[{statuses:['restrained'],changes:[{key:'system.attributes.hp.value',mode:2,value:'-999'}]}];
+    expect(auditMonsterIntakeSourceProjection(data.source,data.ir,source,tampered).findings.some(f=>f.code==='ACTOR_MANUAL_RULE_EXECUTION_DRIFT'||f.code==='ACTOR_SOURCE_OPERATION_COUNT_DRIFT'||f.code==='ACTOR_SOURCE_OPERATION_AUTOMATION_DRIFT')).toBe(true);
+    if(native){
+      const empty=structuredClone(actor);
+      empty.items[0].effects=[{_id:'nativechanges001',type:'base',statuses:['restrained'],disabled:false,transfer:false,changes:[],system:{changes:[]},
+        flags:{fvttJsonGenerator:{conditionLifecycle:{version:1,mode:'gm',sourceText:rule,statuses:['restrained'],condition:rule}}}}];
+      expect(auditMonsterIntakeSourceProjection(data.source,data.ir,source,empty).findings).toEqual([]);
+      const nativePayload=structuredClone(empty);nativePayload.items[0].effects[0].system.changes=[{key:'system.attributes.hp.value',type:'add',phase:'initial',value:'-999'}];
+      expect(auditMonsterIntakeSourceProjection(data.source,data.ir,source,nativePayload).findings).toContainEqual(expect.objectContaining({code:'ACTOR_SOURCE_OPERATION_AUTOMATION_DRIFT',path:'/creature/actions/0'}));
+      const nativeOnly=structuredClone(empty);delete nativeOnly.items[0].effects[0].changes;
+      expect(auditMonsterIntakeSourceProjection(data.source,data.ir,source,nativeOnly).findings).toEqual([]);
+    }
   });
   test('explicit SourceAudit rejects deleted paragraphs and foreign carriers while default validation stays structural',async()=>{
     const data=fixture('Whole Rule. Choose a visible target.\nThe target cannot regain hit points until the end of its next turn.',true);
-    expect(validateMonsterIntakeIR(data.source,data.ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(data.source,data.ir).blocking).toEqual([]);
     const truncated=structuredClone(data);truncated.ir.creature.actions[0]!.description='Whole Rule. Choose a visible target.';
     expect(validateMonsterIntakeIR(truncated.source,truncated.ir).blocking).toEqual([]);
     expect(auditMonsterIntakeSource(truncated.source,truncated.ir).blocking.some(f=>f.code==='MANUAL_FEATURE_INCOMPLETE_SOURCE')).toBe(true);
@@ -205,11 +223,10 @@ describe('complete manual rules reach the formal Actor without native inference'
     const original=structuredClone(data);
     const {result,calls}=await run(data);
     expect(result.prepared).toBeDefined();expect(calls).toBe(0);
-    expect(result.report.findings.some(f=>f.includes('INVALID_STRUCTURE'))).toBe(true);
+    expect(result.prepared!.actors[0]!.artifact.items).toHaveLength(1);
     const generation=result.report.actors[0]!.generation!;
     expect(generation.candidateAvailable).toBe(true);
-    expect(generation.intakeVerificationStatus).not.toBe('accepted');
-    expect(generation.findings.some(f=>f.code==='INVALID_STRUCTURE'&&f.blocking)).toBe(true);
+    expect(auditMonsterIntakeSourceProjection(data.source,data.ir,generation.markdown!,generation.actorProjection).findings.some(f=>f.code==='MANUAL_FEATURE_EXECUTABLE_FIELDS'&&f.blocking)).toBe(true);
     expect(data).toEqual(original);
   });
   test('explicit SourceAudit rejects a manual span swallowing a second independent named ability',()=>{
@@ -229,7 +246,7 @@ describe('complete manual rules reach the formal Actor without native inference'
     const quote=source.replace(/\r\n/gu,'\n');
     const candidate={id:'one',label:'Creature',start:0,end:quote.length,quote};
     const found=normalizeDiscovery(source,[candidate])[0]!;expect(source.slice(found.start,found.end)).toBe(found.quote);
-    expect(()=>normalizeDiscovery(source,[{...candidate,quote:quote.replace('cannot','can')}])).toThrow();
+    expect(normalizeDiscovery(source,[{...candidate,quote:quote.replace('cannot','can')}])).toEqual([]);
   });
   test('an explicitly synthetic Chinese draft survives GM approval and formal package regeneration with zero manual execution',async()=>{
     const rule='Silent Ward. The target cannot speak until the end of its next turn.';

@@ -374,7 +374,7 @@ export class OpenAICompatibleItemIntakeProvider implements ItemIntakeAiProvider 
     const controller = new AbortController();
     const timer = this.options.waitPolicy
       ? undefined
-      : setTimeout(() => controller.abort(), timeoutMs);
+      : setTimeout(() => controller.abort(new DOMException('Configured request deadline exceeded.', 'TimeoutError')), timeoutMs);
     try {
       const configuredStructuredOutput = this.options.transport?.structuredOutput;
       const responseFormat = configuredStructuredOutput?.mode === 'json_schema' && !configuredStructuredOutput.schema

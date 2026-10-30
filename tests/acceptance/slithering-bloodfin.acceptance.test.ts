@@ -41,10 +41,10 @@ function getFirstActivity(item: GeneratedActor['items'][number]): any {
 }
 
 function findItem(actor: GeneratedActor, englishName: string) {
-  const item = actor.items.find((candidate) => candidate.name.includes(`(${englishName})`));
+  const item = actor.items.find((candidate) => candidate.name.endsWith(` ${englishName}`));
   expect(item).toBeDefined();
   if (!item) {
-    throw new Error(`Expected item containing (${englishName})`);
+    throw new Error(`Expected bilingual item ending in ${englishName}`);
   }
   return item;
 }
@@ -480,16 +480,16 @@ describe('Slithering Bloodfin acceptance gate', () => {
     const pelagicScreech = findItem(actor, 'Pelagic Screech');
 
     expect((bite.effects ?? []).map((effect: any) => effect.name)).toEqual(
-      expect.arrayContaining(['受限 (Restrained)', '被擒抱 (Grappled)']),
+      expect.arrayContaining(['受限 Restrained', '被擒抱 Grappled']),
     );
     expect((deathBurst.effects ?? []).map((effect: any) => effect.name)).toEqual(
-      expect.arrayContaining(['中毒 (Poisoned)']),
+      expect.arrayContaining(['中毒 Poisoned']),
     );
     expect((swallow.effects ?? []).map((effect: any) => effect.name)).toEqual(
-      expect.arrayContaining(['受限 (Restrained)', '目盲 (Blinded)']),
+      expect.arrayContaining(['受限 Restrained', '目盲 Blinded']),
     );
     expect((pelagicScreech.effects ?? []).map((effect: any) => effect.name)).toEqual(
-      expect.arrayContaining(['恍惚 (Dazed)']),
+      expect.arrayContaining(['恍惚 Dazed']),
     );
   });
 

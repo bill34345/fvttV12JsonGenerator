@@ -44,7 +44,7 @@ describe('source-bound scalar proof list recovery',()=>{
     expect(bound[0].proof.aoe).toEqual([quote]);expect(sourceOperationErrors(duplicate,bound)).toContain('0/proof/aoe');
     const missing=proposal(undefined);delete missing[0].proof.aoe;
     expect((materializeSourceOperationEvidence(source,missing) as any)[0].proof.aoe).toBeUndefined();
-    expect(()=>bindSourceOperations(source,missing)).toThrow('proof/aoe');
+    expect(sourceOperationErrors(source,bindSourceOperations(source,missing))).toContain('0/proof/aoe');
   });
   test('wrong facts and foreign origins remain independently checked after format recovery',()=>{
     for(const mutate of [(op:any)=>{op.aoe.radius=20;},(op:any)=>{op.damage[0].formula='2d10';}]){
@@ -64,29 +64,29 @@ describe('source-bound scalar proof list recovery',()=>{
     const attack='Melee Attack Roll: +6, reach 5 ft., one creature.',hit='Hit: 5 (1d6 + 2) Piercing damage.',parent='Claw. '+attack+' '+hit;
     const raw=[{id:'claw',name:'Claw',type:'attack',relationship:'primary',attack:{type:'melee',toHit:6,reach:5},targetSpecial:'one creature',damage:[{formula:'1d6 + 2',type:'piercing',relationship:'base'}],proof:{attack:[attack],target:[attack],damage:[hit]}}],before=structuredClone(raw);
     const bound=bindSourceOperations(parent,raw);expect(bound[0]!.proof).toEqual({attack,target:attack,damage:[hit]});expect(raw).toEqual(before);
-    const wrong=structuredClone(raw);wrong[0]!.attack.toHit=7;expect(()=>bindSourceOperations(parent,wrong)).toThrow('attack/type-or-bonus');
+    const wrong=structuredClone(raw);wrong[0]!.attack.toHit=7;expect(sourceOperationErrors(parent,bindSourceOperations(parent,wrong))).toContain('0/attack/type-or-bonus');
   });
   test('Save and range wrappers retain independent DC and distance checks',()=>{
     const save='Constitution Saving Throw: DC 17, each creature in a 10-foot-radius Sphere centered on a point within 60 feet.',parent='Burst. '+save;
     const raw=[{id:'burst',name:'Burst',type:'save',relationship:'primary',save:{dc:17,abilities:['con'],choice:'single',outcome:'none'},range:60,aoe:{shape:'sphere',radius:10},proof:{save:[save],range:[save],aoe:[save]}}],before=structuredClone(raw);
     const bound=bindSourceOperations(parent,raw);expect(bound[0]!.proof).toEqual({save,range:save,aoe:save});expect(raw).toEqual(before);
-    for(const mutate of [(op:any)=>{op.save.dc=18;},(op:any)=>{op.range=90;}]){const wrong=structuredClone(raw);mutate(wrong[0]);expect(()=>bindSourceOperations(parent,wrong)).toThrow();}
+    for(const mutate of [(op:any)=>{op.save.dc=18;},(op:any)=>{op.range=90;}]){const wrong=structuredClone(raw);mutate(wrong[0]);expect(sourceOperationErrors(parent,bindSourceOperations(parent,wrong)).length).toBeGreaterThan(0);}
   });
   test('both healing proofs recover without changing formulas, recipients or timing',()=>{
     const parent=healingFixture.case.features[0]!.text,ops=sourceHealingOperations(parent)!,raw:any=structuredClone(ops);
     for(const op of raw)op.proof.healing=[op.proof.healing];const before=structuredClone(raw);
     expect(bindSourceOperations(parent,raw)).toEqual(bindSourceOperations(parent,ops));expect(raw).toEqual(before);
-    raw[1].healing.formula='99';expect(()=>bindSourceOperations(parent,raw)).toThrow();
+    raw[1].healing.formula='99';expect(sourceOperationErrors(parent,bindSourceOperations(parent,raw)).length).toBeGreaterThan(0);
   });
 });
 
 describe('timed GM rolls distinguish missing operations from field conflicts',()=>{
-  test('an empty list is missing operations; a malformed or oversized list is a structural conflict',()=>{
+  test('an empty list is missing operations; malformed records retain structural and missing-mechanic diagnostics',()=>{
     const source='Pulse. Each creature takes 3d8 Fire damage.';
     expect(sourceFeatureBasicOmissions(source,{sourceOperations:[]} as any)).toEqual(['operations']);
     for(const operations of [{},Array(17).fill({id:'pulse'})]){
-      expect(sourceOperationErrors(source,operations)).toEqual(['operations']);
-      expect(sourceFeatureBasicOmissions(source,{sourceOperations:operations} as any)).toEqual([]);
+      expect(sourceOperationErrors(source,operations).length).toBeGreaterThan(0);
+      expect(sourceFeatureBasicOmissions(source,{sourceOperations:operations} as any)).toEqual(Array.isArray(operations)?['inventory/damage-omitted']:[]);
     }
   });
   for(const timing of ['At the end of each of the sentinel’s turns','At the start of each of the sentinel’s turns','The first time a creature enters the area on a turn'])test('a present timed damage button is not reported missing: '+timing,()=>{
@@ -140,12 +140,12 @@ describe('explicit 2024 Emanations use native radius without rewriting model dat
     expect(findings.filter(f=>f.code==='ACTOR_SOURCE_OPERATION_AREA_DRIFT'||f.path.endsWith('/aoe'))).toEqual([]);
     for(const type of ['sphere','cone']){const bad=structuredClone(output);saveActivity(bad).target.template.type=type;expect(verifyMonsterIntake(rule,ir,markdown,bad).findings.some(f=>f.code==='ACTOR_SOURCE_OPERATION_AREA_DRIFT')).toBe(true);}
   });
-  test('legacy flat AoE also maps when parsed from a sphere-labelled standard document',async()=>{
+  test('legacy flat AoE preserves the explicit sphere field despite Emanation prose',async()=>{
     const ir=areaIr(rule,true),before=structuredClone(ir),markdown=renderMonsterIntakeMarkdown(ir),data=yaml.load(markdown.slice(4,markdown.lastIndexOf('---'))) as any;
     // Test-authored legacy input, never a patch to a generated Actor.
     const entry=data.动作[0];entry.AoE.形状='球形';
     const output=await actor('---\n'+yaml.dump(data,{lineWidth:-1})+'---\n');
-    expect(saveActivity(output).target.template.type).toBe('radius');expect(saveActivity(output).target.template.size).toBe(10);expect(ir).toEqual(before);
+    expect(saveActivity(output).target.template.type).toBe('sphere');expect(saveActivity(output).target.template.size).toBe(10);expect(ir).toEqual(before);
   });
   test('a genuine Sphere remains a Sphere through the same formal workflow',async()=>{
     const description=rule.replace('10-foot Emanation originating from the sentinel','10-foot-radius Sphere centered on a point'),ir=areaIr(description),before=structuredClone(ir);

@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { COVERAGE_TEST_PATTERN, DEFERRED_BROWSER_TEST, partitionCoverageTests, runCoverageProcess } from '../runCoverageShards';
+import { COVERAGE_TEST_PATTERN, DEFERRED_BROWSER_TEST, partitionCoverageTests, runCoverageInventory, runCoverageProcess } from '../runCoverageShards';
 
 describe('bounded coverage execution', () => {
   test('isolates only the named external browser case while retaining companion unit checks', () => {
@@ -50,5 +50,41 @@ describe('full Chrome restart recovery',()=>{
     await expect(runCoverageProcess(process.execPath, ['-e', 'process.exit(7)'])).rejects.toThrow('exit 7');
     await expect(runCoverageProcess(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], 100)).rejects.toThrow('was reaped');
     await expect(runCoverageProcess(process.execPath, [], 0)).rejects.toThrow('deadline');
+  });
+  test('runs an overlong inventory with original paths, file hooks, order and coverage', async () => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'fvtt-coverage-argv-')));
+    try {
+      const directory = join(root, 'original-source-directory-'.repeat(5));
+      await mkdir(directory);
+      const marker = join(root, 'order.jsonl');
+      await writeFile(join(directory, 'helper.ts'), 'export const originalHelper = 7;');
+      const files: string[] = [];
+      for (let index = 0; index < 160; index++) {
+        const file = join(directory, index === 159 ? 'tests.mjs' : `${index}-original-test-source-${'x'.repeat(50)}.test.ts`);
+        files.push(file);
+        await writeFile(file, `import {test,expect,beforeAll,afterAll} from 'bun:test';
+import {appendFileSync} from 'node:fs';
+import {originalHelper} from './helper.ts';
+if (globalThis.coverageOwner !== undefined) throw new Error('PREVIOUS_FILE_NOT_FINISHED');
+beforeAll(()=>{globalThis.coverageOwner=${index}});
+test('original source ${index}',()=>{
+  expect(globalThis.coverageOwner).toBe(${index});
+  expect(import.meta.path).toBe(${JSON.stringify(file)});
+  expect(originalHelper).toBe(7);
+  appendFileSync(${JSON.stringify(marker)},JSON.stringify(${index})+'\\n');
+});
+test('filtered source ${index}',()=>{throw new Error('FILTER_IGNORED')});
+afterAll(()=>{delete globalThis.coverageOwner});`);
+      }
+      expect(files.join(' ').length).toBeGreaterThan(32_767);
+      const report = join(root, 'report');
+      await runCoverageInventory(files, report, '^original source ');
+      expect((await readFile(marker, 'utf8')).trim().split('\n').map(Number)).toEqual(files.map((_, index) => index));
+      const lcov = (await readFile(join(report, 'lcov.info'), 'utf8')).replaceAll('\\', '/');
+      expect(lcov).toContain('helper.ts');
+      expect(lcov).not.toContain('coverage/argv-');
+    } finally {
+      await rm(root, { recursive: true });
+    }
   });
 });

@@ -2,10 +2,10 @@ import { createHash } from 'node:crypto';
 import { describe, expect, test } from 'bun:test';
 import yaml from 'js-yaml';
 import { convertMarkdownContentToJson } from '../../workflow/singleFileConversion';
-import { anchorIrEvidence } from '../orchestrator';
+import { anchorIrEvidence, anchorIrEvidenceSourceAudit } from '../orchestrator';
 import { renderMonsterIntakeMarkdown, renderPreparedSpellcastingProfile } from '../renderer';
 import { verifyMonsterIntake } from '../verifier';
-import { validateMonsterIntakeIR } from '../validator';
+import { auditMonsterIntakeSource, validateMonsterIntakeIR } from '../validator';
 import { buildRatWarlockIr, RAT_WARLOCK_SOURCE, ratEvidence } from './fixtures/rat-warlock';
 import { buildValidLurkerIr, LURKER_SOURCE } from './fixtures/lurker';
 import {stagedSpellParentPlan} from '../../../../tests/helpers/staged-spell-plan';
@@ -16,11 +16,23 @@ const EXPECTED_GROUPS = [
   { usage: '1/day-each', spells: ['augury', 'burning-hands', 'conjure-animals', 'faerie-fire', 'invisibility', 'misty-step'] },
 ];
 
-describe('source-evidenced spellcasting intake', () => {
+describe('explicit offline source-evidenced spellcasting audit and projection', () => {
+  test('keeps source-semantic audits separate from default intake validation and preserves the proposal', () => {
+    const { source, ir } = buildPreparedCasterCase();
+    ir.creature.spellcasting![0]!.casterLevel = 6;
+    const proposal = structuredClone(ir);
+    expect(validateMonsterIntakeIR(source, ir).findings).not.toContainEqual(expect.objectContaining({
+      code: 'SPELLCASTER_LEVEL_EVIDENCE_MISMATCH',
+    }));
+    expect(auditMonsterIntakeSource(source, ir).findings).toContainEqual(expect.objectContaining({
+      code: 'SPELLCASTER_LEVEL_EVIDENCE_MISMATCH', path: '/creature/spellcasting/0/casterLevel',
+    }));
+    expect(ir).toEqual(proposal);
+  });
   test('accepts a source-evidenced level-5 prepared caster with cantrips and 4/3/2 slots', () => {
     const { source, ir } = buildPreparedCasterCase();
 
-    expect(validateMonsterIntakeIR(source, ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(source, ir).blocking).toEqual([]);
     expect((ir as any).creature.spellcasting[0]).toMatchObject({
       ability: 'wis',
       casterLevel: 5,
@@ -33,7 +45,7 @@ describe('source-evidenced spellcasting intake', () => {
     });
   });
 
-  test('merges compatible prepared groups and fails closed on conflicting native Actor profiles', () => {
+  test('merges compatible prepared groups and retains conflicting groups without inventing one native Actor profile', () => {
     const { source, ir } = buildPreparedCasterCase();
     const first = ir.creature.spellcasting![0]!;
     const second = structuredClone(first);
@@ -57,8 +69,10 @@ describe('source-evidenced spellcasting intake', () => {
     ] as const) {
       const conflicted = structuredClone(ir);
       mutate(conflicted.creature.spellcasting![1]);
-      expect(() => renderPreparedSpellcastingProfile(conflicted.creature), label).toThrow();
-      expect(validateMonsterIntakeIR(source, conflicted).findings, label).toContainEqual(expect.objectContaining({ code: expectedCode }));
+      expect(renderPreparedSpellcastingProfile(conflicted.creature), label).toBeUndefined();
+      expect(() => renderMonsterIntakeMarkdown(conflicted), label).not.toThrow();
+      expect(conflicted.creature.spellcasting, label).toHaveLength(2);
+      expect(auditMonsterIntakeSource(source, conflicted).findings, label).toContainEqual(expect.objectContaining({ code: expectedCode }));
     }
   });
 
@@ -70,14 +84,18 @@ describe('source-evidenced spellcasting intake', () => {
     usage.levelEvidence = [{ start: levelStart, end: levelStart + 1, quote: '1' }];
     usage.slotsEvidence = [{ start: slotStart, end: slotStart + 1, quote: '4' }];
 
-    const anchored = anchorIrEvidence(source, {
+    const candidate = {
       id: 'prepared-caster', label: 'Prepared Caster', start: 0, end: source.length, quote: source,
-    }, ir);
+    };
+    const proposal = anchorIrEvidence(source, candidate, ir);
+    expect((proposal.creature.spellcasting![0]!.usageGroups[1] as any).levelEvidence[0].quote).toBe('1');
+    expect((proposal.creature.spellcasting![0]!.usageGroups[1] as any).slotsEvidence[0].quote).toBe('4');
+    const anchored = anchorIrEvidenceSourceAudit(source, candidate, ir);
     const anchoredUsage = anchored.creature.spellcasting![0]!.usageGroups[1] as any;
 
     expect(anchoredUsage.levelEvidence[0].quote).toBe('1st level');
     expect(anchoredUsage.slotsEvidence[0].quote).toBe('4 slots');
-    expect(validateMonsterIntakeIR(source, anchored).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(source, anchored).blocking).toEqual([]);
   });
 
   test('renders prepared spellcasting through standard Markdown into native v14 Actor slots and a pending manifest', async () => {
@@ -172,7 +190,7 @@ describe('source-evidenced spellcasting intake', () => {
     const { source, ir } = buildPreparedCasterCase();
     mutate(ir);
 
-    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({ code, path }));
+    expect(auditMonsterIntakeSource(source, ir).blocking).toContainEqual(expect.objectContaining({ code, path }));
   });
 
   test.each([
@@ -182,7 +200,7 @@ describe('source-evidenced spellcasting intake', () => {
     const { source, ir } = buildPreparedCasterCase();
     mutate(ir);
 
-    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({
+    expect(auditMonsterIntakeSource(source, ir).blocking).toContainEqual(expect.objectContaining({
       code: 'INVALID_SPELL_USE_GROUP',
       path,
     }));
@@ -233,7 +251,7 @@ describe('source-evidenced spellcasting intake', () => {
     const ir = JSON.parse(JSON.stringify(buildRatWarlockIr()).replaceAll('每项1/日', '1次/每日')) as any;
     ir.source = { sha256: createHash('sha256').update(source).digest('hex'), length: source.length };
 
-    expect(validateMonsterIntakeIR(source, ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(source, ir).blocking).toEqual([]);
   });
 
   test('partitions Rat lore as narrative and the statblock as mechanical exactly once', () => {
@@ -249,7 +267,7 @@ describe('source-evidenced spellcasting intake', () => {
 
   test('validates and renders a deterministic portable Markdown contract', () => {
     const ir = buildRatWarlockIr();
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking).toEqual([]);
 
     const first = renderMonsterIntakeMarkdown(ir);
     const second = renderMonsterIntakeMarkdown(structuredClone(ir));
@@ -302,7 +320,7 @@ describe('source-evidenced spellcasting intake', () => {
     ir.claims = [];
     ir.coverage = [];
 
-    expect(validateMonsterIntakeIR(source, ir).blocking.map((finding) => finding.code)).toContain('SPELL_NOT_EXPLICITLY_GRANTED');
+    expect(auditMonsterIntakeSource(source, ir).blocking.map((finding) => finding.code)).toContain('SPELL_NOT_EXPLICITLY_GRANTED');
   });
 
   test('blocks a granted-list ref whose evidence points only to an earlier non-grant mention', () => {
@@ -311,7 +329,7 @@ describe('source-evidenced spellcasting intake', () => {
     ir.creature.spellcasting[0].usageGroups[0].evidence = [ratEvidence(atWillLine)];
     ir.creature.spellcasting[0].usageGroups[0].spellRefs[1].evidence = [ratEvidence('法师护甲mage armor', 0)];
 
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
+    expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
       code: 'SPELL_EVIDENCE_OUTSIDE_GRANT',
       path: '/creature/spellcasting/0/usageGroups/0/spellRefs/1/evidence',
     }));
@@ -357,7 +375,7 @@ describe('source-evidenced spellcasting intake', () => {
     const ir = buildRatWarlockIr() as any;
     mutate(ir);
 
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({ code, path }));
+    expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({ code, path }));
   });
 
   test.each([
@@ -377,7 +395,7 @@ describe('source-evidenced spellcasting intake', () => {
     mechanical.end = source.length;
     mechanical.quote = source.slice(mechanical.start);
 
-    const codes = validateMonsterIntakeIR(source, ir).blocking.map((finding) => finding.code);
+    const codes = auditMonsterIntakeSource(source, ir).blocking.map((finding) => finding.code);
     expect(codes.includes('SPELL_ABILITY_EVIDENCE_MISMATCH')).toBe(shouldBlock);
   });
 
@@ -387,7 +405,7 @@ describe('source-evidenced spellcasting intake', () => {
     usage.evidence = [{ start: 0, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE }];
     usage.spellRefs[1].evidence = [ratEvidence('法师护甲mage armor', 0)];
 
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
+    expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
       code: 'INVALID_SPELL_GRANT_SPAN',
       path: '/creature/spellcasting/0/usageGroups/0/evidence/0',
     }));
@@ -399,7 +417,7 @@ describe('source-evidenced spellcasting intake', () => {
     const start = usage.evidence[0].start;
     usage.evidence = [{ start, end: RAT_WARLOCK_SOURCE.length, quote: RAT_WARLOCK_SOURCE.slice(start) }];
 
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
+    expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
       code: 'INVALID_SPELL_GRANT_SPAN',
       path: '/creature/spellcasting/0/usageGroups/0/evidence/0',
     }));
@@ -410,7 +428,7 @@ describe('source-evidenced spellcasting intake', () => {
     const usage = ir.creature.spellcasting[0].usageGroups[0];
     usage.evidence.push(ir.creature.spellcasting[0].usageGroups[1].evidence[0]);
 
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
+    expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
       code: 'INVALID_SPELL_GRANT_SPAN',
       path: '/creature/spellcasting/0/usageGroups/0/evidence/1',
     }));
@@ -427,7 +445,7 @@ describe('source-evidenced spellcasting intake', () => {
       quote: RAT_WARLOCK_SOURCE.slice(start, fullGrant.end),
     }];
 
-    const findings = validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking;
+    const findings = auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking;
     expect(findings).toContainEqual(expect.objectContaining({
       code: 'SPELL_NOT_EXPLICITLY_GRANTED',
       path: '/creature/spellcasting/0/usageGroups/0',
@@ -438,7 +456,7 @@ describe('source-evidenced spellcasting intake', () => {
   test('accepts a generalized multiline English At Will grant with Markdown list markers', () => {
     const { source, ir } = buildEnglishCasterCase({ multilineUsage: true });
 
-    expect(validateMonsterIntakeIR(source, ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(source, ir).blocking).toEqual([]);
   });
 
   test('blocks an exact usage grant from an unrelated source block outside its spellcasting group evidence', () => {
@@ -471,7 +489,7 @@ describe('source-evidenced spellcasting intake', () => {
       claimPaths: [],
     });
 
-    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({
+    expect(auditMonsterIntakeSource(source, ir).blocking).toContainEqual(expect.objectContaining({
       code: 'SPELL_USAGE_OUTSIDE_GROUP',
       path: '/creature/spellcasting/0/usageGroups/0/evidence/0',
     }));
@@ -480,7 +498,7 @@ describe('source-evidenced spellcasting intake', () => {
   test('accepts a non-Rat English caster with a distinct instance refId and an explicit evidenced alias', () => {
     const { source, ir } = buildEnglishCasterCase();
 
-    expect(validateMonsterIntakeIR(source, ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(source, ir).blocking).toEqual([]);
   });
 
   test.each([
@@ -488,7 +506,7 @@ describe('source-evidenced spellcasting intake', () => {
     ['以力量作为其施法属性','str'],['以敏捷作为其施法属性','dex'],['以体质作为其施法属性','con'],
     ['Its spellcasting ability is 𝒲isdom','wis'],
   ] as const)('accepts a complete affirmative Chinese casting-ability predicate: %s',(abilityClause,ability)=>{
-    const {source,ir}=buildEnglishCasterCase({abilityClause,ability,grantPredicate:true});expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+    const {source,ir}=buildEnglishCasterCase({abilityClause,ability,grantPredicate:true});expect(auditMonsterIntakeSource(source,ir).blocking).toEqual([]);
     const plan=stagedSpellParentPlan(source,ir.creature.spellcasting![0]!);
     const groups=[...stagedSpellcastingGroups(plan).values()];
     expect(groups.map(group=>group.ability)).toEqual([ability]);
@@ -497,7 +515,7 @@ describe('source-evidenced spellcasting intake', () => {
   test('component inheritance consumes the same Chinese casting profile as ordinary validation',()=>{
     const {source,ir}=buildEnglishCasterCase({abilityClause:'以魅力作为其施法属性',ability:'cha',materialClause:'它无需法术成分，以魅力作为其施法属性',allComponents:true,grantPredicate:true});
     const group=ir.creature.spellcasting![0]!;
-    expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(source,ir).blocking).toEqual([]);
     const parent=group.evidence[0]!;
     expect(sourceGroupComponentClause(parent,group)?.ambiguous).toBe(false);
   });
@@ -509,9 +527,9 @@ describe('source-evidenced spellcasting intake', () => {
     '其施法所依赖的属性为魅力',
   ])('checks an AI-normalized ability against its own source fact rather than a sentence template: %s',abilityClause=>{
     const {source,ir}=buildEnglishCasterCase({abilityClause,ability:'cha',grantPredicate:true});
-    expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(source,ir).blocking).toEqual([]);
     const wrong=structuredClone(ir);wrong.creature.spellcasting![0]!.ability='int';
-    expect(validateMonsterIntakeIR(source,wrong).blocking).toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
+    expect(auditMonsterIntakeSource(source,wrong).blocking).toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
   });
   test.each([
     'Its spellcasting ability is unrelated to Charisma',
@@ -520,11 +538,11 @@ describe('source-evidenced spellcasting intake', () => {
     'Its spellcasting ability is Charisma, only at night',
   ])('co-occurrence or a postposed condition is not an unconditional casting profile: %s',abilityClause=>{
     const {source,ir}=buildEnglishCasterCase({abilityClause,ability:'cha',grantPredicate:true});
-    expect(validateMonsterIntakeIR(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
+    expect(auditMonsterIntakeSource(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
   });
   test.each(['Its spellcasting ability is Charisma, and it can cast invisibility only at night','其施法属性为魅力，并且它施展隐形术仅在夜晚'])('a restriction on a separately named spell does not change an unconditional casting ability: %s',abilityClause=>{
     const {source,ir}=buildEnglishCasterCase({abilityClause,ability:'cha',grantPredicate:true});
-    expect(validateMonsterIntakeIR(source,ir).blocking).not.toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
+    expect(auditMonsterIntakeSource(source,ir).blocking).not.toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
   });
   test.each([
     'Its spellcasting ability is Charisma, but its spellcasting ability is Intelligence',
@@ -535,7 +553,7 @@ describe('source-evidenced spellcasting intake', () => {
     const quote=abilityClause.includes('using Charisma')?'using Charisma as its spellcasting ability':abilityClause.match(/(?:Its|its) spellcasting ability is Charisma/u)![0];
     const start=source.indexOf(quote);expect(start).toBeGreaterThanOrEqual(0);
     ir.creature.spellcasting![0]!.abilityEvidence=[{start,end:start+quote.length,quote}];
-    expect(validateMonsterIntakeIR(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
+    expect(auditMonsterIntakeSource(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
   });
   test('clipping both group and field quotes cannot hide the independent complete source parent',()=>{
     const abilityClause='Its spellcasting ability is Charisma, only at night';
@@ -544,7 +562,7 @@ describe('source-evidenced spellcasting intake', () => {
     const group=ir.creature.spellcasting![0]!;
     ir.coverage.push({...group.evidence[0]!,classification:'mechanical',claimPaths:['/creature/spellcasting/0']});
     group.abilityEvidence=group.evidence=[{start,end:start+quote.length,quote}];
-    expect(validateMonsterIntakeIR(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
+    expect(auditMonsterIntakeSource(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
   });
   test.each(['不以魅力作为其施法属性','并非使用魅力作为施法属性','以魅力作为其施法属性，实际以智力作为其施法属性'])('staged extraction cannot accept a negative or contradictory profile: %s',abilityClause=>{
     const {source,ir}=buildEnglishCasterCase({abilityClause,ability:'cha',grantPredicate:true});
@@ -554,11 +572,11 @@ describe('source-evidenced spellcasting intake', () => {
   test.each([
     '以魅力作为武器攻击属性','不以魅力作为其施法属性','并非使用魅力作为施法属性','以感知作为其施法属性','以魅力作为其施法属性，实际以智力作为其施法属性',
   ])('rejects unrelated, negative or conflicting Chinese casting-ability evidence: %s',(abilityClause)=>{
-    const {source,ir}=buildEnglishCasterCase({abilityClause,ability:'cha'});expect(validateMonsterIntakeIR(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
+    const {source,ir}=buildEnglishCasterCase({abilityClause,ability:'cha'});expect(auditMonsterIntakeSource(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SPELL_ABILITY_EVIDENCE_MISMATCH'}));
   });
   test('a Chinese-only spell retains its literal identifier and cannot borrow an invented English identity',()=>{
-    const {source,ir}=buildEnglishCasterCase({spellName:'任意门',explicitAlias:'门'}),ref=(ir as any).creature.spellcasting[0].usageGroups[0].spellRefs[0];ref.identifier='任意门';ref.chineseName='任意门';delete ref.englishName;ref.aliases=[];expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
-    ref.englishName='Dimension Door';ref.identifier='dimension-door';expect(validateMonsterIntakeIR(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SPELL_REF_EVIDENCE_MISMATCH'}));
+    const {source,ir}=buildEnglishCasterCase({spellName:'任意门',explicitAlias:'门'}),ref=(ir as any).creature.spellcasting[0].usageGroups[0].spellRefs[0];ref.identifier='任意门';ref.chineseName='任意门';delete ref.englishName;ref.aliases=[];expect(auditMonsterIntakeSource(source,ir).blocking).toEqual([]);
+    ref.englishName='Dimension Door';ref.identifier='dimension-door';expect(auditMonsterIntakeSource(source,ir).blocking).toContainEqual(expect.objectContaining({code:'SPELL_REF_EVIDENCE_MISMATCH'}));
   });
 
   test.each([
@@ -589,7 +607,7 @@ describe('source-evidenced spellcasting intake', () => {
   ])('accepts generalized evidenced spellcasting syntax: $label', ({ abilityClause, materialClause, ability, allComponents }) => {
     const { source, ir } = buildEnglishCasterCase({ abilityClause, materialClause, ability, allComponents });
 
-    expect(validateMonsterIntakeIR(source, ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(source, ir).blocking).toEqual([]);
   });
 
   test('rejects a spoof identifier when englishName is omitted instead of treating refId as name evidence', () => {
@@ -599,7 +617,7 @@ describe('source-evidenced spellcasting intake', () => {
     ref.identifier = 'fireball';
     ref.refId = 'instance-sacred-flame-1';
 
-    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({
+    expect(auditMonsterIntakeSource(source, ir).blocking).toContainEqual(expect.objectContaining({
       code: 'SPELL_REF_EVIDENCE_MISMATCH',
       path: '/creature/spellcasting/0/usageGroups/0/spellRefs/0',
     }));
@@ -610,7 +628,7 @@ describe('source-evidenced spellcasting intake', () => {
     const ref = (ir as any).creature.spellcasting[0].usageGroups[0].spellRefs[0];
     delete ref.englishName;
 
-    expect(validateMonsterIntakeIR(source, ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(source, ir).blocking).toEqual([]);
   });
 
   test('rejects a mixed-script originalName and identifier as the fallback English identity', () => {
@@ -619,7 +637,7 @@ describe('source-evidenced spellcasting intake', () => {
     delete ref.englishName;
     ref.identifier = '火球-sacred-flame';
 
-    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({
+    expect(auditMonsterIntakeSource(source, ir).blocking).toContainEqual(expect.objectContaining({
       code: 'SPELL_REF_EVIDENCE_MISMATCH',
       path: '/creature/spellcasting/0/usageGroups/0/spellRefs/0',
     }));
@@ -631,7 +649,7 @@ describe('source-evidenced spellcasting intake', () => {
     ref.englishName = '火球 Sacred Flame';
     ref.identifier = '火球-sacred-flame';
 
-    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({
+    expect(auditMonsterIntakeSource(source, ir).blocking).toContainEqual(expect.objectContaining({
       code: 'SPELL_REF_EVIDENCE_MISMATCH',
       path: '/creature/spellcasting/0/usageGroups/0/spellRefs/0',
     }));
@@ -659,7 +677,7 @@ describe('source-evidenced spellcasting intake', () => {
   ])('rejects close generalized syntax negative: $label', ({ abilityClause, materialClause, expectedCode }) => {
     const { source, ir } = buildEnglishCasterCase({ abilityClause, materialClause });
 
-    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({ code: expectedCode }));
+    expect(auditMonsterIntakeSource(source, ir).blocking).toContainEqual(expect.objectContaining({ code: expectedCode }));
   });
 
   test.each([
@@ -684,7 +702,7 @@ describe('source-evidenced spellcasting intake', () => {
     const { source, ir } = build();
     mutate(ir);
 
-    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({
+    expect(auditMonsterIntakeSource(source, ir).blocking).toContainEqual(expect.objectContaining({
       code: 'SPELL_REF_EVIDENCE_MISMATCH',
       path: '/creature/spellcasting/0/usageGroups/0/spellRefs/0',
     }));
@@ -698,7 +716,7 @@ describe('source-evidenced spellcasting intake', () => {
     const { source, ir } = buildEnglishCasterCase();
     mutate(ir);
 
-    expect(validateMonsterIntakeIR(source, ir).blocking).toContainEqual(expect.objectContaining({ code }));
+    expect(auditMonsterIntakeSource(source, ir).blocking).toContainEqual(expect.objectContaining({ code }));
   });
 
   test.each([
@@ -709,7 +727,7 @@ describe('source-evidenced spellcasting intake', () => {
     const ir = buildRatWarlockIr() as any;
     ir.creature.spellcasting[0].description += fabrication;
 
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
+    expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
       code: 'UNSUPPORTED_SPELLCASTING_DESCRIPTION',
       path: '/creature/spellcasting/0/description',
     }));
@@ -723,7 +741,7 @@ describe('source-evidenced spellcasting intake', () => {
       description: ir.creature.spellcasting[0].description,
     });
 
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking.map((finding) => finding.code)).toContain('DUPLICATE_STRUCTURED_SPELLCASTING');
+    expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking.map((finding) => finding.code)).toContain('DUPLICATE_STRUCTURED_SPELLCASTING');
   });
 
   test('blocks renamed ordinary-trait duplication with the same sourced description', () => {
@@ -734,7 +752,7 @@ describe('source-evidenced spellcasting intake', () => {
       description: ir.creature.spellcasting[0].description,
     });
 
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
+    expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
       code: 'DUPLICATE_STRUCTURED_SPELLCASTING',
       path: '/creature/traits/0',
     }));
@@ -750,7 +768,7 @@ describe('source-evidenced spellcasting intake', () => {
       quote: RAT_WARLOCK_SOURCE.slice(groupStart - 8, groupStart + 8),
     }];
 
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking).not.toContainEqual(expect.objectContaining({
+    expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking).not.toContainEqual(expect.objectContaining({
       code: 'DUPLICATE_STRUCTURED_SPELLCASTING',
       path: '/creature/traits/0',
     }));
@@ -760,7 +778,7 @@ describe('source-evidenced spellcasting intake', () => {
     const ir = buildRatWarlockIr() as any;
     ir.creature.spellcasting[0].usageGroups[1].usage = '1/day-shared';
 
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking.map((finding) => finding.code)).toContain('INVALID_SPELL_USE_GROUP');
+    expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking.map((finding) => finding.code)).toContain('INVALID_SPELL_USE_GROUP');
   });
 
   test('blocks missing spell evidence and mechanical spellcasting coverage', () => {
@@ -769,7 +787,7 @@ describe('source-evidenced spellcasting intake', () => {
     const mechanical = ir.coverage.find((entry: any) => entry.classification === 'mechanical');
     mechanical.claimPaths = mechanical.claimPaths.filter((path: string) => path !== '/creature/spellcasting/0');
 
-    const codes = validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking.map((finding) => finding.code);
+    const codes = auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking.map((finding) => finding.code);
     expect(codes).toContain('MISSING_EVIDENCE');
     expect(codes).toContain('UNCOVERED_SPELLCASTING_MECHANIC');
   });
@@ -780,7 +798,7 @@ describe('source-evidenced spellcasting intake', () => {
       const ir = buildRatWarlockIr() as any;
       ir.creature.spellcasting[0].usageGroups[0].spellRefs[0][field] = field === 'expectedLevel' ? 0 : 'invented';
 
-      expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
+      expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
         code: 'UNSUPPORTED_SOURCE_SPELL_FIELD',
         path: `/creature/spellcasting/0/usageGroups/0/spellRefs/0/${field}`,
       }));
@@ -795,7 +813,7 @@ describe('source-evidenced spellcasting intake', () => {
     group.componentWaivers[0].components = ['material'];
     group.usageGroups[0].spellRefs[0].restrictions[0].uuid = 'Compendium.fake';
 
-    const findings = validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking;
+    const findings = auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking;
     expect(findings).toContainEqual(expect.objectContaining({ code: 'UNKNOWN_SPELLCASTING_PROPERTY', path: '/creature/spellcasting/0/callBudget' }));
     expect(findings).toContainEqual(expect.objectContaining({ code: 'INVALID_SPELL_USE_GROUP', path: '/creature/spellcasting/0/usageGroups/0/shared' }));
     expect(findings).toContainEqual(expect.objectContaining({ code: 'UNKNOWN_SPELLCASTING_PROPERTY', path: '/creature/spellcasting/0/componentWaivers/0/components' }));
@@ -808,7 +826,7 @@ describe('source-evidenced spellcasting intake', () => {
     restriction.literal = restriction.text;
     restriction.literalValue = restriction.text;
 
-    const findings = validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking;
+    const findings = auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking;
     expect(findings).toContainEqual(expect.objectContaining({
       code: 'UNKNOWN_SPELLCASTING_PROPERTY',
       path: '/creature/spellcasting/0/usageGroups/0/spellRefs/0/restrictions/0/literal',
@@ -825,8 +843,8 @@ describe('source-evidenced spellcasting intake', () => {
     delete ir.creature.traits;
     ir.creature.spellcasting[0].usageGroups[0].evidence = [null];
 
-    expect(() => validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir)).not.toThrow();
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking.length).toBeGreaterThan(0);
+    expect(() => auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir)).not.toThrow();
+    expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking.length).toBeGreaterThan(0);
   });
 
   test('fails closed when the structured spellcasting claim has malformed evidence', () => {
@@ -834,8 +852,8 @@ describe('source-evidenced spellcasting intake', () => {
     ir.claims.find((claim: any) => claim.path === '/creature/spellcasting/0').evidence = null;
     ir.claims.unshift(null);
 
-    expect(() => validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir)).not.toThrow();
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
+    expect(() => auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir)).not.toThrow();
+    expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
       code: 'MISSING_EVIDENCE',
     }));
   });
@@ -893,8 +911,8 @@ describe('source-evidenced spellcasting intake', () => {
     const ir = buildRatWarlockIr() as any;
     mutate(ir);
 
-    expect(() => validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir)).not.toThrow();
-    expect(validateMonsterIntakeIR(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({ code, path }));
+    expect(() => auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir)).not.toThrow();
+    expect(auditMonsterIntakeSource(RAT_WARLOCK_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({ code, path }));
   });
 });
 

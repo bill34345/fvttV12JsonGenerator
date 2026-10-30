@@ -1,11 +1,11 @@
+import {legacyStagedProvider} from './helpers/forge-legacy-provider';
 import {test,expect} from 'bun:test';
 import fixture from './fixtures/forge-angel-chm-recorded-base.json';
 import vengeance from './fixtures/forge-vengeance-chm-recorded-base.json';
 import company from './fixtures/forge-company-pdf-recorded-base.json';
 import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
-import {OpenAICompatibleMonsterIntakeProvider} from '@fvtt-json-generator/intake-ai/provider';
 import {generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
-import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
+import {auditMonsterIntakeSourceProjection} from '@fvtt-json-generator/intake-ai/verifier';
 import {YamlParser} from '@fvtt-json-generator/parser/yaml';
 import {ActorGenerator} from '@fvtt-json-generator/generation/actor';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
@@ -19,7 +19,7 @@ test('new PDF full formal chain keeps attack, both area Saves, conditional daily
   let calls=0;
   // This recorded artifact contains the historical BASE reply only. Keep its
   // one-call source replay separate from current auto feature/model behavior.
-  const source=company.source,provider=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',apiKey:'test-only',baseUrl:'https://offline.invalid/v1',model:'recorded-base-replay',reviewModel:'disabled',timeoutMs:10000,repairTimeoutMs:10000,stagedExtraction:{baseMode:'facts',featureMode:'source'},httpClient:async()=>{calls++;return {ok:true,status:200,json:async()=>({choices:[{message:{content:JSON.stringify(company.recordedBase)}}]})};}});
+  const source=company.source,provider=legacyStagedProvider({authMode:'api-key',apiKey:'test-only',baseUrl:'https://offline.invalid/v1',model:'recorded-base-replay',reviewModel:'disabled',timeoutMs:10000,repairTimeoutMs:10000,stagedExtraction:{baseMode:'facts',featureMode:'source'},httpClient:async()=>{calls++;return {ok:true,status:200,json:async()=>({choices:[{message:{content:JSON.stringify(company.recordedBase)}}]})};}});
   const ir=await provider.extract({source,sourceSha256:hashSource(source),candidate:{id:'company',label:'Mezzoloth Company',start:0,end:source.length,quote:source}});
   expect(calls).toBe(1);
   const result=await generateEncounterFromHumanMarkdown({source,label:'New PDF recorded regression',reviewPolicy:'deferred',outputLanguage:'source',drafts:[{key:'actor-1',source,ir}],draftParentHash:hashSource(JSON.stringify(ir)),provider:{providerName:'offline',extractionModel:'recorded',reviewModel:'disabled',discover:stop,extract:stop,repair:stop,review:stop},automationProvider:{generate:stop,review:stop}});
@@ -31,21 +31,37 @@ test('new PDF full formal chain keeps attack, both area Saves, conditional daily
   expect(activity('Weaverot')).toMatchObject({type:'save',save:{ability:['dex'],dc:{formula:'18'}},damage:{onSave:'none'},range:{value:60},target:{template:{type:'sphere',size:15}}});
   expect(activity('Weaverot').damage.parts).toHaveLength(2);expect(item('Weaverot').system.description.value).toContain('SUCCESS OR FAILURE');
   expect(activity('Toxic')).toMatchObject({type:'save',activation:{type:'bonus'},save:{ability:['con'],dc:{formula:'17'}},damage:{onSave:'half'},target:{template:{type:'radius',size:10}}});
-  expect(item('Toxic').system.description.value).toContain('until the end');expect(item('Toxic').effects??[]).toHaveLength(0);
+  expect(item('Toxic').system.description.value).toContain('until the end');expect(item('Toxic').effects).toHaveLength(1);expect(item('Toxic').effects[0].flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(item('Toxic').effects[0].flags.fvttJsonGenerator.conditionLifecycle.sourceText).toContain('Toxic Emission');
   expect(activity('Strike-Gate')).toMatchObject({type:'save',activation:{type:'bonus'},save:{ability:['cha'],dc:{formula:'16'}}});expect(item('Strike-Gate').system.uses.max).toBe('1');expect(activity('Strike-Gate').range?.value).not.toBe(120);
   expect(actor.flags?.['fvtt-json-generator-spell-resolver']?.spellManifest).toBeUndefined();
-  expect(verifyMonsterIntake(source,ir,result.prepared!.bundle.actors[0]!.source,actor).status).toBe('accepted');
+  expect(auditMonsterIntakeSourceProjection(source,ir,result.prepared!.bundle.actors[0]!.source,actor).findings).toEqual([]);
+  const empty=structuredClone(actor),effect=empty.items.find((entry:any)=>entry.name.includes('Toxic')).effects[0];
+  effect.changes=[];effect.system={...effect.system,changes:[]};
+  expect(auditMonsterIntakeSourceProjection(source,ir,result.prepared!.bundle.actors[0]!.source,empty).findings).toEqual([]);
+  for(const change of [
+    (entry:any)=>{entry.effects[0].changes=[{key:'system.attributes.hp.value',mode:2,value:'-999'}];},
+    (entry:any)=>{entry.effects[0].changes=[];entry.effects[0].system={...entry.effects[0].system,changes:[{key:'system.attributes.hp.value',type:'add',phase:'initial',value:'-999'}]};},
+    (entry:any)=>{entry.effects[0].flags.fvttJsonGenerator.conditionLifecycle.sourceText='An unrelated ability.';},
+    (entry:any)=>{Object.values<any>(entry.system.activities)[0].effects[0]._id='unrelated-effect';},
+    (entry:any)=>{Object.values<any>(entry.system.activities)[0].effects[0].onSave=true;},
+  ]){
+    const changed=structuredClone(actor);change(changed.items.find((entry:any)=>entry.name.includes('Toxic')));
+    expect(auditMonsterIntakeSourceProjection(source,ir,result.prepared!.bundle.actors[0]!.source,changed).findings).toContainEqual(expect.objectContaining({code:'ACTOR_MIXED_RESOURCE_DRIFT',path:'/creature/bonusActions/0'}));
+  }
+  const nativeOnly=structuredClone(empty);delete nativeOnly.items.find((entry:any)=>entry.name.includes('Toxic')).effects[0].changes;
+  expect(auditMonsterIntakeSourceProjection(source,ir,result.prepared!.bundle.actors[0]!.source,nativeOnly).findings).toEqual([]);
+
 });
 test('a second actual CHM creature retains Ring attack, both Saves, cone/recharge and real single-daily spell grant',async()=>{
   const source=vengeance.source;
-  const provider=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',apiKey:'test-only',baseUrl:'https://offline.invalid/v1',model:'recorded-base-replay',reviewModel:'disabled',timeoutMs:10000,repairTimeoutMs:10000,stagedExtraction:{baseMode:'facts',featureMode:'source'},httpClient:async()=>({ok:true,status:200,json:async()=>({choices:[{message:{content:JSON.stringify(vengeance.baseResponse)}}]})})});
+  const provider=legacyStagedProvider({authMode:'api-key',apiKey:'test-only',baseUrl:'https://offline.invalid/v1',model:'recorded-base-replay',reviewModel:'disabled',timeoutMs:10000,repairTimeoutMs:10000,stagedExtraction:{baseMode:'facts',featureMode:'source'},httpClient:async()=>({ok:true,status:200,json:async()=>({choices:[{message:{content:JSON.stringify(vengeance.baseResponse)}}]})})});
   const ir=await provider.extract({source,sourceSha256:hashSource(source),candidate:{id:'vengeance',label:'Angel of Vengeance',start:0,end:source.length,quote:source}});
   const result=await generateEncounterFromHumanMarkdown({source,label:'Second actual CHM reply replay',reviewPolicy:'deferred',outputLanguage:'source',drafts:[{key:'actor-1',source,ir}],draftParentHash:hashSource(JSON.stringify(ir)),provider:{providerName:'offline',extractionModel:'recorded',reviewModel:'disabled',discover:stop,extract:stop,repair:stop,review:stop},automationProvider:{generate:stop,review:stop}});
   expect(result.prepared,JSON.stringify(result.report.findings)).toBeDefined();
   const actor=result.prepared!.actors[0]!.artifact as any;
   const activity=(word:string)=>(Object.values(actor.items.find((i:any)=>i.name.includes(word)).system.activities) as any[])[0]!;
   expect(activity('Ring').type).toBe('attack');expect(activity('Ring').damage.includeBase).toBeTrue();
-  expect(actor.items.find((i:any)=>i.name.includes('Ring')).system.damage.base).toMatchObject({number:2,denomination:8,types:['bludgeoning']});
+  expect(activity('Ring').damage.parts).toContainEqual(expect.objectContaining({number:2,denomination:8,types:['bludgeoning']}));
   expect(actor.system.abilities.str.value).toBe(20);
   expect(activity('Retribution')).toMatchObject({type:'save',save:{ability:['wis'],dc:{formula:'15'}},damage:{onSave:'half'},target:{template:{type:'cone',size:90}}});
   expect(actor.items.find((i:any)=>i.name.includes('Retribution')).system.uses.recovery).toContainEqual(expect.objectContaining({period:'recharge',formula:'5'}));
@@ -53,11 +69,11 @@ test('a second actual CHM creature retains Ring attack, both Saves, cone/recharg
   expect(ir.creature.spellcasting).toHaveLength(1);expect(ir.creature.spellcasting![0]).toMatchObject({ability:'int',saveDc:15,activationType:'action'});
   expect(ir.creature.spellcasting![0]!.usageGroups.map(g=>[g.usage,g.spellRefs.length])).toEqual([['at-will',2],['1/day-each',1]]);
   const wrong=structuredClone(ir);wrong.creature.spellcasting![0]!.activationType='bonus';
-  expect(verifyMonsterIntake(source,wrong,renderMonsterIntakeMarkdown(wrong),actor).findings.some(f=>f.code==='SPELL_ACTIVATION_SOURCE_MISMATCH')).toBeTrue();
+  expect(auditMonsterIntakeSourceProjection(source,wrong,renderMonsterIntakeMarkdown(wrong),actor).findings.some(f=>f.code==='SPELL_ACTIVATION_SOURCE_MISMATCH')).toBeTrue();
 });
 async function replay(){
   const source=fixture.source;
-  const provider=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',apiKey:'test-only',baseUrl:'https://offline.invalid/v1',model:'recorded-base-replay',reviewModel:'disabled',timeoutMs:10000,repairTimeoutMs:10000,stagedExtraction:{baseMode:'facts',featureMode:'source'},httpClient:async()=>({ok:true,status:200,json:async()=>({choices:[{message:{content:JSON.stringify(fixture.baseResponse)}}]})})});
+  const provider=legacyStagedProvider({authMode:'api-key',apiKey:'test-only',baseUrl:'https://offline.invalid/v1',model:'recorded-base-replay',reviewModel:'disabled',timeoutMs:10000,repairTimeoutMs:10000,stagedExtraction:{baseMode:'facts',featureMode:'source'},httpClient:async()=>({ok:true,status:200,json:async()=>({choices:[{message:{content:JSON.stringify(fixture.baseResponse)}}]})})});
   const ir=await provider.extract({source,sourceSha256:hashSource(source),candidate:{id:'angel',label:'Angel of Death',start:0,end:source.length,quote:source}});
   const result=await generateEncounterFromHumanMarkdown({source,label:'Saved CHM base replay',reviewPolicy:'deferred',outputLanguage:'source',drafts:[{key:'actor-1',source,ir}],draftParentHash:hashSource(JSON.stringify(ir)),provider:{providerName:'offline',extractionModel:'recorded',reviewModel:'disabled',discover:stop,extract:stop,repair:stop,review:stop},automationProvider:{generate:stop,review:stop}});
   expect(result.prepared,JSON.stringify(result.report.findings)).toBeDefined();return{source,ir,result,actor:result.prepared!.actors[0]!.artifact as any};
@@ -70,7 +86,7 @@ test('actual saved CHM source retains a separate manual CON18 Save and failed-sa
   expect(item.effects.map((e:any)=>e.statuses)).toEqual([['dead']]);expect(saves[0].effects.map((e:any)=>e._id)).toEqual([item.effects[0]._id]);
   expect(attacks.every(a=>!a.effects?.length)).toBeTrue();expect(item.system.description.value).toContain('灵魂被困');
   const wrong=structuredClone(actor);delete wrong.items.find((i:any)=>i.name.includes('Soul Scythe')).system.activities[saves[0]._id];
-  expect(verifyMonsterIntake(source,ir,result.prepared!.bundle.actors[0]!.source,wrong).status).toBe('needs_review');
+  expect(auditMonsterIntakeSourceProjection(source,ir,result.prepared!.bundle.actors[0]!.source,wrong).status).toBe('needs_review');
 });
 test('actual staged source creates six real portable spell refs instead of fake Utility use counters',async()=>{
   const {actor}=await replay(),manifest=actor.flags['fvtt-json-generator-spell-resolver']?.spellManifest;
@@ -111,17 +127,19 @@ test('actual caster import verifies first and releases Resolver on the persisted
   expect(imported.documents).toHaveLength(1);expect(env.events).toEqual(['create:pending','release:verified']);expect(env.scheduled).toHaveLength(1);expect(env.resolved).toEqual([]);
   await env.scheduled[0]!();expect(env.resolved).toEqual([imported.documents[0]!.id]);expect(JSON.stringify(prepared)).toBe(before);
 });
-test('readback failure deletes only the pending new Actor and never starts spell hydration',async()=>{
+test('readback drift retains the imported Actor with a concrete warning and Resolver lifecycle',async()=>{
   const {result}=await replay(),env=lifecycleWorld({drift:true});
-  await expect(importForgeEncounter({...env,prepared:result.prepared!,reviewed:true})).rejects.toThrow('movement.walk');expect(env.game.actors.contents).toEqual([]);expect(env.events).toEqual(['create:pending']);expect(env.scheduled).toEqual([]);
+  const imported=await importForgeEncounter({...env,prepared:result.prepared!,reviewed:true});
+  expect(imported.documents).toHaveLength(1);expect(imported.documents[0]!.readbackWarnings?.join(' ')).toContain('movement.walk');
+  expect(env.game.actors.contents).toHaveLength(1);expect(env.events).toEqual(['create:pending','release:verified']);expect(env.scheduled).toHaveLength(1);
 });
 test('late package failure leaves no resolver operation; a release failure retains the committed Actor',async()=>{
   const {result}=await replay(),original=result.prepared!.bundle;
   const command='return forgeEncounter.packageId;';
   const prepared=await prepareForgeEncounter(JSON.stringify({...original,macros:[{key:'late',name:'Late macro',command,commandHash:hashSource(command),bindings:{main:original.actors[0]!.key},covers:[],notes:'Inert lifecycle test.'}]}));
-  const failed=lifecycleWorld({failMacro:true});await expect(importForgeEncounter({...failed,prepared,reviewed:true})).rejects.toThrow('Late macro');expect(failed.game.actors.contents).toEqual([]);expect(failed.scheduled).toEqual([]);
-  const committed=lifecycleWorld({failRelease:true});await expect(importForgeEncounter({...committed,prepared:result.prepared!,reviewed:true})).rejects.toThrow('passed import readback and remains');expect(committed.game.actors.contents).toHaveLength(1);expect(committed.game.actors.contents[0].flags['fvtt-json-forge'][FORGE_SPELL_IMPORT_PHASE]).toBe('pending');expect(committed.scheduled).toEqual([]);
-  const ambiguous=lifecycleWorld({rejectAfterRelease:true});await expect(importForgeEncounter({...ambiguous,prepared:result.prepared!,reviewed:true})).rejects.toThrow('local phase: verified');expect(ambiguous.game.actors.contents).toHaveLength(1);expect(ambiguous.scheduled).toHaveLength(1);
+  const failed=lifecycleWorld({failMacro:true}),failedResult=await importForgeEncounter({...failed,prepared,reviewed:true});expect(failedResult.failures.some(f=>f.message.includes('Late macro'))).toBe(true);expect(failed.game.actors.contents).toHaveLength(1);expect(failed.scheduled).toHaveLength(1);
+  const committed=lifecycleWorld({failRelease:true}),committedResult=await importForgeEncounter({...committed,prepared:result.prepared!,reviewed:true});expect(committedResult.failures.some(f=>f.message.includes('local phase: pending'))).toBe(true);expect(committed.game.actors.contents).toHaveLength(1);expect(committed.game.actors.contents[0].flags['fvtt-json-forge'][FORGE_SPELL_IMPORT_PHASE]).toBe('pending');expect(committed.scheduled).toEqual([]);
+  const ambiguous=lifecycleWorld({rejectAfterRelease:true}),ambiguousResult=await importForgeEncounter({...ambiguous,prepared:result.prepared!,reviewed:true});expect(ambiguousResult.failures.some(f=>f.message.includes('local phase: verified'))).toBe(true);expect(ambiguous.game.actors.contents).toHaveLength(1);expect(ambiguous.scheduled).toHaveLength(1);
 });
 for(const name of ['构装体 (原型)','构装体 (Prototype)','Iron Crab (Prototype)'])test('authored Actor parentheses remain intact: '+name,()=>{
   const parsed=new YamlParser().parse('名称: '+name+'\n类型: npc\n能力: {力量: 10, 敏捷: 10, 体质: 10, 智力: 10, 感知: 10, 魅力: 10}\n护甲等级: 10\n生命值: 4\n挑战等级: 0\n');

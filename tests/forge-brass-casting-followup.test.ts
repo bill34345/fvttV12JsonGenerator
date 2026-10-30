@@ -11,7 +11,7 @@ import {sourceDailySpellAction,sourceDailySpellActionOwnerMatches} from '../pack
 import {sourceReferencedSpellAction} from '../packages/intake-ai/src/source-spell-reference';
 import {sourceSpellcastingAbility,assessSourceSpellcastingAbility} from '../packages/intake-ai/src/spellcasting-ability';
 import {stagedSpellcastingGroups,isSourceSpellcastingFeature,bindSourceGroupComponents,sourceSpellcastingIntroduction} from '../packages/intake-ai/src/staged-spellcasting';
-import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
+import {validateMonsterIntakeIR,auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
 import {sourceSpellGrantTokens,sourceManualSpellGrant} from '../packages/intake-ai/src/spell-grant-tokens';
 import {legacyOfficialDragonSeeds as officialDragonSeeds} from './fixtures/forge-2024-dragon-seeds';
 import type {MonsterIntakeIR} from '../packages/intake-ai/src/types';
@@ -259,7 +259,7 @@ for(const separator of ['\n',' ','\t'])test('spell-local DC and attack overrides
   for(const [field,evidenceField,quote,value] of [['saveDc','saveDcEvidence','spell save DC 18',18],['attackBonus','attackBonusEvidence','+9 to hit with spell attacks',9]] as const){
     for(const index of [0,1]){
       const bad:any=structuredClone(ir),start=data.source.indexOf(quote);bad.creature.spellcasting[index][field]=value;bad.creature.spellcasting[index][evidenceField]=[{start,end:start+quote.length,quote}];
-      expect(validateMonsterIntakeIR(data.source,bad).blocking.some(finding=>finding.path===`/creature/spellcasting/${index}/${field}`),field+' '+index).toBe(true);
+      expect(auditMonsterIntakeSource(data.source,bad).blocking.some(finding=>finding.path===`/creature/spellcasting/${index}/${field}`),field+' '+index).toBe(true);
     }
   }
 });

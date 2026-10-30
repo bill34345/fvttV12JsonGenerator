@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { validateMonsterIntakeIR } from '../validator';
+import { auditMonsterIntakeSource, validateMonsterIntakeIR } from '../validator';
 import { buildValidLurkerIr, LURKER_SOURCE } from './fixtures/lurker';
 
 describe('MonsterIntakeIR validation', () => {
@@ -29,33 +29,33 @@ describe('MonsterIntakeIR validation', () => {
     ))).toBe(false);
   });
 
-  it('fails closed on a non-string biography instead of reaching the renderer', () => {
+  it('reports a non-string biography without throwing', () => {
     const ir = buildValidLurkerIr() as any;
     ir.creature.biography = ['provider', 'array'];
 
     expect(() => validateMonsterIntakeIR(LURKER_SOURCE, ir)).not.toThrow();
     expect(validateMonsterIntakeIR(LURKER_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
-      code: 'INVALID_BIOGRAPHY',
+      code: 'INVALID_STRUCTURE',
       path: '/creature/biography',
     }));
   });
 
-  it('treats a null optional biography as absent provider data', () => {
+  it('reports a null optional biography as a field issue without throwing', () => {
     const ir = buildValidLurkerIr() as any;
     ir.creature.biography = null;
 
-    expect(validateMonsterIntakeIR(LURKER_SOURCE, ir).blocking).not.toContainEqual(expect.objectContaining({
-      code: 'INVALID_BIOGRAPHY',
+    expect(validateMonsterIntakeIR(LURKER_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
+      code: 'INVALID_STRUCTURE',
       path: '/creature/biography',
     }));
   });
 
-  it('fails closed on a non-empty array in optional language custom text', () => {
+  it('reports a non-empty array in optional language custom text', () => {
     const ir = buildValidLurkerIr() as any;
     ir.creature.languages.custom = ['Draconic'];
 
     expect(validateMonsterIntakeIR(LURKER_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
-      code: 'INVALID_LANGUAGE_CUSTOM',
+      code: 'INVALID_STRUCTURE',
       path: '/creature/languages/custom',
     }));
   });
@@ -79,19 +79,19 @@ describe('MonsterIntakeIR validation', () => {
     {
       label: 'object damage container',
       damage: { formula: '1d6' },
-      code: 'INVALID_DAMAGE',
+      code: 'INVALID_STRUCTURE',
       path: '/creature/traits/0/damage',
     },
     {
       label: 'null damage element',
       damage: [null],
-      code: 'INVALID_DAMAGE_PART',
+      code: 'INVALID_STRUCTURE',
       path: '/creature/traits/0/damage/0',
     },
     {
       label: 'primitive damage element',
       damage: [3],
-      code: 'INVALID_DAMAGE_PART',
+      code: 'INVALID_STRUCTURE',
       path: '/creature/traits/0/damage/0',
     },
     {
@@ -116,7 +116,7 @@ describe('MonsterIntakeIR validation', () => {
     expect(result.blocking.some((finding) => finding.path === '/creature/attributes/ac')).toBe(true);
   });
 
-  it('rejects invalid dice formulas and uncovered non-whitespace source', () => {
+  it('reports invalid dice at intake and uncovered source only in the explicit offline audit', () => {
     const ir = buildValidLurkerIr();
     ir.creature.attributes.hp.formula = '65 hit points';
     ir.coverage = [{
@@ -128,7 +128,10 @@ describe('MonsterIntakeIR validation', () => {
     }];
     const result = validateMonsterIntakeIR(LURKER_SOURCE, ir);
     expect(result.blocking.some((finding) => finding.code === 'INVALID_DICE_FORMULA')).toBe(true);
-    expect(result.blocking.some((finding) => finding.code === 'UNCOVERED_SOURCE')).toBe(true);
+    expect(result.findings.some((finding) => finding.code === 'UNCOVERED_SOURCE')).toBe(false);
+    expect(auditMonsterIntakeSource(LURKER_SOURCE, ir).blocking).toContainEqual(expect.objectContaining({
+      code: 'UNCOVERED_SOURCE', path: '/coverage',
+    }));
   });
 
   it('rejects conflicting explicit claims for the same field', () => {
@@ -145,11 +148,12 @@ describe('MonsterIntakeIR validation', () => {
       confidence: 'high',
       value: 20,
     });
-    const result = validateMonsterIntakeIR(LURKER_SOURCE, ir);
+    const result = auditMonsterIntakeSource(LURKER_SOURCE, ir);
     expect(result.blocking.some((finding) => finding.code === 'CONFLICTING_CLAIMS')).toBe(true);
+    expect(validateMonsterIntakeIR(LURKER_SOURCE, ir).findings.some((finding) => finding.code === 'CONFLICTING_CLAIMS')).toBe(false);
   });
 
-  it('rejects conflicting explicit AC values even when AI omits the second claim', () => {
+  it('audits conflicting AC values within the bounded stat header without borrowing later prose', () => {
     const note = '\n旁注：该生物的护甲等级为16，以上AC 14为旧数据。';
     const source = `${LURKER_SOURCE}${note}`;
     const ir = buildValidLurkerIr();
@@ -165,12 +169,20 @@ describe('MonsterIntakeIR validation', () => {
       claimPaths: [],
     });
 
-    const result = validateMonsterIntakeIR(source, ir);
-    const firstCandidateOnly = validateMonsterIntakeIR(source, ir, {
+    const result = auditMonsterIntakeSource(source, ir);
+    const firstCandidateOnly = auditMonsterIntakeSource(source, ir, {
       coverageRange: { start: 0, end: LURKER_SOURCE.length },
     });
 
-    expect(result.blocking.some((finding) => finding.code === 'CONFLICTING_SOURCE_VALUES')).toBe(true);
+    expect(result.blocking.some((finding) => finding.code === 'CONFLICTING_SOURCE_VALUES')).toBe(false);
     expect(firstCandidateOnly.blocking.some((finding) => finding.code === 'CONFLICTING_SOURCE_VALUES')).toBe(false);
+    const conflictingHeaderSource = LURKER_SOURCE.replace('AC 14', 'AC 14 护甲等级为16');
+    const conflictingHeaderIr = buildValidLurkerIr();
+    conflictingHeaderIr.source = {
+      sha256: createHash('sha256').update(conflictingHeaderSource).digest('hex'), length: conflictingHeaderSource.length,
+    };
+    expect(auditMonsterIntakeSource(conflictingHeaderSource, conflictingHeaderIr).blocking).toContainEqual(expect.objectContaining({
+      code: 'CONFLICTING_SOURCE_VALUES', path: '/creature/attributes/ac',
+    }));
   });
 });

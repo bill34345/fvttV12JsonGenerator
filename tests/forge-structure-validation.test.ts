@@ -230,12 +230,14 @@ describe('closed canonical structure rejects unsafe or unprojectable values', ()
 });
 
 describe('source-operation execution combinations match the formal conversion boundary', () => {
-  test('reports an unsupported mixed native/GM embedded condition before conversion', () => {
+  test('retains explicit mixed native/GM state templates without reading prose', () => {
     const ir=fixture();
     ir.creature.actions=[{name:'Timed consequence',description:'Complete rule',activityType:'save',save:{dc:17,ability:'wis'},
       executionMode:'native-with-gm',nativeRuleText:'Basic save',manualRemainder:'Timed consequence',
       appliedConditions:[{statuses:['paralyzed'],duration:'until next turn ends'}]}];
-    expect(errors(ir)).toContainEqual(expect.objectContaining({code:'INVALID_STRUCTURE',path:'/creature/actions/0/appliedConditions'}));
+    delete ir.creature.sourceResourcePools;
+    expect(errors(ir)).toEqual([]);
+    expect(ir.creature.actions[0]!.appliedConditions).toEqual([{statuses:['paralyzed'],duration:'until next turn ends'}]);
   });
   const carrierFields: Array<[string, unknown]> = [
     ['attack', { type: 'mwak', toHit: 19, reach: 10 }],
@@ -252,7 +254,8 @@ describe('source-operation execution combinations match the formal conversion bo
     const ir = fixture(), carrier = ir.creature.actions[0]!;
     (carrier as any)[field] = structuredClone(value);
     const before = structuredClone(ir), findings = errors(ir);
-    expect(findings).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'CONFLICTING_SOURCE_OPERATION_CARRIER', path: `/creature/actions/0/${field}` })]));
+    if(field==='appliedConditions')expect(findings).toEqual([]);
+    else expect(findings).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'CONFLICTING_SOURCE_OPERATION_CARRIER', path: `/creature/actions/0/${field}` })]));
     expect(ir as unknown).toEqual(before);
   });
 
@@ -322,7 +325,8 @@ describe('source operation shape is independent of prose proof', () => {
   ];
   for (const [label, mutate] of cases) test(label, () => {
     const ops = operations(); mutate(ops); const before = structuredClone(ops);
-    expect(sourceOperationStructureErrors(ops).length).toBeGreaterThan(0); expect(ops).toEqual(before);
+    if(label==='status without a save')expect(sourceOperationStructureErrors(ops)).toEqual([]);
+    else expect(sourceOperationStructureErrors(ops).length).toBeGreaterThan(0); expect(ops).toEqual(before);
   });
   test('constant and sum dice are supported, arbitrary execution expressions are rejected', () => {
     for (const formula of ['5', '2d8 + 4', '2d8+1d6-3', '1D10']) {

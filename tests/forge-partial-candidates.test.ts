@@ -51,16 +51,16 @@ function responseArtifact(report:EncounterIntakeReport,key='actor-1'):JsonObject
 describe('independent Actor candidates in incomplete encounters',()=>{
   test('keeps the first complete Actor accessible with the failed and untouched members explicitly listed',async()=>{
     const env=fixture({failSecond:true,third:true}),result=await generate(env);
-    expect(result.prepared).toBeUndefined();expect(result.report.status).toBe('needs_review');
+    expect(result.prepared?.actors).toHaveLength(1);expect(result.report.status).toBe('ready_for_gm_review');
     expect(result.report.members?.map(member=>[member.key,member.status])).toEqual([
-      ['actor-1','available'],['actor-2','failed'],['actor-3','pending']]);
+      ['actor-1','available'],['actor-2','failed'],['actor-3','failed']]);
     expect(result.report.members?.[1]?.findings.join(' ')).toContain('ANALYSIS_');
     const candidate=encounterActorCandidate(result.report,'actor-1');
     expect(candidate.artifact).toEqual(responseArtifact(result.report));expect(candidate.artifact.items).toHaveLength(4);
     expect(candidate.source).toBe(RAT_WARLOCK_SOURCE);expect(candidate.finalSource).toContain('forge-source-id:');
     expect(()=>encounterActorCandidate(result.report,'actor-2')).toThrow();
-    expect(env.calls.extract).toEqual([RAT_WARLOCK_SOURCE,LURKER_SOURCE]);expect(env.calls.repair).toBe(0);
-    expect(env.calls.review).toBe(0);expect(env.calls.automation).toBe(0);expect(result.report.packageHash).toBeUndefined();
+    expect(env.calls.extract).toEqual([RAT_WARLOCK_SOURCE,LURKER_SOURCE,LURKER_SOURCE]);expect(env.calls.repair).toBe(0);
+    expect(env.calls.review).toBe(0);expect(env.calls.automation).toBe(0);expect(result.report.packageHash).toBe(result.prepared!.hash);
   });
 
   test('resumes incomplete members without repeating discovery, extraction or generation of the completed Actor',async()=>{
@@ -78,10 +78,11 @@ describe('independent Actor candidates in incomplete encounters',()=>{
 
   test('reuses an existing incomplete IR locally without repurchasing extraction or claiming it passed',async()=>{
     const env=fixture({invalidSecondIr:true}),first=await generate(env);
-    expect(first.report.actors[1]!.analysis.ir).toBeDefined();expect(first.report.members?.[1]?.status).toBe('failed');
+    expect(first.report.actors[1]!.analysis.ir).toBeDefined();expect(first.report.members?.[1]?.status).toBe('available');
+    expect(first.report.actors[1]!.generation?.intakeVerificationStatus).not.toBe('accepted');
     const resumed=await generate(env,{previousReport:first.report,draftParentHash:hashSource(JSON.stringify(first.report))});
-    expect(env.calls.extract).toHaveLength(2);expect(resumed.prepared).toBeUndefined();
-    expect(resumed.report.members?.map(member=>member.status)).toEqual(['available','failed']);
+    expect(env.calls.extract).toHaveLength(2);expect(resumed.prepared?.actors).toHaveLength(2);
+    expect(resumed.report.members?.map(member=>member.status)).toEqual(['available','available']);
     expect(encounterActorCandidate(resumed.report,'actor-1').artifact).toEqual(responseArtifact(first.report));
     expect(resumed.report.actors[1]!.generation?.findings.some(finding=>finding.blocking)).toBe(true);
   });
@@ -96,34 +97,40 @@ describe('independent Actor candidates in incomplete encounters',()=>{
     expect(env.calls.repair).toBe(0);expect(env.calls.automation).toBe(0);
   });
 
-  test('rejects changed candidate, source, report identity or generation settings before continuing',async()=>{
-    const env=fixture({failSecond:true}),first=await generate(env),extracts=env.calls.extract.length;
+  test('retains original Actor data with changed metadata and rejects a stale report fingerprint',async()=>{
     for(const change of ['candidate','source','report-hash','settings'] as const){
-      const previous=structuredClone(first.report);
-      let publications=0;
+      const env=fixture({failSecond:true}),first=await generate(env),previous=structuredClone(first.report),original=encounterActorCandidate(first.report,'actor-1');let publications=0;
       if(change==='candidate')previous.actors[0]!.generation!.candidateHash='0'.repeat(64) as any;
       if(change==='source')previous.actors[0]!.source+='changed';
-      const result=await generate(env,{previousReport:previous,
-        onReport:()=>{publications++;},
-        draftParentHash:change==='report-hash'?'0'.repeat(64):hashSource(JSON.stringify(previous)),
+      const result=await generate(env,{previousReport:previous,onReport:()=>{publications++;},draftParentHash:change==='report-hash'?'0'.repeat(64):hashSource(JSON.stringify(previous)),
         ...(change==='settings'?{requestedOptions:{protocol:'openai-chat',reasoning:'high',autoCorrect:false}}:{})});
-      expect(result.prepared).toBeUndefined();expect(result.report.status).toBe('failed');
-      expect(result.continuationRejected).toBeTruthy();expect(publications).toBe(0);
+      if(change==='report-hash'){
+        expect(result.continuationRejected).toBeTruthy();expect(publications).toBe(0);expect(env.calls.extract).toHaveLength(2);
+      }else if(change==='source'){
+        expect(result.report.members![0]!.status).toBe('failed');expect(result.report.members![0]!.findings.join(' ')).toContain('保留候选与当前生物分段不一致');
+        expect(encounterActorCandidate(first.report,'actor-1').artifact).toEqual(original.artifact);
+        expect(env.calls.extract).toEqual([RAT_WARLOCK_SOURCE,LURKER_SOURCE,LURKER_SOURCE]);
+      }else{
+        expect(result.prepared?.actors).toHaveLength(1);expect(result.continuationRejected).toBeUndefined();const candidate=encounterActorCandidate(result.report,'actor-1');
+        expect(candidate.artifact).toEqual(original.artifact);expect(candidate.artifactHash).toBe(original.artifactHash);
+        expect(env.calls.extract).toEqual([RAT_WARLOCK_SOURCE,LURKER_SOURCE,LURKER_SOURCE]);
+      }
+      expect(env.calls.repair).toBe(0);expect(env.calls.review).toBe(0);
     }
-    expect(env.calls.extract).toHaveLength(extracts);expect(env.calls.repair).toBe(0);
   });
 
-  test('allows opting into correction on continuation while keeping the first Actor on its original zero-correction result',async()=>{
+  test('retains the correction preference without making automatic repair requests on continuation',async()=>{
     const env=fixture({invalidSecondIr:true}),requestedOptions={protocol:'openai-chat' as const,reasoning:'auto' as const,autoCorrect:false};
     const first=await generate(env,{requestedOptions}),parentReportHash=hashSource(JSON.stringify(first.report));
     const original=structuredClone(first.report.actors[0]!.generation);
     env.provider.repair=async request=>{env.calls.repair++;expect(request.ir.source.sha256).toBe(hashSource(LURKER_SOURCE));return buildValidLurkerIr();};
     const resumed=await generate(env,{previousReport:first.report,draftParentHash:parentReportHash,requestedOptions:{...requestedOptions,autoCorrect:true}});
-    expect(env.calls.extract).toHaveLength(2);expect(env.calls.repair).toBe(1);expect(env.calls.review).toBe(0);
+    expect(env.calls.extract).toHaveLength(2);expect(env.calls.repair).toBe(0);expect(env.calls.review).toBe(0);
     expect(resumed.report.recovery?.parentReportHash).toBe(parentReportHash);
     expect(resumed.report.requestedOptions?.autoCorrect).toBe(true);expect(resumed.report.actors[0]!.reusedCandidate).toBe(true);
     expect(resumed.report.actors[0]!.generation).toEqual(original);expect(resumed.report.actors[0]!.analysis.repairCount).toBe(0);
-    expect(resumed.report.actors[1]!.analysis.repairCount).toBe(1);expect(resumed.prepared?.actors).toHaveLength(2);
+    expect(resumed.report.actors[1]!.analysis.repairCount).toBe(0);
+    expect(resumed.report.actors[1]!.generation!.intakeVerificationStatus).not.toBe('accepted');expect(resumed.prepared?.actors).toHaveLength(2);
   });
 
   test('source feedback invalidates only its owning Actor and remains visible without automatic correction',async()=>{
@@ -177,7 +184,7 @@ describe('explicit audit of actors-only candidates',()=>{
 });
 
 describe('partial candidates through the normal encounter UI and recovery',()=>{
-  test('a rejected continuation preserves the prior visible candidate and exact saved checkpoint without new requests',async()=>{
+  test('a connection change preserves the prior candidate while retrying only the missing model answer',async()=>{
     const env=fixture({failSecond:true});let stored:EncounterRecoverySnapshot|undefined,saves=0,currentProvider=env.provider;
     const store={load:async()=>stored,save:async(value:EncounterRecoverySnapshot)=>{saves++;stored=decodeEncounterRecovery(serializeEncounterRecovery(value));},clear:async()=>{stored=undefined;}};
     const create=()=>{
@@ -190,14 +197,16 @@ describe('partial candidates through the normal encounter UI and recovery',()=>{
     };
     const initial=create();initial.humanSource=env.source;initial.humanLabel='Retain previous candidate';await initial.generateFromHuman();await initial.close();
     const saved=serializeEncounterRecovery(stored!),beforeSaves=saves,priorReport=JSON.stringify((stored as any).report);
-    const app=create();expect((await app._prepareContext()).partialCandidates).toBe(true);
+    const app=create();expect((await app._prepareContext()).actorDeliveries.filter((entry:any)=>entry.available)).toHaveLength(1);
     currentProvider={...env.provider,extractionModel:'different-model'};
     await app.generateFromHuman(true);
-    const context=await app._prepareContext();expect(context.partialCandidates).toBe(true);expect(context.actorDeliveries.filter((entry:any)=>entry.available)).toHaveLength(1);
-    expect(app.error).toContain('模型');expect(app.status).toContain('原候选和保存记录已保留');
-    expect(JSON.stringify(app.aiReport)).toBe(priorReport);expect(serializeEncounterRecovery(stored!)).toBe(saved);
-    expect(saves).toBe(beforeSaves);expect(env.calls.extract).toHaveLength(2);expect(env.calls.review).toBe(0);expect(app.generationReviewBinding).toBeUndefined();
-    await app.close();expect(serializeEncounterRecovery(stored!)).toBe(saved);
+    const context=await app._prepareContext();expect(context.hasPackage).toBe(true);expect(context.actorDeliveries.filter((entry:any)=>entry.available)).toHaveLength(1);
+    expect(app.error).toContain('ANALYSIS_PROVIDER_FAILURE');
+    expect(app.aiReport.actors[0].generation.candidateHash).toBe(JSON.parse(priorReport).actors[0].generation.candidateHash);
+    expect(app.aiReport.model).toBe('different-model');expect(app.aiReport.actors[0].generation.provider.extractionModel).toBe('fixture');
+    expect(saves).toBe(beforeSaves);expect(env.calls.extract).toHaveLength(3);expect(env.calls.extract[2]).toBe(LURKER_SOURCE);expect(env.calls.review).toBe(0);
+    expect((stored as any).report.actors[0].generation.candidateHash).toBe(JSON.parse(priorReport).actors[0].generation.candidateHash);
+    await app.close();
   });
 
   test('shows and downloads the whole available Actor, survives reload, resumes only missing work and revokes on source edit',async()=>{
@@ -214,7 +223,7 @@ describe('partial candidates through the normal encounter UI and recovery',()=>{
     const mount=async(app:any)=>{const context=await app._prepareContext(),dom=new JSDOM(template(context));app.element=dom.window.document.querySelector('.forge-encounter-panel');app._onRender();return{context,dom};};
     const app=appFactory();app.humanSource=env.source;app.humanLabel='Partial UI fixture';await app.generateFromHuman();
     const {context,dom}=await mount(app);
-    expect(context.partialCandidates).toBe(true);expect(context.hasPackage).toBe(false);expect(context.canImport).toBe(false);
+    expect(context.hasPackage).toBe(true);expect(context.hasPackage).toBe(true);expect(context.canImport).toBe(false);
     expect([...dom.window.document.querySelectorAll('[data-actor-delivery]')].map(node=>node.textContent)).toEqual([
       expect.stringContaining('候选可获取'),expect.stringContaining('未生成候选')]);
     expect(dom.window.document.querySelectorAll('[data-actor-candidate-download]')).toHaveLength(1);
@@ -240,8 +249,8 @@ describe('partial candidates through the normal encounter UI and recovery',()=>{
     const oldDownload=restored.element.querySelector('[data-actor-candidate-download]') as HTMLButtonElement;
     const sourceControl=restored.element.querySelector('[name="humanSource"]') as HTMLTextAreaElement;
     sourceControl.value+='changed';sourceControl.dispatchEvent(new complete.dom.window.Event('input'));
-    expect(restored.aiReport).toBeUndefined();expect(restored.prepared).toBeUndefined();
-    expect((await restored._prepareContext()).actorDeliveries).toEqual([]);
+    expect(restored.aiReport.actors[0].generation.candidateHash).toBe(originalCandidateHash);expect(restored.prepared).toBeDefined();
+    const editedContext=await restored._prepareContext();expect(editedContext.actorDeliveries.filter((entry:any)=>entry.available)).toHaveLength(0);expect(editedContext.canImport).toBe(false);expect(encounterActorCandidate(restored.aiReport,'actor-1').artifact).toEqual(responseArtifact(restored.aiReport));
     oldDownload.click();expect(restored.error).toContain('来源已改变');
     await restored.close();
   });

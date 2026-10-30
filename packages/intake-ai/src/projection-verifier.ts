@@ -17,11 +17,6 @@ export function hasLiteralDamageHelpers(feature: CanonicalFeature): boolean {
   return !feature.executionMode && Boolean(feature.damage?.some(deferredDamage));
 }
 
-export function isLiteralDamageHelperOnly(feature: CanonicalFeature): boolean {
-  return hasLiteralDamageHelpers(feature) && !feature.attack && !feature.save && feature.activityType === 'damage'
-    && !feature.damage!.some(part => ['base', 'additional'].includes(part.relationship)) && !feature.uses && !feature.recharge;
-}
-
 /** Checks only the AI-authored contract and its projections. There is
  * deliberately no raw-source parameter or source-content inference here. */
 export function verifyMonsterProjectionPreservation(
@@ -129,12 +124,14 @@ function verifyLiteralDamageHelpers(feature: CanonicalFeature, found: Record<str
   const primary = activities.filter(activity => !helpers.includes(activity));
   const deferred = parts.flatMap((part, index) => deferredDamage(part) ? [{ part, index }] : []);
   const ordinary = parts.filter(part => !deferredDamage(part));
-  const expectedPrimaryCount = isLiteralDamageHelperOnly(feature) ? 0 : 1;
-  if (primary.length !== expectedPrimaryCount || helpers.length !== deferred.length) {
+  if (primary.length !== 1 || helpers.length !== deferred.length) {
     add('ACTOR_DAMAGE_ACTIVITY_COUNT_DRIFT', `${path}/damage`, 'Each conditional or replacement part needs exactly one separate GM damage roll, in addition to its declared primary operation.');
   }
   const damageView = (part: NonNullable<CanonicalFeature['damage']>[number]) => ({ formula: part.formula.replace(/\s+/gu, ''), types: part.types ?? [part.type] });
   const actualParts = (value: unknown) => records(value).map(part => ({ formula: String(part.formula ?? '').replace(/\s+/gu, ''), types: part.types }));
+  if (!ordinary.length && !feature.attack && !feature.save && primary.some(activity => activity.type !== 'utility')) {
+    add('ACTOR_PRIMARY_DAMAGE_DRIFT', `${path}/damage`, 'All deferred damage needs a Utility carrier for the source timing, with the actual rolls kept on separate GM helpers.');
+  }
   if (primary.some(activity => !equal(actualParts(activity.effectiveDamageParts), ordinary.map(damageView)))) {
     add('ACTOR_PRIMARY_DAMAGE_DRIFT', `${path}/damage`, 'The primary roll must contain exactly the unconditional AI damage parts, with no conditional or replacement part applied automatically.');
   }

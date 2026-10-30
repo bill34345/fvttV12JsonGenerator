@@ -73,7 +73,10 @@ describe('default complete-IR prompts follow the AI/content and program/preserva
   const ir=buildRatWarlockIr(),expected=structuredClone(ir),ref=ir.creature.spellcasting![0]!.evidence[0]!;
   ref.start=-1;ref.end=-1;const {provider}=fixture('extract',ir);
   const result=await provider.extract({source,sourceSha256:ir.source.sha256,candidate});
-  expect(result.creature).toEqual(expected.creature);expect(ir.creature.spellcasting![0]!.evidence[0]!.start).toBe(-1);
+  const creature=structuredClone(result.creature);delete creature.candidateReview;
+  expect(creature).toEqual(expected.creature);expect(ir.creature.spellcasting![0]!.evidence[0]!.start).toBe(-1);
+  expect(result.creature.candidateReview?.findings).toEqual([]);
+  expect((result.creature.candidateReview?.proposal as any).original.creature.spellcasting[0].evidence[0]).toMatchObject({start:-1,end:-1});
  });
  test('historical Line references remain readable without requesting that protocol again',async()=>{
   const ir=buildRatWarlockIr();(ir.creature.actions[0] as any).description={firstLineId:'L1',lastLineId:'L1'};

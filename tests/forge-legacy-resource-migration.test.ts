@@ -33,7 +33,7 @@ test('legacy resource migration retains the frozen V2 declared base3/lair4 capac
   expect(JSON.stringify(data)).toBe(before);
 });
 
-test('legacy resource migration changes only the declared native counter and ledger in the full formal Actor', async () => {
+test('legacy resource migration links the declared native counter, ledger and resistance Activity in the full formal Actor', async () => {
   const data = savedGreen(), result = completeCategoryFormV2(data.plan, data.assembled, data.decoded);
   const beforeMarkdown = renderMonsterIntakeMarkdown(data.assembled), markdown = renderMonsterIntakeMarkdown(result);
   const convert = async (content: string) => {
@@ -49,6 +49,9 @@ test('legacy resource migration changes only the declared native counter and led
   unchanged.system.resources.legres.max = before.system.resources.legres.max;
   delete unchanged.flags.fvttJsonGenerator.sourceLegendaryLedger.resistanceMax;
   delete unchanged.flags.fvttJsonGenerator.sourceLegendaryLedger.resistanceLairMax;
+  const resistance=unchanged.items.find((item:any)=>item.system.identifier==='legendary-resistance');
+  expect(resistance.system.uses).toEqual({spent:0,max:'',recovery:[]});delete resistance.system.identifier;delete resistance.system.uses;
+  for(const activity of Object.values<any>(resistance.system.activities)){expect(activity.consumption.targets).toEqual([{type:'attribute',target:'resources.legres.value',value:'1',scaling:{mode:'',formula:''}}]);delete activity.consumption;}
   expect(unchanged).toEqual(before);
   const lost = structuredClone(actor); lost.system.resources.legres.max = 0;
   expect(verifyMonsterIntake(data.saved.source, result, markdown, lost).findings.map(issue => issue.code)).toContain('ACTOR_LEGENDARY_RESISTANCE_DRIFT');

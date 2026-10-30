@@ -164,6 +164,7 @@ describe('weapon mastery and property formal generation', () => {
         attack: {
           _id: 'attack',
           type: 'attack',
+          attack: {ability: 'none', bonus: '', flat: false, type: {value: 'melee', classification: 'weapon'}},
           damage: {
             parts: [],
             includeBase: true,
@@ -175,7 +176,7 @@ describe('weapon mastery and property formal generation', () => {
     const item = await new ItemGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(parsed);
     const canonical = adaptParsedItemToCanonical(parsed);
     const accepted = verifyGeneratedDocument({ canonical, output: item, target: '14', effectProfile: 'core' });
-    expect(accepted.status).toBe('accepted');
+    expect(accepted.status,JSON.stringify(accepted.diagnostics)).toBe('accepted');
     const attack = firstAttack(item);
     attack.damage.critical.bonus = '1d8 + 1d8 + 1d8';
     const duplicate = verifyGeneratedDocument({ canonical, output: item, target: '14', effectProfile: 'core' });
@@ -198,11 +199,11 @@ describe('weapon mastery and property formal generation', () => {
         weaponConfiguration: deadlyConfiguration,
         activities: {
           first: {
-            _id: 'first', type: 'attack',
+            _id: 'first', type: 'attack', attack: {ability: 'none', bonus: '', flat: false, type: {value: 'melee', classification: 'weapon'}},
             damage: { parts: [], includeBase: true, critical: { bonus: '1d6' } },
           },
           second: {
-            _id: 'second', type: 'attack',
+            _id: 'second', type: 'attack', attack: {ability: 'none', bonus: '', flat: false, type: {value: 'ranged', classification: 'weapon'}},
             damage: { parts: [], includeBase: true, ...(secondBonus ? { critical: { bonus: secondBonus } } : {}) },
           },
         },
@@ -213,7 +214,8 @@ describe('weapon mastery and property formal generation', () => {
       expect(attacks).toHaveLength(2);
       expect(attacks[0]?.damage?.critical?.bonus).toBe('1d6 + 1d8');
       expect(attacks[1]?.damage?.critical?.bonus).toBe(secondBonus ? `${secondBonus} + 1d8` : '1d8');
-      expect(verifyGeneratedDocument({ canonical, output: item, target: '14', effectProfile: 'core' }).status).toBe('accepted');
+      const verification=verifyGeneratedDocument({ canonical, output: item, target: '14', effectProfile: 'core' });
+      expect(verification.status,JSON.stringify(verification.diagnostics)).toBe('accepted');
 
       attacks[1].damage.critical.bonus = '1d6 + 1d8';
       const corrupted = verifyGeneratedDocument({ canonical, output: item, target: '14', effectProfile: 'core' });

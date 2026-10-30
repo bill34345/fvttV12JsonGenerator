@@ -4,7 +4,8 @@ import type { MonsterIntakeAiProvider, MonsterIntakeIR } from '@fvtt-json-genera
 import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
 import { generateEncounterFromHumanMarkdown } from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import { compileEncounterSelection } from '@fvtt-json-generator/intake-ai/encounter-automation';
-import { validateMonsterIntakeIR } from '@fvtt-json-generator/intake-ai/validator';
+import { auditMonsterIntakeSource } from '@fvtt-json-generator/intake-ai/validator';
+import { normalizeMonsterSourceFacts } from '@fvtt-json-generator/intake-ai/source-facts';
 import { MonsterIntakeProviderError } from '@fvtt-json-generator/intake-ai/provider';
 import {bindSourceOperations,sourceOperationClauses} from '@fvtt-json-generator/models/source-operations';
 import captured from './fixtures/forge-target-choice-intake.json';
@@ -19,20 +20,27 @@ const provider: MonsterIntakeAiProvider = {
 const original = captured.ir as MonsterIntakeIR;
 const freshOriginal = freshCaptured.ir as unknown as MonsterIntakeIR;
 const combinedOriginal = combinedCaptured.ir as unknown as MonsterIntakeIR;
-function analyze(ir: MonsterIntakeIR = structuredClone(original), source = captured.source) {
+function analyzeDefault(ir: MonsterIntakeIR = structuredClone(original), source = captured.source) {
   return analyzeBrowserActorIntakeDraft({ source, sourceName: 'Captured target choice', requestId: 'target-choice-replay',
     fvttVersion: '14.364', systemVersion: '5.3.3' }, ir, provider);
 }
 
-// Test-authored re-extraction from exact source coverage. Saved IR/approvals
-// remain untouched; incomplete Utility-only inputs must still fail promotion.
+function auditSource(ir:MonsterIntakeIR=structuredClone(original),source=captured.source){
+  const normalized=structuredClone(ir);
+  normalizeMonsterSourceFacts(normalized,source,{start:0,end:source.length});
+  const audit=auditMonsterIntakeSource(source,normalized);
+  return {...audit,ir:normalized};
+}
+
+// Test-authored typed re-extraction for the explicit offline audit. Saved
+// proposals stay unchanged; the default draft never derives these operations.
 function reextractChoice(ir:MonsterIntakeIR,source=captured.source):MonsterIntakeIR{
   const next=structuredClone(ir),feature=next.creature.actions[3]!,span=next.coverage.find(entry=>entry.claimPaths.includes('/creature/actions/3'))!,parent=source.slice(span.start,span.end).trim(),clauses=sourceOperationClauses(parent),radius=Number(/(\d+)-\s*foot Emanation/iu.exec(parent)![1]);
   feature.description=parent;feature.evidence=[{start:span.start,end:span.end,quote:source.slice(span.start,span.end)}];feature.executionMode='native-with-gm';feature.activityType='utility';feature.nativeRuleText=parent;feature.manualRemainder=parent;
   feature.sourceOperations=bindSourceOperations(parent,[{id:'choice',name:'Target choice Save',type:'save',relationship:'primary',save:{dc:15,abilities:['int','wis'],choice:'target',outcome:'none'},aoe:{shape:'radius',radius},proof:{save:clauses.find(clause=>clause.includes('DC 15'))!,aoe:clauses.find(clause=>clause.includes('Emanation'))!}}],span.start+span.quote.indexOf(parent));
   delete feature.save;delete feature.aoe;delete feature.appliedConditions;return next;
 }
-function analyzeRestored(ir:MonsterIntakeIR,source=captured.source){return analyze(reextractChoice(ir,source),source);}
+function auditRestored(ir:MonsterIntakeIR,source=captured.source){return auditSource(reextractChoice(ir,source),source);}
 
 // Change the source and every exact evidence offset together, so negative cases
 // test the actual rule boundary rather than merely failing a stale source hash.
@@ -59,21 +67,32 @@ function sourceVariant(from: string, to: string, base = original) {
 }
 
 function expectBlocked(ir: MonsterIntakeIR, source = captured.source) {
-  const result = analyze(ir, source);
-  expect(result.status).toBe('needs_review');
+  const result = auditSource(ir, source);
+  expect(result.blocking.length).toBeGreaterThan(0);
   expect(result.findings.some(finding => finding.blocking && finding.path.startsWith('/creature/actions/3'))).toBe(true);
-  expect(result.calls).toEqual({ discovery: 0, extraction: 0, repair: 0, review: 0 });
 }
 
-describe('target-choice source-bound re-extraction and legacy rejection', () => {
-  test('the unmodified combined-ability IR requires full-source re-extraction before generation', () => {
+describe('explicit offline target-choice source audit and typed re-extraction', () => {
+  test('the default draft keeps every captured Save profile and model uncertainty without deriving target choices',()=>{
+    for(const ir of [original,freshOriginal,combinedOriginal]){
+      const before=structuredClone(ir),result=analyzeDefault(ir);
+      expect(result.ir!.creature.actions[3]!.save).toEqual(before.creature.actions[3]!.save);
+      expect(result.ir!.creature.actions[3]!.sourceOperations).toBeUndefined();
+      expect(result.ir!.uncertainties.slice(0,before.uncertainties.length)).toEqual(before.uncertainties);
+      expect(result.ir!.uncertainties.slice(before.uncertainties.length).every(finding=>finding.code==='FIELD_PROJECTION_INCOMPLETE'&&finding.blocking===false&&['/creature/identity/alignment','/creature/identity/creatureTypeCustom'].includes(finding.path))).toBe(true);
+      expect(result.findings).toContainEqual(expect.objectContaining({code:'INVALID_STRUCTURE',path:'/creature/actions/4/appliedConditions/0/statuses/0'}));
+      expect(result.calls).toEqual({discovery:0,extraction:0,repair:0,review:0});
+      expect(ir).toEqual(before);
+    }
+  });
+  test('explicit audit diagnoses combined ability text and validates a separate typed re-extraction', () => {
     const before = structuredClone(combinedOriginal);
-    expect(validateMonsterIntakeIR(combinedCaptured.source, combinedOriginal).blocking).toContainEqual(expect.objectContaining({
+    expect(auditMonsterIntakeSource(combinedCaptured.source, combinedOriginal).blocking).toContainEqual(expect.objectContaining({
       code: 'INVALID_FEATURE_SAVE_ABILITY', path: '/creature/actions/3/save/ability',
     }));
-    expect(analyze(combinedOriginal).status).toBe('needs_review');
-    const restored=reextractChoice(combinedOriginal),result = analyze(restored);
-    expect(result.status).toBe('ready_to_generate');
+    expect(auditSource(combinedOriginal).blocking.length).toBeGreaterThan(0);
+    const restored=reextractChoice(combinedOriginal),result = auditSource(restored);
+    expect(result.blocking).toEqual([]);
     const expected = structuredClone(restored.creature);
     // The existing definition-restoration step still runs on this raw extraction.
     expected.biography = `${expected.biography}\n\n${captured.source.split('## Referenced definitions from the same PDF\n\n')[1]!.trim()}`;
@@ -88,22 +107,21 @@ describe('target-choice source-bound re-extraction and legacy rejection', () => 
       expect(captured.source.slice(definition.start, definition.end)).toBe(definition.quote);
     }
     expect(combinedOriginal).toEqual(before);
-    expect(result.calls).toEqual({ discovery: 0, extraction: 0, repair: 0, review: 0 });
-    expect(analyze(result.ir!).ir).toEqual(result.ir);
+    expect(auditSource(result.ir!).ir).toEqual(result.ir);
   });
   test('boundary whitespace alone does not change the proven complete source span', () => {
     const ir = structuredClone(freshOriginal);
     const coverage = ir.coverage.find(entry => entry.claimPaths.includes('/creature/actions/3'))!;
     coverage.end++; coverage.quote = captured.source.slice(coverage.start, coverage.end);
     expect(coverage.quote.endsWith('\n')).toBe(true);
-    expect(analyzeRestored(ir).status).toBe('ready_to_generate');
+    expect(auditRestored(ir).blocking).toEqual([]);
   });
   test('only source-present numeric unit line joins are equivalent, with any distance', () => {
     const joined = structuredClone(freshOriginal);
     joined.creature.actions[3]!.description = joined.creature.actions[3]!.description.replace(/15-\s+foot/u, '15-foot');
-    expect(analyzeRestored(joined).status).toBe('ready_to_generate');
+    expect(auditRestored(joined).blocking).toEqual([]);
     const changed = sourceVariant('15-', '25-', joined);
-    expect(analyzeRestored(changed.ir, changed.source).status).toBe('ready_to_generate');
+    expect(auditRestored(changed.ir, changed.source).blocking).toEqual([]);
     const wrong = structuredClone(joined);
     wrong.creature.actions[3]!.description = wrong.creature.actions[3]!.description.replace('15-foot', '150-foot');
     expectBlocked(wrong);
@@ -111,7 +129,7 @@ describe('target-choice source-bound re-extraction and legacy rejection', () => 
   test('combined ability text still requires typed re-extraction of only the two source-proved choices', () => {
     for (const ability of ['intelligence or wisdom', 'Wisdom or Intelligence']) {
       const ir = structuredClone(freshOriginal); (ir.creature.actions[3]!.save as any).ability = ability;
-      expect(analyze(ir).status).toBe('needs_review');expect(analyzeRestored(ir).status).toBe('ready_to_generate');
+      expect(auditSource(ir).blocking.length).toBeGreaterThan(0);expect(auditRestored(ir).blocking).toEqual([]);
     }
     for (const ability of ['intelligence and wisdom', 'intelligence or charisma', 'wis', 'intelligence or wisdom or charisma']) {
       const ir = structuredClone(combinedOriginal); (ir.creature.actions[3]!.save as any).ability = ability;
@@ -133,7 +151,7 @@ describe('target-choice source-bound re-extraction and legacy rejection', () => 
     conflict.claims.push({path: '/creature/actions/3/save/ability', value: 'wis', valueKind: 'explicit', confidence: 'high',
       evidence: structuredClone(conflict.claims.find(claim => claim.path === '/creature/actions/3')!.evidence)});
     expectBlocked(conflict);
-    expect(analyze(conflict).ir!.creature.actions[3]!.save).toEqual(conflict.creature.actions[3]!.save);
+    expect(auditSource(conflict).ir!.creature.actions[3]!.save).toEqual(conflict.creature.actions[3]!.save);
   });
   test('boundary equivalence does not accept clipped, cross-feature or fabricated evidence', () => {
     for (const mode of ['clipped', 'next-feature', 'fabricated']) {
@@ -151,12 +169,13 @@ describe('target-choice source-bound re-extraction and legacy rejection', () => 
       const ir = structuredClone(combinedOriginal); ir.creature.actions[3]!.save!.dc = 16;
       let repairs = 0;
       const result = await repairBrowserActorIntake({source: captured.source, sourceName: 'Safe diagnostic',
-        requestId: 'safe-diagnostic', fvttVersion: '14.364', systemVersion: '5.3.3'}, analyze(ir), {
+        requestId: 'safe-diagnostic', fvttVersion: '14.364', systemVersion: '5.3.3'}, analyzeDefault(ir), {
         ...provider, repair: async () => { repairs++; throw new MonsterIntakeProviderError('invalid_response', 'secret-value', {
           diagnostic: {stage: 'repair-envelope', path, expected: 'array<=64', actual: 'string'},
         }); },
       });
-      expect(result.status).toBe('failed');
+      expect(result.status).toBe('needs_review');
+      expect(result.ir).toEqual(analyzeDefault(ir).ir);
       expect(repairs).toBe(1);
       const finding = result.findings.find(entry => entry.code === 'REPAIR_INVALID_RESPONSE')!;
       expect(finding.blocking).toBe(true);
@@ -165,23 +184,22 @@ describe('target-choice source-bound re-extraction and legacy rejection', () => 
       expect(JSON.stringify(result)).not.toContain('secret-value');
     }
   });
-  test('source-re-extracted target-selected INT/WIS reaches formal generation without model repair', () => {
+  test('explicit re-extraction validates target-selected INT/WIS operations without rewriting the captured proposal', () => {
     const before = structuredClone(original);
-    expect(analyze(original).status).toBe('needs_review');const restored=reextractChoice(original),result = analyze(restored);
+    expect(auditSource(original).blocking.length).toBeGreaterThan(0);const restored=reextractChoice(original),result = auditSource(restored);
     expect(result.findings.filter(finding => finding.blocking)).toEqual([]);
-    expect(result.status).toBe('ready_to_generate');
+    expect(result.blocking).toEqual([]);
     const expected = structuredClone(restored.creature);
     expect(result.ir?.creature).toEqual(expected);
     expect(result.ir?.claims).toEqual(original.claims);
     expect(result.ir?.coverage).toEqual(original.coverage);
-    expect(result.calls).toEqual({ discovery: 0, extraction: 0, repair: 0, review: 0 });
     expect(original).toEqual(before);
     expect(result.ir?.uncertainties[0]?.code).toBe('SOURCE_VERIFIED_TARGET_CHOICE_MANUAL');
-    expect(analyze(result.ir!).ir).toEqual(result.ir);
+    expect(auditSource(result.ir!).ir).toEqual(result.ir);
   });
 
   test('fresh missing-ability Save is rejected by IR validation before projection', () => {
-    expect(validateMonsterIntakeIR(freshCaptured.source, freshOriginal).blocking).toContainEqual(expect.objectContaining({
+    expect(auditMonsterIntakeSource(freshCaptured.source, freshOriginal).blocking).toContainEqual(expect.objectContaining({
       code: 'INVALID_FEATURE_SAVE_ABILITY', path: '/creature/actions/3/save/ability',
     }));
   });
@@ -189,33 +207,33 @@ describe('target-choice source-bound re-extraction and legacy rejection', () => 
     for (const ability of [undefined, null, '', 'undefined', 'wisdom', ['int', 'wis']]) {
       const ir = structuredClone(freshOriginal);
       (ir.creature.actions[3]!.save as any).ability = ability;
-      expect(validateMonsterIntakeIR(captured.source, ir).blocking).toContainEqual(expect.objectContaining({
+      expect(auditMonsterIntakeSource(captured.source, ir).blocking).toContainEqual(expect.objectContaining({
         code: 'INVALID_FEATURE_SAVE_ABILITY', path: '/creature/actions/3/save/ability',
       }));
     }
     const missing = structuredClone(freshOriginal); delete missing.creature.actions[3]!.save;
-    expect(validateMonsterIntakeIR(captured.source, missing).blocking).toContainEqual(expect.objectContaining({ code: 'INVALID_FEATURE_SAVE' }));
+    expect(auditMonsterIntakeSource(captured.source, missing).blocking).toContainEqual(expect.objectContaining({ code: 'INVALID_FEATURE_SAVE' }));
     const dc = structuredClone(freshOriginal); (dc.creature.actions[3]!.save as any).dc = undefined;
-    expect(validateMonsterIntakeIR(captured.source, dc).blocking).toContainEqual(expect.objectContaining({ code: 'INVALID_FEATURE_SAVE_DC' }));
+    expect(auditMonsterIntakeSource(captured.source, dc).blocking).toContainEqual(expect.objectContaining({ code: 'INVALID_FEATURE_SAVE_DC' }));
   });
-  test('fresh captured shape is resolved from exact source and claims without model uncertainty', () => {
+  test('explicit offline restoration binds the fresh choice shape to its exact source and claims', () => {
     const before = structuredClone(freshOriginal);
-    const restored=reextractChoice(freshOriginal,freshCaptured.source),result = analyze(restored, freshCaptured.source);
-    expect(result.status).toBe('ready_to_generate');
+    const restored=reextractChoice(freshOriginal,freshCaptured.source),result = auditSource(restored, freshCaptured.source);
+    expect(result.blocking).toEqual([]);
     expect(result.ir!.creature.actions[3]!.activityType).toBe('utility');
     expect(result.ir!.creature.actions[3]!.save).toBeUndefined();
     expect(result.ir!.creature.actions[3]!.description).toBe(restored.creature.actions[3]!.description);expect(result.ir!.creature.actions[3]!.sourceOperations![0]!.save!.abilities).toEqual(['int','wis']);
     expect(result.ir!.claims).toEqual(freshOriginal.claims);
     expect(result.ir!.coverage).toEqual(freshOriginal.coverage);
     expect(freshOriginal).toEqual(before);
-    expect(analyze(result.ir!).ir).toEqual(result.ir);
+    expect(auditSource(result.ir!).ir).toEqual(result.ir);
   });
   test('source decision is independent of the model error code or its absence', () => {
     const changed = structuredClone(original);
     changed.uncertainties[0]!.code = 'ANOTHER_MODEL_DIAGNOSTIC';
-    expect(analyze(changed).status).toBe('needs_review');expect(analyzeRestored(changed).status).toBe('ready_to_generate');
+    expect(auditSource(changed).blocking.length).toBeGreaterThan(0);expect(auditRestored(changed).blocking).toEqual([]);
     const absent = structuredClone(original); absent.uncertainties = [];
-    expect(analyze(absent).ir!.creature.actions[3]!.activityType).toBe('utility');
+    expect(auditSource(absent).ir!.creature.actions[3]!.activityType).toBe('utility');
   });
   test('fresh shape with missing selector or conflicting source stays blocked', () => {
     for (const to of ['(Caster’s Choice) DC 15.', '(Target’s Choice) DC 15. The GM chooses Wisdom instead.']) {
@@ -238,13 +256,13 @@ describe('target-choice source-bound re-extraction and legacy rejection', () => 
     conflict.claims.push({ path: '/creature/actions/3/save/ability', valueKind: 'explicit', confidence: 'high', value: 'wis',
       evidence: structuredClone(conflict.claims.find(claim => claim.path === '/creature/actions/3')!.evidence) });
     expectBlocked(conflict);
-    expect(analyze(conflict).ir!.creature.actions[3]!.save).toEqual(conflict.creature.actions[3]!.save);
+    expect(auditSource(conflict).ir!.creature.actions[3]!.save).toEqual(conflict.creature.actions[3]!.save);
   });
   test('an ordinary source-explicit single-ability Save stays native', () => {
     const data = sourceVariant('Intelligence or Wisdom Saving Throw:\n(Target’s Choice) DC 15.', 'Wisdom Saving Throw: DC 15.', freshOriginal);
     data.ir.creature.actions[3]!.save!.ability = 'wis';
-    const result = analyze(data.ir, data.source);
-    expect(result.status).toBe('ready_to_generate');
+    const result = auditSource(data.ir, data.source);
+    expect(result.blocking).toEqual([]);
     expect(result.ir!.creature.actions[3]!.activityType).toBe('save');
     expect(result.ir!.creature.actions[3]!.save).toEqual(data.ir.creature.actions[3]!.save);
   });
@@ -258,7 +276,7 @@ describe('target-choice source-bound re-extraction and legacy rejection', () => 
     expectBlocked(ir, source);
   });
   test('a saved resolution cannot bypass revalidation after source truncation or conflict', () => {
-    const resolved = analyze().ir!.uncertainties[0]!;
+    const resolved = auditSource().ir!.uncertainties[0]!;
     for (const replacement of ['', '(Target’s Choice) DC 15. The GM chooses Wisdom instead.']) {
       const { ir, source } = sourceVariant('(Target’s Choice) DC 15.', replacement);
       ir.creature.actions[3]!.activityType = 'utility';
@@ -294,7 +312,7 @@ describe('target-choice source-bound re-extraction and legacy rejection', () => 
     const ir = structuredClone(original);
     ir.uncertainties.push({ ...structuredClone(ir.uncertainties[0]!), id: 'real-conflict', code: 'CONFLICTING_DC', message: 'Two source DCs conflict.' });
     expectBlocked(ir);
-    expect(analyze(ir).findings.some(finding => finding.code === 'CONFLICTING_DC' && finding.blocking)).toBe(true);
+    expect(auditSource(ir).findings.some(finding => finding.code === 'CONFLICTING_DC' && finding.blocking)).toBe(true);
   });
   test('wrong uncertainty evidence or candidates do not receive the resolution', () => {
     const ir = structuredClone(original);
@@ -306,14 +324,14 @@ describe('target-choice source-bound re-extraction and legacy rejection', () => 
   });
   test('renamed feature and PDF line wrapping preserve the source-bound choice', () => {
     const renamed = sourceVariant('Seed Terror', 'Fading Mirage');
-    expect(analyzeRestored(renamed.ir, renamed.source).status).toBe('ready_to_generate');
+    expect(auditRestored(renamed.ir, renamed.source).blocking).toEqual([]);
     const wrapped = sourceVariant('Intelligence or Wisdom Saving Throw:\n(Target’s Choice)', 'Intelligence or Wisdom Saving Throw: (Target’s Choice)');
-    expect(analyzeRestored(wrapped.ir, wrapped.source).status).toBe('ready_to_generate');
+    expect(auditRestored(wrapped.ir, wrapped.source).blocking).toEqual([]);
   });
   for (const [label, ir, parentHash] of [['old', original, captured.resultSha256], ['fresh', freshOriginal, freshCaptured.resultSha256],
     ['combined', combinedOriginal, combinedCaptured.extractedIrSha256]] as const) {
-  test(`formal encounter entry requires ${label} captured choice re-extraction before a native choice Save`, async () => {
-    expect(analyze(ir).status).toBe('needs_review');const restored=reextractChoice(ir);
+  test(`formal encounter retains ${label} source-bound choice Save with unresolved companion findings`, async () => {
+    expect(auditSource(ir).blocking.length).toBeGreaterThan(0);const restored=reextractChoice(ir);
     let configurationReplays = 0;
     // Bind the fixture's existing source-proved rules to the actual captured
     // names. Neither captured IR nor source is edited; no model is called.
@@ -330,15 +348,21 @@ describe('target-choice source-bound re-extraction and legacy rejection', () => 
       automationProvider: { generate: async request => { configurationReplays++; return compileEncounterSelection(selection, request); }, review: noModel },
     });
     expect(result.report.status).toBe('ready_for_gm_review');
-    expect(result.report.findings).toEqual([]);
-    expect(configurationReplays).toBe(1);
+    expect(result.report.generationRoute).toBe('actors-only');
+    expect(result.report.findings.join(' ')).toContain('检查结论未提升为通过');
+    expect(result.report.actors[0]!.generation!.findings).toContainEqual(expect.objectContaining({code:'INVALID_STRUCTURE',path:'/creature/actions/4/appliedConditions/0/statuses/0'}));
+    expect(result.report.actors[0]!.generation!.findings).toContainEqual(expect.objectContaining({code:'GEN_SAVE_OUTCOME_MISMATCH'}));
+    expect(result.report.actors[0]!.generation!.formalStatus).toBe('failed');
+    expect(configurationReplays).toBe(0);
     expect(result.report.actors[0]?.analysis.calls).toEqual({ discovery: 0, extraction: 0, review: 0, repair: 0 });
     const items = result.prepared!.actors[0]!.artifact.items as Array<any>;
     const item = items.find(item => item.name === original.creature.actions[3]!.name);
-    expect(item.effects).toEqual([]);
+    expect(item.effects).toHaveLength(1);
+    expect(item.effects[0].statuses).toEqual(['frightened']);
+    expect(item.effects[0].flags.fvttJsonGenerator.conditionLifecycle).toMatchObject({version:1,mode:'gm'});
     const activities = Object.values(item.system.activities) as Array<any>;
     expect(activities.length).toBeGreaterThan(0);
-    const saves=activities.filter(activity=>activity.type==='save');expect(saves).toHaveLength(1);expect(saves[0].save).toMatchObject({ability:['int','wis'],dc:{formula:'15'}});expect(activities.every(activity=>!(activity.effects?.length))).toBe(true);expect(activities.filter(activity=>activity.type!=='save').every(activity=>activity.type==='utility')).toBe(true);
+    const saves=activities.filter(activity=>activity.type==='save');expect(saves).toHaveLength(1);expect(saves[0].save).toMatchObject({ability:['int','wis'],dc:{formula:'15'}});expect(activities.flatMap(activity=>activity.effects??[]).every(effect=>effect._id===item.effects[0]._id)).toBe(true);expect(activities.filter(activity=>activity.type!=='save').every(activity=>activity.type==='utility')).toBe(true);
     // Manual display now uses the complete source rule, rather than a second
     // model-authored paraphrase; its chooser, DC and lifecycle must remain.
     expect(activities.some(activity => /Intelligence or Wisdom Saving Throw/iu.test(activity.description.chatFlavor)
@@ -347,7 +371,11 @@ describe('target-choice source-bound re-extraction and legacy rejection', () => 
       && /1 minute/iu.test(activity.description.chatFlavor)
       && /end of turn/iu.test(activity.description.chatFlavor))).toBe(true);
     expect(activities.some(activity => activity.description.chatFlavor.includes('GM'))).toBe(true);
-    expect(result.prepared!.bundle.macros[0]!.covers.some(cover => cover.actorKey === 'actor-1')).toBe(true);
+    expect(result.prepared!.macros).toEqual([]);
+    expect(result.report.automationReview).toEqual({status:'not_requested'});
+    const findings=result.prepared!.reviewFindings;
+    if(!findings)throw new Error('Expected retained candidate review findings.');
+    expect(findings.join(' ')).toContain('GEN_SAVE_OUTCOME_MISMATCH');
   });
   }
 });

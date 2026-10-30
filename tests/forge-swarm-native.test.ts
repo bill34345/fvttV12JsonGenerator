@@ -2,8 +2,8 @@ import {describe,expect,test} from 'bun:test';
 import {sha256} from '@fvtt-json-generator/contracts/hash';
 import {splitStagedMonsterSource} from '@fvtt-json-generator/intake-ai/staged-source';
 import {runStagedMonsterExtraction,validateStagedBaseFacts,type StagedBaseFactsResponse} from '@fvtt-json-generator/intake-ai/staged-extraction';
-import {anchorIrEvidence} from '@fvtt-json-generator/intake-ai/orchestrator';
-import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
+import {anchorIrEvidence,anchorIrEvidenceSourceAudit} from '@fvtt-json-generator/intake-ai/orchestrator';
+import {auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
 import {YamlParser} from '@fvtt-json-generator/parser';
 import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
@@ -68,7 +68,7 @@ describe('source-owned swarm identity independent of Actor size',()=>{
     expect(ir.creature.identity.creatureType).toBe(row.type);
     if('alignment' in row)expect(ir.creature.identity.alignment).toBe(row.alignment);
     if('subtype' in row)expect(ir.creature.identity.creatureTypeCustom).toBe(row.subtype);
-    expect(validateMonsterIntakeIR(source,ir).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(source,ir).blocking).toEqual([]);
     const claim=ir.claims.find(claim=>claim.path==='/creature/identity/swarmSize');
     expect(claim).toBeDefined();
     for(const ref of claim!.evidence)expect(source.slice(ref.start,ref.end)).toBe(ref.quote);
@@ -82,15 +82,17 @@ describe('source-owned swarm identity independent of Actor size',()=>{
     const ir=facts(sourceWithIdentity('Medium swarm of Tiny beasts, unaligned'),creature(type));
     expect(ir.creature.identity.creatureType).toBe('beast');
   });
-  test('complete-IR path fills only a missing explicit swarm member size and evidence',async()=>{
+  test('explicit source audit fills only a missing source member size and evidence',async()=>{
     const source=sourceWithIdentity('Medium swarm of Tiny beasts, unaligned'),raw=await extract(source);
     delete raw.creature.identity.swarmSize;delete raw.creature.identity.alignment;
     raw.claims=raw.claims.filter(claim=>!['/creature/identity/swarmSize','/creature/identity/alignment'].includes(claim.path));
     for(const entry of raw.coverage)entry.claimPaths=entry.claimPaths.filter(path=>!['/creature/identity/swarmSize','/creature/identity/alignment'].includes(path));
-    const normalized=anchorIrEvidence(source,request(source).candidate,raw);
+    const retained=anchorIrEvidence(source,request(source).candidate,raw);
+    expect(retained.creature.identity.swarmSize).toBeUndefined();
+    const normalized=anchorIrEvidenceSourceAudit(source,request(source).candidate,raw);
     expect(normalized.creature.identity.swarmSize).toBe('tiny');
     expect(normalized.creature.identity.alignment).toBe('unaligned');
-    expect(validateMonsterIntakeIR(source,normalized).blocking).toEqual([]);
+    expect(auditMonsterIntakeSource(source,normalized).blocking).toEqual([]);
     expect(normalized.claims.some(claim=>claim.path==='/creature/identity/swarmSize')).toBe(true);
   });
   for(const [field,value] of [['size','tiny'],['swarmSize','small'],['creatureType','fiend'],['alignment','lawful good']] as const)test('wrong supplied '+field+' is never overwritten',()=>{
@@ -113,7 +115,7 @@ describe('source-owned swarm identity independent of Actor size',()=>{
     expect(ir.creature.identity.size).toBe('medium');
     expect(ir.creature.identity.creatureType).toBe('construct');
     const invented=structuredClone(ir);invented.creature.identity.swarmSize='tiny';
-    expect(validateMonsterIntakeIR(source,invented).blocking.some(finding=>finding.path==='/creature/identity/swarmSize')).toBe(true);
+    expect(auditMonsterIntakeSource(source,invented).blocking.some(finding=>finding.path==='/creature/identity/swarmSize')).toBe(true);
     expect(new YamlParser().parse(renderMonsterIntakeMarkdown(ir)).details.swarmSize).toBeUndefined();
   });
   test('a size word in the creature name is not a size declaration',async()=>{
@@ -135,27 +137,30 @@ describe('source-owned swarm identity independent of Actor size',()=>{
     const identity='中型微型野兽集群, unaligned\n'+second,source=sourceWithIdentity(identity);
     expect(()=>facts(source)).toThrow('CONFLICTING_STATIC_FACT');
     const c:any=structuredClone(nativeCases.cases[0]);
-    c.creature.identity={name:seed.creature.identity.name,size:'medium',creatureType:'beast'};
+    c.creature.identity={name:seed.creature.identity.name,size:'medium',creatureType:'beast',swarmSize:'tiny',alignment:'unaligned'};
     c.units[0].text=source.slice(0,source.indexOf('Actions\n'));
     c.source=c.units.map((unit:any)=>unit.text).join('');
     const result=await chain(c,()=>ordinary(c,modelReply(c)));
-    expect(result.status).toBe('blocked');
-    expect(result.findings?.some((finding:any)=>finding.code==='SOURCE_CONFLICTING_STATIC_FACT')).toBe(true);
+    expect(result.actor).toBeDefined();
+    expect(auditMonsterIntakeSource(c.source,result.ir).findings).toContainEqual(expect.objectContaining({code:'SOURCE_CONFLICTING_STATIC_FACT'}));
   });
   test('an unclear swarm size is not guessed',()=>{
-    expect(()=>facts(sourceWithIdentity('Size Medium (Swarm of Tiny or Small)\nType Beast'))).toThrow('identity/swarmSize');
+    expect(()=>facts(sourceWithIdentity('Size Medium (Swarm of Tiny or Small)\nType Beast'))).toThrow('UNSUPPORTED_STATIC_FACT');
   });
   test('a declared member size requires its own claim',async()=>{
     const source=sourceWithIdentity('Medium swarm of Tiny beasts, unaligned'),ir=await extract(source);
     ir.claims=ir.claims.filter(claim=>claim.path!=='/creature/identity/swarmSize');
-    expect(validateMonsterIntakeIR(source,ir).blocking.some(finding=>finding.path==='/creature/identity/swarmSize')).toBe(true);
+    expect(auditMonsterIntakeSource(source,ir).blocking.some(finding=>finding.path==='/creature/identity/swarmSize')).toBe(true);
   });
   test('legacy YAML without the new optional key is unchanged',()=>{
     const parsed=new YamlParser().parse('---\n名称: Old Guard\n类型: npc\n体型: 中型\n生物类型: 构装生物\n---\n');
     expect(parsed.traits.size).toBe('med');expect(parsed.details.swarmSize).toBeUndefined();
   });
-  test('invalid explicit YAML member size is rejected',()=>{
-    expect(()=>new YamlParser().parse('---\n名称: Bad Swarm\n类型: npc\n集群个体体型: unknown\n---\n')).toThrow('InvalidSwarmSize');
+  test('invalid YAML member size retains its field finding and usable creature',()=>{
+    const parsed=new YamlParser().parse('---\n名称: Bad Swarm\n类型: npc\n集群个体体型: unknown\n---\n');
+    expect(parsed.name).toBe('Bad Swarm');expect(parsed.details.swarmSize).toBeUndefined();
+    expect(parsed.candidateReview?.findings).toContainEqual(expect.objectContaining({code:'FIELD_PROJECTION_INCOMPLETE',path:'集群个体体型'}));
+    expect((parsed.candidateReview?.proposal as any).value).toBe('unknown');
   });
 });
 

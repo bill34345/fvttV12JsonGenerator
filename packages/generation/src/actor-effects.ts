@@ -247,7 +247,8 @@ export function configureOfficialConditionEffect(effect:any,declaration:Canonica
   effect.statuses=officialConditionStatuses(declaration.statuses);effect.name=declaration.statuses.map(status=>displayName(SOURCE_NATIVE_FAILURE_LABELS[status as keyof typeof SOURCE_NATIVE_FAILURE_LABELS],status[0]!.toUpperCase()+status.slice(1))).join(' / ');
   effect.disabled=false;effect.transfer=false;effect.img=statusIconPath(declaration.statuses[0]!);
   if(duration)effect.duration={...effect.duration,...duration};
-  effect.description=[source,declaration.condition?`适用/结束条件：${declaration.condition}`:'',declaration.duration?`期限：${declaration.duration}`:'',declaration.escapeDc!==undefined?`逃脱 DC ${declaration.escapeDc}`:'',declaration.staged?'分阶段结果由DM选择此模板应用。':'',declaration.statuses.includes('exhaustion')?'Exhaustion级数按原文由DM设置；此模板不推定级数或累加。':'',manual?'DM判断触发与提前解除；此模板可选应用，不代表自动判定完整规则。':''].filter(Boolean).join('\n');
+  const description=effect.description??'';
+  effect.description=[description,...[source,declaration.condition?`适用/结束条件：${declaration.condition}`:'',declaration.duration?`期限：${declaration.duration}`:'',declaration.escapeDc!==undefined?`逃脱 DC ${declaration.escapeDc}`:'',declaration.staged?'分阶段结果由DM选择此模板应用。':'',declaration.statuses.includes('exhaustion')?'Exhaustion级数按原文由DM设置；此模板不推定级数或累加。':'',manual?'DM判断触发与提前解除；此模板可选应用，不代表自动判定完整规则。':''].filter(text=>text&&!description.includes(text))].filter(Boolean).join('\n');
   effect.flags??={};effect.flags.fvttJsonGenerator={...effect.flags.fvttJsonGenerator,conditionLifecycle:{...declaration,version:1,mode:manual?'gm':'native',sourceText:source}};
 }
 
@@ -383,7 +384,11 @@ export function extractExplicitlyInflictedStatuses(text: string,includeStaged=fa
         if(!englishSubject||application.index-englishSubject.index!>120||isEnglishStatusQualifier(application,clause))continue;
         predicates.push({text:application[1]!,direct:true});
       }
-      if(includeStaged&&!/^\s*(?:if|when|while|after|unless|若|当|每当)/iu.test(clause)&&/\b(?:target|creature|it)\s+(?:immediately\s+)?dies\b|(?:目标|生物|其|它)(?:立即)?死亡/iu.test(clause))predicates.push({text:'dead'});
+      // A death mentioned by an until-clause ends the earlier consequence; it is not applied.
+      const death=clause.match(/(?:\b(?:target|creature|it)\s+(?:immediately\s+)?|(?:\u76ee\u6807|\u751f\u7269|\u5b83|\u5176)(?:\u7acb\u5373)?)(dies\b|\u6b7b\u4ea1)/iu);
+      const deathPrefix=death?clause.slice(0,death.index)+death[0].slice(0,-death[1]!.length):'';
+      if(includeStaged&&!/^\s*(?:if|when|while|after|unless|\u82e5|\u5f53|\u6bcf\u5f53)/iu.test(clause)&&death
+        &&!isEnglishStatusQualifier(death,clause)&&!isChineseStatusQualifier(death[1]!,deathPrefix))predicates.push({text:'dead'});
 
       const gainedParameterizedCondition = clause.match(
         /\b(?:target|creature|enemy|foe|it|they)\b[\s\S]{0,120}?\b(?:gains?|receives?|acquires?)\s+([\s\S]+)/i,
@@ -462,11 +467,11 @@ function isEnglishStatusQualifier(application: RegExpMatchArray,clause:string): 
   return /\b(?:that|which|who)\s+(?:(?:already|currently|still)\s+)?(?:is|are|has|have|was|were)\s+(?:the\s+)?$/iu.test(prefix)
     || /\b(?:no\s+longer|not|never|already|currently|still)\s+(?:is|are|has|have|was|were|becomes?|be|falls?|starts?)\s+(?:the\s+)?$/iu.test(prefix)
     || /\b(?:do|does|did)(?:n['’]t|\s+not)\s+(?:have|be|become|fall|start)\s+(?:the\s+)?$/iu.test(prefix)
-    || /\b(?:if|while|unless|provided(?:\s+that)?)\s+(?:(?:the|a|an|this|that)\s+)?(?:(?:target|creature|enemy|foe|it|they)\s+)?$/iu.test(before);
+    || /\b(?:if|while|until|unless|provided(?:\s+that)?)\s+(?:(?:the|a|an|this|that)\s+)?(?:(?:target|creature|enemy|foe|it|they)\s+)?$/iu.test(before);
 }
 
 function isChineseStatusQualifier(predicate: string,prefix:string): boolean {
-  if(/(?:若|如果|当|仅当|只有)(?:该)?(?:目标|生物|其|它)(?:已|已经|处于|具有)?$/u.test(prefix))return true;
+  if(/(?:若|如果|当|仅当|只有|\u76f4\u5230|\u76f4\u81f3)(?:该)?(?:目标|生物|其|它)(?:已|已经|处于|具有)?$/u.test(prefix))return true;
   // A status before 的 qualifies an existing target; it is not this action's
   // consequence, even when the earlier status was caused by another action.
   return EXPLICIT_STATUS_PATTERNS.some(entry=>{

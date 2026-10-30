@@ -39,6 +39,7 @@ async function assertOwnedSandbox(sandboxRoot: string): Promise<void> {
 export async function runHermeticFoundryScript(
   scriptName: string,
   environment: Record<string, string | undefined> = process.env,
+  scriptArguments: string[] = [],
 ): Promise<number> {
   if (!scriptName || !/^[a-z0-9:_-]+$/i.test(scriptName)) {
     throw new Error(`Expected a package script name, received: ${scriptName || '<empty>'}`);
@@ -52,7 +53,7 @@ export async function runHermeticFoundryScript(
   const sandboxRoot = await mkdtemp(join(tmpdir(), SANDBOX_PREFIX));
   try {
     await assertOwnedSandbox(sandboxRoot);
-    const child = Bun.spawn(['bun', 'run', scriptName], {
+    const child = Bun.spawn(['bun', 'run', scriptName, ...scriptArguments], {
       cwd: process.cwd(),
       env: createHermeticFoundryEnvironment(environment, sandboxRoot, classicLevelEntry),
       stdin: 'inherit',
@@ -68,7 +69,7 @@ export async function runHermeticFoundryScript(
 
 if (import.meta.main) {
   try {
-    const exitCode = await runHermeticFoundryScript(Bun.argv[2] || 'ci:verify:steps');
+    const exitCode = await runHermeticFoundryScript(Bun.argv[2] || 'ci:verify:steps', process.env, Bun.argv.slice(3));
     process.exitCode = exitCode;
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));

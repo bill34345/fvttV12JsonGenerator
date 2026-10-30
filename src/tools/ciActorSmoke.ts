@@ -6,7 +6,7 @@ import { convertMarkdownPathToOutput } from '../core/application/conversion';
 const EXPECTED_WHITE_TUSK_ITEMS = [
   'Aggressive',
   'Minion: Savage Horde',
-  'Spirit-Bonded Body',
+  'Spirit-Bonded Body (Recharges after a Short or Long Rest)',
   'Spirit-Bonded Mind',
   'Multiattack',
   'Blood-Searing Spear',
@@ -52,7 +52,7 @@ export async function runCiActorSmoke(): Promise<void> {
       || actor.system.attributes.hp.max !== 52 || actor.system.details.cr !== 3) {
       throw new Error('White Tusk source identity, HP or CR was lost.');
     }
-    const body = actor.items?.find(item => item.name === 'Spirit-Bonded Body');
+    const body = actor.items?.find(item => item.name === 'Spirit-Bonded Body (Recharges after a Short or Long Rest)');
     if (String(body?.system?.uses?.max) !== '1' || body?.system?.uses?.recovery?.[0]?.period !== 'sr') {
       throw new Error('White Tusk source rest recovery was lost.');
     }

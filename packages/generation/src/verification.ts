@@ -718,27 +718,29 @@ function verifyItemSpecificMechanic(
   if (mechanic.kind === 'effect') {
     const expected = mechanic.value as { passiveEffect?: { type?: string; value?: unknown } };
     if (expected.passiveEffect?.type !== 'acBonus') return undefined;
-    // `system.changes` is the V14 native Effect shape.  Existing strict Item
-    // Markdown still supports V12, whose effect contract is verified by the
-    // generic projection check below.
-    if (target !== '14') return undefined;
     const expectedValue = Number(expected.passiveEffect.value);
     const effectIndex = (document?.effects ?? []).findIndex((effect: any) =>
       effect?.transfer === true
-      && effect?.type === 'base'
+      && (target === '14' ? effect?.type === 'base'
       && effect?.changes === undefined
       && Array.isArray(effect?.system?.changes)
       && effect.system.changes.some((change: any) =>
         change?.key === 'system.attributes.ac.bonus'
         && change?.type === 'add'
         && change?.phase === 'initial'
-        && Number(change?.value) === expectedValue));
+        && Number(change?.value) === expectedValue)
+      : effect?.type === 'passive' && effect.disabled === false
+      && Array.isArray(effect?.changes)
+      && effect.changes.some((change: any) =>
+        change?.key === 'system.attributes.ac.bonus'
+        && change?.mode === 2
+        && Number(change?.value) === expectedValue)));
     if (effectIndex < 0) {
       diagnostics.push(error(
         'GEN_ITEM_AC_EFFECT_MISMATCH',
         'semantic',
         mechanic.path,
-        `Expected a transfer V14 Active Effect adding ${expectedValue} to system.attributes.ac.bonus.`,
+        `Expected a transfer V${target} Active Effect adding ${expectedValue} to system.attributes.ac.bonus.`,
       ));
       return [];
     }

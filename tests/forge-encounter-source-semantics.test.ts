@@ -99,18 +99,15 @@ describe('generic structured lifecycle regressions', () => {
         expect(activity.target.template).toMatchObject({ type: shape, size, units: 'ft' });
         expect(activity.range?.value).not.toBe(5);
         const effects = item.effects.filter((effect: any) => effect.statuses.includes(status));
-        if (fvttVersion === '14' && status === 'frightened') {
-          // This source explicitly lets an ally end fear early; core has no
-          // executor for that lifecycle. Save, damage, area and recharge above
-          // remain native, with the complete status consequence left to GM.
-          expect(effects).toEqual([]);
-          expect(activity.effects ?? []).toEqual([]);
-          expect(item.flags.fvttJsonGenerator.conditionLifecycle.statuses).toContain(status);
-          continue;
-        }
         expect(effects).toHaveLength(1);
         expect(effects[0].duration).toMatchObject(duration);
         expect(effects[0].flags.fvttJsonGenerator.sourceDerivedEmbeddedEffect).toBe(true);
+        if (fvttVersion === '14' && status === 'frightened') {
+          expect(effects[0].flags.fvttJsonGenerator.conditionLifecycle).toMatchObject({ version: 1, mode: 'gm', statuses: [status] });
+          expect(effects[0].description).toContain('5 尺内盟友可援助结束恐慌');
+          expect(effects[0].description).toContain('此模板可选应用');
+          expect(item.flags.fvttJsonGenerator.conditionLifecycle).toMatchObject({ version: 1, mode: 'gm', statuses: [status] });
+        }
         expect(activity.effects.filter((effect: any) => effect._id === effects[0]._id)).toHaveLength(1);
       }
       const noRecharge = actor.items.find((entry: any) => entry.name === '闪避尖刺');

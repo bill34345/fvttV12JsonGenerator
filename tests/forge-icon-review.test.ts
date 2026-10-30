@@ -43,7 +43,7 @@ describe('Forge existing icon report crosses the result boundary', () => {
     expect(decodeForgeItemResponse(oldItem).ok).toBe(true);
   });
 
-  test('rejects malformed, extended, inconsistent or wrong-target icon reports without changing artifact gates', async () => {
+  test('retains the Actor with specific review diagnostics for malformed, extended, inconsistent or wrong-target icon reports', async () => {
     const original = await actorResponse();
     const changes = [
       (r: any) => { r.iconReview.summary.total++; },
@@ -53,9 +53,13 @@ describe('Forge existing icon report crosses the result boundary', () => {
       (r: any) => { r.target.iconMode = 'off'; },
       (r: any) => { r.artifact.name = 'Changed artifact'; },
     ];
-    for (const change of changes) {
+    for (const [index,change] of changes.entries()) {
       const response = structuredClone(original); change(response.result);
-      expect(decodeForgeActorResponse(response).ok).toBe(false);
+      const decoded=decodeForgeActorResponse(response);expect(decoded.ok,`change ${index}`).toBe(true);
+      if(!decoded.ok||!('result' in decoded.value))throw Error('Missing retained Actor');
+      expect(decoded.value.result.artifact).toEqual(response.result.artifact);
+      expect(decoded.value.result.status).not.toBe('accepted');
+      expect(decoded.value.result.diagnostics).toContainEqual(expect.objectContaining({code:'FORGE_REPORT_INCOMPLETE',message:expect.stringContaining(index===4?'TARGET_MISMATCH':index===5?'ARTIFACT_HASH_MISMATCH':'INVALID_PROJECTION')}));
     }
   });
 

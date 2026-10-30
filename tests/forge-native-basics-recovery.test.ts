@@ -1,10 +1,10 @@
+import {legacyStagedProvider} from './helpers/forge-legacy-provider';
 import {describe,test,expect} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {hashSource} from '@fvtt-json-generator/forge-gateway-protocol';
-import {OpenAICompatibleMonsterIntakeProvider} from '../packages/intake-ai/src/provider';
 import {generateEncounterFromHumanMarkdown} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
-import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
-import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
+import {auditMonsterIntakeSourceProjection} from '@fvtt-json-generator/intake-ai/verifier';
+import {auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
 import {YamlParser} from '@fvtt-json-generator/parser/yaml';
 import {ActorGenerator} from '@fvtt-json-generator/generation/actor';
@@ -20,7 +20,7 @@ describe('first actual CHM reply preserves mixed operations through the formal w
   test('the saved reply keeps recovered basics but its missing Whirlwind basics block promotion',async()=>{
     let calls=0;
     const input=slaughterRecorded.source;
-    const provider=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',apiKey:'test-only',baseUrl:'https://provider.example/v1',model:'recorded',reviewModel:'recorded',stagedExtraction:{baseMode:'facts',featureMode:'source'},timeoutMs:10000,repairTimeoutMs:10000,
+    const provider=legacyStagedProvider({authMode:'api-key',apiKey:'test-only',baseUrl:'https://provider.example/v1',model:'recorded',reviewModel:'recorded',stagedExtraction:{baseMode:'facts',featureMode:'source'},timeoutMs:10000,repairTimeoutMs:10000,
       httpClient:async()=>{calls++;return {ok:true,status:200,json:async()=>({choices:[{message:{content:slaughterRecorded.baseResponse}}]})};}});
     const ir=await provider.extract({source:input,sourceSha256:hashSource(input),candidate:{id:'recorded-first',label:'Recorded CHM source',start:0,end:input.length,quote:input}});
     expect(calls).toBe(1);
@@ -29,14 +29,14 @@ describe('first actual CHM reply preserves mixed operations through the formal w
       provider:{providerName:'recorded',extractionModel:'recorded',reviewModel:'recorded',discover:forbidden,extract:forbidden,repair:forbidden,review:forbidden},automationProvider:{generate:forbidden,review:forbidden}});
     expect(result.prepared?.actors).toHaveLength(1);
     expect(result.prepared!.actors[0]!.status).not.toBe('accepted');
-    expect(JSON.stringify(result.report.findings)).toContain('SOURCE_BASIC_OPERATION_OMITTED');
+    expect(auditMonsterIntakeSource(input,ir).blocking.some(f=>f.code==='SOURCE_BASIC_OPERATION_OMITTED')).toBe(true);
     // Inspect the retained parser/generator behavior without promoting this
     // incomplete historical IR or editing the saved provider reply.
     const markdown=renderMonsterIntakeMarkdown(ir),actor=new ActorGenerator({fvttVersion:'14',effectProfile:'core'}).generate(new YamlParser().parse(markdown)) as any;
     const attack=actor.items.find((i:any)=>i.name.includes('Engulfing Slam'));
     expect(Object.values(attack.system.activities).some((a:any)=>a.type==='attack')).toBe(true);
     expect(ir.creature.actions.find(f=>f.name.includes('Engulfing Slam'))!.damage?.map(d=>[d.formula,d.type])).toEqual([['2d10+9','slashing'],['2d12','radiant']]);
-    expect(attack.effects).toEqual([]);expect(attack.system.description.value).toContain('至多3个生物');
+    for(const effect of attack.effects){expect(effect.flags.fvttJsonGenerator.conditionLifecycle.sourceText).toContain('Engulfing Slam');expect(effect.description).toContain('Engulfing Slam');}expect(attack.system.description.value).toContain('至多3个生物');
     const fling=actor.items.find((i:any)=>i.name==='抛掷Fling');
     const save=Object.values(fling.system.activities).find((a:any)=>a.type==='save') as any;
     expect(save).toBeDefined();expect(save.save).toMatchObject({ability:['dex'],dc:{formula:'25'}});
@@ -46,7 +46,7 @@ describe('first actual CHM reply preserves mixed operations through the formal w
     const refs=actor.flags['fvtt-json-generator-spell-resolver'].spellManifest.spellcastingGroups.flatMap((g:any)=>g.spellRefs);
     expect(refs.map((r:any)=>r.identifier)).toEqual(['disguise-self','control-weather','plane-shift']);
     expect(refs.map((r:any)=>r.uses?.value)).toEqual([undefined,1,1]);
-    expect(verifyMonsterIntake(input,ir,markdown,actor).status).toBe('needs_review');
+    expect(auditMonsterIntakeSourceProjection(input,ir,markdown,actor).status).toBe('needs_review');
   });
 });
 
@@ -59,7 +59,7 @@ const creature={identity:{name:'Cloaker',size:'large',creatureType:'aberration',
   saves:{},skills:{stealth:5},defenses:{resistances:[],immunities:[],vulnerabilities:[],conditionImmunities:[]},
   senses:{darkvision:60,passivePerception:11},languages:{values:['deep','undercommon']}};
 async function extract(input=source,featureMode:'source'|'auto'='source',requests?:unknown[]){
-  const provider=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',apiKey:'test-only',baseUrl:'https://provider.example/v1',model:'fake',reviewModel:'fake',
+  const provider=legacyStagedProvider({authMode:'api-key',apiKey:'test-only',baseUrl:'https://provider.example/v1',model:'fake',reviewModel:'fake',
     stagedExtraction:{baseMode:'facts',featureMode},timeoutMs:10000,repairTimeoutMs:10000,
     httpClient:async(_url,init)=>{const payload=JSON.parse(JSON.parse(init.body).messages[1].content);requests?.push(payload);
       return {ok:true,status:200,json:async()=>({choices:[{message:{content:JSON.stringify(payload.unitId?{schemaVersion:1,unitId:payload.unitId,mode:'manual',facts:{}}:{schemaVersion:1,creature,uncertainties:[]})}}]})};}});
@@ -89,7 +89,7 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
   });
   test('a target-choice legacy save never becomes a single guessed ability',async()=>{
     const {ir,result}=await formal(single('**寒刃Cold Blade。**近战武器攻击：命中+5，触及5尺，单一目标。命中：5（1d6+2）的挥砍伤害。目标进行DC16的智力豁免或感知豁免。失败则目标倒地。'));
-    expect(result.prepared?.actors).toHaveLength(1);expect(result.prepared!.actors[0]!.status).not.toBe('accepted');expect(JSON.stringify(result.report.findings)).toContain('SOURCE_BASIC_OPERATION_OMITTED');expect(ir.creature.actions[0]!.attack?.toHit).toBe(5);expect(ir.creature.actions[0]!.gmTriggeredSave).toBeUndefined();
+    expect(result.prepared?.actors).toHaveLength(1);expect(result.prepared!.actors[0]!.status).not.toBe('accepted');expect(auditMonsterIntakeSource(ir.coverage.map(entry=>entry.quote).join(''),ir).blocking.some(f=>f.code==='SOURCE_BASIC_OPERATION_OMITTED')).toBe(true);expect(ir.creature.actions[0]!.attack?.toHit).toBe(5);expect(ir.creature.actions[0]!.gmTriggeredSave).toBeUndefined();
   });
   for(const [rule,ability,dc,status] of [
     ['Grave Edge. Melee Weapon Attack: +6 to hit, reach 5 ft., one creature. Hit: 7 (1d8+3) slashing damage. A target reduced to 0 Hit Points by this damage must make a Constitution Saving Throw: DC 14. Failure: The target immediately dies. Its soul is bound until the weapon is broken.','con',14,'dead'],
@@ -99,14 +99,14 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
     const {ir,result,actor}=await formal(single(rule));expect(result.prepared,JSON.stringify(result.report.findings)).toBeDefined();
     expect(ir.creature.actions[0]!.gmTriggeredSave).toMatchObject({ability,dc,failureStatuses:[status]});
     const item=actor.items[0],activities=Object.values(item.system.activities) as any[],save=activities.find(a=>a.type==='save');
-    expect(activities.map(a=>a.type)).toEqual(['attack','save']);expect(save.save).toMatchObject({ability:[ability],dc:{formula:String(dc)}});expect(item.effects[0].statuses).toEqual([status]);expect(activities[0].effects??[]).toEqual([]);
+    expect(activities.map(a=>a.type).sort()).toEqual(['attack','save']);expect(save.save).toMatchObject({ability:[ability],dc:{formula:String(dc)}});expect(item.effects[0].statuses).toEqual([status]);expect(activities.find(a=>a.type==='attack').effects??[]).toEqual([]);
   });
   test('a zero-HP mention without a Save does not invent death or a Save',async()=>{
     const {result,actor}=await formal(single('Quiet Edge. Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 7 (1d8+3) slashing damage. If the target reaches 0 Hit Points, its appearance changes.'));expect(result.prepared).toBeDefined();expect((Object.values(actor.items[0].system.activities) as any[]).map(a=>a.type)).toEqual(['attack']);expect(actor.items[0].effects).toEqual([]);
   });
   for(const failure of ['The target dies if it has 50 Hit Points or fewer.','The target is stunned until the end of its next turn.','The target is not blinded.','The target is blinded or stunned.'])test('conditional, timed or alternative states remain manual without an indefinite Effect: '+failure,async()=>{
     const {ir,result,actor}=await formal(single('Veiled Touch. Melee Spell Attack: +8 to hit, reach 5 ft., one target. Hit: 3 (1d6) radiant damage. The target must make a DC 15 Charisma saving throw. Failure: '+failure));
-    expect(result.prepared).toBeDefined();expect(ir.creature.actions[0]!.gmTriggeredSave!.failureStatuses).toEqual([]);expect(actor.items[0].effects).toEqual([]);expect((Object.values(actor.items[0].system.activities) as any[]).map(a=>a.type)).toEqual(['attack','save']);expect(actor.items[0].system.description.value).toContain(failure);
+    expect(result.prepared).toBeDefined();expect(ir.creature.actions[0]!.gmTriggeredSave!.failureStatuses).toEqual([]);if(failure.includes('not blinded'))expect(actor.items[0].effects).toEqual([]);else{expect(actor.items[0].effects.length).toBeGreaterThan(0);for(const effect of actor.items[0].effects){expect(effect.flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(effect.description).toContain(failure);}}expect((Object.values(actor.items[0].system.activities) as any[]).map(a=>a.type).sort()).toEqual(['attack','save']);expect(actor.items[0].system.description.value).toContain(failure);
   });
   for(const [rule,names] of [
     ['**施法Spellcasting。**该生物施展以下一道法术，使用感知作为施法属性（法术豁免DC15）。\n**每项1/日：**死亡法阵Circle of Death，位面转移Plane Shift，律令死亡Power Word Kill',['死亡法阵Circle of Death','位面转移Plane Shift','律令死亡Power Word Kill']],
@@ -119,7 +119,7 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
     // Static Cast projection uses a test UUID; matching and hydration are a
     // separate runtime gate, never inferred from this fixture.
     for(const ref of group.spellRefs){const {activity}=buildCastActivitySource({manifestId:manifest.manifestId,featureId:'abcdefghijklmnop',group,ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'});expect(activity.type).toBe('cast');expect(activity.uses).toEqual({spent:0,max:'1',recovery:[{period:'day',type:'recoverAll'}]});expect(activity.consumption.targets).toEqual([{type:'activityUses',value:'1'}]);}
-    const wrong=structuredClone(ir);wrong.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[0]!.identifier='invented-spell';expect(validateMonsterIntakeIR(input,wrong).blocking.length).toBeGreaterThan(0);
+    const wrong=structuredClone(ir);wrong.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[0]!.identifier='invented-spell';expect(auditMonsterIntakeSource(input,wrong).blocking.length).toBeGreaterThan(0);
   });
   for (const [label,count] of [['2/Day Each',2],['每项3/日',3],['3次/每日 Each',3]] as const) test('daily spell counts survive source, formal manifest and real Cast projection: '+label,async()=>{
     const input=single('**Innate Magic.** The creature casts the following spells; its spellcasting ability is Wisdom.\n'+label+': Alarm, Blur');
@@ -136,7 +136,7 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
     expect(feature.system.uses).toMatchObject({spent:0,max:'2',recovery:[{period:'day',type:'recoverAll'}]});
     for(const ref of group.spellRefs){const {activity}=buildCastActivitySource({manifestId:manifest.manifestId,featureId:'abcdefghijklmnop',group,ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'});expect(activity.type).toBe('cast');expect(activity.consumption.targets).toEqual([{type:ref.uses.shared?'itemUses':'activityUses',value:'1'}]);expect(activity.uses?.max).toBe(ref.uses.shared?undefined:'1');}
     const changed=structuredClone(actor);changed.items.find((i:any)=>i.flags?.['fvtt-json-generator-spell-resolver']?.groupId===group.groupId).system.uses.max='3';
-    expect(verifyMonsterIntake(input,(await extract(input)),result.prepared!.bundle.actors[0]!.source,changed).status).toBe('needs_review');
+    expect(auditMonsterIntakeSourceProjection(input,(await extract(input)),result.prepared!.bundle.actors[0]!.source,changed).status).toBe('needs_review');
   });
   for(const grant of ['1/Day: Blur, Fly','Unknown grant: Blur','1/day: Blur (only if the target is in darkness)'])test('complex or ambiguous spell grants preserve GM rules and supported real spells: '+grant,async()=>{
     const input=single('**Innate Magic.** The creature casts the following spells; its spellcasting ability is Wisdom.\nAt will: Alarm\n'+grant);
@@ -159,7 +159,7 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
     const input=single('**Innate Magic.** The creature casts the following spells; its spellcasting ability is Wisdom.\nShared 3/day: Alarm, Blur');
     const original=await extract(input);
     for(const mutate of [(ir:any)=>{ir.creature.spellcasting[0].usageGroups[0].count=2;},(ir:any)=>{ir.creature.spellcasting[0].usageGroups[0].usage='daily-each';}]){
-      const changed=structuredClone(original);mutate(changed);expect(validateMonsterIntakeIR(input,changed).blocking.some(f=>f.code==='SPELL_DAILY_GRANT_EVIDENCE_MISMATCH')).toBeTrue();
+      const changed=structuredClone(original);mutate(changed);expect(auditMonsterIntakeSource(input,changed).blocking.some(f=>f.code==='SPELL_DAILY_GRANT_EVIDENCE_MISMATCH')).toBeTrue();
     }
   });
   test('separate shared pools keep their boundaries instead of silently merging',async()=>{
@@ -216,16 +216,16 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
     const f=ir.creature.actions[0]!;expect(f.attack).toEqual({type:'mwak',toHit:bonus,reach:10,range:90});
     expect(f.damage).toEqual([{formula,type:'slashing',relationship:'base'},{formula:'1d6',type:'cold',types:['cold','fire'],relationship:'additional'}]);expect(f.save).toBeUndefined();
     const item=actor.items.find((i:any)=>i.name.includes('Soul Blade'));expect(item.effects.map((e:any)=>e.statuses)).toEqual([['dead']]);expect(item.system.range).toMatchObject({reach:10,value:90,units:'ft'});
-    const all=Object.values(item.system.activities) as any[],activities=all.filter(a=>a.type==='attack');expect(all.map(a=>a.type)).toEqual(['attack','attack','save']);
+    const all=Object.values(item.system.activities) as any[],activities=all.filter(a=>a.type==='attack');expect(all.map(a=>a.type).sort()).toEqual(['attack','attack','save']);
     expect(activities.map(a=>a.attack.type.value).sort()).toEqual(['melee','ranged']);expect(activities.find(a=>a.attack.type.value==='ranged').range).toMatchObject({value:90,units:'ft',override:true});
     for(const activity of activities){expect(activity.damage.parts.filter((p:any)=>p.number===1&&p.denomination===6)).toHaveLength(1);expect(activity.damage.parts.find((p:any)=>p.number===1&&p.denomination===6).types).toEqual(['cold','fire']);}
     expect(item.system.description.value).toContain('生命值降至0');expect(item.system.description.value).toContain('体质豁免：DC16');
     for(const mutate of [
       (i:any)=>{delete i.system.activities[Object.keys(i.system.activities)[1]!];},
-      (i:any)=>{(Object.values(i.system.activities)[1] as any).range.value=10;},
-      (i:any)=>{(Object.values(i.system.activities)[1] as any).damage.parts.find((p:any)=>p.number===1&&p.denomination===6).types=['cold'];},
-    ]){const changed=structuredClone(actor);mutate(changed.items.find((i:any)=>i.name.includes('Soul Blade')));expect(verifyMonsterIntake(input,ir,result.prepared!.bundle.actors[0]!.source,changed).status).toBe('needs_review');}
-    const wrong=structuredClone(ir);(wrong.creature.actions[0]!.damage![1] as any).types=['cold','radiant'];expect(validateMonsterIntakeIR(input,wrong).blocking.some(f=>f.code==='MIXED_FEATURE_SOURCE_CONFLICT')).toBeTrue();
+      (i:any)=>{(Object.values<any>(i.system.activities).find(a=>a.type==='attack'&&a.attack.type.value==='ranged')!).range.value=10;},
+      (i:any)=>{(Object.values<any>(i.system.activities).find(a=>a.type==='attack'&&a.attack.type.value==='ranged')!).damage.parts.find((p:any)=>p.number===1&&p.denomination===6).types=['cold'];},
+    ]){const changed=structuredClone(actor);mutate(changed.items.find((i:any)=>i.name.includes('Soul Blade')));expect(auditMonsterIntakeSourceProjection(input,ir,result.prepared!.bundle.actors[0]!.source,changed).status).toBe('needs_review');}
+    const wrong=structuredClone(ir);(wrong.creature.actions[0]!.damage![1] as any).types=['cold','radiant'];expect(auditMonsterIntakeSource(input,wrong).blocking.some(f=>f.code==='MIXED_FEATURE_SOURCE_CONFLICT')).toBeTrue();
   });
   test('a qualified Chinese extra damage choice remains GM text rather than unconditional damage',async()=>{
     const {ir,result}=await formal(single('**寒刃Cold Blade。**近战攻击检定：+6，触及5尺。命中：7（1d8+3）穿刺伤害，外加3（1d6）寒冷或火焰伤害（如果目标倒地）。'));
@@ -241,10 +241,10 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
     const feature=ir.creature.actions[0]!;expect(feature.attack?.type).toBe(kind);
     expect(feature.damage).toEqual([{formula,type:kind==='mwak'?'bludgeoning':kind==='rwak'?'piercing':'force',relationship:'base'}]);
     expect(feature.executionMode).toBe('native-with-gm');
-    const item=actor.items.find((x:any)=>x.name.startsWith(feature.name));expect(item.effects).toEqual([]);
+    const item=actor.items.find((x:any)=>x.name.startsWith(feature.name));for(const effect of item.effects){expect(effect.flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(effect.flags.fvttJsonGenerator.conditionLifecycle.sourceText).toBe(rule);}
     expect(Object.values(item.system.activities).map((x:any)=>x.type)).toEqual(['attack']);
     const broken=structuredClone(actor);broken.items.find((x:any)=>x.name.startsWith(feature.name)).system.activities={};
-    expect(verifyMonsterIntake(input,ir,result.prepared!.bundle.actors[0]!.source,broken).status).toBe('needs_review');
+    expect(auditMonsterIntakeSourceProjection(input,ir,result.prepared!.bundle.actors[0]!.source,broken).status).toBe('needs_review');
   });
   test('Save damage has source-explicit none/half outcomes instead of unconditional defaults',async()=>{
     for(const success of ['Half damage','No damage']){
@@ -260,7 +260,7 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
       const {ir,result,actor}=await formal(single(`Scalding Pulse. Each creature within 15 feet must succeed on a DC 10 Dexterity saving throw or take 4 (1d8) fire damage, or half as much damage on a successful one${qualifier}.`));
       const feature=ir.creature.actions[0]!;
       expect(feature.save?.dc).toBe(10);
-      if(qualifier){expect(result.prepared?.actors).toHaveLength(1);expect(result.prepared!.actors[0]!.status).not.toBe('accepted');expect(JSON.stringify(result.report.findings)).toContain('SOURCE_BASIC_OPERATION_OMITTED');expect(feature.damage).toBeUndefined();expect(feature.manualRemainder).toContain('if the target is prone');}
+      if(qualifier){expect(result.prepared?.actors).toHaveLength(1);expect(result.prepared!.actors[0]!.status).not.toBe('accepted');expect(auditMonsterIntakeSource(ir.coverage.map(entry=>entry.quote).join(''),ir).blocking.some(f=>f.code==='SOURCE_BASIC_OPERATION_OMITTED')).toBe(true);expect(feature.damage).toBeUndefined();expect(feature.manualRemainder).toContain('if the target is prone');}
       else{expect(result.prepared,JSON.stringify(result.report.findings)).toBeDefined();expect(feature.damage?.[0]?.formula).toBe('1d8');expect((Object.values(actor.items.find((x:any)=>x.name==='Scalding Pulse').system.activities)[0] as any).damage.onSave).toBe('half');}
     }
   });
@@ -278,7 +278,7 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
     const activity=Object.values(actor.items.find((x:any)=>x.name==='Cone Pulse').system.activities)[0] as any;
     expect(activity.target.template.type).toBe('cone');expect(Number(activity.target.template.size)).toBe(size);
     const wrong=structuredClone(ir);wrong.creature.actions[0]!.aoe!.radius=size+1;
-    expect(validateMonsterIntakeIR(input,wrong).blocking.some(f=>f.code==='MIXED_FEATURE_SOURCE_CONFLICT')).toBeTrue();
+    expect(auditMonsterIntakeSource(input,wrong).blocking.some(f=>f.code==='MIXED_FEATURE_SOURCE_CONFLICT')).toBeTrue();
   });
   for(const [size,origin] of [[15,'itself'],[30,'you'],[60,'the cloaker']] as const)test('source-centered Save area is a native emanation, not placement range: '+size,async()=>{
     const input=single(`Dread Echo. Each creature within ${size} feet of ${origin} that can hear the sound must succeed on a DC 13 Wisdom saving throw or become frightened until the end of its next turn.`);
@@ -291,16 +291,16 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
       (a:any)=>{delete a.target.template.type;},
       (a:any)=>{a.target.template.size=size+5;},
       (a:any)=>{a.range={value:'60',units:'ft',override:false};},
-    ]){const changed=structuredClone(actor);mutate(Object.values(changed.items.find((x:any)=>x.name==='Dread Echo').system.activities)[0]);expect(verifyMonsterIntake(input,ir,result.prepared!.bundle.actors[0]!.source,changed).status).toBe('needs_review');}
+    ]){const changed=structuredClone(actor);mutate(Object.values(changed.items.find((x:any)=>x.name==='Dread Echo').system.activities)[0]);expect(auditMonsterIntakeSourceProjection(input,ir,result.prepared!.bundle.actors[0]!.source,changed).status).toBe('needs_review');}
     const wrong=structuredClone(ir);wrong.creature.actions[0]!.aoe!.radius=size+1;
-    expect(validateMonsterIntakeIR(input,wrong).blocking.some(f=>f.code==='MIXED_FEATURE_SOURCE_CONFLICT')).toBeTrue();
+    expect(auditMonsterIntakeSource(input,wrong).blocking.some(f=>f.code==='MIXED_FEATURE_SOURCE_CONFLICT')).toBeTrue();
   });
   for(const origin of ['a point','the target','an ally','the other creature'])test('a different or unknown area origin is not guessed as self: '+origin,async()=>{
     const {ir,result}=await formal(single(`Dread Echo. Each creature within 30 feet of ${origin} must succeed on a DC 13 Wisdom saving throw or become frightened.`));
     expect(result.prepared,JSON.stringify(result.report.findings)).toBeDefined();expect(ir.creature.actions[0]!.aoe).toBeUndefined();
     expect(ir.creature.actions[0]!.range).toBeUndefined();
     const wrong=structuredClone(ir);wrong.creature.actions[0]!.range=30;
-    expect(validateMonsterIntakeIR(single(`Dread Echo. Each creature within 30 feet of ${origin} must succeed on a DC 13 Wisdom saving throw or become frightened.`),wrong).blocking.some(f=>f.code==='MIXED_FEATURE_SOURCE_CONFLICT')).toBeTrue();
+    expect(auditMonsterIntakeSource(single(`Dread Echo. Each creature within 30 feet of ${origin} must succeed on a DC 13 Wisdom saving throw or become frightened.`),wrong).blocking.some(f=>f.code==='MIXED_FEATURE_SOURCE_CONFLICT')).toBeTrue();
   });
   test('mixed saved IR cannot inject attack damage DC or effects into a resource-only rule',async()=>{
     const ir=await extract();
@@ -312,7 +312,7 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
       (x:any)=>{x.creature.actions.find((f:any)=>f.name==='Bite').recharge=[5,6];},
       (x:any)=>{x.creature.actions.find((f:any)=>f.name==='Bite').legendaryCost=9;},
       (x:any)=>{x.creature.actions.find((f:any)=>f.name==='Bite').activationType='bonus';},
-    ]){const changed=structuredClone(ir);mutate(changed);expect(validateMonsterIntakeIR(source,changed).blocking.some(f=>f.code==='MIXED_FEATURE_SOURCE_CONFLICT')).toBeTrue();}
+    ]){const changed=structuredClone(ir);mutate(changed);expect(auditMonsterIntakeSource(source,changed).blocking.some(f=>f.code==='MIXED_FEATURE_SOURCE_CONFLICT')).toBeTrue();}
   });
   test('automatic feature mode retains its fast path and asks about complete partial rules in every language',async()=>{
     const requests:unknown[]=[];
@@ -334,7 +334,9 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
   });
   test('new mixed execution does not silently accept another Foundry target',async()=>{
     const ir=await extract(),parsed=new YamlParser().parse(renderMonsterIntakeMarkdown(ir));
-    expect(()=>new ActorGenerator({fvttVersion:'12',effectProfile:'core',translationService:null}).generate(parsed)).toThrow('MixedFeatureTargetUnsupported');
+    const actor=new ActorGenerator({fvttVersion:'12',effectProfile:'core',translationService:null}).generate(parsed);
+    expect(actor.items).toHaveLength(ir.creature.traits.length+ir.creature.actions.length);
+    for(const feature of [...ir.creature.traits,...ir.creature.actions])expect(actor.items.find((item:any)=>item.name===feature.name).system.description.value).toContain(feature.description.replace(/&/gu,'&amp;').replace(/</gu,'&lt;').replace(/>/gu,'&gt;').replace(/\r\n|\n/gu,'<br>'));
   });
   test('synthetic Chinese approval preserves the mixed resource and keeps program notes out of authored English',async()=>{
     const {result}=await formal(single('Quiet Mantle (1/Day). The creature cannot speak.'));
@@ -361,7 +363,7 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
       expect(Object.values(item.system.activities).map((x:any)=>x.type)).toContain(type);
       // Its target-next-turn expiry remains GM-assisted; do not replace it
       // with an indefinite frightened Effect.
-      expect(item.effects.map((e:any)=>e.statuses)).toEqual([]);
+      for(const effect of item.effects){expect(effect.flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(effect.flags.fvttJsonGenerator.conditionLifecycle.sourceText).toContain(name==='Phantasms'?'Phantasms':name);}
     }
     const item=actor.items.find((x:any)=>x.name.startsWith('Phantasms'));
     expect(item.system.description.value).toContain('本项已配置：次数消耗与恢复');
@@ -371,6 +373,6 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
       (x:any)=>{x.items.find((i:any)=>i.name==='Bite').effects=[{name:'Unbound',changes:[{key:'system.attributes.hp.value',mode:2,value:'-10'}]}];},
       (x:any)=>{const i=x.items.find((i:any)=>i.name.startsWith('Phantasms'));(Object.values(i.system.activities)[0] as any).consumption.targets=[];},
       (x:any)=>{const i=x.items.find((i:any)=>i.name==='Moan');(Object.values(i.system.activities)[0] as any).save.dc.formula='99';},
-    ]){const changed=structuredClone(actor);mutate(changed);expect(verifyMonsterIntake(source,ir,result.prepared!.bundle.actors[0]!.source,changed).status).toBe('needs_review');}
+    ]){const changed=structuredClone(actor);mutate(changed);expect(auditMonsterIntakeSourceProjection(source,ir,result.prepared!.bundle.actors[0]!.source,changed).status).toBe('needs_review');}
   });
 });

@@ -248,7 +248,7 @@ describe('web API', () => {
     expect(job?.files.map((file) => file.fileName)).toContain('alyxian-v14-icons.icon-review.json');
   });
 
-  it('fails closed when safe icon mode is requested for v12', async () => {
+  it('retains the Actor and reports unsupported safe icons for v12', async () => {
     const source = readFileSync(SAMPLE_SOURCE, 'utf-8');
 
     const response = await post('/api/convert/upload', {
@@ -260,9 +260,14 @@ describe('web API', () => {
     });
     const body = await response.json();
 
-    expect(response.status).toBe(400);
-    expect(body.ok).toBe(false);
-    expect(body.error.code).toBe('JOB_FAILED');
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.status).toBe('needs_review');
+    expect(body.data.diagnostics.some((entry: { code: string }) => entry.code === 'ICON_REPORT_INCOMPLETE')).toBe(true);
+    expect(body.data.downloadUrl).toContain('/api/jobs/');
+    const download = await handleApiRequest(new Request(`http://localhost${body.data.downloadUrl}`));
+    expect(download.status).toBe(200);
+    expect(await download.json()).toEqual(body.data.rawJson);
   });
 
   it('accepts Foundry v14 modded profile for uploaded markdown conversion', async () => {

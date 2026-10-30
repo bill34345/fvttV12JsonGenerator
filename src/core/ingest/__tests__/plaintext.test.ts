@@ -212,7 +212,7 @@ describe('PlainTextIngestionWorkflow', () => {
     expect(parsed.actions?.length).toBeGreaterThan(0);
     expect(parsed.bonus_actions?.length).toBeGreaterThan(0);
     expect(parsed.reactions?.length).toBeGreaterThan(0);
-    expect(actor.items.some((item: { name: string }) => item.name.includes('(Swallow)'))).toBe(true);
+    expect(actor.items.some((item: { name: string }) => item.name.endsWith(' Swallow'))).toBe(true);
     expect(actor.items.some((item: any) =>
       Object.values(item.system?.activities ?? {})
         .some((activity: any) => activity.activation?.type === 'reaction'))).toBe(true);
@@ -270,9 +270,9 @@ describe('PlainTextIngestionWorkflow', () => {
     const { actor: sharkActor } = await generateActorFromBlock('Corrupted Giant Shark');
     const { actor: embraceActor } = await generateActorFromBlock("Death's Embrace");
 
-    const screech = bloodfinActor.items.find((item: { name: string }) => item.name.includes('(Pelagic Screech)'));
-    const ram = sharkActor.items.find((item: { name: string }) => item.name.includes('(Ram)'));
-    const bodyShield = embraceActor.items.find((item: { name: string }) => item.name.includes('(Body Shield)'));
+    const screech = bloodfinActor.items.find((item: { name: string }) => item.name.endsWith(' Pelagic Screech'));
+    const ram = sharkActor.items.find((item: { name: string }) => item.name.endsWith(' Ram'));
+    const bodyShield = embraceActor.items.find((item: { name: string }) => item.name.endsWith(' Body Shield'));
 
     expect(screech?.system?.uses).toEqual(
       expect.objectContaining({
@@ -405,7 +405,7 @@ _大型异怪 (Large Aberration)，混乱邪恶 (Chaotic Evil)_
     );
     expect(actor.system.traits.languages.value).toContain('deep');
 
-    const claw = actor.items.find((item: any) => item.name === '爪击 (Claw)');
+    const claw = actor.items.find((item: any) => item.name === '爪击 Claw');
     const clawActivities = Object.values(claw?.system?.activities ?? {}) as any[];
     const clawAttack = clawActivities.find((activity) => activity.type === 'attack');
     expect(clawAttack).toBeDefined();
@@ -427,7 +427,7 @@ _大型异怪 (Large Aberration)，混乱邪恶 (Chaotic Evil)_
       ]),
     );
 
-    const barb = actor.items.find((item: any) => item.name === '尾刺 (Barb)');
+    const barb = actor.items.find((item: any) => item.name === '尾刺 Barb');
     const barbActivities = Object.values(barb?.system?.activities ?? {}) as any[];
     const barbAttack = barbActivities.find((activity) => activity.type === 'attack');
     expect(barbAttack).toBeDefined();
@@ -445,7 +445,7 @@ _大型异怪 (Large Aberration)，混乱邪恶 (Chaotic Evil)_
       ]),
     );
 
-    const tickle = actor.items.find((item: any) => item.name === '瘙痒 (Tickle)');
+    const tickle = actor.items.find((item: any) => item.name === '瘙痒 Tickle');
     const tickleActivities = Object.values(tickle?.system?.activities ?? {}) as any[];
     const tickleSave = tickleActivities.find((activity) => activity.type === 'save');
     expect(tickleSave).toBeDefined();
@@ -490,7 +490,7 @@ _中型异怪 (Medium Aberration)，守序邪恶 (Lawful Evil)_
     );
   });
 
-  it('preserves live-crawl statlines and avoids inventing conditional mechanics', async () => {
+  it('preserves live-crawl statlines and keeps conditional status templates GM-owned', async () => {
     const gremishka = await generateLiveSemanticActor('Gremishka');
     expect(gremishka.actor.system.traits.languages).toEqual({
       value: ['common'],
@@ -528,10 +528,21 @@ _中型异怪 (Medium Aberration)，守序邪恶 (Lawful Evil)_
     expect(petrifyingHead.actor.system.details.cr).toBe(0.5);
     expect(petrifyingHead.actor.system.traits.dr.value).toEqual(['necrotic']);
     const petrifyingBite = petrifyingHead.actor.items.find((item: any) => item.name.includes('Petrifying Bite'));
-    expect(petrifyingBite?.effects ?? []).toEqual([]);
-    const linkedEffects = Object.values(petrifyingBite?.system?.activities ?? {})
-      .flatMap((activity: any) => activity.effects ?? []);
-    expect(linkedEffects).toEqual([]);
+    expect(petrifyingBite?.effects).toHaveLength(2);
+    const activities = Object.values(petrifyingBite?.system?.activities ?? {}) as any[];
+    expect(activities.some((activity) => activity.type === 'attack')).toBe(true);
+    const linkedEffects = activities.flatMap((activity) => activity.effects ?? []);
+    for (const [status, stage] of [['restrained', '首次失败'], ['petrified', '再次失败']] as const) {
+      const effect = petrifyingBite.effects.find((candidate: any) => candidate.statuses?.includes(status));
+      expect(effect?.flags?.fvttJsonGenerator?.conditionLifecycle).toEqual(expect.objectContaining({ mode: 'gm', staged: true }));
+      expect(effect?.flags?.fvttJsonGenerator?.conditionLifecycle?.condition).toContain(stage);
+      expect(effect?.description).toContain('分阶段结果由DM选择此模板应用');
+      expect(effect?.description).toContain('体质豁免：DC11');
+      expect(effect?.description).toContain('持续10分钟');
+      expect(linkedEffects).toContainEqual({ _id: effect._id });
+    }
+    expect(petrifyingBite.effects.find((effect: any) => effect.statuses?.includes('petrified'))?.statuses)
+      .toEqual(['petrified', 'incapacitated']);
     expect(petrifyingBite?.system?.description?.value).toContain('再次失败');
   });
 });

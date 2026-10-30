@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
-import { validateMonsterIntakeIR } from '@fvtt-json-generator/intake-ai/validator';
+import { auditMonsterIntakeSource } from '@fvtt-json-generator/intake-ai/validator';
 import { renderMonsterIntakeMarkdown } from '@fvtt-json-generator/intake-ai/renderer';
 import { buildForgeActorRequest, convertFinalActorSource } from '@fvtt-json-generator/forge-browser-runtime';
 import { buildValidLurkerIr, LURKER_SOURCE } from '../src/core/intake/__tests__/fixtures/lurker';
@@ -29,7 +29,7 @@ function fixture(quote = `${ATTACK} ${REPEAT}`) {
 }
 
 function findings(source: string, ir: ReturnType<typeof fixture>['ir']) {
-  return validateMonsterIntakeIR(source, ir).findings.map(finding => ({ code: finding.code, path: finding.path }));
+  return auditMonsterIntakeSource(source, ir).findings.map(finding => ({ code: finding.code, path: finding.path }));
 }
 
 describe('attack repeat-save source slots', () => {
@@ -44,6 +44,7 @@ describe('attack repeat-save source slots', () => {
   test('corrected IR keeps the repeat literal and formally projects the attack', async () => {
     const { source, ir, path, feature } = fixture();
     delete feature.save;
+    feature.appliedConditions![0]!.statuses=['blinded'];
     delete feature.appliedConditions![0]!.escapeDc;
     ir.claims = ir.claims.filter(claim => !claim.path.startsWith(`${path}/save/`));
     expect(feature.description).toContain(REPEAT);
@@ -55,7 +56,7 @@ describe('attack repeat-save source slots', () => {
     const response = await convertFinalActorSource(buildForgeActorRequest({ content: rendered,
       displayName: 'Repeat save source projection', requestId: 'repeat-save-source', fvttVersion: '14.364', systemVersion: '5.3.3' }));
     if (!('result' in response)) throw Error('Missing formal Actor result');
-    if (response.result.status === 'failed') throw Error('Formal Actor generation failed');
+    if (response.result.status === 'failed') throw Error(JSON.stringify(response.result.diagnostics));
     expect(response.result.status).not.toBe('failed');
     expect(response.result.diagnostics.some(diagnostic => diagnostic.code === 'GEN_MECHANIC_NOT_PROJECTED')).toBe(false);
     const items = response.result.artifact?.items;

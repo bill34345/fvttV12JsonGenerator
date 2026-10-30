@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { appendFile, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { selectSourceContractScope } from './ciSourceContracts';
 
 // CLI integration and the Session Monitor build run in their own public CI steps.
@@ -49,6 +49,32 @@ export async function runCoverageProcess(command: string, args: string[], timeou
   });
 }
 
+export async function runCoverageInventory(files: string[], directory: string, testNamePattern: string): Promise<void> {
+  const args = [
+    'test', '--coverage', '--coverage-reporter=lcov', `--coverage-dir=${directory}`, '--max-concurrency=1',
+    '--test-name-pattern', testNamePattern,
+  ];
+  let paths = files.map(file => resolve(file));
+  let argumentRoot: string | undefined;
+  try {
+    // Windows limits the whole command line to 32767 characters. Bun resolves
+    // file symlinks before loading, preserving imports, per-file hooks and LCOV paths.
+    if ([process.execPath, ...args, ...paths].join(' ').length > 30_000) {
+      await mkdir('coverage', { recursive: true });
+      const aliases = await mkdtemp(join('coverage', 'argv-'));
+      argumentRoot = aliases;
+      paths = await Promise.all(paths.map(async (file, index) => {
+        const alias = join(aliases, `${index}.test.ts`);
+        await symlink(file, alias, 'file');
+        return `./${alias.replaceAll('\\', '/')}`;
+      }));
+    }
+    await runCoverageProcess(process.execPath, [...args, ...paths], 600_000);
+  } finally {
+    if (argumentRoot) await rm(argumentRoot, { recursive: true });
+  }
+}
+
 export async function runCoverageShards(): Promise<void> {
   const discovered = spawnSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], {
     cwd: process.cwd(), encoding: 'utf8', timeout: 10_000, maxBuffer: 16 * 1024 * 1024, windowsHide: true,
@@ -84,12 +110,7 @@ export async function runCoverageShards(): Promise<void> {
     for (const [index, files] of shards.entries()) {
       const directory = join(evidenceRoot, String(index + 1));
       console.log(`Coverage shard ${index + 1}/${shards.length}: ${files.length} files, starting ${files[0]}`);
-      await runCoverageProcess(process.execPath, [
-        'test', '--coverage', '--coverage-reporter=lcov', `--coverage-dir=${directory}`, '--max-concurrency=1',
-        '--test-name-pattern', scope.testNamePattern, ...files.map(file => `./${file}`),
-      // The 443-file integration inventory reached its final file at 450s.
-      // Keep one process and allow a bounded margin for report finalization.
-      ], 600_000);
+      await runCoverageInventory(files, directory, scope.testNamePattern);
       report = await readFile(join(directory, 'lcov.info'), 'utf8');
     }
     await writeFile('coverage/lcov.info', report);

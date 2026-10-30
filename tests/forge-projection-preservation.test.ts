@@ -142,9 +142,10 @@ describe('literal conditional and replacement damage projection', () => {
   const primary = (actor: any): any => Object.values(probe(actor).system.activities).find((activity: any) => !activity.flags?.fvttJsonGenerator?.literalDamage);
   const codes = (f: Awaited<ReturnType<typeof generated>>, actor = f.actor) => verifyMonsterIntake(RAT_WARLOCK_SOURCE, f.ir, f.markdown, actor).findings.map(finding => finding.code);
 
-  test('all-deferred damage is accepted only as separate GM helpers rather than an unconditional primary action', async () => {
+  test('all-deferred damage keeps an action carrier and separate GM helpers without an unconditional primary roll', async () => {
     const f = await generated(false);
-    expect(primary(f.actor)).toBeUndefined();
+    expect(primary(f.actor)).toMatchObject({type:'utility',activation:{type:'action'}});
+    expect(primary(f.actor).damage).toBeUndefined();
     expect(helpers(f.actor)).toHaveLength(2);
     expect(codes(f)).toEqual([]);
     const changed = structuredClone(f.actor);
@@ -153,6 +154,10 @@ describe('literal conditional and replacement damage projection', () => {
     const missing = structuredClone(f.actor), id = helpers(missing)[0]._id;
     delete probe(missing).system.activities[id];
     expect(codes(f, missing)).toContain('ACTOR_DAMAGE_HELPER_IDENTITY_DRIFT');
+    const noCarrier=structuredClone(f.actor),carrierId=primary(noCarrier)._id;delete probe(noCarrier).system.activities[carrierId];
+    expect(codes(f,noCarrier)).toContain('ACTOR_DAMAGE_ACTIVITY_COUNT_DRIFT');
+    const changedTiming=structuredClone(f.actor);primary(changedTiming).activation.type='bonus';
+    expect(codes(f,changedTiming)).toContain('ACTOR_ACTIVATION_DRIFT');
   });
 
   test('primary and both helper relationships retain independent complete rolls and consume the parent only once', async () => {

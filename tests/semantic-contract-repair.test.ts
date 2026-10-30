@@ -129,6 +129,8 @@ describe('native status display identity', () => {
     expect(localizedEffect.name).toBe('受擒 Grappled');
     const unchangedShape = structuredClone(localizedEffect);
     unchangedShape.name = effect.name;
+    expect(unchangedShape.description).toBe(effect.description.replace(/Grappled/gu, '受擒'));
+    unchangedShape.description = effect.description;
     expect(unchangedShape).toEqual(effect);
   });
   test('Item generation passes the target to native status titles and keeps v12 unchanged', async () => {

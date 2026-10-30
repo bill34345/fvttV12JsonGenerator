@@ -15,12 +15,25 @@ function keyFor(internalKey: string): string {
 describe('YamlParser', () => {
   const parser = new YamlParser();
 
-  it.each(['false', 'null', 'literal-v2', '{}', '[]'])('rejects invalid canonical biography mode %s', (value) => {
-    expect(() => parser.parse(`名称: Literal\nintake-biography-mode: ${value}\n`)).toThrow('InvalidIntakeBiographyMode');
+  it.each([
+    ['false', false], ['null', null], ['literal-v2', 'literal-v2'], ['{}', {}], ['[]', []],
+  ])('retains the Actor and reports invalid canonical biography mode %s', (yamlValue, value) => {
+    const parsed = parser.parse(`名称: Literal\n传记: Original biography.\nintake-biography-mode: ${yamlValue}\n`);
+
+    expect(parsed.name).toBe('Literal');
+    expect(parsed.details.biography).toContain('Original biography.');
+    expect(parsed.candidateReview?.findings).toContainEqual(expect.objectContaining({
+      code: 'FIELD_PROJECTION_INCOMPLETE', path: 'intake-biography-mode',
+    }));
+    expect(parsed.candidateReview?.proposal).toEqual(expect.objectContaining({ field: 'intake-biography-mode', value }));
   });
 
-  it('rejects canonical literal mode on mixed body content instead of silently interpreting it', () => {
-    expect(() => parser.parse('---\n名称: Literal\nintake-biography-mode: literal-v1\n---\n# Actions\nExtra rule.')).toThrow('InvalidIntakeBiographyMode');
+  it('retains source-authored body actions alongside canonical literal biography mode', () => {
+    const parsed = parser.parse('---\n名称: Literal\nintake-biography-mode: literal-v1\n---\n# Actions\nExtra rule.');
+
+    expect(parsed.name).toBe('Literal');
+    expect(parsed.biographyMode).toBe('literal');
+    expect(parsed.actions).toEqual(['Extra rule.']);
   });
 
   it.each(['\n','\r\n'])('keeps authored biography and program notes separate with %j line endings', (eol) => {
@@ -40,18 +53,29 @@ describe('YamlParser', () => {
     {version:1,sourceLength:1,programNotes:['Program.']},
     {version:1,sourceLength:7,programNotes:[{text:'Program.'}]},
     {version:1,sourceLength:7,programNotes:['Program.'],unexpected:true},
-  ])('rejects inconsistent or unsupported biography provenance %j', (presentation) => {
-    expect(() => parser.parse(['名称: Binder','intake-biography-mode: literal-v1',
+  ])('retains authored biography and reports inconsistent or unsupported provenance %j', (presentation) => {
+    const parsed = parser.parse(['名称: Binder','intake-biography-mode: literal-v1',
       '传记: "Author.\\n\\nProgram."',
-      'intake-biography-presentation: ' + JSON.stringify(presentation)].join('\n'))).toThrow();
+      'intake-biography-presentation: ' + JSON.stringify(presentation)].join('\n'));
+
+    expect(parsed.name).toBe('Binder');
+    expect(parsed.details.biography).toStartWith('Author.\n\nProgram.');
+    expect(parsed.biographyPresentation).toBeUndefined();
+    expect(parsed.candidateReview?.findings).toContainEqual(expect.objectContaining({
+      code: 'FIELD_PROJECTION_INCOMPLETE', path: 'intake-biography-presentation',
+    }));
+    expect(parsed.candidateReview?.proposal).toEqual(expect.objectContaining({
+      field: 'intake-biography-presentation', value: presentation,
+    }));
   });
 
   it('does not treat ordinary authored annotation-like prose as program content', () => {
     const parsed = parser.parse('名称: Binder\n传记: "Author. 护甲等级：14。"');
     expect(parsed.details.biography).toBe('Author. 护甲等级：14。');
     expect(parsed.biographyPresentation).toBeUndefined();
-    expect(() => parser.parse('名称: Binder\n传记: Author.\nintake-biography-presentation: {version: 1, sourceLength: 7, programNotes: []}'))
-      .toThrow('literal mode required');
+    const explicitPresentation = parser.parse('名称: Binder\n传记: Author.\nintake-biography-presentation: {version: 1, sourceLength: 7, programNotes: []}');
+    expect(explicitPresentation.details.biography).toBe('Author.');
+    expect(explicitPresentation.biographyPresentation).toEqual({ version: 1, sourceText: 'Author.', programNotes: [] });
   });
 
   it('should parse valid NPC YAML', () => {
@@ -130,12 +154,18 @@ Slithering Bloodfin can take 3 legendary actions.
     expect(result.attributes.legact).toEqual({ value: 3, max: 3 });
   });
 
-  it('should throw on unknown field', () => {
+  it('retains unknown fields with a diagnostic and keeps the Actor', () => {
     const yaml = `
 ${keyFor('name')}: Test
 UnknownField: 123
 `;
-    expect(() => parser.parse(yaml)).toThrow('InvalidField');
+    const parsed = parser.parse(yaml);
+    expect(parsed.name).toBe('Test');
+    expect(parsed.candidateReview?.findings).toContainEqual(expect.objectContaining({
+      code: 'FIELD_PROJECTION_INCOMPLETE', path: 'UnknownField',
+    }));
+    expect(parsed.candidateReview?.proposal).toEqual(expect.objectContaining({ field: 'UnknownField', value: 123 }));
+    expect(parsed.details.biography).toContain('UnknownField：123');
   });
 
   it('should preserve exact hit point values for plain numeric strings', () => {
@@ -257,11 +287,20 @@ ${keyFor('cr')}: "1/4 (50 XP)"
     }
   });
 
-  it('fails closed when the portable manifest has structurally invalid evidence', () => {
+  it('retains spell identity and reports structurally invalid portable manifest evidence', () => {
     const markdown = readFileSync('src/core/parser/__tests__/fixtures/yaml-spell-manifest.md', 'utf-8')
       .replace('end: 10', 'end: 11');
 
-    expect(() => parser.parse(markdown)).toThrow('INVALID_EVIDENCE_QUOTE_LENGTH');
+    const parsed = parser.parse(markdown);
+    const ref = parsed.spellManifest?.spellcastingGroups[0]?.spellRefs[0];
+    expect(ref).toEqual(expect.objectContaining({ refId: 'mage-armor', englishName: 'Mage Armor', evidence: [] }));
+    expect(parsed.structuredActions?.['特性']?.[1]?.spellcastingFeatureKey).toBe('innate-wisdom-feature');
+    expect(parsed.candidateReview?.findings).toContainEqual(expect.objectContaining({
+      code: 'FIELD_PROJECTION_INCOMPLETE', path: '/spellcastingGroups/0/spellRefs/0/evidence/0',
+    }));
+    expect(parsed.candidateReview?.proposal).toEqual(expect.objectContaining({
+      value: { start: 0, end: 11, quote: 'Mage Armor' },
+    }));
   });
 
   it.each([
@@ -272,22 +311,40 @@ ${keyFor('cr')}: "1/4 (50 XP)"
       .replace('start: 0', 'start: 9007199254740992')
       .replace('end: 10', 'end: 9007199254740992')
       .replace('quote: Mage Armor', "quote: ''")],
-  ])('fails closed for %s at the structure-only boundary', (_label, mutate) => {
+  ])('retains the spell and reports %s at the structure-only boundary', (_label, mutate) => {
     const markdown = mutate(readFileSync('src/core/parser/__tests__/fixtures/yaml-spell-manifest.md', 'utf-8'));
 
-    expect(() => parser.parse(markdown)).toThrow('INVALID_EVIDENCE');
+    const parsed = parser.parse(markdown);
+    expect(parsed.name).toBe('Portable Caster');
+    expect(parsed.spellManifest?.spellcastingGroups[0]?.spellRefs[0]).toEqual(expect.objectContaining({
+      refId: 'mage-armor', englishName: 'Mage Armor', evidence: [],
+    }));
+    expect(parsed.candidateReview?.findings).toContainEqual(expect.objectContaining({
+      code: 'FIELD_PROJECTION_INCOMPLETE', path: '/spellcastingGroups/0/spellRefs/0/evidence/0',
+    }));
+    expect(parsed.candidateReview?.proposal).toEqual(expect.objectContaining({
+      field: '/spellcastingGroups/0/spellRefs/0/evidence/0',
+      value: expect.objectContaining({ quote: '' }),
+    }));
   });
 
   it.each([
-    ['an unsupported mythic section', (markdown: string) => markdown.replace('特性:', '神话动作:'), 'InvalidSpellcastingFeatureLinkSection'],
-    ['an unsupported special activation', (markdown: string) => markdown.replace(
+    ['a mythic section', (markdown: string) => markdown.replace('特性:', '神话动作:'), '神话动作', 'legendary'],
+    ['an explicit special activation', (markdown: string) => markdown.replace(
       'spellcastingFeatureKey: innate-wisdom-feature',
       'spellcastingFeatureKey: innate-wisdom-feature\n    activationType: special',
-    ), 'InvalidSpellcastingFeatureActivation'],
-  ])('rejects spellcasting linkage on %s', (_label, mutate, code) => {
+    ), '特性', 'special'],
+  ] as const)('retains source spellcasting linkage on %s', (_label, mutate, section, activation) => {
     const markdown = mutate(readFileSync('src/core/parser/__tests__/fixtures/yaml-spell-manifest.md', 'utf-8'));
 
-    expect(() => parser.parse(markdown)).toThrow(code);
+    const parsed = parser.parse(markdown);
+    const linked = parsed.structuredActions?.[section]?.find((entry) => entry.spellcastingFeatureKey);
+    expect(linked).toEqual(expect.objectContaining({
+      name: 'Innate Magic', spellcastingFeatureKey: 'innate-wisdom-feature',
+      describe: 'The caster invokes its explicitly granted magic.',
+      activation: expect.objectContaining({ type: activation }),
+    }));
+    expect(parsed.spellManifest?.spellcastingGroups[0]?.spellRefs[0]?.englishName).toBe('Mage Armor');
   });
   it.each([['动作','action'],['附赠动作','bonus'],['反应','reaction'],['传奇动作','legendary']] as const)('retains source spellcasting linkage in %s', (section, activation) => {
     const markdown=readFileSync('src/core/parser/__tests__/fixtures/yaml-spell-manifest.md','utf-8').replace('特性:',section+':');

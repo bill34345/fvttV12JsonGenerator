@@ -8,7 +8,7 @@ describe('structured rule audit uses consumed facts', () => {
     const native: ActionData = { name: 'Area', type: 'save', activity: { target: { template: { type: 'sphere', size: '20', units: 'ft' } } } };
     for (const [action, size] of [[source, 15], [native, 20]] as const) {
       const result = summarizeStructuredRule({ logicalPath: 'area', action });
-      expect(result?.zh).toContain(`球形区域，范围${size}尺`);
+      expect(result?.zh).toContain(`球状区域，范围${size}尺`);
       expect(result?.uncovered).toEqual([]);
     }
     const unknown = summarizeStructuredRule({ logicalPath: 'unknown', action: { ...source, aoe: { template: { type: 'capsule', distance: 15 } } } });

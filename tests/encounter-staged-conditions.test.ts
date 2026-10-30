@@ -71,11 +71,13 @@ describe('encounter staged condition companion boundary', () => {
     const markdown = renderMonsterIntakeMarkdown(ir);
     const generated = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null });
     const item = (generated.rawJson as any).items.find((entry: any) => entry.name === 'Stone Stages');
-    // Generation now keeps the unsupported repeat-save lifecycle GM-owned.
-    // Recreate the invalid simultaneous-stage candidate to retain the verifier
-    // regression rather than requiring generation to emit that old defect.
-    item.effects.push({ _id: 'badStage00000001', statuses: ['restrained'] });
-    expect(item.effects.flatMap((effect: any) => effect.statuses).sort()).toEqual(['petrified', 'restrained']);
+    expect(item.effects.flatMap((effect:any)=>effect.statuses).sort()).toEqual(['incapacitated','petrified','restrained']);
+    expect(item.effects.every((effect:any)=>effect.flags.fvttJsonGenerator.conditionLifecycle.mode==='gm')).toBe(true);
+    const retained=verifyMonsterIntake(source,ir,markdown,generated.rawJson);
+    expect(retained.findings.filter(finding=>finding.code==='STAGED_CONDITIONS_SIMULTANEOUS')).toEqual([]);
+    // Recreate automatic simultaneous branches; optional GM templates above do
+    // not execute both outcomes and must remain available.
+    item.effects=[{_id:'badStage00000001',statuses:['restrained']},{_id:'badStage00000002',statuses:['petrified']}];
     const report = verifyMonsterIntake(source, ir, markdown, generated.rawJson);
 
     expect(report.findings).toContainEqual(expect.objectContaining({
@@ -90,7 +92,7 @@ describe('encounter staged condition companion boundary', () => {
     expect(verifyMonsterIntake(source, ordinary, ordinaryMarkdown, ordinaryGenerated.rawJson).findings.filter(finding => finding.code === 'STAGED_CONDITIONS_SIMULTANEOUS')).toEqual([]);
   });
 
-  test('removes a staged feature\'s embedded effects and post-generation inferred effect refs while ordinary source remains native', async () => {
+  test('keeps staged GM templates and manual rules while suppressing only plain inferred effect refs', async () => {
     const { source, ir } = stagedFixture();
     const stagedSource = renderEncounterActorSource(ir, [], source);
     const stagedFeatureStart = stagedSource.indexOf('名称: Staged Fright');
@@ -100,19 +102,33 @@ describe('encounter staged condition companion boundary', () => {
     expect(stagedFeature).not.toContain('失败效果:');
     const stagedGenerated = await convertMarkdownContentToJson({ content: stagedSource, fvttVersion: '14', effectProfile: 'core', translationService: null });
     const stagedItem = (stagedGenerated.rawJson as any).items.find((item: any) => item.name.includes('Staged Fright'));
-    expect(stagedItem.effects.filter((effect: any) => effect.statuses.some((status: string) => ['frightened', 'exhaustion'].includes(status)))).toEqual([]);
-    expect(Object.values(stagedItem.system.activities).flatMap((activity: any) => activity.effects ?? [])).toEqual([]);
+    expect(stagedItem.effects).toHaveLength(1);
+    expect(stagedItem.effects[0].statuses).toEqual(['frightened']);
+    expect(stagedItem.effects[0].flags.fvttJsonGenerator.conditionLifecycle).toMatchObject({version:1,mode:'gm'});
+    expect(stagedItem.effects[0].description).toContain('此模板可选应用');
+    expect(stagedItem.effects.flatMap((effect:any)=>effect.statuses)).not.toContain('exhaustion');
+    expect(Object.values(stagedItem.system.activities).flatMap((activity:any)=>activity.effects??[]).every((effect:any)=>effect._id===stagedItem.effects[0]._id)).toBe(true);
     expect(stagedItem.flags.fvttJsonGenerator.behaviorMechanics).toContainEqual(expect.objectContaining({
       id: 'encounter-staged-action-1', kind: 'lifecycle', coverage: 'literal', executionMode: 'gm-assisted', ruleSource: 'source-derived',
     }));
     const manualActivity = Object.values(stagedItem.system.activities).find((activity: any) => activity.flags?.fvttJsonGenerator?.behaviorOperation) as any;
     expect(manualActivity.description.chatFlavor).not.toContain('encounter-staged');
-    expect(manualActivity.description.chatFlavor).toContain('GM 1：由配套宏逐项检查前后条件');
+    expect(manualActivity.description.chatFlavor).toContain('GM 1：由GM按原文裁定并应用／结束特殊结果；控制入口只展示规则，不自动执行这些效果。');
+
+    const inferredCandidate=structuredClone(stagedGenerated.rawJson) as any;
+    const inferredItem=inferredCandidate.items.find((item:any)=>item.name.includes('Staged Fright'));
+    const inferredId='plainFear0000001';
+    inferredItem.effects.push({_id:inferredId,statuses:['frightened'],disabled:false,changes:[],description:''});
+    const inferredSave=Object.values(inferredItem.system.activities).find((activity:any)=>activity.type==='save') as any;
+    inferredSave.effects??=[];inferredSave.effects.push({_id:inferredId});
+    suppressEncounterStagedInferredEffects(inferredCandidate);
+    expect(inferredItem.effects).toEqual(stagedItem.effects);
+    expect(Object.values(inferredItem.system.activities).flatMap((activity:any)=>activity.effects??[]).some((effect:any)=>effect._id===inferredId)).toBe(false);
 
     const incompleteMarkerSource = stagedSource.replace(/\n        - .*Staged Fright.*\n---/u, '\n---');
     const incompleteGenerated = await convertMarkdownContentToJson({ content: incompleteMarkerSource, fvttVersion: '14', effectProfile: 'core', translationService: null });
     const incompleteItem = (incompleteGenerated.rawJson as any).items.find((item: any) => item.name.includes('Staged Fright'));
-    expect(incompleteItem.effects.some((effect: any) => effect.statuses.includes('frightened'))).toBe(false);
+    expect(incompleteItem.effects.some((effect:any)=>effect.statuses.includes('frightened')&&effect.flags.fvttJsonGenerator.conditionLifecycle.mode==='gm')).toBe(true);
     expect(verifyMonsterIntake(source, ir, incompleteMarkerSource, incompleteGenerated.rawJson).findings).toContainEqual(expect.objectContaining({
       code: 'ACTOR_CONDITION_DRIFT', path: '/creature/actions/0/appliedConditions/1',
     }));
@@ -122,7 +138,7 @@ describe('encounter staged condition companion boundary', () => {
     const ordinarySource = renderEncounterActorSource(ordinary, [], source);
     const ordinaryGenerated = await convertMarkdownContentToJson({ content: ordinarySource, fvttVersion: '14', effectProfile: 'core', translationService: null });
     const ordinaryItem = (ordinaryGenerated.rawJson as any).items.find((item: any) => item.name.includes('Staged Fright'));
-    expect(ordinaryItem.effects.some((effect: any) => effect.statuses.includes('frightened'))).toBe(false);
+    expect(ordinaryItem.effects.some((effect:any)=>effect.statuses.includes('frightened')&&effect.flags.fvttJsonGenerator.conditionLifecycle.mode==='gm')).toBe(true);
     expect(ordinaryItem.flags.fvttJsonGenerator.conditionLifecycle.statuses).toContain('frightened');
     const carrierMismatch = structuredClone(ordinaryGenerated.rawJson) as any;
     const mismatchItem = carrierMismatch.items.find((item: any) => item.name.includes('Staged Fright'));
@@ -134,7 +150,7 @@ describe('encounter staged condition companion boundary', () => {
     expect(mismatchItem.effects.some((effect: any) => effect.statuses.includes('frightened'))).toBe(true);
   });
 
-  test('permits only the reviewed staged companion boundary through multi-Actor intake', async () => {
+  test('retains both staged Actor candidates and GM requirements when projection findings prevent controller generation', async () => {
     const { source: stagedSource, quote, ir: stagedIr } = stagedFixture();
     const source = `${stagedSource}${RAT_WARLOCK_SOURCE}`;
     const actorProvider: MonsterIntakeAiProvider = {
@@ -145,18 +161,25 @@ describe('encounter staged condition companion boundary', () => {
       ] }),
       extract: async (request) => request.source === stagedSource ? stagedIr : buildRatWarlockIr(),
     };
+    let automationCalls=0,reviewCalls=0;
     const automationProvider: EncounterAutomationPort = {
-      generate: async () => ({
+      generate: async () => {automationCalls++;return ({
         version: 1, name: 'Staged companion',
         command: "const actor = await fromUuid(forgeEncounter.actors['actor-1']); return { showPanel() {} };",
         notes: '', manualSteps: [],
         rules: [{ actorKey: 'actor-1', featureName: 'Staged Fright', section: 'action', quote: quote.quote, gmSteps: ['先确认前置恐慌状态，再按原文只结算一个分支。'] }],
-      }),
-      review: async () => ({ verdict: 'accepted', findings: [] }),
+      });},
+      review: async () => {reviewCalls++;return ({ verdict: 'accepted', findings: [] });},
     };
     const result = await generateEncounterFromHumanMarkdown({ source, label: 'Staged multi-Actor fixture', provider: actorProvider, automationProvider });
     expect(result.report.status).toBe('ready_for_gm_review');
-    expect(result.report.actors[0]!.generation?.status).toBe('needs_review');
+    expect(result.report.actors[0]!.generation?.status).toBe('ready_for_gm_review');
+    expect(result.report.actors[0]!.generation?.formalStatus).toBe('needs_review');
+    expect(result.report.generationRoute).toBe('actors-only');
+    expect(result.prepared?.actors).toHaveLength(2);
+    expect(result.prepared?.macros).toEqual([]);
+    expect(result.report.actors[0]!.generation?.findings).toContainEqual(expect.objectContaining({code:'MARKDOWN_IR_PROJECTION_DRIFT'}));
+    expect(automationCalls).toBe(0);expect(reviewCalls).toBe(0);
     expect(result.prepared?.requirements.map((requirement) => requirement.mechanicId)).toContain('encounter-staged-action-1');
   });
 });

@@ -8,7 +8,7 @@ import {stagedSpellcastingGroups} from '../packages/intake-ai/src/staged-spellca
 import {decodeCategoryFormV2} from '../packages/intake-ai/src/category-form-v2';
 import {adaptCategoryFormV2,completeCategoryFormSpellcasting} from '../packages/intake-ai/src/category-form-v2-adapter';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
-import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
+import {validateMonsterIntakeIR,auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
 import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
 import {ActorGenerator} from '@fvtt-json-generator/generation/actor';
 import {YamlParser} from '@fvtt-json-generator/parser/yaml';
@@ -59,13 +59,15 @@ function changeForm(f:any,change:(rows:any[])=>void){
  f.wholeReply=JSON.stringify({markdown:'```yaml\n'+yaml.dump(form,{lineWidth:-1})+'```'});
 }
 test('renamed source parent and a two-use legendary carrier are independently bound',()=>{
- const {actor}=chain('P3',f=>{
+ const {actor,source,ir,markdown}=chain('P3',f=>{
   f.source=f.source.replaceAll('Spellcasting','Psionics').replace('Mind Invasion.','Thought Surge (Costs 2 Actions).');
   changeForm(f,rows=>{for(const row of rows){if(row.名称==='Spellcasting')row.名称='Psionics';if(row.特殊规则)row.特殊规则=row.特殊规则.replaceAll('Spellcasting','Psionics');if(row.编号==='unit-10'){row.名称='Thought Surge (Costs 2 Actions)';row.传奇动作消耗=2;}}});
  });
- const {built,ref}=nativeReference(actor,'Thought Surge');
+ const {built,ref,feature}=nativeReference(actor,'Thought Surge');
+ expect(feature.flags.fvttJsonGenerator.spellcastingActivationCost).toBe(2);
  expect(built.activity.activation).toEqual({type:'legendary',value:2,override:true});
  expect(ref.reuseOf).toBeDefined();expect(built.activity.spell.challenge.save).toBe('17');
+ for(const cost of [1,undefined]){const changed=structuredClone(actor),linked=changed.items.find((item:any)=>item.flags?.fvttJsonGenerator?.spellcastingFeatureKey===feature.flags.fvttJsonGenerator.spellcastingFeatureKey);linked.flags.fvttJsonGenerator.spellcastingActivationCost=cost;expect(verifyMonsterIntake(source,ir,markdown,changed).findings).toContainEqual(expect.objectContaining({code:'SPELL_LEGENDARY_COST_DRIFT'}));}
 });
 test('a multiline fourthlevel source reference preserves complete own evidence and level',()=>{
  const {actor,ir}=chain('P3',f=>{
@@ -107,8 +109,8 @@ for(const wrong of ['link','profile','components','level','evidence'] as const)t
  if(wrong==='profile')group.ability='int';
  if(wrong==='components')group.componentWaivers=[];
  if(wrong==='level')ref.restrictions[0]!.text='(level 4 version)';
- if(wrong==='evidence')ref.evidence=copy.creature.spellcasting![0]!.usageGroups[0]!.spellRefs[1]!.evidence;
- expect(validateMonsterIntakeIR(source,copy).findings.some(f=>f.blocking&&f.code==='SPELL_REFERENCE_SOURCE_MISMATCH')).toBe(true);
+ if(wrong==='evidence'){const quote=source.slice(0,source.indexOf('\n'));ref.evidence=[{start:0,end:quote.length,quote}];}
+ expect(auditMonsterIntakeSource(source,copy).findings).toContainEqual(expect.objectContaining({blocking:true,code:wrong==='evidence'?'SPELL_REF_EVIDENCE_MISMATCH':'SPELL_REFERENCE_SOURCE_MISMATCH'}));
 });
 test('foreign casting is not projected onto this Actor and unrelated Mage operations remain',()=>{
  const {actor}=chain('P3',f=>{const offset=f.source.indexOf('Mind Invasion.');f.source=f.source.slice(0,offset)+f.source.slice(offset).replace('The dragon uses','An ally uses');});

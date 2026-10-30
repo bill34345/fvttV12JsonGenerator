@@ -5,24 +5,24 @@
     "note": "已核Web协议与Item/Species独立入口：仅新增精确原生legres报告路径；Monster语言投影/verifier及Monster提取/显式纠错prompt变化不改连接配置、Item或Species流程/版本/验收边界。现有说明保持。"
   },
   "markdown-convert": {
-    "fingerprint": "0159a9ae9e6c97ff9adeed8c4039a50eaa556018c0ce768c5727dabba39ec881",
+    "fingerprint": "7f138e67bc48de6a8f7d2baf6a0a4f6202553461d2a903e93f7dbcca2eaa93cb",
     "reviewedOn": "2026-10-30",
-    "note": "已对照CLI绝对路径读取、workflow显式输出和来源验证：纯个人资料转换复用主工作区，数据写入仓库外固定目录，不建worktree或纳入Git；工具默认路径、版本和生成/检查契约不变。同步外部路径示例，仅修改规范与说明，不重新生成生物或执行Foundry验收。"
+    "note": "已逐项对照parser/generation及普通完整IR入口：非法literal-v1附带标记保留原值与诊断，语言别名与传奇施法费用保真，Effect原说明和终止条件、条件伤害原时机及GM辅助边界保持；v14未分类固定攻击远射程按5.3.3受支持special及可见文字保存。来源语义审核仍是显式SourceAudit，不恢复默认AI复核、来源回填或整只取消。失败候选同轮本地化记录继续导出与恢复。"
   },
   "monster-intake": {
-    "fingerprint": "afe5e1ae0d2788e518f09b93d1ad6ad868d74136e256818cb3c2130ebac005bd",
-    "reviewedOn": "2026-10-29",
-    "note": "已核完整IR V54/V44提示词、主类/备注独立、原生legres消费与未知语言可见保留；本次整合十IR/十完整Actor等于既有最终基线且零模型请求。默认不复核/纠错及已有Actor不迁移说明保持，不扩大实际模型和runtime接受。"
+    "fingerprint": "a6e6c9095be7479b05eeb6f6e262a29f5e668aadb60a259a74b85fadc6af6852",
+    "reviewedOn": "2026-10-30",
+    "note": "最终增量复核：显式投影审核同时检查顶层和v14原生system.changes，原生空、双空正控及HP篡改负例真实通过；GM模板与施法组稳定身份关联保留，不新增默认来源审查或影响独立Item/Species接受。Item内部deadline按已有timeout归因，旧兼容单法术冷却/标点窄修保持来源与GM限制。命令、时限、重试、版本和本轮已核正文继续有效。"
   },
   "item-intake": {
-    "fingerprint": "7ee5a2dd2e304513a9fc0a6e214a818235145d6cc7264f60c35c4da71138816c",
-    "reviewedOn": "2026-10-29",
-    "note": "已核对renderer主类型与备注独立投影及冻结十答全Actor对照：Monster/Forge修正备注覆盖主类，补充既有Actor不自动迁移说明；Human Encounter复用同一生物转换，入口与步骤保持。Item/Species分别使用独立renderer，契约与产物不变；验证入口、目标版本和权限不变。仅16项局部回归，零模型调用，不代表Foundry运行验收。"
+    "fingerprint": "c564177f8298e4aface5cee8a3e186abcd4fa0e7be4f22d8f8308fb4fcb9564c",
+    "reviewedOn": "2026-10-30",
+    "note": "最终增量复核：显式投影审核同时检查顶层和v14原生system.changes，原生空、双空正控及HP篡改负例真实通过；GM模板与施法组稳定身份关联保留，不新增默认来源审查或影响独立Item/Species接受。Item内部deadline按已有timeout归因，旧兼容单法术冷却/标点窄修保持来源与GM限制。命令、时限、重试、版本和本轮已核正文继续有效。"
   },
   "species-intake": {
-    "fingerprint": "17c09acf6954ce7d2564e2d7cfeff0901a979c9783932b19fb7e904934046484",
-    "reviewedOn": "2026-10-29",
-    "note": "已核对renderer主类型与备注独立投影及冻结十答全Actor对照：Monster/Forge修正备注覆盖主类，补充既有Actor不自动迁移说明；Human Encounter复用同一生物转换，入口与步骤保持。Item/Species分别使用独立renderer，契约与产物不变；验证入口、目标版本和权限不变。仅16项局部回归，零模型调用，不代表Foundry运行验收。"
+    "fingerprint": "cc98d2b7d6b9da0b4b9eec0889e3e3d9b44c07b17aaaa62a3e2ee944e8bd91ad",
+    "reviewedOn": "2026-10-30",
+    "note": "最终增量复核：显式投影审核同时检查顶层和v14原生system.changes，原生空、双空正控及HP篡改负例真实通过；GM模板与施法组稳定身份关联保留，不新增默认来源审查或影响独立Item/Species接受。Item内部deadline按已有timeout归因，旧兼容单法术冷却/标点窄修保持来源与GM限制。命令、时限、重试、版本和本轮已核正文继续有效。"
   },
   "document-extraction": {
     "fingerprint": "1fadc1f19a0a8346a15306bb247d90ae4b2bbaf709177747d8aded524ec25bcc",
@@ -60,14 +60,14 @@
     "note": "已逐项对照运维条目与worktree来源：来源只新增纯个人资料在仓库外转换的分流，仓库开发、资产保留检查、清理授权及运维命令和权限保持。此更新不构成Foundry或生产运行验收。"
   },
   "verification-development": {
-    "fingerprint": "e53be9d8b7bf87bc8dc203c98bbefb38040d39543f7a238754bc99a510b05805",
+    "fingerprint": "4d0834993563d3f972db598b1d5a6635461076ca75e6eef3095503ea5a7fcd91",
     "reviewedOn": "2026-10-30",
-    "note": "工程修改继续使用worktree；纯个人资料转换及其来源核对可在主工作区运行并写入仓库外目录。原检查入口、验证层级和生成契约保持，此次只改资料存放与工作区规范。"
+    "note": "已对照真实 White Tusk 多行来源与既有 project-robustness 回归；离线 smoke 仅将能力清单和恢复查找改为保留短休或长休后缀的来源全名。转换实现、公共入口、支持版本与使用步骤保持。"
   },
   "human-encounter-intake": {
-    "fingerprint": "151692089f2c6f5de38359a6ae6f75177c3d9356e20750629d6ab25010485439",
-    "reviewedOn": "2026-10-29",
-    "note": "已核对renderer主类型与备注独立投影及冻结十答全Actor对照：Monster/Forge修正备注覆盖主类，补充既有Actor不自动迁移说明；Human Encounter复用同一生物转换，入口与步骤保持。Item/Species分别使用独立renderer，契约与产物不变；验证入口、目标版本和权限不变。仅16项局部回归，零模型调用，不代表Foundry运行验收。"
+    "fingerprint": "bfd91ddaa2b99ec2324897092f8853cbce8a7312d897edf41d4ae445fd9309db",
+    "reviewedOn": "2026-10-30",
+    "note": "已对照 Intake 审阅一致性与历史导入：只降级真实 accepted 声明，提交和读回阶段保留并列出发现；候选查看、显式 GM 采用、写入权限及用户操作步骤保持。Git 安装器测试仅改异步子进程，仍使用原时限；手册命令无需调整。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -145,9 +145,9 @@
     "note": "已核configuredConditions与combatRewind/awaitIdle接口共同保留，whenIdle职责未扩大；AC5e精确Mirror14.368/5.3.3/14.533.8及已审核6.x版本门共同保留，203项局部通过。十九状态/玩家/长时未验限制不变。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "025cf68ebc06cd9005c97f9de9fec90cd1c47cc5b7d950b8c6314d36f88c3d32",
-    "reviewedOn": "2026-10-29",
-    "note": "已复核 Forge 创建与报告保留、原生资源消耗、类型投影及五只 Mirror 验收边界；收尾仅清除第三方许可证文件末尾多余空行，许可证文字、依赖和模块行为不变。"
+    "fingerprint": "c4422290ba2036dc172351db7e0327867fa6b18cd3ed9221723046419f4c0907",
+    "reviewedOn": "2026-10-30",
+    "note": "已对照 Intake 审阅一致性与历史导入：只降级真实 accepted 声明，提交和读回阶段保留并列出发现；候选查看、显式 GM 采用、写入权限及用户操作步骤保持。Git 安装器测试仅改异步子进程，仍使用原时限；手册命令无需调整。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "b888eae16a4a0dc1c058805448887553cb8617c6e81dc15bf345e9b0a6b353eb",

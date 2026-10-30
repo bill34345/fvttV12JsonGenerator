@@ -7,7 +7,7 @@ import {validateStagedBaseFacts,assembleStagedMonsterIntake} from '@fvtt-json-ge
 import {decodeCategoryFormV2} from '../packages/intake-ai/src/category-form-v2';
 import {adaptCategoryFormV2,completeCategoryFormSpellcasting} from '../packages/intake-ai/src/category-form-v2-adapter';
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
-import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator';
+import {validateMonsterIntakeIR,auditMonsterIntakeSource} from '@fvtt-json-generator/intake-ai/validator';
 import {verifyMonsterIntake} from '@fvtt-json-generator/intake-ai/verifier';
 import {ActorGenerator} from '@fvtt-json-generator/generation/actor';
 import {YamlParser} from '@fvtt-json-generator/parser/yaml';
@@ -38,18 +38,23 @@ test('same frozen2024 Mage has separate daily spell ability and one shared react
     const group=manifest.spellcastingGroups.find((g:any)=>g.spellRefs.map((r:any)=>r.originalName).join('|')===names.join('|'));
     expect(group,title).toBeDefined();
     const feature=actor.items.find((i:any)=>i.flags?.fvttJsonGenerator?.spellcastingFeatureKey===group.featureItemKey);
-    expect(feature.system.uses).toEqual({spent:0,max:'3',recovery:[{period:'day',type:'recoverAll'}]});
+    if(names.length>1)expect(feature.system.uses).toEqual({spent:0,max:'3',recovery:[{period:'day',type:'recoverAll'}]});
     for(const ref of group.spellRefs){
       const built=buildCastActivitySource({manifestId:manifest.manifestId,featureId:feature._id??'ProofFeature0001',group,ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop',activationType:feature.flags.fvttJsonGenerator.spellcastingActivationType,useParentItemPool:feature.flags.fvttJsonGenerator.spellcastingUsesParent});
-      expect(built.activity.consumption).toEqual({spellSlot:false,targets:[{type:'itemUses',value:'1'}]});
-      expect(built.activity.uses).toBeUndefined();
+      if(names.length>1){
+        expect(built.activity.consumption).toEqual({spellSlot:false,targets:[{type:'itemUses',value:'1'}]});
+        expect(built.activity.uses).toBeUndefined();
+      }else{
+        expect(built.activity.consumption).toEqual({spellSlot:false,targets:[{type:'activityUses',value:'1'}]});
+        expect(built.activity.uses).toEqual({spent:0,max:'3',recovery:[{period:'day',type:'recoverAll'}]});
+      }
       expect(feature.system.description.value).toContain(title);
     }
   }
   expect(JSON.stringify(fixture)).toBe(frozen);
 });
 for(const wrong of ['manifest','quota','reader-consumption','source-link'] as const)test('pending reader requires the complete same-source parent proof: '+wrong,()=>{
-  const {actor,canonical}=frozenCastChain('P2'),item=actor.items.find((i:any)=>i.flags?.fvttJsonGenerator?.spellcastingUsesParent);
+  const {actor,canonical}=frozenCastChain('P2'),item=actor.items.find((i:any)=>i.name.startsWith('Protective Magic'));
   if(wrong==='manifest')delete actor.flags['fvtt-json-generator-spell-resolver'].spellManifest;
   if(wrong==='quota')item.system.uses.max='4';
   if(wrong==='reader-consumption')Object.values<any>(item.system.activities)[0].consumption.targets=[{type:'itemUses',target:'',value:'2'}];
@@ -61,10 +66,12 @@ function changeMageForm(f:any,change:(rows:any[])=>void){
   const form=yaml.load(raw) as Record<string,any[]>;change(Object.values(form).flat());
   f.correctionWholeReply=JSON.stringify({markdown:'```yaml\n'+yaml.dump(form,{lineWidth:-1})+'```'});
 }
-test('a second source daily quota uses its own parent without hardcoding three',()=>{
+test('a second source daily quota retains separate per-Cast uses without hardcoding three',()=>{
   const {actor}=frozenCastChain('P2',f=>{f.source=f.source.replace('Misty Step (3/Day)','Misty Step (2/Day)');changeMageForm(f,rows=>{const row=rows.find(r=>r.编号==='unit-6');row.名称='Misty Step (2/Day)';row.使用次数=2;row.施法.法术[0].次数=2;});});
-  const item=actor.items.find((i:any)=>i.flags?.fvttJsonGenerator?.spellcastingUsesParent);
-  expect(item.system.uses.max).toBe('2');
+  const manifest=actor.flags['fvtt-json-generator-spell-resolver'].spellManifest;
+  const group=manifest.spellcastingGroups.find((g:any)=>g.spellRefs.some((r:any)=>r.originalName==='Misty Step')),ref=group.spellRefs[0];
+  const built=buildCastActivitySource({manifestId:manifest.manifestId,featureId:'ProofFeature0001',group,ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'});
+  expect(built.activity.uses!.max).toBe('2');
 });
 test('a PDF-wrapped daily spell name retains exact multiline source evidence',()=>{
   const {ir}=frozenCastChain('P2',f=>{f.source=f.source.replace('casts Misty Step','casts Misty\nStep');});
@@ -77,7 +84,7 @@ for(const wrong of ['missing-choice','wrong-count','wrong-ability'] as const)tes
 test('a clipped reaction trigger and a foreign caster remain blocked',()=>{
   const {source,ir}=frozenCastChain('P2'),group=ir.creature.spellcasting!.find(g=>g.featureName.startsWith('Protective'))!;
   group.usageGroups[0]!.spellRefs[0]!.restrictions=[];
-  expect(validateMonsterIntakeIR(source,ir).findings.some(f=>f.blocking&&f.code==='SPELL_DAILY_ACTION_EVIDENCE_MISMATCH')).toBe(true);
+  expect(auditMonsterIntakeSource(source,ir).findings.some(f=>f.blocking&&f.code==='SPELL_DAILY_ACTION_EVIDENCE_MISMATCH')).toBe(true);
   expect(()=>frozenCastChain('P2',f=>{f.source=f.source.replace('The mage casts Misty Step','An ally casts Misty Step');})).toThrow();
 });
 test('same frozen2024 Dragon Geas inherits one minute and keeps the source legendary budget',()=>{
@@ -101,16 +108,19 @@ test('printed spell level and included-AC warning survive as native level and li
   }
 });
 
-test('contradictory printed level and unknown casting qualifiers cannot become unrestricted Casts',()=>{
+test('contradictory printed levels reject while unknown casting qualifiers remain literal',()=>{
   const {actor}=frozenCastChain('P2'),manifest=actor.flags['fvtt-json-generator-spell-resolver'].spellManifest;
   const group=manifest.spellcastingGroups.find((g:any)=>g.spellRefs.some((r:any)=>r.originalName==='Fireball'));
   const original=group.spellRefs.find((r:any)=>r.originalName==='Fireball');
   for(const restrictions of [
     [{kind:'casting',text:'level 4 version',value:3}],
     [{kind:'casting',text:'level 4 version'},{kind:'casting',text:'level 5 version'}],
-    [{kind:'casting',text:'only while bloodied'}],
   ]){
     const ref={...structuredClone(original),restrictions},copy={...structuredClone(group),spellRefs:[ref]};
     expect(()=>buildCastActivitySource({manifestId:manifest.manifestId,featureId:'ProofFeature0001',group:copy,ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'})).toThrow();
   }
+  const ref={...structuredClone(original),restrictions:[{kind:'casting' as const,text:'only while bloodied'}]},copy={...structuredClone(group),spellRefs:[ref]};
+  const built=buildCastActivitySource({manifestId:manifest.manifestId,featureId:'ProofFeature0001',group:copy,ref,selectedUuid:'Compendium.dnd5e.spells24.Item.abcdefghijklmnop'});
+  expect(built.activity.description!.chatFlavor).toContain('only while bloodied');
+  expect(built.literalRestrictions).toMatchObject([{kind:'casting',text:'only while bloodied',status:'literal-unsupported'}]);
 });

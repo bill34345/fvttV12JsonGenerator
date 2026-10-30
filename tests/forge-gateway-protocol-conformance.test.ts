@@ -248,7 +248,7 @@ describe('Forge protocol/workflow conformance', () => {
     expect(Object.prototype.hasOwnProperty.call(decodedResponse.value.result, 'artifactHash')).toBe(false);
   });
 
-  test('parsers consume only a valid root Forge identity field and reject invalid metadata', () => {
+  test('parsers consume a valid root Forge identity and retain readable invalid metadata for GM review', () => {
     const yamlParser = new YamlParser();
     const chinese = yamlParser.parse([
       '---',
@@ -265,12 +265,10 @@ describe('Forge protocol/workflow conformance', () => {
     const english = englishParser.parse(ENGLISH_SOURCE);
     expect(english.name).toBe('Forge English Actor');
 
-    expect(() => yamlParser.parse([
-      '---',
-      'forge-source-id: actor:v1:not-a-uuid',
-      '名称: 非法 ID',
-      '---',
-    ].join('\n'))).toThrow(/forge-source-id/u);
+    const invalid=yamlParser.parse(['---','forge-source-id: actor:v1:not-a-uuid','名称: 非法 ID','---'].join('\n'));
+    expect(invalid.name).toBe('非法 ID');
+    expect(invalid.candidateReview?.findings).toContainEqual(expect.objectContaining({code:'FIELD_PROJECTION_INCOMPLETE',path:'forge-source-id'}));
+    expect(invalid.candidateReview?.proposal).toMatchObject({field:'forge-source-id',value:'actor:v1:not-a-uuid'});
     expect(() => englishParser.parse(ENGLISH_SOURCE.replace(SOURCE_ID, 'actor:v1:not-a-uuid'))).toThrow(/forge-source-id/u);
     expect(() => yamlParser.parse([
       '---',
@@ -279,12 +277,9 @@ describe('Forge protocol/workflow conformance', () => {
       '名称: 重复 ID',
       '---',
     ].join('\n'))).toThrow();
-    expect(() => yamlParser.parse([
-      '---',
-      `forge-source-id: ${SOURCE_ID}`,
-      '未声明叶子字段: 不应静默接受',
-      '---',
-    ].join('\n'))).toThrow(/Unknown field/u);
+    const unknown=yamlParser.parse(['---',`forge-source-id: ${SOURCE_ID}`,'未声明叶子字段: 不应静默接受','---'].join('\n'));
+    expect(unknown.candidateReview?.findings).toContainEqual(expect.objectContaining({code:'FIELD_PROJECTION_INCOMPLETE',path:'未声明叶子字段'}));
+    expect(unknown.candidateReview?.proposal).toMatchObject({field:'未声明叶子字段',value:'不应静默接受'});
   });
 
   test('keeps source identity and artifact semantics separate when adding Forge metadata', async () => {

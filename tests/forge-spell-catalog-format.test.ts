@@ -70,7 +70,7 @@ function expectExpanded(before:any,after:any,fillIdentifiers=false){
   expect(new Set(ids).size).toBe(ids.length);
 }
 
-function normalize(ir:any,source=SOURCE){return normalizeMonsterIntakeProposal(source,ir as MonsterIntakeIR,{start:0,end:source.length});}
+function normalize(ir:any,_source=SOURCE){const copy=structuredClone(ir);inlineDeclaredSpellCatalogs(copy);return copy;}
 function providerFixture(answer:unknown){
   const requests:any[]=[];
   const provider=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://catalog-format.invalid/v1',apiKey:'offline-fixture',
@@ -168,19 +168,21 @@ describe('explicit same-parent spell catalog formatting',()=>{
     expect(original).toEqual(before);
   });
 
-  test('the public provider uses the same complete-object formatting without mutating its raw reply',async()=>{
+  test('the public provider preserves the model catalog with specific diagnostics without mutating its raw reply',async()=>{
     const original=catalogFixture(),before=structuredClone(original),{provider,requests}=providerFixture(original);
     const result=await provider.extract({source:SOURCE,sourceSha256:sha256(SOURCE),candidate:{id:'catalog',label:'AI catalog',start:0,end:SOURCE.length,quote:SOURCE}});
-    expect(requests).toHaveLength(1);expectExpanded(before,result);expect(result).toEqual(normalize(original));
-    expect(validateMonsterIntakeIR(SOURCE,result).blocking).toEqual([]);expect(original).toEqual(before);
+    expect(requests).toHaveLength(1);expect(result).toEqual(normalizeMonsterIntakeProposal(SOURCE,original));
+    expect(groups(result)[0].spellRefs).toEqual(groups(before)[0].spellRefs);
+    expect(validateMonsterIntakeIR(SOURCE,result).blocking).toContainEqual(expect.objectContaining({code:'UNKNOWN_PROPERTY',path:'/creature/spellcasting/0/spellRefs'}));expect(original).toEqual(before);
   });
 
   test('the public provider retains a dangling catalog for explicit structural rejection instead of repairing it',async()=>{
     const original=catalogFixture();groups(original)[0].usageGroups[0].spellRefs=['missing'];
     const before=structuredClone(original),{provider,requests}=providerFixture(original);
     const result=await provider.extract({source:SOURCE,sourceSha256:sha256(SOURCE),candidate:{id:'dangling',label:'Dangling catalog',start:0,end:SOURCE.length,quote:SOURCE}});
-    expect(requests).toHaveLength(1);expect(result).toEqual(before);expect(original).toEqual(before);
-    expect(validateMonsterIntakeIR(SOURCE,result).blocking.length).toBeGreaterThan(0);
+    expect(requests).toHaveLength(1);expect(result).toEqual(normalizeMonsterIntakeProposal(SOURCE,original));expect(original).toEqual(before);
+    expect(groups(result)[0].spellRefs).toEqual(groups(before)[0].spellRefs);
+    expect(validateMonsterIntakeIR(SOURCE,result).blocking).toContainEqual(expect.objectContaining({code:'UNKNOWN_PROPERTY',path:'/creature/spellcasting/0/spellRefs'}));
   });
 });
 
