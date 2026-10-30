@@ -25,7 +25,8 @@ if(previousReport&&(previousReport.sourceHash!==hashSource(source)||previousRepo
 if(previousReport&&source!==requestedSource)findings.push('当前输入与保存报告不同；本次继续使用保存报告的原始来源快照，已有角色仍可获取。');
 const label=source.match(/^#\s+(.+)$/m)?.[1]??'多生物战斗资料';
 const drafts=previousReport?.actors?.filter(actor=>actor?.analysis?.ir).map(actor=>({key:actor.key,source:actor.source,ir:actor.analysis.ir!}));
-const draftParentHash=previousReport?hashSource(JSON.stringify(previousReport)):undefined;
+// Keep the full report fingerprint; the shared recovery core independently verifies it.
+const draftParentHash=previousReport?new Bun.CryptoHasher('sha256').update(JSON.stringify(previousReport)).digest('hex'):undefined;
 let sourceFeedback:EncounterIntakeInput['sourceFeedback'];
 if(feedbackPath){
   const feedbackText=await readFile(resolve(feedbackPath),'utf8');assertEncounterSecretsAbsent(feedbackText,[]);

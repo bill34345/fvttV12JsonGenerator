@@ -42,16 +42,17 @@ function isolatedEnv(root: string): Record<string, string> {
 
 async function runResume(root: string, source: string, report: unknown) {
   const sourcePath = join(root, 'source.md'), reportPath = join(root, 'saved-review.json'), output = join(root, 'output');
-  writeFileSync(sourcePath, source); writeFileSync(reportPath, JSON.stringify(report));
+  const originalReport = Buffer.from(JSON.stringify(report));
+  writeFileSync(sourcePath, source); writeFileSync(reportPath, originalReport);
   const networkGuard = join(root, 'deny-network.ts');
   writeFileSync(networkGuard, `globalThis.fetch = async () => { throw Error('UNEXPECTED_NETWORK_IN_SAVED_RESUME'); };`);
   const result = await runTestProcess({ cmd: [process.execPath, 'run', '--no-env-file', `--preload=${networkGuard}`, entry,
-    sourcePath, output, '--resume-draft', reportPath], cwd: worktree, env: isolatedEnv(root) }, 30_000);
+    sourcePath, output, '--resume-draft', reportPath], cwd: worktree, env: isolatedEnv(root) }, 25_000);
   const summaryLine = result.stdout.split(/\r?\n/u).reverse().find(line => {
     try { return Array.isArray(JSON.parse(line).actors); } catch { return false; }
   });
   if (!summaryLine) throw Error(JSON.stringify(result));
-  return { ...result, summary: JSON.parse(summaryLine!), output, reportPath };
+  return { ...result, summary: JSON.parse(summaryLine!), output, reportPath, originalReport };
 }
 
 describe('human creature CLI saved Actor delivery', () => {
@@ -90,6 +91,7 @@ describe('human creature CLI saved Actor delivery', () => {
     const root = mkdtempSync(join(tmpdir(), 'forge-human-cli-large-'));
     const prior = { ...fixture.report, sourceHash: '0'.repeat(64), padding: ' '.repeat(32 * 1024 * 1024) };
     const result = await runResume(root, 'Edited input must not replace the saved source', prior);
+    expect(result.originalReport.byteLength).toBeGreaterThan(32 * 1024 * 1024);
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe('');
     expect(result.summary.actors).toHaveLength(1);
@@ -100,6 +102,7 @@ describe('human creature CLI saved Actor delivery', () => {
     expect(saved.findings.join(' ')).toContain('原始来源快照');
     expect(saved.findings.join(' ')).toContain('来源指纹');
     expect(JSON.parse(readFileSync(result.reportPath, 'utf8')).sourceHash).toBe('0'.repeat(64));
+    expect(readFileSync(result.reportPath).equals(result.originalReport)).toBe(true);
   }, 30_000);
 
   test('keeps a delivered member and explicitly lists missing replies without spending on resumed extraction', async () => {

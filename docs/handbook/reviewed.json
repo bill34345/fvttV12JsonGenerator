@@ -7,7 +7,7 @@
   "markdown-convert": {
     "fingerprint": "7f138e67bc48de6a8f7d2baf6a0a4f6202553461d2a903e93f7dbcca2eaa93cb",
     "reviewedOn": "2026-10-30",
-    "note": "已逐项对照parser/generation及普通完整IR入口：非法literal-v1附带标记保留原值与诊断，语言别名与传奇施法费用保真，Effect原说明和终止条件、条件伤害原时机及GM辅助边界保持；v14未分类固定攻击远射程按5.3.3受支持special及可见文字保存。来源语义审核仍是显式SourceAudit，不恢复默认AI复核、来源回填或整只取消。失败候选同轮本地化记录继续导出与恢复。"
+    "note": "已撤回共享哈希优化原型：contracts源码与包配置恢复b16f52c3；转换参数、生成输出与版本说明保持。最终仅Bun CLI的父报告哈希使用原生执行器。"
   },
   "monster-intake": {
     "fingerprint": "a6e6c9095be7479b05eeb6f6e262a29f5e668aadb60a259a74b85fadc6af6852",
@@ -65,9 +65,9 @@
     "note": "核对超长测试清单传参修订：保持公开安全入口、精确清单、逐文件钩子、单进程覆盖率和接受边界，条目正文无需改写。"
   },
   "human-encounter-intake": {
-    "fingerprint": "bfd91ddaa2b99ec2324897092f8853cbce8a7312d897edf41d4ae445fd9309db",
+    "fingerprint": "6e4eec027fa69d8d801d4511904bca069e8f2a591e8bcebd31b8c3a9e5a5bbc6",
     "reviewedOn": "2026-10-30",
-    "note": "已对照 Intake 审阅一致性与历史导入：只降级真实 accepted 声明，提交和读回阶段保留并列出发现；候选查看、显式 GM 采用、写入权限及用户操作步骤保持。Git 安装器测试仅改异步子进程，仍使用原时限；手册命令无需调整。"
+    "note": "对照保存报告CLI恢复链：只把完整父报告指纹的一次计算换成同值原生SHA256，恢复核心保留原独立核验；32MiB原文件、Actor与来源快照保留，参数、结果和权限不变。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
