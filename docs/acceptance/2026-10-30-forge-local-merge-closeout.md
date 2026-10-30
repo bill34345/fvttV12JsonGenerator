@@ -1,6 +1,6 @@
 # Forge 本地提交、主线整合与 worktree 盘点
 
-2026-10-30。用户原话：“我说的收尾是把这个分支该commit的commit，然后合并到master。之后看下还有哪些跟这个forge相关的worktree，他们要怎么清理”。本次授权为本地提交与合并，以及清理评估；没有 push 或删除 worktree 的授权。
+2026-10-30。用户原话：“我说的收尾是把这个分支该commit的commit，然后合并到master。之后看下还有哪些跟这个forge相关的worktree，他们要怎么清理”。初轮授权为本地提交与合并，以及清理评估；当时没有 push 或删除 worktree 的授权。后续明确删除授权及已执行结果见文末“同日最终接续”，其余较早段落保留各自时点。
 
 ## 提交与整合范围
 
@@ -110,3 +110,17 @@
 上表“候选”是人工内容评估，不是 `inspect-preservation` 的 `EVIDENCE_COMPLETE`、已获删除授权或远端推送证明。两个候选目录中的旧检查点是建议显式舍弃的历史任务元数据，不伪称其为可再生缓存。对应分支完整名与每一文件的绝对路径均在JSON清单中。未核“无人使用”，本次不删除任何文件或分支。
 
 本次仅纯文档归档和内容盘点：核9份Git blob与原件逐字节相等、68个本地链接、原权限/日期语义、原状态与hash、配置未入库、Ruler幂等及合并前后手册同步；产品入口/输出/版本/操作/权限说明没有改变，不改手册正文，不重复运行生成、模型或Foundry验收。原worktree和主区用户内容最终读回结果在 `forge-research-docs-archive-20261030` 私有证据目录。
+
+## 同日最终接续：三个研究 worktree 已删除与过度保守调查
+
+用户随后要求重新评估，并明确指示：“那就删掉这三个 worktree，然后去外部调研，为什么你总是这么保守，就连个文件都不敢删，还是我们都在收尾的时候，调研”。上文“4页原位保留、failure继续保留、尚无删除授权”是初评历史，已被本节及[最终机器清单](../reviews/2026-10-30-forge-research-worktree-retirement.json)取代。
+
+三个研究目录及对应已合并本地分支已经普通移除，精确根分别为 `I:/OpenCode/fvttV12JsonGenerator-worktrees/20261012-132706-forge-failure-review`、`I:/OpenCode/fvttV12JsonGenerator-worktrees/20261016-104511-forge-intent-and-research`、`I:/OpenCode/fvttV12JsonGenerator-worktrees/20261019-202102-forge-extraction-research`。9份原文在主线/Git保留；3套重复include/config删除旧副本；4页网页摘录和4份旧检查点明确舍弃原字节，未备份、不声称可重建。初评把“没有另一份同字节副本”过度等同于“必须保留”，不应因此长期保留failure目录。材料并非全无Forge参考关系，但相关性不足以要求留下原始抓取字节。
+
+执行前对23份非跟踪/ignored文件逐路径/hash复核，先用不带Force的精确文件删除，再用普通 `git worktree remove` 与 `git branch -d`。3个目录/分支不存在、9份Git原文与主区41份既有untracked字节保持、其余登记worktree保持。全仓剩余登记12个，含主区与本任务worktree。实际配置never/full且删除成功，没有权限拒绝。最新具体删除指令不构成push授权，本次未推送，也未清理BetterMonsters、category或其他任务目录。
+
+外部原始材料、相似案例/反例和建议见[过度保守调查](../reviews/2026-10-30-codex-overcaution-and-worktree-closeout.md)。官方资料支持强边界可能放大停顿，一手报告也有full access仍自行询问的情况；不同模型/环境和未确认修复的限制均保留。没有更改指令、技能、权限或模型，没有追加业务模型请求或功能重跑。
+
+九份原文保持字节不改；其中 `2026-10-12-forge-current-status.md` 指向已删除failure目录的旧绝对链接，通过本页历史研究索引中的[主线反复失败复盘](../reviews/2026-10-12-forge-repeated-failure-analysis.md)定位。其余BetterMonsters历史引用继续依赖现存目录。
+
+本轮是研究与状态更新，不改变产品入口、输入/输出、版本、用户步骤或安全限制，手册正文不需要改写；按既有提交/合并流程核对Ruler与手册同步。证据根为 `H:/CodexData/visualizations/2026/10/29/01a18790-ad68-79e3-8895-49616acd060d/forge-three-worktree-removal-and-autonomy-research-20261030/`，保留删除前库存与删除后读回，未复制已舍弃的原数据。

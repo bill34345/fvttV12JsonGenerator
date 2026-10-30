@@ -1,15 +1,15 @@
 {
-  "version": 1,
+  "version": 2,
   "asOf": "2026-10-30",
-  "purpose": "只读内容处置评估；不是自动清理请求或删除授权",
+  "purpose": "三个纯研究worktree最终处置与实际删除记录；保留原库存hash，不代表已删除文件仍在原路径",
   "userRequest": "好，先把这9份文档纳入主线，核对三个纯研究 worktree 的 .local，再给我具体的可删除清单。",
   "archiveCommit": "f27897c2f7069e2625c153db44376c006892846b",
   "documentCount": 9,
   "sourceNontrackedAndIgnoredFilesInspected": 23,
   "localFileCount": 8,
-  "localPageSnapshotsToKeep": 4,
-  "oldCheckpointDiscardCandidates": 4,
-  "worktreeRemovalPerformed": false,
+  "localPageSnapshotsToKeep": 0,
+  "oldCheckpointDiscardCandidates": 0,
+  "worktreeRemovalPerformed": true,
   "pushPerformed": false,
   "scopeExcludes": [
     "BetterMonsters",
@@ -24,13 +24,8 @@
       "head": "3734eb2de0b19b0f3d4cfb38bd1e0c8478635281",
       "headAlreadyAncestorOfMaster": true,
       "trackedIndexAndWorktreeCleanAtInspection": true,
-      "proposedWholeWorktreeRetirement": false,
-      "mustRetainInPlace": [
-        ".local/forge-reliability-research-20261013/5e-importer.md",
-        ".local/forge-reliability-research-20261013/babele.md",
-        ".local/forge-reliability-research-20261013/pf1-converter.md",
-        ".local/forge-reliability-research-20261013/pf1-module.md"
-      ],
+      "proposedWholeWorktreeRetirement": true,
+      "mustRetainInPlace": [],
       "entries": [
         {
           "kind": "untracked",
@@ -38,14 +33,16 @@
           "size": 19,
           "sha256": "d9ac0c7bc6c3441638c2240ffc057dc34776cb22407856276e1a4346dd747a2d",
           "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\.worktreeinclude",
-          "disposition": "duplicate-removal-candidate-after-approval",
+          "disposition": "duplicate-copy-removed",
           "recovery": {
             "kind": "git",
             "repositoryRoot": "I:\\OpenCode\\fvttV12JsonGenerator",
             "commit": "9d5cbf2ac6e887c3b3879acc89970214240897d9",
             "path": ".worktreeinclude"
           },
-          "reason": "与主线已跟踪规则逐字节相同。"
+          "reason": "与主线已跟踪规则逐字节相同。",
+          "sourceCopyRemoved": true,
+          "retainedBytesVerifiedAtExecution": true
         },
         {
           "kind": "untracked",
@@ -60,7 +57,9 @@
             "commit": "f27897c2f7069e2625c153db44376c006892846b",
             "path": "docs/reviews/2026-10-12-forge-ai-task-simplification.md"
           },
-          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。",
+          "sourceCopyRemoved": true,
+          "retainedBytesVerifiedAtExecution": true
         },
         {
           "kind": "untracked",
@@ -75,7 +74,9 @@
             "commit": "f27897c2f7069e2625c153db44376c006892846b",
             "path": "docs/reviews/2026-10-12-forge-current-status.md"
           },
-          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。",
+          "sourceCopyRemoved": true,
+          "retainedBytesVerifiedAtExecution": true
         },
         {
           "kind": "untracked",
@@ -90,7 +91,9 @@
             "commit": "f27897c2f7069e2625c153db44376c006892846b",
             "path": "docs/reviews/2026-10-12-forge-repeated-failure-analysis.md"
           },
-          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。",
+          "sourceCopyRemoved": true,
+          "retainedBytesVerifiedAtExecution": true
         },
         {
           "kind": "untracked",
@@ -105,7 +108,9 @@
             "commit": "f27897c2f7069e2625c153db44376c006892846b",
             "path": "docs/reviews/2026-10-13-forge-reliability-direction.md"
           },
-          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。",
+          "sourceCopyRemoved": true,
+          "retainedBytesVerifiedAtExecution": true
         },
         {
           "kind": "untracked",
@@ -120,7 +125,9 @@
             "commit": "f27897c2f7069e2625c153db44376c006892846b",
             "path": "docs/reviews/2026-10-13-forge-systemic-failure-diagnosis.md"
           },
-          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。",
+          "sourceCopyRemoved": true,
+          "retainedBytesVerifiedAtExecution": true
         },
         {
           "kind": "ignored",
@@ -128,12 +135,14 @@
           "size": 2022,
           "sha256": "d917c99490496bfa6e3e42067efa005bdd3d5d5f820b0621607a2249001ca34c",
           "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\.codex\\config.toml",
-          "disposition": "duplicate-removal-candidate-after-approval",
+          "disposition": "duplicate-copy-removed",
           "recovery": {
             "kind": "file",
             "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator\\.codex\\config.toml"
           },
-          "reason": "与主区本地配置逐字节相同；仅记录hash，不复制或提交配置。"
+          "reason": "与主区本地配置逐字节相同；仅记录hash，不复制或提交配置。",
+          "sourceCopyRemoved": true,
+          "retainedBytesVerifiedAtExecution": true
         },
         {
           "kind": "ignored",
@@ -141,10 +150,11 @@
           "size": 9378,
           "sha256": "08331224cd8060a60cb10896c8f0238839a3077eb0f73cb6ad2b1d97df960a3a",
           "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\.local\\forge-reliability-research-20261013\\5e-importer.md",
-          "disposition": "retain-original-in-place",
-          "reason": "历史调研所读网页摘录；当前仓库和各worktree相同相对路径未读回同hash外部副本。公开URL可以重新下载，但不能保证复现当时网页字节。未获本次原件迁移授权，不为清理制作副本。",
+          "disposition": "reviewed-and-discarded-under-explicit-authorization",
+          "reason": "历史网页摘录有参考关系，但研究结论/引用/限制已在Git报告保留；不值得为原始抓取字节保留整个旧checkout。明确舍弃这份原件，未保存副本，不声称可重建。",
           "publicSource": "https://github.com/jbhaywood/5e-statblock-importer",
-          "existingOutsideRecoveryVerified": false
+          "existingOutsideRecoveryVerified": false,
+          "sourceCopyRemoved": true
         },
         {
           "kind": "ignored",
@@ -152,10 +162,11 @@
           "size": 15131,
           "sha256": "b1e64d895df7df5be3d77afeb5263b83eaf92fcdbf138d0574b1a3c4d29f7656",
           "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\.local\\forge-reliability-research-20261013\\babele.md",
-          "disposition": "retain-original-in-place",
-          "reason": "历史调研所读网页摘录；当前仓库和各worktree相同相对路径未读回同hash外部副本。公开URL可以重新下载，但不能保证复现当时网页字节。未获本次原件迁移授权，不为清理制作副本。",
+          "disposition": "reviewed-and-discarded-under-explicit-authorization",
+          "reason": "历史网页摘录有参考关系，但研究结论/引用/限制已在Git报告保留；不值得为原始抓取字节保留整个旧checkout。明确舍弃这份原件，未保存副本，不声称可重建。",
           "publicSource": "https://foundryvtt.com/packages/babele/",
-          "existingOutsideRecoveryVerified": false
+          "existingOutsideRecoveryVerified": false,
+          "sourceCopyRemoved": true
         },
         {
           "kind": "ignored",
@@ -163,10 +174,11 @@
           "size": 9950,
           "sha256": "268e9b4941a5ed38b284a90b44e0b50d60ce29e2b84571356fdc182199f9f21b",
           "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\.local\\forge-reliability-research-20261013\\pf1-converter.md",
-          "disposition": "retain-original-in-place",
-          "reason": "历史调研所读网页摘录；当前仓库和各worktree相同相对路径未读回同hash外部副本。公开URL可以重新下载，但不能保证复现当时网页字节。未获本次原件迁移授权，不为清理制作副本。",
+          "disposition": "reviewed-and-discarded-under-explicit-authorization",
+          "reason": "历史网页摘录有参考关系，但研究结论/引用/限制已在Git报告保留；不值得为原始抓取字节保留整个旧checkout。明确舍弃这份原件，未保存副本，不声称可重建。",
           "publicSource": "https://github.com/Lavaeolous/Foundry-PF1-StatBlock-Converter",
-          "existingOutsideRecoveryVerified": false
+          "existingOutsideRecoveryVerified": false,
+          "sourceCopyRemoved": true
         },
         {
           "kind": "ignored",
@@ -174,19 +186,17 @@
           "size": 6098,
           "sha256": "6d9ea3651b23ecc666311178b462472779216b9be5eed4c40b470093b73eafc3",
           "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\.local\\forge-reliability-research-20261013\\pf1-module.md",
-          "disposition": "retain-original-in-place",
-          "reason": "历史调研所读网页摘录；当前仓库和各worktree相同相对路径未读回同hash外部副本。公开URL可以重新下载，但不能保证复现当时网页字节。未获本次原件迁移授权，不为清理制作副本。",
+          "disposition": "reviewed-and-discarded-under-explicit-authorization",
+          "reason": "历史网页摘录有参考关系，但研究结论/引用/限制已在Git报告保留；不值得为原始抓取字节保留整个旧checkout。明确舍弃这份原件，未保存副本，不声称可重建。",
           "publicSource": "https://github.com/Lavaeolous/PF1-StatBlock-Converter-Module",
-          "existingOutsideRecoveryVerified": false
+          "existingOutsideRecoveryVerified": false,
+          "sourceCopyRemoved": true
         }
       ],
-      "remainingExecutionConditions": [
-        "精确对象删除授权",
-        "相关提交按授权推送",
-        "明确接受舍弃所列旧检查点JSON（如存在）",
-        "执行前再核内容和使用者",
-        "先按精确清单处理untracked/ignored，不能用force移除脏worktree"
-      ]
+      "remainingExecutionConditions": [],
+      "worktreeRemoved": true,
+      "mergedLocalBranchRemoved": true,
+      "unknownFilesAtExecution": false
     },
     {
       "root": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research",
@@ -203,14 +213,16 @@
           "size": 19,
           "sha256": "d9ac0c7bc6c3441638c2240ffc057dc34776cb22407856276e1a4346dd747a2d",
           "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\.worktreeinclude",
-          "disposition": "duplicate-removal-candidate-after-approval",
+          "disposition": "duplicate-copy-removed",
           "recovery": {
             "kind": "git",
             "repositoryRoot": "I:\\OpenCode\\fvttV12JsonGenerator",
             "commit": "9d5cbf2ac6e887c3b3879acc89970214240897d9",
             "path": ".worktreeinclude"
           },
-          "reason": "与主线已跟踪规则逐字节相同。"
+          "reason": "与主线已跟踪规则逐字节相同。",
+          "sourceCopyRemoved": true,
+          "retainedBytesVerifiedAtExecution": true
         },
         {
           "kind": "untracked",
@@ -225,7 +237,9 @@
             "commit": "f27897c2f7069e2625c153db44376c006892846b",
             "path": "docs/plans/2026-10-16-forge-native-basics-recovery.md"
           },
-          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。",
+          "sourceCopyRemoved": true,
+          "retainedBytesVerifiedAtExecution": true
         },
         {
           "kind": "untracked",
@@ -240,7 +254,9 @@
             "commit": "f27897c2f7069e2625c153db44376c006892846b",
             "path": "docs/reviews/2026-10-16-forge-intent-regression-and-implementation-references.md"
           },
-          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。",
+          "sourceCopyRemoved": true,
+          "retainedBytesVerifiedAtExecution": true
         },
         {
           "kind": "ignored",
@@ -248,12 +264,14 @@
           "size": 2022,
           "sha256": "d917c99490496bfa6e3e42067efa005bdd3d5d5f820b0621607a2249001ca34c",
           "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\.codex\\config.toml",
-          "disposition": "duplicate-removal-candidate-after-approval",
+          "disposition": "duplicate-copy-removed",
           "recovery": {
             "kind": "file",
             "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator\\.codex\\config.toml"
           },
-          "reason": "与主区本地配置逐字节相同；仅记录hash，不复制或提交配置。"
+          "reason": "与主区本地配置逐字节相同；仅记录hash，不复制或提交配置。",
+          "sourceCopyRemoved": true,
+          "retainedBytesVerifiedAtExecution": true
         },
         {
           "kind": "ignored",
@@ -261,8 +279,8 @@
           "size": 3079,
           "sha256": "b84c0cf7d428d8a533f4d1576da853063b05eef33673759f526507b839cf0a2d",
           "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\.local\\forge-intent-checkpoint.json",
-          "disposition": "obsolete-task-state-proposed-discard-after-approval",
-          "reason": "已读完整JSON：只有prompt hash、旧任务状态/权限边界、动作说明及文档引用；没有模型原答、Actor、测试日志或凭据。所指文档/hash均已归档；建议舍弃旧进度记录本身，不宣称JSON可重建。",
+          "disposition": "reviewed-and-discarded-under-explicit-authorization",
+          "reason": "旧任务状态/权限边界/文档hash，非模型原答、Actor或行为证据；所引文档已归档，明确舍弃旧JSON本身，不声称可重建。",
           "checkpointItemIds": [
             "understand-forge-original-goal",
             "investigate-regression-and-external-help",
@@ -290,7 +308,8 @@
               "archivedPath": "docs/reviews/2026-10-16-forge-intent-regression-and-implementation-references.md"
             }
           ],
-          "uniqueTaskStateWouldBeDiscarded": true
+          "uniqueTaskStateWouldBeDiscarded": true,
+          "sourceCopyRemoved": true
         },
         {
           "kind": "ignored",
@@ -298,8 +317,8 @@
           "size": 4038,
           "sha256": "2627fa826e4c97a887dbcdf64ee4b745fe3d63ab347150d07b9fde8bc17ff296",
           "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\.local\\forge-repair-plan-checkpoint.json",
-          "disposition": "obsolete-task-state-proposed-discard-after-approval",
-          "reason": "已读完整JSON：只有prompt hash、旧任务状态/权限边界、动作说明及文档引用；没有模型原答、Actor、测试日志或凭据。所指文档/hash均已归档；建议舍弃旧进度记录本身，不宣称JSON可重建。",
+          "disposition": "reviewed-and-discarded-under-explicit-authorization",
+          "reason": "旧任务状态/权限边界/文档hash，非模型原答、Actor或行为证据；所引文档已归档，明确舍弃旧JSON本身，不声称可重建。",
           "checkpointItemIds": [
             "understand-forge-original-goal",
             "investigate-regression-and-external-help",
@@ -339,16 +358,14 @@
               "archivedPath": "docs/plans/2026-10-16-forge-native-basics-recovery.md"
             }
           ],
-          "uniqueTaskStateWouldBeDiscarded": true
+          "uniqueTaskStateWouldBeDiscarded": true,
+          "sourceCopyRemoved": true
         }
       ],
-      "remainingExecutionConditions": [
-        "精确对象删除授权",
-        "相关提交按授权推送",
-        "明确接受舍弃所列旧检查点JSON（如存在）",
-        "执行前再核内容和使用者",
-        "先按精确清单处理untracked/ignored，不能用force移除脏worktree"
-      ]
+      "remainingExecutionConditions": [],
+      "worktreeRemoved": true,
+      "mergedLocalBranchRemoved": true,
+      "unknownFilesAtExecution": false
     },
     {
       "root": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research",
@@ -365,14 +382,16 @@
           "size": 19,
           "sha256": "d9ac0c7bc6c3441638c2240ffc057dc34776cb22407856276e1a4346dd747a2d",
           "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research\\.worktreeinclude",
-          "disposition": "duplicate-removal-candidate-after-approval",
+          "disposition": "duplicate-copy-removed",
           "recovery": {
             "kind": "git",
             "repositoryRoot": "I:\\OpenCode\\fvttV12JsonGenerator",
             "commit": "9d5cbf2ac6e887c3b3879acc89970214240897d9",
             "path": ".worktreeinclude"
           },
-          "reason": "与主线已跟踪规则逐字节相同。"
+          "reason": "与主线已跟踪规则逐字节相同。",
+          "sourceCopyRemoved": true,
+          "retainedBytesVerifiedAtExecution": true
         },
         {
           "kind": "untracked",
@@ -387,7 +406,9 @@
             "commit": "f27897c2f7069e2625c153db44376c006892846b",
             "path": "docs/plans/2026-10-19-forge-minimal-ab-plan.md"
           },
-          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。",
+          "sourceCopyRemoved": true,
+          "retainedBytesVerifiedAtExecution": true
         },
         {
           "kind": "untracked",
@@ -402,7 +423,9 @@
             "commit": "f27897c2f7069e2625c153db44376c006892846b",
             "path": "docs/reviews/2026-10-19-forge-extraction-granularity-comparison.md"
           },
-          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。",
+          "sourceCopyRemoved": true,
+          "retainedBytesVerifiedAtExecution": true
         },
         {
           "kind": "ignored",
@@ -410,12 +433,14 @@
           "size": 2022,
           "sha256": "d917c99490496bfa6e3e42067efa005bdd3d5d5f820b0621607a2249001ca34c",
           "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research\\.codex\\config.toml",
-          "disposition": "duplicate-removal-candidate-after-approval",
+          "disposition": "duplicate-copy-removed",
           "recovery": {
             "kind": "file",
             "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator\\.codex\\config.toml"
           },
-          "reason": "与主区本地配置逐字节相同；仅记录hash，不复制或提交配置。"
+          "reason": "与主区本地配置逐字节相同；仅记录hash，不复制或提交配置。",
+          "sourceCopyRemoved": true,
+          "retainedBytesVerifiedAtExecution": true
         },
         {
           "kind": "ignored",
@@ -423,8 +448,8 @@
           "size": 2733,
           "sha256": "d0ce062981db5dbe84baea6d3c5c655285a2ee7194b6dc860419dd7461135bc8",
           "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research\\.local\\forge-extraction-research-checkpoint.json",
-          "disposition": "obsolete-task-state-proposed-discard-after-approval",
-          "reason": "已读完整JSON：只有prompt hash、旧任务状态/权限边界、动作说明及文档引用；没有模型原答、Actor、测试日志或凭据。所指文档/hash均已归档；建议舍弃旧进度记录本身，不宣称JSON可重建。",
+          "disposition": "reviewed-and-discarded-under-explicit-authorization",
+          "reason": "旧任务状态/权限边界/文档hash，非模型原答、Actor或行为证据；所引文档已归档，明确舍弃旧JSON本身，不声称可重建。",
           "checkpointItemIds": [
             "fair-a-b-research-comparison",
             "external-firsthand-and-independent-review",
@@ -452,7 +477,8 @@
               "archivedPath": "docs/reviews/2026-10-19-forge-extraction-granularity-comparison.md"
             }
           ],
-          "uniqueTaskStateWouldBeDiscarded": true
+          "uniqueTaskStateWouldBeDiscarded": true,
+          "sourceCopyRemoved": true
         },
         {
           "kind": "ignored",
@@ -460,8 +486,8 @@
           "size": 2554,
           "sha256": "05c88adaeb552099b7d8ba525b8fe10ba86a662e131f26858c58d341a3b373f1",
           "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research\\.local\\forge-minimal-ab-plan-checkpoint.json",
-          "disposition": "obsolete-task-state-proposed-discard-after-approval",
-          "reason": "已读完整JSON：只有prompt hash、旧任务状态/权限边界、动作说明及文档引用；没有模型原答、Actor、测试日志或凭据。所指文档/hash均已归档；建议舍弃旧进度记录本身，不宣称JSON可重建。",
+          "disposition": "reviewed-and-discarded-under-explicit-authorization",
+          "reason": "旧任务状态/权限边界/文档hash，非模型原答、Actor或行为证据；所引文档已归档，明确舍弃旧JSON本身，不声称可重建。",
           "checkpointItemIds": [
             "minimal-ab-plan",
             "metrics-and-request-budget",
@@ -489,16 +515,29 @@
               "archivedPath": "docs/plans/2026-10-19-forge-minimal-ab-plan.md"
             }
           ],
-          "uniqueTaskStateWouldBeDiscarded": true
+          "uniqueTaskStateWouldBeDiscarded": true,
+          "sourceCopyRemoved": true
         }
       ],
-      "remainingExecutionConditions": [
-        "精确对象删除授权",
-        "相关提交按授权推送",
-        "明确接受舍弃所列旧检查点JSON（如存在）",
-        "执行前再核内容和使用者",
-        "先按精确清单处理untracked/ignored，不能用force移除脏worktree"
-      ]
+      "remainingExecutionConditions": [],
+      "worktreeRemoved": true,
+      "mergedLocalBranchRemoved": true,
+      "unknownFilesAtExecution": false
     }
-  ]
+  ],
+  "initialAssessmentCommit": "b508383cbd648607b5fbecdada2306baa8138ca9",
+  "executionUserRequest": "那就删掉这三个 worktree，然后去外部调研，为什么你总是这么保守，就连个文件都不敢删，还是我们都在收尾的时候，调研",
+  "localPageSnapshotsDiscarded": 4,
+  "oldCheckpointsDiscarded": 4,
+  "localBranchRemovalPerformed": true,
+  "removedWorktreeCount": 3,
+  "removedLocalBranchCount": 3,
+  "sourceInventoryFileCopiesRemoved": 23,
+  "mainUntrackedFilesPreserved": 41,
+  "remainingRegisteredWorktreesIncludingMainAndImplementation": 12,
+  "forceUsed": false,
+  "backupsCreated": false,
+  "assessmentCorrection": "初评以网页没有另一份同字节副本为由要求保留failure目录，价值判断过重；9份研究结论和引用已归档，四页原始摘录与四份旧检查点经重评和明确删除授权后舍弃，不声称可再生。",
+  "evidenceRoot": "H:/CodexData/visualizations/2026/10/29/01a18790-ad68-79e3-8895-49616acd060d/forge-three-worktree-removal-and-autonomy-research-20261030/",
+  "ruleResolution": "本轮精确删除指令优先于通用清理前推送/创建归属门槛；只删除三个已指明研究worktree及对应已合并本地分支，不扩大为push或其他目录清理。"
 }
