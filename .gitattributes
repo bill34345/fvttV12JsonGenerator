@@ -18,3 +18,21 @@ tests/fixtures/forge-heading-coverage/guard.md whitespace=-blank-at-eof
 docs/reviews/2026-10-13-forge-reliability-direction.md -text whitespace=cr-at-eol
 # Preserve the other historical report's original terminal blank line.
 docs/reviews/2026-10-12-forge-current-status.md whitespace=-blank-at-eof
+
+# Preserve byte-faithful BetterMonsters historical reports; only exact archived paths.
+docs/acceptance/2026-10-12-forge-food-retention.md -text whitespace=cr-at-eol
+docs/acceptance/2026-10-12-forge-gazer-forced-movement.md whitespace=-blank-at-eof
+docs/acceptance/2026-10-12-forge-target-choice-format.md -text whitespace=cr-at-eol
+docs/acceptance/2026-10-13-forge-contract-repair.md -text whitespace=cr-at-eol
+docs/acceptance/2026-10-13-forge-frozen-six-pdf.md -text whitespace=cr-at-eol
+docs/acceptance/2026-10-17-forge-spell-and-rule-repair.md -text whitespace=cr-at-eol
+docs/plans/2026-10-11-forge-semantic-icons.md -text whitespace=cr-at-eol
+docs/plans/2026-10-13-forge-cross-stage-contract-repair.md -text whitespace=cr-at-eol
+docs/plans/2026-10-13-forge-raw-failure-contract-repair.md -text whitespace=cr-at-eol
+docs/plans/2026-10-13-forge-shared-facts-and-cross-pdf.md -text whitespace=cr-at-eol
+docs/reviews/2026-10-13-forge-comparable-importers-and-manual-fallback.md whitespace=-blank-at-eof
+docs/reviews/2026-10-13-forge-pdf-download-diagnosis.md -text whitespace=cr-at-eol
+docs/reviews/2026-10-15-forge-archivist-grim-source.md -text whitespace=cr-at-eol
+docs/reviews/2026-10-16-native-spell-cache-html-normalization.md -text whitespace=cr-at-eol
+docs/reviews/2026-10-16-native-spell-effect-duration.md -text whitespace=cr-at-eol
+docs/reviews/2026-10-18-forge-broad-rule-expansion.md -text whitespace=cr-at-eol
