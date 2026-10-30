@@ -60,9 +60,9 @@
     "note": "已逐项对照运维条目与worktree来源：来源只新增纯个人资料在仓库外转换的分流，仓库开发、资产保留检查、清理授权及运维命令和权限保持。此更新不构成Foundry或生产运行验收。"
   },
   "verification-development": {
-    "fingerprint": "a1a0d96541c17fb06d31ad144743ba96edd3fde68a16b7156aa1a158a182d5f0",
+    "fingerprint": "91af673332ae46b22f0aab408f99bf7e51d4817700f51915b27a748b1075b5ae",
     "reviewedOn": "2026-10-30",
-    "note": "核对超长测试清单传参修订：保持公开安全入口、精确清单、逐文件钩子、单进程覆盖率和接受边界，条目正文无需改写。"
+    "note": "对照第五CI全部8249非skip用例输出与Bun固定源码：只调整覆盖率总预算840秒、外层22分钟以容纳同步LCOV生成，测试清单、单案预算、单进程、阈值与完整退出接受口径保持。"
   },
   "human-encounter-intake": {
     "fingerprint": "6e4eec027fa69d8d801d4511904bca069e8f2a591e8bcebd31b8c3a9e5a5bbc6",

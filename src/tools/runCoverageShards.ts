@@ -82,9 +82,9 @@ export async function runCoverageInventory(files: string[], directory: string, t
         throw new Error('Coverage inventory exceeds the command-line limit even with directory aliases.');
       }
     }
-    // The hosted Windows inventory reached its final cases at the former 600s
-    // deadline. Allow bounded report finalization on that runner as well.
-    await runCoverageProcess(process.execPath, [...args, ...paths], 720_000);
+    // The hosted Windows run finished its cases at 675s, then hit the 720s
+    // deadline during synchronous LCOV generation. Reserve bounded report time.
+    await runCoverageProcess(process.execPath, [...args, ...paths], 840_000);
   } finally {
     if (argumentRoot) await rm(argumentRoot, { recursive: true });
   }

@@ -15,7 +15,7 @@ concurrency:
 jobs:
   verify:
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 22
     env:
       FVTT_CI_TEST_PROFILE: portable
     steps:
