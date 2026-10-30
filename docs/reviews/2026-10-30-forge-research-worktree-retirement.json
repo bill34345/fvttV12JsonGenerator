@@ -1,0 +1,504 @@
+{
+  "version": 1,
+  "asOf": "2026-10-30",
+  "purpose": "只读内容处置评估；不是自动清理请求或删除授权",
+  "userRequest": "好，先把这9份文档纳入主线，核对三个纯研究 worktree 的 .local，再给我具体的可删除清单。",
+  "archiveCommit": "f27897c2f7069e2625c153db44376c006892846b",
+  "documentCount": 9,
+  "sourceNontrackedAndIgnoredFilesInspected": 23,
+  "localFileCount": 8,
+  "localPageSnapshotsToKeep": 4,
+  "oldCheckpointDiscardCandidates": 4,
+  "worktreeRemovalPerformed": false,
+  "pushPerformed": false,
+  "scopeExcludes": [
+    "BetterMonsters",
+    "category adapter",
+    "MCP tasks",
+    "other worktrees"
+  ],
+  "worktrees": [
+    {
+      "root": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review",
+      "branch": "codex/20261012-132706-forge-failure-review",
+      "head": "3734eb2de0b19b0f3d4cfb38bd1e0c8478635281",
+      "headAlreadyAncestorOfMaster": true,
+      "trackedIndexAndWorktreeCleanAtInspection": true,
+      "proposedWholeWorktreeRetirement": false,
+      "mustRetainInPlace": [
+        ".local/forge-reliability-research-20261013/5e-importer.md",
+        ".local/forge-reliability-research-20261013/babele.md",
+        ".local/forge-reliability-research-20261013/pf1-converter.md",
+        ".local/forge-reliability-research-20261013/pf1-module.md"
+      ],
+      "entries": [
+        {
+          "kind": "untracked",
+          "path": ".worktreeinclude",
+          "size": 19,
+          "sha256": "d9ac0c7bc6c3441638c2240ffc057dc34776cb22407856276e1a4346dd747a2d",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\.worktreeinclude",
+          "disposition": "duplicate-removal-candidate-after-approval",
+          "recovery": {
+            "kind": "git",
+            "repositoryRoot": "I:\\OpenCode\\fvttV12JsonGenerator",
+            "commit": "9d5cbf2ac6e887c3b3879acc89970214240897d9",
+            "path": ".worktreeinclude"
+          },
+          "reason": "与主线已跟踪规则逐字节相同。"
+        },
+        {
+          "kind": "untracked",
+          "path": "docs/reviews/2026-10-12-forge-ai-task-simplification.md",
+          "size": 9760,
+          "sha256": "a0f8fcc8a270975217f2b7f85e384e58f37bba0de782e603479172304d236bfd",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\docs\\reviews\\2026-10-12-forge-ai-task-simplification.md",
+          "disposition": "retained-in-git",
+          "recovery": {
+            "kind": "git",
+            "repositoryRoot": "I:\\OpenCode\\fvttV12JsonGenerator",
+            "commit": "f27897c2f7069e2625c153db44376c006892846b",
+            "path": "docs/reviews/2026-10-12-forge-ai-task-simplification.md"
+          },
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+        },
+        {
+          "kind": "untracked",
+          "path": "docs/reviews/2026-10-12-forge-current-status.md",
+          "size": 38178,
+          "sha256": "08a4c8488ce81f46eb1d61033daeac7af900c09d4a7a87da0c80545575ae0143",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\docs\\reviews\\2026-10-12-forge-current-status.md",
+          "disposition": "retained-in-git",
+          "recovery": {
+            "kind": "git",
+            "repositoryRoot": "I:\\OpenCode\\fvttV12JsonGenerator",
+            "commit": "f27897c2f7069e2625c153db44376c006892846b",
+            "path": "docs/reviews/2026-10-12-forge-current-status.md"
+          },
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+        },
+        {
+          "kind": "untracked",
+          "path": "docs/reviews/2026-10-12-forge-repeated-failure-analysis.md",
+          "size": 21105,
+          "sha256": "43b1c1fd7f4d504c0ac874a6a1db627988ad7336e8d0b9fc40cf61f0752022e1",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\docs\\reviews\\2026-10-12-forge-repeated-failure-analysis.md",
+          "disposition": "retained-in-git",
+          "recovery": {
+            "kind": "git",
+            "repositoryRoot": "I:\\OpenCode\\fvttV12JsonGenerator",
+            "commit": "f27897c2f7069e2625c153db44376c006892846b",
+            "path": "docs/reviews/2026-10-12-forge-repeated-failure-analysis.md"
+          },
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+        },
+        {
+          "kind": "untracked",
+          "path": "docs/reviews/2026-10-13-forge-reliability-direction.md",
+          "size": 8610,
+          "sha256": "40bd94ac1b77c34d94565972db1882b534a694cc946e0857717353159a9a4951",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\docs\\reviews\\2026-10-13-forge-reliability-direction.md",
+          "disposition": "retained-in-git",
+          "recovery": {
+            "kind": "git",
+            "repositoryRoot": "I:\\OpenCode\\fvttV12JsonGenerator",
+            "commit": "f27897c2f7069e2625c153db44376c006892846b",
+            "path": "docs/reviews/2026-10-13-forge-reliability-direction.md"
+          },
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+        },
+        {
+          "kind": "untracked",
+          "path": "docs/reviews/2026-10-13-forge-systemic-failure-diagnosis.md",
+          "size": 16502,
+          "sha256": "52ae79cecca9c6d46c5373194027fdca0784ac0eebac01e6ac2eb5c28885a954",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\docs\\reviews\\2026-10-13-forge-systemic-failure-diagnosis.md",
+          "disposition": "retained-in-git",
+          "recovery": {
+            "kind": "git",
+            "repositoryRoot": "I:\\OpenCode\\fvttV12JsonGenerator",
+            "commit": "f27897c2f7069e2625c153db44376c006892846b",
+            "path": "docs/reviews/2026-10-13-forge-systemic-failure-diagnosis.md"
+          },
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+        },
+        {
+          "kind": "ignored",
+          "path": ".codex/config.toml",
+          "size": 2022,
+          "sha256": "d917c99490496bfa6e3e42067efa005bdd3d5d5f820b0621607a2249001ca34c",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\.codex\\config.toml",
+          "disposition": "duplicate-removal-candidate-after-approval",
+          "recovery": {
+            "kind": "file",
+            "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator\\.codex\\config.toml"
+          },
+          "reason": "与主区本地配置逐字节相同；仅记录hash，不复制或提交配置。"
+        },
+        {
+          "kind": "ignored",
+          "path": ".local/forge-reliability-research-20261013/5e-importer.md",
+          "size": 9378,
+          "sha256": "08331224cd8060a60cb10896c8f0238839a3077eb0f73cb6ad2b1d97df960a3a",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\.local\\forge-reliability-research-20261013\\5e-importer.md",
+          "disposition": "retain-original-in-place",
+          "reason": "历史调研所读网页摘录；当前仓库和各worktree相同相对路径未读回同hash外部副本。公开URL可以重新下载，但不能保证复现当时网页字节。未获本次原件迁移授权，不为清理制作副本。",
+          "publicSource": "https://github.com/jbhaywood/5e-statblock-importer",
+          "existingOutsideRecoveryVerified": false
+        },
+        {
+          "kind": "ignored",
+          "path": ".local/forge-reliability-research-20261013/babele.md",
+          "size": 15131,
+          "sha256": "b1e64d895df7df5be3d77afeb5263b83eaf92fcdbf138d0574b1a3c4d29f7656",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\.local\\forge-reliability-research-20261013\\babele.md",
+          "disposition": "retain-original-in-place",
+          "reason": "历史调研所读网页摘录；当前仓库和各worktree相同相对路径未读回同hash外部副本。公开URL可以重新下载，但不能保证复现当时网页字节。未获本次原件迁移授权，不为清理制作副本。",
+          "publicSource": "https://foundryvtt.com/packages/babele/",
+          "existingOutsideRecoveryVerified": false
+        },
+        {
+          "kind": "ignored",
+          "path": ".local/forge-reliability-research-20261013/pf1-converter.md",
+          "size": 9950,
+          "sha256": "268e9b4941a5ed38b284a90b44e0b50d60ce29e2b84571356fdc182199f9f21b",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\.local\\forge-reliability-research-20261013\\pf1-converter.md",
+          "disposition": "retain-original-in-place",
+          "reason": "历史调研所读网页摘录；当前仓库和各worktree相同相对路径未读回同hash外部副本。公开URL可以重新下载，但不能保证复现当时网页字节。未获本次原件迁移授权，不为清理制作副本。",
+          "publicSource": "https://github.com/Lavaeolous/Foundry-PF1-StatBlock-Converter",
+          "existingOutsideRecoveryVerified": false
+        },
+        {
+          "kind": "ignored",
+          "path": ".local/forge-reliability-research-20261013/pf1-module.md",
+          "size": 6098,
+          "sha256": "6d9ea3651b23ecc666311178b462472779216b9be5eed4c40b470093b73eafc3",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261012-132706-forge-failure-review\\.local\\forge-reliability-research-20261013\\pf1-module.md",
+          "disposition": "retain-original-in-place",
+          "reason": "历史调研所读网页摘录；当前仓库和各worktree相同相对路径未读回同hash外部副本。公开URL可以重新下载，但不能保证复现当时网页字节。未获本次原件迁移授权，不为清理制作副本。",
+          "publicSource": "https://github.com/Lavaeolous/PF1-StatBlock-Converter-Module",
+          "existingOutsideRecoveryVerified": false
+        }
+      ],
+      "remainingExecutionConditions": [
+        "精确对象删除授权",
+        "相关提交按授权推送",
+        "明确接受舍弃所列旧检查点JSON（如存在）",
+        "执行前再核内容和使用者",
+        "先按精确清单处理untracked/ignored，不能用force移除脏worktree"
+      ]
+    },
+    {
+      "root": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research",
+      "branch": "codex/20261016-104511-forge-intent-and-research",
+      "head": "3734eb2de0b19b0f3d4cfb38bd1e0c8478635281",
+      "headAlreadyAncestorOfMaster": true,
+      "trackedIndexAndWorktreeCleanAtInspection": true,
+      "proposedWholeWorktreeRetirement": true,
+      "mustRetainInPlace": [],
+      "entries": [
+        {
+          "kind": "untracked",
+          "path": ".worktreeinclude",
+          "size": 19,
+          "sha256": "d9ac0c7bc6c3441638c2240ffc057dc34776cb22407856276e1a4346dd747a2d",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\.worktreeinclude",
+          "disposition": "duplicate-removal-candidate-after-approval",
+          "recovery": {
+            "kind": "git",
+            "repositoryRoot": "I:\\OpenCode\\fvttV12JsonGenerator",
+            "commit": "9d5cbf2ac6e887c3b3879acc89970214240897d9",
+            "path": ".worktreeinclude"
+          },
+          "reason": "与主线已跟踪规则逐字节相同。"
+        },
+        {
+          "kind": "untracked",
+          "path": "docs/plans/2026-10-16-forge-native-basics-recovery.md",
+          "size": 15971,
+          "sha256": "e26589694cf6b74bbdd10d5889772e676b95b78aa9438a4f5bbbbf7040280cdc",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\docs\\plans\\2026-10-16-forge-native-basics-recovery.md",
+          "disposition": "retained-in-git",
+          "recovery": {
+            "kind": "git",
+            "repositoryRoot": "I:\\OpenCode\\fvttV12JsonGenerator",
+            "commit": "f27897c2f7069e2625c153db44376c006892846b",
+            "path": "docs/plans/2026-10-16-forge-native-basics-recovery.md"
+          },
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+        },
+        {
+          "kind": "untracked",
+          "path": "docs/reviews/2026-10-16-forge-intent-regression-and-implementation-references.md",
+          "size": 12481,
+          "sha256": "cdb1d5f59017bd30f8ff807da67c18bc498c21773d1ad6351eb9b8eb0758ed2a",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\docs\\reviews\\2026-10-16-forge-intent-regression-and-implementation-references.md",
+          "disposition": "retained-in-git",
+          "recovery": {
+            "kind": "git",
+            "repositoryRoot": "I:\\OpenCode\\fvttV12JsonGenerator",
+            "commit": "f27897c2f7069e2625c153db44376c006892846b",
+            "path": "docs/reviews/2026-10-16-forge-intent-regression-and-implementation-references.md"
+          },
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+        },
+        {
+          "kind": "ignored",
+          "path": ".codex/config.toml",
+          "size": 2022,
+          "sha256": "d917c99490496bfa6e3e42067efa005bdd3d5d5f820b0621607a2249001ca34c",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\.codex\\config.toml",
+          "disposition": "duplicate-removal-candidate-after-approval",
+          "recovery": {
+            "kind": "file",
+            "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator\\.codex\\config.toml"
+          },
+          "reason": "与主区本地配置逐字节相同；仅记录hash，不复制或提交配置。"
+        },
+        {
+          "kind": "ignored",
+          "path": ".local/forge-intent-checkpoint.json",
+          "size": 3079,
+          "sha256": "b84c0cf7d428d8a533f4d1576da853063b05eef33673759f526507b839cf0a2d",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\.local\\forge-intent-checkpoint.json",
+          "disposition": "obsolete-task-state-proposed-discard-after-approval",
+          "reason": "已读完整JSON：只有prompt hash、旧任务状态/权限边界、动作说明及文档引用；没有模型原答、Actor、测试日志或凭据。所指文档/hash均已归档；建议舍弃旧进度记录本身，不宣称JSON可重建。",
+          "checkpointItemIds": [
+            "understand-forge-original-goal",
+            "investigate-regression-and-external-help",
+            "known-forge-basic-function-regression"
+          ],
+          "checkpointStatuses": [
+            "done",
+            "done",
+            "waiting"
+          ],
+          "verifiedDocumentReferences": [
+            {
+              "originalPath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\docs\\reviews\\2026-10-16-forge-intent-regression-and-implementation-references.md",
+              "sha256": "cdb1d5f59017bd30f8ff807da67c18bc498c21773d1ad6351eb9b8eb0758ed2a",
+              "archivedPath": "docs/reviews/2026-10-16-forge-intent-regression-and-implementation-references.md"
+            },
+            {
+              "originalPath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\docs\\reviews\\2026-10-16-forge-intent-regression-and-implementation-references.md",
+              "sha256": "cdb1d5f59017bd30f8ff807da67c18bc498c21773d1ad6351eb9b8eb0758ed2a",
+              "archivedPath": "docs/reviews/2026-10-16-forge-intent-regression-and-implementation-references.md"
+            },
+            {
+              "originalPath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\docs\\reviews\\2026-10-16-forge-intent-regression-and-implementation-references.md",
+              "sha256": "cdb1d5f59017bd30f8ff807da67c18bc498c21773d1ad6351eb9b8eb0758ed2a",
+              "archivedPath": "docs/reviews/2026-10-16-forge-intent-regression-and-implementation-references.md"
+            }
+          ],
+          "uniqueTaskStateWouldBeDiscarded": true
+        },
+        {
+          "kind": "ignored",
+          "path": ".local/forge-repair-plan-checkpoint.json",
+          "size": 4038,
+          "sha256": "2627fa826e4c97a887dbcdf64ee4b745fe3d63ab347150d07b9fde8bc17ff296",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\.local\\forge-repair-plan-checkpoint.json",
+          "disposition": "obsolete-task-state-proposed-discard-after-approval",
+          "reason": "已读完整JSON：只有prompt hash、旧任务状态/权限边界、动作说明及文档引用；没有模型原答、Actor、测试日志或凭据。所指文档/hash均已归档；建议舍弃旧进度记录本身，不宣称JSON可重建。",
+          "checkpointItemIds": [
+            "understand-forge-original-goal",
+            "investigate-regression-and-external-help",
+            "known-forge-basic-function-regression",
+            "concrete-native-basics-repair-plan"
+          ],
+          "checkpointStatuses": [
+            "done",
+            "done",
+            "waiting",
+            "done"
+          ],
+          "verifiedDocumentReferences": [
+            {
+              "originalPath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\docs\\reviews\\2026-10-16-forge-intent-regression-and-implementation-references.md",
+              "sha256": "cdb1d5f59017bd30f8ff807da67c18bc498c21773d1ad6351eb9b8eb0758ed2a",
+              "archivedPath": "docs/reviews/2026-10-16-forge-intent-regression-and-implementation-references.md"
+            },
+            {
+              "originalPath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\docs\\reviews\\2026-10-16-forge-intent-regression-and-implementation-references.md",
+              "sha256": "cdb1d5f59017bd30f8ff807da67c18bc498c21773d1ad6351eb9b8eb0758ed2a",
+              "archivedPath": "docs/reviews/2026-10-16-forge-intent-regression-and-implementation-references.md"
+            },
+            {
+              "originalPath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\docs\\reviews\\2026-10-16-forge-intent-regression-and-implementation-references.md",
+              "sha256": "cdb1d5f59017bd30f8ff807da67c18bc498c21773d1ad6351eb9b8eb0758ed2a",
+              "archivedPath": "docs/reviews/2026-10-16-forge-intent-regression-and-implementation-references.md"
+            },
+            {
+              "originalPath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\docs\\plans\\2026-10-16-forge-native-basics-recovery.md",
+              "sha256": "e26589694cf6b74bbdd10d5889772e676b95b78aa9438a4f5bbbbf7040280cdc",
+              "archivedPath": "docs/plans/2026-10-16-forge-native-basics-recovery.md"
+            },
+            {
+              "originalPath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261016-104511-forge-intent-and-research\\docs\\plans\\2026-10-16-forge-native-basics-recovery.md",
+              "sha256": "e26589694cf6b74bbdd10d5889772e676b95b78aa9438a4f5bbbbf7040280cdc",
+              "archivedPath": "docs/plans/2026-10-16-forge-native-basics-recovery.md"
+            }
+          ],
+          "uniqueTaskStateWouldBeDiscarded": true
+        }
+      ],
+      "remainingExecutionConditions": [
+        "精确对象删除授权",
+        "相关提交按授权推送",
+        "明确接受舍弃所列旧检查点JSON（如存在）",
+        "执行前再核内容和使用者",
+        "先按精确清单处理untracked/ignored，不能用force移除脏worktree"
+      ]
+    },
+    {
+      "root": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research",
+      "branch": "codex/20261019-202102-forge-extraction-research",
+      "head": "3734eb2de0b19b0f3d4cfb38bd1e0c8478635281",
+      "headAlreadyAncestorOfMaster": true,
+      "trackedIndexAndWorktreeCleanAtInspection": true,
+      "proposedWholeWorktreeRetirement": true,
+      "mustRetainInPlace": [],
+      "entries": [
+        {
+          "kind": "untracked",
+          "path": ".worktreeinclude",
+          "size": 19,
+          "sha256": "d9ac0c7bc6c3441638c2240ffc057dc34776cb22407856276e1a4346dd747a2d",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research\\.worktreeinclude",
+          "disposition": "duplicate-removal-candidate-after-approval",
+          "recovery": {
+            "kind": "git",
+            "repositoryRoot": "I:\\OpenCode\\fvttV12JsonGenerator",
+            "commit": "9d5cbf2ac6e887c3b3879acc89970214240897d9",
+            "path": ".worktreeinclude"
+          },
+          "reason": "与主线已跟踪规则逐字节相同。"
+        },
+        {
+          "kind": "untracked",
+          "path": "docs/plans/2026-10-19-forge-minimal-ab-plan.md",
+          "size": 14672,
+          "sha256": "d7e4e638898201b98efad0e46976f1d9fe1c40e630022b082e6a7c45c4086b3b",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research\\docs\\plans\\2026-10-19-forge-minimal-ab-plan.md",
+          "disposition": "retained-in-git",
+          "recovery": {
+            "kind": "git",
+            "repositoryRoot": "I:\\OpenCode\\fvttV12JsonGenerator",
+            "commit": "f27897c2f7069e2625c153db44376c006892846b",
+            "path": "docs/plans/2026-10-19-forge-minimal-ab-plan.md"
+          },
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+        },
+        {
+          "kind": "untracked",
+          "path": "docs/reviews/2026-10-19-forge-extraction-granularity-comparison.md",
+          "size": 17504,
+          "sha256": "2669638a0d8c239fcbe11f469feafeb63c0b02a848d04b1086cd958ab594d26b",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research\\docs\\reviews\\2026-10-19-forge-extraction-granularity-comparison.md",
+          "disposition": "retained-in-git",
+          "recovery": {
+            "kind": "git",
+            "repositoryRoot": "I:\\OpenCode\\fvttV12JsonGenerator",
+            "commit": "f27897c2f7069e2625c153db44376c006892846b",
+            "path": "docs/reviews/2026-10-19-forge-extraction-granularity-comparison.md"
+          },
+          "reason": "原文已逐字节归档；旧日期、失败与未实施范围保持。"
+        },
+        {
+          "kind": "ignored",
+          "path": ".codex/config.toml",
+          "size": 2022,
+          "sha256": "d917c99490496bfa6e3e42067efa005bdd3d5d5f820b0621607a2249001ca34c",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research\\.codex\\config.toml",
+          "disposition": "duplicate-removal-candidate-after-approval",
+          "recovery": {
+            "kind": "file",
+            "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator\\.codex\\config.toml"
+          },
+          "reason": "与主区本地配置逐字节相同；仅记录hash，不复制或提交配置。"
+        },
+        {
+          "kind": "ignored",
+          "path": ".local/forge-extraction-research-checkpoint.json",
+          "size": 2733,
+          "sha256": "d0ce062981db5dbe84baea6d3c5c655285a2ee7194b6dc860419dd7461135bc8",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research\\.local\\forge-extraction-research-checkpoint.json",
+          "disposition": "obsolete-task-state-proposed-discard-after-approval",
+          "reason": "已读完整JSON：只有prompt hash、旧任务状态/权限边界、动作说明及文档引用；没有模型原答、Actor、测试日志或凭据。所指文档/hash均已归档；建议舍弃旧进度记录本身，不宣称JSON可重建。",
+          "checkpointItemIds": [
+            "fair-a-b-research-comparison",
+            "external-firsthand-and-independent-review",
+            "scope-and-unverified-effects"
+          ],
+          "checkpointStatuses": [
+            "done",
+            "done",
+            "done"
+          ],
+          "verifiedDocumentReferences": [
+            {
+              "originalPath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research\\docs\\reviews\\2026-10-19-forge-extraction-granularity-comparison.md",
+              "sha256": "2669638a0d8c239fcbe11f469feafeb63c0b02a848d04b1086cd958ab594d26b",
+              "archivedPath": "docs/reviews/2026-10-19-forge-extraction-granularity-comparison.md"
+            },
+            {
+              "originalPath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research\\docs\\reviews\\2026-10-19-forge-extraction-granularity-comparison.md",
+              "sha256": "2669638a0d8c239fcbe11f469feafeb63c0b02a848d04b1086cd958ab594d26b",
+              "archivedPath": "docs/reviews/2026-10-19-forge-extraction-granularity-comparison.md"
+            },
+            {
+              "originalPath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research\\docs\\reviews\\2026-10-19-forge-extraction-granularity-comparison.md",
+              "sha256": "2669638a0d8c239fcbe11f469feafeb63c0b02a848d04b1086cd958ab594d26b",
+              "archivedPath": "docs/reviews/2026-10-19-forge-extraction-granularity-comparison.md"
+            }
+          ],
+          "uniqueTaskStateWouldBeDiscarded": true
+        },
+        {
+          "kind": "ignored",
+          "path": ".local/forge-minimal-ab-plan-checkpoint.json",
+          "size": 2554,
+          "sha256": "05c88adaeb552099b7d8ba525b8fe10ba86a662e131f26858c58d341a3b373f1",
+          "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research\\.local\\forge-minimal-ab-plan-checkpoint.json",
+          "disposition": "obsolete-task-state-proposed-discard-after-approval",
+          "reason": "已读完整JSON：只有prompt hash、旧任务状态/权限边界、动作说明及文档引用；没有模型原答、Actor、测试日志或凭据。所指文档/hash均已归档；建议舍弃旧进度记录本身，不宣称JSON可重建。",
+          "checkpointItemIds": [
+            "minimal-ab-plan",
+            "metrics-and-request-budget",
+            "preserve-scope-and-original-work"
+          ],
+          "checkpointStatuses": [
+            "done",
+            "done",
+            "done"
+          ],
+          "verifiedDocumentReferences": [
+            {
+              "originalPath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research\\docs\\plans\\2026-10-19-forge-minimal-ab-plan.md",
+              "sha256": "d7e4e638898201b98efad0e46976f1d9fe1c40e630022b082e6a7c45c4086b3b",
+              "archivedPath": "docs/plans/2026-10-19-forge-minimal-ab-plan.md"
+            },
+            {
+              "originalPath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research\\docs\\plans\\2026-10-19-forge-minimal-ab-plan.md",
+              "sha256": "d7e4e638898201b98efad0e46976f1d9fe1c40e630022b082e6a7c45c4086b3b",
+              "archivedPath": "docs/plans/2026-10-19-forge-minimal-ab-plan.md"
+            },
+            {
+              "originalPath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261019-202102-forge-extraction-research\\docs\\plans\\2026-10-19-forge-minimal-ab-plan.md",
+              "sha256": "d7e4e638898201b98efad0e46976f1d9fe1c40e630022b082e6a7c45c4086b3b",
+              "archivedPath": "docs/plans/2026-10-19-forge-minimal-ab-plan.md"
+            }
+          ],
+          "uniqueTaskStateWouldBeDiscarded": true
+        }
+      ],
+      "remainingExecutionConditions": [
+        "精确对象删除授权",
+        "相关提交按授权推送",
+        "明确接受舍弃所列旧检查点JSON（如存在）",
+        "执行前再核内容和使用者",
+        "先按精确清单处理untracked/ignored，不能用force移除脏worktree"
+      ]
+    }
+  ]
+}
