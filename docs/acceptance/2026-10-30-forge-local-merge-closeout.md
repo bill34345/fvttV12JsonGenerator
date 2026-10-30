@@ -124,3 +124,11 @@
 九份原文保持字节不改；其中 `2026-10-12-forge-current-status.md` 指向已删除failure目录的旧绝对链接，通过本页历史研究索引中的[主线反复失败复盘](../reviews/2026-10-12-forge-repeated-failure-analysis.md)定位。其余BetterMonsters历史引用继续依赖现存目录。
 
 本轮是研究与状态更新，不改变产品入口、输入/输出、版本、用户步骤或安全限制，手册正文不需要改写；按既有提交/合并流程核对Ruler与手册同步。证据根为 `H:/CodexData/visualizations/2026/10/29/01a18790-ad68-79e3-8895-49616acd060d/forge-three-worktree-removal-and-autonomy-research-20261030/`，保留删除前库存与删除后读回，未复制已舍弃的原数据。
+
+## 同日接续：旧分类目录退役与BetterMonsters归档/处置评估
+
+用户在三个纯研究目录删除后，单独明确批准“先删掉旧分类 MD 适配器 worktree，先只处理这个”。该目录 `I:/OpenCode/fvttV12JsonGenerator-worktrees/20261019-205102-forge-category-md-adapter` 及对应已合并本地分支已用普通Git移除，无Force/备份，主线与其他worktree保持；证据为 `forge-category-retirement-and-bettermonsters-docs-20261030/`。
+
+用户随后要求：“那就先把82份文档归档到master，物品和种族那两行改动先别合。再核对4个诊断脚本和.local，给我具体的保留、删除清单，先不删BetterMonsters这个worktree。”82份原文已在 `4e9e624e` 逐字节归档并ff-only合入本地master，14份CRLF和2份末尾空行通过精确Git属性保持，来源工作树不修改。[归档索引](../reviews/2026-10-30-bettermonsters-archive-index.md)区分原日期与当前状态，并为54条原.local相对链接提供现存原目标定位。
+
+四个诊断源码和.local的[具体处置建议](../reviews/2026-10-30-bettermonsters-scripts-and-local-disposition.md)已完成。3脚本保留、1导出器可列删除候选；.local 16536文件保留、312文件为候选，含每一文件的原hash、理由及现存副本位置。此处仅提出清单，未删除任何BetterMonsters文件或其worktree；未合入物品/种族两行改动或四脚本，不push、不追加模型或功能重跑。原件全量hash、主区41untracked以及源码未混入均按本轮证据核对。

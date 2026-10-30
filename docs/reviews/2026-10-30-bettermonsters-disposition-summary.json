@@ -1,0 +1,728 @@
+{
+  "asOf": "2026-10-30",
+  "status": "PROPOSED_NOT_EXECUTED",
+  "userRequest": "那就先把82份文档归档到master，物品和种族那两行改动先别合。再核对4个诊断脚本和.local，给我具体的保留、删除清单，先不删BetterMonsters这个worktree。",
+  "root": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261006-111625-bettermonsters-eye-deep-sample",
+  "archivalCommit": "4e9e624e603c2f57a44a25eac3c1214e1f4fbf90",
+  "archivedDocuments": 82,
+  "archivedDocumentBytes": 678037,
+  "localFiles": 16848,
+  "localBytes": 3198685307,
+  "localDispositions": {
+    "retain": {
+      "files": 16536,
+      "bytes": 2853788008,
+      "reasons": {
+        "HISTORICAL_RELEASE_OR_CAPTURE": {
+          "files": 31,
+          "bytes": 49593031
+        },
+        "HISTORICAL_TOOL_OR_SOURCE": {
+          "files": 1064,
+          "bytes": 407722452
+        },
+        "REFERENCED_OR_FROZEN_EVIDENCE": {
+          "files": 5840,
+          "bytes": 1692253633
+        },
+        "RUN_INPUT_REPLY_RESULT_OR_RECEIPT": {
+          "files": 8981,
+          "bytes": 578505192
+        },
+        "SOURCE_OR_VISUAL_EVIDENCE": {
+          "files": 620,
+          "bytes": 125713700
+        }
+      }
+    },
+    "delete-candidate": {
+      "files": 312,
+      "bytes": 344897299,
+      "reasons": {
+        "BUN_COMPILER_CACHE": {
+          "files": 7,
+          "bytes": 73769318
+        },
+        "DUPLICATE_COMPILED_BUNDLE": {
+          "files": 19,
+          "bytes": 91327739
+        },
+        "OBSOLETE_PROGRESS_INPUT": {
+          "files": 161,
+          "bytes": 7725100
+        },
+        "REDUNDANT_TOOL_INSTALLATION": {
+          "files": 2,
+          "bytes": 136846953
+        },
+        "REVIEWED_EXTERNAL_RESEARCH_CAPTURE": {
+          "files": 46,
+          "bytes": 6228211
+        },
+        "UNPACKED_COPY_IN_RETAINED_ZIP": {
+          "files": 77,
+          "bytes": 28999978
+        }
+      }
+    }
+  },
+  "exactReferencePinsAtInspection": 5915,
+  "metadataContractsParsed": 1347,
+  "truncatedHistoricalReceiptRetained": [
+    ".local/forge-fresh-cloaker-20261016/install-receipt.json"
+  ],
+  "diagnosticScripts": [
+    {
+      "path": "tests/diagnostics/forge-broad-rule-audit.ts",
+      "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261006-111625-bettermonsters-eye-deep-sample\\tests\\diagnostics\\forge-broad-rule-audit.ts",
+      "size": 23434,
+      "sha256": "3fe3c63e97cb8442cd741c3cab4fc9dd20304965209b330880c53d5ec7824be8",
+      "lines": 208,
+      "disposition": "retain",
+      "reason": "208行独立规则、错误提案及正确对照完整输出比较；不是共享helper的单纯副本。保留为历史显式诊断源码，未证明可直接用于当前政策。"
+    },
+    {
+      "path": "tests/diagnostics/forge-native-mode-audit.ts",
+      "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261006-111625-bettermonsters-eye-deep-sample\\tests\\diagnostics\\forge-native-mode-audit.ts",
+      "size": 2731,
+      "sha256": "90623c1867439eb7853068aeb88b8c822785ed2d6cb6e0973a6ca707c4743ca2",
+      "lines": 25,
+      "disposition": "delete-candidate",
+      "reason": "25行正式链导出器，无独立机械断言；三个代表用例由主线native attack modes测试覆盖，原160条离线链报告及源/IR/Actor导出仍在.local保留。"
+    },
+    {
+      "path": "tests/diagnostics/forge-weird-semantics-audit.ts",
+      "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261006-111625-bettermonsters-eye-deep-sample\\tests\\diagnostics\\forge-weird-semantics-audit.ts",
+      "size": 20151,
+      "sha256": "104860bbc4b1942930d11232537f522dd2ace122805265e2f0302e75cf31d0f2",
+      "lines": 186,
+      "disposition": "retain",
+      "reason": "186行，除重复假provider链外还有条件伤害、时机、替换、状态边界及错误值/漏文探针。未证明独立检查已全被主线覆盖，保留其诊断定义，暂不并入当前CI。"
+    },
+    {
+      "path": "tests/diagnostics/forge-weird-statblock-audit.ts",
+      "absolutePath": "I:\\OpenCode\\fvttV12JsonGenerator-worktrees\\20261006-111625-bettermonsters-eye-deep-sample\\tests\\diagnostics\\forge-weird-statblock-audit.ts",
+      "size": 16192,
+      "sha256": "decf6ee070d9a3b5d7a54efbad5bda58c8f12e4e13352f0f906fab2b0a045271",
+      "lines": 156,
+      "disposition": "retain",
+      "reason": "156行，包含特殊属性块/OCR/来源头、能力库存及漏文变异的完整报告逻辑；主线已有对应回归，但未证明该历史诊断定义整体冗余，保留原源码。"
+    }
+  ],
+  "groups": {
+    "ai-development-methods-research-20261018": {
+      "retainFiles": 1,
+      "retainBytes": 7567,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "bettermonsters-eye-deep": {
+      "retainFiles": 114,
+      "retainBytes": 2396224,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "bettermonsters-second": {
+      "retainFiles": 98,
+      "retainBytes": 14276454,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "conditional-attack-choices-20261018": {
+      "retainFiles": 6,
+      "retainBytes": 12303,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "document-runs": {
+      "retainFiles": 8,
+      "retainBytes": 268019,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-a-baseline-commit-20261019": {
+      "retainFiles": 41,
+      "retainBytes": 14555004,
+      "deleteFiles": 1,
+      "deleteBytes": 2935
+    },
+    "forge-ai-fact-cooperation-20261018": {
+      "retainFiles": 43,
+      "retainBytes": 7956001,
+      "deleteFiles": 1,
+      "deleteBytes": 4083
+    },
+    "forge-ai-handoff-20261012": {
+      "retainFiles": 48,
+      "retainBytes": 1394757,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-angel-of-death-chm-20261016": {
+      "retainFiles": 130,
+      "retainBytes": 42323787,
+      "deleteFiles": 8,
+      "deleteBytes": 93989
+    },
+    "forge-angel-of-slaughter-20261017": {
+      "retainFiles": 128,
+      "retainBytes": 27077076,
+      "deleteFiles": 3,
+      "deleteBytes": 623997
+    },
+    "forge-archivist-grim-retest-20261015": {
+      "retainFiles": 40,
+      "retainBytes": 11029166,
+      "deleteFiles": 1,
+      "deleteBytes": 15774
+    },
+    "forge-archivist-grim-v10-retest-20261015": {
+      "retainFiles": 65,
+      "retainBytes": 12576471,
+      "deleteFiles": 3,
+      "deleteBytes": 102815
+    },
+    "forge-archivist-grim-v9-retest-20261015": {
+      "retainFiles": 52,
+      "retainBytes": 11092017,
+      "deleteFiles": 3,
+      "deleteBytes": 73959
+    },
+    "forge-beholders-control-20261012": {
+      "retainFiles": 22,
+      "retainBytes": 1833032,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-bettermonsters-newpdf-20261013": {
+      "retainFiles": 20,
+      "retainBytes": 832202,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-bilingual-descriptions-20261015": {
+      "retainFiles": 66,
+      "retainBytes": 19418508,
+      "deleteFiles": 2,
+      "deleteBytes": 85955
+    },
+    "forge-bilingual-fresh-20261015": {
+      "retainFiles": 53,
+      "retainBytes": 1798391,
+      "deleteFiles": 2,
+      "deleteBytes": 101149
+    },
+    "forge-bilingual-source-cleanup-20261015": {
+      "retainFiles": 26,
+      "retainBytes": 6938802,
+      "deleteFiles": 2,
+      "deleteBytes": 145510
+    },
+    "forge-bleeding-20261010": {
+      "retainFiles": 45,
+      "retainBytes": 2856608,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-broad-rule-expansion-20261018": {
+      "retainFiles": 39,
+      "retainBytes": 37004571,
+      "deleteFiles": 1,
+      "deleteBytes": 10716
+    },
+    "forge-broad-rule-repair-20261018": {
+      "retainFiles": 964,
+      "retainBytes": 519090593,
+      "deleteFiles": 3,
+      "deleteBytes": 36112
+    },
+    "forge-cause-audit-20261018": {
+      "retainFiles": 5,
+      "retainBytes": 100459,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-cloaker-official-comparison-20261016": {
+      "retainFiles": 8,
+      "retainBytes": 716818,
+      "deleteFiles": 3,
+      "deleteBytes": 315761
+    },
+    "forge-common-contract-repair-20261017": {
+      "retainFiles": 1327,
+      "retainBytes": 244824444,
+      "deleteFiles": 24,
+      "deleteBytes": 9356582
+    },
+    "forge-comparable-importers-20261013": {
+      "retainFiles": 5,
+      "retainBytes": 11717,
+      "deleteFiles": 24,
+      "deleteBytes": 376742
+    },
+    "forge-configured-conditions-20261010": {
+      "retainFiles": 111,
+      "retainBytes": 6036081,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-contract-repair-20261013": {
+      "retainFiles": 79,
+      "retainBytes": 1478517,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-damage-upgrade-20261019": {
+      "retainFiles": 62,
+      "retainBytes": 8041852,
+      "deleteFiles": 1,
+      "deleteBytes": 2857
+    },
+    "forge-damage-upgrade-fresh-ai-20261019": {
+      "retainFiles": 37,
+      "retainBytes": 222085,
+      "deleteFiles": 1,
+      "deleteBytes": 2154
+    },
+    "forge-damage-upgrade-real-ai-20261019": {
+      "retainFiles": 75,
+      "retainBytes": 7873655,
+      "deleteFiles": 1,
+      "deleteBytes": 2912
+    },
+    "forge-discovery-offline-20261015": {
+      "retainFiles": 29,
+      "retainBytes": 266902,
+      "deleteFiles": 2,
+      "deleteBytes": 23163
+    },
+    "forge-encounter-recovery-20261010": {
+      "retainFiles": 112,
+      "retainBytes": 8255548,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-explicit-model-review-20261011": {
+      "retainFiles": 201,
+      "retainBytes": 5674250,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-extra-64-20261018": {
+      "retainFiles": 287,
+      "retainBytes": 157631721,
+      "deleteFiles": 2,
+      "deleteBytes": 33043
+    },
+    "forge-facts-20261013": {
+      "retainFiles": 185,
+      "retainBytes": 15806655,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-failure-evidence-offline-20261015": {
+      "retainFiles": 180,
+      "retainBytes": 18612028,
+      "deleteFiles": 1,
+      "deleteBytes": 27354
+    },
+    "forge-first-pass-20261011": {
+      "retainFiles": 148,
+      "retainBytes": 7247696,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-five-replay-and-six-retest-20261013": {
+      "retainFiles": 291,
+      "retainBytes": 19564748,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-food-retention-20261012": {
+      "retainFiles": 34,
+      "retainBytes": 1553251,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-fresh-cloaker-20261016": {
+      "retainFiles": 170,
+      "retainBytes": 40166032,
+      "deleteFiles": 4,
+      "deleteBytes": 6952150
+    },
+    "forge-fresh-normal-ai-20261018": {
+      "retainFiles": 474,
+      "retainBytes": 110797099,
+      "deleteFiles": 13,
+      "deleteBytes": 34463829
+    },
+    "forge-gazer-push-20261012": {
+      "retainFiles": 41,
+      "retainBytes": 1567313,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-goal-status-20261017": {
+      "retainFiles": 1,
+      "retainBytes": 2988,
+      "deleteFiles": 1,
+      "deleteBytes": 114662
+    },
+    "forge-grandmother-guide-20261009": {
+      "retainFiles": 174,
+      "retainBytes": 14601807,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-healing-activation-20261019": {
+      "retainFiles": 38,
+      "retainBytes": 7276547,
+      "deleteFiles": 1,
+      "deleteBytes": 8089
+    },
+    "forge-healing-live-provider-20261019": {
+      "retainFiles": 167,
+      "retainBytes": 15643565,
+      "deleteFiles": 1,
+      "deleteBytes": 3355
+    },
+    "forge-healing-native-20261019": {
+      "retainFiles": 60,
+      "retainBytes": 3258799,
+      "deleteFiles": 1,
+      "deleteBytes": 3217
+    },
+    "forge-legacy-restoration-20261016": {
+      "retainFiles": 314,
+      "retainBytes": 92690861,
+      "deleteFiles": 12,
+      "deleteBytes": 495877
+    },
+    "forge-lifecycle-language-20261010": {
+      "retainFiles": 60,
+      "retainBytes": 6289926,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-mezzoloth-company-20261017": {
+      "retainFiles": 146,
+      "retainBytes": 16040964,
+      "deleteFiles": 1,
+      "deleteBytes": 105898
+    },
+    "forge-mirror-relaunch-20261009": {
+      "retainFiles": 4,
+      "retainBytes": 56206,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-mirror-update-20261008": {
+      "retainFiles": 17,
+      "retainBytes": 103555,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-name-spacing-20261008": {
+      "retainFiles": 9,
+      "retainBytes": 541651,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-native-basics-20261016": {
+      "retainFiles": 246,
+      "retainBytes": 92770069,
+      "deleteFiles": 22,
+      "deleteBytes": 137639133
+    },
+    "forge-native-mechanics-clarification-20261018": {
+      "retainFiles": 0,
+      "retainBytes": 0,
+      "deleteFiles": 1,
+      "deleteBytes": 3643
+    },
+    "forge-native-semantic-repair-20261018": {
+      "retainFiles": 113,
+      "retainBytes": 33727471,
+      "deleteFiles": 1,
+      "deleteBytes": 6581
+    },
+    "forge-native-swarm-repair-20261018": {
+      "retainFiles": 2,
+      "retainBytes": 36875,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-original-goal-audit-20261015": {
+      "retainFiles": 6,
+      "retainBytes": 18457,
+      "deleteFiles": 1,
+      "deleteBytes": 65273
+    },
+    "forge-original-goal-next-20261015": {
+      "retainFiles": 64,
+      "retainBytes": 8259098,
+      "deleteFiles": 1,
+      "deleteBytes": 88707
+    },
+    "forge-original-goal-repair-20261015": {
+      "retainFiles": 154,
+      "retainBytes": 67234812,
+      "deleteFiles": 3,
+      "deleteBytes": 233304
+    },
+    "forge-pdf-research-20261017": {
+      "retainFiles": 8,
+      "retainBytes": 467915,
+      "deleteFiles": 15,
+      "deleteBytes": 5732754
+    },
+    "forge-pdf-research-checkpoint-20261017.json": {
+      "retainFiles": 0,
+      "retainBytes": 0,
+      "deleteFiles": 1,
+      "deleteBytes": 110008
+    },
+    "forge-phase2-review-flow-20261010": {
+      "retainFiles": 118,
+      "retainBytes": 8511804,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-raw-contract-repair-20261013": {
+      "retainFiles": 130,
+      "retainBytes": 21773675,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-reference-definitions-20261012": {
+      "retainFiles": 148,
+      "retainBytes": 4560990,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-regenerate-healing-20261019": {
+      "retainFiles": 45,
+      "retainBytes": 7509226,
+      "deleteFiles": 1,
+      "deleteBytes": 5613
+    },
+    "forge-request-observation-offline-20261015": {
+      "retainFiles": 41,
+      "retainBytes": 13639926,
+      "deleteFiles": 1,
+      "deleteBytes": 20262
+    },
+    "forge-resume-native-20261015": {
+      "retainFiles": 57,
+      "retainBytes": 32326431,
+      "deleteFiles": 4,
+      "deleteBytes": 370602
+    },
+    "forge-rounds50-20261018": {
+      "retainFiles": 2623,
+      "retainBytes": 331633774,
+      "deleteFiles": 17,
+      "deleteBytes": 367216
+    },
+    "forge-sea-hag-auntie-20261011": {
+      "retainFiles": 232,
+      "retainBytes": 8992057,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-sea-hag-fresh-20261012": {
+      "retainFiles": 14,
+      "retainBytes": 1045438,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-semantic-icons-20261011": {
+      "retainFiles": 71,
+      "retainBytes": 697640,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-source-boundary-20261015": {
+      "retainFiles": 226,
+      "retainBytes": 27027010,
+      "deleteFiles": 20,
+      "deleteBytes": 4398049
+    },
+    "forge-source-normalization-audit-20261017": {
+      "retainFiles": 1,
+      "retainBytes": 3363,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-spell-and-rule-repair-20261017": {
+      "retainFiles": 661,
+      "retainBytes": 129159979,
+      "deleteFiles": 69,
+      "deleteBytes": 67868234
+    },
+    "forge-spell-chain-unify-20261018": {
+      "retainFiles": 47,
+      "retainBytes": 15640106,
+      "deleteFiles": 1,
+      "deleteBytes": 5408
+    },
+    "forge-stage-commit-20261010": {
+      "retainFiles": 25,
+      "retainBytes": 1285831,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-staged-manual-20261013": {
+      "retainFiles": 2856,
+      "retainBytes": 291810229,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-statblock-semantic-audit-20261018": {
+      "retainFiles": 82,
+      "retainBytes": 5990522,
+      "deleteFiles": 1,
+      "deleteBytes": 3969
+    },
+    "forge-statblock-semantic-repair-20261018": {
+      "retainFiles": 86,
+      "retainBytes": 7723428,
+      "deleteFiles": 1,
+      "deleteBytes": 3641
+    },
+    "forge-status-lifecycle-20261009": {
+      "retainFiles": 324,
+      "retainBytes": 14656530,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-systemic-analysis-20261013": {
+      "retainFiles": 10,
+      "retainBytes": 41282,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-target-choice-20261012": {
+      "retainFiles": 73,
+      "retainBytes": 3485291,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-target-choice-format-20261012": {
+      "retainFiles": 34,
+      "retainBytes": 1897705,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-target-choice-source-20261012": {
+      "retainFiles": 29,
+      "retainBytes": 566705,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-three-blockers-20261012": {
+      "retainFiles": 149,
+      "retainBytes": 4578438,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-timeout-research-20261015": {
+      "retainFiles": 4,
+      "retainBytes": 23969,
+      "deleteFiles": 8,
+      "deleteBytes": 136081
+    },
+    "forge-translation-20261007": {
+      "retainFiles": 324,
+      "retainBytes": 56948070,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-ui-preview-20261011": {
+      "retainFiles": 7,
+      "retainBytes": 1170615,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "forge-url-localization-repair-20261015": {
+      "retainFiles": 121,
+      "retainBytes": 24792301,
+      "deleteFiles": 5,
+      "deleteBytes": 314632
+    },
+    "forge-v10-zh-recovery-investigation-20261015": {
+      "retainFiles": 8,
+      "retainBytes": 130705,
+      "deleteFiles": 1,
+      "deleteBytes": 36974
+    },
+    "forge-v7-unseen-archivist-grim": {
+      "retainFiles": 40,
+      "retainBytes": 308670,
+      "deleteFiles": 2,
+      "deleteBytes": 8602
+    },
+    "forge-vengeance-chm-20261017": {
+      "retainFiles": 138,
+      "retainBytes": 16152151,
+      "deleteFiles": 1,
+      "deleteBytes": 100097
+    },
+    "forge-weird-semantics-expansion-20261018": {
+      "retainFiles": 37,
+      "retainBytes": 15235249,
+      "deleteFiles": 1,
+      "deleteBytes": 4068
+    },
+    "forge-weird-statblock-repair-20261018": {
+      "retainFiles": 99,
+      "retainBytes": 26498870,
+      "deleteFiles": 1,
+      "deleteBytes": 4805
+    },
+    "forge-weird-statblock-research-20261018": {
+      "retainFiles": 52,
+      "retainBytes": 22334104,
+      "deleteFiles": 1,
+      "deleteBytes": 3074
+    },
+    "forge-workflow-audit-20261015": {
+      "retainFiles": 4,
+      "retainBytes": 9850,
+      "deleteFiles": 2,
+      "deleteBytes": 12612
+    },
+    "intake-runs": {
+      "retainFiles": 33,
+      "retainBytes": 310525,
+      "deleteFiles": 0,
+      "deleteBytes": 0
+    },
+    "isolated-constraint-pilot-20261018-91c3bd": {
+      "retainFiles": 134,
+      "retainBytes": 5107559,
+      "deleteFiles": 7,
+      "deleteBytes": 73769318
+    }
+  },
+  "evidenceRoot": "H:\\CodexData\\visualizations\\2026\\10\\29\\01a18790-ad68-79e3-8895-49616acd060d\\forge-bettermonsters-archive-and-disposition-20261030",
+  "fullFileLists": {
+    "retain": "H:\\CodexData\\visualizations\\2026\\10\\29\\01a18790-ad68-79e3-8895-49616acd060d\\forge-bettermonsters-archive-and-disposition-20261030\\local-retain.csv",
+    "deleteCandidates": "H:\\CodexData\\visualizations\\2026\\10\\29\\01a18790-ad68-79e3-8895-49616acd060d\\forge-bettermonsters-archive-and-disposition-20261030\\local-delete-candidates.csv",
+    "diagnosticScripts": "H:\\CodexData\\visualizations\\2026\\10\\29\\01a18790-ad68-79e3-8895-49616acd060d\\forge-bettermonsters-archive-and-disposition-20261030\\diagnostic-script-dispositions.json"
+  },
+  "copyReadbacks": {
+    "zipMembers": 77,
+    "retainedFiles": 19,
+    "runtimeExecutableMatchesExistingLab": true,
+    "runtimeZipContainsOnlyThatExecutable": true
+  },
+  "prohibitedThisTurn": [
+    "delete BetterMonsters or any source file",
+    "merge Item/Species timeout changes",
+    "merge diagnostic scripts",
+    "push",
+    "model requests"
+  ],
+  "checks": "Static source/manifest/content-purpose review and byte readback only; no new script execution or functional test."
+}

@@ -171,3 +171,5 @@
 | `../../.local/forge-common-contract-repair-20261017/worker-handoff-v15.md` | [原证据](I:/OpenCode/fvttV12JsonGenerator-worktrees/20261006-111625-bettermonsters-eye-deep-sample/.local/forge-common-contract-repair-20261017/worker-handoff-v15.md) |
 | `../../.local/forge-fresh-normal-ai-20261018/worker-selected-spell-identity-handoff-r4.md` | [原证据](I:/OpenCode/fvttV12JsonGenerator-worktrees/20261006-111625-bettermonsters-eye-deep-sample/.local/forge-fresh-normal-ai-20261018/worker-selected-spell-identity-handoff-r4.md) |
 | `../../.local/forge-cause-audit-20261018/causal-evidence.json` | [原证据](I:/OpenCode/fvttV12JsonGenerator-worktrees/20261006-111625-bettermonsters-eye-deep-sample/.local/forge-cause-audit-20261018/causal-evidence.json) |
+
+诊断脚本与.local的后续只读结果见[逐项处置建议](2026-10-30-bettermonsters-scripts-and-local-disposition.md)，其中所有删除项目尚未执行。
