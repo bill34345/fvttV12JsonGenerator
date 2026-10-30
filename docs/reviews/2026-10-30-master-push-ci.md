@@ -112,3 +112,21 @@ MIDI 生产查询仍保持 10 秒预算及失败关闭。CI 增加独立 Windows
 最终只把 inspection/workflow/selection 三个测试 fixture 的 Git helper 改为 execFile 异步调用，保留每条 Git 5000ms 预算、顺序及实际仓库操作；inspection 的每次 HEAD 仍实时读取，未缓存身份。三组真实 Git 准备／清理 hook 各 15 秒，已有 external 测试的 20 秒预算不改。全部数据保持、文件模式、来源身份、权限和拒绝断言保留；生产同步 API、全局测试预算与 Bun 版本不改，不将此次规避写成 Bun 本体已修复。
 
 公共安全入口完整三文件 53 pass、0 fail、216 次断言；工具类型及 diff 检查通过。独立审查确认实际命令及返回值均已等待，未见 Promise 伪结果或断言削弱。手册监测的 38 项仍一致；此次仅测试准备层变化，用户入口、产物和限制不变，不改正文或无关 review。完整远端门禁继续单独取得结论。
+
+## 第八轮失败与未采用的运行时升级
+
+`951a33e2` 的 [GitHub CI 41070877328](https://github.com/bill34345/fvttV12JsonGenerator/actions/runs/41070877328) 最终为 8248 pass、83 skip、1 fail，8332 用例、576 文件、723.72 秒。唯一失败是实际验收 API 在 run CLI claimed-contract 用例中报 `Git identity check failed: rev-parse --show-toplevel`；本轮没有完整远端通过结果。
+
+仓库外探针直接调用未修改的 `workspaceIdentity`：Bun 1.3.14 首次调用成功，空闲约 6 秒后的再次调用在 9.40ms 失败；真实 Git HEAD、clean 状态和生产源码 SHA-256 均保持。并列安装的 Bun 1.4.0 在同条件探针通过，但完整本地门禁为 8352 pass、83 skip、11 fail，涉及 Windows 文件 URL、长清单目录映射和目录复制兼容性，不能据探针通过采用升级。原始日志和失败结果保存在仓库外证据目录；未覆盖旧运行时、全局 Bun 或现有服务。
+
+## 用户决定：关闭并移除 GitHub CI 专用配置
+
+用户原话：“那就按你说的清理掉 GitHub CI 专用配置，保留本地检查和功能修复，未提交的 Bun 升级试验也撤掉，同步相关说明后提交并 push。”
+
+GitHub 工作流已读回 `disabled_manually`，运行中与排队任务均为 0。本次移除 `.github/workflows/ci.yml`、`.github/requirements-ci.txt` 及 `.github/foundry-leveldb/` 下两个依赖配置文件；撤销未提交的 Bun 1.4.0 配置、版本说明与生成页面试验。本地开发运行时继续为 1.3.14，版本依据移至根 README“本地开发与检查”；相关当前操作说明、模块共同约定与工具规则同步，历史验收记录保留。
+
+`package.json`、lockfile、本地安全检查与覆盖率执行器、此前生成／Forge／抓取器／MIDI 的功能修复均保留。本地 `ci:verify` 继续作为手动综合入口，按改动范围选择检查；未设置 profile 仍使用完整库存，显式 portable 不代表历史源码或真实 Foundry 接受。手册中此前漏核的 720 秒文字修正为执行器现有的 840 秒，不改变实际预算。
+
+本次只有专用配置删除及说明同步，验证范围为引用、源码与本地入口保持、AGENTS 生成一致性、手册人工核对与生成一致性；不再执行已撤销的全仓 CI 整改，也不把关闭 CI 记为旧失败已经修复。
+
+本次核对结果：AGENTS 生成及分层一致性通过；16 个受影响手册条目按具体来源逐项核对后重新生成，全部 38 项检查通过，稳定 ID、watch、来源与命令保持。所有实现／测试源码、根 package.json 与 bun.lock 均未改变。直接调用环境检查曾因继承持久 Lab 根而按设计拒绝；随后通过现有隔离包装器运行同一检查成功，测试隔离静态检查及 diff 检查也通过，没有修改用户级环境配置。页面改动仅为说明和原始来源同步，无界面行为变化。

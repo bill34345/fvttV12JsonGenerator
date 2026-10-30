@@ -53,9 +53,9 @@ bun run legacy-next-inputs:prepare -- --check
 
 这次只消除旧迁移树依赖。现有测试仍读取本机 `F:\FoundryLab` 的固定 Core/Node、系统方法、TCoE 对照来源与部分已保存接受收据；没有把这些依赖搬入输入库。全新机器或公共克隆仍须取得合法来源和相应参考环境，不能把本机通过称为通用自包含测试。历史固定版本不替代现行系统，旧 PASS 也不推广到新版本。
 
-## 公共 CI 与严格本地源码门
+## 本地检查清单与严格历史源码门
 
-2026-10-29 用户选择“公共 CI＋严格本地历史回归门”。GitHub Actions 显式设置 `FVTT_CI_TEST_PROFILE=portable`，保留全部可移植检查。需要原包、合集、私有分析数据或本机固定 Core/Node 的原有测试，按 `src/tools/ciSourceContracts.ts` 的明确清单交给独立本地门；混合文件只分离准确命名的来源用例，同文件的普通用例仍在公共 CI 中执行。
+2026-10-30 已按用户要求关闭 GitHub 自动 CI 并移除专用配置。本地综合检查和严格历史源码门继续保留。需要原包、合集、私有分析数据或本机固定 Core/Node 的原有测试，仍由 `src/tools/ciSourceContracts.ts` 明确登记；混合文件按准确命名区分来源用例与普通用例。
 
 ```powershell
 bun run test:local-source-contracts
@@ -63,6 +63,6 @@ bun run test:local-source-contracts
 
 这个入口运行当前 checkout 的原有真实测试，不替换其来源哈希、版本、断言或失败条件。来源缺失、身份不符或测试失败都会非零退出；结果记录在 `coverage/local-source-contracts.json`。在已准备输入库的 checkout 执行 `legacy-next-inputs:prepare -- --check`；从 sibling worktree 核对共享库时，使用 `--target-root '<已准备库所在checkout的绝对路径>'`，测试定位器仍自动读取同仓库主 checkout 的材料。
 
-未设置 profile 时，既有 `ci:verify`／完整覆盖率入口继续执行完整本地测试库存。本地模拟公共 Runner 时可设置当前进程的 `FVTT_CI_TEST_PROFILE=portable` 后运行 `bun run ci:verify`，随后清除该临时覆盖。参考缓存仍需按既有入口准备；公共 workflow 显式使用 Runner 临时目录中的独立缓存，bootstrap 与消费测试读取同一 `FVTT_REFERENCE_CACHE_ROOT`。
+未设置 profile 时，既有 `ci:verify`／完整覆盖率入口继续执行完整本地测试库存。需要单独检查可移植范围时，可在当前进程设置 `FVTT_CI_TEST_PROFILE=portable` 后运行 `bun run ci:verify`，随后清除该临时覆盖。这个变量只选择测试清单，不启动 GitHub 工作流。参考缓存仍按既有入口准备，bootstrap 与消费测试读取同一 `FVTT_REFERENCE_CACHE_ROOT`。
 
-公共 CI 的覆盖率清单和 GitHub step summary 将这些历史源码组标为 `NOT_EXECUTED`，并给出本地命令；不会把它们计作云端通过。公共 CI 绿色、本地历史回归通过和真实 Foundry 接受分别记录。原始第三方材料和私有输入继续保留在 Git 外，本次拆分不上传这些材料、不降低覆盖率门槛，也不把缺失来源改成测试通过。
+显式选择 portable 时，覆盖率清单将独立历史源码组标为 `NOT_EXECUTED` 并给出本地命令，不能据此声称完整本地回归通过。本地历史回归通过和真实 Foundry 接受分别记录。原始第三方材料和私有输入继续保留在 Git 外，覆盖率门槛、来源身份和失败条件保持。

@@ -23,7 +23,7 @@ bun run foundry:mcp:install-worktree-init --repo I:\OpenCode\fvttV12JsonGenerato
 
 ## 日常准备顺序
 
-1. 选择当前任务实际需要的实例，核对共享占用。使用 CI 锁定的 Bun 1.3.14；配置取当前 worktree 的 `.codex/config.toml` 绝对路径。
+1. 选择当前任务实际需要的实例，核对共享占用。使用根 README 指定的本地开发运行时 Bun 1.3.14；配置取当前 worktree 的 `.codex/config.toml` 绝对路径。
 2. 执行准备命令。正确运行的服务复用；端口和对应进程均空闲时才启动现有本地实例，不重启已有服务。
 
    ```powershell

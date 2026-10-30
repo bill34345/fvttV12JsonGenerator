@@ -62,9 +62,9 @@
 
 ## 验证与维护
 
-变更用户可执行入口、输入或输出、支持版本、操作步骤或安全限制时，同步维护 `docs/handbook/`，人工核对后记录 review 并生成根 `工具手册.html`，与功能一起合并。仅内部实现、测试或重构先核对这些用户信息是否改变并记录具体结论；若既有 `watch` 在本次必需的 `handbook:check` 或 CI 中报 stale，仍须人工核对受影响条目、更新 review 并生成页面，不要求改写已经正确的说明。保留现有目录覆盖和合并前后的 `bun run handbook:check`，不缩小 watch 或盲目刷新指纹绕过核对。步骤见 `docs/runbooks/handbook-maintenance.md`。
+变更用户可执行入口、输入或输出、支持版本、操作步骤或安全限制时，同步维护 `docs/handbook/`，人工核对后记录 review 并生成根 `工具手册.html`，与功能一起合并。仅内部实现、测试或重构先核对这些用户信息是否改变并记录具体结论；若既有 `watch` 在本次必需的 `handbook:check` 或本地综合检查中报 stale，仍须人工核对受影响条目、更新 review 并生成页面，不要求改写已经正确的说明。保留现有目录覆盖和合并前后的 `bun run handbook:check`，不缩小 watch 或盲目刷新指纹绕过核对。步骤见 `docs/runbooks/handbook-maintenance.md`。
 
-授权范围内的本地安全测试可直接运行、修复本次失败并重跑受影响检查。小改直接使用已有安全入口；先选能回答本次变化或失败的局部检查，再按实际接口影响补真实行为。纯文档/指令只核对文义、引用、作用域和生成一致性。全仓 CI、覆盖率与跨模块矩阵在明确整合边界或对应影响下执行，不作为每次局部修复、报告更新或工具恢复的默认后续。具体选择、工具不适配与证据复用见 `docs/runbooks/development-feedback-loop.md`。
+授权范围内的本地安全测试可直接运行、修复本次失败并重跑受影响检查。小改直接使用已有安全入口；先选能回答本次变化或失败的局部检查，再按实际接口影响补真实行为。纯文档/指令只核对文义、引用、作用域和生成一致性。全仓综合检查、覆盖率与跨模块矩阵在明确整合边界或对应影响下执行，不作为每次局部修复、报告更新或工具恢复的默认后续。具体选择、工具不适配与证据复用见 `docs/runbooks/development-feedback-loop.md`。
 
 parser bug 保留 fixture 回归，结构变化用 `assertEqualStructure()` 或更严格检查；parser/generation/inference 变化执行局部 anti-overfit。测试使用 `package.json` 安全包装入口，不手动运行内部 `*:raw`。来源语义和受影响 runtime 门禁继续执行，通过的共同检查不因多层文档重复运行。
 

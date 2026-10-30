@@ -5,14 +5,14 @@
     "note": "已核Web协议与Item/Species独立入口：仅新增精确原生legres报告路径；Monster语言投影/verifier及Monster提取/显式纠错prompt变化不改连接配置、Item或Species流程/版本/验收边界。现有说明保持。"
   },
   "markdown-convert": {
-    "fingerprint": "7f138e67bc48de6a8f7d2baf6a0a4f6202553461d2a903e93f7dbcca2eaa93cb",
+    "fingerprint": "1984ceb601cf29a168b3829209d1dab7c9b97b5c1579b91b990dac562a587324",
     "reviewedOn": "2026-10-30",
-    "note": "已撤回共享哈希优化原型：contracts源码与包配置恢复b16f52c3；转换参数、生成输出与版本说明保持。最终仅Bun CLI的父报告哈希使用原生执行器。"
+    "note": "逐项核对这些条目唯一变化来源为根README新增的本地开发说明：GitHub自动CI移除，开发继续使用Bun1.3.14。转换、资料同步、抓取、图片、翻译及血猎手的入口、输入输出、目标版本与权限说明均保持；未改功能源码或升级运行时。"
   },
   "monster-intake": {
-    "fingerprint": "a6e6c9095be7479b05eeb6f6e262a29f5e668aadb60a259a74b85fadc6af6852",
+    "fingerprint": "da8ea7f165be701707376ca393a19d465adf351ffb9aec376cb0cc6b328b60df",
     "reviewedOn": "2026-10-30",
-    "note": "最终增量复核：显式投影审核同时检查顶层和v14原生system.changes，原生空、双空正控及HP篡改负例真实通过；GM模板与施法组稳定身份关联保留，不新增默认来源审查或影响独立Item/Species接受。Item内部deadline按已有timeout归因，旧兼容单法术冷却/标点窄修保持来源与GM限制。命令、时限、重试、版本和本轮已核正文继续有效。"
+    "note": "逐项核对这些条目唯一变化来源为根README新增的本地开发说明：GitHub自动CI移除，开发继续使用Bun1.3.14。转换、资料同步、抓取、图片、翻译及血猎手的入口、输入输出、目标版本与权限说明均保持；未改功能源码或升级运行时。"
   },
   "item-intake": {
     "fingerprint": "c564177f8298e4aface5cee8a3e186abcd4fa0e7be4f22d8f8308fb4fcb9564c",
@@ -30,39 +30,39 @@
     "note": "已对照文档规则：仅报告/元数据显示改变且原MD、顺序、候选及下游行为有未变证据时缩小验收；正文或消费变化/证据不足仍核完整来源链。"
   },
   "vault-sync": {
-    "fingerprint": "30d2a7e94dd24c4ec078b861327b1ff323ed540c49b0b342500949b37237c5c1",
-    "reviewedOn": "2026-10-29",
-    "note": "已对照本条入口/限制及合并后的README：README仅更新仓库定位、版本分流和手册导航，本条对应实现无双方业务冲突。原命令、独立写入/备份限制及精确版本接受保持；共同生成链已验但不作为本条新增实机接受。"
+    "fingerprint": "e32a7295678e68e851e04b8455a4e06e104d19def5cd9ba9b14c2a1443191fde",
+    "reviewedOn": "2026-10-30",
+    "note": "逐项核对这些条目唯一变化来源为根README新增的本地开发说明：GitHub自动CI移除，开发继续使用Bun1.3.14。转换、资料同步、抓取、图片、翻译及血猎手的入口、输入输出、目标版本与权限说明均保持；未改功能源码或升级运行时。"
   },
   "goddessfantasy-crawl": {
-    "fingerprint": "0af0f20ab06581bee88bdb3c859037234e446b3086a98015c04f9d254f1a54cf",
+    "fingerprint": "e9b926db76032ffdad6327dce3852d63951cc9aace79c84b27177cdb502f78d9",
     "reviewedOn": "2026-10-30",
-    "note": "已对照锁定 Crawlee 3.17.0 的实际存储实现：本轮请求队列使用内存，增量仍从 records.json 恢复，来源HTML、记录、失败与manifest保持；并发完整采集、同目录增量恢复、CLI和Web均经真实链核对。远端600秒实际截断后覆盖率watchdog改为720秒；用例、顺序、阈值和20分钟job上限保持。Midi仅修两个真实Windows子进程测试的夹具寿命及独立时限，安装保护未改。"
+    "note": "逐项核对这些条目唯一变化来源为根README新增的本地开发说明：GitHub自动CI移除，开发继续使用Bun1.3.14。转换、资料同步、抓取、图片、翻译及血猎手的入口、输入输出、目标版本与权限说明均保持；未改功能源码或升级运行时。"
   },
   "artwork-icons": {
-    "fingerprint": "3742da69daac8653221efe7ee8a2c5f74cff4ac06c7123c30d79f632b8191c9c",
-    "reviewedOn": "2026-10-29",
-    "note": "已对照本条入口/限制及合并后的README：README仅更新仓库定位、版本分流和手册导航，本条对应实现无双方业务冲突。原命令、独立写入/备份限制及精确版本接受保持；共同生成链已验但不作为本条新增实机接受。"
+    "fingerprint": "73c9e854b513045f7ed50f8814658e5a582af94fcdbd8e90d158f0628e7f2bc5",
+    "reviewedOn": "2026-10-30",
+    "note": "逐项核对这些条目唯一变化来源为根README新增的本地开发说明：GitHub自动CI移除，开发继续使用Bun1.3.14。转换、资料同步、抓取、图片、翻译及血猎手的入口、输入输出、目标版本与权限说明均保持；未改功能源码或升级运行时。"
   },
   "legacy-text": {
-    "fingerprint": "950143c13e4bfa473282a6293c0face8ee9dbf0f0f180ac27758322a79dfe4b7",
-    "reviewedOn": "2026-10-29",
-    "note": "已对照本条入口/限制及合并后的README：README仅更新仓库定位、版本分流和手册导航，本条对应实现无双方业务冲突。原命令、独立写入/备份限制及精确版本接受保持；共同生成链已验但不作为本条新增实机接受。"
+    "fingerprint": "5e822b3e1a7cf073a2e645ae5ddc8c5a70b8b0a818072511b7b581375a8fd9e1",
+    "reviewedOn": "2026-10-30",
+    "note": "逐项核对这些条目唯一变化来源为根README新增的本地开发说明：GitHub自动CI移除，开发继续使用Bun1.3.14。转换、资料同步、抓取、图片、翻译及血猎手的入口、输入输出、目标版本与权限说明均保持；未改功能源码或升级运行时。"
   },
   "json-translation": {
-    "fingerprint": "d46edadcb17306f5dd242cc07673200b78bd8c36418244e552df8eda3f6619b4",
-    "reviewedOn": "2026-10-29",
-    "note": "已对照本条入口/限制及合并后的README：README仅更新仓库定位、版本分流和手册导航，本条对应实现无双方业务冲突。原命令、独立写入/备份限制及精确版本接受保持；共同生成链已验但不作为本条新增实机接受。"
+    "fingerprint": "e731f223eedbe43a0b1172ef56e3590a4d9960d000dbc9ffb38f470115ac8e1b",
+    "reviewedOn": "2026-10-30",
+    "note": "逐项核对这些条目唯一变化来源为根README新增的本地开发说明：GitHub自动CI移除，开发继续使用Bun1.3.14。转换、资料同步、抓取、图片、翻译及血猎手的入口、输入输出、目标版本与权限说明均保持；未改功能源码或升级运行时。"
   },
   "foundry-ops": {
-    "fingerprint": "ce95c09cb8d8416259136c9e8e1c3d2d4ade442891a7e23f890066ae8cb23113",
+    "fingerprint": "43a40b33c09c5c4b1dd131f7e786d533dd052910f0a878514a5ab9f2c6d461f9",
     "reviewedOn": "2026-10-30",
-    "note": "已逐项对照运维条目与worktree来源：来源只新增纯个人资料在仓库外转换的分流，仓库开发、资产保留检查、清理授权及运维命令和权限保持。此更新不构成Foundry或生产运行验收。"
+    "note": "对照tools/foundry-ops/AGENTS.md，仅将Bun版本依据从已删除CI配置改为根README；本地检查包装、临时沙箱、只读依赖、生产权限、目标路径和失败关闭要求保持。"
   },
   "verification-development": {
-    "fingerprint": "91af673332ae46b22f0aab408f99bf7e51d4817700f51915b27a748b1075b5ae",
+    "fingerprint": "ed764b8be408f5a077694a5b011f29868328d8942fde0d28a075727120149998",
     "reviewedOn": "2026-10-30",
-    "note": "对照第五CI全部8249非skip用例输出与Bun固定源码：只调整覆盖率总预算840秒、外层22分钟以容纳同步LCOV生成，测试清单、单案预算、单进程、阈值与完整退出接受口径保持。"
+    "note": "已对照本地package脚本、覆盖率执行器和手册来源：移除GitHub专用配置，本地手动综合检查及complete/portable范围、单进程覆盖率和阈值保持；运行时继续1.3.14，纠正720秒旧文字为现有840秒。未把旧CI失败写为通过。"
   },
   "human-encounter-intake": {
     "fingerprint": "6e4eec027fa69d8d801d4511904bca069e8f2a591e8bcebd31b8c3a9e5a5bbc6",
@@ -75,9 +75,9 @@
     "note": "人工核对新tracked AGENTS两目录登记及Scope/Verification标题，显式清单32→34，作用域/功能/版本/权限未变，检查器19回归及production类型通过；运行模块代码和build输入无变化。"
   },
   "midi-qol-server-next-patch": {
-    "fingerprint": "314fa5cb9d014fe716df9da6d21634277886258a2e7ecb9ef319cdb985a02c4d",
+    "fingerprint": "e73d2e5e03d3937269400b953a8569e3a8af683f9e5e26c99654cb64a5db70f7",
     "reviewedOn": "2026-10-30",
-    "note": "对照历史源码安装器实际预检，补充Windows进程查询10秒上限与超时回收、中止而非视为空闲；固定目标和现行安装边界保持。"
+    "note": "逐项核对变化仅来自历史测试输入runbook及对应本地入口说明：移除公共CI自动执行承诺，保留严格历史源码门、显式portable选择、固定来源版本/哈希、缺失失败条件和Git外材料。各模块功能、候选安装与玩法接受范围保持。"
   },
   "version-selection": {
     "fingerprint": "c3f5643712f5d10a0b3742784932e2020175ff3a0baa744142de315f487d44c7",
@@ -85,9 +85,9 @@
     "note": "已核支持矩阵合并后的Forge5.3.3与Next6.0.6各自限定接受及历史日期；常规v14/core、CLI默认v12和Forge生成目标5.3.3保持，不将本地Git整合写成新版本兼容。"
   },
   "legacy-next-test-inputs": {
-    "fingerprint": "df607f03dc6e15b581879ae038a26468133798833fdbe5b3b74405ac70f8069d",
-    "reviewedOn": "2026-10-29",
-    "note": "已对照公共workflow、源码清单和严格本地入口：云端portable保留可移植用例，历史来源在云端标NOT_EXECUTED，本地原断言及缺失来源失败保留；补充共享库核对路径和当前600秒watchdog。"
+    "fingerprint": "3169623f383d7b69f9114e0012c701b7f8ee20dbeb7dc6554688355596264d06",
+    "reviewedOn": "2026-10-30",
+    "note": "逐项核对变化仅来自历史测试输入runbook及对应本地入口说明：移除公共CI自动执行承诺，保留严格历史源码门、显式portable选择、固定来源版本/哈希、缺失失败条件和Git外材料。各模块功能、候选安装与玩法接受范围保持。"
   },
   "babele-zh-maintenance": {
     "fingerprint": "1b9623a7ea556db39772d7316f302f30eb1fee823778a96a894bb94cc07ed269",
@@ -95,9 +95,9 @@
     "note": "首版收尾已对照独立项目当前交付页、包与验收记录：增加current-state接续入口，历史验收明确为快照；命令、版本及安装授权边界不变，Force标签和动画精确匹配仍列待办。"
   },
   "foundry-mcp-readiness": {
-    "fingerprint": "7e8d576ad8db9201a3cf0df5470518770f925e3b08c3b7775843eaee5c0ee2f3",
+    "fingerprint": "ff32939eec664f97d2f51ad40b36144673224becc139c18a1e1b1c654615770e",
     "reviewedOn": "2026-10-30",
-    "note": "核对统一入口、可重装的worktree初始化器、v0.8.5精确路径组合与运行切换边界；真实隔离测试通过，现有后台和Bridge保持运行。"
+    "note": "对照两份MCP来源文档和现有命令，Bun1.3.14版本依据改为根README，原独立runtime示例路径保留；配置、实例选择、世界读回及共享服务边界不变，Bun1.4.0试验已撤销。"
   },
   "chat-memory-guard": {
     "fingerprint": "778ebb668dd7af6a0a92cf198b10ccd4b0e8258a75cf2764535623938626a07d",
@@ -115,9 +115,9 @@
     "note": "已核6.0.6 FireI事务、Region成本/linked falling、重载、非GM入口和权限拒绝及原生清理代表链。绘制仍仅向GM开放；全目录、更多组合、长时和生产范围未扩大。 本次AGENTS同步同一限定接受，不改变操作权限。"
   },
   "fvtt-blood-hunter-2024": {
-    "fingerprint": "e8f9c034bfcf3da9595076129fec844a39961348a425ea0bf66f7f5397444dd5",
-    "reviewedOn": "2026-10-29",
-    "note": "已对照本条入口/限制及合并后的README：README仅更新仓库定位、版本分流和手册导航，本条对应实现无双方业务冲突。原命令、独立写入/备份限制及精确版本接受保持；共同生成链已验但不作为本条新增实机接受。"
+    "fingerprint": "772868e56d4b110d3358b5a32c0929b155fd376d590c13860f726d4e140bc38b",
+    "reviewedOn": "2026-10-30",
+    "note": "逐项核对这些条目唯一变化来源为根README新增的本地开发说明：GitHub自动CI移除，开发继续使用Bun1.3.14。转换、资料同步、抓取、图片、翻译及血猎手的入口、输入输出、目标版本与权限说明均保持；未改功能源码或升级运行时。"
   },
   "fvtt-homebrew-species": {
     "fingerprint": "81fd95c8dccd1df26a50bf7a2654e54d2a7bb1ff3bd16d3322965501b19d8e21",
@@ -175,18 +175,18 @@
     "note": "已核源码active/API/能力门和持久marker，并对照总账WMP R5/R6：606单GM Sap预约取消、Club伤害/Slow、重复提交零重复结算、重载/清理已接受。README/手册/AGENTS统一该范围，manifest verified仍605；旧User UNKNOWN与完整精通/玩家/多GM/长时/生产缺口保留。"
   },
   "midi-qol": {
-    "fingerprint": "49c3e8e94bdde9c90e304761d2d6d04237fcf03fe2c21502ab5785b79bc9c953",
+    "fingerprint": "6db912cccd26cdd29982aacbe419aad7d86c73a4cec1283b12ac69498b797885",
     "reviewedOn": "2026-10-30",
-    "note": "核对当前6.0.5/local.10条目：仅历史源码工具进程查询增加预算与提供方过滤，不改已安装模块、客户端行为或既有玩法接受。"
+    "note": "逐项核对变化仅来自历史测试输入runbook及对应本地入口说明：移除公共CI自动执行承诺，保留严格历史源码门、显式portable选择、固定来源版本/哈希、缺失失败条件和Git外材料。各模块功能、候选安装与玩法接受范围保持。"
   },
   "server-next-external-candidates": {
-    "fingerprint": "e167870ef80339cf0cda88f0d3c7259699b7009ce6605ccb062c1377dad51035",
-    "reviewedOn": "2026-10-29",
-    "note": "已核对本次来源runbook增补仅改变公共CI与本地历史回归出口；三个条目的固定版本、历史构建安装入口及现行玩法接受限制仍准确，不改变或扩大其运行接受。"
+    "fingerprint": "3ef610e0bb52691a3d5172121354a59269a49f867ae51355d7c5227ceed1f8ee",
+    "reviewedOn": "2026-10-30",
+    "note": "逐项核对变化仅来自历史测试输入runbook及对应本地入口说明：移除公共CI自动执行承诺，保留严格历史源码门、显式portable选择、固定来源版本/哈希、缺失失败条件和Git外材料。各模块功能、候选安装与玩法接受范围保持。"
   },
   "fvtt-suite-console": {
-    "fingerprint": "6d510771fee36ddb07e1d6fc8621f64f3133accd1bdff1abbeb117fa5e6ffb93",
-    "reviewedOn": "2026-10-25",
-    "note": "已对照delivery策略与手册条目：新增MCP准备仅进入离线完整目录，完整目录38项、工程历史10项，Foundry用户投影仍28项。只同步数量说明，不改变模块交互或运行接受状态。"
+    "fingerprint": "87c5f456d7ef772d41398ede7c9aa3674d9f9ada8b0e7a0ba711437109efdabd",
+    "reviewedOn": "2026-10-30",
+    "note": "对照模块README，构建仍用Bun1.3.14，仅将版本依据从CI改为根README；模块入口、同源手册投影、打包、安装及已有接受范围不变。"
   }
 }

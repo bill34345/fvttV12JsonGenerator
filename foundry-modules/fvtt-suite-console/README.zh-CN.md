@@ -25,7 +25,7 @@
 
 ## 开发与构建
 
-在仓库根目录使用与 CI 一致的 Bun 1.3.14：
+在仓库根目录使用根 README 指定的本地开发运行时 Bun 1.3.14：
 
 ```powershell
 bun run test:suite-console

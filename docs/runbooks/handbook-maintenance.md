@@ -16,7 +16,7 @@
 - `docs/handbook/delivery.json`：显式划分Foundry用户条目与离线专用条目，排除项登记原因；每个稳定ID必须且只能登记一次，不影响完整离线目录和watch覆盖。
 - `packages/suite-handbook/`：browser-safe内容契约、搜索、局部导航和阅读视图；只操作传入的root，不访问Foundry数据、URL、存储或全局主题。
 - `docs/handbook/standalone.ts`：静态页面宿主，负责hash/history、页面标题、本机主题、全局快捷键和剪贴板；窗口关闭时可释放订阅。
-- `docs/handbook/template.html`、`style.css`、`client.js`：离线页面模板、静态样式与启动入口。构建时用与CI一致的Bun 1.3.14打包为内联脚本；打开成品仍不需要Bun。
+- `docs/handbook/template.html`、`style.css`、`client.js`：离线页面模板、静态样式与启动入口。构建时用根README指定的本地开发运行时Bun 1.3.14打包为内联脚本；打开成品仍不需要Bun。
 - `docs/handbook/build.mjs`：构建与只读一致性检查，不修改生成器和 Foundry。
 - 根 `工具手册.html`：确定性生成、随功能一起提交的用户交付物，不能手工修补。
 
@@ -47,7 +47,7 @@ H4通过`release:suite-console`准备本地交付：模块ZIP仅5个白名单文
 
 变更用户可执行入口、输入或输出、支持版本、操作步骤或安全限制时，按本节更新说明。内部实现、测试或重构先核对这些信息是否改变，并记录具体结论；用户结果或限制发生变化的修复仍须更新说明，不能仅凭入口名称没变就归为内部变化。
 
-现有 `watch` 和目录覆盖检查继续保留。已登记实现或来源变化使本次必需的 `handbook:check`／CI 报 stale 时，人工核对所有受影响条目、更新 review 并重新生成页面；没有文义变化可写“不影响说明”的具体理由，不要求为消除 stale 改写正确文字。不得缩小 watch、漏登记内部共享 package 的所属条目，或批量确认未审阅内容。
+现有 `watch` 和目录覆盖检查继续保留。已登记实现或来源变化使本次必需的 `handbook:check`／本地综合检查报 stale 时，人工核对所有受影响条目、更新 review 并重新生成页面；没有文义变化可写“不影响说明”的具体理由，不要求为消除 stale 改写正确文字。不得缩小 watch、漏登记内部共享 package 的所属条目，或批量确认未审阅内容。
 
 1. 在同一个功能 worktree 中更新对应条目的用途、选择时机、准备、操作步骤、产物和限制。新增模块必须有独立条目；新增 app/package/tool 必须登记 `watch` 归属。共享实现可被多个条目关注。
    已迁移的模块只改owner目录内的manual.json；引用必须指向本owner的该文件，watch继续覆盖来源。不得在中央目录增加第二份正文或局部覆盖字段；loader拒绝越界路径、链接、错误owner、未监测来源和重复ID。Deck构建把同一JSON的用户说明编入独立后备窗口。
