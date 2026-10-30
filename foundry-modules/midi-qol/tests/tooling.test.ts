@@ -8,6 +8,7 @@ import {
   assertPhysicalInstallPaths,
   assertWorkflowEffectContract,
   processesUsingDataRoot,
+  run,
   validateTarget,
   verifyArchive,
   type TargetPolicy,
@@ -49,26 +50,46 @@ describe('Midi-QOL patch scope (not runtime acceptance)', () => {
 });
 
 describe('ServerNext install identity gate', () => {
+  test('reaps a hung ownership subprocess and rejects even when command failure is allowed', async () => {
+    let failure: unknown;
+    try {
+      await run(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], process.cwd(), {
+        allowFailure: true, timeoutMs: 100,
+      });
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toBeInstanceOf(Error);
+    const message = (failure as Error).message;
+    expect(message).toMatch(/Command subprocess \d+ exceeded 100ms and was reaped\./u);
+    const pid = Number(message.match(/subprocess (\d+)/u)![1]);
+    expect(() => process.kill(pid, 0)).toThrow();
+  });
+
   test.skipIf(process.platform !== 'win32')('detects a real process that references the data root in its command line', async () => {
-    const root = resolve(tmpdir(), `midi-qol-process-${crypto.randomUUID()}`);
+    const root = resolve(tmpdir(), `midi-qol-process-${crypto.randomUUID()}-'_%[literal]`);
     const forwardRoot = root.replaceAll('\\', '/');
     ownedRoots.push(root);
     await mkdir(root, { recursive: true });
-    const child = Bun.spawn([process.execPath, '-e', 'setInterval(() => {}, 1000)', forwardRoot], {
+    const children = [root, forwardRoot, forwardRoot.replace('_', 'x')].map((path) => Bun.spawn([process.execPath, '-e', 'setInterval(() => {}, 1000)', path], {
       stdout: 'ignore', stderr: 'ignore',
-    });
+    }));
     try {
       const deadline = Date.now() + 3000;
       let matches: Awaited<ReturnType<typeof processesUsingDataRoot>> = [];
       do {
         matches = await processesUsingDataRoot(root);
-        if (matches.some((item) => item.processId === child.pid)) break;
+        if (children.slice(0, 2).every((child) => matches.some((item) => item.processId === child.pid))) break;
         await Bun.sleep(100);
       } while (Date.now() < deadline);
-      expect(matches.map((item) => item.processId)).toContain(child.pid);
+      const pids = matches.map((item) => item.processId);
+      expect(pids).toContain(children[0]!.pid);
+      expect(pids).toContain(children[1]!.pid);
+      expect(pids).not.toContain(children[2]!.pid);
+      expect(() => assertInstallRuntimeIdle({ lockExists: false, portListening: false, processes: matches })).toThrow('A process references');
     } finally {
-      child.kill();
-      await child.exited;
+      for (const child of children) child.kill();
+      await Promise.all(children.map((child) => child.exited));
     }
   }, 15_000);
 

@@ -60,9 +60,9 @@
     "note": "已逐项对照运维条目与worktree来源：来源只新增纯个人资料在仓库外转换的分流，仓库开发、资产保留检查、清理授权及运维命令和权限保持。此更新不构成Foundry或生产运行验收。"
   },
   "verification-development": {
-    "fingerprint": "89b1df1c802333e5769d18af211a965bfe07221891bb47b56408bdbf47d47463",
+    "fingerprint": "a1a0d96541c17fb06d31ad144743ba96edd3fde68a16b7156aa1a158a182d5f0",
     "reviewedOn": "2026-10-30",
-    "note": "已对照锁定 Crawlee 3.17.0 的实际存储实现：本轮请求队列使用内存，增量仍从 records.json 恢复，来源HTML、记录、失败与manifest保持；并发完整采集、同目录增量恢复、CLI和Web均经真实链核对。远端600秒实际截断后覆盖率watchdog改为720秒；用例、顺序、阈值和20分钟job上限保持。Midi仅修两个真实Windows子进程测试的夹具寿命及独立时限，安装保护未改。"
+    "note": "核对超长测试清单传参修订：保持公开安全入口、精确清单、逐文件钩子、单进程覆盖率和接受边界，条目正文无需改写。"
   },
   "human-encounter-intake": {
     "fingerprint": "bfd91ddaa2b99ec2324897092f8853cbce8a7312d897edf41d4ae445fd9309db",
@@ -75,9 +75,9 @@
     "note": "人工核对新tracked AGENTS两目录登记及Scope/Verification标题，显式清单32→34，作用域/功能/版本/权限未变，检查器19回归及production类型通过；运行模块代码和build输入无变化。"
   },
   "midi-qol-server-next-patch": {
-    "fingerprint": "d36a2f117326064afb2839b2b21651814605b8fc82576ad0ecb141f79eb54c05",
-    "reviewedOn": "2026-10-29",
-    "note": "已核对本次来源runbook增补仅改变公共CI与本地历史回归出口；三个条目的固定版本、历史构建安装入口及现行玩法接受限制仍准确，不改变或扩大其运行接受。"
+    "fingerprint": "314fa5cb9d014fe716df9da6d21634277886258a2e7ecb9ef319cdb985a02c4d",
+    "reviewedOn": "2026-10-30",
+    "note": "对照历史源码安装器实际预检，补充Windows进程查询10秒上限与超时回收、中止而非视为空闲；固定目标和现行安装边界保持。"
   },
   "version-selection": {
     "fingerprint": "c3f5643712f5d10a0b3742784932e2020175ff3a0baa744142de315f487d44c7",
@@ -175,9 +175,9 @@
     "note": "已核源码active/API/能力门和持久marker，并对照总账WMP R5/R6：606单GM Sap预约取消、Club伤害/Slow、重复提交零重复结算、重载/清理已接受。README/手册/AGENTS统一该范围，manifest verified仍605；旧User UNKNOWN与完整精通/玩家/多GM/长时/生产缺口保留。"
   },
   "midi-qol": {
-    "fingerprint": "06d01017f0a319ea1d277b8ed08423e1517bcd96948920b61a1129f9b31e1ba4",
-    "reviewedOn": "2026-10-29",
-    "note": "已核对本次来源runbook增补仅改变公共CI与本地历史回归出口；三个条目的固定版本、历史构建安装入口及现行玩法接受限制仍准确，不改变或扩大其运行接受。"
+    "fingerprint": "49c3e8e94bdde9c90e304761d2d6d04237fcf03fe2c21502ab5785b79bc9c953",
+    "reviewedOn": "2026-10-30",
+    "note": "核对当前6.0.5/local.10条目：仅历史源码工具进程查询增加预算与提供方过滤，不改已安装模块、客户端行为或既有玩法接受。"
   },
   "server-next-external-candidates": {
     "fingerprint": "e167870ef80339cf0cda88f0d3c7259699b7009ce6605ccb062c1377dad51035",

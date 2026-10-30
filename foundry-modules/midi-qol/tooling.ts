@@ -78,7 +78,7 @@ export async function run(
   command: string,
   args: string[],
   cwd: string,
-  options: { allowFailure?: boolean; env?: Record<string, string | undefined> } = {},
+  options: { allowFailure?: boolean; env?: Record<string, string | undefined>; timeoutMs?: number } = {},
 ): Promise<CommandResult> {
   const child = Bun.spawn([command, ...args], {
     cwd,
@@ -86,16 +86,26 @@ export async function run(
     stdout: 'pipe',
     stderr: 'pipe',
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(child.stdout).text(),
-    new Response(child.stderr).text(),
-    child.exited,
-  ]);
-  const result = { command: [command, ...args].join(' '), exitCode, stdout, stderr };
-  if (exitCode !== 0 && !options.allowFailure) {
-    throw new Error(`${result.command} failed (${exitCode})\n${stdout}\n${stderr}`.trim());
+  let expired = false;
+  const timer = options.timeoutMs === undefined ? undefined : setTimeout(() => {
+    expired = true;
+    child.kill();
+  }, options.timeoutMs);
+  try {
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+      child.exited,
+    ]);
+    if (expired) throw new Error(`Command subprocess ${child.pid} exceeded ${options.timeoutMs}ms and was reaped.`);
+    const result = { command: [command, ...args].join(' '), exitCode, stdout, stderr };
+    if (exitCode !== 0 && !options.allowFailure) {
+      throw new Error(`${result.command} failed (${exitCode})\n${stdout}\n${stderr}`.trim());
+    }
+    return result;
+  } finally {
+    clearTimeout(timer);
   }
-  return result;
 }
 
 function assertInside(root: string, candidate: string, label: string): void {
@@ -387,17 +397,21 @@ export async function processesUsingDataRoot(dataRoot: string): Promise<InstallR
   const windowsPath = resolve(dataRoot);
   const forwardPath = windowsPath.replaceAll('\\', '/');
   const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
+  // WQL LIKE must treat path characters literally, including its wildcard syntax.
+  const filter = [windowsPath, forwardPath].map((path) => {
+    const literal = path.replace(/[\\'"]/gu, '\\$&').replace(/[%_[]/gu, '[$&]');
+    return `CommandLine LIKE '%${literal}%'`;
+  }).join(' OR ');
   const script = [
-    `$needles = @(${quote(windowsPath)}, ${quote(forwardPath)})`,
-    '$items = @(Get-CimInstance Win32_Process -ErrorAction Stop | Where-Object {',
-    '  $commandLine = $_.CommandLine',
-    '  $commandLine -and ($needles | Where-Object { $commandLine.IndexOf($_, [System.StringComparison]::OrdinalIgnoreCase) -ge 0 })',
-    '} | Select-Object ProcessId, Name, ExecutablePath)',
+    "$ErrorActionPreference = 'Stop'",
+    "$ProgressPreference = 'SilentlyContinue'",
+    `$items = @(Get-CimInstance Win32_Process -Filter ${quote(filter)} -Property ProcessId,Name,ExecutablePath -OperationTimeoutSec 5 | Select-Object ProcessId,Name,ExecutablePath)`,
     'if ($items.Count -eq 0) { "[]" } else { $items | ConvertTo-Json -Compress }',
   ].join('\n');
   const encoded = Buffer.from(script, 'utf16le').toString('base64');
   const result = await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded], workspaceRoot, {
     allowFailure: true,
+    timeoutMs: 10_000,
   });
   if (result.exitCode !== 0) throw new Error(`Unable to establish ServerNext process ownership:\n${result.stderr}`);
   const parsed = JSON.parse(result.stdout.trim() || '[]') as Record<string, unknown> | Array<Record<string, unknown>>;

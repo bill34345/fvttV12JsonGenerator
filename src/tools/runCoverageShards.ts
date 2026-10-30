@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { appendFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { selectSourceContractScope } from './ciSourceContracts';
 
 // CLI integration and the Session Monitor build run in their own public CI steps.
@@ -54,20 +54,33 @@ export async function runCoverageInventory(files: string[], directory: string, t
     'test', '--coverage', '--coverage-reporter=lcov', `--coverage-dir=${directory}`, '--max-concurrency=1',
     '--test-name-pattern', testNamePattern,
   ];
-  let paths = files.map(file => resolve(file));
+  let paths = files.map(file => {
+    const path = relative(process.cwd(), resolve(file));
+    return (isAbsolute(path) ? path : `./${path}`).replaceAll('\\', '/');
+  });
   let argumentRoot: string | undefined;
   try {
-    // Windows limits the whole command line to 32767 characters. Bun resolves
-    // file symlinks before loading, preserving imports, per-file hooks and LCOV paths.
+    // Windows limits the whole command line to 32767 characters. Alias parent
+    // directories, keeping each original file name and its sibling imports intact.
     if ([process.execPath, ...args, ...paths].join(' ').length > 30_000) {
       await mkdir('coverage', { recursive: true });
-      const aliases = await mkdtemp(join('coverage', 'argv-'));
+      const aliases = await mkdtemp(join('coverage', 'a-'));
       argumentRoot = aliases;
-      paths = await Promise.all(paths.map(async (file, index) => {
-        const alias = join(aliases, `${index}.test.ts`);
-        await symlink(file, alias, 'file');
-        return `./${alias.replaceAll('\\', '/')}`;
-      }));
+      const directories = new Map<string, string>();
+      paths = [];
+      for (const file of files.map(file => resolve(file))) {
+        const parent = dirname(file);
+        let alias = directories.get(parent);
+        if (!alias) {
+          alias = join(aliases, String(directories.size));
+          await symlink(parent, alias, process.platform === 'win32' ? 'junction' : 'dir');
+          directories.set(parent, alias);
+        }
+        paths.push(`./${join(alias, basename(file)).replaceAll('\\', '/')}`);
+      }
+      if ([process.execPath, ...args, ...paths].join(' ').length > 30_000) {
+        throw new Error('Coverage inventory exceeds the command-line limit even with directory aliases.');
+      }
     }
     // The hosted Windows inventory reached its final cases at the former 600s
     // deadline. Allow bounded report finalization on that runner as well.

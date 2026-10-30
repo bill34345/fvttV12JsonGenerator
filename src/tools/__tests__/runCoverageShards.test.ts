@@ -54,12 +54,16 @@ describe('full Chrome restart recovery',()=>{
   test('runs an overlong inventory with original paths, file hooks, order and coverage', async () => {
     const root = await realpath(await mkdtemp(join(tmpdir(), 'fvtt-coverage-argv-')));
     try {
-      const directory = join(root, 'original-source-directory-'.repeat(5));
-      await mkdir(directory);
+      const directories = [0, 1].map(index => join(root, `${index}-original source directory-`.repeat(5)));
+      for (const directory of directories) {
+        await mkdir(directory);
+        await writeFile(join(directory, 'helper.ts'), 'export const originalHelper = 7;');
+        await writeFile(join(directory, 'unselected.test.ts'), "import {test} from 'bun:test'; test('original source unselected',()=>{throw new Error('UNSELECTED_FILE_EXECUTED')});");
+      }
       const marker = join(root, 'order.jsonl');
-      await writeFile(join(directory, 'helper.ts'), 'export const originalHelper = 7;');
       const files: string[] = [];
       for (let index = 0; index < 160; index++) {
+        const directory = directories[index % directories.length]!;
         const file = join(directory, index === 159 ? 'tests.mjs' : `${index}-original-test-source-${'x'.repeat(50)}.test.ts`);
         files.push(file);
         await writeFile(file, `import {test,expect,beforeAll,afterAll} from 'bun:test';
@@ -80,9 +84,13 @@ afterAll(()=>{delete globalThis.coverageOwner});`);
       const report = join(root, 'report');
       await runCoverageInventory(files, report, '^original source ');
       expect((await readFile(marker, 'utf8')).trim().split('\n').map(Number)).toEqual(files.map((_, index) => index));
+      for (const directory of directories) expect(await readFile(join(directory, 'helper.ts'), 'utf8')).toBe('export const originalHelper = 7;');
       const lcov = (await readFile(join(report, 'lcov.info'), 'utf8')).replaceAll('\\', '/');
       expect(lcov).toContain('helper.ts');
-      expect(lcov).not.toContain('coverage/argv-');
+      expect(lcov).not.toContain('coverage/a-');
+      expect(lcov).not.toContain('unselected.test.ts');
+      await runCoverageInventory([files[0]!], join(root, 'direct-report'), '^original source 0$');
+      expect((await readFile(marker, 'utf8')).trim().split('\n').map(Number)).toEqual([...files.map((_, index) => index), 0]);
     } finally {
       await rm(root, { recursive: true });
     }

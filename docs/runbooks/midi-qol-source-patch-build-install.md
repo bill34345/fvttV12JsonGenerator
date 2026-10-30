@@ -47,6 +47,8 @@ bun run midi-qol:install
 
 默认只验证候选包和目标身份：数据根必须精确为 `F:\FoundryLab\foundry-v14\data\server-next`，世界必须是 `cor-cotn`，Foundry/dnd5e 必须为 14.368/6.0.2。30002 必须未监听，`options.json.lock` 必须不存在，且任何进程命令行都不能引用该 dataPath；无法读取进程所有权时 fail-closed。ZIP 必须只包含 `midi-qol/`，manifest ID 必须保持 `midi-qol`，解压树不得含 symlink/junction。
 
+Windows 进程查询包含 PowerShell 启动在内最多等待 10 秒，内部 WMI 操作预算为 5 秒。超时会回收本次查询子进程并中止检查，不会把无法确认占用当成空闲；先排查系统进程查询，再重新执行预检。
+
 ServerNext/30002 由用户管理为永久运行的共享环境。本任务不得启停或重启；E2E 使用现有服务，只操作自己标记的测试文档。完整包安装器保持停止状态门禁，不能为了安装而停止服务。候选工具当前只接受 local.7 → local.8 的独立浏览器资源入口；local.7 的 A–G/Z 35 项历史验收已关闭，local.8 的新效果创建修复仍须单独做浏览器验收。local.4 在源码审查被拒绝、未部署。旧 PID、旧 handoff 和“本轮曾启动”均不构成停止权限。
 
 ### 常驻实例的受限浏览器资源更新
