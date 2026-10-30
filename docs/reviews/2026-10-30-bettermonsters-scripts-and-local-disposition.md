@@ -1,10 +1,12 @@
-# BetterMonsters：诊断源码与 .local 保留、删除建议
+# BetterMonsters：诊断源码与 .local 评估、删除执行结果
+
+2026-10-30执行更新：用户随后明确批准清单中的312份.local文件及native-mode导出脚本删除，现已全部完成。另3脚本、16536份保留证据及两行未提交改动的hash保持，worktree和分支保留。下方评估段落记载清理前时点，实际执行见文末“批准后的精确删除结果”。
 
 2026-10-30。用户原话：“那就先把82份文档归档到master，物品和种族那两行改动先别合。再核对4个诊断脚本和.local，给我具体的保留、删除清单，先不删BetterMonsters这个worktree。”
 
 82份原文已在 `4e9e624e603c2f57a44a25eac3c1214e1f4fbf90` 归档并合入本地master，35验收/17计划/30调研，共678037字节，全部Git blob与源文件hash一致。14份CRLF与2份末尾空行原文保持；140个本地链接中86个在归档处可定位，54个通过[归档索引](2026-10-30-bettermonsters-archive-index.md)定位到原工作树现存证据。旧日期、失败、停止/权限及未实施范围保持。本轮不把旧计划当作当前指令。
 
-以下均为**具体处置建议，未执行删除**。源根为 `I:/OpenCode/fvttV12JsonGenerator-worktrees/20261006-111625-bettermonsters-eye-deep-sample`。物品/种族provider的两行改动保持未提交、未合入；四个诊断脚本也没有合入或运行。源码、原答、失败、ZIP与世界均未修改，没有新增模型请求、Foundry/浏览器操作或push。
+以下为**清理前的具体处置建议，当时未执行删除**。源根为 `I:/OpenCode/fvttV12JsonGenerator-worktrees/20261006-111625-bettermonsters-eye-deep-sample`。物品/种族provider的两行改动保持未提交、未合入；四个诊断脚本也没有合入或运行。源码、原答、失败、ZIP与世界均未修改，没有新增模型请求、Foundry/浏览器操作或push。
 
 ## 四个诊断脚本
 
@@ -60,3 +62,15 @@
 - 当前没有实施清理或测文件独占锁；未来若批准删除，需在具体文件上重核路径、hash、保留副本和使用者，再按精确清单操作。部分旧解包路径将失效，已在副本理由中明示；不可直接整目录删除，更不删除BetterMonsters worktree。
 
 本轮归档/报告不改变用户生成入口、输入/输出、版本、操作步骤或安全限制。Ruler检查复用本轮未变化的规则源结果；手册保留38项完整覆盖，按本次文档合并流程核对。原件与基线的最终读回、提交和合并日志在同一证据根。
+
+## 批准后的精确删除结果
+
+用户原话：“好，按清单删掉这312份文件和那个 native-mode 导出脚本，删除前再核对 hash 和保留副本。保留另外3个脚本和原始证据，先不删 BetterMonsters worktree，物品和种族那两行也别合。”
+
+仅删除已核清单的312份.local文件及 `tests/diagnostics/forge-native-mode-audit.ts`，共313份、344900030逻辑字节，约328.92MiB。删除前重新核对清单指纹、每个目标的路径/大小/SHA-256，并独立读回77个保留ZIP成员、19份保留文件副本与Lab现存Bun；旧Bun安装zip仅包含已核可执行文件。161旧进度输入、46外部抓取及7编译缓存按已批准的舍弃理由处理，不声称保存或可重建其全部原字节。
+
+执行使用PowerShell `Remove-Item -LiteralPath` 逐文件操作，每份删除前再次核hash。没有Force、递归删除、属性清除、备份或目录/分支移除。没有重跑旧生成或模型，也没有清理清单外内容。
+
+删除后核对：313个目标均不存在，剩余.local文件集合恰16536份、2853788008字节，全部SHA-256与原保留清单相同；另3诊断脚本及82份源文档保持原hash。BetterMonsters HEAD仍为 `f637f77f`、索引为空，dirty/untracked仅因移除native-mode一项从89变为88；Item/Species两份文件的完整hash保持，未合入。原生导出结果与原始输入/回复/失败证据保持；Lab Bun仍存在且同hash。主工作区41份原untracked内容保持。
+
+原候选CSV与保留CSV保持作为批准时清单，不回写历史记录。[机器摘要](2026-10-30-bettermonsters-disposition-summary.json)的 `deletionExecution` 记录实际状态；删除前库存、重核结果、逐文件日志及删除后读回保存在 `H:/CodexData/visualizations/2026/10/29/01a18790-ad68-79e3-8895-49616acd060d/forge-bettermonsters-approved-file-cleanup-20261030/`。旧解包路径按清单失效，复验应使用其中指明的保留版本；不重新启用已删除导出器。

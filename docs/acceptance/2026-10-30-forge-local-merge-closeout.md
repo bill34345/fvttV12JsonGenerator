@@ -132,3 +132,11 @@
 用户随后要求：“那就先把82份文档归档到master，物品和种族那两行改动先别合。再核对4个诊断脚本和.local，给我具体的保留、删除清单，先不删BetterMonsters这个worktree。”82份原文已在 `4e9e624e` 逐字节归档并ff-only合入本地master，14份CRLF和2份末尾空行通过精确Git属性保持，来源工作树不修改。[归档索引](../reviews/2026-10-30-bettermonsters-archive-index.md)区分原日期与当前状态，并为54条原.local相对链接提供现存原目标定位。
 
 四个诊断源码和.local的[具体处置建议](../reviews/2026-10-30-bettermonsters-scripts-and-local-disposition.md)已完成。3脚本保留、1导出器可列删除候选；.local 16536文件保留、312文件为候选，含每一文件的原hash、理由及现存副本位置。此处仅提出清单，未删除任何BetterMonsters文件或其worktree；未合入物品/种族两行改动或四脚本，不push、不追加模型或功能重跑。原件全量hash、主区41untracked以及源码未混入均按本轮证据核对。
+
+## 同日接续：按批准清单删除313份文件
+
+用户明确批准：“好，按清单删掉这312份文件和那个 native-mode 导出脚本，删除前再核对 hash 和保留副本。保留另外3个脚本和原始证据，先不删 BetterMonsters worktree，物品和种族那两行也别合。”
+
+执行范围仅312份.local候选和1个native-mode导出脚本。删除前313项原hash/路径全部匹配，77项ZIP成员、19项直接文件副本和Bun保留版本重新读回。普通PowerShell逐文件删除成功，没有Force、递归/目录移除或备份，未删除worktree/分支。删除后16536份保留.local文件与3脚本全量SHA-256相同，82份源文档保持，Item/Species两份文件完整hash未变且未合入；主区41untracked与全部worktree登记保持。旧原生导出结果和原始来源/回复/失败均仍在保留清单。
+
+[处置报告](../reviews/2026-10-30-bettermonsters-scripts-and-local-disposition.md#批准后的精确删除结果)和[机器摘要](../reviews/2026-10-30-bettermonsters-disposition-summary.json)已区分清理前库存与实际执行结果。证据为 `H:/CodexData/visualizations/2026/10/29/01a18790-ad68-79e3-8895-49616acd060d/forge-bettermonsters-approved-file-cleanup-20261030/` 的preflight、逐文件journal与post-deletion-readback。没有合入业务代码、运行模型/历史功能测试或push。
