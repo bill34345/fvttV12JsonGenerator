@@ -92,3 +92,13 @@ Crawlee full 模式原例本地连续 10 次通过，没有复现远端 `EPERM`�
 固定 [Bun 1.3.14 源码](https://github.com/oven-sh/bun/blob/0d9b296af33f2b851fcbf4df3e9ec89751734ba4/src/cli/test_command.zig#L1884) 在重印 skip／fail 列表后同步生成覆盖率，再打印最终 pass 与 Ran；全量来源排序、逐来源覆盖率计算、LCOV flush 和原子 rename 都在此区间。该位置尚未进入 globalExit，不能将此次停顿归因为已证实的遗留句柄退出等待。同步计算／IO 卡住仍是待排除解释。
 
 据此只将 coverage 总预算从 720 秒调整到 840 秒；前置实际约 5 分 37 秒，加 14 分钟 coverage 为 19 分 37 秒，外层 job 从 20 调整到 22 分钟，给其余 gate 和清理约 2 分 23 秒。单案时限、清单、单进程 LCOV、覆盖率阈值和失败退出保持。现有 12 项 coverage runner 检查通过，真实挂起仍会被小预算回收。独立审查认可该容量依据；新预算内仍须实际生成有效 LCOV 并通过全部后续门禁。如果同一阶段再次耗尽 840 秒，下一步定位 coverage 生成，不能继续仅增加预算。手册 verification-development 已核对，入口和接受口径保持，review 与生成页面同步。
+
+## 第六轮远端：Windows 集成前置与单案预算
+
+`d91f5f13` 的 [GitHub CI 41063164738](https://github.com/bill34345/fvttV12JsonGenerator/actions/runs/41063164738) 正常结束覆盖率收尾并打印最终汇总：8246 pass、83 skip、3 fail，8332 用例、576 文件、675.06 秒；没有触发总看门狗。长清单 821.69ms、大报告 12061.72ms 通过。失败为 Blood Hunter 真实安装／回滚测试 5049.20ms、Spell Resolver 真实 LevelDB 路径替换测试 5001.60ms（均碰到默认 5000ms），以及 MIDI 查询触及自己的 10000ms 保护。原日志完整保留，最终覆盖率阈值和后续门禁仍未闭合。
+
+两个文件系统用例包含真实构建、安装、LevelDB 读写／关闭、失败路径和多次目录哈希核对，原有其他轮次通过记录保留；只给这两例 15000ms 测试预算，恢复、拒绝路径及完整性断言不改，模块运行时代码不改。
+
+MIDI 生产查询仍保持 10 秒预算及失败关闭。CI 增加独立 Windows 准备步骤，用实际 powershell.exe 查询其自身 PID 的 Win32_Process，要求 PID 相同且 CommandLine 非空；WMI 操作 30 秒、外层步骤 1 分钟，失败中止，不重试或跳过。正式三 PID、近似路径排除及安装拒绝断言照常执行。此步骤区分 runner 查询能力准备与功能用例，但自 PID 查询比 CommandLine LIKE 更轻，冷启动根因尚未证实，不能据此宣称生产首次冷查询一定小于 10 秒。若准备通过后原查询仍超时，继续定位查询阶段，不再增加生产预算。
+
+本机执行同一准备脚本成功，三个原失败用例定点 3 pass、0 fail、12 次断言，均使用随机临时根及独立进程；没有使用持久 Lab 作破坏性 fixture。独立审查认可该前置与预算范围。手册 status 显示全部 38 项与来源一致；此次只改 CI 准备和测试预算，用户入口、输出、支持版本及生产保护不变，未改说明正文或刷新无关 review。后续仍须取得新提交实际完整 CI 成功。

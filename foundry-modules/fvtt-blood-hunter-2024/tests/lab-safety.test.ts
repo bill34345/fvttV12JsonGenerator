@@ -164,7 +164,7 @@ describe('Blood Hunter Lab safety boundary', () => {
     expect(destinationAfter.hash).toBe(destinationBefore.hash);
     expect(destinationAfter.hash).not.toBe(buildAfter.hash);
     expect(renameCalls).toBeGreaterThanOrEqual(3);
-  });
+  }, 15_000);
 });
 
 interface Sandbox {

@@ -934,7 +934,7 @@ describe('Foundry Lab spell resolver lifecycle', () => {
       expect(await readModulesFromDatabase(preservedOriginal, ClassicLevel)).toEqual({ dae: true });
       expect(await hashNonLockTree(outsideSettings)).toEqual(outsideBefore);
     });
-  });
+  }, 15_000);
 
   test.each(['cor-cotn', 'unknown-world', '../fvtt-v14-module-matrix'])(
     'rejects production-like, unknown, or escaping world %s',

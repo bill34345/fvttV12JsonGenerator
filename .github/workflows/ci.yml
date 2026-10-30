@@ -75,5 +75,20 @@ jobs:
       - name: Acquire immutable reference cache
         run: bun run references bootstrap
 
+      - name: Prepare Windows process query provider
+        shell: pwsh
+        timeout-minutes: 1
+        run: |
+          powershell.exe -NoProfile -NonInteractive -Command {
+            $ErrorActionPreference = 'Stop'
+            $ProgressPreference = 'SilentlyContinue'
+            $item = Get-CimInstance Win32_Process -Filter "ProcessId=$PID" -Property ProcessId,CommandLine -OperationTimeoutSec 30
+            if ($null -eq $item -or $item.ProcessId -ne $PID -or [string]::IsNullOrWhiteSpace($item.CommandLine)) {
+              throw 'Windows process query provider did not return its own command line.'
+            }
+            "Windows process query provider ready (PID $($item.ProcessId))."
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Run deterministic repository gate
         run: bun run ci:verify
