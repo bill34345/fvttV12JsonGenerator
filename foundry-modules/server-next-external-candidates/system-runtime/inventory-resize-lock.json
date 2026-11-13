@@ -1,0 +1,8 @@
+{
+  "system": "dnd5e",
+  "version": "6.0.6",
+  "commit": "87e94dbd9f930135e0694cd7e7d49f210603cd2c",
+  "sourcePath": "module/applications/components/inventory.mjs",
+  "sourceUrl": "https://github.com/foundryvtt/dnd5e/blob/87e94dbd9f930135e0694cd7e7d49f210603cd2c/module/applications/components/inventory.mjs",
+  "sourceSha256Lf": "e653588c969c0c2fa39ee38606d881dfd0be8d17008c9e88768811a7e82936e0"
+}

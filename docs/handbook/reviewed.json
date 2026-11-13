@@ -60,9 +60,9 @@
     "note": "对照tools/foundry-ops/AGENTS.md，仅将Bun版本依据从已删除CI配置改为根README；本地检查包装、临时沙箱、只读依赖、生产权限、目标路径和失败关闭要求保持。"
   },
   "verification-development": {
-    "fingerprint": "e5a012f8c004bbb8956be32fbd8d898593be142b00aa5d715cfd7e21463d1091",
+    "fingerprint": "70bc9aaf622d9931f9eb5938f5433ef933316ac0563261047aa869b922b7d9fa",
     "reviewedOn": "2026-11-13",
-    "note": "血猎手编译与测试走受控临时根；版本与本地构建说明见模块条目。"
+    "note": "新增外部战斗补丁的离线入口，手册按工程维护内容登记；本条既有验证命令、范围和运行要求保持。"
   },
   "human-encounter-intake": {
     "fingerprint": "18480831d4d3c65a7afe21846f6d5e798455d8059cf1ffff4abd753910dd26ee",
@@ -93,6 +93,11 @@
     "fingerprint": "1b9623a7ea556db39772d7316f302f30eb1fee823778a96a894bb94cc07ed269",
     "reviewedOn": "2026-10-25",
     "note": "首版收尾已对照独立项目当前交付页、包与验收记录：增加current-state接续入口，历史验收明确为快照；命令、版本及安装授权边界不变，Force标签和动画精确匹配仍列待办。"
+  },
+  "foundry-combat-compatibility": {
+    "fingerprint": "26e4f43e0327b0658d78670f4696c1ba7653d8c3cb4e96e9188fbb2f29946725",
+    "reviewedOn": "2026-11-13",
+    "note": "核对官方版本、输入来源与摘要、补丁顺序和构建入口。说明适用条件、生成文件及首次绘制仍可能短停。"
   },
   "foundry-mcp-readiness": {
     "fingerprint": "ff32939eec664f97d2f51ad40b36144673224becc139c18a1e1b1c654615770e",
@@ -180,13 +185,13 @@
     "note": "逐项核对变化仅来自历史测试输入runbook及对应本地入口说明：移除公共CI自动执行承诺，保留严格历史源码门、显式portable选择、固定来源版本/哈希、缺失失败条件和Git外材料。各模块功能、候选安装与玩法接受范围保持。"
   },
   "server-next-external-candidates": {
-    "fingerprint": "3ef610e0bb52691a3d5172121354a59269a49f867ae51355d7c5227ceed1f8ee",
-    "reviewedOn": "2026-10-30",
-    "note": "逐项核对变化仅来自历史测试输入runbook及对应本地入口说明：移除公共CI自动执行承诺，保留严格历史源码门、显式portable选择、固定来源版本/哈希、缺失失败条件和Git外材料。各模块功能、候选安装与玩法接受范围保持。"
+    "fingerprint": "e45a84110a6fba6036c277c5f90e797cb942b60d6efc4945668b40044a2f79ba",
+    "reviewedOn": "2026-11-13",
+    "note": "保留历史候选入口，核对新战斗补丁的独立说明和各组件官方输入。"
   },
   "fvtt-suite-console": {
-    "fingerprint": "87c5f456d7ef772d41398ede7c9aa3674d9f9ada8b0e7a0ba711437109efdabd",
-    "reviewedOn": "2026-10-30",
-    "note": "对照模块README，构建仍用Bun1.3.14，仅将版本依据从CI改为根README；模块入口、同源手册投影、打包、安装及已有接受范围不变。"
+    "fingerprint": "37c38bc9045eaaf55d8942d23c00d2ecb8b44fe5ec6519c6db3d9b14072a2b9c",
+    "reviewedOn": "2026-11-13",
+    "note": "交付策略仅把新增战斗补丁放入完整离线手册，Foundry 内的条目清单、功能和入口保持。"
   }
 }

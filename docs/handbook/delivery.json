@@ -64,6 +64,10 @@
       "reason": "外部候选调查及未接受清单留在工程手册，不随用户模块宣称可用或可分发。"
     },
     {
+      "entryId": "foundry-combat-compatibility",
+      "reason": "外部版本补丁和构建说明留在离线手册，需按环境自行选择，不随 Foundry 模块安装。"
+    },
+    {
       "entryId": "babele-zh-maintenance",
       "reason": "中文Babele汉化的上游更新和冲突处理由独立维护项目执行，在完整离线手册保留入口，不属于Foundry内日常用户工具。"
     },

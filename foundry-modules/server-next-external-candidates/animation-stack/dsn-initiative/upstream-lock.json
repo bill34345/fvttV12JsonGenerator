@@ -1,0 +1,10 @@
+{
+  "moduleId": "dice-so-nice",
+  "upstreamVersion": "6.4.4",
+  "candidateVersion": "6.4.4+local.2",
+  "commit": "a21ede8b21a322b25fbf0d99dc89470f2ebe2711",
+  "releaseUrl": "https://gitlab.com/riccisi/foundryvtt-dice-so-nice/-/tags/6.4.4",
+  "archiveSha256": "564fdf7e3044ac480e17d35afe156e91732f3334952c2daaaf04496e013ea046",
+  "sourcePath": "../module/ui/InitiativeMask.js",
+  "sourceSha256": "48fc58e5e3f433e04997acf24c4c9087f3aac1e8102db4e8ee7d28c8d4a27321"
+}

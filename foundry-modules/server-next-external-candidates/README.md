@@ -4,11 +4,12 @@
 
 ## ServerNext external candidates
 
+For the optional fixes tested on Foundry 14.370, see the [combat compatibility notes](../../docs/reviews/2026-11-13-foundry-combat-compatibility.md). Each component has its own pinned upstream inputs and can be prepared separately.
+
 The original builds below retain the historical `NEXT-EXT-20260929-01` target,
-Foundry14.368 / dnd5e6.0.2. Current ServerNext follows the stable6.x policy and
-is now on6.0.5. Do not reuse old runtime contracts or the6.0.2-only launcher for
-the current service. Already-accepted behavior is reused when still applicable.
-Current migration status remains only in `docs/plan/server-next-migration-handoff-20260927.md`.
+Foundry14.368 / dnd5e6.0.2. The later 6.0.5 migration is also historical.
+Do not reuse old runtime contracts or the 6.0.2-only launcher on newer versions.
+The migration record is `docs/plan/server-next-migration-handoff-20260927.md`.
 
 The2026-10-02 [DAE phase-chain candidate](./dae/README.md) is a separate narrow
 14.0.14+servernext.1 correction on Core14.368/dnd5e6.0.5. It restores native

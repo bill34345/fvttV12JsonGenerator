@@ -1544,6 +1544,52 @@
     ]
   },
   {
+    "id": "foundry-combat-compatibility",
+    "title": "Foundry 14 战斗兼容补丁",
+    "category": "maintain",
+    "summary": "让开战只切一次聊天，减少批量先攻和 3D 骰首次显示时的短停。",
+    "when": "正在维护与实测版本一致的 Foundry 14.370 环境，并遇到对应问题时。",
+    "requires": [
+      "按需准备 Monk’s Combat Details 14.03、dnd5e 6.0.6 或 Dice So Nice 6.4.4 的官方文件。各组件分别核对版本与来源。",
+      "在仓库根安装锁定依赖。按对应源码说明准备 Git、Node 22 或以上，以及系统构建所需的 Rollup。"
+    ],
+    "steps": [
+      {
+        "title": "限制自动切聊天和分开显示先攻浮窗",
+        "text": "在另一个解包目录按说明应用 Monk’s Combat Details 的两份补丁。设置开启时只在开战切一次聊天；一批先攻仍逐条提醒。"
+      },
+      {
+        "title": "减少批量先攻的重复计算",
+        "text": "按 dnd5e 构建说明提供官方源码、发行文件、编译器目录和新输出目录，加入 --initiative-precheck。单独核对正常分组和 0 点先攻继承。",
+        "command": "bun run test:system-initiative-precheck"
+      },
+      {
+        "title": "生成 Dice So Nice 的首次绘制补丁",
+        "text": "在官方 6.4.4 原包上合成两项前置修复和材质优化。输出三个文件，需配套使用。",
+        "command": "bun run prepare:dsn-board-normal \"<解包后的官方目录>\" \"<尚未创建的输出目录>\" --official"
+      }
+    ],
+    "outputs": [
+      "独立的补丁或本地构建产物。命令不会安装、改动世界或启动 Foundry。"
+    ],
+    "limits": [
+      "补丁随各自上游版本单独复核，不随 Forge 安装。",
+      "Dice So Nice 优化只影响战斗画布真实光照下首次生成材质，第一次绘制仍可能短停。未定位的开战前卡顿也不在此次修复范围。"
+    ],
+    "keywords": ["战斗", "回合", "先攻", "骰子", "卡顿", "Monk’s Combat Details", "Dice So Nice"],
+    "sources": [
+      "docs/reviews/2026-11-13-foundry-combat-compatibility.md",
+      "foundry-modules/server-next-external-candidates/retained-tools/monks-combat-details-14.03.md",
+      "foundry-modules/server-next-external-candidates/system-runtime/README.md",
+      "foundry-modules/server-next-external-candidates/animation-stack/dsn-board-normal-worker.md"
+    ],
+    "watch": [
+      "foundry-modules/server-next-external-candidates/retained-tools/",
+      "foundry-modules/server-next-external-candidates/system-runtime/",
+      "foundry-modules/server-next-external-candidates/animation-stack/"
+    ]
+  },
+  {
     "id": "foundry-mcp-readiness",
     "title": "本地 Foundry MCP 开发准备",
     "category": "maintain",
