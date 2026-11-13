@@ -1,32 +1,56 @@
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { classicLevelForBloodHunterTests } from './helpers.ts';
+import { lstat, mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { createDeterministicZip, inspectModuleTree, moduleUuid } from '../build.ts';
 import {
   bloodHunterLabPaths,
-  dryRunBloodHunterInstall,
-  installBloodHunterModule,
+  dryRunBloodHunterInstall as dryRunModule,
+  installBloodHunterModule as installModule,
   parseBloodHunterLabCliArgs,
   verifyBloodHunterInstall,
 } from '../lab.ts';
 import {
   assertInsideRoot,
   assertNoReparsePathComponents,
+  assertInstalledBloodHunterCore,
   createLabConfig,
 } from '../labConfig.ts';
+import type { BloodHunterLabConfig } from '../labConfig.ts';
+import type { InstallOptions } from '../lab.ts';
 import { EXPECTED_DND5E_EXTERNAL_UUIDS } from '../build.ts';
 
-const CLASSIC_LEVEL_ENTRY = process.env.FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY?.trim()
-  || 'F:\\FoundryLab\\foundry-v14\\app\\14.364\\node_modules\\classic-level\\index.js';
+const CLASSIC_LEVEL_ENTRY = classicLevelForBloodHunterTests();
 const temporaryRoots: string[] = [];
+const stoppedFixture = async () => undefined;
+const dryRunBloodHunterInstall = (config: BloodHunterLabConfig) => dryRunModule(config, { assertStopped: stoppedFixture });
+const installBloodHunterModule = (config: BloodHunterLabConfig, options: InstallOptions) => installModule(config, { assertStopped: stoppedFixture, ...options });
 
 afterEach(async () => {
   for (const root of temporaryRoots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
 describe('Blood Hunter Lab safety boundary', () => {
+  test('selected Core 14 follows the shared override and verifies the actual installed release', async () => {
+    const root = await mkdtemp(join(process.env.TEMP ?? process.cwd(), 'fvtt-bh-config-test-'));
+    temporaryRoots.push(root);
+    const config = createLabConfig(join(root, 'repo'), { FVTT_OPS_LAB_ROOT: join(root, 'lab'), FVTT_OPS_DEVELOPMENT_FOUNDRY_VERSION: '14.371' });
+    expect(config.profiles.development).toMatchObject({ id: 'development', port: 30001 });
+    expect(config.profiles.development.dataPath).toBe(join(root, 'lab/data/server-mirror'));
+    expect(() => createLabConfig(join(root, 'repo'), { FVTT_OPS_MIRROR_FOUNDRY_VERSION: '14.370' })).toThrow('development 30001');
+    expect(config.versions.foundry).toBe('14.371');
+    expect(config.classicLevelEntry).toBe(join(root, 'lab/app/14.371/node_modules/classic-level/index.js'));
+    const app = join(root, 'lab/app/14.371');
+    await mkdir(app, { recursive: true });
+    await writeFile(join(app, 'package.json'), JSON.stringify({ name: 'foundryvtt', release: { generation: 14, build: 371 } }));
+    expect(() => assertInstalledBloodHunterCore(config)).not.toThrow();
+    await writeFile(join(app, 'package.json'), JSON.stringify({ name: 'foundryvtt', release: { generation: 14, build: 370 } }));
+    expect(() => assertInstalledBloodHunterCore(config)).toThrow('differs from selected');
+    for (const version of ['14.367', '13.999', '15.1', '14.371-beta']) expect(() => createLabConfig(join(root, 'repo'), { FVTT_OPS_DEVELOPMENT_FOUNDRY_VERSION: version })).toThrow('Core 14.368');
+  });
+
   test('CLI modes require exact source/apply syntax', () => {
     expect(parseBloodHunterLabCliArgs(['dry-run'])).toEqual({ action: 'dry-run', apply: false });
     expect(parseBloodHunterLabCliArgs(['build', '--source=C:\\source.json'])).toEqual({ action: 'build', apply: false, sourcePath: 'C:\\source.json' });
@@ -113,35 +137,54 @@ describe('Blood Hunter Lab safety boundary', () => {
     expect((await dryRunBloodHunterInstall(clean.config)).changed).toBe(false);
   });
 
-  test('owned pre-v14 pack layout is backed up and replaced instead of blocking reinstall', async () => {
+  test('owned pre-v14 pack layout is replaced without making a backup', async () => {
     const sandbox = await makeSandbox();
     await installBloodHunterModule(sandbox.config, { apply: true, now: () => new Date('2026-08-04T05:00:00.000Z') });
     const paths = bloodHunterLabPaths(sandbox.config);
+    await writeFile(join(paths.destination, 'data', 'owned-marker.json'), JSON.stringify({ owned: true, moduleId: 'fvtt-blood-hunter-2024', version: '1.0.0' }), 'utf8');
     await writeRootPseudoIndex(join(paths.destination, 'packs', 'classes'));
 
     const result = await installBloodHunterModule(sandbox.config, { apply: true, now: () => new Date('2026-08-04T05:01:00.000Z') });
     expect(result.changed).toBe(true);
-    expect(result.backupPath).toBe(join(sandbox.config.backupRoot, 'fvtt-blood-hunter-2024', '2026-08-04T05-01-00-000Z', 'module'));
-    expect(await readFile(join(result.backupPath!, 'data', 'owned-marker.json'), 'utf8')).toContain('fvtt-blood-hunter-2024');
+    expect(result.backupPath).toBeUndefined();
     expect((await verifyBloodHunterInstall(sandbox.config)).packConsistent).toBe(true);
   });
 
-  test('foreign same-ID and LevelDB LOCK targets are fail-closed', async () => {
+  test('foreign same-ID and a running-target preflight are fail-closed', async () => {
     const foreign = await makeSandbox();
     const foreignPaths = bloodHunterLabPaths(foreign.config);
     await mkdir(join(foreignPaths.destination, 'data'), { recursive: true });
     await writeFile(join(foreignPaths.destination, 'data', 'owned-marker.json'), JSON.stringify({ owned: false, moduleId: 'other-module' }), 'utf8');
     await expect(dryRunBloodHunterInstall(foreign.config)).rejects.toThrow(/Foreign same-ID/);
 
-    const locked = await makeSandbox();
-    const lockedPaths = bloodHunterLabPaths(locked.config);
-    await mkdir(join(lockedPaths.destination, 'data'), { recursive: true });
-    await writeFile(join(lockedPaths.destination, 'data', 'owned-marker.json'), JSON.stringify({ owned: true, moduleId: 'fvtt-blood-hunter-2024', version: '1.0.0' }), 'utf8');
-    await writeFile(join(lockedPaths.destination, 'LOCK'), 'synthetic lock', 'utf8');
-    await expect(dryRunBloodHunterInstall(locked.config)).rejects.toThrow(/LOCK|occupied/);
+    await expect(installBloodHunterModule(foreign.config, { apply: true, assertStopped: async () => { throw new Error('A server-mirror Foundry process is running.'); } })).rejects.toThrow('process is running');
   });
 
-  test('failed atomic replacement restores the owned destination from backup', async () => {
+  test.skipIf(process.platform !== 'win32')('a real LevelDB handle blocks replacement; a closed database retaining LOCK can upgrade unchanged by the probe', async () => {
+    const sandbox = await makeSandbox();
+    await installBloodHunterModule(sandbox.config, { apply: true });
+    const paths = bloodHunterLabPaths(sandbox.config);
+    await writeFile(join(paths.buildRoot, 'scripts/index.js'), 'export const fixtureVersion = 2;\n');
+    await writeFile(paths.zipPath, await createDeterministicZip(paths.buildRoot));
+    const imported = await import(pathToFileURL(CLASSIC_LEVEL_ENTRY).href) as { ClassicLevel: new (path: string, options?: Record<string, unknown>) => any };
+    const database = new imported.ClassicLevel(join(paths.destination, 'packs/classes'), { createIfMissing: false, keyEncoding: 'utf8', valueEncoding: 'json' });
+    await database.open();
+    try {
+      const before = await snapshotTreeBytes(paths.destination);
+      await expect(installBloodHunterModule(sandbox.config, { apply: true })).rejects.toThrow(/LOCK is held|locked/);
+      expect(await snapshotTreeBytes(paths.destination)).toEqual(before);
+    } finally { await database.close(); }
+    expect(await readFile(join(paths.destination, 'packs/classes/LOCK'))).toHaveLength(0);
+    const closed = await snapshotTreeBytes(paths.destination);
+    expect((await dryRunBloodHunterInstall(sandbox.config)).changed).toBe(true);
+    expect(await snapshotTreeBytes(paths.destination)).toEqual(closed);
+    const installed = await installBloodHunterModule(sandbox.config, { apply: true });
+    expect(installed.changed).toBe(true);
+    expect(installed.backupPath).toBeUndefined();
+    expect((await verifyBloodHunterInstall(sandbox.config)).packConsistent).toBe(true);
+  }, 15_000);
+
+  test('failed replacement retains validated staging and reports the no-backup state', async () => {
     const sandbox = await makeSandbox();
     await installBloodHunterModule(sandbox.config, { apply: true, now: () => new Date('2026-08-04T02:00:00.000Z') });
     const paths = bloodHunterLabPaths(sandbox.config);
@@ -155,15 +198,14 @@ describe('Blood Hunter Lab safety boundary', () => {
       now: () => new Date('2026-08-04T03:00:00.000Z'),
       rename: async (from, to) => {
         renameCalls += 1;
-        if (renameCalls === 2) throw new Error('synthetic stage swap failure');
+        if (renameCalls === 1) throw new Error('synthetic stage swap failure');
         const fs = await import('node:fs/promises');
         await fs.rename(from, to);
       },
     })).rejects.toThrow(/install failed|stage swap/);
-    const destinationAfter = await inspectModuleTree(paths.destination, sandbox.config, true);
-    expect(destinationAfter.hash).toBe(destinationBefore.hash);
-    expect(destinationAfter.hash).not.toBe(buildAfter.hash);
-    expect(renameCalls).toBeGreaterThanOrEqual(3);
+    const retained = await inspectModuleTree(paths.staging, sandbox.config, true);
+    expect(retained.hash).toBe(buildAfter.hash);
+    expect(renameCalls).toBe(1);
   }, 15_000);
 });
 
@@ -181,6 +223,8 @@ async function makeSandbox(): Promise<Sandbox> {
   const labRoot = join(root, 'lab');
   await mkdir(repoRoot, { recursive: true });
   await mkdir(labRoot, { recursive: true });
+  await mkdir(join(labRoot, 'app/14.370'), { recursive: true });
+  await writeFile(join(labRoot, 'app/14.370/package.json'), JSON.stringify({ name: 'foundryvtt', release: { generation: 14, build: 370 } }));
   const config = createLabConfig(repoRoot, {
     FVTT_OPS_LAB_ROOT: labRoot,
     FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY: CLASSIC_LEVEL_ENTRY,
@@ -202,8 +246,8 @@ async function makeSandbox(): Promise<Sandbox> {
   const identity = {
     schemaVersion: 1,
     moduleId: 'fvtt-blood-hunter-2024',
-    version: '1.0.0',
-    target: { foundry: '14.364', dnd5e: '5.3.3', rules: '2024', effectProfile: 'modded-v14' },
+    version: '1.1.4',
+    target: { foundry: '14.368', dnd5e: '6.0.2', rules: '2024', effectProfile: 'modded-v14' },
     sourceSha256: 'fixture-source',
     logicalHash: 'fixture-logical-hash',
     counts: { classes: 1, subclasses: 1, features: 1, ledger: 0, activities: 0 },
@@ -214,7 +258,7 @@ async function makeSandbox(): Promise<Sandbox> {
     activityCount: 0,
   };
   await writeFile(join(paths.buildRoot, 'data', 'identity-manifest.json'), `${JSON.stringify(identity, null, 2)}\n`, 'utf8');
-  await writeFile(join(paths.buildRoot, 'data', 'owned-marker.json'), JSON.stringify({ schemaVersion: 1, owned: true, moduleId: 'fvtt-blood-hunter-2024', version: '1.0.0', logicalHash: identity.logicalHash }), 'utf8');
+  await writeFile(join(paths.buildRoot, 'data', 'owned-marker.json'), JSON.stringify({ schemaVersion: 1, owned: true, moduleId: 'fvtt-blood-hunter-2024', version: '1.1.4', logicalHash: identity.logicalHash }), 'utf8');
   await writeFile(join(paths.buildRoot, 'data', 'canonical-package.json'), '{}\n', 'utf8');
   await writeFile(join(paths.buildRoot, 'data', 'migration-contract.json'), '{}\n', 'utf8');
   await writeFile(join(paths.buildRoot, 'data', 'coverage-ledger.json'), '[]\n', 'utf8');
@@ -286,4 +330,20 @@ async function rewriteItemPackLayout(path: string): Promise<void> {
 async function removeLevelDbLock(path: string): Promise<void> {
   const fs = await import('node:fs/promises');
   await fs.unlink(join(path, 'LOCK')).catch(() => undefined);
+}
+
+async function snapshotTreeBytes(root: string): Promise<Array<[string, string]>> {
+  const files: Array<[string, string]> = [];
+  async function visit(directory: string) {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) await visit(path);
+      else if (entry.name === 'LOCK') {
+        const info = await lstat(path);
+        files.push([relative(root, path), `LOCK:${info.size}:${info.mtimeMs}`]);
+      } else files.push([relative(root, path), (await readFile(path)).toString('base64')]);
+    }
+  }
+  await visit(root);
+  return files.sort(([left], [right]) => left.localeCompare(right));
 }

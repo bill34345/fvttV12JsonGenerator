@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { cp, lstat, mkdir, open, readFile, readdir, rename, rm } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, parse, relative, resolve, sep } from 'node:path';
+import { assertNoHeldLevelDbLocks, assertServerMirrorStopped as assertDevelopmentStopped } from '../lab-owned-upgrade.ts';
 
 import {
   MODULE_ID,
@@ -17,6 +18,7 @@ import {
   assertInsideLabRoot,
   assertInsideRoot,
   assertNoReparsePathComponents,
+  assertInstalledBloodHunterCore,
   createLabConfig,
   type BloodHunterLabConfig,
 } from './labConfig.ts';
@@ -40,7 +42,11 @@ export interface BloodHunterLabPaths {
   backupRoot: string;
 }
 
-export interface InstallOptions {
+export interface LabPreflightDependencies {
+  assertStopped?: () => Promise<void>;
+}
+
+export interface InstallOptions extends LabPreflightDependencies {
   apply: boolean;
   now?: () => Date;
   beforeDestinationMutation?: () => Promise<void> | void;
@@ -91,7 +97,7 @@ export function parseBloodHunterLabCliArgs(args: readonly string[]): LabCliReque
 export function bloodHunterLabPaths(config: BloodHunterLabConfig): BloodHunterLabPaths {
   if (config.moduleId !== MODULE_ID) throw new Error('Configured Blood Hunter module ID is not exact.');
   const distRoot = resolve(config.moduleRoot, 'dist');
-  const modulesRoot = resolve(config.profiles.serverMirror.dataPath, 'Data/modules');
+  const modulesRoot = resolve(config.profiles.development.dataPath, 'Data/modules');
   const destination = resolve(modulesRoot, MODULE_ID);
   return {
     buildRoot: resolve(distRoot, 'module'),
@@ -117,6 +123,7 @@ function assertBloodHunterBuildPaths(config: BloodHunterLabConfig, paths: BloodH
 
 function assertBloodHunterLabPaths(config: BloodHunterLabConfig, paths: BloodHunterLabPaths): void {
   assertConfiguredLab(config);
+  assertInstalledBloodHunterCore(config);
   assertExactLabPath(config, paths.modulesRoot, ['data', 'server-mirror', 'Data', 'modules'], 'Blood Hunter Lab modules root');
   assertExactLabPath(config, paths.destination, ['data', 'server-mirror', 'Data', 'modules', MODULE_ID], 'Blood Hunter Lab module destination');
   assertExactLabPath(config, paths.staging, ['data', 'server-mirror', 'Data', 'modules', `.${MODULE_ID}.installing`], 'Blood Hunter Lab module staging');
@@ -131,10 +138,11 @@ export async function buildBloodHunterForLab(config: BloodHunterLabConfig, sourc
   return buildBloodHunterModule({ sourcePath, config, target });
 }
 
-export async function dryRunBloodHunterInstall(config: BloodHunterLabConfig): Promise<InstallResult> {
+export async function dryRunBloodHunterInstall(config: BloodHunterLabConfig, dependencies: LabPreflightDependencies = {}): Promise<InstallResult> {
   const paths = bloodHunterLabPaths(config);
   assertBloodHunterBuildPaths(config, paths);
   assertBloodHunterLabPaths(config, paths);
+  await (dependencies.assertStopped ?? assertDevelopmentStopped)();
   await assertZipMatchesModule(paths.zipPath, paths.buildRoot);
   const build = await inspectModuleTree(paths.buildRoot, config, true);
   await rejectForeignOrUnsafeDestination(config, paths);
@@ -152,9 +160,9 @@ export async function dryRunBloodHunterInstall(config: BloodHunterLabConfig): Pr
     staticConsistent: existing ? compareModuleStaticFiles(build, existing) : undefined,
     actions: [
       'Validate the exact built module tree and ZIP metadata',
-      'Reject foreign same-ID, reparse, path-escape, LOCK, and occupied targets',
-      'Back up an owned destination under the configured backup root',
-      'Atomically replace only the exact server-mirror module directory if --apply is supplied',
+      'Reject foreign same-ID, reparse, path-escape, running targets, and OS-held LOCK files',
+      'Replace only an owned destination after rechecking its hash; create no backup',
+      'Atomically replace only the exact development 30001 module directory if --apply is supplied',
     ],
   };
 }
@@ -163,6 +171,8 @@ export async function installBloodHunterModule(config: BloodHunterLabConfig, opt
   const paths = bloodHunterLabPaths(config);
   assertBloodHunterBuildPaths(config, paths);
   assertBloodHunterLabPaths(config, paths);
+  const assertStopped = options.assertStopped ?? assertDevelopmentStopped;
+  await assertStopped();
   await assertZipMatchesModule(paths.zipPath, paths.buildRoot);
   const build = await inspectModuleTree(paths.buildRoot, config, true);
   await rejectForeignOrUnsafeDestination(config, paths);
@@ -176,19 +186,17 @@ export async function installBloodHunterModule(config: BloodHunterLabConfig, opt
       destination: paths.destination,
       buildHash: build.hash,
       ...(existing ? { installHash: existing.hash } : {}),
-      actions: ['Validate deterministic build', 'Back up only an owned same-ID module', 'Atomically replace exact server-mirror destination'],
+      actions: ['Validate deterministic build', 'Recheck owned same-ID module hash', 'Replace exact development 30001 destination without a backup'],
     };
   }
   if (existing && compareModuleLogicalContent(build, existing)) return { action: 'install', apply: true, changed: false, destination: paths.destination, buildHash: build.hash, installHash: existing.hash, manifestConsistent: true, packConsistent: true, staticConsistent: true };
   await options.beforeDestinationMutation?.();
+  await assertStopped();
   await assertNoLocksOrOccupancy(paths.destination);
   if (await exists(paths.staging)) throw new Error(`Refusing to overwrite stale Blood Hunter staging directory: ${paths.staging}`);
   await mkdir(paths.modulesRoot, { recursive: true });
   assertBloodHunterLabPaths(config, paths);
   const move = options.rename ?? rename;
-  let backupPath: string | undefined;
-  let movedExisting = false;
-  let movedStaging = false;
   try {
     await cp(paths.buildRoot, paths.staging, { recursive: true, force: false, errorOnExist: true });
     await options.afterStaging?.(paths.staging);
@@ -202,19 +210,15 @@ export async function installBloodHunterModule(config: BloodHunterLabConfig, opt
       throw new Error(`Blood Hunter staged module differs from the validated build: ${differences.join(', ') || 'tree hash only'}.`);
     }
     await assertNoLocksOrOccupancy(paths.destination);
+    await assertStopped();
     if (existingState.exists) {
-      backupPath = resolve(paths.backupRoot, timestamp(options.now ?? (() => new Date())), 'module');
-      assertInsideRoot(config.labRoot, backupPath, 'Blood Hunter backup destination');
-      await mkdir(dirname(backupPath), { recursive: true });
       const current = await inspectOwnedDestination(config, paths);
       if (!current.exists || current.rawHash !== existingState.rawHash) throw new Error('Owned Blood Hunter destination changed after preflight; refusing replacement.');
-      await move(paths.destination, backupPath);
-      movedExisting = true;
+      await rm(paths.destination, { recursive: true });
     } else if (await exists(paths.destination)) {
       throw new Error('Blood Hunter destination appeared after preflight; refusing replacement.');
     }
     await move(paths.staging, paths.destination);
-    movedStaging = true;
     const installed = await inspectModuleTree(paths.destination, config, true);
     if (installed.hash !== build.hash) throw new Error('Installed Blood Hunter module differs from the validated build.');
     return {
@@ -224,27 +228,12 @@ export async function installBloodHunterModule(config: BloodHunterLabConfig, opt
       destination: paths.destination,
       buildHash: build.hash,
       installHash: installed.hash,
-      ...(backupPath ? { backupPath } : {}),
       manifestConsistent: compareManifestIdentity(build, installed),
       packConsistent: comparePackDocuments(build, installed),
       staticConsistent: compareModuleStaticFiles(build, installed),
     };
   } catch (error) {
-    const recoveryErrors: unknown[] = [error];
-    if (movedStaging && await exists(paths.destination)) {
-      try {
-        await rm(paths.destination, { recursive: true, force: true });
-      } catch (cleanupError) { recoveryErrors.push(cleanupError); }
-    }
-    if (movedExisting && backupPath && await exists(backupPath) && !(await exists(paths.destination))) {
-      try {
-        await move(backupPath, paths.destination);
-      } catch (restoreError) { recoveryErrors.push(restoreError); }
-    }
-    if (await exists(paths.staging)) {
-      try { await rm(paths.staging, { recursive: true, force: true }); } catch (cleanupError) { recoveryErrors.push(cleanupError); }
-    }
-    throw new AggregateError(recoveryErrors, `Blood Hunter install failed; owned backup restore attempted: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Blood Hunter install failed without creating a backup. Validated staging or installed files are retained for inspection: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
@@ -269,7 +258,7 @@ async function rejectForeignOrUnsafeDestination(config: BloodHunterLabConfig, pa
   const markerStats = await lstat(markerPath).catch(() => undefined);
   if (!markerStats?.isFile() || markerStats.isSymbolicLink()) throw new Error(`Foreign same-ID Blood Hunter destination refused: ${paths.destination}`);
   const marker = await readJson(markerPath);
-  if (marker.owned !== true || marker.moduleId !== MODULE_ID || marker.version !== '1.0.0') throw new Error(`Foreign same-ID Blood Hunter destination refused: ${paths.destination}`);
+  if (marker.owned !== true || marker.moduleId !== MODULE_ID || !['1.0.0', '1.1.0', '1.1.1', '1.1.2', '1.1.3', '1.1.4'].includes(String(marker.version))) throw new Error(`Foreign same-ID Blood Hunter destination refused: ${paths.destination}`);
   await assertNoLocksOrOccupancy(paths.destination);
 }
 
@@ -282,7 +271,7 @@ async function inspectOwnedDestination(config: BloodHunterLabConfig, paths: Bloo
     // An owned destination may be from the pre-v14 writer (for example, the
     // old root-level !index layout). It is safe to replace only after the
     // ownership, lock, and raw-tree checks above; logical inspection is not
-    // required to create the recoverable backup.
+    // required to replace the owned directory after its raw hash is rechecked.
     return { exists: true, rawHash };
   }
 }
@@ -331,15 +320,16 @@ async function assertNoLocksOrOccupancy(root: string): Promise<void> {
   if (!(await exists(root))) return;
   const stats = await lstat(root);
   if (stats.isSymbolicLink() || !stats.isDirectory()) throw new Error(`Blood Hunter target is not a real directory: ${root}`);
+  const lockPaths: string[] = [];
   async function visit(directory: string): Promise<void> {
     const entries = await readdir(directory, { withFileTypes: true });
     for (const entry of entries) {
       const path = resolve(directory, entry.name);
-      if (entry.name.toLocaleUpperCase('en') === 'LOCK') throw new Error(`Blood Hunter target has a LevelDB LOCK and may be occupied: ${path}`);
       const childStats = await lstat(path);
       if (childStats.isSymbolicLink()) throw new Error(`Blood Hunter target contains a symlink/junction/reparse point: ${path}`);
       if (childStats.isDirectory()) await visit(path);
       else if (childStats.isFile()) {
+        if (entry.name.toLocaleUpperCase('en') === 'LOCK') lockPaths.push(path);
         let handle;
         try { handle = await open(path, 'r+'); } catch (error) { throw new Error(`Blood Hunter target file is locked or not writable: ${path}: ${error instanceof Error ? error.message : String(error)}`); }
         await handle.close();
@@ -347,6 +337,7 @@ async function assertNoLocksOrOccupancy(root: string): Promise<void> {
     }
   }
   await visit(root);
+  await assertNoHeldLevelDbLocks(lockPaths);
 }
 
 function timestamp(now: () => Date): string {

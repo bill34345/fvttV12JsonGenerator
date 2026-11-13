@@ -1,3 +1,4 @@
+import { classicLevelForBloodHunterTests } from './helpers.ts';
 import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, rm, unlink, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -7,6 +8,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import {
   EXPECTED_ACTIVITY_COUNT,
   EXPECTED_DND5E_EXTERNAL_UUIDS,
+  EXPECTED_OPTIONAL_PHB_FIGHTING_STYLE_UUIDS,
   EXPECTED_EFFECT_CHANGE_COUNT,
   EXPECTED_LEDGER_COUNT,
   assertExternalReferenceCompleteness,
@@ -30,26 +32,25 @@ import { makeBloodHunter2024Fixture } from '../../../packages/blood-hunter-v14/t
 import { createLabConfig } from '../labConfig.ts';
 
 const temporaryRoots: string[] = [];
-const CLASSIC_LEVEL_ENTRY = process.env.FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY?.trim()
-  || 'F:\\FoundryLab\\foundry-v14\\app\\14.364\\node_modules\\classic-level\\index.js';
+const CLASSIC_LEVEL_ENTRY = classicLevelForBloodHunterTests();
 
 afterEach(async () => {
   for (const root of temporaryRoots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
 describe('module release contract', () => {
-  test('manifest locks the exact Foundry/system versions and Item packs', async () => {
+  test('manifest retains projection identities while opening the supported runtime majors and Item packs', async () => {
     const manifest = JSON.parse(await Bun.file(resolve(import.meta.dir, '../src/module.json')).text()) as Record<string, any>;
     expect(manifest.id).toBe('fvtt-blood-hunter-2024');
-    expect(manifest.version).toBe('1.0.0');
+    expect(manifest.version).toBe('1.1.4');
     expect(manifest.title).toBe('血猎手 2024');
-    expect(manifest.compatibility).toEqual({ minimum: '14.364', verified: '14.364', maximum: '14.364' });
+    expect(manifest.compatibility).toEqual({ minimum: '14.368', verified: '14.368', maximum: '14.999' });
     expect(manifest.relationships.systems).toEqual([{
-      id: 'dnd5e', type: 'system', compatibility: { minimum: '5.3.3', verified: '5.3.3', maximum: '5.3.3' },
+      id: 'dnd5e', type: 'system', compatibility: { minimum: '6.0.2', verified: '6.0.2', maximum: '6.999.999' },
     }]);
     expect(manifest.relationships.requires ?? []).toEqual([]);
     expect(manifest.relationships.recommends.map((entry: any) => [entry.id, entry.compatibility.verified])).toEqual([
-      ['midi-qol', '14.0.11'], ['dae', '14.0.12'],
+      ['midi-qol', '14.6.7'], ['dae', '14.6.5'], ['chris-premades', '2.1.7'], ['cat', '0.1.7'],
     ]);
     expect(manifest.packs).toHaveLength(3);
     expect(manifest.packs.map((pack: any) => [pack.name, pack.path, pack.type, pack.system])).toEqual([
@@ -61,6 +62,9 @@ describe('module release contract', () => {
     expect(JSON.stringify(manifest).toLocaleLowerCase('en-US')).not.toContain('classpack');
     expect(MIGRATION_APP_TITLE).toBe('血猎手 2024：角色迁移');
     validateManifest(manifest);
+    const crossedProjection = structuredClone(manifest);
+    crossedProjection.relationships.systems[0].compatibility.verified = '5.3.3';
+    expect(() => validateManifest(crossedProjection)).toThrow(/projection version and supported runtime range/);
     const serverNext = structuredClone(manifest);
     serverNext.compatibility = { minimum: '14.368', verified: '14.368', maximum: '14.368' };
     serverNext.relationships.systems[0].compatibility = { minimum: '6.0.2', verified: '6.0.2', maximum: '6.0.6' };
@@ -72,22 +76,23 @@ describe('module release contract', () => {
     priorServerNext.relationships.systems[0].compatibility.maximum = '6.0.5';
     validateManifest(priorServerNext);
     serverNext.relationships.systems[0].compatibility.maximum = '6.0.7';
-    expect(() => validateManifest(serverNext)).toThrow(/projection version and reviewed runtime maximum/);
+    expect(() => validateManifest(serverNext)).toThrow(/projection version and supported runtime range/);
     serverNext.relationships.systems[0].compatibility.maximum = '6.0.6';
     serverNext.relationships.systems[0].compatibility.verified = '5.3.3';
-    expect(() => validateManifest(serverNext)).toThrow(/projection version and reviewed runtime maximum/);
+    expect(() => validateManifest(serverNext)).toThrow(/projection version and supported runtime range/);
   });
 
-  test('projects only the ServerNext dnd5e maximum without mutating existing module metadata', async () => {
+  test('Core369 compatibility: projects runtime maxima without mutating content metadata', async () => {
     const legacy = JSON.parse(await Bun.file(resolve(import.meta.dir, '../src/module.json')).text()) as Record<string, any>;
-    for (const maximum of ['6.0.2', '6.0.5']) {
+    for (const maximum of ['6.0.2', '6.0.5', '6.0.6', '6.999.999']) {
       const source = structuredClone(legacy);
       source.compatibility = { minimum: '14.368', verified: '14.368', maximum: '14.368' };
       source.relationships.systems[0].compatibility = { minimum: '6.0.2', verified: '6.0.2', maximum };
       const before = JSON.stringify(source);
       const projected = projectBloodHunterServerNext606Manifest(source) as Record<string, any>;
       const expected = structuredClone(source);
-      expected.relationships.systems[0].compatibility.maximum = '6.0.6';
+      expected.compatibility.maximum = '14.999';
+      expected.relationships.systems[0].compatibility.maximum = '6.999.999';
       expect(projected).toEqual(expected);
       expect(JSON.stringify(source)).toBe(before);
       expect(projected.relationships.systems[0].compatibility.verified).toBe('6.0.2');
@@ -96,7 +101,7 @@ describe('module release contract', () => {
     }
   });
 
-  test('rejects foreign, crossed, duplicate, or future manifest inputs before overlay', async () => {
+  test('Core369 compatibility: rejects foreign, crossed, duplicate, or future manifest inputs before overlay', async () => {
     const base = JSON.parse(await Bun.file(resolve(import.meta.dir, '../src/module.json')).text()) as Record<string, any>;
     base.compatibility = { minimum: '14.368', verified: '14.368', maximum: '14.368' };
     base.relationships.systems[0].compatibility = { minimum: '6.0.2', verified: '6.0.2', maximum: '6.0.5' };
@@ -105,7 +110,7 @@ describe('module release contract', () => {
     change((value) => { value.id = 'foreign-blood-hunter'; });
     change((value) => { value.compatibility = { minimum: '14.364', verified: '14.364', maximum: '14.364' }; });
     change((value) => { value.relationships.systems[0].compatibility.verified = '6.0.5'; });
-    change((value) => { value.relationships.systems[0].compatibility.maximum = '6.0.6'; });
+    change((value) => { value.compatibility.maximum = '14.370'; });
     change((value) => { value.relationships.systems[0].compatibility.maximum = '6.0.7'; });
     change((value) => { value.relationships.systems.push(structuredClone(value.relationships.systems[0])); });
     change((value) => { value.relationships.systems.push({ id: 'pathfinder2e', type: 'system' }); });
@@ -116,6 +121,7 @@ describe('module release contract', () => {
   test('release count constants reflect the frozen public compiler output without pinning logicalHash', () => {
     expect([EXPECTED_ACTIVITY_COUNT, EXPECTED_LEDGER_COUNT, EXPECTED_EFFECT_CHANGE_COUNT]).toEqual([117, 94, 72]);
     expect(EXPECTED_DND5E_EXTERNAL_UUIDS).toHaveLength(12);
+    expect(EXPECTED_OPTIONAL_PHB_FIGHTING_STYLE_UUIDS).toHaveLength(6);
     expect(new Set(EXPECTED_DND5E_EXTERNAL_UUIDS)).toEqual(new Set(EXPECTED_DND5E_EXTERNAL_UUIDS));
     expect((buildBloodHunterModule as unknown as { toString(): string }).toString()).not.toContain('c680500ac8eb09058e91559811344ebecced02c2f74b1ce9547ec0ffd0cc3728');
   });
@@ -125,7 +131,7 @@ describe('module release contract', () => {
     temporaryRoots.push(root);
     const sourceRoot = join(root, 'dnd5e', '5.3.3', 'repo', 'packs', '_source');
     await mkdir(sourceRoot, { recursive: true });
-    const packageValue = { target: { dnd5e: '5.3.3' }, nested: EXPECTED_DND5E_EXTERNAL_UUIDS.map((uuid) => ({ uuid, deep: [uuid] })) } as unknown as NativeBloodHunterPackage;
+    const packageValue = { target: { dnd5e: '5.3.3' }, nested: [...EXPECTED_DND5E_EXTERNAL_UUIDS, ...EXPECTED_OPTIONAL_PHB_FIGHTING_STYLE_UUIDS].map((uuid) => ({ uuid, deep: [uuid] })) } as unknown as NativeBloodHunterPackage;
     expect(collectExternalDnd5eUuids(packageValue)).toEqual([...EXPECTED_DND5E_EXTERNAL_UUIDS].sort());
     for (const [index, uuid] of EXPECTED_DND5E_EXTERNAL_UUIDS.entries()) {
       const id = uuid.split('.').at(-1)!;
@@ -142,6 +148,12 @@ describe('module release contract', () => {
     }
     packageValue.target = { ...BLOOD_HUNTER_DND6_TARGET, rules: '2024' };
     expect(await assertExternalReferenceCompleteness(packageValue, config)).toHaveLength(12);
+    const missingPhb = structuredClone(packageValue) as unknown as { nested: Array<{ uuid: string }> };
+    missingPhb.nested = missingPhb.nested.filter((entry) => entry.uuid !== EXPECTED_OPTIONAL_PHB_FIGHTING_STYLE_UUIDS[0]);
+    await expect(assertExternalReferenceCompleteness(missingPhb as unknown as NativeBloodHunterPackage, config)).rejects.toThrow(/Optional PHB Fighting Style UUID set/);
+    const unrelatedPhb = structuredClone(packageValue) as unknown as { nested: Array<{ uuid: string }> };
+    unrelatedPhb.nested.push({ uuid: EXPECTED_OPTIONAL_PHB_FIGHTING_STYLE_UUIDS[0].replace('.feats.', '.classes.') });
+    await expect(assertExternalReferenceCompleteness(unrelatedPhb as unknown as NativeBloodHunterPackage, config)).rejects.toThrow(/Optional PHB Fighting Style UUID set/);
   });
 
   test('deterministic ZIP is complete and is independently checked against module files', async () => {
@@ -181,7 +193,7 @@ describe('module release contract', () => {
 
   test('writes v14 embedded ActiveEffects into items.effects and preserves Dawn Rite references', async () => {
     const output = compileBloodHunterV14Package(makeBloodHunter2024Fixture());
-    const dawn = output.features.find((item) => item.name === '破晓血仪');
+    const dawn = output.features.find((item) => item.name === '破晓血仪 Rite of the Dawn');
     expect(dawn).toBeDefined();
     expect(dawn!.effects).toHaveLength(2);
     const projected = dawn!.effects.map((effect) => projectEffectForFoundryV14Pack(effect));

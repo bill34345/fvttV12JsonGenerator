@@ -266,18 +266,7 @@ bun run src/index.ts `
 
 ## 血猎手 2024 原生合集模块（Foundry v14）
 
-`fvtt-blood-hunter-2024` 锁定 Foundry `14.364` / dnd5e `5.3.3`，提供 `classes`、`subclasses`、`features` 三个原生 Item 合集。它不依赖 Plutonium 或旧 classpack；旧 `build-blood-hunter-homebrew` 仍只生成标记为 `plutonium-side-data` 的历史 side-data，不是该模块的权威内容。
-
-```powershell
-bun run build:blood-hunter-v14 --source="C:\absolute\path\blood-hunter-2024.activities.json"
-bun run test:blood-hunter-v14
-bun run install:blood-hunter-v14 --apply
-bun run verify:blood-hunter-v14-install
-```
-
-构建严格校验锁定源 SHA-256、94 条 coverage ledger、117 个 Activities、稳定 UUID、Advancement 引用、三个 LevelDB packs、确定性 ZIP 以及 dnd5e `5.3.3` 的 12 个官方内容 UUID。安装只允许配置后的本地 Lab，拒绝生产路径、外来同名模块、链接路径和被占用的 Pack，并在替换既有自有模块前建立恢复备份。`verify-install` 只证明安装字节和 pack 内容一致，不代表真实 Foundry 运行时或线上生产验收。
-
-玩家从模块 `classes` 合集把“血猎手”拖入角色卡，再通过 dnd5e 原生 Advancement 升级和选择结社；已经复制到 Actor 的 Item 是快照，不会随模块更新实时同步。旧角色应使用模块中的 GM-only“血猎手 2024：角色迁移”执行 Preview、迁移副本验证，再决定是否应用原角色。完整构建、安装、迁移和自动化边界见 [`foundry-modules/fvtt-blood-hunter-2024/README.zh-CN.md`](foundry-modules/fvtt-blood-hunter-2024/README.zh-CN.md)。
+本仓库提供血猎手 2024 1.1.4 自动化和构建工具，包含破晓血仪、双血咒、惩戒烙印和印记跨客户端结算修复。需使用已取得的匹配 enriched JSON 在本地构建职业、子职和特性合集。构建、玩法及来源限制见[模块说明](foundry-modules/fvtt-blood-hunter-2024/README.zh-CN.md)。
 
 ## Foundry 目标世界法术解析（v14）
 

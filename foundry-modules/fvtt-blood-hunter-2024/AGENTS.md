@@ -1,28 +1,13 @@
-# fvtt-blood-hunter-2024
+# 血猎手 2024 模块
 
-## 范围
+正式构建默认 native6；`--target=server-next` 仅作别名，legacy 构建入口已退出。内容投影身份保留 Core 14.368／dnd5e 6.0.2，主要开发目标为第二套本地 Core 14.370／dnd5e 6.0.6。Core 14／dnd5e 6 主版本范围开放不等于未来版本玩法已验。
 
-- 本目录保留14.364/5.3.3旧构建入口。显式`--target=server-next`仍按14.368/6.0.2编译内容，manifest保持minimum/verified6.0.2、maximum6.0.6。仅元数据投影也须核现装owned marker和源hash；不重造pack或改变内容身份。6.0.6只接受四个新建3级角色的职业/子职授予、重载和清理；旧角色仅只读Preview，不执行Copy/Apply或备份，完整升级/选择/迁移未接受，既有installer仍服务旧Mirror目标。
-- 模块只消费冻结的 `packages/blood-hunter-v14/src/index.ts` 公共接口；不得复制、改写或在浏览器端重建编译器匹配规则。
-- 所有构建、安装、迁移和测试代码必须留在本模块目录；根 `scripts/`、`package.json`、`tools/` 和 `docs/` 不属于本模块 worker 的写入范围。
-
-## Runtime 与数据边界
-
-- Foundry 浏览器 runtime 只能加载 `module.json`、browser-safe JavaScript 和构建生成的 canonical/migration 契约；不得导入 Node、Bun、编译器、LevelDB、文件系统、SSH 或生产连接代码。
-- 模块不得自动 ready 扫描或修改 Actor。迁移必须是 GM-only、Preview 只读、先复制后应用；Apply original 需要副本验证、Actor copy、JSON backup 和精确名称确认。
-- 通过 Foundry 公共 Document API 修改 Actor；禁止直接写世界或 compendium LevelDB。歧义、手改 Activity/Effect/说明冲突和失败均 fail-closed，并支持补偿回滚。
-- 只允许把 `FVTT_OPS_LAB_ROOT` 解析为配置后的本地 Lab 模块目录；拒绝生产变量、8080、路径逃逸、symlink/junction/reparse、foreign same-ID 和锁定目标。
-
-## Build 与验证
-
-- build 输入必须是显式绝对 JSON 路径，raw bytes 交给冻结编译器并由 validator fail-closed；不得手写正式 pack 内容。
-- 每次 build 先在随机临时根创建三个 LevelDB pack、模块树、ledger/review/identity/manifest/ZIP，再比较两次构建的 docs、UUID 和 logical identity，最后原子发布到本目录 `dist/`。
-- `classic-level` 只能从配置的只读入口加载；测试不得把真实 Lab app/data/world 当作数据库，也不得修改真实 Lab 或生产 8080。
-- 测试须同时记录机械结果（命令、结构、哈希、文件完整性）和语义结果（迁移保留字段、重复/引用/选择、Callum fixture 的 Preview/copy/apply/rollback）。mock Foundry API 不得冒充真实 Foundry E2E。
-
-## 局部完成标准
-
-- manifest、pack 声明、UUID 前缀、版本和依赖精确符合任务契约。
-- deterministic build/archive/LevelDB/index/安装安全测试通过，生成 ZIP SHA-256、logical hash 和 UUID 清单。
-- GM-only 迁移行为、冲突 Keep/Overwrite/Cancel、失败补偿和 Callum 5/2 fixture 通过模块内语义测试。
-- README 说明构建、安装、迁移、使用，以及 Core/Modded/assisted/external 边界；明确快照不实时同步、旧 side-data 非权威、线上不在本任务部署。
+- 模块消费 `packages/blood-hunter-v14/src/index.ts` 公开编译接口；不在浏览器重建编译器或导入 Node／Bun／LevelDB。
+- 原始 bytes、canonical ID、UUID 与选择图保持来源可追溯。需要改正式内容时改编译器再重建，不手改 pack。
+- 破晓附伤仅使用 CAT／CPR 的公开 API；绑定实际武器与附魔 UUID。按 Core 14 `system.changes` 创建 runtime Effect，不能用旧顶层 changes。
+- 双血咒通过正常 Activity 工作流结算，各自资源一次，总共一次附赠动作或反应。引用实际角色资源 Item ID，只在本次施放的临时 Item 副本中适配。
+- 不在 ready 扫描或批量修改 Actor。canonical 图标名称更新须 GM 明确指定角色并审阅差异，只写选中的 name／img。旧 Plutonium 中文分支按锁定来源的 page/source/URL hash 加 book/rules 唯一匹配，仅写 img，保留名称、机制和全部旧 flags；索引由源构建产生。完整旧迁移 UI 保持只读 Preview，不调用历史 Copy／Apply 备份路线。
+- 安装仅允许配置的 `data/server-mirror` 开发环境 `development`／30001；拒绝 30004、生产、foreign same-ID、逃逸、reparse 和实际占用。复用共享停服检查；Windows 独占读确认残留LOCK未被持有，不能按文件存在／0B判断，也不删除锁文件。保留 owned/hash 保护，直接替换，不创建备份；失败停止并报告。
+- Core 选择使用共享 `FVTT_OPS_DEVELOPMENT_FOUNDRY_VERSION`，默认14.370、最低14.368，app及默认classic-level路径跟随；安装时实际package.release必须与所选Core身份一致。
+- 构建与测试写入随机临时目录或本目录 dist，不写真实世界数据库。Bun 使用 Foundry 独立 1.3.14；运行根 `test:blood-hunter-v14` 及本目录／编译包 typecheck。
+- 说明与公开用法见 [README](README.zh-CN.md)，真实行为验收与环境维护范围以项目唯一维护记录为准。当前不把历史四个3级角色授予结果推广为全等级或旧人物迁移通过。

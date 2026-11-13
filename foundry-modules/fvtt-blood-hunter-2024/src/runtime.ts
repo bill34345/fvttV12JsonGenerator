@@ -14,7 +14,7 @@ import type {
 } from './contracts.ts';
 
 export const MODULE_ID = 'fvtt-blood-hunter-2024' as const;
-export const MODULE_VERSION = '1.0.0' as const;
+export const MODULE_VERSION = '1.1.4' as const;
 export const MIGRATION_APP_TITLE = '血猎手 2024：角色迁移';
 export const MIGRATION_CONTRACT_URL = `modules/${MODULE_ID}/data/migration-contract.json`;
 
@@ -290,15 +290,12 @@ function createBloodHunterMigrationApp(ApplicationV2Base: ApplicationConstructor
     root.className = 'fvtt-blood-hunter-2024-migration';
     root.innerHTML = `
       <h2>${MIGRATION_APP_TITLE}</h2>
-      <p>Preview 只读。必须先创建迁移副本和 JSON backup；Apply original 还需要输入精确 Actor 名称。</p>
+      <p>当前旧角色迁移仅提供只读 Preview。图标和名称可用模块 API 对明确选择的角色预览差异后更新，保留等级、选择、消耗及其他手改；不创建备份。</p>
       <label>Actor ID 或精确名称 <input name="actor" type="text" /></label>
-      <label>Apply original 精确确认 <input name="confirmation" type="text" /></label>
       <div class="bh-status" data-role="status">尚未选择 Actor。</div>
       <div class="bh-conflicts" data-role="conflicts"></div>
       <div class="bh-actions">
         <button type="button" data-action="preview">Preview</button>
-        <button type="button" data-action="copy" disabled>Create migrated copy</button>
-        <button type="button" data-action="apply" disabled>Apply original</button>
       </div>`;
     this.attachListeners(root);
     return root;

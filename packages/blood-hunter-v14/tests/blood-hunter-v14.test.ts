@@ -21,6 +21,12 @@ const FIGHTING_STYLE_UUIDS = [
   'Compendium.dnd5e.feats24.Item.phbfstDefense000',
   'Compendium.dnd5e.feats24.Item.phbfstGreatWeapo',
   'Compendium.dnd5e.feats24.Item.phbfstTwoWeaponF',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstDueling000',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstIntercepti',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstBlindFight',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstProtection',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstThrownWeap',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstUnarmedFig',
 ] as const;
 
 describe('Blood Hunter v14 native compiler', () => {
@@ -33,7 +39,7 @@ describe('Blood Hunter v14 native compiler', () => {
     expect(source).toEqual(before);
     expect(first).toEqual(second);
     expect(first.moduleId).toBe('fvtt-blood-hunter-2024');
-    expect(first.version).toBe('1.0.0');
+    expect(first.version).toBe('1.1.4');
     expect(first.target).toEqual({ foundry: '14.364', dnd5e: '5.3.3', rules: '2024', effectProfile: 'modded-v14' });
     expect(first.classes).toHaveLength(1);
     expect(first.subclasses).toHaveLength(4);
@@ -190,6 +196,11 @@ describe('Blood Hunter v14 native compiler', () => {
 
     const fighting = classAdvancements.find((advancement) => advancement.type === 'ItemChoice' && advancement.configuration.restriction.subtype === 'fightingStyle');
     expect(fighting.configuration.pool).toEqual(expect.arrayContaining(FIGHTING_STYLE_UUIDS));
+    expect(fighting.configuration.pool).toHaveLength(11);
+    expect(fighting.configuration).toMatchObject({ allowDrops: true, type: 'feat', restriction: { type: 'feat', subtype: 'fightingStyle' } });
+    const graph = output.grantGraph.find((node) => node.id === fighting._id)!;
+    expect(graph.references.filter((reference) => reference.source === 'dnd-players-handbook').map((reference) => reference.uuid))
+      .toEqual(FIGHTING_STYLE_UUIDS.slice(4));
     const syntheticUuid = fighting.configuration.pool.find((uuid: string) => MODULE_ITEM_UUID.test(uuid));
     expect(syntheticUuid).toEqual(expect.any(String));
     const syntheticId = MODULE_ITEM_UUID.exec(syntheticUuid)![2]!;

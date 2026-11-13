@@ -1,7 +1,8 @@
-# Blood Hunter v14 package
+# Blood Hunter 编译包
 
-本包只负责把锁定的 `BloodHunter2024` enriched source 编译成原生文档契约，并生成**纯**迁移计划。保留 Foundry VTT 14.364 / dnd5e 5.3.3 目标；14.368 / dnd5e 6.0.2 已有独立构建候选，运行时仍须另行验收。
+本包负责把锁定的 2024 BloodHunter enriched source 编译为原生文档，并提供纯迁移计划。正式构建默认 native6，内容投影身份为 Core 14.368／dnd5e 6.0.2；主要实际开发环境为 Core 14.370／dnd5e 6.0.6。历史 5.3.3 对象重载用于对照回归，不作为正式构建入口。
 
-- 修改入口是 `src/index.ts` 公开的 compiler、validator 与 migration planner；不得在此包启动 Foundry、访问 World/LevelDB 或执行任何写入迁移。
-- 输入身份、22/30/42 形状、四个子职和 side-data 关联必须 fail closed。外部规则只可用稳定 reference key 表达，不能猜测世界 UUID。
-- 运行 `bun test` 与 `bun run typecheck`（均在本目录）验证。测试必须检查编译后的语义边界，而不只检查对象可解析。
+- 修改源头并重新编译；保留原始 source SHA、canonical ID 和 UUID，不手改最终 pack。
+- 不在本包启动 Foundry、访问 World／LevelDB 或执行角色写入。
+- 保留输入身份、22／30／42 源形状、四子职、side-data 和外部引用检查。显示名称与图标独立于身份。
+- 运行本目录 `bun run test`、`bun run typecheck`；模块的正常施放与资源行为另在对应 runtime 验证。

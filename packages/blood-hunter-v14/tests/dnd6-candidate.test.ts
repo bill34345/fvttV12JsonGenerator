@@ -11,6 +11,12 @@ const FIGHTING_STYLE_UUIDS = [
   'Compendium.dnd5e.feats24.Item.phbfstDefense000',
   'Compendium.dnd5e.feats24.Item.phbfstGreatWeapo',
   'Compendium.dnd5e.feats24.Item.phbfstTwoWeaponF',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstDueling000',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstIntercepti',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstBlindFight',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstProtection',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstThrownWeap',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstUnarmedFig',
 ] as const;
 
 describe('Blood Hunter dnd5e 6.0.2 candidate', () => {
@@ -62,7 +68,7 @@ describe('Blood Hunter dnd5e 6.0.2 candidate', () => {
     expect(candidate.features).toHaveLength(77);
     const marker = candidate.features.find((item) => item.system.identifier === 'fighting-style');
     expect(marker).toBeDefined();
-    expect(marker!.name).toBe('战斗风格');
+    expect(marker!.name).toBe('战斗风格 Fighting Style');
     expect((marker!.system.type as Record<string, unknown>).value).toBe('class');
     expect(String((marker!.system.description as Record<string, unknown>).value).length).toBeGreaterThan(0);
     const markerUuid = `Compendium.fvtt-blood-hunter-2024.features.Item.${marker!._id}`;
@@ -74,10 +80,10 @@ describe('Blood Hunter dnd5e 6.0.2 candidate', () => {
     expect(advancements.indexOf(grant)).toBeLessThan(advancements.indexOf(choice));
     expect(grant.configuration.items).toContainEqual({ uuid: markerUuid, optional: false });
     expect(candidate.grantGraph.find((node) => node.id === grant._id)?.references.some((reference) => reference.uuid === markerUuid)).toBe(true);
-    expect(choice.configuration.pool).toEqual(expect.arrayContaining([
+    expect(choice.configuration.pool).toEqual([
       ...FIGHTING_STYLE_UUIDS.map((uuid) => ({ uuid })),
-      { uuid: `Compendium.fvtt-blood-hunter-2024.features.Item.${legacy.features.find((item) => item.name === '诱变武者')!._id}` },
-    ]));
+      { uuid: `Compendium.fvtt-blood-hunter-2024.features.Item.${legacy.features.find((item) => item.name === '诱变武者 Mutagenic Warrior')!._id}` },
+    ]);
     expect(validateNativeBloodHunterPackage(candidate)).toEqual({ ok: true, findings: [] });
 
     const missingGrant = structuredClone(candidate);
@@ -86,6 +92,31 @@ describe('Blood Hunter dnd5e 6.0.2 candidate', () => {
     broken.configuration.items = broken.configuration.items.filter((item: any) => item.uuid !== markerUuid);
     expect(validateNativeBloodHunterPackage(missingGrant).findings.map((finding) => finding.code))
       .toContain('FIGHTING_STYLE_ELIGIBILITY_MISSING');
+  });
+
+  test('rejects any missing official PHB style and unrelated PHB references in the native choice', () => {
+    const source = makeBloodHunter2024Fixture();
+    const candidate = compileBloodHunterV14Package(source);
+    candidate.target = { ...BLOOD_HUNTER_DND6_TARGET, rules: '2024' };
+    addDnd6FightingStyleEligibility(candidate, source);
+    projectDnd6Advancements(candidate);
+    for (const missingUuid of FIGHTING_STYLE_UUIDS.slice(4)) {
+      const broken = structuredClone(candidate);
+      const choice = Object.values(broken.classes[0]!.system.advancement as Record<string, any>)
+        .find((item: any) => item.type === 'ItemChoice' && item.name === '战斗风格') as any;
+      choice.configuration.pool = choice.configuration.pool.filter((entry: any) => entry.uuid !== missingUuid);
+      expect(validateNativeBloodHunterPackage(broken).findings.map((finding) => finding.code)).toContain('FIGHTING_STYLE_SCHEMA_MISMATCH');
+    }
+    const broken = structuredClone(candidate);
+    const choice = Object.values(broken.classes[0]!.system.advancement as Record<string, any>)
+      .find((item: any) => item.type === 'ItemChoice' && item.name === '战斗风格') as any;
+    const reference = broken.grantGraph.find((node) => node.id === choice._id)!.references
+      .find((entry) => entry.source === 'dnd-players-handbook')!;
+    const previousUuid = reference.uuid;
+    reference.uuid = reference.uuid.replace('.feats.', '.classes.');
+    choice.configuration.pool.find((entry: any) => entry.uuid === previousUuid).uuid = reference.uuid;
+    expect(validateNativeBloodHunterPackage(broken).findings.map((finding) => finding.code))
+      .toEqual(expect.arrayContaining(['INVALID_ITEM_CHOICE_UUID', 'PHB_REFERENCE_MISMATCH']));
   });
 
   test('rejects cross-paired target versions before reading source bytes', () => {

@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { planNativeBloodHunterMigration, compileBloodHunterV14Package } from '../../../packages/blood-hunter-v14/src/index.ts';
 import { makeBloodHunter2024Fixture } from '../../../packages/blood-hunter-v14/tests/fixture.ts';
 import { clone, normalizeName } from '../src/migration.ts';
@@ -17,7 +18,7 @@ export function fixtureContract(pkg = fixturePackage()): MigrationContract {
   return {
     schemaVersion: 1,
     moduleId: 'fvtt-blood-hunter-2024',
-    version: '1.0.0',
+    version: '1.1.4',
     target: { foundry: '14.364', dnd5e: '5.3.3', rules: '2024', effectProfile: 'modded-v14' },
     logicalHash: pkg.logicalHash,
     documents,
@@ -71,4 +72,18 @@ export function callumFixtureActor(contract: MigrationContract): { actor: ActorL
 
 export function normalizedLegacyName(document: RuntimeDocument): string {
   return normalizeName(document.name);
+}
+
+export function classicLevelForBloodHunterTests(): string {
+  const shared = process.env.FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY?.trim();
+  if (shared) {
+    // The shared sandbox runner still supplies Core 14.364 to legacy test suites.
+    // Blood Hunter writes native 6 packs using Core 14.370 from the same read-only app root.
+    return /[\\/]app[\\/]14\.364[\\/]node_modules[\\/]classic-level[\\/]index\.js$/i.test(shared)
+      ? resolve(shared, '../../../../14.370/node_modules/classic-level/index.js')
+      : shared;
+  }
+  const lab = process.env.FVTT_OPS_LAB_ROOT?.trim();
+  if (!lab) throw new Error('Set FVTT_OPS_LAB_ROOT to the local Foundry installation or run the repository test wrapper.');
+  return resolve(lab, 'app/14.370/node_modules/classic-level/index.js');
 }

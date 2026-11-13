@@ -1,96 +1,118 @@
 # 血猎手 2024 独立 Foundry 模块
 
-## ServerNext 6.0.6 当前限定接受
+本仓库提供血猎手 2024 1.1.4 的自动化源码与本地构建工具。构建后得到职业、四个结社和特性三个 Item 合集。源码不附带完整规则 JSON 或预构建安装包。请使用你已取得的匹配 enriched JSON；公开的规则 PDF 不是构建输入。[来源与公开范围](../../docs/reviews/2026-11-13-blood-hunter-public-source.md) · [更新日志](CHANGELOG.md)
 
-本轮仅接受新建临时角色与职业授予：四个3级角色的职业/子职内容、Item links/配方、普通重载读回和精确清理通过；来源投影与模块契约差异为0，同一官方 Archery 来源的4条记录另有独立核对。旧角色更新保持只读 Preview，不执行 Copy/Apply 或备份。其余等级/选择组合、ActorDelta 与旧人物迁移尚未接受；Profane 的法术/契术位配置（该来源为 none/empty ability、GM-assisted）和生产仍未接受。整体内容编译 identity 仍为6.0.2，不能把这条3级授予接受扩大成整体6.0.6。
+生成内容沿用 Core 14.368／dnd5e 6.0.2 的投影身份；主要验证组合为 Core 14.370／dnd5e 6.0.6 系列。清单允许对应主版本内的后续版本，实际玩法范围见更新日志。
 
-`fvtt-blood-hunter-2024` 是独立模块，版本为 `1.0.0`：默认构建精确对应 Foundry Virtual Tabletop `14.364`、dnd5e `5.3.3`；显式 `--target=server-next` 仍以 Foundry `14.368`、dnd5e `6.0.2` 作为编译内容身份，生成的 manifest 则记录 `minimum/verified=6.0.2`、`maximum=6.0.6`，整体内容仍是6.0.2身份。6.0.6当前只接受上方列出的新建3级角色/职业授予代表链；其余等级/选择组合、ActorDelta 与原人物迁移尚未接受。它提供三个 Item compendium pack：`classes`、`subclasses`、`features`。模块不依赖 Plutonium 或 classpack；MIDI-QOL `14.0.11` 与 DAE `14.0.12` 是旧目标推荐版本，不是硬依赖，不能据此推断 ServerNext 本机版本的额外自动化已经验收。
+## 日常使用顺序
 
-若锁定来源 JSON 当前不可用于重新构建，运维可在核对现有 ServerNext 安装身份、文件清单与来源记录后，使用 `projectBloodHunterServerNext606Manifest()` 准备**仅含 manifest 版本上限变化**的候选。该函数只接受已有的 14.368 / dnd5e 6.0.2 投影且上限为 6.0.2 或 6.0.5 的 manifest，不读取或生成内容包；角色 Item、pack、浏览器脚本与迁移契约均沿用原安装。是否安装该候选取决于独立的运维保护与版本检查，不能据此宣称 6.0.6 内容编译、角色升级或迁移已经验收。
+1. 从原生职业升级选择战斗风格／结社／已学血咒。已有职业是快照，合集更新不会自动重选升级内容。
+2. 正常激活血仪，把实际武器拖到该聊天卡的附魔区；核对装备状态与激活时失血，不重复激活或重复扣血。
+3. 从角色卡上的实际武器发起攻击，先看命中，再结算该次伤害。破晓不死附骰与印记骰的查看、原卡应用方式见各节。
+4. 使用诅咒专家时选动作、目标及一至两个不同已学血咒，随后逐个完成正常使用配置；是否扣次由各次配置／装备规则决定。
+5. 6级后，用血仪武器伤害目标，再使用施加惩戒烙印并应用目标效果；符合条件的实际伤害触发后续反噬。
 
-## 构建
+这些已实现的血猎手自动化由本模块接线，不需要再给每个条目套一遍CPR或手动绑定宏。CAT Kit显示没有CPR条目，并不能据此判定本模块自动化缺失。请不要批量覆盖本模块的活动、消耗或效果。
 
-构建必须使用已经接受的 `BloodHunter2024` enriched source JSON 的原始 UTF-8 bytes：
+原始 2024 enriched source 的 UTF-8 bytes SHA-256 锁定为 `3526E4F2F28A81052843D0FFE71FCCA54F49015E2AB5037F7F1DA7423BE6FB65`。编译内容投影身份仍为 Core 14.368／dnd5e 6.0.2；运行版本、内容来源与实际验收范围分别记录。新功能允许重新编译并更新 logical hash，canonical ID 和 UUID 保持稳定。历史 5.3.3 对象重载仅用于比较与回归，正式构建不再输出 classic 包。
+
+## 构建与本地安装
 
 ```powershell
 bun run build:blood-hunter-v14 --source="C:\absolute\path\BloodHunter2024.json"
-```
-
-`--source` 必须是绝对路径。构建脚本只通过 `packages/blood-hunter-v14/src/index.ts` 的公开接口调用编译器，先把 raw bytes 交给编译器，再由公开 validator fail-closed。它不会复制编译器的匹配规则、ledger schema 或 Effect/Activity 生成逻辑；每次都以编译器返回的 `logicalHash` 为准，因此 coverageLedger 的语义修正会自然进入新构建。
-
-每次构建在随机临时根内完成两份候选结果：三份 LevelDB Item pack、canonical package、migration contract、coverage ledger、review、identity manifest 和确定性 ZIP。构建会比较两次结果的文档/UUID、manifest、logical identity、pack index、Activity/Effect 引用，并递归检查整个编译结果中的 12 个 dnd5e 外部 Item UUID（7 equipment、1 Boon、4 fighting styles）。缺少任何 UUID，或锁定的 `dnd5e/5.3.3/repo/packs/_source` reference cache 缺少对应 document，都会失败。Effect change 的 mode 等语义由最终编译器输出负责，模块只序列化输出。
-
-构建成功后才会把结果原子发布到本目录的 `dist/`：
-
-- `dist/module/`：可安装模块树；
-- `dist/fvtt-blood-hunter-2024.zip`：ZIP 及其 SHA-256；
-- `dist/module/data/identity-manifest.json`：source SHA-256、编译器 logical hash、81 documents、94 ledger、117 Activities、UUID 清单；
-- `dist/module/data/migration-contract.json`：浏览器迁移使用的 canonical/migration 契约。
-
-`dist` 不是运行中 Lab 的 pack；构建不会原地写 Lab 世界或运行中的 compendium。
-
-ServerNext 的独立候选使用同一锁定原始 source，加 `--target=server-next`：
-
-```powershell
-bun run build:blood-hunter-v14 --source="F:\FoundryLab\foundry-v14\data\server-mirror\Data\assets\homebrew\blood-hunter-2024.activities.json" --target=server-next
-```
-
-这一选项使用 Foundry `14.368` / dnd5e `6.0.2` 编译身份及 Advancement 形状，核对 `dnd5e/6.0.2/repo/packs/_source` 中的 12 个外部引用；输出 manifest 的兼容上限为 dnd5e `6.0.5`，而 `verified` 和内容身份保持 `6.0.2`。对这一编译目标，还从原文生成 2 级先授予的“战斗风格”基础特性，使四个官方战斗风格通过目标系统的先决条件；因此该目标有 77 项特性，旧目标仍有 76 项。省略选项仍构建旧目标。`dist` 一次只保存最后一次构建；旧 Lab 安装命令仍只允许 server-mirror，**不能用于安装 ServerNext 候选**。6.0.5 上的模块启用与人物行为读回应另行验收。
-
-## Lab 安装与验证
-
-Lab CLI 只允许配置后的本地 `FVTT_OPS_LAB_ROOT`，目标严格为：
-
-```text
-<FVTT_OPS_LAB_ROOT>/data/server-mirror/Data/modules/fvtt-blood-hunter-2024
-```
-
-示例：
-
-```powershell
 bun run foundry-modules/fvtt-blood-hunter-2024/labCli.ts dry-run
 bun run install:blood-hunter-v14
 bun run install:blood-hunter-v14 --apply
 bun run verify:blood-hunter-v14-install
 ```
 
-CLI 会拒绝生产/远程变量、8080、路径逃逸、symlink/junction/reparse、LevelDB `LOCK` 或占用目标。已有同 ID 目录必须带本模块的 `data/owned-marker.json` 才能替换；foreign same-ID 目录会停止。替换前把旧目录移动到配置的 backup root，stage 通过完整 hash、manifest、pack documents/index 检查后再原子替换，并在失败时尝试恢复 backup。
+默认构建 native6；`--target=server-next` 是兼容别名。配置 `FVTT_OPS_LAB_ROOT` 为本地 Lab 根、`FVTT_REFERENCE_CACHE_ROOT` 为只读参考缓存根；classic-level 默认从 `app/14.370/node_modules/classic-level/index.js` 读取，仅在随机临时目录创建构建数据库。外部引用核对仍使用真实内容来源 `dnd5e/6.0.2/repo/packs/_source`。
 
-`verify-install` 只报告字节、manifest、LevelDB documents/index 和 identity 一致性；它不启动 Foundry、不启用模块，也不冒充真实 runtime 或游戏性 E2E。构建/测试只使用随机临时 Lab 根和配置的只读 `classic-level` 入口，不把真实 `F:\FoundryLab\foundry-v14` 的 app/data/world 当作数据库写入。
+本地工具与共享配置使用同名 `FVTT_OPS_DEVELOPMENT_FOUNDRY_VERSION`：默认 `14.370`，可显式选择 Core 14.368 及后续同主版本；默认 app／classic-level 路径跟随所选版本。安装及核对时读取该 app 的实际 `package.release.generation/build`，必须与选择值一致，目录名不能代替安装身份。
 
-Foundry Ops 的公开只读证据入口使用：
+构建比较两份候选的内容、引用和确定性 ZIP，成功后在本地生成 `dist/module` 与 `dist/fvtt-blood-hunter-2024.zip`。包包含 1 个职业、4 个子职、77 个特性、94 条覆盖审查、117 个 Activity、12 个系统官方 Item UUID 与 6 个可选 PHB 2024 战斗风格引用。`dist/module/data/identity-manifest.json` 记录来源、logical hash 和 UUID 清单；游戏包与 migration contract 使用一致的 Core 14 Effect 投影。
 
-```powershell
-bun run foundry:ops lab blood-hunter-v14 plan --input="C:\absolute\matrix-plan-input.json"
-bun run foundry:ops lab blood-hunter-v14 verify-actor --input="C:\absolute\actor-snapshot-input.json"
+2 级战斗风格的直接候选包括系统自带四项、已安装官方 PHB 2024 的对决／拦截／盲斗／守护／投掷武器战斗／徒手战斗，以及本模块诱变武者。完整 PHB 已安装时共 11 项；未安装该内容包时，原生选择器跳过无法解析的六项，保留系统四项与诱变武者，不要求额外安装或复制付费规则。专长的原生先决条件继续生效。已有角色里的职业仍是快照，更新合集不会自动改写其升级候选或已选结果。
+
+安装限定配置后的 `data/server-mirror/Data/modules/fvtt-blood-hunter-2024`，拒绝生产／远程变量、路径逃逸、reparse、foreign same-ID 和运行中目标。复用共享停服检查核对开发实例及数据目录进程；对残留 `LOCK` 用 Windows 独占读句柄确认未被持有，真正占用或无法核实就停止，不删除锁文件。替换前验证 staging、owned marker 及原目录 raw hash，随后直接替换，不创建旧目录备份。失败时保留 staging 或已安装文件并报告，不自动恢复或改动其他环境。`verify-install` 只证明安装与构建内容一致，不代表玩法通过。
+
+## 图标与已有角色
+
+职业、子职、特性及其活动、效果使用 Foundry 内置图标；条目名称采用 `中文 English`。已有 Actor 内嵌 Item 是快照，合集更新不会直接替换它们。新 runtime 可按既有 canonical sourceIdentity 识别旧版破晓血仪和诅咒专家，旧破晓附魔标记也可识别；不会在 ready 扫描 Actor。
+
+1.1.3为6级“惩戒烙印 Brand of Castigation”单独指定橙红色符文印记，包含其活动图标；“印记血咒 Blood Curse of the Marked”保留血斧图标，便于区分。仅更新展示，规则、消耗和升级授予不变；已有角色条目仍按下方明确选择的展示更新流程处理。
+
+GM 可对明确选择的角色预览并只更新选中条目的名称和图标：
+
+```javascript
+const api = game.modules.get('fvtt-blood-hunter-2024').api;
+const actor = game.actors.get('明确的 Actor ID');
+const diff = await api.previewFeaturePresentation(actor);
+console.table(diff);
+// 审阅后传回希望更新的行；不要修改 diff 的 before/after。
+await api.refreshFeaturePresentation(actor, diff);
 ```
 
-还支持 `inspect`、`verify-migration` 与 `evidence-manifest`。这些动作只读取显式 JSON 并返回验证结果，不启动 Foundry、不写世界，也不会把 pack/API 探针提升为 E2E PASS。
+canonical 快照行只写 `name` 和 `img`，并核对预览后的当前值，保留等级、advancement choices、spent uses、活动、效果和其他手改。手动改过的名称或图标会明确显示在差异中，由 GM 决定是否选中。
 
-## 迁移 UI
+旧 Plutonium 中文条目另走 `legacy-icon-only` 分支：同时符合 `plutonium-cn` 的 page／source／URL hash、`BH2024` book 和 `2024` rules，且能唯一对应锁定源记录时，差异行只含 `img`；保留当前名称、全部旧来源 flags 和规则数据，不写 canonical flags。当前支持已核实的 classes.html、classFeature、optionalfeatures.html 身份，缺失或含糊的来源跳过或停止，不按显示名称猜测。武器精通在原生职业中是 Advancement，其旧条目图标来自独立的来源展示登记，不冒称 canonical Item。索引由正式源构建生成，图标元数据不会改变 canonical 内容 hash。
 
-模块在 `init` 阶段只注册 GM-only 菜单，不在 `ready` 自动扫描 Actor，也不自动修改任何 Actor。菜单标题是“血猎手 2024：角色迁移”。
+完整旧角色迁移菜单保持 GM-only 的只读 Preview；旧 Copy／Apply 备份路线不在当前 UI 开放。正常 Document API 会维护修改时间、修改者和 Core 审计版本等 `_stats`，这些审计变化与玩家的等级、选择和规则数据分别核对。
 
-1. GM 明确输入 Actor ID 或精确名称后点击 `Preview`。Preview 只读，不写 Actor。
-2. flags `fvttJsonGenerator.bloodHunter2024.canonicalId` 优先；没有 flags 时，只有 `source + class/subclass + level + normalized name` 全部严格相等才使用 legacy match。多候选、重复 canonical 或歧义会停止。
-3. 点击 `Create migrated copy`，模块通过 Foundry 公共 Actor Document API 创建迁移副本，并生成 Actor JSON backup；副本通过非血猎手投影、选择/消耗、重复和 Activity/Effect 引用检查后，才允许下一步。
-4. `Apply original` 需要已有副本、通过副本验证、JSON backup，以及输入与 Actor 名称完全相同的确认文字。冲突逐项选择 `Keep`、`Overwrite` 或 `Cancel`；关闭窗口等同 `Cancel`。任何未决冲突都不能 Apply。
+来源存在但未通过当前系统初始化的旧条目，不在已加载 Item 列表内；模块不会绕过校验去改它的原始数据。可以单独更新已有效加载、来源唯一的特性图标，同时完整保留未加载的职业项。标准 Actor 导出会整理权限等字段，涉及完整源保全时需用正常 Macro 直接保存 `Actor.toObject(true)`，分别核对原生源和导出投影。
 
-迁移只原位更新唯一匹配的 Blood Hunter Item；没有现有对应项时不会自动补充特性，因为仅凭全包清单不能判定人物当前职业、子职与等级。缺少的特性须在正常升级流程中授予或由 GM 单独核对；不按名称批量删除，不改 HP、Actor system、职业等级、spent uses、已选 advancement、非 Blood Hunter Item 或其他 flags。Activity/Effect/说明冲突默认暂停。Apply 通过公共 Document API 完成；失败会用 Apply 前 JSON/Actor snapshot 补偿回滚，禁止直接写 LevelDB。
+## 破晓血仪 Rite of the Dawn
 
-Callum 的旧“破晓血仪” fixture（0 Activity、0 Effect）覆盖 Preview、迁移副本、Apply 和 rollback：原 Actor 在 Preview/副本阶段保持不变，副本应得到 5 Activity、2 Effect。
+先使用该特性的激活 Activity 生成“激活破晓血仪”聊天卡，再把角色装备栏里要附魔的武器拖到该卡的附魔区域；这是 dnd5e 原生流程，不会另外弹出武器选择窗口。激活失血沿用原有流程。同一武器只保留一个本模块血仪。普通光耀血仪附伤由原生 enchantment 表达。
 
-## 自动化边界
+激活时掷出的血法骰是当前生命值损失，忽略抗性、免疫和临时生命值。MIDI 的物品使用宏或自动伤害结算关闭时，保留实际骰数并人工从当前 HP 扣除一次；不要把未扣血理解为需要再次激活，也不要把这一步当成新增的自动 HP 功能。普通伤害应用可能使用减免或临时 HP，不能默认等同此项规则成本。
 
-- **Core**：Foundry/dnd5e 原生 class、subclass、advancement、Activity/Effect 结构；不要求 MIDI-QOL 或 DAE。
-- **Modded**：可利用推荐的 MIDI-QOL `14.0.11` / DAE `14.0.12`，但模块不会把它们当作硬依赖，也不会把未验证效果宣称为原生自动化。
-- **assisted**：需要 GM/玩家按规则确认的跨 Item、目标条件、休息或选择流程；ledger/review 中会保留边界。
-- **external-rule**：依赖外部规则或外部 compendium UUID 的部分；identity manifest 会保留 12 个 dnd5e UUID，缺引用即 fail-closed。
+模块给持握该武器的角色关联一个黯蚀抗性 Effect，取消装备时禁用；重新装备恢复；解除／替换附魔、删除武器、完成短休或长休会清理对应效果。dnd5e 没有独立的收鞘字段，本模块用武器「已装备」表示持握：收起武器请取消装备。20 尺明亮光照仍按场景调整。
 
-这是一次构建快照，不是实时同步：安装后不会监视远程 homebrew、旧 side-data 或 Actor 变化。旧 side-data 只作为迁移识别/审查的历史输入，不是权威规则来源；权威来源是本次 raw source 与公开编译器输出。线上生产 Foundry（8080）不在本任务部署范围内，也不会由本模块 CLI 触碰。
+附加不死生物伤害需要 CPR 2.1.7／CAT 0.1.7 或兼容新版、MIDI-QOL 至少 14.6.5、DAE 至少 14.6.4 和这些模块自己的依赖；CAT 的实际模块标识为 `cat`。模块只使用 CAT 的公开 `registerFnMacro`、`DamageBonus` 机制，不导入 CPR 私有宏。实际破晓武器每次攻击命中 `undead` 类型目标，自动增加一个当前 `@scale.blood-hunter.hemocraft` 的光耀骰，允许重击；普通目标不会得到此额外骰，同名其他武器也不会触发。原有「抗性」「不死额外伤害」辅助按钮由 runtime 拦截，不需再次点按。
 
-## 本地候选的只读 Preview
+公开 `api.syncDawnWeapon(weapon)` 可对明确的已有破晓武器刷新关联；启用模块不会自动扫描已有角色的旧附魔。
 
-已安装条目的来源hash只说明当时的来源版本，不能证明当前内容没有手改。Preview现在比较当前说明、Activity和Effect，并忽略既有已消耗次数、等级与advancement选择。相同来源版本下，名称、类型或其他无逐字段决策的业务变化会明确跳过，保留整个Item，要求人工核对。
+## 印记血咒 Blood Curse of the Marked
 
-本轮仅完成合成数据上的Preview判断与模块契约检查；没有执行真实角色的复制、备份或迁移。旧Copy/Apply流程仍要求副本和JSON备份，不能在当前无备份约定下调用；须先明确新的迁移模式。内容包来源与分发范围也没有因此获得商品发行许可。
+印记附伤使用CAT公开的目标伤害工作流，不需要给人物手动绑定CPR／CAT宏。目标实际受到符合条件的伤害时，模块从施咒者的已激活血仪读取类型，从施咒者读取当前鲜血秘法骰。普通版本仅对施咒者造成且与激活血仪同类型的伤害触发；增幅可由其他来源伤害触发。没有活跃血仪、未命中、未造成有效伤害或未被标记的目标，不会凭空加骰。效果持续到施咒者下回合开始，不限每回合首次。
+
+为依据目标的实际减伤结果判断是否触发，额外骰会显示为独立的“印记血咒”掷骰，并自动计入该目标同次伤害。原武器卡仍显示原血仪骰；请同时查看印记骰卡和目标伤害明细。自动应用伤害开启时，附伤计入同次目标结算；当前世界若关闭自动应用，只从原攻击卡正常应用伤害，印记骰卡仅展示结果，不提供第二个应用入口。同一攻击应用时复用已掷出的印记结果，下一次命中仍重新投掷。玩家掷伤害后，GM 可从自己的页面点原攻击卡应用伤害。跨客户端复用印记骰需要 Midi-QOL 开启 Save to Chat Card。请在效果到期前完成应用。同时激活多种血仪且本次伤害无法唯一确定类型时，会出现简短的类型选择；取消该选择只跳过本次印记附伤。已有角色的来源血咒无需重新导入，正常再次施放会适配当前效果接口；更新前已施加效果的旧持续时间不会被批量改写，重施后使用“施咒者下回合开始”的期限。
+
+### 5级破晓与普通印记的骰子怎么查看
+
+以弯刀`1d6`、敏捷+5、血法骰`1d8`为例：已激活破晓血仪并对带有自己普通印记的不死生物正常命中时，弯刀卡应有`1d6+5+1d8+1d8`，自动出现的独立印记卡另有`1d8`，两卡合计`1d6+3d8+5`。未命中后手动点伤害，只看到`1d6+5+1d8`，不能据此判断命中附伤失败；破晓不死附骰和印记附骰都需要符合命中／有效伤害条件。
+
+先确认攻击卡命中，再结算同次伤害。命中后若已弹出原生伤害配置窗，就使用该窗；没有弹窗才点同张新卡的Damage，避免重复打开。查看两张真实骰卡，不要求三颗d8都挤在武器卡里。世界关闭自动应用时仍只从原攻击卡应用一次。
+
+## 惩戒烙印 Brand of Castigation
+
+用已激活血仪的武器对生物造成伤害后，将该生物设为目标，使用“施加惩戒烙印”，再从聊天卡应用烙印Effect。施加时机仍由玩家确认。旧版canonical角色首次使用时，只补这个Item的目标效果模板、活动引用和说明，保留原次数、等级、消耗及其他效果；不会在ready扫描角色。同一血猎手的新烙印会解除其旧烙印，不移除其他施咒者的烙印；主动解除可正常删除目标上的对应Effect。
+
+被烙印生物实际伤害施咒者本人，或伤害距施咒者10尺内且其能看见的生物时，模块自动结算`max(1, 智力调整值)`点心灵伤害。本人受伤不要求距离或视线；其他生物同时要求10尺及可见。距离使用场景尺度换算为英尺，视线使用CAT／Midi的实际Token判断。它不是施咒者攻击该目标时的额外伤害。
+
+当前世界手动应用伤害时，先从原攻击卡应用正常伤害，之后才触发反噬；仅命中、掷出预览伤害、治疗或0伤害不触发。反噬本身会自动扣血并生成“惩戒烙印：心灵反噬”数值卡，不需要再次扣血。它需要已启用的CAT／Midi公开接口，按正常心灵伤害减免结算，不修改世界的自动掷伤害、自动应用、CAT或CPR设置。
+
+反噬需要可追溯原Activity的实际伤害应用；直接手改HP或无来源的伤害不推测攻击者。方向感知、死亡收益、解除魔法判定及13级强化规则仍按原文处理。
+
+## 诅咒专家 Curse Specialist
+
+点击特性，在左侧按头像与名称选择生物，在右侧加入一至两个不同的已学血咒；每个血咒选择普通或增幅版本。两个血咒可以给同一个目标，也可以分别给两个目标。同一血咒在整次选择中只能出现一次，不能把普通与增幅当成两个血咒。下方摘要可以更换目标、移除选择，资源按各血咒的使用配置结算。窗口按可用视口初始化，右下角原生缩放柄可同时向下、向右拖动；目标与血咒列表在内部滚动，确认／取消始终保留。默认显示同场景当前战斗的有效目标；没有适用战斗时显示当前场景，不再提供场景／战斗切换。名称搜索帮助缩小列表；同名生物显示独立编号，悬停或键盘聚焦会高亮，定位按钮指向地图上的实际 Token，不修改其原名。
+
+选择附赠动作或反应后，只显示来源活动支持该动作的已学血咒；普通／增幅版本分别过滤，切换动作会清除不兼容的已选项，提交时再次核对。不能把来源本来需要附赠动作的血咒改成反应施放。
+
+每个血咒依次进入正常 Activity 使用配置，由各自的次数设置、装备或规则决定是否消耗，豁免、增幅失血和效果也按通常流程继续。诅咒专家不提前检查次数池是否存在或总剩余次数，即便剩余为零也允许进入下一步；免耗须由正常配置或装备规则提供，不会由本特性强制免费。总共只占一次附赠动作或反应。反应及各血咒的触发条件仍须玩家依原文判断。取消会停止尚未开始的血咒，已完成的消耗保留。开始前核实所有选择都来自该角色已学血咒、互不重复，且需要生物目标的活动已选择有效的当前场景目标；任一选择不合法，本次都不会开始或扣次。自身与区域活动保留正常原生流程。MIDI 使用本次选择的目标，不再用第二个确认窗覆盖该选择。
+
+血咒的 `blood-maledict` 默认资源引用，在双血咒及直接使用的临时副本中解析为角色实际资源 Item ID，不永久修改角色。有效自定义资源、物品自身资源和装备提供的免费活动保留，不把它们重定向到鲜血秘法。程序化验收可调用：
+
+```javascript
+await api.useCurseSpecialist(specialistActivity, {
+  action: 'bonus', // 必须与两个来源 Activity 的动作类型一致，也可选择 reaction
+  curses: [
+    {itemId: firstCurse.id, activityId: normal.id, targetUuids: [firstTarget.document.uuid]},
+    {itemId: secondCurse.id, activityId: amplified.id, targetUuids: [secondTarget.document.uuid]}
+  ]
+});
+```
+
+双血咒不会把各血咒原有的 assisted 规则变成已验自动化。新功能的模块单元测试和确定性构建，与真实 Foundry UI／游戏行为验收分别记录，不能相互代替。历史 6.0.6 接受仅覆盖四个新建 3 级角色的职业／子职授予、重载与清理，不能推广成全部等级或旧人物迁移已通过。内容发行权不因本地编译或测试而改变。

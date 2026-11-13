@@ -13,6 +13,14 @@ const FIGHTING_STYLE_UUIDS = [
   'Compendium.dnd5e.feats24.Item.phbfstGreatWeapo',
   'Compendium.dnd5e.feats24.Item.phbfstTwoWeaponF',
 ] as const;
+const PHB_FIGHTING_STYLE_UUIDS = new Set([
+  'Compendium.dnd-players-handbook.feats.Item.phbfstDueling000',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstIntercepti',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstBlindFight',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstProtection',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstThrownWeap',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstUnarmedFig',
+]);
 const EPIC_BOON_UUID = 'Compendium.dnd5e.feats24.Item.phbBoonofTruesig';
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 const ACTIVE_EFFECT_MODE_LABELS = ['CUSTOM', 'MULTIPLY', 'ADD', 'DOWNGRADE', 'UPGRADE', 'OVERRIDE'] as const;
@@ -25,7 +33,7 @@ export function validateNativeBloodHunterPackage(value: unknown): BloodHunterVal
     return { ok: false, findings };
   }
   const pkg = value as NativeBloodHunterPackage;
-  if (pkg.moduleId !== BLOOD_HUNTER_MODULE_ID || pkg.version !== BLOOD_HUNTER_MODULE_VERSION) add('MODULE_IDENTITY_MISMATCH', '/', 'moduleId/version 必须锁定为 fvtt-blood-hunter-2024@1.0.0。');
+  if (pkg.moduleId !== BLOOD_HUNTER_MODULE_ID || pkg.version !== BLOOD_HUNTER_MODULE_VERSION) add('MODULE_IDENTITY_MISMATCH', '/', 'moduleId/version 必须锁定为 fvtt-blood-hunter-2024@1.1.4。');
   const dnd6 = pkg.target?.foundry === '14.368' && pkg.target?.dnd5e === '6.0.2';
   if ((!dnd6 && (pkg.target?.foundry !== '14.364' || pkg.target?.dnd5e !== '5.3.3')) || pkg.target?.rules !== '2024' || pkg.target?.effectProfile !== 'modded-v14') add('TARGET_VERSION_MISMATCH', '/target', '目标必须是精确的 14.364/5.3.3 或 14.368/6.0.2 配对。');
   if (pkg.sourceSha256 !== undefined && pkg.sourceSha256 !== EXPECTED_BLOOD_HUNTER_SOURCE_SHA256) add('SOURCE_HASH_MISMATCH', '/sourceSha256', 'byte-verified package 必须记录锁定 BloodHunter2024 SHA-256。');
@@ -140,7 +148,7 @@ function validateAdvancement(advancement: JsonObject, path: string, dnd6: boolea
     const items = asArray<JsonObject>(configuration.items);
     if (items.length === 0 || items.some((item) => !stringValue(item.uuid) || typeof item.optional !== 'boolean')) add('EMPTY_OR_INVALID_ITEM_GRANT', `${path}/configuration/items`, '每个持久 ItemGrant 至少含一个直接 UUID items 条目。');
     for (const [index, item] of items.entries()) {
-      if (!isDirectItemUuid(stringValue(item.uuid))) add('INVALID_ITEM_GRANT_UUID', `${path}/configuration/items/${index}/uuid`, 'ItemGrant configuration.items 必须直接使用模块或 dnd5e Compendium Item UUID，且终端 ID 为严格16位。');
+      if (!isDirectItemUuid(stringValue(item.uuid))) add('INVALID_ITEM_GRANT_UUID', `${path}/configuration/items/${index}/uuid`, 'ItemGrant configuration.items 必须直接使用模块、dnd5e 或已锁定的 PHB Compendium Item UUID，且终端 ID 为严格16位。');
     }
   }
   if (type === 'ItemChoice') {
@@ -150,7 +158,7 @@ function validateAdvancement(advancement: JsonObject, path: string, dnd6: boolea
     for (const [index, entry] of pool.entries()) {
       const uuid = dnd6 ? stringValue(asRecord(entry).uuid) : stringValue(entry);
       if ((dnd6 && (typeof entry !== 'object' || entry === null)) || (!dnd6 && typeof entry !== 'string')) add('ITEM_CHOICE_POOL_SHAPE_MISMATCH', `${path}/configuration/pool/${index}`, 'ItemChoice pool 条目形状与目标版本不符。');
-      if (!isDirectItemUuid(uuid)) add('INVALID_ITEM_CHOICE_UUID', `${path}/configuration/pool/${index}`, 'ItemChoice configuration.pool 必须直接使用模块或 dnd5e Compendium Item UUID，且终端 ID 为严格16位。');
+      if (!isDirectItemUuid(uuid)) add('INVALID_ITEM_CHOICE_UUID', `${path}/configuration/pool/${index}`, 'ItemChoice configuration.pool 必须直接使用模块、dnd5e 或已锁定的 PHB Compendium Item UUID，且终端 ID 为严格16位。');
     }
     for (const [level, choice] of Object.entries(choices)) {
       const candidate = asRecord(choice);
@@ -231,17 +239,19 @@ function validateFeaturePrerequisites(pkg: NativeBloodHunterPackage, add: AddFin
 }
 
 function validateReference(reference: NativeReferenceContract, path: string, documents: ReadonlyMap<string, NativeItemSource>, add: AddFinding): void {
-  if (!stringValue(reference.referenceKey) || reference.classification !== 'native' || reference.resolution !== 'direct-uuid' || !isStrictId(reference.targetDocumentId) || !stringValue(reference.uuid) || !['module', 'dnd5e'].includes(reference.source)) add('INVALID_REFERENCE_CONTRACT', path, 'reference 必须是直接 UUID native contract，并含严格16位 terminal document id。');
+  if (!stringValue(reference.referenceKey) || reference.classification !== 'native' || reference.resolution !== 'direct-uuid' || !isStrictId(reference.targetDocumentId) || !stringValue(reference.uuid) || !['module', 'dnd5e', 'dnd-players-handbook'].includes(reference.source)) add('INVALID_REFERENCE_CONTRACT', path, 'reference 必须是直接 UUID native contract，并含严格16位 terminal document id。');
   const moduleMatch = MODULE_UUID.exec(reference.uuid ?? '');
   const dnd5eMatch = DND5E_UUID.exec(reference.uuid ?? '');
-  if (!moduleMatch && !dnd5eMatch) add('INVALID_REFERENCE_UUID', `${path}/uuid`, 'reference UUID 必须是模块或 dnd5e Compendium Item UUID。');
-  const terminalId = moduleMatch?.[2] ?? dnd5eMatch?.[1];
+  const phbMatch = PHB_FIGHTING_STYLE_UUIDS.has(reference.uuid);
+  if (!moduleMatch && !dnd5eMatch && !phbMatch) add('INVALID_REFERENCE_UUID', `${path}/uuid`, 'reference UUID 必须是模块、dnd5e 或已锁定的可选 PHB 战斗风格 Compendium Item UUID。');
+  const terminalId = moduleMatch?.[2] ?? dnd5eMatch?.[1] ?? (phbMatch ? reference.uuid.split('.').at(-1) : undefined);
   if (terminalId !== reference.targetDocumentId) add('REFERENCE_ID_MISMATCH', path, 'reference.targetDocumentId 必须等于 UUID 的16位 terminal id。');
   if (reference.source === 'module') {
     const target = documents.get(reference.targetDocumentId);
     if (!target || reference.uuid !== moduleUuidFor(target)) add('DANGLING_NATIVE_REFERENCE', path, '模块 reference 必须直接指向 package 内 document 的正确 pack UUID。');
   }
   if (reference.source === 'dnd5e' && !dnd5eMatch) add('DND5E_REFERENCE_MISMATCH', path, 'dnd5e reference 必须使用 Compendium.dnd5e.*.Item.<16-id>。');
+  if (reference.source === 'dnd-players-handbook' && !phbMatch) add('PHB_REFERENCE_MISMATCH', path, '可选 PHB reference 只允许六个已锁定的官方 2024 战斗风格 UUID。');
 }
 
 function validateGraphPersistence(node: GrantGraphNode, advancement: JsonObject, path: string, dnd6: boolean, add: AddFinding): void {
@@ -293,7 +303,7 @@ function validateSemanticAdvancements(pkg: NativeBloodHunterPackage, advancement
   if (!mastery || masteryConfiguration.mode !== 'mastery' || asArray<JsonObject>(masteryConfiguration.choices)[0]?.count !== 2 || !asArray<string>(asArray<JsonObject>(masteryConfiguration.choices)[0]?.pool).includes('weapon:*')) add('WEAPON_MASTERY_SCHEMA_MISMATCH', '/classes/0/system/advancement', '武器精通必须是 Trait/mastery，count 2，pool weapon:*。');
   const fighting = classAdvancements.find((candidate) => candidate.type === 'ItemChoice' && advancementName(candidate, dnd6) === '战斗风格');
   const fightingPool = asArray<unknown>(asRecord(fighting?.configuration).pool).map((entry) => dnd6 ? stringValue(asRecord(entry).uuid) : stringValue(entry));
-  if (!fighting || FIGHTING_STYLE_UUIDS.some((uuid) => !fightingPool.includes(uuid)) || !fightingPool.some((uuid) => MODULE_UUID.test(uuid ?? ''))) add('FIGHTING_STYLE_SCHEMA_MISMATCH', '/classes/0/system/advancement', '战斗风格必须有四个锁定 official UUID 和 synthetic 模块 feat。');
+  if (!fighting || fightingPool.length !== 11 || [...FIGHTING_STYLE_UUIDS, ...PHB_FIGHTING_STYLE_UUIDS].some((uuid) => !fightingPool.includes(uuid)) || !fightingPool.some((uuid) => MODULE_UUID.test(uuid ?? ''))) add('FIGHTING_STYLE_SCHEMA_MISMATCH', '/classes/0/system/advancement', '战斗风格必须有四个免费规则、六个可选官方 PHB 2024 UUID 和 synthetic 模块 feat，共11项。');
   if (dnd6) {
     const marker = pkg.features.find((item) => item.system.identifier === 'fighting-style');
     const grant = classAdvancements.find((candidate) => candidate.type === 'ItemGrant' && candidate.level === 2);
@@ -303,29 +313,29 @@ function validateSemanticAdvancements(pkg: NativeBloodHunterPackage, advancement
     if (!marker || asRecord(marker.system.type).value !== 'class' || !stringValue(asRecord(bloodHunterMetadata(marker).synthetic).origin)
       || !markerUuid || !grantItems.includes(markerUuid) || !grantNode?.references.some((reference) => reference.uuid === markerUuid)
       || !fighting || classAdvancements.indexOf(grant!) >= classAdvancements.indexOf(fighting)) {
-      add('FIGHTING_STYLE_ELIGIBILITY_MISSING', '/classes/0/system/advancement', 'D&D 6 目标必须先在2级授予本团战斗风格基础特性，再提供四个官方风格与诱变武者的选择。');
+      add('FIGHTING_STYLE_ELIGIBILITY_MISSING', '/classes/0/system/advancement', 'D&D 6 目标必须先在2级授予本团战斗风格基础特性，再提供十个官方风格与诱变武者的选择。');
     }
   }
   const boon = classAdvancements.find((candidate) => candidate.type === 'AbilityScoreImprovement' && advancementName(candidate, dnd6) === '传奇恩惠');
   const boonConfiguration = asRecord(boon?.configuration);
   if (!boon || boonConfiguration.recommendation !== EPIC_BOON_UUID || boonConfiguration.points !== 2 || boonConfiguration.cap !== 2 || boonConfiguration.max !== null) add('EPIC_BOON_SCHEMA_MISMATCH', '/classes/0/system/advancement', '传奇恩惠必须使用 points2/cap2/max null 和精确推荐 UUID。');
-  const synthetic = pkg.features.find((item) => item.name === '诱变武者');
+  const synthetic = pkg.features.find((item) => (item.name === '诱变武者' || item.name.startsWith('诱变武者' + ' ')));
   if (!synthetic || !stringValue(asRecord(bloodHunterMetadata(synthetic).synthetic).origin) || bloodHunterMetadata(synthetic).automation !== 'assisted') add('MUTAGENIC_WARRIOR_SYNTHETIC_MISMATCH', '/features', '诱变武者必须是带来源和辅助边界的稳定 synthetic feat。');
-  const profaneSoul = pkg.subclasses.find((item) => item.name === '渎魂结社');
+  const profaneSoul = pkg.subclasses.find((item) => (item.name === '渎魂结社' || item.name.startsWith('渎魂结社' + ' ')));
   if (!profaneSoul || !String(asRecord(profaneSoul.system.description).value ?? '').includes('契约魔法（GM 辅助）') || Object.values(asRecord(profaneSoul.system.advancement)).filter((advancement) => asRecord(advancement).type === 'ScaleValue').length !== 4) add('PACT_MAGIC_BOUNDARY_MISMATCH', '/subclasses/渎魂结社', '契约魔法必须在渎魂 subclass 以可见四个 ScaleValue 和 assisted boundary 表达完整血猎手等级表。');
-  const corrosion = pkg.features.find((item) => item.name === '腐蚀血咒');
+  const corrosion = pkg.features.find((item) => (item.name === '腐蚀血咒' || item.name.startsWith('腐蚀血咒' + ' ')));
   if (corrosion && corrosion.effects.some((effect) => asRecord(asRecord(effect).duration).expiry === 'sourceEnd')) add('CORROSION_EXPIRY_MISMATCH', '/features', '腐蚀血咒不得使用 sourceEnd 自动结束。');
   for (const name of ['升腾', '幻惑']) {
-    const item = pkg.features.find((candidate) => candidate.name === name);
+    const item = pkg.features.find((candidate) => (candidate.name === name || candidate.name.startsWith(name + ' ')));
     if (item && asArray<JsonObject>(item.effects).some((effect) => asRecord(asRecord(effect).duration).seconds !== 3600)) add('MUTAGEN_DURATION_MISMATCH', `/features/${name}`, `${name} 的 Effect 必须明确 seconds=3600。`);
   }
-  const mobile = pkg.features.find((item) => item.name === '灵活移动');
+  const mobile = pkg.features.find((item) => (item.name === '灵活移动' || item.name.startsWith('灵活移动' + ' ')));
   if (mobile && bloodHunterMetadata(mobile).automation !== 'assisted') add('MOBILE_ASSISTANCE_MISMATCH', '/features/灵活移动', '灵活移动的11级麻痹免疫必须保持 assisted。');
-  const hybrid = pkg.features.find((item) => item.name === '混种变形');
+  const hybrid = pkg.features.find((item) => (item.name === '混种变形' || item.name.startsWith('混种变形' + ' ')));
   if (hybrid && (!stringValue(asRecord(hybrid.system.uses).max) || bloodHunterMetadata(hybrid).automation !== 'assisted')) add('HYBRID_USES_MISMATCH', '/features/混种变形', '混种变形必须有明确 uses 且18级无限边界标为 assisted。');
-  const mastery20 = pkg.features.find((item) => item.name === '胸有成竹');
+  const mastery20 = pkg.features.find((item) => (item.name === '胸有成竹' || item.name.startsWith('胸有成竹' + ' ')));
   if (mastery20 && bloodHunterMetadata(mastery20).automation !== 'assisted') add('SANGUINE_MASTERY_ASSISTANCE_MISMATCH', '/features/胸有成竹', '胸有成竹的跨 Item 短休恢复必须保持 assisted。');
-  const dawn = pkg.features.filter((item) => item.name === '破晓血仪');
+  const dawn = pkg.features.filter((item) => (item.name === '破晓血仪' || item.name.startsWith('破晓血仪' + ' ')));
   if (dawn.length !== 1 || Object.keys(asRecord(dawn[0]?.system.activities)).length !== 5 || asArray<JsonObject>(dawn[0]?.effects).length !== 2) add('DUSK_RITE_CANONICAL_MISMATCH', '/features/破晓血仪', '破晓血仪必须只有一个 canonical feat、5 Activity、2 Effect。');
 }
 
@@ -444,7 +454,7 @@ function moduleUuidFor(item: NativeItemSource): string {
 
 function bloodHunterMetadata(item: NativeItemSource): JsonObject { return asRecord(asRecord(asRecord(item.flags).fvttJsonGenerator).bloodHunter2024); }
 function isStrictId(value: unknown): value is string { return typeof value === 'string' && STRICT_ID.test(value); }
-function isDirectItemUuid(value: unknown): boolean { return typeof value === 'string' && (MODULE_UUID.test(value) || DND5E_UUID.test(value)); }
+function isDirectItemUuid(value: unknown): boolean { return typeof value === 'string' && (MODULE_UUID.test(value) || DND5E_UUID.test(value) || PHB_FIGHTING_STYLE_UUIDS.has(value)); }
 function sameStringSet(left: readonly string[], right: readonly string[]): boolean { return sameArray([...left].sort(), [...right].sort()); }
 function sameArray(left: readonly string[], right: readonly string[]): boolean { return left.length === right.length && left.every((value, index) => value === right[index]); }
 type AddFinding = (code: string, path: string, message: string) => void;

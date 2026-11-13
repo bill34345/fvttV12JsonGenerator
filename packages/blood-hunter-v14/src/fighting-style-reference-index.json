@@ -1,0 +1,109 @@
+{
+  "source": {
+    "module": "dnd-players-handbook",
+    "version": "2.1.0",
+    "core": "14.370",
+    "system": "6.0.6+local.3",
+    "pack": "dnd-players-handbook.feats",
+    "captured": "2026-11-06",
+    "method": "standard Foundry MCP get_compendium_item fullData; metadata only"
+  },
+  "entries": [
+    {
+      "uuid": "Compendium.dnd-players-handbook.feats.Item.phbfstDueling000",
+      "name": "Dueling",
+      "type": "feat",
+      "subtype": "fightingStyle",
+      "featureType": "feat",
+      "rules": "2024",
+      "prerequisites": {
+        "level": null,
+        "items": [
+          "fighting-style"
+        ],
+        "repeatable": false
+      },
+      "identifier": "dueling"
+    },
+    {
+      "uuid": "Compendium.dnd-players-handbook.feats.Item.phbfstIntercepti",
+      "name": "Interception",
+      "type": "feat",
+      "subtype": "fightingStyle",
+      "featureType": "feat",
+      "rules": "2024",
+      "prerequisites": {
+        "level": null,
+        "items": [
+          "fighting-style"
+        ],
+        "repeatable": false
+      },
+      "identifier": "interception"
+    },
+    {
+      "uuid": "Compendium.dnd-players-handbook.feats.Item.phbfstBlindFight",
+      "name": "Blind Fighting",
+      "type": "feat",
+      "subtype": "fightingStyle",
+      "featureType": "feat",
+      "rules": "2024",
+      "prerequisites": {
+        "level": null,
+        "items": [
+          "fighting-style"
+        ],
+        "repeatable": false
+      },
+      "identifier": "blind-fighting"
+    },
+    {
+      "uuid": "Compendium.dnd-players-handbook.feats.Item.phbfstProtection",
+      "name": "Protection",
+      "type": "feat",
+      "subtype": "fightingStyle",
+      "featureType": "feat",
+      "rules": "2024",
+      "prerequisites": {
+        "level": null,
+        "items": [
+          "fighting-style"
+        ],
+        "repeatable": false
+      },
+      "identifier": "protection"
+    },
+    {
+      "uuid": "Compendium.dnd-players-handbook.feats.Item.phbfstThrownWeap",
+      "name": "Thrown Weapon Fighting",
+      "type": "feat",
+      "subtype": "fightingStyle",
+      "featureType": "feat",
+      "rules": "2024",
+      "prerequisites": {
+        "level": null,
+        "items": [
+          "fighting-style"
+        ],
+        "repeatable": false
+      },
+      "identifier": "thrown-weapon-fighting"
+    },
+    {
+      "uuid": "Compendium.dnd-players-handbook.feats.Item.phbfstUnarmedFig",
+      "name": "Unarmed Fighting",
+      "type": "feat",
+      "subtype": "fightingStyle",
+      "featureType": "feat",
+      "rules": "2024",
+      "prerequisites": {
+        "level": null,
+        "items": [
+          "fighting-style"
+        ],
+        "repeatable": false
+      },
+      "identifier": "unarmed-fighting"
+    }
+  ]
+}

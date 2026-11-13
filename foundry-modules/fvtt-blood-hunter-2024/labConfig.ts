@@ -1,4 +1,4 @@
-import { lstatSync, realpathSync } from 'node:fs';
+import { lstatSync, readFileSync, realpathSync } from 'node:fs';
 import { basename, dirname, isAbsolute, parse, relative, resolve, sep } from 'node:path';
 
 export const BLOOD_HUNTER_ENVIRONMENT = {
@@ -7,6 +7,7 @@ export const BLOOD_HUNTER_ENVIRONMENT = {
   evidenceRoot: 'FVTT_OPS_EVIDENCE_ROOT',
   classicLevelEntry: 'FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY',
   referenceCacheRoot: 'FVTT_REFERENCE_CACHE_ROOT',
+  developmentFoundryVersion: 'FVTT_OPS_DEVELOPMENT_FOUNDRY_VERSION',
 } as const;
 
 export interface BloodHunterLabConfig {
@@ -18,9 +19,9 @@ export interface BloodHunterLabConfig {
   evidenceRoot: string;
   referenceCacheRoot: string;
   classicLevelEntry: string;
-  versions: { foundry: '14.364'; dnd5e: '5.3.3' };
+  versions: { foundry: string; dnd5e: '6.0.6' };
   moduleId: 'fvtt-blood-hunter-2024';
-  profiles: { serverMirror: { id: 'server-mirror'; dataPath: string; host: '127.0.0.1'; port: 30001 } };
+  profiles: { development: { id: 'development'; dataPath: string; host: '127.0.0.1'; port: 30001 } };
 }
 
 type Environment = Readonly<Record<string, string | undefined>>;
@@ -32,6 +33,7 @@ export function createLabConfig(
   const root = resolve(repoRoot);
   const moduleRoot = resolve(root, 'foundry-modules/fvtt-blood-hunter-2024');
   assertNoProductionEnvironment(environment);
+  const foundryVersion = configuredFoundryVersion(environment);
   const configuredLab = environment[BLOOD_HUNTER_ENVIRONMENT.labRoot]?.trim();
   const labRoot = resolve(configuredLab || resolve(root, '.local/foundry-v14'));
   assertSpecificRoot(root, labRoot, BLOOD_HUNTER_ENVIRONMENT.labRoot);
@@ -56,11 +58,11 @@ export function createLabConfig(
     evidenceRoot,
     referenceCacheRoot,
     classicLevelEntry,
-    versions: { foundry: '14.364', dnd5e: '5.3.3' },
+    versions: { foundry: foundryVersion, dnd5e: '6.0.6' },
     moduleId: 'fvtt-blood-hunter-2024',
     profiles: {
-      serverMirror: {
-        id: 'server-mirror',
+      development: {
+        id: 'development',
         dataPath: resolve(labRoot, 'data/server-mirror'),
         host: '127.0.0.1',
         port: 30001,
@@ -81,17 +83,32 @@ export function findRepoRoot(start: string): string {
 
 export function resolveConfiguredClassicLevelEntry(repoRoot: string, labRoot: string, environment: Environment): string {
   const explicit = environment[BLOOD_HUNTER_ENVIRONMENT.classicLevelEntry]?.trim();
-  const entry = resolve(explicit || resolve(labRoot, 'app/14.364/node_modules/classic-level/index.js'));
-  const expectedSuffix = ['app', '14.364', 'node_modules', 'classic-level', 'index.js'].join(sep).toLocaleLowerCase();
-  const normalized = entry.toLocaleLowerCase();
-  if (!normalized.endsWith(`${sep}${expectedSuffix}`) && !normalized.endsWith(expectedSuffix)) {
-    throw new Error(`${BLOOD_HUNTER_ENVIRONMENT.classicLevelEntry} must name the Foundry 14.364 classic-level entry.`);
+  const version = configuredFoundryVersion(environment);
+  const entry = resolve(explicit || resolve(labRoot, 'app', version, 'node_modules/classic-level/index.js'));
+  const installation = /[\\/]app[\\/]14\.(\d+)[\\/]node_modules[\\/]classic-level[\\/]index\.js$/i.exec(entry);
+  if (!installation || Number(installation[1]) < 368) {
+    throw new Error(`${BLOOD_HUNTER_ENVIRONMENT.classicLevelEntry} must name a Core 14.368+ classic-level entry.`);
   }
   const root = parse(entry).root;
   assertNoReparsePathComponents(root, entry, 'Foundry classic-level read-only entry');
-  if (!explicit) assertExactLabPath(labRoot, entry, ['app', '14.364', 'node_modules', 'classic-level', 'index.js'], 'Foundry classic-level read-only entry');
+  if (!explicit) assertExactLabPath(labRoot, entry, ['app', version, 'node_modules', 'classic-level', 'index.js'], 'Foundry classic-level read-only entry');
   if (!isAbsolute(entry) || resolve(repoRoot) === entry) throw new Error('classic-level entry must be an absolute file outside the repository root.');
   return entry;
+}
+
+function configuredFoundryVersion(environment: Environment): string {
+  if (environment.FVTT_OPS_MIRROR_FOUNDRY_VERSION?.trim()) throw new Error('FVTT_OPS_MIRROR_FOUNDRY_VERSION is retired; use FVTT_OPS_DEVELOPMENT_FOUNDRY_VERSION for development 30001. ServerMirror is 30004.');
+  const version = environment[BLOOD_HUNTER_ENVIRONMENT.developmentFoundryVersion]?.trim() || '14.370';
+  if (!/^14\.\d+$/.test(version) || Number(version.split('.')[1]) < 368) throw new Error(`${BLOOD_HUNTER_ENVIRONMENT.developmentFoundryVersion} requires Core 14.368 or later within Core 14.`);
+  return version;
+}
+
+export function assertInstalledBloodHunterCore(config: BloodHunterLabConfig): void {
+  const path = resolve(config.labRoot, 'app', config.versions.foundry, 'package.json');
+  assertNoReparsePathComponents(config.labRoot, path, 'Blood Hunter selected Foundry release');
+  const installed = JSON.parse(readFileSync(path, 'utf8'));
+  const version = `${installed.release?.generation}.${installed.release?.build}`;
+  if (installed.name !== 'foundryvtt' || version !== config.versions.foundry) throw new Error(`Blood Hunter installed Foundry identity ${version} differs from selected ${config.versions.foundry}.`);
 }
 
 export function assertExactRepoPath(config: BloodHunterLabConfig, target: string, segments: readonly string[], label: string): void {

@@ -1,6 +1,7 @@
 import { asArray, asRecord, clone, htmlFromEntries, normalizeName, sha256, stableId, stringValue } from './internals';
 import { BLOOD_HUNTER_MODULE_ID, BLOOD_HUNTER_MODULE_VERSION } from './constants';
 import { projectDnd6Advancements } from './dnd6-projection';
+import { bloodHunterActivityName, bloodHunterDisplayName, bloodHunterIcon } from './presentation';
 import { refreshNativeBloodHunterItemLogicalHash } from './item-hash';
 import {
   BLOOD_HUNTER_CLASS_NAME,
@@ -47,7 +48,6 @@ export const BLOOD_HUNTER_DND6_TARGET: BloodHunterV14CompileTarget = {
   effectProfile: 'modded-v14',
 };
 
-const ITEM_ICON = 'icons/svg/book.svg';
 const CLASS_IDENTIFIER = 'blood-hunter';
 const DUSK_RITE_ENGLISH = 'Rite of the Dawn';
 const MODULE_PACKS = { class: 'classes', subclass: 'subclasses', feat: 'features' } as const;
@@ -57,6 +57,14 @@ const FIGHTING_STYLE_UUIDS = [
   'Compendium.dnd5e.feats24.Item.phbfstDefense000',
   'Compendium.dnd5e.feats24.Item.phbfstGreatWeapo',
   'Compendium.dnd5e.feats24.Item.phbfstTwoWeaponF',
+] as const;
+const PHB_FIGHTING_STYLE_UUIDS = [
+  'Compendium.dnd-players-handbook.feats.Item.phbfstDueling000',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstIntercepti',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstBlindFight',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstProtection',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstThrownWeap',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstUnarmedFig',
 ] as const;
 const EPIC_BOON_UUID = 'Compendium.dnd5e.feats24.Item.phbBoonofTruesig';
 
@@ -217,7 +225,7 @@ export function compileBloodHunterV14Package(input: BloodHunterEnrichedSource | 
       continue;
     }
     if (isEpicBoon(feature)) {
-      const reference = dnd5eReference(EPIC_BOON_UUID, 'Blood Hunter level 19 epic boon recommendation');
+      const reference = officialReference(EPIC_BOON_UUID, 'dnd5e', 'Blood Hunter level 19 epic boon recommendation');
       const advancementId = addAdvancement(classItem, 'AbilityScoreImprovement', feature.entry.level!, feature.entry.name, asiConfiguration(EPIC_BOON_UUID), 'choice', [reference]);
       destinations.set(feature.sourceKey, destination(undefined, advancementId, classId, feature.entry.level!, 'choice', 'native'));
       continue;
@@ -230,7 +238,8 @@ export function compileBloodHunterV14Package(input: BloodHunterEnrichedSource | 
     }
     if (isFightingStyle(feature)) {
       const references = [
-        ...FIGHTING_STYLE_UUIDS.map((uuid) => dnd5eReference(uuid, 'Blood Hunter fighting style option')),
+        ...FIGHTING_STYLE_UUIDS.map((uuid) => officialReference(uuid, 'dnd5e', 'Blood Hunter fighting style option')),
+        ...PHB_FIGHTING_STYLE_UUIDS.map((uuid) => officialReference(uuid, 'dnd-players-handbook', 'Optional official PHB 2024 fighting style; native ItemChoice skips unavailable documents')),
         nativeReference(mutagenicWarrior, 'Blood Hunter custom Mutagenic Warrior fighting style option'),
       ];
       const advancementId = addAdvancement(classItem, 'ItemChoice', feature.entry.level!, feature.entry.name, itemChoiceConfiguration({ [feature.entry.level!]: 1 }, references, 'fightingStyle'), 'choice', references);
@@ -350,6 +359,9 @@ export function compileBloodHunterV14Package(input: BloodHunterEnrichedSource | 
 }
 
 function resolveCompileInput(input: BloodHunterEnrichedSource | BloodHunterV14CompileOptions): { source: BloodHunterEnrichedSource; sourceSha256?: string; target: BloodHunterV14CompileTarget } {
+  // Historical object-only callers have no byte provenance and are not a build
+  // entrypoint. Keep their projection for comparison fixtures; release builds
+  // always pass locked bytes and default to the dnd5e 6 target.
   if (!asRecord(input) || !('target' in input) || !('source' in input)) return { source: input as BloodHunterEnrichedSource, target: BLOOD_HUNTER_V14_TARGET };
   const options = input as BloodHunterV14CompileOptions;
   const target = options.target;
@@ -373,9 +385,9 @@ function buildClassDocument(entry: BloodHunterEnrichedSource['class'][number], i
   const sourceKey = sourceKeyForDocument('class', entry);
   const document: NativeItemSource = {
     _id: id,
-    name: entry.name,
+    name: bloodHunterDisplayName(entry),
     type: 'class',
-    img: ITEM_ICON,
+    img: bloodHunterIcon(entry),
     system: {
       identifier: CLASS_IDENTIFIER,
       levels: 1,
@@ -437,9 +449,9 @@ function buildSubclassDocument(entry: BloodHunterEnrichedSource['subclass'][numb
   if (!description) throw new Error(`subclass container description is required: ${entry.name}`);
   const document: NativeItemSource = {
     _id: id,
-    name: entry.name,
+    name: bloodHunterDisplayName(entry),
     type: 'subclass',
-    img: ITEM_ICON,
+    img: bloodHunterIcon(entry),
     system: {
       identifier: normalizeName(entry.ENG_name ?? entry.name),
       classIdentifier: CLASS_IDENTIFIER,
@@ -474,7 +486,7 @@ function buildFeatureDocument(feature: CollectedBloodHunterFeature, id: string, 
   delete sideSystem.advancement;
   const system: JsonObject = {
     ...sideSystem,
-    identifier: normalizeName(feature.entry.ENG_name ?? feature.entry.name),
+    identifier: stringValue(sideSystem.identifier) ?? normalizeName(feature.entry.ENG_name ?? feature.entry.name),
     description: { value: decorateFeatureDescription(feature, htmlFromEntries(feature.entry.entries)), chat: '' },
     source: { custom: BLOOD_HUNTER_SOURCE, rules: '2024' },
     activities,
@@ -482,15 +494,36 @@ function buildFeatureDocument(feature: CollectedBloodHunterFeature, id: string, 
   };
   if (!system.uses) system.uses = { spent: 0, max: '', recovery: [] };
   applyFeatureSemantics(feature, system, effects);
+  for (const effect of effects) {
+    effect.img = bloodHunterIcon(feature.entry);
+    effect.name = bloodHunterActivityName(String(effect.name ?? feature.entry.name), feature.entry);
+  }
+  for (const activity of Object.values(activities)) {
+    const data = asRecord(activity);
+    data.img = bloodHunterIcon(feature.entry);
+    data.name = bloodHunterActivityName(String(data.name ?? feature.entry.name), feature.entry);
+  }
   const document: NativeItemSource = {
     _id: id,
-    name: feature.entry.name,
+    name: bloodHunterDisplayName(feature.entry),
     type: 'feat',
-    img: ITEM_ICON,
+    img: bloodHunterIcon(feature.entry),
     system,
     effects,
     flags: clone(asRecord(side?.flags)),
   };
+  if (isDuskRite(feature)) {
+    document.flags['fvtt-blood-hunter-2024'] = { automation: 'rite-of-the-dawn' };
+    const midi = asRecord(document.flags['midi-qol']);
+    midi.onUseMacroName = String(midi.onUseMacroName ?? '').split(',').filter((entry) => !entry.startsWith('[postActiveEffects]')).join(',');
+    document.flags['midi-qol'] = midi;
+  }
+  if (feature.entry.ENG_name === 'Curse Specialist') document.flags['fvtt-blood-hunter-2024'] = { automation: 'curse-specialist' };
+  if (feature.entry.ENG_name === 'Blood Curse of the Marked') {
+    const midi = asRecord(document.flags['midi-qol']);
+    midi.onUseMacroName = String(midi.onUseMacroName ?? '').split(',').filter((entry) => entry !== '[postActiveEffects]ActivityMacro-6f6ad7b229d76963').join(',');
+    document.flags['midi-qol'] = midi;
+  }
   attachMetadata(document, feature.sourceKey, feature.sourceIdentity, deriveAutomation(feature, side, activities, effects));
   bloodHunterMetadata(document).prerequisiteProjection = {
     sourcePresent: sourcePrerequisites.length > 0,
@@ -505,9 +538,9 @@ function buildMutagenicWarriorDocument(): NativeItemSource {
   const id = itemIdForSourceKey('synthetic-feat', sourceKey);
   const document: NativeItemSource = {
     _id: id,
-    name: '诱变武者',
+    name: '诱变武者 Mutagenic Warrior',
     type: 'feat',
-    img: ITEM_ICON,
+    img: bloodHunterIcon({ name: 'Mutagenic Warrior' }),
     system: {
       identifier: 'mutagenic-warrior',
       description: { value: '<p><strong>来源：血猎手「战斗风格」的自定义选项。</strong>你学习突变者子职中的两种诱变剂公式；每次长休后可用炼金工具配制一种已知诱变剂，并以附赠动作饮用。配制品在下一次长休后惰性，效果持续到短休或长休结束。</p><p><strong>辅助边界：</strong>公式学习、配制选择和现有诱变剂替换需要 GM/玩家确认；本 feat 不伪造为自动子职解锁。</p>', chat: '' },
@@ -533,15 +566,15 @@ function buildMutagenicWarriorDocument(): NativeItemSource {
   return document;
 }
 
-/** D&D 6 checks for this granted class feature before showing the four official Fighting Style feats. */
+/** D&D 6 checks for this granted class feature before showing official Fighting Style feats. */
 function buildFightingStyleEligibilityDocument(feature: CollectedBloodHunterFeature): NativeItemSource {
   const sourceKey = `${BLOOD_HUNTER_SOURCE}|synthetic|${CLASS_IDENTIFIER}|fighting-style-eligibility`;
   const id = itemIdForSourceKey('synthetic-feat', sourceKey);
   const document: NativeItemSource = {
     _id: id,
-    name: feature.entry.name,
+    name: bloodHunterDisplayName(feature.entry),
     type: 'feat',
-    img: ITEM_ICON,
+    img: bloodHunterIcon(feature.entry),
     system: {
       identifier: 'fighting-style',
       type: { value: 'class', subtype: '' },
@@ -626,6 +659,68 @@ function projectFeaturePrerequisites(
 }
 
 function applyFeatureSemantics(feature: CollectedBloodHunterFeature, system: JsonObject, effects: JsonObject[]): void {
+  if (feature.entry.ENG_name === 'Brand of Castigation') {
+    const effectId = stableId('effect', feature.sourceKey, 'brand-of-castigation');
+    effects.push({
+      _id: effectId, name: '惩戒烙印 Brand of Castigation', type: 'base',
+      disabled: false, transfer: false, duration: {}, system: { changes: [] },
+      flags: { 'fvtt-blood-hunter-2024': { castigationBrand: true }, dae: { showIcon: true } },
+    });
+    for (const activity of Object.values(asRecord(system.activities))) {
+      const data = asRecord(activity);
+      if (data.type !== 'utility') continue;
+      data.effects = [{ _id: effectId }];
+      data.activation = { ...asRecord(data.activation), condition: '用已激活血仪的武器伤害该目标后施加。' };
+      data.description = { ...asRecord(data.description), chatFlavor: '用已激活血仪的武器伤害该目标后使用，并在聊天卡应用烙印。同一施咒者的新烙印会替换旧烙印。被烙印生物实际伤害你，或距你10尺内你能看见的生物时，自动结算至少1点的智力调整值心灵反噬。方向感知及死亡收益仍由玩家处理。' };
+    }
+  }
+  for (const activity of Object.values(asRecord(system.activities))) {
+    const data = asRecord(activity);
+    if (data.type === 'enchant' && effects.some((effect) => asRecord(asRecord(effect.flags).fvttJsonGenerator).bloodHunterRite)) {
+      data.macroData = { name: '血仪生命周期 Rite Lifecycle', command: '' };
+    }
+  }
+  if (feature.entry.ENG_name === 'Blood Curse of the Marked') {
+    for (const effect of effects) {
+      const scope = asArray<JsonObject>(effect.changes).find((change) => change.key === 'flags.fvttJsonGenerator.bloodCurseMark')?.value;
+      if (scope !== 'source-only' && scope !== 'all-attackers') continue;
+      effect.duration = { ...asRecord(effect.duration), expiry: 'sourceStart' };
+      const flags = asRecord(effect.flags);
+      flags['fvtt-blood-hunter-2024'] = { ...asRecord(flags['fvtt-blood-hunter-2024']), markedScope: scope };
+      flags.cat = { ...asRecord(flags.cat), macros: { ...asRecord(asRecord(flags.cat).macros), roll: [{ source: 'fvtt-blood-hunter-2024', rules: 'all', identifier: 'bloodCurseOfTheMarked' }] } };
+      effect.flags = flags;
+    }
+    for (const activity of Object.values(asRecord(system.activities))) {
+      const data = asRecord(activity);
+      if (!asArray(data.effects).length) continue;
+      data.description = { ...asRecord(data.description), chatFlavor: '印记持续至施法者下回合开始。普通：施法者造成匹配已激活血仪类型的实际伤害时附加一枚血法骰；增幅：任何来源的实际伤害均可触发。额外骰以独立印记血咒聊天卡显示，并自动计入该目标的本次伤害。' };
+      const macro = asRecord(data.macroData);
+      if (String(macro.command ?? '').includes('ChatMessage.create')) data.macroData = { ...macro, command: '' };
+    }
+  }
+  if (isDuskRite(feature)) {
+    for (const effect of effects) {
+      const flags = asRecord(effect.flags);
+      if (effect.type === 'enchantment') {
+        flags['fvtt-blood-hunter-2024'] = { rite: 'dawn' };
+        const sourceFlags = asRecord(flags.fvttJsonGenerator);
+        delete sourceFlags.manualRiders;
+        flags.fvttJsonGenerator = sourceFlags;
+      } else {
+        effect.name = '破晓血仪：黯蚀抗性 Rite of the Dawn: Necrotic Resistance';
+        flags['fvtt-blood-hunter-2024'] = { resistanceTemplate: true };
+      }
+      effect.flags = flags;
+    }
+    for (const [id, activity] of Object.entries(asRecord(system.activities))) {
+      const data = asRecord(activity);
+      if (data.type === 'enchant') data.description = { ...asRecord(data.description), chatFlavor: '激活破晓血仪并选择实际武器。光耀血仪附伤由附魔提供；持握武器的黯蚀抗性由模块关联，命中不死生物的额外血法骰由 CPR／CAT 自动结算。20尺明亮光照按场景设置。' };
+      if (id === '96f94dd2358a38f2' || id === '16e87ec8645abaa6') {
+        data.midiProperties = { ...asRecord(data.midiProperties), automationOnly: true };
+        data.description = { ...asRecord(data.description), chatFlavor: '此辅助活动保留用于来源追溯；实际破晓武器的抗性与命中不死生物额外血法骰由模块自动结算，无需单独点击。' };
+      }
+    }
+  }
   if (isCorrosion(feature)) {
     for (const effect of effects) {
       const duration = asRecord(effect.duration);
@@ -702,8 +797,9 @@ function decorateFeatureDescription(feature: CollectedBloodHunterFeature, descri
     return `${description}<p><strong>辅助边界：</strong>短休恢复所有惩戒烙印 uses 属于跨 Item 修改；当前 package 提供可见规则说明，但 GM 需在短休后恢复该特性的 uses。</p>`;
   }
   if (isDuskRite(feature)) {
-    return `${description}<p><strong>边界：</strong>光耀附加伤害由附魔 Effect 自动提供；20尺明亮光照、持握武器期间的黯蚀抗性，以及命中不死生物的额外血法骰均保留为明确辅助步骤。</p>`;
+    return `${description}<p><strong>自动结算：</strong>血仪附加光耀伤害绑定实际附魔武器。该武器装备为持握状态时自动获得黯蚀抗性；取消装备、解除或替换血仪后移除，休息结束血仪。使用 CPR／CAT 时，该武器每次命中不死生物自动增加一个当前血法骰的光耀伤害，重击正常翻倍。Foundry 的武器「已装备」表示持握；收起武器请取消装备。20尺明亮光照仍需按当前场景调整。</p>`;
   }
+  if (feature.entry.ENG_name === 'Curse Specialist') return `${description}<p><strong>双血咒：</strong>点击特性后先选附赠动作或反应，列表仅显示以该动作施放的已学血咒。默认从当前场景的战斗目标中选择；没有同场景战斗时显示当前场景目标。选择1–2个不同的血咒，每个血咒的普通／增幅互斥，可分配给同一或不同目标。依次进入各血咒的通常使用配置，次数与免耗依各自设置及装备规则结算，不提前要求总剩余次数；总共占用一次附赠动作或反应。反应仍须符合所选血咒的触发条件。取消后不施放尚未开始的血咒，已完成的消耗保留。</p>`;
   return description;
 }
 
@@ -799,15 +895,15 @@ function nativeReference(item: NativeItemSource, purpose: string): NativeReferen
   };
 }
 
-function dnd5eReference(uuid: string, purpose: string): NativeReferenceContract {
+function officialReference(uuid: string, source: 'dnd5e' | 'dnd-players-handbook', purpose: string): NativeReferenceContract {
   const targetDocumentId = uuid.split('.').at(-1)!;
   return {
-    referenceKey: `dnd5e:${targetDocumentId}`,
+    referenceKey: `${source}:${targetDocumentId}`,
     classification: 'native',
     uuid,
     targetDocumentId,
     resolution: 'direct-uuid',
-    source: 'dnd5e',
+    source,
     purpose,
   };
 }
@@ -1102,16 +1198,19 @@ function advancementSummary(name: string, advancement: JsonObject, target: Desti
 
 function reviewForFeature(feature: CollectedBloodHunterFeature, target: Destination, activities: CoverageActivitySemantic[], effects: CoverageEffectSemantic[], semantic: CoverageSemanticSummary): BloodHunterCoverageLedgerEntry['review'] {
   const name = feature.entry.name;
+  if (feature.entry.ENG_name === 'Brand of Castigation') return { status: 'adjusted', notes: '6级惩戒烙印：原生Activity应用目标Effect，同一施咒者新烙印替换旧烙印。实际应用伤害后，按施咒者本人或10尺内可见生物、智力调整值至少1点结算心灵反噬；单独命中或预览伤害不触发。施加时的血仪武器伤害条件、方向感知及死亡收益仍由玩家处理。' };
   if (isCorrosion(feature)) return { status: 'adjusted', notes: '腐蚀血咒：中毒只由目标回合末成功体质豁免结束；Activity 明确初始/增幅/失血结算，Effect 删除 sourceEnd；4d6 失败重复伤害需 GM 辅助。' };
   if (isTimedMutagen(feature)) return { status: 'adjusted', notes: `${name}：饮用 Activity 连接对应诱变剂 Effect；Effect 明确为 3600 秒，同时保留短休/长休边界。` };
   if (isMobileMutagen(feature)) return { status: 'assisted', notes: '灵活移动：受擒和束缚免疫写入 Effect；11级麻痹免疫不以静态 Effect 冒充动态可靠自动化，升级时由 GM 确认。' };
   if (isHybridTransformation(feature)) return { status: 'assisted', notes: '混种变形：可见 uses/Scale 明确 3级1次、11级2次；18级无限使用超出有限 uses 的可靠表达，已明确转为 GM 辅助。' };
   if (isSanguineMastery(feature)) return { status: 'assisted', notes: '胸有成竹：血法骰双掷保留为可见辅助；短休恢复另一 Item「惩戒烙印」的全部 uses 是跨 Item 操作，不能静默宣称原生完成。' };
   if (isPactMagic(feature)) return { status: 'assisted', notes: '契约魔法：可见 ScaleValue 逐列记录完整血猎手等级的戏法、已知法术、法术位和环阶；标准 pact progression 不等价，GM 按表配置并在休息恢复。' };
-  if (isDuskRite(feature)) return { status: 'assisted', notes: `破晓血仪：Activity 分别为 ${activities.map((activity) => `${activity.name}[${activity.classification}]`).join('、')}；Effect 分别为 ${effects.map((effect) => `${effect.name}[${effect.changes.map((change) => `${change.key}:${change.modeLabel}`).join(',') || 'status'}]`).join('、')}。光照、持握抗性、对不死额外骰保留辅助边界。` };
+  if (isDuskRite(feature)) return { status: 'assisted', notes: `破晓血仪：Activity 分别为 ${activities.map((activity) => `${activity.name}[${activity.classification}]`).join('、')}；Effect 分别为 ${effects.map((effect) => `${effect.name}[${effect.changes.map((change) => `${change.key}:${change.modeLabel}`).join(',') || 'status'}]`).join('、')}。模块根据实际武器装备与附魔关联抗性，CPR／CAT 公开 DamageBonus 自动结算命中不死生物的当前血法骰及重击；光照仍需场景辅助。` };
+  if (feature.entry.ENG_name === 'Blood Curse of the Marked') return { status: 'adjusted', notes: '印记血咒：修正持续到施法者下回合开始，目标 Effect 接入 CAT targetDamageComplete。普通限施法者造成匹配实际激活血仪类型的伤害，增幅允许任何来源的实际伤害；额外血法骰来自施咒者，独立聊天骰卡并计入同次伤害。多种血仪类型无法唯一确定时由操作者选择。' };
+  if (feature.entry.ENG_name === 'Curse Specialist') return { status: 'assisted', notes: '点击特性选择1–2个不同的已学血咒，每个血咒的普通／增幅互斥，可指向同一或不同目标；依次调用正常 Activity，资源按各自配置及装备规则结算，不提前要求总剩余次数，共用一次附赠动作或反应。触发条件、各血咒未自动化的规则仍由玩家确认。' };
   if (target.containerRoute) return { status: 'pass', notes: `${name}：这是 ${target.level} 级的子职触发条目，明确路由到四个子职各自的真实 ItemGrant，不生成空占位 ItemGrant。` };
   if (isWeaponMastery(feature)) return { status: 'pass', notes: '武器精通：使用 dnd5e Trait/mastery，直接提供 weapon:* 的两项选择；不伪装为 feat ItemChoice。' };
-  if (isFightingStyle(feature)) return { status: 'assisted', notes: '战斗风格：直接 pool 四个锁定 dnd5e fighting-style UUID 与模块 synthetic「诱变武者」；后者的公式和配制选择保留 GM 辅助。' };
+  if (isFightingStyle(feature)) return { status: 'assisted', notes: '战斗风格：直接 pool 四个 dnd5e 免费规则、六个可选官方 PHB 2024 UUID 与模块 synthetic「诱变武者」；未安装 PHB 时原生选择器跳过不可用条目，保留免费规则与诱变武者。诱变武者的公式和配制选择保留 GM 辅助。' };
   if (isEpicBoon(feature)) return { status: 'pass', notes: '传奇恩惠：使用完整 AbilityScoreImprovement schema，并精确推荐真实视觉之恩惠 UUID。' };
   const status: BloodHunterCoverageLedgerEntry['review']['status'] = target.automation === 'assisted' || target.automation === 'external-rule' ? 'assisted' : 'pass';
   return { status, notes: `${name}：${semantic.summary} 边界：${semantic.boundary}` };

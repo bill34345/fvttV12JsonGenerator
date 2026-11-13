@@ -5,14 +5,14 @@
     "note": "核对Web上传默认目标、下载JSON和现有任务提示。"
   },
   "markdown-convert": {
-    "fingerprint": "f4ba3cb4310b66cf9e31c9c4da8283d83bf8d67492849fb949207d5c2979453b",
+    "fingerprint": "a79f69372f5db5ddc77585c7d61f69457e0cccda17400b90c10e787067e48405",
     "reviewedOn": "2026-11-13",
-    "note": "核对CLI默认v14、显式v12/v13和原生dnd5e6输出及来源验证。"
+    "note": "共享README更新血猎手独立构建说明；普通生物与物品转换未变。"
   },
   "monster-intake": {
-    "fingerprint": "876ef3fd5a6adecb8935f7214a1a63b5db130482e634c519eb718a9c6ca8e496",
+    "fingerprint": "9cfc44123ea7c5542b43239c73b55754bb15571c6644d51a1c9c4fae77558960",
     "reviewedOn": "2026-11-13",
-    "note": "核对默认目标、既有来源链及生物候选与审查分离；旧运行证据保留。"
+    "note": "共享README更新血猎手模块；生物Intake、结果交付与核对步骤未变。"
   },
   "item-intake": {
     "fingerprint": "20742603328edcb1427a5f9184d308394db36528f53c7d22ac36c755f96efa03",
@@ -30,29 +30,29 @@
     "note": "已对照文档规则：仅报告/元数据显示改变且原MD、顺序、候选及下游行为有未变证据时缩小验收；正文或消费变化/证据不足仍核完整来源链。"
   },
   "vault-sync": {
-    "fingerprint": "1c82def1cbcd0eeddabbadfcf28f766ca5fda6785e147fe3dcad48e15e538969",
+    "fingerprint": "a2013dd8602ae39fa5d2740450a6e2d61d859e081839d6c0ed25058c3cdbe0bc",
     "reviewedOn": "2026-11-13",
-    "note": "核对共享目标默认14及原有同步范围和写入边界。"
+    "note": "共享README更新血猎手模块；Vault同步入口与范围未变。"
   },
   "goddessfantasy-crawl": {
-    "fingerprint": "47d03f2396d59230cf77a47663a7344028599af48fdea5c2e2cf96efe3e239c7",
+    "fingerprint": "40768b4901167c284fbcd9bc163b73e05ac32aece800dc7a844c04b56c6fa77d",
     "reviewedOn": "2026-11-13",
-    "note": "共享README更新了生成器版本；该工具的采集入口和权限边界未改。"
+    "note": "共享README更新血猎手模块；抓取入口、结果及权限未变。"
   },
   "artwork-icons": {
-    "fingerprint": "a828c4396f5f9bdf5a98555851c9ac7a97e3adc73ddf6fc5a1115dcece6310e6",
+    "fingerprint": "5e4db848c8cf7838d29929702cfb97c3f5240a2070881fbcb5351cf200a62272",
     "reviewedOn": "2026-11-13",
-    "note": "核对14.370/6.0.6图标索引、safe可选且默认off、审阅报告及低置信边界。"
+    "note": "共享README更新血猎手模块；生成器图标规则未变，血猎手图标另见本模块手册。"
   },
   "legacy-text": {
-    "fingerprint": "0655e3a4653a5babf1bbd5bf393f69377bb2e74b42dc21e28d33e9d23ecd7ed5",
+    "fingerprint": "cc5bd0a66280750aec4266154851fa049f115f4ec4f3664c16dae4c315da5f39",
     "reviewedOn": "2026-11-13",
-    "note": "共享README更新了生成器版本；旧纯文本入口及写入约束保持。"
+    "note": "共享README更新血猎手模块；旧纯文本入口及转换规则未变。"
   },
   "json-translation": {
-    "fingerprint": "4a287323ac939e8c41202a3c4c79116d31373b1d987e2585b45ba4947bd35f0f",
+    "fingerprint": "2dd3648f82274020d9b9a507bf69d20e89460b53579259af0ae9b59cb8805659",
     "reviewedOn": "2026-11-13",
-    "note": "共享README更新了生成器版本；独立JSON翻译队列的入口和输出规则未改。"
+    "note": "共享README更新血猎手模块；JSON翻译入口与结果未变。"
   },
   "foundry-ops": {
     "fingerprint": "43a40b33c09c5c4b1dd131f7e786d533dd052910f0a878514a5ab9f2c6d461f9",
@@ -60,9 +60,9 @@
     "note": "对照tools/foundry-ops/AGENTS.md，仅将Bun版本依据从已删除CI配置改为根README；本地检查包装、临时沙箱、只读依赖、生产权限、目标路径和失败关闭要求保持。"
   },
   "verification-development": {
-    "fingerprint": "35bf78500678fa13997ac502de717438ef91e3ac8587d344876cbea1ff64a631",
+    "fingerprint": "e5a012f8c004bbb8956be32fbd8d898593be142b00aa5d715cfd7e21463d1091",
     "reviewedOn": "2026-11-13",
-    "note": "核对原生6来源、正式验收报告的版本与字段检查、离线边界和历史证据。"
+    "note": "血猎手编译与测试走受控临时根；版本与本地构建说明见模块条目。"
   },
   "human-encounter-intake": {
     "fingerprint": "18480831d4d3c65a7afe21846f6d5e798455d8059cf1ffff4abd753910dd26ee",
@@ -115,9 +115,9 @@
     "note": "已核6.0.6 FireI事务、Region成本/linked falling、重载、非GM入口和权限拒绝及原生清理代表链。绘制仍仅向GM开放；全目录、更多组合、长时和生产范围未扩大。 本次AGENTS同步同一限定接受，不改变操作权限。"
   },
   "fvtt-blood-hunter-2024": {
-    "fingerprint": "d6d7cb0acc4538716e943714e8a4782775c40b3d5b7f00667f86469ca9c23bdb",
+    "fingerprint": "d380c35f3bed83ba37f023a562cb18cb07d31863905f94e991946f75f637e776",
     "reviewedOn": "2026-11-13",
-    "note": "共享README更新；本批未带入血猎手版本或玩法改动，保留原说明。"
+    "note": "核对原生6来源、自备输入和本地构建、破晓、双血咒、烙印和印记原卡结算；不提供预构建包。"
   },
   "fvtt-homebrew-species": {
     "fingerprint": "8ab4da7ae0c36f43fa6c9c7bade468465d85feb5c03091ff6d7bccf1c656e495",

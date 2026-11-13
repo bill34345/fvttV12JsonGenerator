@@ -22,10 +22,12 @@ import {
   createLabConfig,
   type BloodHunterLabConfig,
 } from './labConfig.ts';
+import { buildLegacyIconIndex } from './legacyIconIndex.ts';
+import type { LegacyIconIndex } from './src/legacy-icons.ts';
 
 export const MODULE_ID = 'fvtt-blood-hunter-2024' as const;
-export const MODULE_VERSION = '1.0.0' as const;
-const SERVER_NEXT_DND5E_COMPATIBILITY_MAXIMUM = '6.0.6' as const;
+export const MODULE_VERSION = '1.1.4' as const;
+const SERVER_NEXT_DND5E_COMPATIBILITY_MAXIMUM = '6.999.999' as const;
 export const EXPECTED_ACTIVITY_COUNT = 117;
 export const EXPECTED_LEDGER_COUNT = 94;
 export const EXPECTED_EFFECT_CHANGE_COUNT = 72;
@@ -44,12 +46,21 @@ export const EXPECTED_DND5E_EXTERNAL_UUIDS = [
   'Compendium.dnd5e.feats24.Item.phbfstGreatWeapo',
   'Compendium.dnd5e.feats24.Item.phbfstTwoWeaponF',
 ] as const;
+export const EXPECTED_OPTIONAL_PHB_FIGHTING_STYLE_UUIDS = [
+  'Compendium.dnd-players-handbook.feats.Item.phbfstDueling000',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstIntercepti',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstBlindFight',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstProtection',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstThrownWeap',
+  'Compendium.dnd-players-handbook.feats.Item.phbfstUnarmedFig',
+] as const;
 
 // The list is a release contract, not a compiler implementation. Build still
 // discovers UUIDs recursively from the compiler result and compares both sets.
 const EXPECTED_EXTERNAL_UUIDS = new Set<string>(EXPECTED_DND5E_EXTERNAL_UUIDS);
 
 const EXTERNAL_UUID_PATTERN = /Compendium\.dnd5e\.[A-Za-z0-9_-]+\.Item\.[A-Za-z0-9]{16}/g;
+const OPTIONAL_PHB_UUID_PATTERN = /Compendium\.dnd-players-handbook\.[A-Za-z0-9_-]+\.Item\.[A-Za-z0-9]{16}/g;
 const PACK_NAMES = ['classes', 'subclasses', 'features'] as const;
 const ITEM_SUBLEVEL = 'items' as const;
 const ITEM_EFFECT_SUBLEVEL = 'items.effects' as const;
@@ -105,7 +116,8 @@ export interface ModuleInspection {
 
 export async function buildBloodHunterModule(options: BuildOptions): Promise<BuildResult> {
   const config = options.config ?? createLabConfig();
-  const target = options.target === 'server-next' ? BLOOD_HUNTER_DND6_TARGET : BLOOD_HUNTER_V14_TARGET;
+  if (options.target === 'legacy') throw new Error('The legacy dnd5e 5.3.3 build entrypoint is retired. Use the default Core 14 / dnd5e 6 build.');
+  const target = BLOOD_HUNTER_DND6_TARGET;
   const sourcePath = resolve(options.sourcePath);
   if (!isAbsolute(options.sourcePath)) throw new Error('--source must be an absolute JSON file path.');
   const raw = await readFile(sourcePath);
@@ -119,8 +131,8 @@ export async function buildBloodHunterModule(options: BuildOptions): Promise<Bui
   try {
     const candidateA = resolve(temporaryRoot, 'candidate-a');
     const candidateB = resolve(temporaryRoot, 'candidate-b');
-    const firstCandidate = await writeCandidate(candidateA, first, config, externalDnd5eUuids);
-    const secondCandidate = await writeCandidate(candidateB, second, config, externalDnd5eUuids);
+    const firstCandidate = await writeCandidate(candidateA, first, config, externalDnd5eUuids, buildLegacyIconIndex(raw, first));
+    const secondCandidate = await writeCandidate(candidateB, second, config, externalDnd5eUuids, buildLegacyIconIndex(raw, second));
     const inspectedA = await inspectModuleTree(firstCandidate.moduleRoot, config, true);
     const inspectedB = await inspectModuleTree(secondCandidate.moduleRoot, config, true);
     assertDeterministicArtifacts(inspectedA, inspectedB, first, second);
@@ -161,7 +173,7 @@ export async function buildBloodHunterModule(options: BuildOptions): Promise<Bui
   }
 }
 
-export function compileNative(raw: Uint8Array, target = BLOOD_HUNTER_V14_TARGET): NativeBloodHunterPackage {
+export function compileNative(raw: Uint8Array, target = BLOOD_HUNTER_DND6_TARGET): NativeBloodHunterPackage {
   return compileBloodHunterV14Package({ source: raw, target });
 }
 
@@ -182,10 +194,14 @@ export function assertNativePackage(pkg: NativeBloodHunterPackage): void {
 }
 
 export function collectExternalDnd5eUuids(value: unknown): string[] {
+  return collectExternalItemUuids(value, EXTERNAL_UUID_PATTERN);
+}
+
+function collectExternalItemUuids(value: unknown, pattern: RegExp): string[] {
   const found = new Set<string>();
   function visit(candidate: unknown): void {
     if (typeof candidate === 'string') {
-      for (const match of candidate.matchAll(EXTERNAL_UUID_PATTERN)) found.add(match[0]);
+      for (const match of candidate.matchAll(pattern)) found.add(match[0]);
       return;
     }
     if (Array.isArray(candidate)) {
@@ -201,6 +217,7 @@ export function collectExternalDnd5eUuids(value: unknown): string[] {
 }
 
 export async function assertExternalReferenceCompleteness(pkg: NativeBloodHunterPackage, config: BloodHunterLabConfig): Promise<string[]> {
+  await assertOptionalPhbFightingStyleReferences(pkg);
   const actual = collectExternalDnd5eUuids(pkg);
   if (actual.length !== EXPECTED_EXTERNAL_UUIDS.size) throw new Error(`Expected ${EXPECTED_EXTERNAL_UUIDS.size} recursive dnd5e external Item UUIDs, found ${actual.length}.`);
   const missing = [...EXPECTED_EXTERNAL_UUIDS].filter((uuid) => !actual.includes(uuid));
@@ -211,6 +228,24 @@ export async function assertExternalReferenceCompleteness(pkg: NativeBloodHunter
   const absentFromReference = actual.filter((uuid) => !referenceIds.has(uuid.split('.').at(-1)!));
   if (absentFromReference.length > 0) throw new Error(`dnd5e reference cache is missing external Item UUIDs: ${absentFromReference.join(', ')}`);
   return actual;
+}
+
+async function assertOptionalPhbFightingStyleReferences(pkg: NativeBloodHunterPackage): Promise<void> {
+  const expected = [...EXPECTED_OPTIONAL_PHB_FIGHTING_STYLE_UUIDS].sort();
+  const actual = collectExternalItemUuids(pkg, OPTIONAL_PHB_UUID_PATTERN);
+  if (canonicalJson(actual) !== canonicalJson(expected)) throw new Error('Optional PHB Fighting Style UUID set must contain exactly the six locked official 2024 references.');
+  const index = await readJson(resolve(import.meta.dir, '../../packages/blood-hunter-v14/src/fighting-style-reference-index.json'));
+  const source = asRecord(index.source);
+  const entries = asArray<Record<string, unknown>>(index.entries);
+  if (source.module !== 'dnd-players-handbook' || source.version !== '2.1.0' || source.core !== '14.370'
+    || source.system !== '6.0.6+local.3' || source.pack !== 'dnd-players-handbook.feats'
+    || canonicalJson(entries.map((entry) => String(entry.uuid)).sort()) !== canonicalJson(expected)
+    || entries.some((entry) => entry.type !== 'feat' || entry.featureType !== 'feat' || entry.subtype !== 'fightingStyle'
+      || entry.rules !== '2024' || !entry.name || !entry.identifier
+      || canonicalJson(asRecord(entry.prerequisites).items) !== canonicalJson(['fighting-style'])
+      || asRecord(entry.prerequisites).level !== null || asRecord(entry.prerequisites).repeatable !== false)) {
+    throw new Error('Optional PHB Fighting Style metadata must retain its locked official source, 2024 category, and native prerequisite.');
+  }
 }
 
 async function collectReferenceDocumentIds(root: string): Promise<Set<string>> {
@@ -298,7 +333,7 @@ interface CandidateResult {
   zipSha256: string;
 }
 
-async function writeCandidate(root: string, pkg: NativeBloodHunterPackage, config: BloodHunterLabConfig, externalDnd5eUuids: string[]): Promise<CandidateResult> {
+async function writeCandidate(root: string, pkg: NativeBloodHunterPackage, config: BloodHunterLabConfig, externalDnd5eUuids: string[], legacyIconIndex: LegacyIconIndex): Promise<CandidateResult> {
   const moduleRoot = resolve(root, 'module');
   await mkdir(moduleRoot, { recursive: true });
   const sourceManifest = resolve(config.moduleRoot, 'src/module.json');
@@ -306,7 +341,7 @@ async function writeCandidate(root: string, pkg: NativeBloodHunterPackage, confi
   if (pkg.target.dnd5e === BLOOD_HUNTER_DND6_TARGET.dnd5e) {
     const manifest = await readJson(resolve(moduleRoot, 'module.json'));
     validateManifest(manifest);
-    manifest.compatibility = { minimum: '14.368', verified: '14.368', maximum: '14.368' };
+    manifest.compatibility = { minimum: '14.368', verified: '14.368', maximum: '14.999' };
     const dnd5e = asArray<Record<string, any>>(asRecord(manifest.relationships).systems).find((system) => system.id === 'dnd5e');
     if (!dnd5e) throw new Error('Blood Hunter source manifest lacks its dnd5e system dependency.');
     dnd5e.compatibility = { minimum: '6.0.2', verified: '6.0.2', maximum: SERVER_NEXT_DND5E_COMPATIBILITY_MAXIMUM };
@@ -373,6 +408,7 @@ async function writeCandidate(root: string, pkg: NativeBloodHunterPackage, confi
   await writeJson(resolve(moduleRoot, 'data/canonical-package.json'), pkg);
   await writeJson(resolve(moduleRoot, 'data/migration-contract.json'), migrationContract);
   await writeJson(resolve(moduleRoot, 'data/identity-manifest.json'), identity);
+  await writeJson(resolve(moduleRoot, 'data/legacy-icon-index.json'), legacyIconIndex);
   await writeJson(resolve(moduleRoot, 'data/coverage-ledger.json'), pkg.coverageLedger);
   await writeJson(resolve(moduleRoot, 'data/review.json'), review);
   await writeJson(resolve(moduleRoot, 'data/owned-marker.json'), { schemaVersion: 1, owned: true, moduleId: MODULE_ID, version: MODULE_VERSION, logicalHash: pkg.logicalHash });
@@ -663,7 +699,8 @@ export function validateManifest(manifest: Record<string, unknown>): void {
   if (manifest.id !== MODULE_ID || manifest.version !== MODULE_VERSION) throw new Error('Blood Hunter module manifest ID/version mismatch.');
   const compatibility = asRecord(manifest.compatibility);
   const foundry = compatibility.verified;
-  if (!['14.364', '14.368'].includes(foundry) || compatibility.minimum !== foundry || compatibility.maximum !== foundry) throw new Error('Blood Hunter module manifest must pin an exact supported Foundry version.');
+  if (!['14.364', '14.368'].includes(foundry) || compatibility.minimum !== foundry
+    || (![foundry, '14.999', ...(foundry === '14.368' ? ['14.369'] : [])].includes(compatibility.maximum))) throw new Error('Blood Hunter module manifest must retain its projection baseline and the supported Core 14 range.');
   if (!Array.isArray(manifest.esmodules) || canonicalJson(manifest.esmodules) !== canonicalJson(['scripts/index.js'])) throw new Error('Blood Hunter module manifest must load scripts/index.js.');
   const relationships = asRecord(manifest.relationships);
   if (Object.prototype.hasOwnProperty.call(relationships, 'requires')) throw new Error('Blood Hunter module must not have hard module dependencies.');
@@ -671,11 +708,11 @@ export function validateManifest(manifest: Record<string, unknown>): void {
   const dnd5e = systems.find((system) => system.id === 'dnd5e');
   const systemCompatibility = asRecord(dnd5e?.compatibility);
   const dnd5eVersion = foundry === '14.368' ? '6.0.2' : '5.3.3';
-  const maximumDnd5eVersions = foundry === '14.368' ? [dnd5eVersion, '6.0.5', SERVER_NEXT_DND5E_COMPATIBILITY_MAXIMUM] : [dnd5eVersion];
-  if (!dnd5e || systemCompatibility.minimum !== dnd5eVersion || systemCompatibility.verified !== dnd5eVersion || !maximumDnd5eVersions.includes(systemCompatibility.maximum)) throw new Error('Blood Hunter module manifest must preserve its exact projection version and reviewed runtime maximum.');
+  const maximumDnd5eVersions = foundry === '14.368' ? [dnd5eVersion, '6.0.5', '6.0.6', SERVER_NEXT_DND5E_COMPATIBILITY_MAXIMUM] : [dnd5eVersion];
+  if (!dnd5e || systemCompatibility.minimum !== dnd5eVersion || systemCompatibility.verified !== dnd5eVersion || !maximumDnd5eVersions.includes(systemCompatibility.maximum)) throw new Error('Blood Hunter module manifest must preserve its exact projection version and supported runtime range.');
   const recommends = asArray<Record<string, unknown>>(relationships.recommends);
   const recommendedIds = recommends.map((entry) => entry.id).sort();
-  if (canonicalJson(recommendedIds) !== canonicalJson(['dae', 'midi-qol'].sort())) throw new Error('Blood Hunter module must recommend exactly MIDI-QOL and DAE.');
+  if (canonicalJson(recommendedIds) !== canonicalJson(['dae', 'midi-qol', 'chris-premades', 'cat'].sort())) throw new Error('Blood Hunter module must recommend MIDI-QOL, DAE, CPR and CAT.');
   const serialized = JSON.stringify(manifest).toLocaleLowerCase('en');
   if (serialized.includes('plutonium') || serialized.includes('classpack')) throw new Error('Blood Hunter module manifest must not depend on Plutonium or classpack.');
   const packs = asArray<Record<string, unknown>>(manifest.packs);
@@ -693,13 +730,14 @@ export function projectBloodHunterServerNext606Manifest(manifest: Record<string,
   const systems = asArray<Record<string, unknown>>(asRecord(manifest.relationships).systems);
   const system = systems[0];
   const compatibility = asRecord(system?.compatibility);
-  if (foundry.minimum !== '14.368' || foundry.verified !== '14.368' || foundry.maximum !== '14.368'
+  if (foundry.minimum !== '14.368' || foundry.verified !== '14.368' || !['14.368', '14.369', '14.999'].includes(foundry.maximum)
     || systems.length !== 1 || system?.id !== 'dnd5e' || system.type !== 'system'
     || compatibility.minimum !== '6.0.2' || compatibility.verified !== '6.0.2'
-    || !['6.0.2', '6.0.5'].includes(compatibility.maximum)) {
-    throw new Error('Blood Hunter manifest overlay requires one previously reviewed ServerNext dnd5e 6.0.2/6.0.5 candidate.');
+    || !['6.0.2', '6.0.5', '6.0.6', SERVER_NEXT_DND5E_COMPATIBILITY_MAXIMUM].includes(compatibility.maximum)) {
+    throw new Error('Blood Hunter manifest overlay requires one previously reviewed ServerNext dnd5e 6.0.2/6.0.5/6.0.6 candidate.');
   }
   const projected = structuredClone(manifest);
+  asRecord(projected.compatibility).maximum = '14.999';
   asRecord(asArray<Record<string, unknown>>(asRecord(projected.relationships).systems)[0]?.compatibility).maximum = SERVER_NEXT_DND5E_COMPATIBILITY_MAXIMUM;
   validateManifest(projected);
   return projected;
@@ -755,20 +793,15 @@ async function publishDist(config: BloodHunterLabConfig, candidate: string): Pro
   const stage = resolve(config.moduleRoot, `.dist-staging-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   assertInsideRoot(config.moduleRoot, stage, 'Blood Hunter dist staging');
   await cp(candidate, stage, { recursive: true, force: false, errorOnExist: true });
-  let previous: string | undefined;
   try {
     if (await exists(distRoot)) {
       const stats = await lstat(distRoot);
       if (stats.isSymbolicLink() || !stats.isDirectory()) throw new Error(`Existing Blood Hunter dist is unsafe: ${distRoot}`);
-      previous = resolve(config.moduleRoot, `.dist-previous-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-      await rename(distRoot, previous);
+      await rm(distRoot, { recursive: true });
     }
     await rename(stage, distRoot);
-    if (previous) await rm(previous, { recursive: true, force: true });
   } catch (error) {
-    if (await exists(stage)) await rm(stage, { recursive: true, force: true });
-    if (previous && await exists(previous) && !(await exists(distRoot))) await rename(previous, distRoot).catch(() => undefined);
-    throw error;
+    throw new Error(`Blood Hunter dist publication failed without creating a backup; staging is retained: ${stage}`, { cause: error });
   }
 }
 

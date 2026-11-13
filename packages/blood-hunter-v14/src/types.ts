@@ -76,7 +76,8 @@ export interface NativeReferenceContract {
   /** The terminal Foundry document id in `uuid`; always a strict 16-char id. */
   targetDocumentId: string;
   resolution: 'direct-uuid';
-  source: 'module' | 'dnd5e';
+  /** PHB references are optional; native ItemChoice omits documents from unavailable packs. */
+  source: 'module' | 'dnd5e' | 'dnd-players-handbook';
   purpose: string;
 }
 
@@ -200,7 +201,7 @@ export interface BloodHunterActivitySummary {
 
 export interface NativeBloodHunterPackage {
   moduleId: 'fvtt-blood-hunter-2024';
-  version: '1.0.0';
+  version: '1.1.4';
   target: {
     foundry: '14.364' | '14.368';
     dnd5e: '5.3.3' | '6.0.2';
@@ -270,7 +271,7 @@ export interface NativeBloodHunterMigrationAction {
 
 export interface NativeBloodHunterMigrationPlan {
   moduleId: 'fvtt-blood-hunter-2024';
-  version: '1.0.0';
+  version: '1.1.4';
   actions: NativeBloodHunterMigrationAction[];
   mergePolicy: MigrationMergePolicy;
 }
