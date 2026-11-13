@@ -1,4 +1,11 @@
-Third-party licenses for libraries bundled in scripts/index.js
+Third-party licenses for libraries distributed with FVTT JSON Forge
+
+PDF.js / pdfjs-dist 6.4.299 - Apache-2.0
+=======================================
+The unmodified PDF.js reader, worker, CMaps and standard fonts are distributed
+under vendor/pdfjs. See vendor/pdfjs/LICENSE and the licenses included in its
+cmaps/ and standard_fonts/ directories. These files are loaded locally; no CDN
+is used by the PDF reader.
 
 parse5 7.3.0 - MIT
 ==================

@@ -18,6 +18,7 @@ import { readForgeSessionSettings, subscribeForgeSessionSettings } from './setti
 import { claimForgeAiJob, releaseForgeAiJob } from './aiJobGate';
 import { assertExactRuntime, assertGm } from './runtime';
 import { createEncounterAssetPort, importForgeEncounter, listForgeEncounterMacros, startForgeEncounterMacro, type EncounterImportResult } from './encounterRuntime';
+import { readForgePdfInput, type ForgePdfInputReceipt } from './pdfInput';
 
 
 
@@ -31,6 +32,8 @@ export function createForgeEncounterApplicationClass(environment: {
   reviewForgeEncounterCandidate?:typeof reviewForgeEncounterCandidate;
   recoveryStore?:EncounterRecoveryStore;
   openAiConnection?:()=>void;
+  initialPdfFile?:File;
+  readForgePdfInput?:typeof readForgePdfInput;
 }): any {
   const { game, foundry, ui } = environment;
   const Base = foundry.applications.api.HandlebarsApplicationMixin(foundry.applications.api.ApplicationV2);
@@ -47,9 +50,14 @@ export function createForgeEncounterApplicationClass(environment: {
     private status = '选择生物导入文件，预览角色、召唤物和配套宏。';
     private error = '';
     private controller?: AbortController;
-    private fileRevision = 0;
+    private fileRevision = environment.initialPdfFile ? 1 : 0;
     private humanSource='';
     private humanLabel='多生物战斗资料';
+    private pdfFile = environment.initialPdfFile;
+    private pdfMonster='';
+    private pdfPages='';
+    private pdfReceipt?:ForgePdfInputReceipt;
+    private pdfAttempt?:ForgePdfInputReceipt;
     private outputLanguage:'source'|'zh-CN'='source';
     private translationReport:EncounterLocalizationProgress[]=[];
     private localizationDraft?:ForgeEncounterLocalizationDraft;
@@ -222,17 +230,21 @@ export function createForgeEncounterApplicationClass(environment: {
           reusedCandidate:deliveryReport?.actors.find(actor=>actor.key===member.key)?.reusedCandidate===true,
           strictStatus:candidate?.strictStatus,findings:[...member.findings,...(invalid?[invalid]:[])],source:candidate?.source};
       });
+      const pdfReading=this.pdfAttempt??this.pdfReceipt;
       return {busy:this.busy, importing:this.importing, reviewed:this.reviewed, ready:!!this.prepared,
         actorDeliveries,partialCandidates:!this.prepared&&actorDeliveries.some(actor=>actor.available),
         configuredConditions,canConfigureConditions:typeof game.modules?.get?.('fvtt-custom-conditions')?.api?.configuredConditions?.openEditor==='function',
         humanSource:this.humanSource,humanLabel:this.humanLabel,aiRunning:this.aiRunning,
+        pdfFileName:this.pdfFile?.name,pdfMonster:this.pdfMonster,pdfPages:this.pdfPages,
+        pdfReceipt:pdfReading,pdfReceiptText:pdfReading?JSON.stringify(pdfReading,null,2):undefined,
+        pdfSource:pdfReading?.source,pdfDoubts:[...new Set([...(pdfReading?.doubts??[]),...(pdfReading?.failures??[])])],
         chineseSelected:this.outputLanguage==='zh-CN',localized:!!this.prepared?.bundle.localization,
         terminologyNotes:LOCALIZATION_TERM_NOTES,terminologyReferences:[...new Set(LOCALIZATION_TERMS.map(term=>term.reference).filter(reference=>reference.startsWith('https:')))],
         localPage:['127.0.0.1','localhost','[::1]'].includes((globalThis as any).location?.hostname),
         hasReport:!!this.aiReport||this.translationReport.length>0||!!this.prepared?.bundle.localization,hasPackage:!!this.prepared,aiFindings:[...(this.aiReport?.findings??[]),...(this.prepared?.reviewFindings??[])],
         reportDownload:this.reportDownload,
         textView:this.textView,reportViewText:this.textView?.kind==='report'?this.textView.text:undefined,
-        recoveryAvailable:!!this.recoveryReport?.actors.some(hasRetainedActorSource) && !this.busy && !this.prepared,
+        recoveryAvailable:!!this.recoveryReport?.actors.some(hasRetainedActorSource) && this.recoveryReport.source===this.humanSource && !this.pdfFile && !this.busy && !this.prepared,
         recoveryPackageAvailable:!!this.recoveryPackage&&!this.prepared&&!this.busy,
         hasLocalRecovery:!!this.recoveryStore&&(!!this.humanSource||!!this.recoveryReport||!!this.recoveryPackage||this.status.startsWith('本地任务恢复不可用')||this.status.startsWith('此前任务')),
         recoveryDraftCount:this.recoveryReport?.actors.filter(hasRetainedActorSource).length??0,
@@ -310,19 +322,29 @@ export function createForgeEncounterApplicationClass(environment: {
         const button=root.querySelector<HTMLButtonElement>('[data-action="encounter-import"]');if(button)button.disabled=true;
       };
       const source=root.querySelector<HTMLTextAreaElement>('[name="humanSource"]');
-      if(source)source.oninput=()=>{if(this.busy)return;this.humanSource=source.value;invalidate();};
+      if(source)source.oninput=()=>{if(this.busy)return;this.humanSource=source.value;this.pdfFile=undefined;this.pdfReceipt=undefined;this.pdfAttempt=undefined;
+        root.querySelector('[data-pdf-reading]')?.remove();root.querySelector('[data-pdf-input]')?.remove();invalidate();};
       const label=root.querySelector<HTMLInputElement>('[name="humanLabel"]');
       if(label)label.oninput=()=>{if(this.busy)return;this.humanLabel=label.value;invalidate(true);};
       const language=root.querySelector<HTMLSelectElement>('[name="outputLanguage"]');
       if(language)language.onchange=()=>{if(this.busy)return;this.outputLanguage=language.value==='zh-CN'?'zh-CN':'source';invalidate(true);void this.render();};
       const sourceFile=root.querySelector<HTMLInputElement>('[name="humanSourceFile"]');
       if(sourceFile)sourceFile.onchange=()=>{if(this.busy)return;const chosen=sourceFile.files?.[0];if(!chosen)return;
-        invalidate();const revision=this.fileRevision;
+        invalidate();const revision=++this.fileRevision;
+        if(/\.pdf$/iu.test(chosen.name)){
+          this.pdfFile=chosen;this.pdfMonster='';this.pdfPages='';this.pdfAttempt=undefined;
+          this.status='已选择 PDF；填写生物名称后直接生成，读取完成后会自动继续。';void this.render();return;
+        }
+        this.pdfFile=undefined;this.pdfReceipt=undefined;this.pdfAttempt=undefined;
         this.humanSource='';if(source)source.value='';
         this.busy=true;this.readingSource=true;this.status='正在读取原始MD文件。';void this.render();
         void chosen.text().then(text=>{if(this.closed||revision!==this.fileRevision)return;this.humanSource=text;this.humanLabel=chosen.name.replace(/\.(md|txt)$/i,'');this.status='原始资料已读取，可以开始AI生成。';this.queueRecoverySave();})
           .catch(()=>{if(revision===this.fileRevision)this.error='无法读取原始MD文件。';})
           .finally(()=>{if(revision!==this.fileRevision)return;this.busy=false;this.readingSource=false;if(!this.closed)void this.render();});};
+      const pdfMonster=root.querySelector<HTMLInputElement>('[name="pdfMonster"]');
+      if(pdfMonster)pdfMonster.oninput=()=>{if(this.busy)return;this.pdfMonster=pdfMonster.value;invalidate(true);};
+      const pdfPages=root.querySelector<HTMLInputElement>('[name="pdfPages"]');
+      if(pdfPages)pdfPages.oninput=()=>{if(this.busy)return;this.pdfPages=pdfPages.value;invalidate(true);};
       const file=root.querySelector<HTMLInputElement>('[name="encounterFile"]');
       if(file)file.onchange=()=>{if(this.busy)return;this.clearReportPresentation();this.file=file.files?.[0];this.fileRevision++;this.prepared=undefined;this.generationReviewBinding=undefined;this.result=undefined;this.aiReport=undefined;this.recoveryReport=undefined;this.recoveryPackage=undefined;this.recoveryUploadedHash=undefined;this.recoveryUploadedProgress=undefined;this.recoveryUploadedDraft=undefined;this.translationReport=[];this.localizationDraft=undefined;this.translationReviewed=false;this.reviewFilter='all';this.actorFilter='';this.reviewed=false;this.error='';this.queueRecoverySave();void this.render();};
       const reviewed=root.querySelector<HTMLInputElement>('[name="encounterReviewed"]');
@@ -343,6 +365,8 @@ export function createForgeEncounterApplicationClass(environment: {
       bind('encounter-localize',()=>this.translatePrepared());
       bind('encounter-approve-localization',()=>this.approveLocalization());
       bind('encounter-ai',()=>this.generateFromHuman());
+      bind('encounter-pdf-md-download',()=>{const receipt=this.pdfAttempt??this.pdfReceipt;if(!this.busy&&receipt?.source)download(`${receipt.requestedMonster}.md`,receipt.source,'text/markdown');});
+      bind('encounter-pdf-receipt-download',()=>{const receipt=this.pdfAttempt??this.pdfReceipt;if(!this.busy&&receipt)download('forge-pdf-source.json',JSON.stringify(receipt,null,2),'application/json');});
       bind('encounter-resume',()=>this.generateFromHuman(true));
       bind('encounter-recover-preview',()=>this.previewRecovered());
       bind('encounter-clear-recovery',()=>this.clearCurrentRecovery());
@@ -412,9 +436,11 @@ export function createForgeEncounterApplicationClass(environment: {
     private async generateFromHuman(resume=false){
       if(this.busy||this.readingSource||this.closed)return;
       await this.loadRecovery();
+      if(this.pdfFile&&!this.pdfMonster.trim()){this.error='请输入 PDF 中要读取的生物名称。';void this.render();return;}
       if(!claimForgeAiJob(this)){this.error='已有Forge AI任务运行，请等待完成。';void this.render();return;}
       const controller=new AbortController();this.controller=controller;
-      const source=this.humanSource;const label=this.humanLabel;const revision=this.fileRevision;
+      let source=this.humanSource;let label=this.humanLabel;const revision=this.fileRevision;
+      const pdfFile=this.pdfFile;
       const prior=this.recoveryReport;
       const priorPresentation={prepared:this.prepared,recoveryPackage:this.recoveryPackage,translationReport:this.translationReport,
         localizationDraft:this.localizationDraft,recoveredReview:this.recoveredReview,aiReport:this.aiReport,recoveryReport:this.recoveryReport,result:this.result};
@@ -430,6 +456,20 @@ export function createForgeEncounterApplicationClass(environment: {
         if(!options&&!localResume)throw new Error('请先在Intake连接页配置AI服务。');
         const generatedOptionsHash=options?connectionOptionsHash(options):'',generationSessionRevision=this.sessionRevision;
         if(options)this.rememberSecrets(options);
+        if(pdfFile){
+          if(!options)throw new Error('PDF 整理需要当前 Forge AI 连接。');
+          this.progressDetail='正在读取 PDF 原文与版面。';
+          const receipt=await (environment.readForgePdfInput??readForgePdfInput)({file:pdfFile,monster:this.pdfMonster.trim(),pages:this.pdfPages},options,controller.signal,
+            progress=>{if(this.closed||this.controller!==controller||revision!==this.fileRevision)return;this.status=progress;this.progressDetail=progress;void this.render();});
+          const retainedOnCancel=controller.signal.aborted&&receipt.status==='cancelled'&&!!receipt.source.trim()&&receipt.outputs.length>0;
+          if(this.closed||this.controller!==controller||revision!==this.fileRevision||controller.signal.aborted&&!retainedOnCancel)throw new Error('PDF 读取已取消，原资料保留。');
+          this.pdfAttempt=receipt;
+          if(!receipt.source.trim()||!receipt.outputs.length)throw new Error([...receipt.failures,...receipt.doubts].join('\n')||'PDF 没有读到可生成的生物资料。');
+          this.pdfReceipt=receipt;this.pdfAttempt=undefined;this.pdfFile=undefined;
+          source=this.humanSource=receipt.source;label=this.humanLabel=receipt.requestedMonster;
+          this.checkpointEnabled=true;this.queueRecoverySave();
+          if(controller.signal.aborted)throw new Error('PDF 读取已取消；已取得的原语言 MD 与来源记录保留，尚未继续生成。');
+        }
         assertEncounterSecretsAbsent(source,this.forbiddenValues);
         assertEncounterSecretsAbsent(label,this.forbiddenValues);
         this.checkpointEnabled=true;
@@ -502,7 +542,7 @@ export function createForgeEncounterApplicationClass(environment: {
         this.status=retainPrior?'本次生成未完成；原候选和保存记录已保留，可继续查看和下载。':'生成未完成；已保存的有效草稿可继续。';
         if(!retainPrior)this.queueRecoverySave();
       }
-      finally{releaseForgeAiJob(this);this.busy=false;this.aiRunning=false;if(!this.closed)void this.render();}
+      finally{releaseForgeAiJob(this);this.busy=false;this.aiRunning=false;this.queueRecoverySave();if(!this.closed)void this.render();}
     }
     private async translatePrepared(){
       if(this.busy||this.closed||!this.prepared||this.prepared.bundle.localization)return;
@@ -692,6 +732,7 @@ export function createForgeEncounterApplicationClass(environment: {
           return;
         }
         this.humanSource=loaded.source;this.humanLabel=loaded.label;this.outputLanguage=loaded.outputLanguage;
+        this.pdfReceipt=loaded.pdfReceipt;this.pdfMonster=loaded.pdfReceipt?.requestedMonster??'';
         this.recoveryReport=loaded.report;
         this.generationReviewBinding=undefined;
         this.aiReport=loaded.report;
@@ -715,6 +756,7 @@ export function createForgeEncounterApplicationClass(environment: {
     }
     private async saveRecovery():Promise<void> {
       if(!this.checkpointEnabled||!this.recoveryStore||this.closed)return;
+      if(this.pdfFile)return;
       try {
         this.recoveryBinding();
         if(this.recoveryUploadedHash&&this.recoveryPackage){
@@ -730,7 +772,8 @@ export function createForgeEncounterApplicationClass(environment: {
           assertEncounterSecretsAbsent(JSON.stringify(snapshot),this.forbiddenValues);
           this.pendingSave=this.recoveryStore.save(snapshot);await this.pendingSave;return;
         }
-        if(this.recoveryReport&&this.recoveryReport.source!==this.humanSource)return;
+        const pdfSourceCurrent=this.pdfReceipt?.source===this.humanSource;
+        if(this.recoveryReport&&this.recoveryReport.source!==this.humanSource&&!pdfSourceCurrent)return;
         if(!this.humanSource.trim()||!this.humanLabel.trim()){
           if(this.recoveryReport||this.recoveryPackage)return;
           this.pendingSave=this.recoveryStore.clear();await this.pendingSave;return;
@@ -739,10 +782,11 @@ export function createForgeEncounterApplicationClass(environment: {
         const options=environment.getRecoverySecrets?.()??(()=>{const current=readForgeSessionSettings();return{apiKey:current.apiKey,baseUrl:current.endpoint,otherKeys:Object.values(current.savedApiKeys)};})();
         this.rememberSecrets(options);
         const binding=this.recoveryBinding();
-        const report=this.recoveryReport?.source===this.humanSource&&this.recoveryReport.sourceHash===hashSource(this.humanSource)
+        const report=this.recoveryReport&&(this.recoveryReport.source===this.humanSource&&this.recoveryReport.sourceHash===hashSource(this.humanSource)||pdfSourceCurrent)
           &&this.recoveryCatalogHash===binding.catalogHash?this.recoveryReport:undefined;
         const snapshot:EncounterRecoverySnapshot={version:1,source:this.humanSource,sourceHash:hashSource(this.humanSource),
           label:this.humanLabel,outputLanguage:this.outputLanguage,...binding,...(report?{report}:{}),
+          ...(pdfSourceCurrent?{pdfReceipt:this.pdfReceipt}:{}),
           ...(report&&this.recoveryPackage?{package:this.recoveryPackage}:{}),
           ...(report&&this.translationReport.length?{translationReport:this.translationReport}:{})};
         assertEncounterSecretsAbsent(JSON.stringify(snapshot),this.forbiddenValues);
@@ -755,6 +799,7 @@ export function createForgeEncounterApplicationClass(environment: {
       this.controller?.abort();this.fileRevision++;
       if(this.saveTimer){clearTimeout(this.saveTimer);this.saveTimer=undefined;}
       this.clearReportPresentation();this.humanSource='';this.humanLabel='多生物战斗资料';this.outputLanguage='source';
+      this.pdfFile=undefined;this.pdfReceipt=undefined;this.pdfAttempt=undefined;this.pdfMonster='';this.pdfPages='';
       this.prepared=undefined;this.generationReviewBinding=undefined;this.result=undefined;this.reviewed=false;this.aiReport=undefined;
       this.recoveryReport=undefined;this.recoveryPackage=undefined;this.recoveryUploadedHash=undefined;this.recoveryUploadedProgress=undefined;this.recoveryUploadedDraft=undefined;this.recoveredReview=false;this.translationReport=[];this.localizationDraft=undefined;this.translationReviewed=false;this.progressDetail='';
       try {if(this.recoveryStore){this.pendingSave=this.recoveryStore.clear();await this.pendingSave;}
@@ -809,7 +854,7 @@ export function createForgeEncounterApplicationClass(environment: {
     }
     private currentActorReport():EncounterIntakeReport|undefined{
       const report=this.aiReport;
-      return report?.source===this.humanSource&&report.sourceHash===hashSource(this.humanSource)?report:undefined;
+      return report&&report.sourceHash===hashSource(report.source)?report:undefined;
     }
     private currentActorText(key:string):string{
       assertGm(game);assertExactRuntime(game);

@@ -510,24 +510,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       this.bind(root, 'analyze', () => void this.analyze(root));
       this.bind(root, 'connection-open', () => this.openConnectionSettings());
       this.bind(root, 'structured-open', () => this.openStructuredImport());
-      this.bind(root, 'encounter-open', () => {
-        if (this.directoryKind !== 'Actor' || this.busy() || this.batchApplying) return;
-        try { assertGm(environment.game); assertExactRuntime(environment.game);
-          const Encounter = createForgeEncounterApplicationClass({ ...environment, foundry: foundryGlobal,
-            getAiOptions:controller=>this.encounterAiProviderOptions(controller),
-            openAiConnection:()=>this.openConnectionSettings(),
-            getAiWaitPolicy:controller=>({
-              cycleMs:BROWSER_AI_WAIT_CYCLE_MS,
-              cyclesBeforeDecision:BROWSER_AI_WAIT_CYCLES_BEFORE_DECISION,
-              onDecision:async(status: IntakeRequestWaitStatus)=>{
-                const decision=await this.promptAiWaitDecision(status);
-                if(decision==='stop')controller.abort();
-                return decision;
-              },
-            }) });
-          new Encounter().render(true);
-        } catch (error) { this.notify('error', messageOf(error)); }
-      });
+      this.bind(root, 'encounter-open', () => this.openEncounter());
       this.bind(root, 'repair', () => void this.repair(root));
       this.bind(root,'download-actor',()=>{
         const form=readForm(root),candidate=this.generation as BrowserActorGenerationResult|undefined;
@@ -1603,10 +1586,35 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       } catch (error) { this.notify('error', messageOf(error)); }
     }
 
+    private openEncounter(initialPdfFile?: File): void {
+      if (this.directoryKind !== 'Actor' || this.busy() || this.batchApplying) return;
+      try {
+        assertGm(environment.game); assertExactRuntime(environment.game);
+        const Encounter = createForgeEncounterApplicationClass({ ...environment, foundry: foundryGlobal, initialPdfFile,
+          getAiOptions: controller => this.encounterAiProviderOptions(controller),
+          openAiConnection: () => this.openConnectionSettings(),
+          getAiWaitPolicy: controller => ({
+            cycleMs: BROWSER_AI_WAIT_CYCLE_MS,
+            cyclesBeforeDecision: BROWSER_AI_WAIT_CYCLES_BEFORE_DECISION,
+            onDecision: async (status: IntakeRequestWaitStatus) => {
+              const decision = await this.promptAiWaitDecision(status);
+              if (decision === 'stop') controller.abort();
+              return decision;
+            },
+          }) });
+        new Encounter().render(true);
+      } catch (error) { this.notify('error', messageOf(error)); }
+    }
+
     private async readSourceFile(root: HTMLElement, input: HTMLInputElement): Promise<void> {
       if (this.busy() || this.creating) return;
       const file = input.files?.[0];
       if (!file) return;
+      if (this.directoryKind === 'Actor' && /\.pdf$/iu.test(file.name)) {
+        this.openEncounter(file);
+        input.value = '';
+        return;
+      }
       // Selecting a file is itself a source change. Invalidate the old
       // accepted result before awaiting File.text(), then capture a new
       // revision so a later manual edit/clear can win the race.

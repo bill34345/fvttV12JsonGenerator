@@ -1,6 +1,7 @@
 import { cp, lstat, mkdir, readFile, readdir, realpath, rm } from 'node:fs/promises';
 import { statSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
+import { FORGE_PDF_ENGINE_VERSION } from '@fvtt-json-generator/forge-browser-runtime/pdf-types';
 
 export const MODULE_ID = 'fvtt-json-forge' as const;
 export const MODULE_VERSION = '0.5.1' as const;
@@ -45,6 +46,7 @@ export async function buildModule(): Promise<{ moduleRoot: string; files: string
   await cp(resolve(sourceRoot, 'templates/forge-guide.hbs'), resolve(moduleRoot, 'templates/forge-guide.hbs'));
   await cp(resolve(sourceRoot, 'guide'), resolve(moduleRoot, 'guide'), { recursive: true });
   await cp(resolve(sourceRoot, 'styles/fvtt-json-forge.css'), resolve(moduleRoot, 'styles/fvtt-json-forge.css'));
+  await copyPdfReaderAssets(resolve(moduleRoot, 'vendor/pdfjs'));
 
   const manifest = JSON.parse(await readFile(resolve(moduleRoot, 'module.json'), 'utf8')) as Record<string, unknown>;
   validateManifest(manifest);
@@ -53,6 +55,21 @@ export async function buildModule(): Promise<{ moduleRoot: string; files: string
 
   const files = await collectFiles(moduleRoot);
   return { moduleRoot, files: files.map((file) => relative(moduleRoot, file).replace(/\\/g, '/')) };
+}
+
+export async function copyPdfReaderAssets(destination: string): Promise<void> {
+  const packagePath = Bun.resolveSync('pdfjs-dist/package.json', resolve(repoRoot, 'packages/forge-browser-runtime'));
+  const pdfRoot = resolve(packagePath, '..');
+  const manifest = JSON.parse(await readFile(packagePath, 'utf8'));
+  if (manifest.version !== FORGE_PDF_ENGINE_VERSION) throw new Error('Forge PDF package version differs from the reader contract.');
+  await mkdir(destination, { recursive: true });
+  for (const file of ['pdf.mjs', 'pdf.worker.mjs']) {
+    await cp(resolve(pdfRoot, 'build', file), resolve(destination, file));
+  }
+  for (const directory of ['cmaps', 'standard_fonts']) {
+    await cp(resolve(pdfRoot, directory), resolve(destination, directory), { recursive: true });
+  }
+  await cp(resolve(pdfRoot, 'LICENSE'), resolve(destination, 'LICENSE'));
 }
 
 export interface BrowserBundleOptions {

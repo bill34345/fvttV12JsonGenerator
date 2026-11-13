@@ -9,6 +9,10 @@
     "tools/*"
   ],
   "scripts": {
+    "test:forge-pdf-core": "bun run src/tools/runHermeticFoundryScript.ts test:forge-pdf-core:raw",
+    "test:forge-pdf-core:raw": "bun test tests/forge-pdf-source.test.ts tests/forge-pdf-reader.test.ts --max-concurrency 1",
+    "test:forge-pdf-input": "bun run src/tools/runHermeticFoundryScript.ts test:forge-pdf-input:raw",
+    "test:forge-pdf-input:raw": "bun test foundry-modules/fvtt-json-forge/tests/pdf-input.test.ts foundry-modules/fvtt-json-forge/tests/pdf-workflow.test.ts --max-concurrency 1",
     "test:forge-creature-type": "bun run src/tools/runHermeticFoundryScript.ts test:forge-creature-type:raw",
     "test:forge-creature-type:raw": "bun test tests/forge-creature-type-projection.test.ts --max-concurrency 1",
     "test:forge-prompt-consolidation": "bun run src/tools/runHermeticFoundryScript.ts test:forge-prompt-consolidation:raw",

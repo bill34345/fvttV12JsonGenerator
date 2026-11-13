@@ -34,10 +34,10 @@
             <textarea name="source" rows="14" placeholder="在这里粘贴生物或物品的完整规则描述……" spellcheck="false" required></textarea>
           </label>
           <div class="forge-source-file-panel">
-            <label class="forge-source-file">读取 Markdown / TXT
-              <input name="sourceFile" type="file" accept=".md,.txt,text/plain,text/markdown">
+            <label class="forge-source-file">读取 Markdown / TXT{{#if isActorDirectory}} / PDF{{/if}}
+              <input name="sourceFile" type="file" accept=".md,.txt,text/plain,text/markdown{{#if isActorDirectory}},.pdf,application/pdf{{/if}}">
             </label>
-            <small>读取后仍可编辑来源文本。</small>
+            <small>读取后仍可编辑来源文本。{{#if isActorDirectory}}PDF 会打开同一 Forge 的生物生成流程，填写生物名后直接读取并生成。{{/if}}</small>
           </div>
         </div>
 

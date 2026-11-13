@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./provider-response-evidence": "./src/provider-response-evidence.ts",
     "./localization": "./src/localization.ts",
     "./encounter-automation": "./src/encounter-automation.ts",
     ".": "./src/index.ts",

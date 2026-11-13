@@ -3,7 +3,20 @@
   <p>提供完整生物资料。若能力涉及召唤其他生物或物件，可同时提供其资料和规则；这仍属于生物生成。AI提取生物与配套配置，工具使用已实现的能力生成控制入口。AI不编写宏代码；资料缺项会显示出来，确认导入前不创建角色或启动自动化。</p>
   <label>资料名称<input name="humanLabel" value="{{humanLabel}}" maxlength="160" {{#if busy}}disabled{{/if}}></label>
   <label>卡片语言<select name="outputLanguage" {{#if busy}}disabled{{/if}}><option value="source" {{#unless chineseSelected}}selected{{/unless}}>保留来源语言</option><option value="zh-CN" {{#if chineseSelected}}selected{{/if}}>中文正文 · 中文标题保留英文对照</option></select></label>
-  <label>读取原始MD或TXT<input name="humanSourceFile" type="file" accept=".md,.txt,text/plain,text/markdown" {{#if busy}}disabled{{/if}}></label>
+  <label>读取 PDF、MD 或 TXT<input name="humanSourceFile" type="file" accept=".pdf,.md,.txt,application/pdf,text/plain,text/markdown" {{#if busy}}disabled{{/if}}></label>
+  {{#if pdfFileName}}<section class="forge-pdf-input" data-pdf-input>
+    <p>已选择 PDF：{{pdfFileName}}。读取完成后会自动继续生成，默认保留原语言。</p>
+    <label>PDF 中的生物名称<input name="pdfMonster" value="{{pdfMonster}}" placeholder="例如 Aboleth" {{#if busy}}disabled{{/if}}></label>
+    <label>物理页码（可选）<input name="pdfPages" value="{{pdfPages}}" placeholder="例如 258 或 72-73；留空自动定位" {{#if busy}}disabled{{/if}}></label>
+  </section>{{/if}}
+  {{#if pdfReceipt}}<details data-pdf-reading><summary>PDF 读取来源 · {{pdfReceipt.sourceName}}</summary>
+    <p>目标：{{pdfReceipt.requestedMonster}} · 共 {{pdfReceipt.pageCount}} 页 · {{pdfReceipt.engine}} {{pdfReceipt.engineVersion}}</p>
+    {{#if pdfDoubts}}<ul>{{#each pdfDoubts}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+    {{#if pdfSource}}<label>已读取的原语言 Markdown<textarea data-pdf-source readonly rows="12">{{pdfSource}}</textarea></label>
+    <button type="button" data-action="encounter-pdf-md-download" {{#if busy}}disabled{{/if}}>下载原语言 MD</button>{{/if}}
+    <label>页码、坐标与读取记录<textarea data-pdf-receipt readonly rows="8">{{pdfReceiptText}}</textarea></label>
+    <button type="button" data-action="encounter-pdf-receipt-download" {{#if busy}}disabled{{/if}}>下载 PDF 来源记录</button>
+  </details>{{/if}}
   <label>原始生物资料<textarea name="humanSource" rows="10" maxlength="24000" {{#if busy}}disabled{{/if}}>{{humanSource}}</textarea></label>
   <p>使用“Forge · AI 连接”中保存的当前 Provider、模型与凭据。原始资料最多24000字符，支持1至6种生物；单只生物也可携带需 GM 裁定的规则。AI 内容复核已暂时关闭，生成、翻译和恢复均不会请求该复核。</p>
   <p>明确的单只完整生物数据可在本地识别，省略模型发现请求。单只生物通过结构与转换检查且没有声明配套机制时，不请求控制配置、不创建空宏；复杂规则继续走配套审核与GM处理。</p>

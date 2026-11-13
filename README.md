@@ -26,6 +26,8 @@ Actor、Item、单文件、合集、Vault Sync、CLI 和 Web Job 共享 `parse �
 
 `fvtt-json-forge` 是面向 GM 的浏览器模块。当前候选支持 Foundry `14.364`／`14.368`、dnd5e `5.3.3`、`core`，提供生物及关联召唤物生成、独立 Item 生成、来源库、审核记录、完整候选恢复，以及顺序执行的可恢复批量队列。当前分支实现及限定验收见模块说明和唯一当前状态；本地候选通过不代表已发布或部署到生产。
 
+生物 AI 来源支持直接选择文字型 PDF，填写目标生物名后自动得到原语言 MD 并继续生成；可选物理页码，默认保留来源语言。PDF 来源记录及 MD 可查看、下载和恢复，无需另开转换服务；扫描件 OCR 尚不支持。操作与实际接受范围见[模块 PDF 说明](foundry-modules/fvtt-json-forge/README.zh-CN.md#在-forge-中读取-pdf)。
+
 2026-10-17共用契约候选将同一能力的攻击、伤害、独立豁免与次数分别保留，完整特殊规则明确交GM；多个来源明确的共享法术池分别计次，真实施法继续交目标世界Resolver匹配。排版整理使用原文行身份，完整能力事实仍逐项核对来源，不能因后果复杂而整体变成文字占位。旧卡、旧失败原件和CLI默认版本保留，旧卡不自动迁移。本轮离线、正常DeepSeek与实机进度见[执行记录](docs/plans/2026-10-17-forge-common-contract-restoration.md)，未完成层级不算通过。
 
 正式发行版通过 Foundry Setup 的 **Install Module** 安装，manifest URL 为：

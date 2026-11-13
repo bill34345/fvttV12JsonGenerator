@@ -5,10 +5,12 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { assertBrowserBundleSafe, buildBrowserBundle, buildModule, validateManifest } from '../build';
 import { encounterFixture } from '../../../tests/helpers/forge-encounter';
+import { expectedForgePdfAssets } from '../../../tests/helpers/forge-pdf-assets';
 
 describe('FVTT JSON Forge browser build', () => {
   test('contains only the exact manifest, browser entry, template, and stylesheet', async () => {
     const result = await buildModule();
+    const pdfAssets = await expectedForgePdfAssets();
     expect(result.files).toEqual([
       'guide/generic-status-source.md',
       'guide/generic-status.forge-encounter.zip',
@@ -27,7 +29,11 @@ describe('FVTT JSON Forge browser build', () => {
       'templates/forge-item.hbs',
       'templates/forge-workspace.hbs',
       'third-party-licenses.txt',
+      ...pdfAssets.map(asset => asset.name),
     ]);
+    for (const asset of pdfAssets) {
+      expect(await readFile(resolve(result.moduleRoot, asset.name))).toEqual(await readFile(asset.source));
+    }
     const manifest = JSON.parse(await readFile(resolve(result.moduleRoot, 'module.json'), 'utf8')) as Record<string, unknown>;
     validateManifest(manifest);
     const bundle = await readFile(resolve(result.moduleRoot, 'scripts/index.js'), 'utf8');

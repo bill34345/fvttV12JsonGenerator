@@ -2,6 +2,7 @@ import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
 import { decodeForgeEncounterPackageText, encounterPackageHash } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import { assertEncounterSecretsAbsent, type EncounterIntakeReport } from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import type { EncounterLocalizationProgress, ForgeEncounterLocalizationDraft } from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
+import type { ForgePdfInputReceipt } from './pdfInput';
 
 export interface SourceEncounterRecoverySnapshot {
   version: 1;
@@ -15,6 +16,7 @@ export interface SourceEncounterRecoverySnapshot {
   report?: EncounterIntakeReport;
   package?: string;
   translationReport?: EncounterLocalizationProgress[];
+  pdfReceipt?: ForgePdfInputReceipt;
   packageHash?: never;
   packageSha256?: never;
 }
@@ -177,6 +179,10 @@ export function decodeEncounterRecovery(value: string): EncounterRecoverySnapsho
     || typeof record.catalogHash !== 'string' || !/^[a-f0-9]{64}$/.test(record.catalogHash)
     || typeof record.target !== 'string' || !/^14\.(?:364|368)\/dnd5e\/5\.3\.3\/core$/.test(record.target))
     throw new TypeError('生物生成任务记录与来源或目标不符。');
+  if(record.pdfReceipt!==undefined&&!isPdfReceipt(record.pdfReceipt,record.source)){
+    delete record.pdfReceipt;
+    warnings.push('保存的 PDF 页码／坐标记录与原语言 MD 不符；已有 MD 和 Actor 保留。');
+  }
   if(record.sourceHash!==hashSource(record.source as string))warnings.push('保存来源的指纹与正文不同；已保存内容保留。');
   if (record.report !== undefined) {
     const report = record.report as Partial<EncounterIntakeReport>;
@@ -215,6 +221,27 @@ export function decodeEncounterRecovery(value: string): EncounterRecoverySnapsho
     throw new TypeError('无效的中文审核进度。');
   if(warnings.length)record.recoveryWarnings=[...new Set(warnings)];
   return record as unknown as EncounterRecoverySnapshot;
+}
+
+function isPdfReceipt(value:unknown,source:string):value is ForgePdfInputReceipt {
+  if(!value||typeof value!=='object'||Array.isArray(value))return false;
+  const receipt=value as Partial<ForgePdfInputReceipt>;
+  return receipt.version===1&&receipt.source===source&&typeof receipt.sourceName==='string'
+    &&typeof receipt.sourceSha256==='string'&&/^[a-f0-9]{64}$/u.test(receipt.sourceSha256)
+    &&typeof receipt.requestedMonster==='string'&&typeof receipt.engine==='string'&&typeof receipt.engineVersion==='string'
+    &&Number.isSafeInteger(receipt.pageCount)&&receipt.pageCount! > 0
+    &&['completed','with_doubts','not_found','failed','cancelled'].includes(receipt.status??'')
+    &&Array.isArray(receipt.sourcePages)&&Array.isArray(receipt.outputs)&&Array.isArray(receipt.calls)
+    &&(receipt.responses===undefined||Array.isArray(receipt.responses)&&receipt.responses.every(response=>response
+      &&Number.isSafeInteger(response.pass)&&response.pass>0&&typeof response.content==='string'))
+    &&Array.isArray(receipt.doubts)&&receipt.doubts.every(entry=>typeof entry==='string')
+    &&Array.isArray(receipt.failures)&&receipt.failures.every(entry=>typeof entry==='string')
+    &&receipt.sourcePages.every(page=>page&&Number.isSafeInteger(page.pageNumber)&&page.pageNumber>0&&page.pageNumber<=receipt.pageCount!
+      &&Array.isArray(page.lines)&&Array.isArray(page.rawItems))
+    &&receipt.outputs.every(output=>output&&typeof output.name==='string'&&typeof output.markdown==='string'
+      &&Array.isArray(output.sourceLineIds)&&output.sourceLineIds.every(id=>typeof id==='string')
+      &&Array.isArray(output.pageNumbers)&&output.pageNumbers.every(page=>Number.isSafeInteger(page)&&page>0&&page<=receipt.pageCount!)
+      &&Array.isArray(output.doubts)&&output.doubts.every(entry=>typeof entry==='string'));
 }
 
 function scanSecrets(value: unknown): void {

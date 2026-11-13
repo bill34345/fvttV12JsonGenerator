@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { DOWNLOAD_URL, MANIFEST_URL, MODULE_ID, MODULE_VERSION, RELEASE_TAG } from '../build';
+import { expectedForgePdfAssets } from '../../../tests/helpers/forge-pdf-assets';
 import {
   RELEASE_ARCHIVE_NAME,
   RELEASE_CHECKSUM_NAME,
@@ -19,6 +20,7 @@ describe('FVTT JSON Forge release package', () => {
     expect(second.releaseTag).toBe(RELEASE_TAG);
     expect(second.archiveSha256).toBe(first.archiveSha256);
     expect(secondArchive).toEqual(firstArchive);
+    const pdfAssets = await expectedForgePdfAssets();
     expect(second.archiveEntries).toEqual([
       'guide/generic-status-source.md',
       'guide/generic-status.forge-encounter.zip',
@@ -37,9 +39,13 @@ describe('FVTT JSON Forge release package', () => {
       'templates/forge-item.hbs',
       'templates/forge-workspace.hbs',
       'third-party-licenses.txt',
+      ...pdfAssets.map(asset => asset.name),
     ]);
 
     const archive = readStoredZip(secondArchive);
+    for (const asset of pdfAssets) {
+      expect(archive.get(asset.name)).toEqual(new Uint8Array(await readFile(asset.source)));
+    }
     expect(new TextDecoder().decode(archive.get('third-party-licenses.txt'))).toBe(await readFile(new URL('../src/third-party-licenses.txt',import.meta.url),'utf8'));
     const archivedManifest = JSON.parse(new TextDecoder().decode(archive.get('module.json'))) as Record<string, unknown>;
     const releaseManifest = JSON.parse(await readFile(second.manifestPath, 'utf8')) as Record<string, unknown>;

@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./pdf-source": "./src/pdfSource.ts",
+    "./pdf-reader": "./src/pdfReader.ts",
+    "./pdf-types": "./src/pdfTypes.ts",
     "./native-status-riders": "./src/nativeStatusRiders.ts",
     "./encounter-localization": "./src/encounterLocalization.ts",
     ".": "./src/index.ts",
@@ -37,6 +40,7 @@
     "@fvtt-json-generator/parser": "workspace:*",
     "@fvtt-json-generator/workflows": "workspace:*",
     "js-yaml": "^4.1.1",
-    "opencc-js": "^1.0.5"
+    "opencc-js": "^1.0.5",
+    "pdfjs-dist": "6.4.299"
   }
 }

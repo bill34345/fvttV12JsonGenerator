@@ -1,6 +1,7 @@
 import { sha256 } from '@fvtt-json-generator/contracts/hash';
 import { localizationHash } from '@fvtt-json-generator/contracts/localization';
 import {sanitizeFailureReply,type TransportFailureEvidence,type TransportFailureDiagnostic} from './transport-failure-evidence';
+export { sanitizeFailureReply } from './transport-failure-evidence';
 
 /** Deterministic syntax recovery only. Hashes bind the complete original
  * response and the unchanged values; only object punctuation is adjusted. */
