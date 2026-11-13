@@ -1,3 +1,4 @@
+import { isForgeRuntimeTargetSupported } from './nativeTarget';
 import { hashArtifact, hashSource, type Sha256 } from '@fvtt-json-generator/forge-gateway-protocol';
 import {
   decodeForgeIntakeReviewBundleText,
@@ -473,7 +474,7 @@ export function createForgeBatchApplyManifest(
     }
     const expectedDocumentId = hashArtifact({ sourceId: candidate.sourceId }).slice(0, 16);
     if (!/^[0-9a-f]{16}$/u.test(candidate.documentId) || candidate.documentId !== expectedDocumentId) throw new TypeError(`${path}/documentId is not the deterministic Forge identity.`);
-    if ((candidate.target.fvttVersion !== '14.364' && candidate.target.fvttVersion !== '14.368') || candidate.target.systemId !== 'dnd5e' || candidate.target.systemVersion !== '5.3.3'
+    if (!isForgeRuntimeTargetSupported(candidate.target.fvttVersion, candidate.target.systemVersion) || candidate.target.systemId !== 'dnd5e'
       || candidate.target.generatorProfile !== 'v14' || candidate.target.effectProfile !== 'core'
       || !['off', 'safe'].includes(candidate.target.iconMode)
       || candidate.target.iconMode !== proof.target?.iconMode) {

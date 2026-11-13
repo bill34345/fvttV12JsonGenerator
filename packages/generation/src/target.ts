@@ -1,4 +1,5 @@
 import type { FvttTargetVersion, FoundryTarget } from '@fvtt-json-generator/contracts/target';
+import { FOUNDRY_V14_CORE_VERSION, DND5E_V14_SYSTEM_VERSION } from '@fvtt-json-generator/contracts/target';
 
 export type { FvttTargetVersion, FoundryTarget } from '@fvtt-json-generator/contracts/target';
 
@@ -31,20 +32,20 @@ const TARGETS: Record<FvttTargetVersion, FoundryTarget> = {
   },
   '14': {
     fvttVersion: '14',
-    dnd5eVersion: '5.3.3',
+    dnd5eVersion: DND5E_V14_SYSTEM_VERSION,
     stats: {
-      coreVersion: '14.364',
+      coreVersion: FOUNDRY_V14_CORE_VERSION,
       systemId: 'dnd5e',
-      systemVersion: '5.3.3',
+      systemVersion: DND5E_V14_SYSTEM_VERSION,
     },
     reference: {
-      dnd5eRepo: '.local/references/dnd5e/5.3.3/repo',
-      localCache: '.local/references/dnd5e/5.3.3/repo',
+      dnd5eRepo: '.local/references/dnd5e/6.0.6/repo',
+      localCache: '.local/references/dnd5e/6.0.6/repo',
       requiredForGeneration: false,
     },
     modules: {
-      midiQol: '14.0.11',
-      dae: '14.0.12',
+      midiQol: '14.6.7',
+      dae: '14.6.5',
       timesUp: null,
       itemMacro: null,
     },
@@ -53,7 +54,7 @@ const TARGETS: Record<FvttTargetVersion, FoundryTarget> = {
 };
 
 export function parseFvttTargetVersion(value: unknown): FvttTargetVersion {
-  const version = String(value ?? '12');
+  const version = String(value ?? '14');
   if (version === '12' || version === '13' || version === '14') {
     return version;
   }
@@ -68,7 +69,7 @@ export function getFoundryTarget(
   const target = TARGETS[version];
   if (version !== '14' || !options.referenceCacheRoot) return target;
   const cacheRoot = options.referenceCacheRoot.replaceAll('\\', '/').replace(/\/$/, '');
-  const dnd5eRepo = `${cacheRoot}/dnd5e/5.3.3/repo`;
+  const dnd5eRepo = `${cacheRoot}/dnd5e/${DND5E_V14_SYSTEM_VERSION}/repo`;
   return {
     ...target,
     reference: {

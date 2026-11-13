@@ -18,6 +18,7 @@
     "./status-lifecycle": "./src/status-lifecycle.ts",
     "./hash": "./src/hash.ts",
     "./target": "./src/target.ts",
+    "./version-admission": "./src/version-admission.ts",
     "./icon-review": "./src/icon-review.ts"
     ,"./forge-import-lifecycle": "./src/forge-import-lifecycle.ts"
   },

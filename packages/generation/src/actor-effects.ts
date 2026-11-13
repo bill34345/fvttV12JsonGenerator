@@ -246,7 +246,9 @@ export function configureOfficialConditionEffect(effect:any,declaration:Canonica
   const manual=!!declaration.condition||declaration.escapeDc!==undefined||declaration.staged===true||lifecycles.some(life=>life.mode==='gm')||declaration.statuses.includes('exhaustion')||unique.length>1;
   effect.statuses=officialConditionStatuses(declaration.statuses);effect.name=declaration.statuses.map(status=>displayName(SOURCE_NATIVE_FAILURE_LABELS[status as keyof typeof SOURCE_NATIVE_FAILURE_LABELS],status[0]!.toUpperCase()+status.slice(1))).join(' / ');
   effect.disabled=false;effect.transfer=false;effect.img=statusIconPath(declaration.statuses[0]!);
-  if(duration)effect.duration={...effect.duration,...duration};
+  if(duration)effect.duration=Object.hasOwn(effect.duration??{},'value')
+    ? {...effect.duration,value:duration.seconds??duration.rounds,units:duration.seconds===undefined?'rounds':'seconds'}
+    : {...effect.duration,...duration};
   const description=effect.description??'';
   effect.description=[description,...[source,declaration.condition?`适用/结束条件：${declaration.condition}`:'',declaration.duration?`期限：${declaration.duration}`:'',declaration.escapeDc!==undefined?`逃脱 DC ${declaration.escapeDc}`:'',declaration.staged?'分阶段结果由DM选择此模板应用。':'',declaration.statuses.includes('exhaustion')?'Exhaustion级数按原文由DM设置；此模板不推定级数或累加。':'',manual?'DM判断触发与提前解除；此模板可选应用，不代表自动判定完整规则。':''].filter(text=>text&&!description.includes(text))].filter(Boolean).join('\n');
   effect.flags??={};effect.flags.fvttJsonGenerator={...effect.flags.fvttJsonGenerator,conditionLifecycle:{...declaration,version:1,mode:manual?'gm':'native',sourceText:source}};

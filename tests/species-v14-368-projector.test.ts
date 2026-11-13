@@ -14,9 +14,10 @@ const markdown = readFileSync(resolve('obsidian/dnd数据转fvttjson/input/speci
 describe('Species Foundry 14.368 / dnd5e 6.0.2 static candidate projector', () => {
   test('projects exact dnd5e 6 race fields and preserves established identities', () => {
     const next = compileSpeciesMarkdown(markdown, { fvttVersion: '14.368' });
-    const old = compileSpeciesMarkdown(markdown, { fvttVersion: '14' });
-    const publishedOld = JSON.parse(readFileSync(resolve('obsidian/dnd数据转fvttjson/output/species/ogre.json'), 'utf8'));
-    expect(old).toEqual(publishedOld);
+    const old = JSON.parse(readFileSync(resolve('obsidian/dnd数据转fvttjson/output/species/ogre.json'), 'utf8')) as typeof next;
+    const acceptedNext = JSON.parse(readFileSync(resolve('obsidian/dnd数据转fvttjson/output/species/v14-368/ogre.json'), 'utf8'));
+    expect(next).toEqual(acceptedNext);
+    expect(next.logicalHash).toBe('ce06c1c503b2c0e69416414449467655e0299a9c27ccecbfbe9a85e67d7aad41');
     expect(next.target).toEqual(SPECIES_V14_368_TARGET);
     expect(next.logicalHash).not.toBe(old.logicalHash);
     expect(validateNativeSpeciesPackage(next, '14.368')).toEqual({ ok: true, findings: [] });
@@ -63,13 +64,24 @@ describe('Species Foundry 14.368 / dnd5e 6.0.2 static candidate projector', () =
     }
   });
 
+  test('ordinary V14 targets current native6 without relabeling the accepted 6.0.2 source', () => {
+    const current = compileSpeciesMarkdown(markdown, { fvttVersion: '14' });
+    const accepted = compileSpeciesMarkdown(markdown, { fvttVersion: '14.368' });
+    expect(current.target).toEqual({ foundry: '14.370', dnd5e: '6.0.6', effectProfile: 'core', rules: '2024' });
+    expect(validateNativeSpeciesPackage(current, '14')).toEqual({ ok: true, findings: [] });
+    expect(current.logicalHash).not.toBe(accepted.logicalHash);
+    expect(current.species).toEqual(accepted.species);
+    expect(current.features).toEqual(accepted.features);
+    expect(current.coverageLedger).toEqual(accepted.coverageLedger);
+  });
+
   test('projects an independent positive hp bonus through the native effect schema', () => {
     const canonical = parseSpeciesMarkdown(markdown);
     canonical.identifier = 'sturdy-giant';
     canonical.features = [{ id: 'sturdy-frame', name: '坚实身躯', description: '每级生命值增加 5。', parts: [{
       id: 'sturdy-frame-hp', level: 0, automation: 'native', mechanics: [{ kind: 'hp-per-level', value: 5 }],
     }] }];
-    const result = compileCanonicalSpecies(canonical, { fvttVersion: '14.368' });
+    const result = compileCanonicalSpecies(canonical, { fvttVersion: '14' });
     expect(validateNativeSpeciesPackage(result)).toEqual({ ok: true, findings: [] });
     const feature = result.features[0];
     if (!feature) throw new Error('Sturdy Frame feature was not projected');
@@ -89,7 +101,7 @@ describe('Species Foundry 14.368 / dnd5e 6.0.2 static candidate projector', () =
     canonical.movement.walk = 25;
     canonical.senses.darkvision = undefined;
     canonical.features = [{ id: 'watchful-step', name: '警觉步伐', description: '3级起每次短休可使用一次。', parts: [{ id: 'watchful-step-use', level: 3, automation: 'native', mechanics: [{ kind: 'limited-utility', activation: 'reaction', uses: { max: 1, recovery: 'sr' }, consumption: 1, chatFlavor: '按原规则手动处理结果。' }] }] }];
-    const result = compileCanonicalSpecies(canonical, { fvttVersion: '14.368' });
+    const result = compileCanonicalSpecies(canonical, { fvttVersion: '14' });
     expect(validateNativeSpeciesPackage(result)).toEqual({ ok: true, findings: [] });
     expect(result.species.system.movement.speeds.walk).toBe(25);
     expect(result.species.system.senses.ranges.darkvision).toBeNull();
@@ -100,13 +112,13 @@ describe('Species Foundry 14.368 / dnd5e 6.0.2 static candidate projector', () =
     const canonical = parseSpeciesMarkdown(markdown);
     canonical.identifier = 'quiet-giant';
     canonical.features = [{ id: 'quiet-rule', name: '沉默规则', description: '完整保留原文并由GM执行。', parts: [{ id: 'quiet-rule-manual', level: 0, automation: 'gm-assisted', mechanics: [{ kind: 'gm-assisted', boundaries: ['由GM执行。'] }] }] }];
-    const result = compileCanonicalSpecies(canonical, { fvttVersion: '14.368' });
+    const result = compileCanonicalSpecies(canonical, { fvttVersion: '14' });
     expect(validateNativeSpeciesPackage(result).ok).toBeTrue();
     expect(result.features[0]).toMatchObject({ effects: [], system: { activities: {} } });
   });
 
   test('rejects near-valid old fields even when logical hash is recomputed', () => {
-    const root = compileSpeciesMarkdown(markdown, { fvttVersion: '14.368' });
+    const root = compileSpeciesMarkdown(markdown, { fvttVersion: '14' });
     const mutate = (change: (pkg: any) => void) => {
       const pkg = structuredClone(root);
       change(pkg);

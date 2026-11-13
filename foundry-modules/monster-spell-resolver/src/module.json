@@ -6,7 +6,7 @@
   "compatibility": {
     "minimum": "14.364",
     "verified": "14.364",
-    "maximum": "14.368"
+    "maximum": "14.999"
   },
   "esmodules": ["scripts/index.js"],
   "styles": [{ "src": "styles/resolver.css" }],
@@ -22,7 +22,7 @@
         "compatibility": {
           "minimum": "5.3.3",
           "verified": "5.3.3",
-          "maximum": "6.0.6"
+          "maximum": "6.999.999"
         }
       }
     ]

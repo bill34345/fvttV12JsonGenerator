@@ -30,7 +30,7 @@ function itemRequest(content = FINAL_SOURCE): Record<string, unknown> {
       sourceId: ITEM_SOURCE_ID,
       utf8Sha256: hashSource(content),
     },
-    foundryRuntime: { fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3' },
+    foundryRuntime: { fvttVersion: '14.370', systemId: 'dnd5e', systemVersion: '6.0.6' },
     resolvedTarget: { generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' },
   };
 }
@@ -69,11 +69,11 @@ function itemResultBase() {
   return {
     sourceIdentity: { sourceId: ITEM_SOURCE_ID, sourceHash: hashSource(FINAL_SOURCE) },
     target: {
-      fvttRuntimeVersion: '14.364',
+      fvttRuntimeVersion: '14.370',
       generatorProfile: 'v14',
       generatorVersion: '0.1.0',
       systemId: 'dnd5e',
-      systemVersionObserved: '5.3.3',
+      systemVersionObserved: '6.0.6',
       effectProfile: 'core',
       iconMode: 'off',
     },

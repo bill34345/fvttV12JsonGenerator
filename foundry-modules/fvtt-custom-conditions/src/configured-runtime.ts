@@ -169,6 +169,7 @@ export class ConfiguredConditionRuntime {
           await ensureNativeStatusRiders({
             actor, primary: primaries[0], status: native.status,
             configurationFor: id => configuredStatusEffect(this.globals.CONFIG?.statusEffects, id),
+            modifyBatch: entries => this.globals.foundry.documents.modifyBatch(entries),
             dae: this.globals.game?.modules?.get?.('dae'),
             assertLive: () => this.requireGM(actor),
             record: (type, detail) => this.globals.console?.info?.(`[${MODULE_ID}] ${type}`, detail),

@@ -43,7 +43,7 @@ export class PlainTextActorWorkflow {
   public async ingestActors(options: PlainTextActorWorkflowOptions): Promise<PlainTextActorWorkflowResult> {
     const sourcePath = this.resolvePath(options.sourcePath);
     const vaultPath = this.resolvePath(options.vaultPath);
-    const effectProfile = options.effectProfile ?? 'modded-v12';
+    const effectProfile = options.effectProfile ?? 'core';
     const emitDir = join(vaultPath, 'input');
 
     const markdown = await this.dependencies.ingestion.ingest({
@@ -61,7 +61,7 @@ export class PlainTextActorWorkflow {
       ? this.createDryRunSyncResult(vaultPath)
       : await this.dependencies.syncWorkflow.sync({
           vaultPath,
-          fvttVersion: options.fvttVersion ?? '12',
+          fvttVersion: options.fvttVersion ?? '14',
           effectProfile,
           iconOptions: options.iconOptions,
           imageAssets: options.imageAssets,

@@ -106,12 +106,8 @@ export function buildActorVerificationSummaryFromValues(
 
       const acChange = effect.changes.find((change) => change.key.startsWith('system.attributes.ac.'));
       const expectedKey = parsed.kind === 'flat'
-        ? 'system.attributes.ac.flat'
-        : foundryMajor === '14'
-          ? 'system.attributes.ac.formula'
-          : foundryMajor === '12'
-            ? 'system.attributes.ac.bonus'
-            : undefined;
+        ? foundryMajor === '14' ? 'system.attributes.ac.override' : 'system.attributes.ac.flat'
+        : foundryMajor === '14' ? 'system.attributes.ac.value' : 'system.attributes.ac.bonus';
       if (expectedKey && acChange?.key !== expectedKey) {
         warnings.push(
           `Source-derived AC effect on ${item.name} has key ${acChange?.key ?? '<missing>'}, expected ${expectedKey} for Foundry v${foundryMajor}`,
@@ -179,7 +175,7 @@ function verifySourceIdentityAndRecovery(source: string, actor: RecordLike): str
         ?? Math.floor((Math.max(Number(actorDetails.cr ?? 0), Number(actorDetails.level ?? 0), 1) + 7) / 4));
       const score = 10 + Math.floor((Number(ability.value ?? 10) - 10) / 2)
         + Number(skill.value ?? 0) * proficiency
-        + Number(bonuses.check || 0) + Number(bonuses.passive || 0);
+        + Number(getRecord(skill.roll).bonus || bonuses.check || 0) + Number(bonuses.passive || 0);
       if (score !== Number(passive[1])) errors.push('SOURCE_PASSIVE_PERCEPTION_MISMATCH: passive Perception differs from source.');
     }
   }
@@ -236,7 +232,7 @@ function summarizeEffect(value: unknown): EffectSummary {
   const generatorFlags = getRecord(getRecord(effect.flags).fvttJsonGenerator);
   return {
     name: String(effect.name ?? ''),
-    changes: Array.isArray(effect.changes) ? effect.changes.map((change) => summarizeEffectChange(change)) : [],
+    changes: ((getRecord(effect.system).changes ?? effect.changes) as unknown[] | undefined)?.map((change) => summarizeEffectChange(change)) ?? [],
     sourceDerivedAcEffect: generatorFlags.sourceDerivedAcEffect === true,
     sourceText: String(generatorFlags.sourceText ?? ''),
   };

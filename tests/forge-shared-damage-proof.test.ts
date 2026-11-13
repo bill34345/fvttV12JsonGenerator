@@ -29,7 +29,7 @@ test('input field policy: an empty optional damage proof matches omission withou
  expect(emptyNormalized).toEqual(omittedNormalized);expect(empty).toEqual(before);expect(bite(emptyNormalized).sourceOperations[0].proof.damage).toBeUndefined();
  expect(sourceOperationStructureErrors(bite(emptyNormalized).sourceOperations)).toEqual([]);
  const forbidden=async()=>{throw Error('No model permitted');},provider:any={providerName:'frozen',extractionModel:'frozen',reviewModel:'disabled',discover:forbidden,extract:forbidden,review:forbidden,repair:forbidden};
- const input={source:fixture.source,sourceName:'Ankheg',sourceScope:'single' as const,fvttVersion:'14.368',systemVersion:'5.3.3',requestId:'optional-empty-proof',sourceId:'actor:v1:17fa7d9b-9f7e-4e55-b627-48bb26937048' as ForgeSourceId};
+ const input={source:fixture.source,sourceName:'Ankheg',sourceScope:'single' as const,fvttVersion:'14.368',systemVersion:'6.0.6',requestId:'optional-empty-proof',sourceId:'actor:v1:17fa7d9b-9f7e-4e55-b627-48bb26937048' as ForgeSourceId};
  const results=[];
  for(const ir of [empty,omitted]){const analysis=analyzeBrowserActorIntakeDraft(input,ir,provider),generation=await generateBrowserActorIntakeCandidate(input,analysis,provider);expect(generation.candidateAvailable).toBe(true);expect(generation.findings).toEqual([]);results.push(generation.candidateResponse);}
  expect(results[0]).toEqual(results[1]);
@@ -89,7 +89,7 @@ test('the saved real Ankheg reply completes the formal chain with no model calls
   const provider:any={id:'offline',model:'saved-reply',reviewModel:'saved-reply',promptVersion:'frozen-real',
     discover:forbidden,extract:forbidden,review:forbidden,repair:forbidden};
   const input={source:fixture.source,sourceName:'Ankheg 2024 frozen first response',sourceScope:'single' as const,
-    fvttVersion:'14.368' as const,systemVersion:'5.3.3',requestId:'shared-proof-regression'};
+    fvttVersion:'14.368' as const,systemVersion:'6.0.6',requestId:'shared-proof-regression'};
   const analysis=analyzeBrowserActorIntakeDraft(input,base(),provider);
   expect(analysis.findings).toEqual([]);
   const result=await generateBrowserActorIntakeCandidate(input,analysis,provider);

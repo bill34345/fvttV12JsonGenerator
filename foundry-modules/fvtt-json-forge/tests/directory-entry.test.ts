@@ -7,7 +7,7 @@ function directory() {
   const host = { append: (button: any) => buttons.push(button) };
   return { buttons, root: { ownerDocument: document, querySelector: (selector: string) => selector === '[data-forge-directory-entry]' ? buttons[0] : selector === '.header-actions' ? host : null } };
 }
-function environment(isGM = true, version = '14.364') { return { game: { user: { isGM }, version, system: { id: 'dnd5e', version: '5.3.3' } } }; }
+function environment(isGM = true, version = '14.370') { return { game: { user: { isGM }, version, system: { id: 'dnd5e', version: '6.0.6' } } }; }
 
 describe('Forge directory entry', () => {
   test('adds one Actor entry across repeated renders without replacing native header contents', () => {

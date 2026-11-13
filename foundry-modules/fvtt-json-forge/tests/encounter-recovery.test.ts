@@ -13,18 +13,26 @@ import { localizationText } from '@fvtt-json-generator/contracts/localization';
 import firstCompanyUi from '../../../tests/fixtures/forge-company-first-ui-recovery.json';
 
 const source = '## 生物一：Night Claw\nIts attack hits a target.\n## 生物二：守卫\n守卫的攻击命中目标。';
-function game() { return { version: '14.368', world: { id: 'world-a' }, system: { id: 'dnd5e', version: '5.3.3' }, user: { id: 'gm-a', isGM: true }, macros: { contents: [] } }; }
+function game() { return { version: '14.368', world: { id: 'world-a' }, system: { id: 'dnd5e', version: '6.0.6' }, user: { id: 'gm-a', isGM: true }, macros: { contents: [] } }; }
 function report(): any { return { version: 1, source, sourceHash: hashSource(source), model: 'first', reviewModel: 'first', evidenceMode: 'exact-quotes-v1',
   status: 'needs_review', actors: [{ key: 'actor-1', start: 0, end: source.indexOf('## 生物二'), source: source.slice(0, source.indexOf('## 生物二')), analysis: { ir: { sample: true }, candidate: { label: 'Night Claw' } } }], findings: ['Review unavailable'] }; }
 function snapshot(overrides: Partial<SourceEncounterRecoverySnapshot> = {}): SourceEncounterRecoverySnapshot {
   const current = game();
   return { version: 1, source, sourceHash: hashSource(source), label: '夜爪与守卫', outputLanguage: 'zh-CN',
-    target: '14.368/dnd5e/5.3.3/core', catalogHash: hashSource(JSON.stringify(configuredConditionsCatalog(current))), report: report(), ...overrides };
+    target: '14.368/dnd5e/6.0.6/core', catalogHash: hashSource(JSON.stringify(configuredConditionsCatalog(current))), report: report(), ...overrides };
 }
+
+test('runtime admission preserves exact recovery targets within the native6 major range', () => {
+  const data = snapshot({ target: '14.370/dnd5e/6.1.0/core' });
+  expect(decodeEncounterRecovery(serializeEncounterRecovery(data)).target).toBe(data.target);
+  for (const target of ['15.0/dnd5e/6.1.0/core', '14.370/dnd5e/7.0.0/core', '14.370/pathfinder2e/6.1.0/core']) {
+    expect(() => serializeEncounterRecovery({ ...data, target })).toThrow();
+  }
+});
 async function uploadedSnapshot(){
   const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(encounterFixture()));
   const serialized=serializeForgeEncounterPackage(prepared.bundle);
-  return {version:2 as const,kind:'uploaded-package' as const,target:'14.368/dnd5e/5.3.3/core',
+  return {version:2 as const,kind:'uploaded-package' as const,target:'14.368/dnd5e/6.0.6/core',
     catalogHash:hashSource(JSON.stringify(configuredConditionsCatalog(game()))),package:serialized,
     packageHash:prepared.hash,packageSha256:hashSource(serialized),translationReport:[]};
 }
@@ -139,7 +147,7 @@ describe('encounter task checkpoint', () => {
   });
 
   test('changed target or catalog retains the saved proposal while corrupt source identity is reported', async () => {
-    for (const stale of [snapshot({ target: '14.364/dnd5e/5.3.3/core' }), snapshot({ catalogHash: 'a'.repeat(64) }), snapshot({ sourceHash: 'b'.repeat(64) })]) {
+    for (const stale of [snapshot({ target: '14.370/dnd5e/6.0.6/core' }), snapshot({ catalogHash: 'a'.repeat(64) }), snapshot({ sourceHash: 'b'.repeat(64) })]) {
       const harness = app({ load: async () => stale, save: async () => undefined });
       const context = await harness.application._prepareContext();
       expect(context.recoveryAvailable).toBe(true);
@@ -174,7 +182,7 @@ describe('encounter task checkpoint', () => {
   test('uploaded package restore reports changed metadata without hiding readable Actor candidates',async()=>{
     const valid=await uploadedSnapshot();
     for(const stale of [{...valid,packageHash:'0'.repeat(64)},
-      {...valid,target:'14.364/dnd5e/5.3.3/core'},
+      {...valid,target:'14.370/dnd5e/6.0.6/core'},
       {...valid,catalogHash:'a'.repeat(64)}]){
       const harness=app({load:async()=>stale,save:async()=>undefined});
       const before=await harness.application._prepareContext();

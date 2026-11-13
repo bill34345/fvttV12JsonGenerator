@@ -35,7 +35,7 @@ async function extract(options:{preserveCandidates?:boolean;maxCorrections?:0|1}
 }
 async function generated(ir:Awaited<ReturnType<typeof extract>>['ir']){
   const markdown=renderMonsterIntakeMarkdown(ir);
-  const response=await convertFinalActorSource(buildForgeActorRequest({content:markdown,displayName:'candidate',requestId:'preserved-candidate',fvttVersion:'14.364',systemVersion:'5.3.3'}));
+  const response=await convertFinalActorSource(buildForgeActorRequest({content:markdown,displayName:'candidate',requestId:'preserved-candidate',fvttVersion:'14.370',systemVersion:'6.0.6'}));
   expect('result'in response).toBe(true);
   if(!('result'in response))throw Error('Missing result');
   return response.result;

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { createBundledIconResolutionSession } from '@fvtt-json-generator/assets-icons/icon-browser';
 import { iconWorkflowAdapter } from '@fvtt-json-generator/assets-icons/icon-adapter';
 import { readFileSync } from 'node:fs';
+import { NATIVE_RECEIVER_CAPTURE } from './helpers/forge-native-receiver';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
@@ -18,6 +19,7 @@ import {
 import {
   buildForgeItemRequest,
   convertFinalItemSource,
+  FORGE_NATIVE_606_TARGET,
 } from '@fvtt-json-generator/forge-browser-runtime';
 import { conversionApplication } from '../src/core/application/conversion';
 import { normalizeForgeItemArtifact } from '../packages/forge-browser-runtime/src/artifact';
@@ -31,10 +33,54 @@ const SHIELD_SOURCE = readFileSync(resolve('obsidian/dnd数据转fvttjson/input/
 const JEWEL_SOURCE = readFileSync(resolve('obsidian/dnd数据转fvttjson/input/items/三祷之坠.md'), 'utf8');
 
 describe('browser Forge Item runtime', () => {
+  test('round-trips the complete captured native receiver Item through the closed response codec',async()=>{
+    const captured=NATIVE_RECEIVER_CAPTURE.cases.find(entry=>entry.kind==='Item')!,runtime=NATIVE_RECEIVER_CAPTURE.provenance;let observedInputHash:string|undefined;
+    expect(String(hashArtifact(captured.input))).toBe(captured.inputHash);expect(String(hashArtifact(captured.output))).toBe(captured.outputHash);
+    const response=await convertFinalItemSource(buildForgeItemRequest({content:captured.source,displayName:captured.key,requestId:'captured-shield',fvttVersion:runtime.core,systemVersion:runtime.systemVersion}),{
+      nativeProjection:{target:FORGE_NATIVE_606_TARGET,runtime:{coreVersion:runtime.core,systemId:runtime.systemId,systemVersion:runtime.systemVersion},project(kind,input){
+        expect(kind).toBe('Item');observedInputHash=hashArtifact(input);return structuredClone(captured.output);
+      }},
+    });
+    expect(observedInputHash).toBe(captured.inputHash);expect(decodeForgeItemResponse(response)).toMatchObject({ok:true});
+    if(!('result' in response)||response.result.status!=='accepted')throw Error(JSON.stringify(response));
+    expect(response.result.status).toBe('accepted');expect(response.result.diagnostics).toEqual([]);
+    expect(response.result.artifact).toEqual(normalizeForgeItemArtifact(captured.output,'14'));
+    expect(response.result.artifactHash).toBe(hashArtifact(response.result.artifact));
+    expect(String(hashArtifact(captured.output))).toBe(captured.outputHash);
+  });
+
+  test('native606: formal Item projection keeps FormulaField literals, all rarity labels and true target',async()=>{
+    const request=buildForgeItemRequest({content:SHIELD_SOURCE,sourceId:ITEM_SOURCE_ID,displayName:'Shield',requestId:'native606-item-port',fvttVersion:'14.369',systemVersion:'6.0.6'});
+    let calls=0;
+    const response:any=await convertFinalItemSource(request,{nativeProjection:{target:FORGE_NATIVE_606_TARGET,project(kind,input){
+      calls++;expect(kind).toBe('Item');expect(input.system.armor.magicalBonus).toBe('2');
+      // Contract double for exact field-reader tests; actual construction is a separate Foundry check.
+      for(const effect of input.effects){expect(effect.duration).toMatchObject({value:null,units:'seconds',expiry:null});
+        effect.duration={value:null,units:'seconds',expiry:null,expired:false};effect.start=null;}
+      input.system.armor.magicalBonus='2';input.system.rarities=['veryRare'];delete input.system.rarity;
+      return input;
+    }}});
+    expect(calls).toBe(1);expect(response.result.target.systemVersionObserved).toBe('6.0.6');
+    if(!response.result.artifact)throw Error(JSON.stringify(response.result.diagnostics));
+    expect(response.result.artifact.system.armor.magicalBonus).toBe('2');
+    expect(response.result.artifact.system.rarities).toEqual(['veryRare']);
+    expect(response.result.itemDocument.rarity).toBe('veryRare');
+    expect(response.result.diagnostics.some((entry:any)=>entry.code==='GEN_ITEM_ARMOR_MISMATCH')).toBe(false);
+  });
+  test('native606: a rejected receiver normalization preserves the native6 review candidate',async()=>{
+    const request=buildForgeItemRequest({content:SHIELD_SOURCE,sourceId:ITEM_SOURCE_ID,displayName:'Shield',requestId:'native606-item-rejected',fvttVersion:'14.369',systemVersion:'6.0.6'});
+    const response:any=await convertFinalItemSource(request,{nativeProjection:{target:FORGE_NATIVE_606_TARGET,project(){throw Error('Native item fixture rejected');}}});
+    expect(response.result.status).toBe('needs_review');expect(response.result.target.systemVersionObserved).toBe('6.0.6');
+    expect(response.result.artifact.system.armor.magicalBonus).toBe('2');
+    expect(response.result.diagnostics.some((entry:any)=>entry.code==='NATIVE_PROJECTION_INCOMPLETE')).toBe(true);
+    const removed:any=await convertFinalItemSource(request,{nativeProjection:{target:FORGE_NATIVE_606_TARGET,project(_kind,input){input.effects=[];return input;}}});
+    expect(removed.result.status).toBe('needs_review');expect(removed.result.artifact).toBeDefined();
+    expect(removed.result.diagnostics.find((entry:any)=>entry.code==='NATIVE_PROJECTION_INCOMPLETE').message).not.toMatch(/[\\/]/u);
+  });
   test('disabled Item review preserves a strict local candidate for GM approval [review disabled]', async () => {
     const source = JEWEL_OF_THREE_PRAYERS_SOURCE;
     const input = { source, sourceName: 'Jewel', displayName: 'Jewel', requestId: 'item-optional-review',
-      fvttVersion: '14.364', systemVersion: '5.3.3' };
+      fvttVersion: '14.370', systemVersion: '6.0.6' };
     let reviews = 0;
     const provider = { providerName: 'fixture', extractionModel: 'fixture', reviewModel: 'fixture',
       discover: async () => ({ schemaVersion: 1 as const, candidates: [jewelCandidate()] }),
@@ -60,7 +106,7 @@ describe('browser Forge Item runtime', () => {
   });
   test.each(['', ' \t '])('falls back from blank Item display name %j before formal generation', async (displayName) => {
     const input = { source: JEWEL_OF_THREE_PRAYERS_SOURCE, sourceName: 'Jewel', displayName,
-      requestId: 'item-blank-display', fvttVersion: '14.368', systemVersion: '5.3.3' };
+      requestId: 'item-blank-display', fvttVersion: '14.368', systemVersion: '6.0.6' };
     const provider = { providerName: 'fixture', extractionModel: 'fixture', reviewModel: 'fixture',
       discover: async () => ({ schemaVersion: 1 as const, candidates: [jewelCandidate()] }),
       extract: async () => buildJewelOfThreePrayersIr(), repair: async (request: any) => request.ir,
@@ -75,7 +121,7 @@ describe('browser Forge Item runtime', () => {
   });
   test('keeps Item generation blocked when both display and source names are blank', async () => {
     const input = { source: JEWEL_OF_THREE_PRAYERS_SOURCE, sourceName: '', displayName: ' ',
-      requestId: 'item-no-name', fvttVersion: '14.368', systemVersion: '5.3.3' };
+      requestId: 'item-no-name', fvttVersion: '14.368', systemVersion: '6.0.6' };
     const provider = { providerName: 'fixture', extractionModel: 'fixture', reviewModel: 'fixture',
       discover: async () => ({ schemaVersion: 1 as const, candidates: [jewelCandidate()] }),
       extract: async () => buildJewelOfThreePrayersIr(), repair: async (request: any) => request.ir,
@@ -91,7 +137,7 @@ describe('browser Forge Item runtime', () => {
   test.each([
     ['12.331', '12', '4.3.9'],
     ['13.340', '12', '4.3.9'],
-    ['14.364', '14', '5.3.3'],
+    ['14.370', '14', '6.0.6'],
   ] as const)('matches the formal Node Shield artifact for FVTT %s', async (fvttVersion, workflowTarget, systemVersion) => {
     const request = buildForgeItemRequest({
       content: SHIELD_SOURCE,
@@ -147,8 +193,8 @@ describe('browser Forge Item runtime', () => {
       sourceId: ITEM_SOURCE_ID,
       displayName: 'Stable Shield',
       requestId: 'stable-shield',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     });
     const runtime = await browserRuntime();
     const first = await runtime.convertFinalItemSource(request);
@@ -168,8 +214,8 @@ describe('browser Forge Item runtime', () => {
       sourceId: ITEM_SOURCE_ID,
       displayName: 'Shield',
       requestId: 'shield-semantics',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }));
     if (!('result' in response) || response.result.status !== 'accepted') {
       throw new Error(`Expected accepted Shield: ${JSON.stringify(response)}`);
@@ -182,7 +228,7 @@ describe('browser Forge Item runtime', () => {
       },
       rarity: 'veryRare',
       attunement: 'required',
-      armor: { value: 2, magicalBonus: 2 },
+      armor: { value: 2, magicalBonus: '2' },
       itemType: { value: 'shield', baseItem: 'shield' },
       properties: ['mgc'],
       weight: { value: 6, units: 'lb' },
@@ -227,8 +273,8 @@ describe('browser Forge Item runtime', () => {
       sourceId: ITEM_SOURCE_ID,
       displayName: 'Jewel',
       requestId: 'jewel-multi-stage',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }));
     const decoded = decodeForgeItemResponse(response);
     expect(decoded.ok).toBe(true);

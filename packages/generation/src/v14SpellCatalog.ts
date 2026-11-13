@@ -1,11 +1,15 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
+import { DND5E_V14_SYSTEM_VERSION } from '@fvtt-json-generator/contracts/target';
 
 export interface LockedDnd5eV14Spell {
   identifier: string;
   name: string;
   uuid: string;
+  level?: number;
+  activation?: LockedDnd5eV14Activation;
+  castingTime?: { type: string; value: number | null };
 }
 
 export type LockedDnd5eV14Activation = 'action' | 'bonus' | 'reaction' | 'free';
@@ -19,8 +23,17 @@ interface LockedSpellCatalog {
 const CATALOG_CACHE = new Map<string, LockedSpellCatalog>();
 let yamlLoader: { load(value: string): unknown } | undefined;
 
+export function resolveLockedDnd5eV14SpellByName(
+  name: string,
+  environment: Readonly<Record<string, string | undefined>> = process.env,
+): LockedDnd5eV14Spell | undefined {
+  const root = resolve(environment.FVTT_REFERENCE_CACHE_ROOT?.trim() || join(process.cwd(), '.local', 'references'));
+  const matches = loadCatalog(root).byName.get(normalize(name)) ?? [];
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
 /**
- * Resolve a core dnd5e 5.3.3 spell from the manifest-pinned reference cache.
+ * Resolve a 2024 dnd5e spell from the manifest-pinned reference cache.
  * Both identifier and English name must independently select the same one
  * source spell.  This deliberately avoids the older unversioned spell mapper
  * for formal V14 Item Intake.
@@ -63,16 +76,16 @@ function loadCatalog(cacheRoot: string): LockedSpellCatalog {
   const cached = CATALOG_CACHE.get(cacheRoot);
   if (cached) return cached;
 
-  const repoRoot = join(cacheRoot, 'dnd5e', '5.3.3', 'repo');
+  const repoRoot = join(cacheRoot, 'dnd5e', DND5E_V14_SYSTEM_VERSION, 'repo');
   const systemPath = join(repoRoot, 'system.json');
-  const spellsRoot = join(repoRoot, 'packs', '_source', 'spells');
+  const spellsRoot = join(repoRoot, 'packs', '_source', 'spells24');
   if (!existsSync(systemPath) || !existsSync(spellsRoot)) {
     const empty = emptyCatalog();
     CATALOG_CACHE.set(cacheRoot, empty);
     return empty;
   }
   const system = parseYaml(readFileSync(systemPath, 'utf8')) as Record<string, unknown> | undefined;
-  if (String(system?.version ?? '') !== '5.3.3') {
+  if (String(system?.version ?? '') !== DND5E_V14_SYSTEM_VERSION) {
     const empty = emptyCatalog();
     CATALOG_CACHE.set(cacheRoot, empty);
     return empty;
@@ -81,16 +94,21 @@ function loadCatalog(cacheRoot: string): LockedSpellCatalog {
   const catalog = emptyCatalog();
   for (const path of collectYamlFiles(spellsRoot)) {
     const source = parseYaml(readFileSync(path, 'utf8')) as Record<string, unknown> | undefined;
+    if (source?.type !== 'spell') continue;
     const itemSystem = source?.system as Record<string, unknown> | undefined;
     const identifier = typeof itemSystem?.identifier === 'string' ? itemSystem.identifier : '';
     const name = typeof source?.name === 'string' ? source.name : '';
     const id = typeof source?._id === 'string' ? source._id : '';
     if (!identifier || !name || !id) continue;
-    const activation = (((itemSystem?.activation as Record<string, unknown> | undefined)?.type) as string | undefined);
+    const casting = itemSystem?.activation as Record<string, unknown> | undefined;
+    const activation = typeof casting?.type === 'string' ? casting.type : undefined;
     const spell = {
       identifier,
       name,
-      uuid: `Compendium.dnd5e.spells.Item.${id}`,
+      uuid: `Compendium.dnd5e.spells24.Item.${id}`,
+      ...(Number.isInteger(itemSystem?.level) && Number(itemSystem?.level) >= 0 ? { level: Number(itemSystem?.level) } : {}),
+      ...(activation && isActivation(activation) ? { activation } : {}),
+      ...(activation ? { castingTime: { type: activation, value: typeof casting?.value === 'number' ? casting.value : null } } : {}),
     };
     add(catalog.byIdentifier, normalize(identifier), spell);
     add(catalog.byName, normalize(name), spell);

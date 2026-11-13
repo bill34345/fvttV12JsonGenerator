@@ -116,7 +116,7 @@ test('legacy resource migration preserves an ambiguous counter as a visible usab
   const provider = { providerName: 'legacy-resource-control', extractionModel: 'frozen-reply', reviewModel: 'disabled',
     discover: unexpected, extract: async () => { calls.extract++; return structuredClone(ir); }, review: unexpected, repair: unexpected };
   const input = { source: data.saved.source, sourceName: 'Frozen 2024 Green Dragon', displayName: 'Adult Green Dragon',
-    requestId: 'legacy-resource-control', fvttVersion: '14.364', systemVersion: '5.3.3', sourceScope: 'single' as const };
+    requestId: 'legacy-resource-control', fvttVersion: '14.370', systemVersion: '6.0.6', sourceScope: 'single' as const };
   const analysis = await analyzeBrowserActorSourceWithAi(input, provider);
   const result = await generateBrowserActorIntakeCandidate(input, analysis, provider);
   expect(result.candidateAvailable).toBe(true);

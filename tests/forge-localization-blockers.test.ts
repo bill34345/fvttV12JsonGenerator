@@ -17,7 +17,7 @@ function packageWithRuleReferences(notes: string, rules: Array<{ id: string; ite
     rules: rules.map(rule => ({ id: rule.id, itemName: rule.itemName, kind: 'gm-manual', actorKey: rule.actorKey ?? actorKey, parameters: {} })), legendaryRecovery: [] });
   return {
     schema: 'fvtt-json-forge-encounter', version: 1, id: 'rule-reference-fixture', label: 'Guard package',
-    target: { foundry: '14.364', system: 'dnd5e', systemVersion: '5.3.3', effectProfile: 'core' },
+    target: { foundry: '14.370', system: 'dnd5e', systemVersion: '6.0.6', effectProfile: 'core' },
     primaryActorKey: actorKey, actors: [{ key: actorKey, label: 'Marsh Guard', source: actorSource, sourceHash: hashSource(actorSource) }],
     macros: [{ key: 'control', name: 'Guard control', command, commandHash: hashSource(command), bindings: { [actorKey]:actorKey }, covers: [], notes }],
     assets: [],

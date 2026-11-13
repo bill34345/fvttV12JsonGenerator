@@ -70,7 +70,7 @@ describe('source-derived area placement ranges', () => {
 
     expect(activity).toMatchObject({
       type: 'save',
-      range: { value: expected, units: 'ft' },
+      range: { value: String(expected), units: 'ft' },
       target: { template: { type: aoe.shape, size: aoe.range, units: 'ft' } },
     });
   });

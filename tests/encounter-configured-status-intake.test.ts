@@ -55,7 +55,7 @@ describe('source-scoped configured condition intake', () => {
     expect(document.动作[0].内嵌效果).toBeUndefined();
     expect(document.行为机制.机制.some((mechanic:any) => mechanic.ID === 'encounter-manual-action-1')).toBe(true);
     const response = await convertFinalActorSource(buildForgeActorRequest({ content: source,
-      displayName: 'Frost Mark', requestId: 'configured-frost-mark', fvttVersion: '14.364', systemVersion: '5.3.3' }));
+      displayName: 'Frost Mark', requestId: 'configured-frost-mark', fvttVersion: '14.370', systemVersion: '6.0.6' }));
     if (!('result' in response)) throw Error('Formal Actor conversion returned no result');
     if (response.result.status === 'failed') throw Error('Formal Actor conversion failed');
     const items = response.result.artifact?.items;

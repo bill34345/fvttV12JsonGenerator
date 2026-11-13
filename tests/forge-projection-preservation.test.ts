@@ -105,7 +105,7 @@ describe('Monster Intake checks AI IR projection preservation without reviewing 
     const before = structuredClone(f);
     expect(findings(f, source)).toEqual([]);
     expect(f.ir.creature.attributes.ac).toBe(12);
-    expect(f.actor.system.attributes.ac.flat).toBe(12);
+    expect(f.actor.system.attributes.ac.override).toBe(12);
     expect(f).toEqual(before);
   });
 

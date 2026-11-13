@@ -141,7 +141,7 @@ export const stagedDamageLabels=Object.keys(DAMAGE);
 export const stagedDamageType=(value:string):string|undefined=>DAMAGE[token(value)];
 const empty = (value: string) => /^(?:none|—|-|无)[。.]?$/iu.test(clean(value));
 const parts = (value: string) => clean(value).split(/[,，;；、]/u).map(value => value.trim().replace(/^and\s+/iu, '')).filter(Boolean);
-/** The 5.3.3 language tree groups these four named dialects under Primordial.
+/** The 6.0.6 language tree groups these four named dialects under Primordial.
  * Keep both printed facts when the qualifier is stored as a custom note;
  * arbitrary parenthetical restrictions must remain complete and checked. */
 const languageDialectParts=(value:string):string[]=>{

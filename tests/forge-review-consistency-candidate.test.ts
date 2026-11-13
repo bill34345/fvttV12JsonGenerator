@@ -21,7 +21,7 @@ function acceptedActorReview(): ForgeIntakeReviewBundleInput {
     objectKind: 'actor', mode: 'ai-monster', requestId: 'review-request', attemptId: 'review-attempt', status: 'accepted',
     rawSource, rawSourceHash: hashSource(rawSource), canonicalSource,
     sourceIdentity: { sourceId, finalSourceHash: hashSource(canonicalSource) },
-    target: { generatorVersion: '0.1.0', fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3',
+    target: { generatorVersion: '0.1.0', fvttVersion: '14.370', systemId: 'dnd5e', systemVersion: '6.0.6',
       generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' },
     candidate: { id: 'scout', label: 'Scout', start: 0, end: rawSource.length, quote: rawSource },
     evidence: { source: { sha256: hashSource(rawSource), length: rawSource.length }, claims: [], coverage: [], uncertainties: [] },

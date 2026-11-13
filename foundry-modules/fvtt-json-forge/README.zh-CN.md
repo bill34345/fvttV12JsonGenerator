@@ -1,4 +1,6 @@
-# FVTT JSON Forge 0.5.1（固定效果与GM能力控制候选）
+# FVTT JSON Forge 0.6.0（Core 14／dnd5e 6候选）
+
+新生成直接输出 Core 14.370／dnd5e 6.0.6 原生 Actor／Item，无需先连接 Foundry。Forge 允许 Core 14.368 起的 14.x 与 dnd5e 6.0.6 起的 6.x；GM、来源、绑定和实际 API 检查仍适用。旧 5.3.3 生物包可以查看、下载；有来源时可重新生成用于 6.x，没有来源则保持只读。检查或配套规则问题不丢弃已有 Actor。[兼容范围与复查方式](../../docs/acceptance/2026-11-13-native-dnd5e6.md)
 
 ## 在 Forge 中读取 PDF
 
@@ -32,7 +34,7 @@
 
 力竭使用官方 Actor 等级：来源给出增加量时按量累加，未给出时在应用时请 GM 填写本次增加量；这不是生成前置。相位蜘蛛“此次伤害降至 0 → 中毒一小时 → 中毒期间麻痹”保留为组合模板，链接咬击的命中后伤害；不新增豁免，不改成每次命中自动施加。美杜莎的首次失败束缚与二次失败石化保留可分别选择的阶段模板，不在首次失败自动套最终石化。
 
-Forge 正常创建时对 Midi14.0.11 做局部适配，避免自动施加需要 GM 判断的模板；同活动的普通原生效果和其他来源效果保留原处理，不修改世界全局设置。CLI／Web 的 core JSON 保存原生模板与链接；在 Midi 世界使用时经过 Forge 的正常导入适配。已有世界 Actor 不自动迁移，复杂触发、自然到期和其他模块的解除流程不因存在模板就被宣称全部自动实现。
+Forge 正常创建时对可用的 Midi-QOL 接口做局部适配，避免自动施加需要 GM 判断的模板；同活动的普通原生效果和其他来源效果保留原处理，不修改世界全局设置。CLI／Web 的 core JSON 保存原生模板与链接；在 Midi 世界使用时经过 Forge 的正常导入适配。已有世界 Actor 不自动迁移，复杂触发、自然到期和其他模块的解除流程不因存在模板就被宣称全部自动实现。
 
 Mirror14.368/dnd5e5.3.3/Midi14.0.11/DAE14.0.12 已实际核对活动、伤害和模板，并无投骰点击应用中毒／麻痹、失败豁免的恐慌、官方力竭 1→3；删除组合效果后，DAE 派生状态同时清除。具体产物、冻结回放、界面证据与限制见[官方状态验收](../../docs/acceptance/2026-10-27-forge-official-status-effects.md)。以下较早记录中的“仅留 GM 文字／不生成 Effect”不再描述当前官方状态模板行为。
 
@@ -159,7 +161,7 @@ Company/吸血鬼兼容续批：复合目标、紧邻前句指定的豁免目标
 
 2026-10-17共用契约修复候选：同一能力可以保留多个独立攻击、伤害与豁免按钮，完整原文和共同限制留在同一个Item。GM按原文判断后续按钮的前提；后续豁免或条件伤害不再次扣掉主能力次数，也不会自动连锁。来源明确由目标选择INT或WIS时，一个原生Save保留两种属性供目标选择；不能把同时要求两种豁免解释为二选一。条件、替换或可选伤害不能混入每次攻击的无条件伤害；持续、移动、吞咽、灵魂及其他特殊后果仍由GM处理。程序只沿用来源直接、无条件、无期限的普通失败状态，有限期限或额外条件不生成永久效果。
 
-启用Midi时，来源绑定多操作卡使用已适配的14.0.11集成规则；其他版本或局部活动无法适配时提示具体集成缺口，保留原生Actor和已有活动，不以Midi适配失败拒绝整只创建。中立攻击的普通／替代伤害用damageMode区分，仅选择一个结算，不复制攻击检定或重复扣资源。portable JSON与安装适配分别记录；其他版本不因保留Actor而被声明为已验收。
+启用受支持的 Midi-QOL 14.x 时，来源绑定多操作卡使用通过接口检查的集成规则；其他版本或局部活动无法适配时提示具体集成缺口，保留原生Actor和已有活动，不以Midi适配失败拒绝整只创建。中立攻击的普通／替代伤害用damageMode区分，仅选择一个结算，不复制攻击检定或重复扣资源。portable JSON与安装适配分别记录；其他版本不因保留Actor而被声明为已验收。
 
 每日独立N次保留各法术自己的次数；同一施法特性内多个明确独立的共享每日池分别绑定，池内真实Cast共用次数，池间互不扣除。未说明each/shared的多法术列表或不能准确表达的施法限定保留完整GM授予，不删除、不造假Cast，其余已支持法术继续匹配。必要施法属性缺失、无效数值和冲突仍待审。来源明确的动作／附赠动作／反应会覆盖匹配法术的默认施法时间；非受支持的传奇施法保留GM能力及原文动作消耗。旧卡不自动迁移。本轮正常DeepSeek、原生点击与计数/刷新已取得限定证据，普通AI入口与其他未完成层级以[当前执行记录](../../docs/plans/2026-10-17-forge-common-contract-restoration.md)为准，不能据离线或单个样例宣布任意资料均已修复。
 
@@ -189,7 +191,7 @@ Forge GM 工作台与生物蓝图已整合为同一模块：GM 从生物或物�
 
 图标由本地安全匹配完成，不增加模型调用或 API 花费；已解析的攻击、伤害、次数、动作类别和 GM 裁定保持来源原样。明确用户覆盖优先；Forge v14 自动采用模糊匹配，不要求精确名称或明显领先第二候选。线索不足时按攻击、防御、移动、感知、魔法或被动特性选择有意义的类别图，Activity 可以继承父 Item 已选内容图。自动结果不得为空、占位图或目录类型默认图；所需素材不可用时失败。旧世界对象保持原图标，重新生成并核对后才能获得新图标。
 
-图标素材来自已验证的 Foundry v14 / dnd5e 5.3.3 内置目录，不要求额外图标模块。物品包含多个活动时分别匹配活动图标：仅在 includeBase 为 true 时计入父 Item 基础伤害，不混入兄弟 Activity 的伤害。结果的“Icon 选图依据与近似程度”可展开查看理由、备选及低把握说明，类别或继承图不记作类型默认图；旧响应缺少报告时明确显示没有报告。原生 Actor/Item 卡片可以查看实际图标，Forge 的文字预览继续用于核对规则。“火球术”名称只用于选图，单体或范围、攻击或豁免、伤害骰仍以来源定义为准，不套用同名法术的规则。此功能适用于当前受支持的 v14 Forge 入口；CLI/Web 的普通生成仍默认图标关闭，需显式选择 safe。
+图标引用来自 Foundry Core 14.370／dnd5e 6.0.6 的目录，不要求额外图标模块。物品包含多个活动时分别匹配活动图标：仅在 includeBase 为 true 时计入父 Item 基础伤害，不混入兄弟 Activity 的伤害。结果的“Icon 选图依据与近似程度”可展开查看理由、备选及低把握说明，类别或继承图不记作类型默认图；旧响应缺少报告时明确显示没有报告。原生 Actor/Item 卡片可以查看实际图标，Forge 的文字预览继续用于核对规则。“火球术”名称只用于选图，单体或范围、攻击或豁免、伤害骰仍以来源定义为准，不套用同名法术的规则。此功能适用于当前受支持的 v14 Forge 入口；CLI/Web 的普通生成仍默认图标关闭，需显式选择 safe。
 
 2026-10-11已在Mirror `14.368 / 5.3.3`通过标准资料正常生成并创建图标验收兽与验收盾，核对原生卡片中五种能力及物品两个活动的图标，正常刷新后显示与路径保持。爪击、火球、冰球、牙齿、尾巴视觉可区分；附赠/传奇动作、火球来源的120尺单体1d10伤害保持。来源和正式产物哈希一致，两个专用测试对象已精确删除，未调用模型或执行战斗。该记录属于当时策略的验收；2026-10-13 的候选按模糊内容或功能类别选图，新的原生验收仍需单独记录。
 
@@ -227,11 +229,11 @@ v14 正式生成会将已知标准英文语言名按系统代码规范大小写�
 
 点击“下载来源与审核记录”后，同窗显示当前候选的“下载审核文件”链接；浏览器未自动开始下载时可直接点击该链接。文件准备完成的提示不代表浏览器已经保存成功。更换来源、语言或包文件、重新生成／预览／翻译以及关闭窗口会撤销旧链接，避免误取上一个候选的审核记录。
 
-本轮精确支持目标为 Foundry `14.364` 或 `14.368` / dnd5e `5.3.3` / `core`。新生成入口使用本地内容图标，已有 icon off 记录继续读取。当前GM可在来源、目标和产物身份有效时明确确认AI Actor候选；检查状态及原问题保留。Item创建仍只接受正式 `accepted`。0.5.1 是尚未远端发布的本地候选；统一组合的历史验收与剩余范围见[当前整合计划](../../docs/plans/2026-10-05-forge-unified-workbench.md)，旧版本的接受不自动推广。
+当前支持Core14.368+／dnd5e6.0.6+同主版本／core；新生成锁定Core14.370／dnd5e6.0.6。新生成入口使用本地内容图标，已有 icon off 记录继续读取。当前GM可在来源、目标和产物身份有效时明确确认AI Actor候选；检查状态及原问题保留。Item创建仍只接受正式 `accepted`。统一组合的历史验收与剩余范围见[当前整合计划](../../docs/plans/2026-10-05-forge-unified-workbench.md)，旧版本的接受不自动推广。
 
 2026-10-05已在Mirror `14.368 / 5.3.3`完成统一窗口、宽窄预览、蓝图草稿/派生/复用、标准Actor/Item创建回读、共享连接设置与生物导入文件新入口的本地验收。测试对象和审计宏已精确清理，原世界集合及视图保持。此次没有调用真实Provider，也没有重跑原生战斗或启动生物导入文件；这些范围不由本轮界面验收推广。
 
-> English summary: A single GM workspace combines versioned creature blueprints, structured sources, reviewed AI Intake, readable artifact previews and explicit Actor/Item creation. Encounter import and startup remain separate reviewed actions. Exact runtime pairs are Foundry 14.364 or 14.368 with dnd5e 5.3.3.
+> English summary: A single GM workspace combines versioned creature blueprints, structured sources, reviewed AI Intake, readable artifact previews and explicit Actor/Item creation. Encounter import and startup remain separate reviewed actions. Current runtime admission is Core14.368+ and dnd5e6.0.6+ within their majors; new generation targets Core14.370/dnd5e6.0.6.
 
 单条生物工作台按明确的单只上下文直接提取，保留完整前言和引用段落；多只资料使用“生物与召唤物”的识别／划分流程。单只Actor若全部通过正式原生投影与来源校验，且没有GM辅助、外部规则或分阶段/手工条件要求，生物与召唤物入口可只生成Actor，不再请求配套控制配置或创建空Macro；复杂来源保留原有控制配置与明确GM审核。
 
@@ -257,7 +259,7 @@ PDF单次换行不再使明确的普通／首次豁免失败条件丢失；句�
 
 ### Foundry Setup 安装
 
-本次0.5.1候选尚未发布，先使用下一节的本地ZIP方式。下面的Setup链接只有在本增量正式发布后才能取得新功能；旧0.1.0发行包不包含生物与召唤物入口。
+本次0.6.0候选尚未发布，先使用下一节的本地ZIP方式。下面的Setup链接只有在本增量正式发布后才能取得新功能；旧0.1.0发行包不包含生物与召唤物入口。
 
 在 Foundry 的 Setup 页面打开 **Add-on Modules → Install Module**，把下面的 manifest URL 粘贴到 **Manifest URL**：
 
@@ -269,7 +271,7 @@ https://raw.githubusercontent.com/bill34345/fvttV12JsonGenerator/master/foundry-
 
 ### ZIP 手工安装
 
-使用本次本地构建的 `foundry-modules/fvtt-json-forge/dist/release/fvtt-json-forge-0.5.1.zip` 和同目录 `SHA256SUMS.txt`，先核对 SHA-256；不假设尚未发布的GitHub Release已经存在。停止 Foundry 后，把 ZIP 解压为：
+使用本次本地构建的 `foundry-modules/fvtt-json-forge/dist/release/fvtt-json-forge-0.6.0.zip` 和同目录 `SHA256SUMS.txt`，先核对 SHA-256；不假设尚未发布的GitHub Release已经存在。停止 Foundry 后，把 ZIP 解压为：
 
 ```text
 <Foundry Data>/Data/modules/fvtt-json-forge/module.json
@@ -457,7 +459,7 @@ bun run verify-release:fvtt-json-forge
 
 发行输出位于 `foundry-modules/fvtt-json-forge/dist/release/`：
 
-- `fvtt-json-forge-0.5.1.zip`
+- `fvtt-json-forge-0.6.0.zip`
 - `fvtt-json-forge-module.json`
 - `SHA256SUMS.txt`
 
@@ -476,7 +478,7 @@ bun run verify-release:fvtt-json-forge
 
 旧临时生命资料只有来源明确证明自身受者时才补齐self，其他明确受者和真正未知目标分别保留。引文坐标成功重定位属于正常整理历史，原答保留；未定位或坏记录仍有具体提示。五类修复及本批验证范围见[验收记录](../../docs/acceptance/2026-10-29-forge-five-mechanism-fixes.md)。
 
-本地候选使用同一条参数规则处理 dnd5e5.3.3 的全部14种普通原生状况：目盲 Blinded、魅惑 Charmed、耳聋 Deafened、恐慌 Frightened、受擒 Grappled、失能 Incapacitated、隐形 Invisible、麻痹 Paralyzed、石化 Petrified、中毒 Poisoned、倒地 Prone、束缚 Restrained、震慑 Stunned、昏迷 Unconscious。攻击确认命中后施加原文状态，持续指定分钟或轮数，目标每回合结束时再次豁免，成功只解除该来源效果。状态、属性、DC、时长以及“可以/必须豁免”从完整来源核对，不按怪物名称猜测；状态名称、识别及预览来自同一目录。
+当前候选使用同一条参数规则处理 dnd5e 6 的 14 种普通原生状况：目盲 Blinded、魅惑 Charmed、耳聋 Deafened、恐慌 Frightened、受擒 Grappled、失能 Incapacitated、隐形 Invisible、麻痹 Paralyzed、石化 Petrified、中毒 Poisoned、倒地 Prone、束缚 Restrained、震慑 Stunned、昏迷 Unconscious。攻击确认命中后施加原文状态，持续指定分钟或轮数，目标每回合结束时再次豁免，成功只解除该来源效果。状态、属性、DC、时长以及“可以/必须豁免”从完整来源核对，不按怪物名称猜测；状态名称、识别及预览来自同一目录。
 
 来源可以使用含义明确的中英文同义表达、不同语序和中文/英文数字，不要求整句套固定模板。AI先整理成上述已支持规则，工具再核对原文引用、状态和数值，GM核对施加对象、时机、可以/必须、成功解除及完整原文中的限制；AI内容复核现已暂时关闭。含糊的指代、缺失的参数、否定或额外环境/解除分支不会因为“意思接近”而自动套用，应保留原文交GM处理。既有已审包继续读取，新包记录逐项原文依据与真实审核来源。此增量的历史实测见[同义句验收记录](../../docs/plans/2026-10-10-forge-lifecycle-language.md)，当前AI内容复核已暂停，该历史记录不恢复调用权限。
 
@@ -506,7 +508,7 @@ Forge 的原生状态显示效果名称带有 `Forge`，便于在角色卡“效
 
 此规则需要兼容的 Trigger Engine。当前自动命中路径限定活动 GM 的原生单目标攻击；玩家客户端攻击、多个标记目标、额外环境限定、受伤提前结束、多属性择一豁免等不在这条规则内，保留完整 GM 操作说明。普通原生攻击/伤害继续由 dnd5e 处理，AI只选择数据配置，工具生成固定入口宏。原生状态由 dnd5e 提供，本条无需新增全局自定义状态。
 
-启用 Midi-QOL 时，候选接入精确 `14.0.11` 的已确认命中事件，并核对持久聊天卡，避免漏掉同卡攻击或重复施加。其他版本、未确认命中或其他机制替换了攻击骰时，特殊状态需 GM 核对。该桥接的[接口与接受记录](../../docs/reviews/2026-10-09-forge-midi-status-hit-bridge.md)保留首次真实失败及后续复验边界。
+启用受支持的 Midi-QOL 14.x（最低 14.6.7）时，候选接入已确认命中事件，并核对持久聊天卡，避免漏掉同卡攻击或重复施加。其他版本、未确认命中或其他机制替换了攻击骰时，特殊状态需 GM 核对。该桥接的[接口与接受记录](../../docs/reviews/2026-10-09-forge-midi-status-hit-bridge.md)保留首次真实失败及后续复验边界。
 
 可使用[两只新怪物的完整练习原文](../../tests/fixtures/encounter-status-lifecycle.md)核对同一规则的目盲/恐慌、CON/WIS、DC15/13和分钟/轮变体；这是功能测试资料。
 

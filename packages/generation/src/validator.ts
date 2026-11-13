@@ -6,7 +6,7 @@ export class ActorValidator {
   public validate(parsed: ParsedNPC, actor: any): string[] {
     const warnings: string[] = [];
 
-    const expectedName=parsed.name;
+    const expectedName = parsed.name;
     if (actor.name !== expectedName && parsed.name) {
       warnings.push(`Name mismatch: Expected '${expectedName}', got '${actor.name}'`);
     }
@@ -21,8 +21,9 @@ export class ActorValidator {
     }
 
     if (parsed.attributes.ac) {
-      if (actor.system.attributes.ac.flat !== parsed.attributes.ac.value) {
-        warnings.push(`AC mismatch: Expected ${parsed.attributes.ac.value}, got ${actor.system.attributes.ac.flat}`);
+      const ac = actor?._stats?.systemVersion === '6.0.6' ? actor.system.attributes.ac.override ?? actor.system.attributes.ac.flat : actor.system.attributes.ac.flat;
+      if (ac !== parsed.attributes.ac.value) {
+        warnings.push(`AC mismatch: Expected ${parsed.attributes.ac.value}, got ${ac}`);
       }
     }
 
@@ -33,9 +34,9 @@ export class ActorValidator {
     }
 
     const expectedMoves = Object.keys(parsed.attributes.movement || {});
-    const actualMoves = actor.system.attributes.movement || {};
+    const actualMoves = (actor?._stats?.systemVersion === '6.0.6' ? actor.system.attributes.movement?.speeds : actor.system.attributes.movement) || {};
     for (const [k, v] of Object.entries(actualMoves)) {
-      if (k !== 'units' && k !== 'hover' && v !== null) {
+      if (k !== 'units' && k !== 'hover' && v !== null && !(actor?._stats?.systemVersion === '6.0.6' && v === '')) {
         if (!expectedMoves.includes(k) && !(k === 'walk' && expectedMoves.length === 0)) {
            warnings.push(`Potential Leakage: Found unexpected movement speed '${k}: ${v}'`);
         }

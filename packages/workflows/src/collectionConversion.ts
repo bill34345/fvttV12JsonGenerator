@@ -136,7 +136,7 @@ export async function convertMonsterCollectionToJson(
   return summarizeCollection(
     'monster-collection',
     items,
-    options.fvttVersion ?? '12',
+    options.fvttVersion ?? '14',
     options.effectProfile ?? 'core',
     outputDir,
     dependencies.iconWorkflow,
@@ -207,7 +207,7 @@ export async function convertItemCollectionToJson(
   return summarizeCollection(
     'item-collection',
     items,
-    options.fvttVersion ?? '12',
+    options.fvttVersion ?? '14',
     options.effectProfile ?? 'core',
     outputDir,
     dependencies.iconWorkflow,

@@ -14,7 +14,7 @@ const forbidden=async():Promise<never>=>{throw Error('This report regression for
 const offline={providerName:'frozen-native-resource-report',extractionModel:'frozen',reviewModel:'disabled',discover:forbidden,extract:forbidden,review:forbidden,repair:forbidden};
 const sourceId='actor:v1:76f8213f-310c-4f65-ae8c-82b535d89253' as ForgeSourceId;
 const readJson=(path:string)=>JSON.parse(readFileSync(path,'utf8').replace(/^\uFEFF/u,''));
-const input=(source:string,id:string)=>({source,sourceName:id,sourceScope:'single' as const,sourceId,requestId:'native-report-'+id,fvttVersion:'14.368',systemVersion:'5.3.3',autoCorrect:false});
+const input=(source:string,id:string)=>({source,sourceName:id,sourceScope:'single' as const,sourceId,requestId:'native-report-'+id,fvttVersion:'14.368',systemVersion:'6.0.6',autoCorrect:false});
 
 function expectFormalReport(generated:Awaited<ReturnType<typeof generateBrowserActorIntakeCandidate>>,max:number){
   expect(generated.candidateAvailable).toBe(true);expect(generated.formalStatus).not.toBe('failed');

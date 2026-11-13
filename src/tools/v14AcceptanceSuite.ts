@@ -14,6 +14,8 @@ import type { EffectProfile } from '../core/application/conversion';
 import { convertMarkdownPathToOutput } from '../core/application/conversion';
 import { buildActorVerificationSummary, type ActorVerificationSummary } from './actorVerification';
 import { runGoddessFantasyPipeline } from './goddessFantasyPipeline';
+import { FOUNDRY_V14_CORE_VERSION, DND5E_V14_SYSTEM_VERSION } from '@fvtt-json-generator/contracts/target';
+import { getFoundryTarget } from '@fvtt-json-generator/generation/target';
 
 export interface V14AcceptanceSample {
   id: string;
@@ -155,7 +157,7 @@ export function buildV14AcceptanceReport(result: V14AcceptanceSuiteResult): stri
     '## Module Compatibility',
     '',
     result.effectProfile === 'modded-v14'
-      ? '- MIDI-QOL `14.0.11` and DAE `14.0.12` are the locked v14 module references for generated automation.'
+      ? `- MIDI-QOL \`${getFoundryTarget('14').modules?.midiQol}\` and DAE \`${getFoundryTarget('14').modules?.dae}\` are the v14 module references for generated automation.`
       : '- Module automation is not emitted for the `core` profile.',
     '- Times Up: not used for v14; v14 duration handling is core/DAE-based.',
     '- Item Macro: not required for v14 acceptance; no v14-verified dependency is assumed.',
@@ -366,8 +368,8 @@ export function runV14SchemaChecks(document: unknown): V14SchemaCheck[] {
   ];
 
   return [
-    check('actor core version', stats.coreVersion === '14.364', String(stats.coreVersion ?? 'missing')),
-    check('actor system version', stats.systemVersion === '5.3.3', String(stats.systemVersion ?? 'missing')),
+    check('actor core version', stats.coreVersion === FOUNDRY_V14_CORE_VERSION, String(stats.coreVersion ?? 'missing')),
+    check('actor system version', stats.systemVersion === DND5E_V14_SYSTEM_VERSION, String(stats.systemVersion ?? 'missing')),
     check('actor system id', stats.systemId === 'dnd5e', String(stats.systemId ?? 'missing')),
     check(
       'v14 senses ranges',
@@ -383,7 +385,7 @@ export function runV14SchemaChecks(document: unknown): V14SchemaCheck[] {
       'embedded item target stats',
       items.every((item) => {
         const itemStats = getRecord(item._stats);
-        return itemStats.coreVersion === '14.364' && itemStats.systemVersion === '5.3.3';
+        return itemStats.coreVersion === FOUNDRY_V14_CORE_VERSION && itemStats.systemVersion === DND5E_V14_SYSTEM_VERSION;
       }),
       `${items.length} embedded items checked`,
     ),
@@ -399,10 +401,24 @@ export function runV14SchemaChecks(document: unknown): V14SchemaCheck[] {
       'effects target stats',
       effects.every((effect) => {
         const effectStats = getRecord(effect._stats);
-        return effectStats.coreVersion === '14.364' && effectStats.systemVersion === '5.3.3';
+        return effectStats.coreVersion === FOUNDRY_V14_CORE_VERSION && effectStats.systemVersion === DND5E_V14_SYSTEM_VERSION;
       }),
       `${effects.length} effects checked`,
     ),
+    check('native6 AC and movement', Object.hasOwn(getRecord(attributes.ac), 'override')
+      && !Object.hasOwn(getRecord(attributes.ac), 'calc') && Object.hasOwn(getRecord(attributes.movement), 'speeds'), JSON.stringify({ ac: attributes.ac, movement: attributes.movement })),
+    check('native6 Activity ranges', activities.every(activity => {
+      const range = getRecord(activity.range);
+      return !Object.hasOwn(range, 'long') && !Object.hasOwn(range, 'reach')
+        && (range.value === undefined || typeof range.value === 'string');
+    }), `${activities.length} activities checked`),
+    check('native Core14 Effects', effects.every(effect => {
+      const changes = getRecord(effect.system).changes;
+      const duration = getRecord(effect.duration);
+      return effect.changes === undefined && Array.isArray(changes)
+        && changes.every(change => typeof getRecord(change).type === 'string' && /^[A-Za-z0-9]{16}$/.test(String(getRecord(change)._id)))
+        && Object.hasOwn(duration, 'value') && duration.seconds === undefined && duration.rounds === undefined;
+    }), `${effects.length} effects checked`),
   ];
 }
 

@@ -1,5 +1,6 @@
 import { RESOLVER_MODULE_ID } from '../../../src/core/spell-resolution/types';
 import { sha256 } from '@fvtt-json-generator/contracts/hash';
+import { isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
 import { registerResolverSettings, type ResolverSettingDefinition, type ResolverSettingsMenuDefinition } from './settings';
 import { createResolverSettingsApplicationClass } from './settings-app';
 import {
@@ -52,22 +53,27 @@ export interface ResolverFoundryAdapter extends FoundrySpellSourceAdapter {
 }
 
 export function evaluateRuntimeCompatibility(versions: ResolverRuntimeVersions): ResolverCompatibility {
+  const native6Core = isVersionInMajor(versions.foundry, SERVER_NEXT_FOUNDRY_VERSION);
+  const native6System = isVersionInMajor(versions.dnd5e, SERVER_NEXT_DND5E_606_CANDIDATE_VERSION);
+  if (native6Core && native6System) {
+    return { supported: true, ...versions, diagnostics: [] };
+  }
   const diagnostics: ResolverCompatibilityDiagnostic[] = [];
   if (!versions.foundry || !versions.dnd5e) {
     diagnostics.push({ code: 'MISSING_RUNTIME_VERSION', message: 'Foundry and dnd5e runtime versions are required.' });
   } else {
-    const supportedFoundry = SUPPORTED_RUNTIME_PAIRS.some((pair) => pair.foundry === versions.foundry);
-    const supportedDnd5e = SUPPORTED_RUNTIME_PAIRS.some((pair) => pair.dnd5e === versions.dnd5e);
+    const supportedFoundry = native6Core || SUPPORTED_RUNTIME_PAIRS.some((pair) => pair.foundry === versions.foundry);
+    const supportedDnd5e = native6System || SUPPORTED_RUNTIME_PAIRS.some((pair) => pair.dnd5e === versions.dnd5e);
     if (!supportedFoundry) {
       diagnostics.push({
         code: 'UNSUPPORTED_FOUNDRY_VERSION',
-        message: `Foundry ${versions.foundry} is unsupported; only exact versions ${EXACT_FOUNDRY_VERSION} and ${SERVER_NEXT_FOUNDRY_VERSION} are allowed.`,
+        message: `Foundry ${versions.foundry} is unsupported; native6 requires ${SERVER_NEXT_FOUNDRY_VERSION}+ within major 14, or a retained legacy pair.`,
       });
     }
     if (!supportedDnd5e) {
       diagnostics.push({
         code: 'UNSUPPORTED_DND5E_VERSION',
-        message: `dnd5e ${versions.dnd5e} is unsupported; only exact versions ${EXACT_DND5E_VERSION}, ${SERVER_NEXT_DND5E_VERSION}, ${SERVER_NEXT_DND5E_CANDIDATE_VERSION}, and ${SERVER_NEXT_DND5E_606_CANDIDATE_VERSION} are allowed.`,
+        message: `dnd5e ${versions.dnd5e} is unsupported; native6 requires ${SERVER_NEXT_DND5E_606_CANDIDATE_VERSION}+ within major 6, or a retained legacy pair.`,
       });
     }
     if (supportedFoundry && supportedDnd5e && !SUPPORTED_RUNTIME_PAIRS.some((pair) => pair.foundry === versions.foundry && pair.dnd5e === versions.dnd5e)) {

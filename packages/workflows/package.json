@@ -17,7 +17,8 @@
     "./json-translation-sync": "./src/jsonTranslationSync.ts",
     "./obsidian-sync": "./src/obsidianSync.ts",
     "./plain-text-actor": "./src/plainTextActor.ts",
-    "./single-file-conversion": "./src/singleFileConversion.ts"
+    "./single-file-conversion": "./src/singleFileConversion.ts",
+    "./native-projection": "./src/nativeProjection.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --pretty false"

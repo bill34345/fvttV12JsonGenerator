@@ -1,4 +1,5 @@
-import { isForgeCoreVersionSupported } from './mirror-core-compatibility';
+import { nativeProjectionForGame } from './nativeProjection';
+import { isForgeRuntimeTargetSupported } from './mirror-core-compatibility';
 import { iconReviewPresentation } from './iconReviewPresentation';
 import { captureIntakeCandidate, revalidateIntakeCandidate, IndexedDbIntakeCandidateStore,
   type IntakeCandidateRecord, type IntakeCandidateStore, type IntakeCandidateRepairOrigin } from './intakeCandidateRecovery';
@@ -105,7 +106,6 @@ import {
   createReviewedForgeActorCandidate,
   forgeActorCandidateReviewHash,
   EXPECTED_FOUNDRY_VERSION,
-  EXPECTED_SYSTEM_VERSION,
 } from './runtime';
 import {
   clearApiKey,
@@ -969,7 +969,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         fvttVersion: this.snapshot?.target.fvttVersion??environment.game.version,
         systemVersion: this.snapshot?.target.systemVersion??environment.game.system.version,
       });
-      const response = await this.services.convertFinalActorSource(request);
+      const response = await this.services.convertFinalActorSource(request,{nativeProjection:nativeProjectionForGame(environment.game)});
       const status = actorResponseStatus(response);
       const available='result'in response&&!!response.result.artifact;
       return {
@@ -1194,7 +1194,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       if (this.busy() || this.batchRunning || this.batchApplying || !this.importedReview) return;
       try { assertGm(environment.game); assertExactRuntime(environment.game); } catch (error) { return void this.notify('error', messageOf(error)); }
       if (!importedTargetCompatible(this.importedReview)) {
-        this.notify('error', '导入记录的 target 与当前 Foundry 14.364 或 14.368 / dnd5e 5.3.3 安全边界不兼容，不能开启新 attempt。');
+        this.notify('error', '导入记录的 target 与当前 Core 14／dnd5e 6 安全边界不兼容，不能开启新 attempt。');
         return;
       }
       if (!this.isDirectoryMode(this.importedReview.bundle.mode)
@@ -1807,7 +1807,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         system:{version:this.snapshot?.target.systemVersion??environment.game.system.version},
       });
       const prior=this.actorArtifactContext,response=(prior?.generation as BrowserActorGenerationResult|undefined)?.candidateResponse??prior?.response;
-      return {...input,...(prior?.snapshot.rawSourceHash===hashSource(input.source)&&response&&'result'in response
+      return {...input,nativeProjection:nativeProjectionForGame(environment.game),...(prior?.snapshot.rawSourceHash===hashSource(input.source)&&response&&'result'in response
         ?{sourceId:response.result.sourceIdentity.sourceId as BrowserActorIntakeInput['sourceId']}: {})};
     }
     private canGenerate(form:ReturnType<typeof readForm>):boolean{
@@ -2264,7 +2264,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         this.assertLibraryReadable(); await this.loadCandidates();
         const saved = this.savedCandidates.single;
         if (!saved || !this.isDirectoryMode(saved.mode)) throw Error('当前工作台没有可恢复的单条候选。');
-        const record = await revalidateIntakeCandidate(saved, { fvttVersion: environment.game.version, systemVersion: environment.game.system.version });
+        const record = await revalidateIntakeCandidate(saved, { fvttVersion: environment.game.version, systemVersion: environment.game.system.version },Date.now(),nativeProjectionForGame(environment.game));
         this.assertLibraryReadable();
         if (this.revision !== revision || !this.libraryWorkspaceEmpty(root)) throw Error('工作区已改变，未覆盖当前草稿。');
         for (const [name, value] of Object.entries({ mode: record.mode, source: record.input.source, displayName: record.input.displayName ?? '' })) {
@@ -2319,7 +2319,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
           try {
             if (!this.directoryEntryAllowed(batchQueueEntry(this.batchState!, job))) continue;
             if (saved.mode==='ai-item'&&saved.queueAttempt !== job.attemptCount) throw Error('保存候选属于旧 attempt；请显式重新准备。');
-            const record = await revalidateIntakeCandidate(saved, { fvttVersion: environment.game.version, systemVersion: environment.game.system.version });
+            const record = await revalidateIntakeCandidate(saved, { fvttVersion: environment.game.version, systemVersion: environment.game.system.version },Date.now(),nativeProjectionForGame(environment.game));
             this.assertLibraryReadable();
             this.batchState = await this.batchQueue.restoreReadyJob(job.id, record.bundle, record.queueAttempt!, () => this.assertLibraryReadable());
             this.batchResponses.set(job.id, { mode: record.mode, rawSourceHash: record.bundle.rawSourceHash,
@@ -3164,7 +3164,8 @@ function humanActorPreview(result: any): string {
   const items = Array.isArray(result?.actorVerification?.items) ? result.actorVerification.items : (Array.isArray(actor?.items) ? actor.items : []);
   const name = actor?.name || '未命名生物';
   const hpText = hp?.max !== undefined || hp?.value !== undefined ? `${hp?.value ?? hp?.max ?? '—'} / ${hp?.max ?? '—'}` : '未提供';
-  const acText = ac?.value ?? ac?.flat ?? '未提供';
+  const acText = ac?.value ?? ac?.override ?? ac?.flat
+    ?? (Array.isArray(ac?.formulas)?ac.formulas.map((entry:any)=>entry.formula).filter(Boolean).join('；')||undefined:undefined) ?? '未提供';
   const crText = projection?.cr ?? details?.cr?.value ?? details?.cr ?? '未提供';
   const vulnerability=projection?.damageVulnerability??system?.traits?.dv;
   const vulnerabilityNote=typeof vulnerability?.custom==='string'&&vulnerability.custom?`<dt>伤害易伤备注</dt><dd>${escapeHtml(vulnerability.custom)}</dd>`:'';
@@ -3407,10 +3408,10 @@ function humanSummary(status: ForgeIntakeReviewStatus, analysis: IntakeAnalysis 
   return '当前结果尚未满足创建条件。';
 }
 function actorInput(form: ReturnType<typeof readForm>, requestId: string, game: any, onStage?: (stage: any) => void):Omit<BrowserActorIntakeInput,'sourceId'> {
-  return { source: form.source, sourceName: form.sourceName, displayName: form.displayName, requestId, fvttVersion: game.version, systemVersion: game.system.version, autoCorrect:form.autoCorrect, onStage };
+  return { source: form.source, sourceName: form.sourceName, displayName: form.displayName, requestId, nativeProjection:nativeProjectionForGame(game), fvttVersion: game.version, systemVersion: game.system.version, autoCorrect:form.autoCorrect, onStage };
 }
 function itemInput(form: ReturnType<typeof readForm>, requestId: string, game: any, onStage?: (stage: any) => void) {
-  return { source: form.source, sourceName: form.sourceName, displayName: form.displayName, requestId, fvttVersion: game.version, systemVersion: game.system.version, onStage };
+  return { source: form.source, sourceName: form.sourceName, displayName: form.displayName, requestId, nativeProjection:nativeProjectionForGame(game), fvttVersion: game.version, systemVersion: game.system.version, onStage };
 }
 function isActorGeneration(value: IntakeGeneration): value is BrowserActorGenerationResult { return 'evidence' in value && 'analysis' in value; }
 function isItemGeneration(value: IntakeGeneration): value is BrowserItemGenerationResult { return 'formalStatus' in value && 'analysis' in value && !('evidence' in value); }
@@ -3455,7 +3456,7 @@ function acceptedActorResponse(response: ForgeActorResponse): boolean {
   const result = decoded.value.result;
   return result.status === 'accepted' && result.verification.status === 'accepted' && Boolean(result.artifact && result.artifactHash)
     && result.diagnostics.length === 0 && result.actorVerification.warnings.length === 0
-    && isForgeCoreVersionSupported(result.target.fvttRuntimeVersion) && result.target.systemVersionObserved === EXPECTED_SYSTEM_VERSION;
+    && isForgeRuntimeTargetSupported(result.target.fvttRuntimeVersion,result.target.systemVersionObserved);
 }
 function acceptedItemResponse(response: ForgeItemResponse): boolean {
   const decoded = decodeForgeItemResponse(response);
@@ -3463,7 +3464,7 @@ function acceptedItemResponse(response: ForgeItemResponse): boolean {
   const result = decoded.value.result;
   return result.status === 'accepted' && result.verification.status === 'accepted' && Boolean(result.artifact && result.artifactHash)
     && !result.diagnostics.some((entry) => entry.severity === 'warning' || entry.severity === 'error')
-    && isForgeCoreVersionSupported(result.target.fvttRuntimeVersion) && result.target.systemVersionObserved === EXPECTED_SYSTEM_VERSION;
+    && isForgeRuntimeTargetSupported(result.target.fvttRuntimeVersion,result.target.systemVersionObserved);
 }
 function isCurrentRuntime(game: any): boolean { try { assertGm(game); assertExactRuntime(game); return true; } catch { return false; } }
 type DisplayIssue={code:string;path?:string;message:string;evidence?:readonly {quote:string}[]};
@@ -3556,9 +3557,8 @@ function selectedBatchFile(root: HTMLElement): File | undefined {
 function importedTargetCompatible(imported: ImportedForgeIntakeReviewRecord): boolean {
   const target = imported.bundle.target;
   return Boolean(target
-    && isForgeCoreVersionSupported(target.fvttVersion)
+    && isForgeRuntimeTargetSupported(target.fvttVersion,target.systemVersion)
     && target.systemId === 'dnd5e'
-    && target.systemVersion === EXPECTED_SYSTEM_VERSION
     && target.generatorProfile === 'v14'
     && target.effectProfile === 'core'
     && (target.iconMode === 'off' || target.iconMode === 'safe'));

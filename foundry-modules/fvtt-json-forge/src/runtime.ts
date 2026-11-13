@@ -15,15 +15,18 @@ import {
   resolveLegacySpellUuid,
 } from '@fvtt-json-generator/forge-browser-runtime';
 
-import { isForgeCoreVersionSupported } from './mirror-core-compatibility';
+import { isForgeCoreVersionSupported, isForgeRuntimeTargetSupported } from './mirror-core-compatibility';
+import { isNativeForgeRuntimeTargetSupported } from '@fvtt-json-generator/forge-browser-runtime';
 import { FORGE_SPELL_IMPORT_PHASE, isForgeSpellImportPending } from '@fvtt-json-generator/contracts/forge-import-lifecycle';
 import { RESOLVER_MODULE_ID } from '@fvtt-json-generator/spell-manifest-contracts';
 import {parseFragment, serialize} from 'parse5';
+import { isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
+import { FOUNDRY_V14_CORE_VERSION, DND5E_V14_SYSTEM_VERSION } from '@fvtt-json-generator/contracts/target';
 
 export const MODULE_ID = 'fvtt-json-forge' as const;
-export const EXPECTED_FOUNDRY_VERSION = '14.364' as const;
+export const EXPECTED_FOUNDRY_VERSION = FOUNDRY_V14_CORE_VERSION;
 export const EXPECTED_SYSTEM_ID = 'dnd5e' as const;
-export const EXPECTED_SYSTEM_VERSION = '5.3.3' as const;
+export const EXPECTED_SYSTEM_VERSION = DND5E_V14_SYSTEM_VERSION;
 
 export interface ForgeGameLike {
   version?: string;
@@ -314,22 +317,25 @@ export async function completeForgeSpellImport(actor: ForgeActorLike): Promise<v
   }
 }
 
-export function prepareFoundryImportArtifact(artifact: JsonObject,game?:Pick<ForgeGameLike,'modules'>,warnings: string[] = []): JsonObject {
+export function prepareFoundryImportArtifact(artifact: JsonObject,game?:Pick<ForgeGameLike,'modules'|'version'|'system'>,warnings: string[] = []): JsonObject {
+  if(isNativeForgeRuntimeTargetSupported(game?.version,game?.system?.version)
+    && !isNativeForgeRuntimeTargetSupported(getRecord(artifact._stats).coreVersion,getRecord(artifact._stats).systemVersion))
+    throw new Error('Actor artifact does not use the Core 14 / dnd5e 6 native schema; the original candidate remains available.');
   const copy = JSON.parse(JSON.stringify(artifact)) as JsonObject;
   if (!Array.isArray(copy.items)) return copy;
   const independent=sourceOperationActivityGroups(copy,warnings),midi=game?.modules?.get('midi-qol');
   if(independent.length&&midi?.active){
-    if(midi.version!=='14.0.11')warnings.push(`Midi ${midi.version??'unknown'} 的独立活动适配尚未验证；原生活动保留，请核对第三方自动化。`);
+    if(!isVersionInMajor(midi.version,'14.6.7'))warnings.push(`Midi ${midi.version??'unknown'} 的独立活动适配尚未验证；原生活动保留，请核对第三方自动化。`);
     for(const group of independent)for(const{activity}of group.activities){
       activity.midiProperties={...getRecord(activity.midiProperties),otherActivityCompatible:false,triggeredActivityId:'none'};
-      // Midi14.0.11 removes core damage buttons and may hide its replacement
+      // Midi14.6.7 removes core damage buttons and may hide its replacement
       // using GM automation settings. This source-bound mixed Save keeps an
       // explicit manual damage entry without changing world settings, rolls,
       // consumption or the GM-owned remainder.
       if(activity.type==='save'&&Array.isArray(getRecord(activity.damage).parts)&&getRecord(activity.damage).parts.length){
         activity.midiProperties.removeChatButtons='none';
       }
-      // Midi14.0.11 defines otherActivityId on Attack. Damage has no such
+      // Midi14.6.7 defines otherActivityId on Attack. Damage has no such
       // field. Empty Attack IDs otherwise auto-select a compatible sibling.
       if(activity.type==='attack')activity.otherActivityId='none';
     }
@@ -385,10 +391,14 @@ function assertSourceOperationMidiSafety(artifact:unknown,readback:unknown):void
     const actual=getRecord(getRecord(getRecord(Array.isArray(items)?items[group.index]:undefined).system).activities)[key];
     if(expected.midiProperties===undefined&&actual?.midiProperties===undefined)continue;
     const midi=getRecord(actual?.midiProperties);
+    const stats=getRecord(getRecord(artifact)._stats);
+    const nativeEmptyOther=isNativeForgeRuntimeTargetSupported(stats.coreVersion,stats.systemVersion)
+      &&expected.type!=='attack'&&actual?.type===expected.type&&actual.otherActivityId===null
+      &&expected.otherActivityId===undefined&&!expected.attack&&!actual.attack&&!expected.ammunition&&!actual.ammunition;
     if(midi.otherActivityCompatible!==false||midi.triggeredActivityId!=='none'
       ||expected.midiProperties?.removeChatButtons==='none'&&midi.removeChatButtons!=='none'
       ||expected.type==='attack'&&actual?.otherActivityId!=='none'
-      ||expected.type!=='attack'&&actual?.otherActivityId!==undefined&&actual.otherActivityId!=='none'){
+      ||expected.type!=='attack'&&actual?.otherActivityId!==undefined&&actual.otherActivityId!=='none'&&!nativeEmptyOther){
       throw new Error('Foundry Actor semantics failed independent source-operation Midi safety readback. Missing or changed safety fields; use a new Forge source/package identity for unsafe existing Actors, which are not migrated.');
     }
   }
@@ -399,9 +409,9 @@ export function assertGm(game: ForgeGameLike): void {
 }
 
 export function assertExactRuntime(game: ForgeGameLike): void {
-  if (!isForgeCoreVersionSupported(game.version)) throw new Error(`Forge Actor requires Foundry ${EXPECTED_FOUNDRY_VERSION} or 14.368.`);
-  if (game.system?.id !== EXPECTED_SYSTEM_ID || game.system?.version !== EXPECTED_SYSTEM_VERSION) {
-    throw new Error(`Forge Actor requires dnd5e ${EXPECTED_SYSTEM_VERSION}.`);
+  if (!isForgeCoreVersionSupported(game.version)) throw new Error(`Forge Actor requires Core 14 at or above the supported baseline.`);
+  if (game.system?.id !== EXPECTED_SYSTEM_ID || !isForgeRuntimeTargetSupported(game.version,game.system?.version)) {
+    throw new Error(`Forge Actor requires Core 14.368+ / dnd5e 6.0.6+ within their current majors.`);
   }
 }
 
@@ -420,7 +430,7 @@ export function assertResponseTarget(
     fvttRuntimeVersion: game.version,
     generatorProfile: 'v14',
     systemId: EXPECTED_SYSTEM_ID,
-    systemVersionObserved: EXPECTED_SYSTEM_VERSION,
+    systemVersionObserved: game.system?.version,
     effectProfile: 'core',
   } as const;
   const actual = {
@@ -581,6 +591,11 @@ function actorSemantics(value: unknown, effectSource: 'artifact' | 'readback', s
   const attributes = getRecord(system.attributes);
   const details = getRecord(system.details);
   const traits = getRecord(system.traits);
+  const movement=getRecord(stripDocumentNoise(attributes.movement));
+  const speeds=movement.speeds?getRecord(movement.speeds):movement;
+  for(const key of ['walk','burrow','climb','fly','swim']){
+    if(typeof speeds[key]==='number'||typeof speeds[key]==='string'&&/^-?\d+(?:\.\d+)?$/u.test(speeds[key]))speeds[key]=String(Number(speeds[key]));
+  }
   const expectedItems=Array.isArray(sourceArtifact?.items)?sourceArtifact.items:[];
   const manifestId=getRecord(getRecord(getRecord(sourceArtifact).flags)[RESOLVER_MODULE_ID]).spellManifest?.manifestId;
   const expectedIds=new Set(expectedItems.map(item=>getRecord(item)._id));
@@ -599,7 +614,7 @@ function actorSemantics(value: unknown, effectSource: 'artifact' | 'readback', s
     damageImmunity: traitSemantics(traits.di),
     damageResistance: traitSemantics(traits.dr),
     conditionImmunity: traitSemantics(traits.ci),
-    movement:stripDocumentNoise(attributes.movement),
+    movement,
     resources:stripDocumentNoise(system.resources),
     spellManifest:getRecord(getRecord(actor.flags)[RESOLVER_MODULE_ID]).spellManifest,
     senses: attributes.senses ?? traits.senses,
@@ -660,17 +675,17 @@ function traitSemantics(value:unknown):unknown{
 
 function projectActivityReadback(value: unknown, itemRange: unknown): unknown {
   const activity = getRecord(stripDocumentNoise(value));
-  // dnd5e 5.3.3 ActivationField.condition is a default StringField. Core
+  // dnd5e 6.0.6 ActivationField.condition is a default StringField. Core
   // 14.368 cleans it with trim:true, confirmed against the real in-memory
   // Document. Normalize only that native boundary; inner text stays strict
   // and the complete source/evidence in flags is retained byte for byte.
   const activation=getRecord(activity.activation);
   if(typeof activation.condition==='string')activity.activation={...activation,condition:activation.condition.trim()};
-  // dnd5e5.3.3 Activity.description.chatFlavor is also a default StringField
+  // dnd5e6.0.6 Activity.description.chatFlavor is also a default StringField
   // in the installed Activity schema; Core14.368 trims its edges on creation.
   const description=getRecord(activity.description);
   if(typeof description.chatFlavor==='string')activity.description={...description,chatFlavor:description.chatFlavor.trim()};
-  // Schema-derived: 5.3.3 Save/Damage have no includeBase field. Reject an
+  // Schema-derived: 6.0.6 Save/Damage have no includeBase field. Reject an
   // explicit value on either side, rather than dropping it as Doc noise.
   if((activity.type==='save'||activity.type==='damage')&&Object.hasOwn(getRecord(activity.damage),'includeBase')){
     throw new Error('Foundry Actor semantics contain unsupported non-Attack damage.includeBase. Regenerate the source for the locked native schema.');
@@ -679,12 +694,12 @@ function projectActivityReadback(value: unknown, itemRange: unknown): unknown {
   normalizeInactiveActivityTemplateForComparison(activity);
   const activityRange = getRecord(activity.range);
   const parentRange = getRecord(itemRange);
-  // 5.3.3 ignores the Activity's range payload when it inherits the Item range.
+  // 6.0.6 ignores the Activity's range payload when it inherits the Item range.
   // The parent range remains part of the Item comparison below this boundary.
   if(activityRange.override===false){activity.range={override:false};return activity;}
   const itemReach = parentRange.reach;
   const itemLong = parentRange.long;
-  // dnd5e 5.3.3 stores melee reach on the parent weapon's system.range. Its
+  // dnd5e 6.0.6 stores melee reach on the parent weapon's system.range. Its
   // Activity RangeField intentionally has no reach field, so importFromJSON()
   // drops the protocol's activity-level copy. Project the supported parent
   // field back into the source-shaped comparison without changing the artifact.
@@ -723,7 +738,7 @@ function normalizeLegacySpellReferencesForFoundry(system: Record<string, any>,wa
     if (!legacyUuid) continue;
     const foundryUuid = resolveFoundrySpellUuid(legacyUuid);
     if (!foundryUuid) {
-      warnings.push(`法术引用 ${legacyUuid} 没有唯一的 dnd5e 5.3.3 对应；原法术活动及引用保留。`);
+      warnings.push(`法术引用 ${legacyUuid} 没有唯一的 dnd5e 6.0.6 对应；原法术活动及引用保留。`);
       continue;
     }
     spell.uuid = foundryUuid;
@@ -762,7 +777,9 @@ function effectSemantics(value: unknown, source: 'artifact' | 'readback'): unkno
     statuses: effect.statuses instanceof Set||Array.isArray(effect.statuses)?[...effect.statuses].sort():effect.statuses,
     disabled:effect.disabled,
     description:effect.description,
-    duration:effect.duration===undefined?undefined:{seconds:getRecord(effect.duration).seconds,rounds:getRecord(effect.duration).rounds,turns:getRecord(effect.duration).turns},
+    duration:effect.duration===undefined?undefined:Object.hasOwn(getRecord(effect.duration),'value')
+      ?{value:getRecord(effect.duration).value,units:getRecord(effect.duration).units,expiry:getRecord(effect.duration).expiry}
+      :{seconds:getRecord(effect.duration).seconds,rounds:getRecord(effect.duration).rounds,turns:getRecord(effect.duration).turns},
     conditionLifecycle:getRecord(getRecord(effect.flags).fvttJsonGenerator).conditionLifecycle,
     sourceDuration:getRecord(getRecord(effect.flags).fvttJsonGenerator).sourceDuration,
   };

@@ -69,7 +69,7 @@ describe('encounter review navigation',()=>{
   });
 
   test('saved accepted titles require current request, reviewed text hash and clean findings',()=>{
-    const artifact={name:'Echo',_stats:{systemVersion:'5.3.3',coreVersion:'14.364'},items:[]};
+    const artifact={name:'Echo',_stats:{systemVersion:'6.0.6',coreVersion:'14.370'},items:[]};
     const currentBundle:any={actors:[{key:'echo',label:'Echo',source:'source one'}],macros:[],label:'Test'};
     const request=createActorLocalizationRequest(artifact,currentBundle.actors[0].source);
     const translation=acceptLocalization(request,{texts:[{id:request.texts[0]!.id,text:'回声'}]},
@@ -100,7 +100,7 @@ describe('encounter review navigation',()=>{
 
   test('legacy prepared GM mechanisms remain visible when fixed-rule counts are unavailable',async()=>{
     class Base{element:any={querySelector:()=>null,querySelectorAll:()=>[]};render(){return this;}async close(){return this;}}
-    const game:any={version:'14.368',system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}};
+    const game:any={version:'14.368',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},macros:{contents:[]}};
     const App=createForgeEncounterApplicationClass({game,foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}}});
     const app:any=new App();app.prepared={hash:'legacy-hash',label:'Legacy',bundle:{label:'Legacy',actors:[{key:'one',label:'One',source:'source'}],
       primaryActorKey:'one',macros:[],assets:[]},actors:[],macros:[{name:'Legacy macro',command:'legacy command',bindings:{one:'one'}}],
@@ -118,7 +118,7 @@ describe('encounter review navigation',()=>{
     let renders=0,aiCalls=0,worldWrites=0;
     const revoked:string[]=[];
     class Base { element=root; render(){renders++;return this;} async close(){return this;} }
-    const game:any={version:'14.368',system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]},
+    const game:any={version:'14.368',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},macros:{contents:[]},
       actors:{create:()=>{worldWrites++;}}};
     let opened=0;
     const App=createForgeEncounterApplicationClass({game,foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}},
@@ -129,7 +129,7 @@ describe('encounter review navigation',()=>{
       evidence:[{start:0,end:firstName.length,quote:firstName}]}];
     const app:any=new App();app.humanSource=source;app.aiReport=visibleReport;app.translationReport=[];app.reviewed=true;
     app.prepared={hash:'fixed-hash',label:'fixture',bundle:{schema:'fvtt-json-forge-encounter',version:1,id:'navigation-fixture',label:'fixture',
-      target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},
+      target:{foundry:'14.370',system:'dnd5e',systemVersion:'6.0.6',effectProfile:'core'},
       actors:bundle.actors.map((actor:any)=>({...actor,sourceHash:hashSource(actor.source)})),assets:[],macros:[],primaryActorKey:'actor-1'},actors:[],macros:[],requirements:[]};
     const candidate=app.prepared;
     const candidateBefore=structuredClone(candidate);
@@ -212,7 +212,7 @@ describe('encounter review navigation',()=>{
       const button=root.querySelector('[data-action="encounter-open-ai-connection"]');
       if(button)button.replaceWith(button.cloneNode(true));
       return this;}async close(){return this;}}
-    const game:any={version:'14.368',world:{id:'world'},system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}};
+    const game:any={version:'14.368',world:{id:'world'},system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},macros:{contents:[]}};
     const App=createForgeEncounterApplicationClass({game,foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}},
       recoveryStore:{load:async()=>undefined,save:async()=>undefined,clear:async()=>{clears++;}},
       getRecoverySecrets:()=>({apiKey:'',baseUrl:''}),getAiOptions:()=>{aiCalls++;throw Error('No provider request expected');},
@@ -244,7 +244,7 @@ describe('encounter review navigation',()=>{
       '- Bite. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6+2) piercing damage.'].join('\n');
     const command=fixedEncounterCommand({version:1,rules:[{id:'manual',kind:'gm-manual',actorKey:'guard',itemName:'Bite',parameters:{}}],legendaryRecovery:[]});
     const sourceBundle:any={schema:'fvtt-json-forge-encounter',version:1,id:'upload-review-fixture',label:'Guard encounter',
-      target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:'guard',
+      target:{foundry:'14.370',system:'dnd5e',systemVersion:'6.0.6',effectProfile:'core'},primaryActorKey:'guard',
       actors:[{key:'guard',label:'Marsh Guard',source:actorSource,sourceHash:hashSource(actorSource)}],
       macros:[{key:'control',name:'Guard control',command,commandHash:hashSource(command),bindings:{guard:'guard'},covers:[],
         notes:`原始资料SHA-256：${hashSource(actorSource)}\nGM handles timing.`}],assets:[]};
@@ -259,7 +259,7 @@ describe('encounter review navigation',()=>{
     const rootDocument=new JSDOM('<main></main>').window.document;
     const root=rootDocument.querySelector('main') as HTMLElement;
     class Base{element=root;render(){return this;}async close(){return this;}}
-    const game:any={version:'14.368',world:{id:'world'},system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}};
+    const game:any={version:'14.368',world:{id:'world'},system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},macros:{contents:[]}};
     const App=createForgeEncounterApplicationClass({game,foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}},
       recoveryStore:{load:async()=>undefined,save:async()=>undefined,clear:async()=>undefined},getRecoverySecrets:()=>({apiKey:'',baseUrl:''}),
       getAiOptions:()=>({baseUrl:'https://provider.example/v1',apiKey:'test-key',model:'test'}),

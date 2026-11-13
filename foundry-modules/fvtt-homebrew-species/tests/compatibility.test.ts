@@ -15,4 +15,13 @@ describe('ServerNext Species compatibility projection', () => {
     expect(candidate.description).toContain('projected for dnd5e 6.0.2');
     expect(moduleManifest(source, '14')).toBe(source);
   });
+  test('defaults to the admitted major ranges while preserving exact content provenance', () => {
+    const source = { id: 'fvtt-homebrew-species', packs: [{ name: 'species' }] };
+    const candidate = moduleManifest(source, '14.368');
+    expect(candidate.compatibility).toEqual({ minimum: '14.368', verified: '14.368', maximum: '14.999' });
+    expect(candidate.relationships.systems[0].compatibility).toEqual({ minimum: '6.0.2', verified: '6.0.2', maximum: '6.999.999' });
+    expect(candidate.packs).toEqual(source.packs);
+    expect(source).not.toHaveProperty('compatibility');
+  });
+
 });

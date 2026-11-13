@@ -292,10 +292,11 @@ function verifyPortableSpellResolution(
         `Prepared spellcasting ability must remain ${expectedPrepared.ability}.`,
       );
     }
-    if (details.spellLevel !== expectedPrepared.casterLevel) {
+    const nativeCaster = Object.hasOwn(attributes, 'spell') || /^6(?:\.|$)/u.test(String(asRecord(actorRoot._stats).systemVersion ?? ''));
+    if ((asRecord(attributes.spell).level ?? details.spellLevel) !== expectedPrepared.casterLevel) {
       add(
         'PREPARED_SPELLCASTER_LEVEL_DRIFT',
-        '/actor/system/details/spellLevel',
+        nativeCaster ? '/actor/system/attributes/spell/level' : '/actor/system/details/spellLevel',
         `Prepared spellcaster level must remain ${expectedPrepared.casterLevel}.`,
       );
     }
@@ -554,6 +555,7 @@ export function projectActor(actor: unknown, options: { skillKeys?: string[]; sa
   const details = asRecord(system.details);
   const abilities = asRecord(system.abilities);
   const movement = asRecord(attrs.movement);
+  const speeds = movement.speeds === undefined ? movement : asRecord(movement.speeds);
   const ac = asRecord(attrs.ac);
   const hp = asRecord(attrs.hp);
   const projectedAbilities: Record<string, unknown> = {};
@@ -572,7 +574,8 @@ export function projectActor(actor: unknown, options: { skillKeys?: string[]; sa
   }));
   const allSaves = Object.fromEntries(Object.entries(abilityValues).map(([key, score]) => {
     const ability = asRecord(abilities[key]);
-    return [key, abilityMod(score) + numeric(ability.proficient) * prof + numeric(asRecord(ability.bonuses).save)];
+    return [key, abilityMod(score) + numeric(ability.proficient) * prof
+      + numeric(asRecord(asRecord(ability.save).roll).bonus ?? asRecord(ability.bonuses).save)];
   }));
   const requestedSaveKeys = options.saveKeys === undefined ? undefined : new Set(options.saveKeys);
   const saves = Object.fromEntries(Object.entries(allSaves).filter(([key]) => requestedSaveKeys === undefined || requestedSaveKeys.has(key)));
@@ -583,7 +586,7 @@ export function projectActor(actor: unknown, options: { skillKeys?: string[]; sa
   for (const [canonical, key] of Object.entries(SKILL_KEYS)) {
     const skill = asRecord(skillSystem[key]);
     const ability = String(skill.ability ?? SKILL_ABILITIES[key] ?? 'int');
-    const checkBonus = asRecord(skill.bonuses).check;
+    const checkBonus = asRecord(skill.roll).bonus ?? asRecord(skill.bonuses).check;
     const total = abilityMod(abilityValues[ability]) + numeric(skill.value) * prof + numeric(checkBonus);
     allSkillTotals[canonical] = total;
     const configured = numeric(skill.value) !== 0 || (checkBonus !== undefined && checkBonus !== null && String(checkBonus).trim() !== '');
@@ -595,13 +598,13 @@ export function projectActor(actor: unknown, options: { skillKeys?: string[]; sa
   const languages = asRecord(traits.languages);
   return {
     name: root.name,
-    ac: ac.flat ?? ac.value,
+    ac: ac.override ?? ac.flat ?? ac.value,
     hp: hp.value,
     hpFormula: hp.formula,
     cr: details.cr,
     xp: asRecord(details.xp).value,
     proficiencyBonus: prof,
-    initiative: options.includeInitiative === false ? undefined : abilityMod(abilityValues.dex) + numeric(asRecord(attrs.init).bonus),
+    initiative: options.includeInitiative === false ? undefined : abilityMod(abilityValues.dex) + numeric(asRecord(asRecord(attrs.init).roll).bonus ?? asRecord(attrs.init).bonus),
     size: normalizeSize(traits.size),
     creatureType: asRecord(details.type).value,
     swarmSize:asRecord(details.type).swarm?normalizeSize(asRecord(details.type).swarm):undefined,
@@ -610,7 +613,7 @@ export function projectActor(actor: unknown, options: { skillKeys?: string[]; sa
     saves,
     skills,
     movement: {
-      ...Object.fromEntries(['walk', 'climb', 'fly', 'swim', 'burrow'].map((key) => [key, movement[key]])),
+      ...Object.fromEntries(['walk', 'climb', 'fly', 'swim', 'burrow'].map((key) => [key, numericOrUndefined(speeds[key])])),
       hover: movement.hover,
     },
     resistances: arrayValues(asRecord(traits.dr).value),
@@ -623,7 +626,7 @@ export function projectActor(actor: unknown, options: { skillKeys?: string[]; sa
       blindsight: numericSense(senseRanges.blindsight),
       tremorsense: numericSense(senseRanges.tremorsense),
       truesight: numericSense(senseRanges.truesight),
-      // schema-derived: dnd5e 5.3.3 CreatureTemplate.prepareSkill adds the
+      // schema-derived: dnd5e 6.0.6 CreatureTemplate.prepareSkill adds the
       // passive FormulaField after the ordinary skill total. ActorGenerator
       // uses this field to preserve a source-explicit passive score.
       passivePerception: 10 + (allSkillTotals.perception ?? 0)
@@ -650,13 +653,16 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
   const activityActivation = asRecord(firstActivity.activation);
   const activityDescription = asRecord(firstActivity.description);
   const attack = asRecord(firstActivity.attack);
-  const activityRange=asRecord(firstActivity.range),itemRange=asRecord(system.range);
+  const activityRange=projectRange(firstActivity.range),itemRange=projectRange(system.range);
   // Unmigrated exports may still carry an explicit legacy Activity reach.
   // Retain it while filling fields inherited from the Item in native mode.
   const range=activityRange.override===false&&Object.keys(itemRange).length
     ?{...itemRange,...activityRange,reach:activityRange.reach??itemRange.reach,value:activityRange.value??itemRange.value,long:activityRange.long??itemRange.long}
     :Object.keys(activityRange).length?activityRange:itemRange;
   const gmLongRange=/^远射程 (\d+) 尺$/u.exec(String(range.special??''));
+  const rangedActivity = projectedActivities.find(activity => asRecord(asRecord(activity.attack).type).value === 'ranged');
+  const rangedRange = rangedActivity ? projectRange(rangedActivity.range) : undefined;
+  const rangedLongRange = /^远射程 (\d+) 尺$/u.exec(String(rangedRange?.special ?? ''));
   const save = asRecord(firstActivity.save);
   const saveDc = asRecord(save.dc);
   const damageBase = asRecord(asRecord(system.damage).base);
@@ -711,7 +717,7 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
       consumption: asRecord(activity.consumption),
       uses:asRecord(activity.uses),
       areaTemplate: asRecord(asRecord(activity.target).template),
-      range: asRecord(activity.range),
+      range: projectRange(activity.range),
       attackMode: asRecord(asRecord(activity.attack).type).value,
       attackData:asRecord(activity.attack),
       rollData:asRecord(activity.roll),
@@ -767,10 +773,10 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
     attackType: asRecord(attack.type).value==='melee'?(asRecord(attack.type).classification==='spell'?'msak':'mwak')
       :asRecord(attack.type).value==='ranged'?(asRecord(attack.type).classification==='spell'?'rsak':'rwak'):asRecord(attack.type).value,
     toHit,
-    reach: range.reach,
-    range: range.value,
+    reach: range.reach ?? (['melee', 'mwak', 'msak'].includes(String(asRecord(attack.type).value)) ? range.value : undefined),
+    range: rangedRange?.value ?? range.value,
     targetSpecial: asRecord(asRecord(firstActivity.target).affects).special,
-    longRange: range.long??numericOrUndefined(gmLongRange?.[1]),
+    longRange: rangedRange?.long ?? numericOrUndefined(rangedLongRange?.[1]) ?? range.long ?? numericOrUndefined(gmLongRange?.[1]) ?? itemRange.long,
     damageFormula,
     ...(damageFormula || additionalDamageFormulas.length > 0 || supplementalDamageFormulas.length > 0
       ? { damageFormulas: [damageFormula, ...additionalDamageFormulas, ...supplementalDamageFormulas].filter((value): value is string => Boolean(value)) }
@@ -783,7 +789,7 @@ function projectItem(value: unknown, abilities: Record<string, number>, prof: nu
     behaviorMechanics,
     manualRule: asRecord(itemFlags.fvttJsonGenerator).manualRule,
     literalMechanics: asRecord(asRecord(itemFlags.fvttJsonGenerator).literalMechanics),
-    nativeWeapon:{properties:arrayValues(system.properties),type:asRecord(system.type),range:asRecord(system.range),damage:asRecord(system.damage)},
+    nativeWeapon:{properties:arrayValues(system.properties),type:asRecord(system.type),range:projectRange(system.range),damage:asRecord(system.damage)},
     effectCount: Array.isArray(item.effects)?item.effects.length:0,
     effectDefinitions:Array.isArray(item.effects)?item.effects.map(effect=>({_id:asRecord(effect)._id,statuses:arrayValues(asRecord(effect).statuses),changes:asRecord(effect).changes,systemChanges:asRecord(asRecord(effect).system).changes,duration:asRecord(asRecord(effect).duration),flags:asRecord(asRecord(effect).flags),description:asRecord(effect).description,disabled:asRecord(effect).disabled,transfer:asRecord(effect).transfer})):[],
     conditionLifecycle:asRecord(itemFlags.fvttJsonGenerator).conditionLifecycle,
@@ -1247,7 +1253,7 @@ function compareFeatureSections(
             const lifecycle=asRecord(asRecord(effect.flags).fvttJsonGenerator).conditionLifecycle,life=asRecord(lifecycle),links=conditionActivities.flatMap(activity=>arrayValues(activity.effectIds).includes(String(effect._id))?[activity]:[]);
             if(!links.length||effect.disabled===true||effect.transfer!==false||links.some(activity=>asRecord(activity.sourceOperation).role==='attack-roll'&&!gmHitRollTemplatesValid(activity,definitions,conditionActivities)))add('ACTOR_CONDITION_LINK_DRIFT',conditionPath,'An official template must be usable from its own result Activity.');
             if(life.version!==1||compact(String(life.sourceText??''))!==compact(feature.description)||(applied.condition||applied.escapeDc!==undefined||applied.staged||status==='exhaustion')&&life.mode!=='gm'||applied.condition&&(life.condition!==applied.condition||!String(effect.description).includes(applied.condition))||applied.escapeDc!==undefined&&life.escapeDc!==applied.escapeDc||applied.staged!==undefined&&life.staged!==applied.staged||applied.duration!==undefined&&life.duration!==applied.duration||status==='exhaustion'&&applied.exhaustionLevels!==undefined&&life.exhaustionLevels!==applied.exhaustionLevels)add('ACTOR_CONDITION_GM_METADATA_DRIFT',conditionPath,'The optional template lost its explicit GM qualification.');
-            if(duration&&(asRecord(effect.duration).seconds!==(duration.seconds??null)||asRecord(effect.duration).rounds!==(duration.rounds??null)))add('ACTOR_CONDITION_DURATION_DRIFT',conditionPath,'The optional template lost its numeric duration.');
+            if(duration&&!conditionDurationMatches(asRecord(effect.duration), duration))add('ACTOR_CONDITION_DURATION_DRIFT',conditionPath,'The optional template lost its numeric duration.');
           }
         }
         continue;
@@ -1280,7 +1286,7 @@ function compareFeatureSections(
             if (!companion && !manualCarrier) add('ACTOR_CONDITION_DRIFT', conditionPath, `${feature.name} lost the IR condition ${status} and its GM rule carrier.`);
           } else if (duration && definitions.filter(effect => arrayValues(effect.statuses).map(normalizeCondition).includes(status)).some(effect => {
             const actual = asRecord(effect.duration);
-            return actual.seconds !== (duration.seconds ?? null) || actual.rounds !== (duration.rounds ?? null) || actual.turns != null;
+            return !conditionDurationMatches(actual, duration);
           })) add('ACTOR_CONDITION_DURATION_DRIFT', conditionPath, 'The native duration does not preserve the duration explicitly declared in the AI IR.');
         }
         const conditionActivities = Array.isArray(found.activities) ? found.activities.map(asRecord) : [];
@@ -1307,7 +1313,7 @@ function compareFeatureSections(
           const matching = definitions.filter(effect => arrayValues(effect.statuses).map(normalizeCondition).includes(status));
           if (matching.some(effect => {
             const duration = asRecord(effect.duration);
-            return duration.seconds !== (lifecycle.duration!.seconds ?? null) || duration.rounds !== (lifecycle.duration!.rounds ?? null) || duration.turns != null;
+            return !conditionDurationMatches(duration, lifecycle.duration!);
           })) add('ACTOR_CONDITION_DURATION_DRIFT', conditionPath, 'Native condition duration must exactly express the source interval; sourceDuration metadata cannot replace it.');
         }
       }
@@ -1432,6 +1438,26 @@ const SKILL_ABILITIES: Record<string, string> = {
   dec: 'cha', itm: 'cha', prc: 'wis', ste: 'dex', ath: 'str', acr: 'dex', ins: 'wis', inv: 'int', arc: 'int',
   his: 'int', nat: 'int', rel: 'int', sur: 'wis', med: 'wis', per: 'cha', prf: 'cha', slt: 'dex', ani: 'wis',
 };
+
+function projectRange(value: unknown): Record<string, unknown> {
+  const range = { ...asRecord(value) };
+  for (const key of ['value', 'long', 'reach']) {
+    const distance = range[key];
+    if (typeof distance === 'string' && /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/u.test(distance.trim())) {
+      range[key] = Number(distance);
+    }
+  }
+  return range;
+}
+
+function conditionDurationMatches(clock: Record<string, unknown>, expected: { seconds?: number; rounds?: number }): boolean {
+  if (Object.hasOwn(clock, 'value') || Object.hasOwn(clock, 'units')) {
+    const units = expected.seconds !== undefined ? 'seconds' : 'rounds';
+    return clock.units === units && clock.value === expected[units] && clock.expiry === 'turnStart'
+      && clock.expired !== true && ['seconds', 'rounds', 'turns'].every(key => clock[key] == null);
+  }
+  return clock.seconds === (expected.seconds ?? null) && clock.rounds === (expected.rounds ?? null) && clock.turns == null;
+}
 
 function numeric(value: unknown): number {
   const result = typeof value === 'number' ? value : Number.parseFloat(String(value ?? ''));
@@ -1633,7 +1659,7 @@ function operationConditionProjectionValid(op:NonNullable<CanonicalFeature['sour
       const life=asRecord(asRecord(asRecord(effect.flags).fvttJsonGenerator).conditionLifecycle),clock=asRecord(effect.duration);
       if(effect.disabled===true||effect.transfer!==false||life.version!==1||condition.condition&&!String(effect.description).includes(condition.condition)||condition.escapeDc!==undefined&&life.escapeDc!==condition.escapeDc||condition.staged===true&&life.staged!==true||status==='exhaustion'&&condition.exhaustionLevels!==undefined&&life.exhaustionLevels!==condition.exhaustionLevels)return false;
       if((condition.condition||condition.escapeDc!==undefined||condition.staged||status==='exhaustion')&&life.mode!=='gm')return false;
-      if(duration&&(clock.seconds!==(duration.seconds??null)||clock.rounds!==(duration.rounds??null)))return false;
+      if(duration&&!conditionDurationMatches(clock, duration))return false;
     }
   }
   return true;

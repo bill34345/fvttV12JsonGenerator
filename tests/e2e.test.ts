@@ -20,12 +20,12 @@ describe('End-to-End Conversion', () => {
     }
   });
 
-  it('should convert template to valid actor JSON', () => {
+  it('preserves the explicit v12 template and historical golden-master schema', () => {
     const yamlParser = new YamlParser();
     const parsed = yamlParser.parse(template);
     console.log('Parsed:', JSON.stringify(parsed, null, 2));
     
-    const generator = new ActorGenerator();
+    const generator = new ActorGenerator({ fvttVersion: '12' });
     const actor = generator.generate(parsed);
     
     expect(actor.name).toBe('成年红龙');
@@ -122,35 +122,13 @@ describe('End-to-End Conversion', () => {
     // We just check existence as per instructions.
     expect(regionalEffect.flags?.['tidy5e-sheet']?.section).toBeDefined();
 
-    // 6. Spellcasting Feature exists (or standalone items if not mapped)
-    // We look for a feature that might contain the spells as activities.
-    // This is often named "Spellcasting" or "施法".
-    const spellcastingFeature = actor.items.find((i: any) => i.name === '施法' || i.name === 'Spellcasting');
-    
-    // 7. Spellcasting Feature has Activity for "火球术" (if spells.ldb has it)
-    // If not found in DB, it should be a standalone item.
-    if (spellcastingFeature) {
-       expect(spellcastingFeature).toBeDefined();
-       if (spellcastingFeature.system.activities) {
-           const activities = Object.values(spellcastingFeature.system.activities);
-           // It might be named "Cast" or "Fireball" depending on generator
-           // But assuming generator preserves name or we can find it.
-           // Since we can't be sure of the activity name without inspection, 
-           // and "if spells.ldb has it" is the condition, we assume if feature exists, logic worked.
-           // But let's try to find it.
-           const fireballActivity = activities.find((a: any) => a.name === '火球术' || (spellcastingFeature.name === '施法' && activities.length > 0)); 
-           // If '施法' exists, it must have at least one spell (since we passed [火球术, 未知法术] and '未知法术' is definitely not in DB, so '火球术' must be the one triggering the feature).
-           expect(activities.length).toBeGreaterThan(0);
-       }
-    } else {
-       // Fallback: Fireball item exists
-       const fireballItem = actor.items.find((i: any) => i.name === '火球术');
-       expect(fireballItem).toBeDefined();
-    }
-    
-    // 8. Standalone Item exists for "未知法术"
-    const unknownSpell = actor.items.find((i: any) => i.name === '未知法术');
-    expect(unknownSpell).toBeDefined();
+    const spellcastingFeature = actor.items.find((item: any) => item.name === '施法 Spellcasting');
+    expect(spellcastingFeature).toBeDefined();
+    expect(spellcastingFeature.system.description.value).toContain('火球术');
+    expect(spellcastingFeature.system.description.value).toContain('未知法术');
+    expect(spellcastingFeature.flags.fvttJsonGenerator.pendingSpells.map((entry: any) => entry.name)).toEqual(['火球术', '未知法术']);
+    expect(spellcastingFeature.system.activities).toEqual({});
+    expect(actor.items.some((item: any) => item.type === 'spell')).toBe(false);
   });
   it('keeps actor structure stable between core and modded plaintext profiles', async () => {
     const text = readFileSync('tests/fixtures/plaintext/月蚀矿腐化生物数据.md', 'utf-8');

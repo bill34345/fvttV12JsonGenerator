@@ -5,7 +5,9 @@ import { deriveSaveDc, type DcSourceKind } from './activity-derivation';
 import { mapDamageType } from './actor-text';
 import { getFoundryTarget, type FvttTargetVersion } from './target';
 import { createStableDocumentId } from './stableId';
-import { resolveLockedDnd5eV14Spell } from './v14SpellCatalog';
+import { applyActivityTargetFields } from './actor-target-metadata';
+import { resolveLockedDnd5eV14Spell, resolveLockedDnd5eV14SpellByName } from './v14SpellCatalog';
+import { displayNameIdentityCandidates } from '@fvtt-json-generator/models/display-name';
 import { weaponCriticalBonus, weaponDamagePartSignature, type WeaponConfiguration } from '@fvtt-json-generator/contracts/weapon-properties';
 
 /** Compatibility-only fixed UUID lookup used by pre-Intake Item Markdown. */
@@ -31,7 +33,7 @@ export class ActivityGenerator {
   private readonly fvttVersion: FvttTargetVersion;
 
   public constructor(options: { fvttVersion?: FvttTargetVersion } = {}) {
-    this.fvttVersion = options.fvttVersion ?? '12';
+    this.fvttVersion = options.fvttVersion ?? '14';
   }
 
   public generate(action: ActionData, context: ActivityGenerationContext = {}): Record<string, any> {
@@ -248,11 +250,27 @@ export class ActivityGenerator {
         }
       };
     } else if (action.type === 'spell' && action.spellName) {
-      // item-mechanics is the formal V14 Item Intake contract.  It carries a
-      // canonical identifier, so an unresolved spell must fail the formal
-      // promotion rather than becoming a misleading Utility Activity.  The
-      // older strict Markdown routes intentionally keep their established
-      // best-effort fallback below; they have no evidence-gated identifier.
+      if (this.isV14()) {
+        const candidates = [...displayNameIdentityCandidates(action.spellName), ...(action.englishName ? [action.englishName] : [])]
+          .filter(name => /^[A-Za-z]/u.test(name)).map(name => resolveLockedDnd5eV14SpellByName(name)).filter(spell => spell !== undefined);
+        const unique = [...new Map(candidates.map(spell => [spell.uuid, spell])).values()];
+        const locked = action.spellIdentifier
+          ? resolveLockedDnd5eV14Spell(action.spellIdentifier, action.englishName ?? action.spellName)
+          : unique.length === 1 ? unique[0] : undefined;
+        const activation = action.useAction?.activation ?? locked?.activation;
+        if (action.spellIdentifier && (locked?.level === undefined || !activation)) {
+          throw new Error(`Unable to uniquely resolve dnd5e spell "${action.spellIdentifier}" for Item Activity.`);
+        }
+        if (locked?.level !== undefined && activation) {
+          const consumption = action.useAction?.consumption ?? 0;
+          activities[id] = { _id: id, type: 'cast', spell: { uuid: locked.uuid, level: locked.level },
+            activation: { type: activation, value: action.useAction?.activation ? 1 : locked.castingTime?.value ?? null, override: false },
+            consumption: { targets: consumption > 0 ? [{ type: 'itemUses', target: '', value: String(consumption), scaling: { mode: '', formula: '' } }] : [],
+              spellSlot: false, scaling: { allowed: false, max: '' } } };
+        }
+        return activities;
+      }
+      // Explicit legacy targets retain their original mapper compatibility.
       const isFormalItemIntakeSpell = Boolean(action.spellIdentifier);
       const lockedSpell = action.spellIdentifier
         ? resolveLockedDnd5eV14Spell(action.spellIdentifier, action.englishName ?? action.spellName)
@@ -508,6 +526,7 @@ export class ActivityGenerator {
       }
     }
 
+    for (const activity of Object.values(activities)) applyActivityTargetFields(activity, this.fvttVersion);
     return activities;
   }
 
@@ -665,7 +684,7 @@ export class ActivityGenerator {
 
   private buildAttackRange(attack: NonNullable<ActionData['attack']>): Record<string, unknown> {
     if (attack.type === 'mwak' || attack.type === 'msak') {
-      const thrownMatch = attack.range?.match(/(?:射程|range)\s*(\d+)\s*\/\s*(\d+)/i);
+      const thrownMatch = attack.range?.match(this.isV14() ? /(\d+)\s*\/\s*(\d+)/ : /(?:射程|range)\s*(\d+)\s*\/\s*(\d+)/i);
       const value = thrownMatch?.[1] ? Number.parseInt(thrownMatch[1], 10) : null;
       const long = thrownMatch?.[2] ? Number.parseInt(thrownMatch[2], 10) : null;
       return {

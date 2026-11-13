@@ -48,6 +48,7 @@ function summarizeRange(value: unknown): NonNullable<ForgeItemVerificationSummar
   if (typeof range.override === 'boolean') result.override = range.override;
   for (const key of ['value', 'long', 'reach'] as const) {
     if (range[key] === null || (typeof range[key] === 'number' && Number.isFinite(range[key]))) result[key] = range[key];
+    else if(typeof range[key]==='string' && /^-?\d+(?:\.\d+)?$/u.test(range[key])) result[key]=Number(range[key]);
   }
   for (const key of ['units', 'special'] as const) {
     if (typeof range[key] === 'string') result[key] = range[key];

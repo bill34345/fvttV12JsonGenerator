@@ -4,7 +4,7 @@ import { isAbsolute, relative, resolve } from 'node:path';
 import { FORGE_PDF_ENGINE_VERSION } from '@fvtt-json-generator/forge-browser-runtime/pdf-types';
 
 export const MODULE_ID = 'fvtt-json-forge' as const;
-export const MODULE_VERSION = '0.5.1' as const;
+export const MODULE_VERSION = '0.6.0' as const;
 export const RELEASE_TAG = `${MODULE_ID}-v${MODULE_VERSION}` as const;
 export const REPOSITORY_URL = 'https://github.com/bill34345/fvttV12JsonGenerator' as const;
 export const MANIFEST_URL = `https://raw.githubusercontent.com/bill34345/fvttV12JsonGenerator/master/foundry-modules/${MODULE_ID}/src/module.json` as const;
@@ -100,15 +100,15 @@ export function validateManifest(manifest: Record<string, unknown>): void {
   if (manifest.url !== `${REPOSITORY_URL}/tree/master/foundry-modules/${MODULE_ID}`) throw new Error('FVTT JSON Forge project URL drifted.');
   if (manifest.manifest !== MANIFEST_URL || manifest.download !== DOWNLOAD_URL) throw new Error('FVTT JSON Forge release URLs drifted.');
   const compatibility = asRecord(manifest.compatibility);
-  if (compatibility.minimum !== '14.364' || compatibility.verified !== '14.364' || compatibility.maximum !== '14.368') {
-    throw new Error('FVTT JSON Forge requires reviewed Core builds 14.364 or 14.368, with 14.364 verified.');
+  if (compatibility.minimum !== '14.368' || compatibility.verified !== '14.370' || compatibility.maximum !== '14.999') {
+    throw new Error('FVTT JSON Forge must retain the verified Core baseline and admit the Core 14 major.');
   }
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(['scripts/index.js'])) throw new Error('FVTT JSON Forge browser entry drifted.');
   const systems = Array.isArray(asRecord(manifest.relationships).systems) ? asRecord(manifest.relationships).systems : [];
   const dnd5e = systems.map((entry: unknown) => asRecord(entry)).find((entry: Record<string, any>) => entry.id === 'dnd5e');
   const systemCompatibility = asRecord(dnd5e?.compatibility);
-  if (systemCompatibility.minimum !== '5.3.3' || systemCompatibility.verified !== '5.3.3' || systemCompatibility.maximum !== '5.3.3') {
-    throw new Error('FVTT JSON Forge supports exactly dnd5e 5.3.3.');
+  if (systemCompatibility.minimum !== '6.0.6' || systemCompatibility.verified !== '6.0.6' || systemCompatibility.maximum !== '6.999.999') {
+    throw new Error('FVTT JSON Forge must declare the native dnd5e 6 baseline and major ceiling.');
   }
   if (manifest.socket !== false) throw new Error('FVTT JSON Forge must not declare a socket.');
 }

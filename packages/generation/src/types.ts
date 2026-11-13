@@ -118,7 +118,7 @@ export interface GenerationProjectionOptions {
 
 export interface GenerationProjector {
   readonly targetVersions: readonly FvttTargetVersion[];
-  readonly systemVersion: '4.3.9' | '5.3.3';
+  readonly systemVersion: '4.3.9' | '6.0.6';
   project(
     document: CanonicalGenerationDocument,
     options: GenerationProjectionOptions,

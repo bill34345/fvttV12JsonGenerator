@@ -30,7 +30,7 @@ describe('structured action source sections', () => {
       expect(actor).toMatchObject({
         name: 'Mixed Sections Fixture',
         type: 'npc',
-        _stats: { systemVersion: fvttVersion === '14' ? '5.3.3' : '4.3.9' },
+        _stats: { systemVersion: fvttVersion === '14' ? '6.0.6' : '4.3.9' },
         system: { resources: { lair: { value: true, initiative: 20 } } },
       });
       expect(actor.items).toHaveLength(2);

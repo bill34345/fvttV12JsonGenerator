@@ -54,8 +54,38 @@ export function normalizeForgeItemArtifact(value: unknown, target: '12' | '14'):
   return replaceIdentityText(item, replacements) as JsonObject;
 }
 
+/** Existing Forge range preservation must precede native Field cleaning. */
+export function prepareForgeActorForNativeProjection(value: unknown): JsonObject {
+  const actor=normalizeForgeActorArtifact(value,'14');
+  for(const item of Array.isArray(actor.items)?actor.items:[])if(isJsonObject(item))prepareNativeItemFields(item);
+  return actor;
+}
+
+export function prepareForgeItemForNativeProjection(value: unknown): any {
+  const item=normalizeForgeItemArtifact(value,'14');
+  prepareNativeItemFields(item);
+  return item;
+}
+
+function prepareNativeItemFields(item:JsonObject):void{
+  const system=isJsonObject(item.system)?item.system:undefined;
+  if(!system)return;
+  const activities=Object.values(isJsonObject(system.activities)?system.activities:{}).filter(isJsonObject);
+  for(const activity of activities){
+    const activityRange=isJsonObject(activity.range)?activity.range:undefined;
+    if(activityRange?.override===false&&activityRange.value===null)delete activityRange.value;
+    const target=isJsonObject(activity.target)?activity.target:undefined;
+    const template=target&&isJsonObject(target.template)?target.template:undefined;
+    if(template?.units===''&&['type','count','size','width','height'].every(key=>template[key]===undefined||template[key]===null||template[key]===''))delete template.units;
+  }
+  const range=isJsonObject(system.range)?system.range:undefined;
+  if(range?.long!==null)return;
+  const longs=new Set(activities.map(activity=>isJsonObject(activity.range)?activity.range.long:undefined).filter((value):value is number=>typeof value==='number'));
+  if(longs.size===1)range.long=[...longs][0]!;
+}
+
 /**
- * Materialize the dnd5e 5.3.3 Activity defaults that Foundry writes during
+ * Materialize the dnd5e 6.0.6 Activity defaults that Foundry writes during
  * Document construction. Keeping them in the Forge-only artifact makes the
  * preview and post-create readback describe the same world semantics without
  * changing the ordinary CLI/Web Item JSON.

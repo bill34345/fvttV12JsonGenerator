@@ -60,7 +60,10 @@ export interface BrowserItemIntakeStageResult {
   message?: string;
 }
 
+import type { NativeDocumentProjection } from './nativeTarget';
+
 export interface BrowserItemIntakeInput {
+  nativeProjection?: NativeDocumentProjection;
   source: string;
   sourceName: string;
   displayName?: string;
@@ -453,7 +456,7 @@ async function generateBrowserItemIntake(
       sourceId: input.sourceId,
     });
     const canonicalMarkdown = request.source.content;
-    const response = await convertFinalItemSource(request);
+    const response = await convertFinalItemSource(request,{nativeProjection:input.nativeProjection});
     throwIfAborted(signal);
     report('generate', 'completed');
     const formalStatus = itemResponseStatus(response);

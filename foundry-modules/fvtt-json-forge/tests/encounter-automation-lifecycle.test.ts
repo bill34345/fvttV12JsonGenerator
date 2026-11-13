@@ -11,10 +11,10 @@ async function fixture(){
   const config={version:1 as const,rules:[],legendaryRecovery:[]};const bundle:any=encounterFixture();
   bundle.macros[0]!.key='battle-control';bundle.macros[0]!.command=fixedEncounterCommand(config);bundle.macros[0]!.commandHash=hashSource(bundle.macros[0]!.command);
   function collection(kind:string){const contents:any[]=[];return {contents,get:(id:string)=>contents.find(d=>d.id===id),documentClass:{async create(data:any){const doc:any={id:data._id,uuid:`${kind}.${data._id}`,flags:data.flags,toObject:()=>data,execute:async()=>{},delete:async()=>contents.splice(contents.indexOf(doc),1),async setFlag(scope:string,key:string,value:any){const parts=key.split('.');let target=data.flags[scope]??={};for(const part of parts.slice(0,-1))target=target[part]??={};target[parts.at(-1)!]=value;}};contents.push(doc);return doc;}}};}
-  const game:any={version:'14.364',system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro')};
+  const game:any={version:'14.370',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro')};
   const prepared=await prepareForgeEncounter(JSON.stringify(bundle));await importForgeEncounter({game,prepared,reviewed:true,assets:{async ensure(){throw Error('unexpected upload');}}});
   const macro=game.macros.contents[0],identity=macro.flags['fvtt-json-forge'].encounter;
-  const context={packageId:identity.packageId,packageHash:identity.packageHash,actors:identity.bindings,bindingKeys:identity.bindingKeys,covers:identity.covers};
+  const context={target:identity.target,packageId:identity.packageId,packageHash:identity.packageHash,actors:identity.bindings,bindingKeys:identity.bindingKeys,covers:identity.covers};
   return {game,macro,config,context,env:{game,canvas:{ready:true},ui:{notifications:{warn(){}}}}};
 }
 describe('fixed automation activation and resume',()=>{

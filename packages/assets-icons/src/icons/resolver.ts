@@ -20,9 +20,10 @@ const PLACEHOLDER_PATHS = new Set([
 
 const PACK_PRIORITY = new Map([
   ['dnd5e.monsterfeatures24', 0],
-  ['dnd5e.monsterfeatures', 1],
-  ['dnd5e.items', 2],
-  ['dnd5e.spells', 3],
+  ['dnd5e.classes24', 1],
+  ['dnd5e.feats24', 2],
+  ['dnd5e.equipment24', 3],
+  ['dnd5e.spells24', 4],
 ]);
 
 const DAMAGE_TAGS = new Set([
@@ -749,7 +750,7 @@ function itemBaseDamage(value: unknown): unknown {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
   const damage = value as Record<string, unknown>;
   if ('base' in damage) return damage.base;
-  // dnd5e 5.3.3 migrates the first legacy part into damage.base.
+  // Imported legacy parts still provide the same semantic damage signals.
   if (Array.isArray(damage.parts)) return damage.parts[0];
   return value;
 }

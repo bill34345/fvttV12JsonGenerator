@@ -1,15 +1,17 @@
+import { projectNativeDocument, type NativeDocumentProjection } from '@fvtt-json-generator/workflows/native-projection';
 import { hashArtifact,readForgeSourceId,createForgeSourceId, type JsonObject } from '@fvtt-json-generator/forge-gateway-protocol';
 import type { IconReviewReport } from '@fvtt-json-generator/contracts/icon-review';
 import { buildForgeActorRequest, convertFinalActorSource } from './index';
-import { decodeForgeEncounterPackageText, encounterPackageHash, encounterPackageFindings, type ForgeEncounterPackage } from './encounterPackage';
+import { decodeForgeEncounterPackageText, serializeForgeEncounterPackage, encounterPackageHash, encounterPackageFindings, type ForgeEncounterPackage } from './encounterPackage';
 import { readEncounterRuleMarker } from '@fvtt-json-generator/contracts/encounter-rules';
 import { localizedEncounterPresentation } from './encounterLocalizationProjection';
 import type { ForgeEncounterPackageMacro } from './encounterPackage';
-import {restoreRulePresentationPlan,type RulePresentationPlan} from '@fvtt-json-generator/generation/rule-presentation';
+import {restoreRulePresentationPlan,rebindRulePresentationAfterProjection,type RulePresentationPlan} from '@fvtt-json-generator/generation/rule-presentation';
 import {projectReviewedActorLocalization} from '@fvtt-json-generator/generation/reviewed-localization';
-import {normalizeForgeActorArtifact} from './artifact';
+import {normalizeForgeActorArtifact,prepareForgeActorForNativeProjection} from './artifact';
 import { actorRulePresentation } from './actorRulePresentationContext';
 import {actorSourceReviews} from './actorSourceReviewContext';
+import { FORGE_NATIVE_606_TARGET, isNativeForgeRuntimeTargetSupported } from './nativeTarget';
 
 export interface PreparedEncounterActor {
   key: string;
@@ -32,6 +34,8 @@ export interface EncounterRequirement {
   detailJson:string;
 }
 export interface PreparedForgeEncounter {
+  /** The source bundle remains immutable provenance; this binds the actual receiver. */
+  runtimeTarget?: ForgeEncounterPackage['target'];
   reviewFindings?: readonly string[];
   label: string;
   macros: readonly ForgeEncounterPackageMacro[];
@@ -41,11 +45,20 @@ export interface PreparedForgeEncounter {
   requirements: readonly EncounterRequirement[];
 }
 const preparedProofs = new WeakSet<object>();
+const nativePorts = new WeakMap<object, NativeDocumentProjection>();
 const ASSISTED_CODES = new Set(['GEN_GM_ASSISTANCE_REQUIRED', 'GEN_EXTERNAL_RULE_REVIEW_REQUIRED', 'GEN_LITERAL_REVIEW_REQUIRED']);
 
-/** Saved Actor artifacts are retained; source-only legacy packages use the formal workflow. */
-export async function prepareForgeEncounter(text: string, signal?: AbortSignal): Promise<PreparedForgeEncounter> {
+/** Native saved Actors are reused; older artifacts remain available while source conversion is attempted. */
+export async function prepareForgeEncounter(text: string, signal?: AbortSignal, options: { nativeProjection?: NativeDocumentProjection } = {}): Promise<PreparedForgeEncounter> {
   const bundle = decodeForgeEncounterPackageText(text);
+  const nativeProjection = options.nativeProjection;
+  const projectionTarget:ForgeEncounterPackage['target'] = {
+    foundry:FORGE_NATIVE_606_TARGET.stats.coreVersion, system:'dnd5e',
+    systemVersion:FORGE_NATIVE_606_TARGET.dnd5eVersion, effectProfile:'core',
+  };
+  const runtimeTarget:ForgeEncounterPackage['target']|undefined = nativeProjection?.runtime
+    ? { foundry:nativeProjection.runtime.coreVersion, system:nativeProjection.runtime.systemId,
+      systemVersion:nativeProjection.runtime.systemVersion, effectProfile:'core' } : projectionTarget;
   const findings:string[]=[...encounterPackageFindings(bundle)];
   const actors: PreparedEncounterActor[] = [];
   for (const input of bundle.actors) {
@@ -59,27 +72,30 @@ export async function prepareForgeEncounter(text: string, signal?: AbortSignal):
       let rulePresentation:RulePresentationPlan|undefined;
       const reviewFindings:string[]=[...(input.reviewFindings??[])];
       if(artifact&&input.artifactHash&&input.artifactHash!==hashArtifact(artifact))reviewFindings.push('保存的 Actor 指纹与内容不同；Actor 已保留，请核对。');
+      if (artifact && !isNativeArtifact(artifact)) {
+        const retiredSource=bundle.target.systemVersion==='5.3.3'||(artifact._stats as Record<string,unknown>|undefined)?.systemVersion==='5.3.3';
+        if (retiredSource && input.source.trim()) {
+          artifact=undefined;
+          reviewFindings.push('旧版 Actor 已保留；本次采用现有来源经正式 workflow 重新生成 Core 14／dnd5e 6 产物。');
+        } else reviewFindings.push('保存的 Actor 仅供查看和下载；缺少可采用的 Core 14／dnd5e 6 目标证明，须先核对来源并转换才能采用。');
+      }
       if(artifact&&input.rulePresentation){
         try{rulePresentation=restoreRulePresentationPlan(input.rulePresentation,artifact,input.source,(actor:unknown)=>normalizeForgeActorArtifact(actor,'14'));}
         catch(error){reviewFindings.push(`本地化规则事实未恢复：${error instanceof Error?error.message:String(error)}；Actor 保留。`);}
       }
-      if(artifact&&bundle.localization){
-        const translation=bundle.localization.actors.find(actor=>actor.key===input.key)?.translation;
-        if(translation)try{artifact=projectReviewedActorLocalization(artifact,input.source,translation,rulePresentation).actor;retainedArtifact=artifact;}
-        catch(error){reviewFindings.push(`中文显示未应用：${error instanceof Error?error.message:String(error)}；原语言 Actor 保留。`);}
-      }
+      let nativeAttempted=false;
       if (!artifact) {
         const digest = hashArtifact({packageId:bundle.id,key:input.key,sourceHash:input.sourceHash});
         const stableId = createForgeSourceId(()=>`${digest.slice(0,8)}-${digest.slice(8,12)}-4${digest.slice(13,16)}-a${digest.slice(17,20)}-${digest.slice(20,32)}`);
+        const generationTarget=projectionTarget;
+        nativeAttempted=Boolean(nativeProjection&&generationTarget.systemVersion==='6.0.6');
         const request = buildForgeActorRequest({content:input.source,displayName:input.label,
-          requestId:`encounter-${bundle.id}-${input.key}`,fvttVersion:bundle.target.foundry,systemVersion:bundle.target.systemVersion,
+          requestId:`encounter-${bundle.id}-${input.key}`,fvttVersion:generationTarget.foundry,systemVersion:generationTarget.systemVersion,
           ...(readForgeSourceId(input.source).status==='missing'?{sourceId:stableId}:{})});
-        const response = await convertFinalActorSource(request,{captureRulePresentation:true,
-          reviewedLocalization:bundle.localization?.actors.find(actor=>actor.key===input.key)?.translation});
+        const response = await convertFinalActorSource(request,{captureRulePresentation:true,nativeProjection:nativeAttempted?nativeProjection:undefined});
         signal?.throwIfAborted();
         if (!('result' in response) || !response.result.artifact) {
-          findings.push(`${input.label}：本地转换未返回 Actor；其他已生成角色保留。`);
-          continue;
+          throw new Error('本地转换未返回 Actor；保存的旧产物仍可查看和下载');
         }
         const result = response.result;
         artifact=result.artifact;retainedArtifact=artifact;
@@ -94,6 +110,21 @@ export async function prepareForgeEncounter(text: string, signal?: AbortSignal):
         if(result.actorVerification.warnings.length||result.diagnostics.some(d=>d.severity==='error'||!ASSISTED_CODES.has(d.code)))
           reviewFindings.push('来源或生成检查仍有疑点；Actor 已保留。');
       }
+      const translation=bundle.localization?.actors.find(actor=>actor.key===input.key)?.translation;
+      let localized=false,localizationError:unknown;
+      if(artifact&&translation)try{artifact=projectReviewedActorLocalization(artifact,input.source,translation,rulePresentation).actor;retainedArtifact=artifact;localized=true;}
+      catch(error){localizationError=error;}
+      if (artifact && isNativeArtifact(artifact) && nativeProjection && !nativeAttempted) {
+        status='needs_review';
+        const beforeProjection=artifact;
+        artifact = normalizeForgeActorArtifact(await projectNativeDocument(nativeProjection,'Actor',prepareForgeActorForNativeProjection(artifact)),'14');
+        retainedArtifact = artifact;
+        if(rulePresentation&&!localized)try{rulePresentation=rebindRulePresentationAfterProjection(rulePresentation,beforeProjection,artifact,input.source);}
+        catch(error){rulePresentation=undefined;reviewFindings.push(`原生投影后的规则展示未恢复：${error instanceof Error?error.message:String(error)}；Actor保留。`);}
+      }
+      if(artifact&&translation&&!localized&&nativeProjection)try{artifact=projectReviewedActorLocalization(artifact,input.source,translation,rulePresentation).actor;retainedArtifact=artifact;localized=true;}
+      catch(error){localizationError=error;}
+      if(localizationError&&!localized)reviewFindings.push(`中文显示未应用：${localizationError instanceof Error?localizationError.message:String(localizationError)}；现有 Actor 保留。`);
       const retained=artifact!;
       reviewFindings.push(...encounterStagedMarkerFindings(retained));
       const mechanics = (Array.isArray(retained.items)?retained.items:[]).flatMap((item:any)=>item.flags?.fvttJsonGenerator?.behaviorMechanics??[]);
@@ -118,7 +149,7 @@ export async function prepareForgeEncounter(text: string, signal?: AbortSignal):
         artifactHash:hashArtifact(retainedArtifact),sourceHash:input.sourceHash,status:'needs_review',reviewFindings:[finding],requirements:[]});
     }
   }
-  const available = new Set(actors.map(actor=>actor.key));
+  const available = new Set(actors.filter(actor=>isNativeArtifact(actor.artifact)).map(actor=>actor.key));
   const macros = bundle.macros.filter(macro=>{
     const missing = Object.values(macro.bindings).filter(key=>!available.has(key));
     const invalid = macro.covers.filter(cover=>!actors.find(actor=>actor.key===cover.actorKey)?.requirements.some(required=>required.mechanicId===cover.mechanicId));
@@ -135,21 +166,34 @@ export async function prepareForgeEncounter(text: string, signal?: AbortSignal):
     presentation={label:bundle.label,macros:[]};
     findings.push(`包级中文展示未完成：${error instanceof Error?error.message:String(error)}；已生成 Actor 保留，配套宏未准备，原宏记录保留。`);
   }
-  const result:PreparedForgeEncounter = freeze({bundle,hash:encounterPackageHash(bundle),actors,...presentation,
+  const hash=encounterPackageHash(bundle);
+  const result:PreparedForgeEncounter = freeze({bundle,hash,actors,...presentation,...(runtimeTarget?{runtimeTarget}:{}),
     requirements:actors.flatMap(actor=>actor.requirements),reviewFindings:[...findings,...actors.flatMap(actor=>(actor.reviewFindings??[]).map(f=>`${actor.name}：${f}`))]});
   preparedProofs.add(result);
+  if(nativeProjection)nativePorts.set(result,nativeProjection);
   return result;
 }
 
 export function assertPreparedForgeEncounter(value: PreparedForgeEncounter): void {
   if (!preparedProofs.has(value) || encounterPackageHash(value.bundle) !== value.hash) throw new Error('生物导入文件必须在当前页面重新生成并审核。');
 }
+
+export function reprepareForgeEncounter(prepared:PreparedForgeEncounter,bundle:ForgeEncounterPackage,signal?:AbortSignal):Promise<PreparedForgeEncounter>{
+  assertPreparedForgeEncounter(prepared);
+  return prepareForgeEncounter(serializeForgeEncounterPackage(bundle),signal,{nativeProjection:nativePorts.get(prepared)});
+}
+
 function freeze<T>(value: T): T {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
     for (const child of Object.values(value)) freeze(child);
     Object.freeze(value);
   }
   return value;
+}
+
+function isNativeArtifact(artifact:JsonObject):boolean {
+  const stats=artifact._stats as Record<string,unknown>|undefined;
+  return isNativeForgeRuntimeTargetSupported(stats?.coreVersion,stats?.systemVersion);
 }
 
 function encounterStagedMarkerFindings(artifact: JsonObject): string[] {

@@ -14,8 +14,9 @@ import {executeHydrationTransaction,HydrationTransactionError,projectHydrationBi
 import {FinalArtifactResolverActor} from './helpers/final-artifact-resolver-port';
 
 const artifactRoot=resolve('.local/forge-brass-cast-20261022');
-const referenceRoot='F:/FoundryLab/reference-cache/dnd5e/5.3.3/repo/packs/_source/spells24';
-const pinnedCastSource='F:/FoundryLab/reference-cache/dnd5e/5.3.3/repo/module/documents/activity/cast.mjs';
+const referenceRepo=resolve(process.env.FVTT_REFERENCE_CACHE_ROOT ?? '.local/references','dnd5e/6.0.6/repo');
+const referenceRoot=join(referenceRepo,'packs/_source/spells24');
+const pinnedCastSource=join(referenceRepo,'module/documents/activity/cast.mjs');
 const required=[join(artifactRoot,'N2.actor.json'),join(artifactRoot,'N3.actor.json'),join(artifactRoot,'replay-final-verification.json'),pinnedCastSource];
 const available=required.every(existsSync)&&existsSync(referenceRoot);
 const sha=(path:string)=>createHash('sha256').update(readFileSync(path)).digest('hex');

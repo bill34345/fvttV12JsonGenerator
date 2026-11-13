@@ -913,7 +913,7 @@ export function App() {
           detection.route === "ai-item-intake" &&
           (fvttVersion !== "14" || effectProfile !== "core")
         ) {
-          throw new Error("AI Item 整理目前要求 Foundry v14 + core。请调整目标后再运行。");
+          throw new Error("AI Item 整理目前要求 Foundry v14／dnd5e 6 + core。请调整目标后再运行。");
         }
         if (detection.route === "single") {
           const result = await convertSingle({
@@ -1459,7 +1459,7 @@ export function App() {
                         selectFvttVersion(event.target.value as FvttVersion)
                       }
                     >
-                      <option value="14">v14（推荐）</option>
+                      <option value="14">v14／dnd5e 6（推荐）</option>
                       {!aiItemRouteSelected ? (
                         <option value="12">v12（旧世界兼容）</option>
                       ) : null}
@@ -1513,7 +1513,7 @@ export function App() {
                             : "modded-v12："}
                         </strong>
                         {fvttVersion === "14"
-                          ? "面向已安装 DAE 14.0.12 与 MIDI-QOL 14.0.11 的世界，增加来源明确的自动化；缺少模块时不要选择。"
+                          ? "面向已安装兼容 dnd5e 6 的 DAE 与 MIDI-QOL 的世界，增加来源明确的自动化；缺少模块时不要选择。"
                           : "面向旧版 Foundry 模块环境保留兼容自动化；新项目请使用 v14 + core。"}
                       </p>
                     </div>

@@ -17,6 +17,7 @@ import type { GenerationIconResolver } from './ports';
 import { renderFoundryItemDescriptionHtml } from './item-description';
 import { projectWeaponProperties } from './weapon-properties';
 import type { WeaponConfiguration } from '@fvtt-json-generator/contracts/weapon-properties';
+import { applyEffectTargetFields, applyItemActivityTargetFields } from './actor-target-metadata';
 
 /**
  * Item document type - represents a Foundry VTT item document
@@ -70,7 +71,7 @@ export class ItemGenerator {
   private readonly effectProfileApplier = new EffectProfileApplier();
 
   constructor(private options: ItemGeneratorOptions = {}) {
-    this.fvttVersion = options.fvttVersion ?? '12';
+    this.fvttVersion = options.fvttVersion ?? '14';
     this.effectProfile = options.effectProfile ?? 'core';
     assertEffectProfileForTarget(this.fvttVersion, this.effectProfile);
     this.activityGenerator = new ActivityGenerator({ fvttVersion: this.fvttVersion });
@@ -171,7 +172,7 @@ export class ItemGenerator {
           book: '',
           page: '',
           license: '',
-          rules: '2014',
+          rules: this.isV14() ? '2024' : '2014',
         },
         quantity: 1,
         weight: {
@@ -513,11 +514,21 @@ export class ItemGenerator {
 
     if (this.isV14()) {
       delete item.system.attuned;
+      if (item.system.rarity !== undefined) {
+        item.system.rarities = item.system.rarity ? [item.system.rarity] : [];
+        delete item.system.rarity;
+      }
+      if (item.system.armor?.magicalBonus !== undefined) {
+        item.system.armor.magicalBonus = String(item.system.armor.magicalBonus ?? '');
+      }
+      if (item.system.magicalBonus !== undefined) item.system.magicalBonus = String(item.system.magicalBonus ?? '');
+      applyItemActivityTargetFields(item, this.fvttVersion);
     }
 
     if (Array.isArray(item.effects)) {
-      for (const effect of item.effects) {
+      for (const [index, effect] of item.effects.entries()) {
         if (!effect || typeof effect !== 'object') continue;
+        applyEffectTargetFields(effect, this.fvttVersion, `${item.name}/${effect.name}/${index}`);
         effect._stats = {
           ...(effect._stats ?? {}),
           coreVersion: this.targetStats().coreVersion,

@@ -14,7 +14,7 @@ import { createForgeEncounterApplicationClass } from '../foundry-modules/fvtt-js
 const actorSource = readFileSync(new URL('./fixtures/forge-semantic-icons.md', import.meta.url), 'utf8');
 async function actorResponse() {
   const response = await convertFinalActorSource(buildForgeActorRequest({ content: actorSource, displayName: 'Report Fixture',
-    requestId: 'icon-review-report', fvttVersion: '14.368', systemVersion: '5.3.3' }));
+    requestId: 'icon-review-report', fvttVersion: '14.368', systemVersion: '6.0.6' }));
   if (!('result' in response) || response.result.status !== 'accepted') throw new Error('Fixture must generate successfully.');
   return response;
 }
@@ -30,12 +30,12 @@ describe('Forge existing icon report crosses the result boundary', () => {
     const oldActor = structuredClone(actor); delete oldActor.result.iconReview;
     expect(decodeForgeActorResponse(oldActor).ok).toBe(true);
     const off = await convertFinalActorSource({ ...buildForgeActorRequest({ content: actorSource, displayName: 'Off',
-      requestId: 'off-report', fvttVersion: '14.368', systemVersion: '5.3.3' }),
+      requestId: 'off-report', fvttVersion: '14.368', systemVersion: '6.0.6' }),
       resolvedTarget: { generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' } });
     expect('result' in off && Object.hasOwn(off.result, 'iconReview')).toBe(false);
     const item = await convertFinalItemSource(buildForgeItemRequest({
       content: readFileSync('obsidian/dnd数据转fvttjson/input/items/骑士之盾.md', 'utf8'), displayName: 'Shield',
-      requestId: 'item-report', fvttVersion: '14.368', systemVersion: '5.3.3' }));
+      requestId: 'item-report', fvttVersion: '14.368', systemVersion: '6.0.6' }));
     if (!('result' in item)) throw new Error('Expected Item result.');
     expect(item.result.iconReview?.entries.length).toBeGreaterThan(0);
     expect(decodeForgeItemResponse(JSON.parse(JSON.stringify(item))).ok).toBe(true);
@@ -86,7 +86,7 @@ describe('Forge existing icon report crosses the result boundary', () => {
     expect(serializeForgeEncounterPackage(prepared.bundle)).toBe(serialized);
     class Base { render() { return this; } }
     const App = createForgeEncounterApplicationClass({
-      game: { version: '14.368', system: { id: 'dnd5e', version: '5.3.3' }, user: { isGM: true }, macros: { contents: [] } },
+      game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.6' }, user: { isGM: true }, macros: { contents: [] } },
       foundry: { applications: { api: { ApplicationV2: Base, HandlebarsApplicationMixin: (base: any) => base } } },
     });
     const app: any = new App(); app.prepared = prepared;

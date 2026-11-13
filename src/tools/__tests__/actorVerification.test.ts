@@ -182,8 +182,8 @@ describe('actorVerification', () => {
     const summary = buildActorVerificationSummaryFromValues({
       source: '# AC Guardian\nGuarded Step. The creature gains +2 AC until its next turn.',
       actor: buildActorWithAcEffect({
-        coreVersion: '14.364',
-        key: 'system.attributes.ac.formula',
+        coreVersion: '14.370',
+        key: 'system.attributes.ac.value',
         value: '4',
       }),
     });
@@ -197,7 +197,7 @@ describe('actorVerification', () => {
     const summary = buildActorVerificationSummaryFromValues({
       source: '# AC Guardian\nGuarded Step. The creature gains +2 AC until its next turn.',
       actor: buildActorWithAcEffect({
-        coreVersion: '14.364',
+        coreVersion: '14.370',
         key: 'system.attributes.ac.bonus',
         value: '2',
       }),
@@ -210,13 +210,13 @@ describe('actorVerification', () => {
       }),
     );
     expect(summary.warnings).toContain(
-      'Source-derived AC effect on Guarded Step has key system.attributes.ac.bonus, expected system.attributes.ac.formula for Foundry v14',
+      'Source-derived AC effect on Guarded Step has key system.attributes.ac.bonus, expected system.attributes.ac.value for Foundry v14',
     );
   });
 
   it.each([
     ['12.331', 'system.attributes.ac.bonus'],
-    ['14.364', 'system.attributes.ac.formula'],
+    ['14.370', 'system.attributes.ac.value'],
   ])('accepts a matching source-derived bonus AC effect for Foundry %s', (coreVersion, key) => {
     const summary = buildActorVerificationSummaryFromValues({
       source: '# AC Guardian\nGuarded Step. The creature gains +2 AC until its next turn.',
@@ -235,7 +235,7 @@ function buildActorWithAcEffect(options: {
   return {
     name: 'AC Guardian',
     type: 'npc',
-    _stats: { coreVersion: options.coreVersion },
+    _stats: { coreVersion: options.coreVersion, systemVersion: options.coreVersion.startsWith('14.') ? '6.0.6' : '4.3.9' },
     system: {
       attributes: { senses: {} },
       details: {},
@@ -248,14 +248,16 @@ function buildActorWithAcEffect(options: {
         effects: [
           {
             name: 'Guarded Step',
-            changes: [
+            ...(options.coreVersion.startsWith('14.') ? { system: { changes: [{
+              _id: 'change0000000001', key: options.key, type: 'add', phase: 'final', value: options.value, priority: null,
+            }] } } : { changes: [
               {
                 key: options.key,
                 mode: 2,
                 value: options.value,
                 priority: null,
               },
-            ],
+            ] }),
             flags: {
               fvttJsonGenerator: {
                 sourceDerivedAcEffect: true,

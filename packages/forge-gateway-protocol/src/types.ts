@@ -168,8 +168,8 @@ export interface ForgeAcceptedVerificationSummary {
 }
 
 export interface ForgeHitPointSummary {
-  value?: number;
-  max?: number;
+  value?: number | null;
+  max?: number | null;
   temp?: number | null;
   tempmax?: number | null;
   formula?: string;
@@ -177,31 +177,34 @@ export interface ForgeHitPointSummary {
 
 export interface ForgeArmorClassSummary {
   value?: number;
-  flat?: number;
-  bonus?: number;
+  flat?: number | null;
+  bonus?: number | string;
   formula?: string;
   calc?: string;
+  override?: number | null;
+  calcs?: string[];
+  formulas?: Array<{ formula?: string; label?: string; armored?: boolean | null; shielded?: boolean | null }>;
 }
 
 export interface ForgeSensesSummary {
   ranges?: {
-    darkvision?: number;
-    blindsight?: number;
-    tremorsense?: number;
-    truesight?: number;
+    darkvision?: number | null;
+    blindsight?: number | null;
+    tremorsense?: number | null;
+    truesight?: number | null;
   };
-  darkvision?: number;
-  blindsight?: number;
-  tremorsense?: number;
-  truesight?: number;
+  darkvision?: number | null;
+  blindsight?: number | null;
+  tremorsense?: number | null;
+  truesight?: number | null;
   passive?: number;
   special?: string;
-  units?: string;
+  units?: string | null;
 }
 
 export interface ForgeActivityRangeSummary {
   override?: boolean;
-  value?: number | null;
+  value?: number | string | null;
   long?: number | null;
   reach?: number | null;
   units?: string;
@@ -266,7 +269,7 @@ export interface ForgeActorVerificationSummary {
     creatureType?: string;
     hp?: ForgeHitPointSummary;
     ac?: ForgeArmorClassSummary;
-    cr?: number;
+    cr?: number | null;
     senses: ForgeSensesSummary;
     damageVulnerability?: {value:string[];custom:string};
   };

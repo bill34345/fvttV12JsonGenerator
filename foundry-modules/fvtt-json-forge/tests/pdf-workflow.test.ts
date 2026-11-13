@@ -41,7 +41,7 @@ function harness(configuration:{initialPdf?:File;reader?:(...args:any[])=>Promis
     async close(){return this;}
   }
   const foundry={applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}};
-  const game:any={version:'14.368',world:{id:'pdf-fixture'},system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}};
+  const game:any={version:'14.368',world:{id:'pdf-fixture'},system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},macros:{contents:[]}};
   const noReview=async()=>{throw Error('No paid content review is allowed');};
   const providers=()=>({provider:{providerName:'offline-fixture',extractionModel:'fixture',reviewModel:'fixture',
     discover:async(request:any)=>{

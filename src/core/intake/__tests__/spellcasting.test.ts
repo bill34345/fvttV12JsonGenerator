@@ -131,7 +131,8 @@ describe('explicit offline source-evidenced spellcasting audit and projection', 
     });
     const actor = generated.rawJson as any;
     expect(actor.system.attributes.spellcasting).toBe('wis');
-    expect(actor.system.details.spellLevel).toBe(5);
+    expect(actor.system.attributes.spell.level).toBe(5);
+    expect(actor.system.details.spellLevel).toBeUndefined();
     expect(actor.system.spells.spell1).toMatchObject({ value: 4, override: null });
     expect(actor.system.spells.spell2).toMatchObject({ value: 3, override: null });
     expect(actor.system.spells.spell3).toMatchObject({ value: 2, override: null });
@@ -140,7 +141,7 @@ describe('explicit offline source-evidenced spellcasting audit and projection', 
     expect(verifyMonsterIntake(source, ir, markdown, actor).status).toBe('accepted');
     for (const [label, mutate, code, path] of [
       ['ability', (value: any) => { value.system.attributes.spellcasting = 'cha'; }, 'PREPARED_SPELLCASTING_ABILITY_DRIFT', '/actor/system/attributes/spellcasting'],
-      ['caster level', (value: any) => { value.system.details.spellLevel = 6; }, 'PREPARED_SPELLCASTER_LEVEL_DRIFT', '/actor/system/details/spellLevel'],
+      ['caster level', (value: any) => { value.system.attributes.spell.level = 6; }, 'PREPARED_SPELLCASTER_LEVEL_DRIFT', '/actor/system/attributes/spell/level'],
       ['slot pool', (value: any) => { value.system.spells.spell1.value = 9; }, 'PREPARED_SPELL_SLOT_DRIFT', '/actor/system/spells/spell1/value'],
     ] as const) {
       const drifted = structuredClone(actor);

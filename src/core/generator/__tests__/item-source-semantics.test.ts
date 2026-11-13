@@ -148,7 +148,7 @@ describe('source-derived standalone Item semantics', () => {
     const generated = await new ItemGenerator({ fvttVersion: '14' }).generate(parsed);
 
     expect(generated.img).toBe('icons/svg/item-bag.svg');
-    expect(generated.system.armor).toEqual({ value: null, dex: null, magicalBonus: null });
+    expect(generated.system.armor).toEqual({ value: null, dex: null, magicalBonus: '' });
     expect(generated.system.type).toEqual({ value: 'trinket', baseItem: '' });
     expect(generated.system.properties).toEqual(['mgc']);
     expect(generated.system.weight).toEqual({ value: 0, units: 'lb' });
@@ -293,8 +293,8 @@ describe('source-derived standalone Item semantics', () => {
       const activities = activitySemantics(generated);
       const reaction = activities.find((activity) => activity.name === '庇护领域 Protective Field');
 
-      expect(generated.system.rarity).toBe('veryRare');
-      expect(generated.system.armor).toEqual({ value: 2, dex: null, magicalBonus: 2 });
+      expect(fvttVersion === '14' ? generated.system.rarities : [generated.system.rarity]).toEqual(['veryRare']);
+      expect(generated.system.armor).toEqual({ value: 2, dex: null, magicalBonus: fvttVersion === '14' ? '2' : 2 });
       expect(generated.system.type).toEqual({ value: 'shield', baseItem: 'shield' });
       expect(generated.system.properties).toEqual(['mgc']);
       expect(generated.system.weight).toEqual({ value: 6, units: 'lb' });

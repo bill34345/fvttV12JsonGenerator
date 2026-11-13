@@ -9,7 +9,7 @@ import {buildValidLurkerIr,LURKER_SOURCE} from '../src/core/intake/__tests__/fix
 
 const noCall=async():Promise<never>=>{throw Error('No model or network calls in preservation tests.');};
 const provider={providerName:'preservation-fixture',extractionModel:'none',reviewModel:'disabled',discover:noCall,extract:noCall,repair:noCall,review:noCall};
-const input={sourceName:'Preserved activities',displayName:'Preserved activities',requestId:'preserved-activities',sourceScope:'single' as const,sourceId:'actor:v1:22c247c7-3074-4c46-8989-c562c5622aa4' as ForgeSourceId,fvttVersion:'14.368',systemVersion:'5.3.3'};
+const input={sourceName:'Preserved activities',displayName:'Preserved activities',requestId:'preserved-activities',sourceScope:'single' as const,sourceId:'actor:v1:22c247c7-3074-4c46-8989-c562c5622aa4' as ForgeSourceId,fvttVersion:'14.368',systemVersion:'6.0.6'};
 function proposal(features:any[]){
   const ir:any=buildValidLurkerIr();
   ir.creature.traits=[];ir.creature.actions=features;ir.creature.bonusActions=[];ir.creature.reactions=[];ir.creature.legendaryActions=[];ir.claims=[];ir.coverage=[];
@@ -72,7 +72,7 @@ test('preservation: modern coordinated conditions share the declared failed Save
     for(const status of declared){
       const owner=links(item,status);expect(owner).toHaveLength(1);expect(owner[0]).toMatchObject({type:'save',save:{ability:['wis'],dc:{formula:'15'}}});
       const effect=item.effects.find((entry:any)=>entry.statuses.includes(status));expect(owner[0].effects).toContainEqual({_id:effect._id,onSave:false});
-      if(seconds!==undefined)expect(effect.duration.seconds).toBe(seconds);
+      if(seconds!==undefined)expect(effect.duration).toMatchObject({value:seconds,units:'seconds'});
       else expect(effect.description).toContain(consequence);
     }
   }
@@ -126,7 +126,7 @@ test('preservation: mixed canonical child Saves retain their effects and do not 
     expect(list).toHaveLength(2);expect(save).toMatchObject({name:'Follow-up Save',activation:{type:'special'},save:{ability:['con'],dc:{formula:'15'}},consumption:{targets:[]}});
     expect(save.description.chatFlavor).toContain('The target is Frightened for 1 minute.');expect(save.description.chatFlavor).not.toContain('piercing damage');
     expect(links(item,'prone').map(activity=>activity.type)).toEqual(['attack']);expect(links(item,'frightened')).toEqual([save]);
-    const fear=item.effects.find((effect:any)=>effect.statuses.includes('frightened'));expect(fear.duration.seconds).toBe(60);expect(fear.flags.fvttJsonGenerator.conditionLifecycle.condition).toContain('Only after the hit.');
+    const fear=item.effects.find((effect:any)=>effect.statuses.includes('frightened'));expect(fear.duration).toMatchObject({value:60,units:'seconds'});expect(fear.flags.fvttJsonGenerator.conditionLifecycle.condition).toContain('Only after the hit.');
     expect(String(item.system.uses.max)).toBe('3');expect(list.filter(activity=>activity.consumption.targets.length)).toHaveLength(1);
     expect(save.flags.fvttJsonGenerator.sourceResourceRole).toBe('follow-up');
     children.push({activity:save,effect:fear});
@@ -180,8 +180,8 @@ test('preservation: parent and child Saves keep separate states even when the sa
     expect(child).toMatchObject({type:'save',save:{dc:{formula:'12'},ability:['con']},consumption:{targets:[]}});
     expect(parent.effects).toHaveLength(1);expect(child.effects).toHaveLength(1);expect(parent.effects[0]._id).not.toBe(child.effects[0]._id);
     const parentEffect=item.effects.find((effect:any)=>effect._id===parent.effects[0]._id),childEffect=item.effects.find((effect:any)=>effect._id===child.effects[0]._id);
-    expect(parentEffect.statuses).toEqual(['prone']);expect(parentEffect.duration.seconds).toBe(60);expect(parentEffect.description).not.toContain('Only after the parent Save.');
-    expect(childEffect.statuses).toEqual([childStatus]);expect(childEffect.duration.rounds).toBe(2);expect(childEffect.flags.fvttJsonGenerator.conditionLifecycle.condition).toBe('Only after the parent Save.');
+    expect(parentEffect.statuses).toEqual(['prone']);expect(parentEffect.duration).toMatchObject({value:60,units:'seconds'});expect(parentEffect.description).not.toContain('Only after the parent Save.');
+    expect(childEffect.statuses).toEqual([childStatus]);expect(childEffect.duration).toMatchObject({value:2,units:'rounds'});expect(childEffect.flags.fvttJsonGenerator.conditionLifecycle.condition).toBe('Only after the parent Save.');
     expect(parent.effects[0].onSave).toBe(false);expect(child.effects[0].onSave).toBe(false);
     expect(list.filter(activity=>activity.consumption?.targets?.length)).toHaveLength(1);
   }

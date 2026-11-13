@@ -14,7 +14,7 @@ import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import { getFoundryTarget } from '@fvtt-json-generator/generation/target';
 import type { ParserRoute } from '@fvtt-json-generator/parser/types';
 import { FACT_LOCALIZATION_POLICY, type ReviewedLocalization } from '@fvtt-json-generator/contracts/localization';
-import type { RulePresentationPlan } from '@fvtt-json-generator/generation/rule-presentation';
+import { rebindRulePresentationAfterProjection, type RulePresentationPlan } from '@fvtt-json-generator/generation/rule-presentation';
 import { projectReviewedActorLocalization } from '@fvtt-json-generator/generation/reviewed-localization';
 import {
   createDisabledIconResolutionSession,
@@ -23,7 +23,11 @@ import {
   type IconWorkflowPort,
 } from './iconPort';
 
+import { projectNativeDocument, type NativeDocumentProjection } from './nativeProjection';
+
 export interface ActorGenerationPipelineOptions {
+  nativeProjection?: NativeDocumentProjection;
+  nativeSourceNormalizer?: (actor: any) => any;
   parsed: ParsedNPC;
   sourceText: string;
   sourcePath?: string;
@@ -70,7 +74,7 @@ export async function generateActorArtifact(
   let rulePresentation: RulePresentationPlan | undefined;
   const capture = options.fvttVersion === '14' && (options.captureRulePresentation
     || options.reviewedLocalization?.policy === FACT_LOCALIZATION_POLICY);
-  const actor = await projector.project(canonical, {
+  let actor = await projector.project(canonical, {
     targetVersion: options.fvttVersion,
     reviewDelivery: options.reviewDelivery,
     effectProfile: options.effectProfile,
@@ -83,9 +87,19 @@ export async function generateActorArtifact(
   const projectionFindings=(actor as any)?.flags?.fvttJsonGenerator?.candidateReview?.findings;
   diagnostics.push(...actorGenerationDiagnostics(actor as object));
   for(const finding of Array.isArray(projectionFindings)?projectionFindings:[])if(finding.code==='FIELD_PROJECTION_INCOMPLETE')reportFailure(finding.code,finding.message);
+  let runtimeTarget;
+  if (options.nativeProjection) {
+    const beforeProjection = actor;
+    try { actor = await projectNativeDocument(options.nativeProjection, 'Actor', options.nativeSourceNormalizer?.(actor)??actor); runtimeTarget = options.nativeProjection.target; }
+    catch (error) { reportFailure('NATIVE_PROJECTION_INCOMPLETE', error); }
+    if (runtimeTarget && rulePresentation) {
+      try { rulePresentation = rebindRulePresentationAfterProjection(rulePresentation, beforeProjection, actor, options.sourceText); }
+      catch (error) { rulePresentation = undefined; reportFailure('RULE_PRESENTATION_PROJECTION_INCOMPLETE', error); }
+    }
+  }
   let verification:GenerationVerification;
-  try{verification=verifyGeneratedDocument({canonical,output:actor,target:options.fvttVersion,effectProfile:options.effectProfile});}
-  catch(error){reportFailure('GENERATION_CHECK_INCOMPLETE',error);verification={status:'needs_review',diagnostics:[],target:getFoundryTarget(options.fvttVersion),mechanicsCoverage:[]};}
+  try{verification=verifyGeneratedDocument({canonical,output:actor,target:options.fvttVersion,runtimeTarget,effectProfile:options.effectProfile});}
+  catch(error){reportFailure('GENERATION_CHECK_INCOMPLETE',error);verification={status:'needs_review',diagnostics:[],target:runtimeTarget??getFoundryTarget(options.fvttVersion),mechanicsCoverage:[]};}
   let localized=actor;
   if(options.reviewedLocalization)try{localized=projectReviewedActorLocalization(actor,options.sourceText,options.reviewedLocalization,rulePresentation).actor;}
   catch(error){reportFailure('LOCALIZATION_PROJECTION_INCOMPLETE',error);}

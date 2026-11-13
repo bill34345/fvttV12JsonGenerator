@@ -11,7 +11,7 @@ const provider={providerName:'frozen-statuses',extractionModel:'none',reviewMode
 async function generate(features:any[],options:{ir?:any;source?:string}={}){
   const ir=options.ir??buildValidLurkerIr();if(!options.ir){ir.creature.traits=[];ir.creature.actions=features;ir.creature.bonusActions=[];ir.creature.reactions=[];ir.creature.legendaryActions=[];ir.claims=[];ir.coverage=[];}
   const source=options.source??LURKER_SOURCE+'\n'+features.map(feature=>feature.description).join('\n');
-  const input={source,sourceName:'Official status projection',sourceScope:'single' as const,requestId:'official-state-test',sourceId:'actor:v1:339870d7-4c56-43d9-9104-abc743d70022' as ForgeSourceId,fvttVersion:'14.368',systemVersion:'5.3.3'};
+  const input={source,sourceName:'Official status projection',sourceScope:'single' as const,requestId:'official-state-test',sourceId:'actor:v1:339870d7-4c56-43d9-9104-abc743d70022' as ForgeSourceId,fvttVersion:'14.368',systemVersion:'6.0.6'};
   const analysis=analyzeBrowserActorIntakeDraft(input,ir,provider),result=await generateBrowserActorIntakeCandidate(input,analysis,provider);
   expect(result.candidateAvailable).toBe(true);const actor=(result.candidateResponse as any)?.result?.artifact;expect(actor).toBeDefined();
   return{actor,result,analysis};
@@ -19,7 +19,7 @@ async function generate(features:any[],options:{ir?:any;source?:string}={}){
 const acts=(item:any)=>Object.values<any>(item.system.activities);
 function effect(item:any,status:string){const found=item.effects.find((entry:any)=>entry.statuses.includes(status));expect(found).toBeDefined();return found;}
 function linked(item:any,state:any){return acts(item).filter(activity=>activity.effects?.some((link:any)=>link._id===state._id));}
-function nativeTemplate(state:any){expect(state).toMatchObject({type:'base',transfer:false,disabled:false,changes:[]});expect(state._id).toMatch(/^[A-Za-z0-9]{16}$/u);expect(state.img).toContain('statuses/');expect(state.flags.fvttJsonGenerator.conditionLifecycle.version).toBe(1);expect(['native','gm']).toContain(state.flags.fvttJsonGenerator.conditionLifecycle.mode);}
+function nativeTemplate(state:any){expect(state).toMatchObject({type:'base',transfer:false,disabled:false,system:{changes:[]}});expect(state._id).toMatch(/^[A-Za-z0-9]{16}$/u);expect(state.img).toContain('statuses/');expect(state.flags.fvttJsonGenerator.conditionLifecycle.version).toBe(1);expect(['native','gm']).toContain(state.flags.fvttJsonGenerator.conditionLifecycle.mode);}
 
 test('official effects: an ordinary native hit has one optional state on its Attack and preserves all damage and resource data',async()=>{
   const text='Melee Weapon Attack: +5 to hit, reach 5 ft. Hit: 6 (1d6+3) piercing damage and the target is Prone.';
@@ -38,7 +38,7 @@ test('official effects: a follow-up failed Save owns its timed repeat-save templ
   ]}]);
   const item=actor.items[0],prone=effect(item,'prone'),fear=effect(item,'frightened');nativeTemplate(fear);
   expect(linked(item,prone).map(activity=>activity.type)).toEqual(['attack']);expect(linked(item,fear).map(activity=>activity.type)).toEqual(['save']);
-  expect(fear.duration.seconds).toBe(60);expect(fear.flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(fear.description).toContain('ending the effect on success');
+  expect(fear.duration).toMatchObject({value:60,units:'seconds'});expect(fear.flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(fear.description).toContain('ending the effect on success');
   const saveActivity=linked(item,fear)[0];expect(saveActivity.effects).toEqual([{_id:fear._id,onSave:false}]);expect(saveActivity.save.dc.formula).toBe('14');expect(saveActivity.consumption.targets).toEqual([]);
 });
 
@@ -71,14 +71,14 @@ test('official effects: a neutral GM hit puts its declared state on post-hit dam
 test('official effects: existing flat canonical Save conditions and missing old condition fields both retain available templates',async()=>{
   for(const explicit of [true,false]){
     const {actor,result}=await generate([{name:'Flat poison',description:'Constitution Saving Throw: DC 14. Failure: the target is Poisoned for 1 minute.',activityType:'save',save:{dc:14,ability:'con'},...(explicit?{appliedConditions:[{statuses:['poisoned'],duration:'1 minute'}]}:{})}]);
-    const item=actor.items[0],state=effect(item,'poisoned');nativeTemplate(state);expect(state.duration.seconds).toBe(60);expect(linked(item,state).map(activity=>activity.type)).toEqual(['save']);
+    const item=actor.items[0],state=effect(item,'poisoned');nativeTemplate(state);expect(state.duration).toMatchObject({value:60,units:'seconds'});expect(linked(item,state).map(activity=>activity.type)).toEqual(['save']);
     expect(linked(item,state)[0].effects).toContainEqual({_id:state._id,onSave:false});expect(result.findings.filter(finding=>finding.code==='GEN_CONDITION_LIFECYCLE_INVALID')).toEqual([]);
   }
 });
 
 test('official effects: an existing feature-level qualified state is not erased or duplicated by its source-operation carrier',async()=>{
   const {actor}=await generate([{name:'Existing qualified effect',description:'Melee Weapon Attack: +4. Hit: the target is Poisoned for 1 minute, ending early when the target takes damage.',appliedConditions:[{statuses:['poisoned'],duration:'1 minute',condition:'ends early when the target takes damage'}],sourceOperations:[{name:'Strike',type:'attack',relationship:'primary',attack:{type:'mwak',toHit:4},damage:[{formula:'1d4',type:'piercing',relationship:'base'}],proof:{}}]}]);
-  const item=actor.items[0],state=effect(item,'poisoned');expect(item.effects).toHaveLength(1);expect(state.duration.seconds).toBe(60);expect(state.flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(state.description).toContain('ends early when the target takes damage');expect(linked(item,state).map(activity=>activity.type)).toEqual(['attack']);
+  const item=actor.items[0],state=effect(item,'poisoned');expect(item.effects).toHaveLength(1);expect(state.duration).toMatchObject({value:60,units:'seconds'});expect(state.flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(state.description).toContain('ends early when the target takes damage');expect(linked(item,state).map(activity=>activity.type)).toEqual(['attack']);
 });
 
 test('official effects: an explicit or old unstructured state on a GM rule uses its existing Utility without inventing a roll',async()=>{
@@ -119,7 +119,7 @@ test('official effects: First Failure and Second Failure keep both templates GM-
 
 test('official effects: a modern HAS-condition failed Save retains its template and numeric duration',async()=>{
   const {actor}=await generate([{name:'Modern save',description:'Wisdom Saving Throw: DC 14. Failure: the target has the Charmed condition for 1 minute.',sourceOperations:[{name:'Save',type:'save',relationship:'primary',save:{dc:14,abilities:['wis'],choice:'single',outcome:'none'},proof:{save:'Wisdom Saving Throw: DC 14.'}}]}]);
-  const item=actor.items[0],state=effect(item,'charmed');nativeTemplate(state);expect(state.duration.seconds).toBe(60);expect(linked(item,state)[0].type).toBe('save');expect(linked(item,state)[0].effects).toEqual([{_id:state._id,onSave:false}]);
+  const item=actor.items[0],state=effect(item,'charmed');nativeTemplate(state);expect(state.duration).toMatchObject({value:60,units:'seconds'});expect(linked(item,state)[0].type).toBe('save');expect(linked(item,state)[0].effects).toEqual([{_id:state._id,onSave:false}]);
 });
 
 test('official effects: unconscious includes only its official same-lifecycle implication, not its separate Prone rider',async()=>{
@@ -129,7 +129,7 @@ test('official effects: unconscious includes only its official same-lifecycle im
 
 test('official effects: a conditional death result remains a GM-selectable failed-save template without changing target HP',async()=>{
   const {actor}=await generate([{name:'Conditional death',description:'Constitution Saving Throw: DC 14. Failure: the target dies if its hit point maximum is reduced to 0.',sourceOperations:[{name:'Save',type:'save',relationship:'primary',save:{dc:14,abilities:['con'],choice:'single',outcome:'none'},proof:{save:'Constitution Saving Throw: DC 14.'}}]}]);
-  const item=actor.items[0],state=effect(item,'dead');nativeTemplate(state);expect(state.flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(state.description).toContain('maximum is reduced to 0');expect(state.changes).toEqual([]);expect(linked(item,state)[0].effects).toEqual([{_id:state._id,onSave:false}]);
+  const item=actor.items[0],state=effect(item,'dead');nativeTemplate(state);expect(state.flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(state.description).toContain('maximum is reduced to 0');expect(state.system.changes).toEqual([]);expect(linked(item,state)[0].effects).toEqual([{_id:state._id,onSave:false}]);
 });
 
 for(const description of ['If the target is Grappled, it takes extra damage.','The target is already Poisoned.','The target is immune to the Poisoned condition.','目标不再陷入中毒状态。','The creature has advantage on checks made to escape the grappled condition.','The target gains immunity to Exhaustion.','When the target dies, another creature gains temporary hit points.'])test('official effects: prerequisites, existing states, immunity and removal do not apply a new state: '+description,async()=>{
@@ -163,7 +163,7 @@ test('official effects: all fifteen official declared IDs and compatible Dead ha
 test('official effects: unrelated independent Item output is identical before and after Actor template projection',async()=>{
   setSystemTime(new Date('2026-10-27T00:00:00Z'));
   try{
-    const content=readFileSync('obsidian/dnd数据转fvttjson/input/items/骑士之盾.md','utf8'),request=buildForgeItemRequest({content,sourceId:'item:v1:339870d7-4c56-43d9-9104-abc743d70022' as ForgeItemSourceId,displayName:'Knight Shield',requestId:'status-unrelated-item',fvttVersion:'14.364',systemVersion:'5.3.3'});
+    const content=readFileSync('obsidian/dnd数据转fvttjson/input/items/骑士之盾.md','utf8'),request=buildForgeItemRequest({content,sourceId:'item:v1:339870d7-4c56-43d9-9104-abc743d70022' as ForgeItemSourceId,displayName:'Knight Shield',requestId:'status-unrelated-item',fvttVersion:'14.370',systemVersion:'6.0.6'});
     const before=await convertFinalItemSource(request);
     await generate([{name:'Actor state',description:'The target is Prone.',sourceOperations:[{name:'Save',type:'save',relationship:'primary',save:{dc:13,abilities:['str'],choice:'single',outcome:'none'},appliedConditions:[{statuses:['prone']}],proof:{}}]}]);
     const after=await convertFinalItemSource(request);expect(after).toEqual(before);expect('result'in after).toBe(true);
@@ -174,7 +174,7 @@ const frozen=process.env.FORGE_STATUS_FROZEN_ROOT;
 test.skipIf(!frozen)('official effects: the actual Phase Spider first answer retains HP0 Poisoned/while-Poisoned Paralyzed as one one-hour optional template without inventing a Save',async()=>{
   const path=join(frozen!,'results','phase-spider','raw-answer.txt'),raw=readFileSync(path,'utf8'),ir=JSON.parse(raw),source=readFileSync(join(frozen!,'sources-r2','phase-spider.md'),'utf8');
   const {actor}=await generate([],{ir,source}),item=actor.items.find((item:any)=>item.name.includes('Bite')),state=effect(item,'poisoned');
-  expect(state.statuses).toEqual(['poisoned','paralyzed','incapacitated']);expect(item.effects).toHaveLength(1);expect(state.duration.seconds).toBe(3600);expect(state.flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');
+  expect(state.statuses).toEqual(['poisoned','paralyzed','incapacitated']);expect(item.effects).toHaveLength(1);expect(state.duration).toMatchObject({value:3600,units:'seconds'});expect(state.flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');
   expect(state.description).toContain('生命值降至0');expect(state.description).toContain('中毒期间');expect(acts(item).some(activity=>activity.type==='save')).toBe(false);
   const damage=linked(item,state)[0];expect(damage.type).toBe('damage');expect(damage.damage.parts).toHaveLength(2);expect(acts(item).find(activity=>activity.roll)?.effects).toEqual([]);expect(readFileSync(path,'utf8')).toBe(raw);
 });

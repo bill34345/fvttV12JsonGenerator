@@ -158,7 +158,7 @@ describe('Forge Item ApplicationV2', () => {
     await (application as any).create();
     expect(createCalls).toBe(0);
 
-    game.version = '14.364';
+    game.version = '14.370';
     hooks.emit('updateSetting');
     expect(root.create.disabled).toBe(false);
   });
@@ -230,8 +230,8 @@ async function makeResponse(content: string, requestId: string): Promise<ForgeIt
     sourceId: 'item:v1:123e4567-e89b-42d3-a456-426614174000' as ForgeItemSourceId,
     displayName: 'Item Application Test',
     requestId,
-    fvttVersion: '14.364',
-    systemVersion: '5.3.3',
+    fvttVersion: '14.370',
+    systemVersion: '6.0.6',
   }));
 }
 
@@ -289,8 +289,8 @@ function bindResponse(response: ForgeItemResponse, request: ForgeItemRequest): F
 function makeApplication(services: Partial<ForgeItemApplicationServices> = {}) {
   const notifications = { errors: [] as string[], infos: [] as string[] };
   const game = {
-    version: '14.364',
-    system: { id: 'dnd5e', version: '5.3.3' },
+    version: '14.370',
+    system: { id: 'dnd5e', version: '6.0.6' },
     user: { isGM: true },
   };
   const hooks = new FakeHooks();

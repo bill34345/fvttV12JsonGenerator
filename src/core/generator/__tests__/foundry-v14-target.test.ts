@@ -1,12 +1,139 @@
 import { describe, expect, it } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { ActorGenerator } from '../actor';
 import { ActivityGenerator } from '../activity';
 import { ItemGenerator } from '../item-generator';
 import { assertEqualStructure } from '../../utils/assertEqualStructure';
 import { ActorValidator } from '../validator';
 import type { ParsedNPC } from '../../../config/mapping';
+import { getFoundryTarget, parseFvttTargetVersion } from '@fvtt-json-generator/generation/target';
+import { adaptParsedActorToCanonical } from '@fvtt-json-generator/generation/adapters';
+import { verifyGeneratedDocument } from '@fvtt-json-generator/generation/verification';
 
 describe('Foundry v14 generator target', () => {
+  it.each([
+    'Armor Shift. The creature AC becomes 14 until the start of its next turn.',
+    'Armor Shift. The creature gains +2 AC until the start of its next turn.',
+  ])('uses a verified current Core icon for a source AC effect: %s', text => {
+    const actor = new ActorGenerator({ fvttVersion: '14' }).generate({ name: 'Icon Control', type: 'npc', abilities: {}, attributes: {}, details: {}, traits: {}, skills: {}, saves: [], items: [], actions: [text] }, { route: 'english' });
+    const effect = actor.items.find((item: any) => item.name === 'Armor Shift').effects[0];
+    expect(effect.img).toBe('icons/svg/shield.svg');
+    const catalog = JSON.parse(readFileSync(new URL('../../../../references/foundry-v14-icons/catalog.json', import.meta.url), 'utf8'));
+    expect(catalog.target).toEqual({ foundryVersion: getFoundryTarget('14').stats.coreVersion, systemId: 'dnd5e', systemVersion: getFoundryTarget('14').dnd5eVersion });
+    expect(catalog.files).toContainEqual(expect.objectContaining({ path: effect.img, source: 'core' }));
+  });
+
+  it.each(['', '+2'])('accepts the native6 constructor spell DC bonus without accepting migrated legacy bonuses: %s', dc => {
+    const source: ParsedNPC = { name: 'Native Bonus Control', type: 'npc', abilities: {}, attributes: {}, details: {}, traits: {}, skills: {}, saves: [], items: [] };
+    const actor = new ActorGenerator().generate(source);
+    actor.system.bonuses = { spell: { dc } };
+    const verification = verifyGeneratedDocument({ canonical: adaptParsedActorToCanonical(source), output: actor, target: '14', effectProfile: 'core' });
+    expect(verification.status).toBe('accepted');
+    expect(actor.system.bonuses).toEqual({ spell: { dc } });
+  });
+
+  it.each([
+    { key: 'mwak', value: { attack: '1' }, path: 'system/bonuses/mwak' },
+    { key: 'rwak', value: { damage: '1' }, path: 'system/bonuses/rwak' },
+    { key: 'msak', value: { attack: '1' }, path: 'system/bonuses/msak' },
+    { key: 'rsak', value: { damage: '1' }, path: 'system/bonuses/rsak' },
+    { key: 'abilities', value: { save: '1' }, path: 'system/bonuses/abilities' },
+    { key: 'spell', value: { dc: '', attack: '1' }, path: 'system/bonuses/spell/attack' },
+  ])('rejects a legacy bonus next to legal native spell DC data with an exact diagnostic: $path', ({ key, value, path }) => {
+    const source: ParsedNPC = { name: 'Legacy Bonus Control', type: 'npc', abilities: {}, attributes: {}, details: {}, traits: {}, skills: {}, saves: [], items: [] };
+    const actor = new ActorGenerator().generate(source);
+    actor.system.bonuses = { spell: { dc: '' }, [key]: value };
+    const verification = verifyGeneratedDocument({ canonical: adaptParsedActorToCanonical(source), output: actor, target: '14', effectProfile: 'core' });
+    expect(verification.status).toBe('failed');
+    expect(verification.diagnostics).toContainEqual(expect.objectContaining({ code: 'GEN_DND6_LEGACY_ACTOR_FIELD', path,
+      message: expect.stringContaining(path.replaceAll('/', '.')) }));
+  });
+
+  it.each([
+    { text: 'until the start of its next turn', value: 1, expiry: 'turnStart' },
+    { text: 'until the end of its next turn', value: 1, expiry: 'turnEnd' },
+    { text: 'for 3 rounds', value: 3, expiry: 'turnStart' },
+  ])('keeps the actual source AC duration in native rounds: %o', ({ text, value, expiry }) => {
+    const actor = new ActorGenerator().generate({ name: 'Duration Control', type: 'npc', abilities: {}, attributes: { ac: { value: 17, calc: 'flat' } },
+      details: {}, traits: {}, skills: {}, saves: [], items: [], actions: [`Guarded Step. The creature gains +9 AC ${text}.`] }, { route: 'english' });
+    expect(actor.items.find((item: any) => item.name === 'Guarded Step').effects[0].duration).toEqual({ value, units: 'rounds', expiry, expired: false });
+    expect(actor.items.find((item: any) => item.name === 'Guarded Step').effects[0].system.changes[0]).toMatchObject({ key: 'system.attributes.ac.value', type: 'add', phase: 'final', value: '9' });
+  });
+
+  it.each(['natural', 'flat'] as const)('preserves the source %s AC calculation and applies a temporary modifier after the prepared value', calc => {
+    const parsed: ParsedNPC = { name: 'Natural Guard', type: 'npc', abilities: {}, attributes: { ac: { value: 17, calc } }, details: {}, traits: {}, skills: {}, saves: [], items: [],
+      actions: ['Guarded Step. The creature gains +9 AC until the start of its next turn.'] };
+    const actor = new ActorGenerator().generate(parsed, { route: 'english' });
+    expect(actor.system.attributes.ac).toMatchObject(calc === 'natural'
+      ? { calcs: ['natural'], flat: 17, override: null }
+      : { calcs: ['unarmored', 'armored'], override: 17 });
+    expect(new ActorValidator().validate(parsed, actor)).toEqual([]);
+    expect(actor.items[0].effects[0].system.changes[0]).toMatchObject({ key: 'system.attributes.ac.value', type: 'add', phase: 'final', value: '9' });
+  });
+
+  it.each([
+    { ac: 17, fly: 60, init: 5 },
+    { ac: 12, fly: 30, init: 2 },
+    { ac: 21, fly: 90, init: 8 },
+  ])('emits native dnd5e 6 source fields directly without a receiver: %o', ({ ac, fly, init }) => {
+    const source: ParsedNPC = {
+      name: 'Native Guardian', type: 'npc', abilities: { dex: 14, wis: 16 },
+      attributes: { ac: { value: ac, calc: 'flat' }, init, movement: { walk: 30, fly, hover: true }, legres: { value: 2, max: 3 } },
+      details: { cr: 5, spellLevel: 7 }, traits: { senses: { darkvision: 60 } },
+      skills: { prc: 1 }, skillBonuses: { prc: 2 }, skillPassives: { prc: 21 }, saveBonuses: { con: 4 },
+      saves: [], items: [],
+    };
+    const actor = new ActorGenerator({ resources: { goldenMasterPath: null } }).generate(source);
+    expect(parseFvttTargetVersion(undefined)).toBe('14');
+    expect(actor._stats).toMatchObject(getFoundryTarget('14').stats);
+    expect(actor.system.attributes.ac).toMatchObject({ override: ac, calcs: ['unarmored', 'armored'], formulas: [] });
+    expect(actor.system.attributes.ac.calc).toBeUndefined();
+    expect(actor.system.attributes.movement).toMatchObject({ speeds: { walk: '30', fly: String(fly) }, hover: true });
+    expect(actor.system.attributes.movement.fly).toBeUndefined();
+    expect(actor.system.attributes.init).toEqual({ roll: { bonus: init === 2 ? '' : `+${init - 2}` } });
+    expect(actor.system.attributes.spell.level).toBe(7);
+    expect(actor.system.details.spellLevel).toBeUndefined();
+    expect(actor.system.skills.prc.roll.bonus).toBe('+2');
+    expect(actor.system.skills.prc.bonuses).toEqual({ passive: '+3' });
+    expect(actor.system.abilities.con.save.roll.bonus).toBe('+4');
+    expect(actor.system.abilities.con.bonuses).toBeUndefined();
+    expect(actor.system.resources.legres).toEqual({ max: 3, spent: 1 });
+    const verify = () => verifyGeneratedDocument({ canonical: adaptParsedActorToCanonical(source), output: actor, target: '14', effectProfile: 'core' });
+    expect(verify().diagnostics.filter(entry => entry.code === 'GEN_DND6_LEGACY_ACTOR_FIELD')).toEqual([]);
+    actor._stats.coreVersion = '14.364';
+    expect(verify().diagnostics.some(entry => entry.code === 'GEN_TARGET_METADATA_MISMATCH')).toBe(true);
+    actor._stats.coreVersion = getFoundryTarget('14').stats.coreVersion;
+    actor.system.attributes.init.bonus = 3;
+    expect(verify().diagnostics.some(entry => entry.code === 'GEN_DND6_LEGACY_ACTOR_FIELD')).toBe(true);
+    expect(actor.items).toBeDefined();
+  });
+
+  it('defaults standalone Item generation to native rarities and Core14 effects', async () => {
+    const item = await new ItemGenerator().generate({ name: 'Ward', type: 'equipment', rarity: 'rare', description: 'A ward.',
+      structuredActions: { utilities: [{ name: 'Ward', type: 'effect', passiveEffect: { type: 'acBonus', value: 1 } }] } });
+    expect(item._stats).toMatchObject(getFoundryTarget('14').stats);
+    expect(item.system.rarities).toEqual(['rare']);
+    expect(item.system.rarity).toBeUndefined();
+    expect(item.system.source.rules).toBe('2024');
+    const effect = item.effects?.[0];
+    expect(effect).toMatchObject({ type: 'base', transfer: true, system: { changes: [expect.objectContaining({
+      _id: expect.stringMatching(/^[A-Za-z0-9]{16}$/), key: 'system.attributes.ac.bonus', type: 'add', phase: 'initial', value: 1,
+    })] } });
+    expect(effect.changes).toBeUndefined();
+  });
+
+  it.each([[20, 60], [30, 120], [60, 240]])('retains separate melee and ranged uses of an explicitly thrown weapon: %s/%s', async (value, long) => {
+    const item = await new ItemGenerator().generate({ name: '标枪', englishName: 'Javelin', type: 'weapon', description: 'Melee or ranged weapon attack.',
+      range: { value, long, reach: 5, units: 'ft' },
+      structuredActions: { attacks: [{ name: '标枪', englishName: 'Javelin', type: 'attack',
+        attack: { type: 'mwak', toHit: 5, range: `reach 5 ft. or range ${value}/${long} ft.`, reach: '5', damage: [{ formula: '1d6+3', type: 'piercing' }] } }] } });
+    const attacks = Object.values<any>(item.system.activities).filter(activity => activity.type === 'attack');
+    expect(attacks).toHaveLength(2);
+    expect(attacks.find(activity => activity.attack.type.value === 'melee').range).toMatchObject({ value: '5', override: true });
+    expect(attacks.find(activity => activity.attack.type.value === 'ranged').range).toMatchObject({ value: String(value), override: true, special: `远射程 ${long} 尺` });
+    expect(item.system.range).toMatchObject({ value, long, reach: 5 });
+    expect(new Set(attacks.map(activity => activity._id)).size).toBe(2);
+  });
   it('emits v14 actor stats, resource counters, and senses schema', () => {
     const input: ParsedNPC = {
       name: 'V14 Guardian',
@@ -30,8 +157,8 @@ describe('Foundry v14 generator target', () => {
 
     const actor = new ActorGenerator({ fvttVersion: '14' }).generate(input);
 
-    expect(actor._stats.coreVersion).toBe('14.364');
-    expect(actor._stats.systemVersion).toBe('5.3.3');
+    expect(actor._stats.coreVersion).toBe('14.370');
+    expect(actor._stats.systemVersion).toBe('6.0.6');
     expect(actor.system.resources.legact).toEqual(expect.objectContaining({ max: 3, spent: 1 }));
     expect(actor.system.resources.legact.value).toBeUndefined();
     expect(actor.system.attributes.senses.ranges).toEqual(expect.objectContaining({
@@ -44,8 +171,8 @@ describe('Foundry v14 generator target', () => {
     expect(actor.system.attributes.senses.special).toBe('sees invisible creatures');
   });
 
-  it('keeps the existing v12 resource and senses schema by default', () => {
-    const actor = new ActorGenerator().generate({
+  it('keeps the explicitly requested v12 resource and senses schema', () => {
+    const actor = new ActorGenerator({ fvttVersion: '12' }).generate({
       name: 'V12 Guardian',
       type: 'npc',
       abilities: {},
@@ -97,8 +224,8 @@ describe('Foundry v14 generator target', () => {
       description: 'Armor generated for v14.',
     });
 
-    expect(item._stats?.coreVersion).toBe('14.364');
-    expect(item._stats?.systemVersion).toBe('5.3.3');
+    expect(item._stats?.coreVersion).toBe('14.370');
+    expect(item._stats?.systemVersion).toBe('6.0.6');
     expect(item.system.attunement).toBe('required');
     expect(item.system.attuned).toBeUndefined();
   });
@@ -127,7 +254,7 @@ describe('Foundry v14 generator target', () => {
 
       expect(item.type).toBe(foundryType);
       expect(item.system.description.value).toContain(sourceType);
-      expect(item._stats?.systemVersion).toBe('5.3.3');
+      expect(item._stats?.systemVersion).toBe('6.0.6');
     }
   });
 
@@ -151,7 +278,7 @@ describe('Foundry v14 generator target', () => {
         price: { value: 0, denomination: 'gp' },
         attunement: 'none',
         equipped: false,
-        rarity: 'common',
+        rarities: ['common'],
         identified: true,
         cover: null,
         uses: { max: '', spent: 0, recovery: [] },
@@ -160,16 +287,16 @@ describe('Foundry v14 generator target', () => {
         properties: ['mgc'],
         container: null,
         unidentified: { description: '' },
-        armor: { value: null, dex: null, magicalBonus: null },
+        armor: { value: null, dex: null, magicalBonus: '' },
         type: { value: 'trinket', baseItem: '' },
       },
       effects: [],
       flags: { fvttJsonGenerator: { effectHints: {} } },
       _stats: {
         duplicateSource: null,
-        coreVersion: '14.364',
+        coreVersion: '14.370',
         systemId: 'dnd5e',
-        systemVersion: '5.3.3',
+        systemVersion: '6.0.6',
         createdTime: 0,
         modifiedTime: 0,
       },
@@ -177,7 +304,7 @@ describe('Foundry v14 generator target', () => {
 
     assertEqualStructure(generated, neutralEquipmentContract, { mode: 'shape' });
     expect(generated.img).toBe('icons/svg/item-bag.svg');
-    expect(generated.system.armor).toEqual({ value: null, dex: null, magicalBonus: null });
+    expect(generated.system.armor).toEqual({ value: null, dex: null, magicalBonus: '' });
     expect(generated.system.type).toEqual({ value: 'trinket', baseItem: '' });
     expect(generated.system.properties).toEqual(['mgc']);
     expect(generated.effects).toEqual([]);
@@ -213,11 +340,11 @@ describe('Foundry v14 generator target', () => {
       value: 2,
       priority: null,
     }));
-    expect(effect?._stats.coreVersion).toBe('14.364');
-    expect(effect?._stats.systemVersion).toBe('5.3.3');
+    expect(effect?._stats.coreVersion).toBe('14.370');
+    expect(effect?._stats.systemVersion).toBe('6.0.6');
   });
 
-  it('emits v14 spell preparation fields for legacy spell fallback items', () => {
+  it('retains an unmatched legacy spell name as a pending complete feature without fabricating a level-zero Spell', () => {
     const actor = new ActorGenerator({ fvttVersion: '14' }).generate({
       name: 'Fallback Spellcaster',
       type: 'npc',
@@ -231,11 +358,11 @@ describe('Foundry v14 generator target', () => {
       spellcasting: ['Cantrips (at will): homebrew spark'],
     });
 
-    const spell = actor.items.find((item: any) => item.name === 'homebrew spark');
-    expect(spell?.type).toBe('spell');
-    expect(spell?.system.preparation).toBeUndefined();
-    expect(spell?.system.method).toBe('innate');
-    expect(spell?.system.prepared).toBe(1);
+    expect(actor.items.some((item: any) => item.type === 'spell')).toBe(false);
+    const spellcasting = actor.items.find((item: any) => item.name === '施法 Spellcasting');
+    expect(spellcasting.system.description.value).toContain('Cantrips (at will): homebrew spark');
+    expect(spellcasting.flags.fvttJsonGenerator.pendingSpells).toContainEqual(expect.objectContaining({ name: 'homebrew spark' }));
+    expect(spellcasting.system.activities).toEqual({});
   });
 
   it('normalizes v14 embedded item metadata and removes item-level activation', () => {
@@ -256,8 +383,8 @@ describe('Foundry v14 generator target', () => {
     const activityId = item ? Object.keys(item.system.activities)[0] : undefined;
     const activity = activityId ? item?.system.activities[activityId] : undefined;
 
-    expect(item?._stats.coreVersion).toBe('14.364');
-    expect(item?._stats.systemVersion).toBe('5.3.3');
+    expect(item?._stats.coreVersion).toBe('14.370');
+    expect(item?._stats.systemVersion).toBe('6.0.6');
     expect(item?.system.activation).toBeUndefined();
     expect(activity.activation).toEqual(expect.objectContaining({ type: 'action', value: null }));
   });

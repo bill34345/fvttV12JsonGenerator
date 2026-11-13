@@ -105,7 +105,7 @@ describe('project robustness source regressions', () => {
   });
   test.each(['珍稀', '稀有', 'rare'])('preserves exact rare label %s', async rarity => {
     const result = await convertMarkdownContentToJson({ ...target, content: shield.replace('珍稀', rarity) });
-    expect((result.rawJson as any).system.rarity).toBe('rare');
+    expect((result.rawJson as any).system.rarities).toEqual(['rare']);
     expect(new ItemParser().parse(shield.replace('珍稀', rarity + '材料')).rarity).toBeUndefined();
   });
   test.each([2, 3, 4])('explicit shield bonus %s survives and mutations fail', async bonus => {
@@ -114,7 +114,7 @@ describe('project robustness source regressions', () => {
     expect(artifact!.verification.status).toBe('accepted');
     expect(artifact!.canonical.source.text).toBe(source);
     const item = artifact!.item as any;
-    expect(item.system.armor.magicalBonus).toBe(bonus);
+    expect(item.system.armor.magicalBonus).toBe(String(bonus));
     expect(item.system.source.custom).toBe('Custom campaign source');
     expect(item.system.source.book).toBe('');
     expect(item.system.source.license).toBe('');
@@ -145,7 +145,7 @@ describe('project robustness source regressions', () => {
   test('negated bonus is not invented', async () => {
     const result = await convertMarkdownContentToJson({ ...target, content: shield.replace('获得额外 +3 加值', '不会获得 +3 加值') });
     expect(result.status).toBe('accepted');
-    expect((result.rawJson as any).system.armor.magicalBonus).toBeNull();
+    expect((result.rawJson as any).system.armor.magicalBonus).toBe('');
   });
 
   test.each(['护甲等级提高 +3', '护甲等级提升 +3', '护甲等级增加 +3', 'Armor Class increases by +3'])('unresolved AC increase requires review: %s', async clause => {
@@ -159,7 +159,7 @@ describe('project robustness source regressions', () => {
   test.each(['护甲等级不会提高 +3', '护甲等级不增加 +3', 'Armor Class does not increase by +3', "Armor Class doesn't increase by +3"])('negated AC increase stays unautomated: %s', async clause => {
     const result = await convertMarkdownContentToJson({ ...target, content: shield.replace('护甲等级获得额外 +3 加值', clause) });
     expect(result.status).toBe('accepted');
-    expect((result.rawJson as any).system.armor.magicalBonus).toBeNull();
+    expect((result.rawJson as any).system.armor.magicalBonus).toBe('');
   });
 
   test.each(['Sentinel', 'sentinel'])('duplicate item filenames reject whole batch (%s)', async second => {

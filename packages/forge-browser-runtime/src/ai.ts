@@ -91,7 +91,10 @@ export interface BrowserActorIntakeStageResult {
   message?: string;
 }
 
+import type { NativeDocumentProjection } from './nativeTarget';
+
 export interface BrowserActorIntakeInput {
+  nativeProjection?: NativeDocumentProjection;
   autoCorrect?: boolean;
   /** Caller-owned input scope. Omitted retains the historical discovery path. */
   sourceScope?: 'single' | 'discover';
@@ -1014,7 +1017,7 @@ async function convertRenderedActor(
     systemVersion: input.systemVersion,
     sourceId,
   });
-  return convertFinalActorSource(request,{captureRulePresentation:true});
+  return convertFinalActorSource(request,{captureRulePresentation:true,nativeProjection:input.nativeProjection});
 }
 
 function verifyRenderedActor(

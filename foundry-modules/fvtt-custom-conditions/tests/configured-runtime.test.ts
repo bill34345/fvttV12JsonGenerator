@@ -219,29 +219,30 @@ describe('configured condition public API', () => {
   });
 
   test('native Unconscious preserves an independent DAE Prone rider after the configured source ends', async () => {
-    const { globals, actor, api } = fixture();
+    const { globals, actor, api } = fixture(true,'6.0.6');
     globals.CONFIG = { statusEffects: {
       unconscious: { id: 'unconscious', _id: 'nativeUnconscious', name: 'Unconscious', riders: ['prone'] },
       prone: { id: 'prone', _id: 'dnd5eprone000000', name: 'Prone' },
     } };
-    globals.game.modules = { get: (id: string) => id === 'dae' ? { active: true, version: '14.0.12' } : undefined };
+    globals.game.modules = { get: (id: string) => id === 'dae' ? { active: true, version: '14.6.5' } : undefined };
     globals.foundry = { utils: { getDocumentClass: () => ({ fromStatusEffect: async (status: string) => {
       let source: any = { name: 'Unconscious', statuses: [status, 'incapacitated'], flags: {}, changes: [] };
       return { name: 'Unconscious', updateSource: (changes: any) => { source = { ...source, ...changes }; },
         toObject: () => structuredClone(source) };
     } }) } };
+    globals.foundry.documents={modifyBatch:async(entries:any[])=>{for(const entry of entries){expect(entry.documentName).toBe('ActiveEffect');expect(entry.parent).toBe(actor);actor.effects.push(...entry.data);}}};
     const originalCreate = actor.createEmbeddedDocuments.bind(actor);
     actor.createEmbeddedDocuments = async (type: string, data: any[]) => {
       const created = await originalCreate(type, data);
       const primary = created.find((effect: any) => effect.statuses?.includes('unconscious'));
-      if (primary) primary.createRiderConditions = async () => {
+      if (primary) primary.system={collectRiders:async () => {
         const rider: any = { id: 'dnd5eprone000000', statuses: new Set(['prone']), flags: { dae: { autoCreated: true, specialDuration: [] } },
           origin: null, transfer: false, duration: {}, changes: [], disabled: false };
         rider.toObject = () => ({ statuses: ['prone'], flags: structuredClone(rider.flags), origin: null,
           transfer: false, duration: {}, changes: [] });
         rider.update = async (changes: any) => { assign(rider, changes); };
-        actor.effects.push(rider);
-      };
+        return [{action:'create',documentName:'ActiveEffect',data:[rider],parent:actor,keepId:true}];
+      }};
       return created.slice().reverse();
     };
     const definition = native('unconscious'); await api.save(definition);
@@ -255,7 +256,7 @@ describe('configured condition public API', () => {
   });
 
   test('failed Unconscious rider validation leaves a Shocked weapon equipped', async () => {
-    const { globals, actor, api } = fixture();
+    const { globals, actor, api } = fixture(true,'6.0.6');
     actor.items.push({ id: 'weapon', type: 'weapon', system: { equipped: true } });
     globals.CONFIG = { statusEffects: [
       { id: 'unconscious', _id: 'nativeUnconscious', riders: ['prone'] },
@@ -267,17 +268,18 @@ describe('configured condition public API', () => {
       return { name: 'Unconscious', updateSource: (changes: any) => { source = { ...source, ...changes }; },
         toObject: () => structuredClone(source) };
     } }) } };
+    globals.foundry.documents={modifyBatch:async(entries:any[])=>{for(const entry of entries)actor.effects.push(...entry.data);}};
     const originalCreate = actor.createEmbeddedDocuments.bind(actor);
     actor.createEmbeddedDocuments = async (type: string, data: any[]) => {
       const created = await originalCreate(type, data);
       const primary = created.find((effect: any) => effect.statuses?.includes('unconscious'));
-      if (primary) primary.createRiderConditions = async () => {
+      if (primary) primary.system={collectRiders:async () => {
         const rider: any = { id: 'dnd5eprone000000', statuses: new Set(['prone']), flags: { dae: { autoCreated: true, specialDuration: [] } },
           origin: null, transfer: false, duration: {}, changes: [], disabled: false };
         rider.toObject = () => ({ statuses: ['prone'], flags: structuredClone(rider.flags), origin: null,
           transfer: false, duration: {}, changes: [] });
-        actor.effects.push(rider);
-      };
+        return [{action:'create',documentName:'ActiveEffect',data:[rider],parent:actor,keepId:true}];
+      }};
       return created;
     };
     const definition: ConfiguredConditionDefinition = { ...native('unconscious'), components: [

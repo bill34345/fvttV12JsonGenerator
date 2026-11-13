@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { DND5E_V14_SYSTEM_VERSION, FOUNDRY_V14_CORE_VERSION } from '@fvtt-json-generator/contracts/target';
 import { V14IconResolver, createIconReviewReport } from '../resolver';
 import { loadV14IconCatalog } from '../resources';
 import type {
@@ -8,9 +9,9 @@ import type {
 } from '../types';
 
 const TARGET = {
-  foundryVersion: '14.364',
+  foundryVersion: FOUNDRY_V14_CORE_VERSION,
   systemId: 'dnd5e',
-  systemVersion: '5.3.3',
+  systemVersion: DND5E_V14_SYSTEM_VERSION,
 } as const;
 
 const PATHS = {
@@ -402,7 +403,7 @@ describe('catalog-backed visual families', () => {
       { name: '剧烈脉冲', type: 'feat', img: 'icons/svg/mystery-man.svg', system: { activities: { a: { type: 'damage', damage: { parts: [{ types: ['lightning'] }] } } } } },
       { name: 'Storm Pulse', type: 'feat', img: 'icons/svg/mystery-man.svg', system: { activities: { a: { type: 'attack', damage: { parts: [{ types: ['thunder'] }] } } } } },
       { name: 'Ruinous Pulse', type: 'feat', img: 'icons/svg/mystery-man.svg', system: { activities: { a: { type: 'save', damage: { parts: [{ types: ['fire', 'cold'] }] } } } } },
-      { name: 'Fire Resistance', type: 'feat', img: 'icons/svg/mystery-man.svg', system: { activities: { a: { type: 'utility', damage: { parts: [{ types: ['fire'] }] } } } } },
+      { name: 'Uncatalogued Fire Resistance', type: 'feat', img: 'icons/svg/mystery-man.svg', system: { activities: { a: { type: 'utility', damage: { parts: [{ types: ['fire'] }] } } } } },
     ];
     const { actor, review } = resolve(items);
     expect(actor.items.map((item) => item.img)).toEqual([

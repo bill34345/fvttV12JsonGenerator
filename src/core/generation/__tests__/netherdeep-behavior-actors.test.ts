@@ -102,7 +102,7 @@ describe('Netherdeep behavior semantic controls', () => {
       const actor = (await generate(name, '14')).rawJson as any;
       const effect = actor.items.flatMap((item: any) => item.effects ?? []).find((entry: any) =>
         entry.flags?.fvttJsonGenerator?.behaviorState?.stateId === stateId);
-      expect(effect.changes.find((change: any) => change.key === 'system.attributes.ac.value'))
+      expect((effect.system?.changes ?? effect.changes).find((change: any) => change.key === 'system.attributes.ac.value'))
         .toMatchObject({ value, phase: 'final' });
     }
   });

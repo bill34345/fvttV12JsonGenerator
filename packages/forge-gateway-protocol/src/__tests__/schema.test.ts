@@ -210,6 +210,76 @@ describe('Forge protocol schemas', () => {
     expect(JSON.stringify(projection)).not.toMatch(/sourcePath|actorPath|localCache|reference|C:\\/u);
   });
 
+  test('preserves native armor class fields through closed projection and response decoding', () => {
+    const ac = { override: 17, calcs: ['unarmored', 'armored'], formulas: [
+      { formula: '13 + @abilities.dex.mod', label: 'Natural armor', armored: false, shielded: null },
+    ] };
+    const projection = projectForgeVerification({ verification: SAFE_VERIFICATION,
+      actorVerification: { ...SAFE_ACTOR_VERIFICATION, actor: { ...SAFE_ACTOR_VERIFICATION.actor, ac } } });
+    expect(projection.actorVerification.actor.ac).toEqual(ac);
+    const artifact = { name: 'Test Actor' };
+    const response = { protocolVersion: 1, requestId: 'native-ac', result: {
+      sourceIdentity: { sourceId: SOURCE_ID, sourceHash: sha256(CONTENT) },
+      target: { fvttRuntimeVersion: '14.370', generatorProfile: 'v14', generatorVersion: '0.1.0', systemId: 'dnd5e',
+        systemVersionObserved: '6.0.6', effectProfile: 'core', iconMode: 'off' },
+      status: 'accepted', diagnostics: [], ...projection, artifact, artifactHash: hashArtifact(artifact),
+    } };
+    expect(decodeForgeActorResponse(response)).toMatchObject({ ok: true, value: { result: {
+      actorVerification: { actor: { ac } },
+    } } });
+    const forged = structuredClone(response);
+    (forged.result.actorVerification.actor.ac!.formulas![0] as any).privatePath = 'C:/private';
+    const retained = decodeForgeActorResponse(forged);
+    expect(retained).toMatchObject({ ok: true, value: { result: { status: 'needs_review', artifact } } });
+    expect(JSON.stringify(retained)).not.toContain('privatePath');
+    const noOverride = projectForgeVerification({ verification: SAFE_VERIFICATION,
+      actorVerification: { ...SAFE_ACTOR_VERIFICATION, actor: { ...SAFE_ACTOR_VERIFICATION.actor, ac: { override: null, calcs: [], formulas: [] } } } });
+    expect(noOverride.actorVerification.actor.ac).toEqual({ override: null, calcs: [], formulas: [] });
+  });
+
+  test('preserves source-backed nullable native defaults without accepting other scalar types', () => {
+    const actor = { ...SAFE_ACTOR_VERIFICATION.actor,
+      cr: null,
+      hp: { value: null, max: null, temp: null, tempmax: null, formula: '' },
+      ac: { flat: null, override: 5, bonus: '', calcs: ['unarmored', 'armored'], formulas: [] },
+      senses: { ranges: { darkvision: null, blindsight: null, tremorsense: null, truesight: null },
+        darkvision: null, blindsight: null, tremorsense: null, truesight: null, passive: 0, units: null, special: '' },
+    };
+    const projection = projectForgeVerification({ verification: SAFE_VERIFICATION,
+      actorVerification: { ...SAFE_ACTOR_VERIFICATION, actor } });
+    expect(projection.actorVerification.actor).toEqual(actor);
+    const artifact = { name: 'Native nullable defaults' };
+    const response = { protocolVersion: 1, requestId: 'native-nullable', result: {
+      sourceIdentity: { sourceId: SOURCE_ID, sourceHash: sha256(CONTENT) },
+      target: { fvttRuntimeVersion: '14.370', generatorProfile: 'v14', generatorVersion: '0.1.0', systemId: 'dnd5e',
+        systemVersionObserved: '6.0.6', effectProfile: 'core', iconMode: 'off' },
+      status: 'accepted', diagnostics: [], ...projection, artifact, artifactHash: hashArtifact(artifact),
+    } };
+    expect(decodeForgeActorResponse(response)).toMatchObject({ ok: true, value: { result: {
+      status: 'accepted', actorVerification: { actor },
+    } } });
+    for (const [field, key, value] of [
+      ['hp', 'value', '100'], ['hp', 'max', false], ['ac', 'flat', '5'], ['ac', 'override', false],
+      ['ac', 'bonus', null], ['senses', 'darkvision', '60'], ['senses', 'ranges', { darkvision: '60' }], ['senses', 'passive', null],
+    ] as const) {
+      const invalidActor: any = structuredClone(actor);
+      invalidActor[field][key] = value;
+      expect(() => projectForgeVerification({ verification: SAFE_VERIFICATION,
+        actorVerification: { ...SAFE_ACTOR_VERIFICATION, actor: invalidActor } })).toThrow();
+      const decoded = decodeForgeActorResponse({ ...response, result: { ...response.result,
+        actorVerification: { ...SAFE_ACTOR_VERIFICATION, actor: invalidActor } } });
+      expect(decoded).toMatchObject({ ok: true, value: { result: { status: 'needs_review', artifact } } });
+    }
+    for (const value of ['1', NaN]) {
+      const invalidActor = { ...actor, cr: value };
+      expect(() => projectForgeVerification({ verification: SAFE_VERIFICATION,
+        actorVerification: { ...SAFE_ACTOR_VERIFICATION, actor: invalidActor } })).toThrow();
+      expect(decodeForgeActorResponse({ ...response, result: { ...response.result,
+        actorVerification: { ...SAFE_ACTOR_VERIFICATION, actor: invalidActor } } }))
+        .toMatchObject({ ok: true, value: { result: { status: 'needs_review', artifact } } });
+    }
+  });
+
   test('projects workflow-supported empty creature types and heal activities', () => {
     const projection = projectForgeVerification({
       verification: SAFE_VERIFICATION,
@@ -359,8 +429,8 @@ describe('Forge protocol schemas', () => {
     const artifact = { name: 'Review candidate', type: 'npc', system: { attributes: { hp: { value: 12 } } },
       items: [{ name: 'Attack', type: 'feat', system: { activities: {} } }], effects: [] };
     const result = { sourceIdentity: { sourceId: SOURCE_ID, sourceHash: sha256(CONTENT) },
-      target: { fvttRuntimeVersion: '14.364', generatorProfile: 'v14', generatorVersion: '0.1.0',
-        systemId: 'dnd5e', systemVersionObserved: '5.3.3', effectProfile: 'core', iconMode: 'off' },
+      target: { fvttRuntimeVersion: '14.370', generatorProfile: 'v14', generatorVersion: '0.1.0',
+        systemId: 'dnd5e', systemVersionObserved: '6.0.6', effectProfile: 'core', iconMode: 'off' },
       status: 'failed', verification: { status: 'failed', mechanicsCoverage: [] },
       diagnostics: [ERROR_DIAGNOSTIC], actorVerification: SAFE_ACTOR_VERIFICATION, artifact };
     const response = { protocolVersion: 1, requestId: 'failed-candidate', result };

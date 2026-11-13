@@ -6,7 +6,7 @@ import {validateMonsterIntakeIR} from '@fvtt-json-generator/intake-ai/validator'
 import {renderMonsterIntakeMarkdown} from '@fvtt-json-generator/intake-ai/renderer';
 import type {MonsterIntakeIR} from '@fvtt-json-generator/intake-ai/types';
 import {analyzeBrowserActorIntakeDraft, generateBrowserActorIntakeCandidate} from '@fvtt-json-generator/forge-browser-runtime/ai';
-import {hashArtifact, hashSource, type ForgeSourceId} from '@fvtt-json-generator/forge-gateway-protocol';
+import {hashSource, type ForgeSourceId} from '@fvtt-json-generator/forge-gateway-protocol';
 import {generateActorArtifact} from '@fvtt-json-generator/workflows/generation-pipeline';
 import {convertMarkdownContentToJson} from '@fvtt-json-generator/workflows/single-file-conversion';
 import {YamlParser} from '@fvtt-json-generator/parser/yaml';
@@ -37,7 +37,7 @@ async function canonical(content: string, reviewDelivery: 'document' | 'external
 }
 async function formal(source: string, ir: MonsterIntakeIR, name: string) {
   const input = {source,sourceName:name,sourceScope:'single' as const,sourceId,requestId:'candidate-history-'+name,
-    fvttVersion:'14.368',systemVersion:'5.3.3'};
+    fvttVersion:'14.368',systemVersion:'6.0.6'};
   const analysis = analyzeBrowserActorIntakeDraft(input, ir, provider);
   const generated = await generateBrowserActorIntakeCandidate(input, analysis, provider);
   return {analysis, generated, actor:generated.actorProjection as any};
@@ -248,12 +248,14 @@ describe('candidate history uses the existing closed inert data contract', () =>
     }
   });
 
-  test('unrelated complete Actor without review metadata retains its frozen identity', async () => {
+  test('unrelated complete Actor without review metadata remains identical across current workflow entries', async () => {
     const markdown = renderMonsterIntakeMarkdown(buildValidLurkerIr());
     const actual = await canonical(markdown,'document');
-    expect<string>(hashArtifact(actual.actor)).toBe('c2528e82171761db39d8f45e3580b8689e351e21949be2a05f0fbfecfa0850b8');
+    expect(actual.actor._stats).toMatchObject({coreVersion:'14.370',systemVersion:'6.0.6'});
     expectNoReviewFlags(actual.actor);
     expect((await canonical(markdown,'external')).actor).toEqual(actual.actor);
+    const single=await convertMarkdownContentToJson({content:markdown,fvttVersion:'14',effectProfile:'core',translationService:null,iconOptions:{mode:'off'}});
+    expect(single.rawJson).toEqual(actual.actor);
   });
 
   for (const record of captured.cases) test(record.id+' original provider reply retains the original proposal and old coordinates after successful relocation', async () => {

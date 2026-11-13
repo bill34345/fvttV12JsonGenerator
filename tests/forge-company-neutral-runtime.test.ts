@@ -78,7 +78,7 @@ test('Company and current full-IR replay retain neutral attack and explicit outg
   const actor=result.prepared!.actors[0]!.artifact as any,shred=actor.items.find((item:any)=>item.flags?.fvttJsonGenerator?.manualRule?.sourceOperations?.some((op:any)=>op.attack?.type==='melee'));
   expect(shred.type).not.toBe('weapon');const activities=Object.values<any>(shred.system.activities);
   expect(activities).toHaveLength(2);const roll=activities.find(a=>a.type==='utility')!,damage=activities.find(a=>a.type==='damage')!;
-  expect(roll.roll.formula).toBe('1d20+10');expect(roll.range.value).toBe(0);expect(roll.attack).toBeUndefined();
+  expect(roll.roll.formula).toBe('1d20+10');expect(roll.range.value).toBe('0');expect(roll.attack).toBeUndefined();
   expect(damage.damage.parts).toHaveLength(1);expect(damage.damage.parts[0]).toMatchObject({number:10,denomination:8,bonus:'4',types:['slashing']});
   expect(damage.flags.fvttJsonGenerator.sourceOperation.damageAdjustment).toMatchObject({multiplier:0.5,actor:'the company'});
   expect(shred.system.description.value).toContain('Bloodied');expect(shred.system.description.value).toContain('Bonus Action');

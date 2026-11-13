@@ -118,7 +118,7 @@ function savedActorResult(record:IntakeCandidateRecord){
 /** Actor recovery reads the saved artifact. Item recovery retains its own
  * generation contract and local reproducibility checks. */
 export async function revalidateIntakeCandidate(record: IntakeCandidateRecord,
-  target: Pick<Input,'fvttVersion'|'systemVersion'>, now = Date.now()): Promise<IntakeCandidateRecord> {
+  target: Pick<Input,'fvttVersion'|'systemVersion'>, now = Date.now(), nativeProjection?: Input['nativeProjection']): Promise<IntakeCandidateRecord> {
   if(record.mode==='ai-monster'){
     savedActorResult(record);
     const restored=JSON.parse(serialized(record)) as IntakeCandidateRecord;
@@ -139,7 +139,7 @@ export async function revalidateIntakeCandidate(record: IntakeCandidateRecord,
   const forbidden=async()=>{throw Error('候选本地重验不得请求模型。');};
   const provider={...saved.provider,discover:forbidden,extract:forbidden,review:forbidden,repair:forbidden} as any;
   const input={...record.input,sourceId:result.sourceIdentity.sourceId,autoCorrect:false};
-  const fresh=await generateBrowserItemIntakeCandidate(input as any,saved.analysis,provider);
+  const fresh=await generateBrowserItemIntakeCandidate({...input,nativeProjection} as any,saved.analysis,provider);
   if(fresh.status!=='ready_for_gm_review' || fresh.finalSource!==saved.finalSource
     || jsonHash(fresh.candidateResponse)!==jsonHash(saved.candidateResponse)
     || jsonHash(fresh.deterministicFindings??fresh.findings)!==jsonHash(saved.deterministicFindings??saved.findings)) {

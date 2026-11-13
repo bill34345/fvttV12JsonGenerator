@@ -34,8 +34,8 @@ test('offline handbook exposes first-use and version guides with valid destinati
   navigate('guide');
   assert.equal(document.querySelector('#navigation [aria-current="page"]').getAttribute('href'), '#guide');
   navigate('tool/version-selection');
-  assert.match(document.querySelector('#main').textContent, /省略版本仍默认 V12/);
-  assert.match(document.querySelector('#main').textContent, /正式生成目标仍为 dnd5e 5\.3\.3/);
+  assert.match(document.querySelector('#main').textContent, /CLI\/workflow省略版本与Web初始均为V14/);
+  assert.match(document.querySelector('#main').textContent, /生成身份统一14\.370\/6\.0\.6/);
   assert.equal(document.querySelector('#navigation [aria-current="page"]').textContent, '版本与兼容性');
 });
 

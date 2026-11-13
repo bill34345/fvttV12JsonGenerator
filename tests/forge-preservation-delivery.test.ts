@@ -25,16 +25,16 @@ let networkAttempts=0;
 globalThis.fetch = Object.assign((async()=>{networkAttempts++;throw Error('Preservation delivery tests forbid network/model requests.');}), {preconnect: () => { throw Error('Frozen tests forbid network preconnect.'); }});
 beforeAll(async()=>{
   source=renderMonsterIntakeMarkdown(buildValidLurkerIr());
-  response=await convertFinalActorSource(buildForgeActorRequest({displayName:'Preservation delivery',content:source,requestId:'preservation-delivery',fvttVersion:'14.364',systemVersion:'5.3.3'}));
+  response=await convertFinalActorSource(buildForgeActorRequest({displayName:'Preservation delivery',content:source,requestId:'preservation-delivery',fvttVersion:'14.370',systemVersion:'6.0.6'}));
   expect(response.result?.artifact).toBeDefined();
   const timed=buildValidLurkerIr();
   timed.creature.actions[1]!.description='Melee Attack Roll: +6, reach 10 ft. Hit: 9 (1d10+4) Slashing damage. The target has the Poisoned condition for 2 rounds.';
   timed.creature.actions[1]!.appliedConditions=[{statuses:['poisoned'],duration:'2 rounds'}];
-  const generated=await convertFinalActorSource(buildForgeActorRequest({displayName:'Preservation delivery',content:renderMonsterIntakeMarkdown(timed),requestId:'preservation-lifecycle-control',fvttVersion:'14.364',systemVersion:'5.3.3'}));
+  const generated=await convertFinalActorSource(buildForgeActorRequest({displayName:'Preservation delivery',content:renderMonsterIntakeMarkdown(timed),requestId:'preservation-lifecycle-control',fvttVersion:'14.370',systemVersion:'6.0.6'}));
   expect('result'in generated).toBe(true);timedArtifact=(generated as any).result.artifact;
   const ordinary=JSON.parse(readFileSync('tests/fixtures/forge-ordinary-protocol-failures.json','utf8')).ordinary;
   const normalized=normalizeMonsterIntakeProposal(ordinary.source,JSON.parse(ordinary.content),ordinary.candidate);
-  const resource=await convertFinalActorSource(buildForgeActorRequest({displayName:'Preservation delivery',content:renderMonsterIntakeMarkdown(normalized,ordinary.source),requestId:'preservation-readback-range',fvttVersion:'14.364',systemVersion:'5.3.3'}));
+  const resource=await convertFinalActorSource(buildForgeActorRequest({displayName:'Preservation delivery',content:renderMonsterIntakeMarkdown(normalized,ordinary.source),requestId:'preservation-readback-range',fvttVersion:'14.370',systemVersion:'6.0.6'}));
   expect('result'in resource).toBe(true);resourceArtifact=(resource as any).result.artifact;
 });
 afterAll(()=>{globalThis.fetch=previousFetch;expect(networkAttempts).toBe(0);});
@@ -42,7 +42,7 @@ afterAll(()=>{globalThis.fetch=previousFetch;expect(networkAttempts).toBe(0);});
 function bundle():any{
   const command='void forgeEncounter.actors.main;';
   return{schema:'fvtt-json-forge-encounter',version:1,id:'preservation-delivery',label:'Preservation delivery fixture',
-    target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:'main',
+    target:{foundry:'14.370',system:'dnd5e',systemVersion:'6.0.6',effectProfile:'core'},primaryActorKey:'main',
     actors:['main','summon'].map(key=>({key,label:key,source,sourceHash:hashSource(source),artifact:structuredClone(response.result.artifact),artifactHash:hashArtifact(response.result.artifact)})),
     macros:[{key:'control',name:'Inert reviewed control',command,commandHash:hashSource(command),bindings:{main:'main',summon:'summon'},covers:[],notes:'Contract fixture only.'}],assets:[]};
 }
@@ -60,7 +60,7 @@ function runtime(){
       }}};
     return api;
   };
-  const game:any={version:'14.364',system:{id:'dnd5e',version:'5.3.3'},world:{id:'preservation-fixture'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro')};
+  const game:any={version:'14.370',system:{id:'dnd5e',version:'6.0.6'},world:{id:'preservation-fixture'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro')};
   return{game,get executions(){return executions;},assets:{async ensure(){throw Error('No fixture asset upload expected.');}}};
 }
 function appFor(game:any,prepared:any):any{
@@ -140,7 +140,7 @@ for(const [name,breakArtifact] of [
   expect(context.actors).toHaveLength(2);
   const normal=context.actors.find((actor:any)=>actor.key==='main'),partial=context.actors.find((actor:any)=>actor.key==='summon');
   expect(normal.hp).toBe(response.result.artifact.system.attributes.hp.max);
-  expect(normal.ac).toBe(response.result.artifact.system.attributes.ac.flat);
+  expect(normal.ac).toBe(response.result.artifact.system.attributes.ac.override);
   expect(normal.cr).toBe(response.result.artifact.system.details.cr);
   expect(normal.abilities.map((item:any)=>item.name)).toEqual(response.result.artifact.items.map((item:any)=>item.name));
   expect(normal.previewIssues).toEqual([]);
@@ -201,7 +201,7 @@ test('preservation D01: source resources, immunities, resistance and movement lo
 test('preservation D01: Item rule text and Effect duration, disabled state and lifecycle remain in readback comparison',()=>{
   const sourceItem=timedArtifact.items.find((item:any)=>item.effects?.some((effect:any)=>effect.statuses?.includes('poisoned')));
   expect(sourceItem).toBeDefined();
-  expect(sourceItem.effects.find((effect:any)=>effect.statuses.includes('poisoned')).duration.rounds).toBe(2);
+  expect(sourceItem.effects.find((effect:any)=>effect.statuses.includes('poisoned')).duration).toMatchObject({value:2,units:'rounds'});
   for(const field of ['description','duration','disabled','conditionLifecycle']){
     const changed=structuredClone(timedArtifact),item=changed.items.find((entry:any)=>entry.name===sourceItem.name),effect=item.effects.find((entry:any)=>entry.statuses.includes('poisoned'));
     if(field==='description')item.system.description.value='<p>Lost source rule.</p>';
@@ -214,16 +214,17 @@ test('preservation D01: Item rule text and Effect duration, disabled state and l
 
 test('preservation D01: native defaults, numeric FormulaFields, unordered sets and duration start markers are equivalent',()=>{
   const actual=structuredClone(timedArtifact);
-  actual.system.attributes.movement.walk=String(actual.system.attributes.movement.walk);
+  actual.system.attributes.movement.speeds.walk=Number(actual.system.attributes.movement.speeds.walk);
   actual.system.traits.ci.value=new Set([...actual.system.traits.ci.value].reverse());
   actual.system.traits.languages.communication={};
-  for(const item of actual.items)for(const effect of item.effects??[]){effect.statuses=new Set([...effect.statuses].reverse());effect.duration={...effect.duration,startTime:3456,startRound:6,startTurn:2};}
+  for(const item of actual.items)for(const effect of item.effects??[]){effect.statuses=new Set([...effect.statuses].reverse());effect.start={combat:null,combatant:null,initiative:10,time:3456,round:6,turn:2};}
   expect(actorReadbackWarnings(timedArtifact,actual)).toEqual([]);
 });
 
-test('preservation D01 range: inherited Activity payload is inactive while Item and overridden range drift remain visible',()=>{
-  const actor=resourceArtifact,item=actor.items.find((entry:any)=>entry.name==='Soul Mark'),activity=Object.values(item.system.activities).find((entry:any)=>entry.type==='attack') as any;
-  expect(item.system.range.value).toBe(5);expect(activity.range).toMatchObject({override:false,reach:5});
+test('preservation D01 range: native melee override and inherited payload retain independent drift checks',()=>{
+  const actor=structuredClone(resourceArtifact),item=actor.items.find((entry:any)=>entry.name==='Soul Mark'),activity=Object.values(item.system.activities).find((entry:any)=>entry.type==='attack') as any;
+  expect(item.system.range.value).toBe(5);expect(activity.range).toMatchObject({override:true,value:'5'});
+  activity.range={override:false,value:'5',units:'ft',special:''};
   const cleaned=structuredClone(actor),cleanedItem=cleaned.items.find((entry:any)=>entry.name===item.name);
   cleanedItem.system.activities[activity._id].range={override:false,units:'ft',special:''};
   expect(actorReadbackWarnings(actor,cleaned)).toEqual([]);
@@ -231,7 +232,7 @@ test('preservation D01 range: inherited Activity payload is inactive while Item 
   expect(actorReadbackWarnings(actor,missingParent).join('\n')).toContain('距离');
   const changedParent=structuredClone(cleaned);changedParent.items.find((entry:any)=>entry.name===item.name).system.range.value=30;
   expect(actorReadbackWarnings(actor,changedParent).join('\n')).toContain('距离');
-  const overridden=structuredClone(actor);overridden.items.find((entry:any)=>entry.name===item.name).system.activities[activity._id].range={override:true,value:5,units:'ft',special:''};
+  const overridden=structuredClone(actor);overridden.items.find((entry:any)=>entry.name===item.name).system.activities[activity._id].range={override:true,value:'5',units:'ft',special:''};
   const changedOverride=structuredClone(overridden);changedOverride.items.find((entry:any)=>entry.name===item.name).system.activities[activity._id].range.value=50;
   expect(actorReadbackWarnings(overridden,changedOverride).join('\n')).toContain('距离');
 });
@@ -315,7 +316,8 @@ if(frozenRoot)test('preservation D01: the frozen Dust and Unicorn missing fields
 });
 
 const runtimeRoot=process.env.FORGE_PRESERVATION_RUNTIME_ROOT;
-if(runtimeRoot)test('preservation D01 runtime: the exact saved resource Actor has no range or HTML representation warning',async()=>{
+// This receipt belongs to the retired 5.3.3 projector and cannot certify current 6.x output.
+if(runtimeRoot)test.skip('historical 5.3.3 preservation D01 runtime: the exact saved resource Actor has no range or HTML representation warning',async()=>{
   const sourcePath=join(runtimeRoot,'mirror-fixture/resource-original.md'),snapshotPath=join(runtimeRoot,'chrome/post-refresh.json');
   const canonical=readFileSync(sourcePath,'utf8'),snapshot=readFileSync(snapshotPath,'utf8');
   const actual=JSON.parse(snapshot).actors.find((actor:any)=>actor._id==='4986d085322e00c6');expect(actual).toBeDefined();

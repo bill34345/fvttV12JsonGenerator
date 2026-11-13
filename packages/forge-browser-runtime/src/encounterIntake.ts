@@ -1,3 +1,4 @@
+import { FORGE_NATIVE_606_TARGET, type NativeDocumentProjection } from './nativeTarget';
 import { hashSource, hashArtifact, type JsonObject, isUsableActorCandidateArtifact } from '@fvtt-json-generator/forge-gateway-protocol';
 import {actorRulePresentation} from './actorRulePresentationContext';
 import {assertForgeAiReviewAvailable,rejectForgeAiReview} from './aiReviewPolicy';
@@ -46,6 +47,7 @@ export interface EncounterIntakeMember {
   findings:string[];
 }
 export interface EncounterIntakeReport {
+  runtimeTarget?: ForgeEncounterPackage['target'];
   outputLanguage?: 'source' | 'zh-CN';
   localization?: EncounterLocalizationProgress[];
   localizationDraft?: ForgeEncounterLocalizationDraft;
@@ -70,6 +72,7 @@ export interface EncounterAutomationPort {
   review(request:EncounterAutomationRequest & {automation:EncounterAutomationIR;finalSources?:Array<{key:string;source:string;artifact:unknown}>}):Promise<{verdict:'accepted'|'needs_review';findings:string[]}>;
 }
 export interface EncounterIntakeInput {
+  nativeProjection?: NativeDocumentProjection;
   reviewPolicy?:'automatic'|'deferred';
   outputLanguage?: 'source' | 'zh-CN';
   translationService?: ReviewedTranslationServicePort;
@@ -109,7 +112,7 @@ export function encounterActorCandidate(report:EncounterIntakeReport,key:string)
 
 function encounterActorInput(report:EncounterIntakeReport,actor:EncounterIntakeActor){
   return{source:actor.source,sourceName:actor.analysis.candidate?.label??actor.key,displayName:actor.analysis.candidate?.label??actor.key,
-    sourceScope:'single' as const,requestId:`encounter-ai-${report.sourceHash.slice(0,12)}-${actor.key}`,fvttVersion:'14.364',systemVersion:'5.3.3'};
+    sourceScope:'single' as const,requestId:`encounter-ai-${report.sourceHash.slice(0,12)}-${actor.key}`,fvttVersion:report.runtimeTarget?.foundry??FORGE_NATIVE_606_TARGET.stats.coreVersion,systemVersion:report.runtimeTarget?.systemVersion??FORGE_NATIVE_606_TARGET.dnd5eVersion};
 }
 function retainEncounterArtifacts(bundle:ForgeEncounterPackage,report:EncounterIntakeReport):ForgeEncounterPackage{
   return {...bundle,actors:bundle.actors.map(input=>{
@@ -227,7 +230,7 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
   const deferred=true;
   let conditionCatalog:ConfiguredConditionDefinition[]=[];
   const report:EncounterIntakeReport={version:1,source,sourceHash:hashSource(source),model:provider.extractionModel,
-    reviewModel:provider.reviewModel,evidenceMode:input.evidenceMode??'standard',requestedOptions:input.requestedOptions,status:'running',actors:[],findings:[]};
+    reviewModel:provider.reviewModel,evidenceMode:input.evidenceMode??'standard',requestedOptions:input.requestedOptions,...(input.nativeProjection?{runtimeTarget:encounterGenerationTarget(input.nativeProjection)}:{}),status:'running',actors:[],findings:[]};
   let continuationValidated=!input.previousReport;
   const progress=(message:string)=>{signal?.throwIfAborted();try{input.onProgress?.(message);}
     catch{report.findings.push('进度显示未完成；生成资料与 Actor 保留。');}};
@@ -240,9 +243,9 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
     const available=report.actors.filter(actor=>actor.generation?.finalSource&&actor.generation.candidateResponse&&'result' in actor.generation.candidateResponse&&actor.generation.candidateResponse.result.artifact);
     if(!available.length)return;
     const bundle:ForgeEncounterPackage={schema:'fvtt-json-forge-encounter',version:1,id:`intake-${report.sourceHash.slice(0,20)}`,
-      label:input.label.trim()||'生物资料',target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:available[0]!.key,
+      label:input.label.trim()||'生物资料',target:encounterGenerationTarget(input.nativeProjection),primaryActorKey:available[0]!.key,
       actors:available.map(actor=>({key:actor.key,label:actor.analysis.candidate!.label,source:actor.generation!.finalSource!,sourceHash:hashSource(actor.generation!.finalSource!)})),macros:[],assets:[]};
-    return prepareForgeEncounter(serializeForgeEncounterPackage(retainEncounterArtifacts(bundle,report)),signal);
+    return prepareForgeEncounter(serializeForgeEncounterPackage(retainEncounterArtifacts(bundle,report)),signal,{nativeProjection:input.nativeProjection});
   };
   const finishDeferred=async(prepared:PreparedForgeEncounter):Promise<EncounterIntakeResult>=>{
     report.automationReview={status:'not_requested'};report.outputLanguage='source';
@@ -321,7 +324,7 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
       member.status='running';publish();
       let pendingManualRules: Array<EncounterAutomationRule & {mechanicId:string;capabilityKind:'gm-manual'}>=[];
       const actorInput={source:actorSource,sourceName:candidate.label,displayName:candidate.label,sourceScope:'single' as const,
-        requestId:`encounter-ai-${report.sourceHash.slice(0,12)}-${key}`,fvttVersion:'14.364',systemVersion:'5.3.3',
+        requestId:`encounter-ai-${report.sourceHash.slice(0,12)}-${key}`,fvttVersion:encounterGenerationTarget(input.nativeProjection).foundry,systemVersion:encounterGenerationTarget(input.nativeProjection).systemVersion,nativeProjection:input.nativeProjection,
         renderMarkdown:(ir:MonsterIntakeIR)=>renderEncounterActorSource(ir,pendingManualRules,actorSource),
         onStage:(stage:{stage:string;status:string})=>progress(`生物${index+1}/${candidates.length}：${candidate.label} · ${actorStageLabel(stage.stage)} ${actorStageStatus(stage.status)}`)};
       const existingIr=draft?.ir??prior?.analysis.ir;
@@ -411,9 +414,9 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
       progress('唯一生物已通过原生生成与转换保真检查，省略配套控制配置请求；仍需GM确认。');
       const actorSource=sourceRecovery?renderEncounterActorSource(native.analysis.ir!,[],native.source):native.generation.finalSource!;
       const bundle:ForgeEncounterPackage={schema:'fvtt-json-forge-encounter',version:1,id:`intake-${report.sourceHash.slice(0,20)}`,
-        label:input.label.trim()||'生物资料',target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:native.key,
+        label:input.label.trim()||'生物资料',target:encounterGenerationTarget(input.nativeProjection),primaryActorKey:native.key,
         actors:[{key:native.key,label:native.analysis.candidate!.label,source:actorSource,sourceHash:hashSource(actorSource)}],macros:sourceRecovery?(()=>{const command=buildEncounterMacroCommand(sourceRecovery);return[{key:'battle-control',name:sourceRecovery.name,command,commandHash:hashSource(command),bindings:{[native.key]:native.key},covers:[],notes:[sourceRecovery.notes,...sourceRecovery.manualSteps,`原始资料SHA-256：${report.sourceHash}`].join('\n')}];})():[],assets:[]};
-      return await finishDeferred(await prepareForgeEncounter(serializeForgeEncounterPackage(retainEncounterArtifacts(bundle,report)),signal));
+      return await finishDeferred(await prepareForgeEncounter(serializeForgeEncounterPackage(retainEncounterArtifacts(bundle,report)),signal,{nativeProjection:input.nativeProjection}));
     }
     report.generationRoute='encounter-with-controller';
     const request:EncounterAutomationRequest={source,conditionCatalog,actors:report.actors.map(a=>({key:a.key,ir:a.analysis.ir!,source:a.source,artifact:a.generation!.actorProjection}))};
@@ -440,13 +443,13 @@ export async function generateEncounterFromHumanMarkdown(input:EncounterIntakeIn
       }
       const command=buildEncounterMacroCommand(automation);
       const bundle:ForgeEncounterPackage={schema:'fvtt-json-forge-encounter',version:1,id:`intake-${report.sourceHash.slice(0,20)}`,
-        label:input.label.trim()||'生物资料',target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:report.actors[0]!.key,
+        label:input.label.trim()||'生物资料',target:encounterGenerationTarget(input.nativeProjection),primaryActorKey:report.actors[0]!.key,
         actors:report.actors.map(a=>{const rendered=renderEncounterActorSource(a.analysis.ir!,rules.filter(r=>r.actorKey===a.key),a.source);return {key:a.key,label:a.generation!.analysis.candidate!.label,source:rendered,sourceHash:hashSource(rendered)};}),
         macros:[{key:'battle-control',name:automation.name,command,commandHash:hashSource(command),
           bindings:Object.fromEntries(report.actors.map(a=>[a.key,a.key])),covers:[...rules.map(r=>({actorKey:r.actorKey,mechanicId:r.mechanicId})),...stagedCovers,...manualCovers],
           notes:[automation.notes,...automation.manualSteps,`原始资料SHA-256：${report.sourceHash}`].join('\n')}],assets:[]};
       progress('工具已生成固定控制入口，正在核对导入文件结构和固定能力配置。');
-      const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(retainEncounterArtifacts(bundle,report)),signal);
+      const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(retainEncounterArtifacts(bundle,report)),signal,{nativeProjection:input.nativeProjection});
       for(const actor of report.actors){
         const pendingRules=manualPreparationRules(actor.analysis.ir!,actor.source,actor.key);
         if(pendingRules.length===0)continue;
@@ -684,4 +687,9 @@ export function explicitCreatureSections(source:string):DiscoveryCandidate[]{
   const headings=[...source.matchAll(/^#{1,3}[ \t]+(?:生物[一二三四五六七八九十\d]*|Creature[ \t]+\d+)[ \t]*[:：][ \t]*(.+)$/gimu)];
   return headings.map((match,index)=>{const start=match.index!;const end=headings[index+1]?.index??source.length;
     return {id:`creature-${index+1}`,label:match[1]!.trim(),start,end,quote:source.slice(start,end)};});
+}
+
+function encounterGenerationTarget(port?: NativeDocumentProjection):ForgeEncounterPackage['target'] {
+  const target=port?.target??FORGE_NATIVE_606_TARGET;
+  return{foundry:target.stats.coreVersion,system:'dnd5e',systemVersion:target.dnd5eVersion,effectProfile:'core'};
 }

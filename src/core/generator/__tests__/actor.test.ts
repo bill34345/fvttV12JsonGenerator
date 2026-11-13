@@ -3,7 +3,7 @@ import { ActorGenerator } from '../actor';
 import type { ParsedNPC } from '../../../config/mapping';
 
 describe('ActorGenerator', () => {
-  const generator = new ActorGenerator();
+  const generator = new ActorGenerator({ fvttVersion: '12' });
 
   it('should generate basic actor from parsed data', () => {
     const input: ParsedNPC = {

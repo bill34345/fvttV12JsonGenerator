@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { FOUNDRY_V14_CORE_VERSION } from '@fvtt-json-generator/contracts/target';
 import type { IconReviewEntry, IconReviewReport } from '@fvtt-json-generator/assets-icons/icon-types';
 
 const ROOT = resolve(import.meta.dir, '../..');
@@ -19,7 +20,7 @@ export function resolveInstalledIconRoots(
   const root = resolve(workspaceRoot);
   const labRoot = resolve(environment.FVTT_OPS_LAB_ROOT || resolve(root, '.local/foundry-v14'));
   return {
-    corePublicRoot: resolve(labRoot, 'app/14.364/public'),
+    corePublicRoot: resolve(labRoot, `app/${FOUNDRY_V14_CORE_VERSION}/public`),
     dnd5eRoot: resolve(labRoot, 'data/server-mirror/Data/systems/dnd5e'),
   };
 }

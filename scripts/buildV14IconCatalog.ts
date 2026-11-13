@@ -8,6 +8,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, extname, join, relative, resolve, sep } from 'node:path';
+import { DND5E_V14_SYSTEM_VERSION, FOUNDRY_V14_CORE_VERSION } from '@fvtt-json-generator/contracts/target';
 import type {
   V14IconCatalog,
   V14IconCatalogEntry,
@@ -40,9 +41,10 @@ const DEFAULT_PATHS = resolveV14IconCatalogPaths(ROOT, process.env);
 const IMAGE_EXTENSIONS = new Set(['.avif', '.gif', '.jpeg', '.jpg', '.png', '.svg', '.webp']);
 const PACK_ORDER = [
   'dnd5e.monsterfeatures24',
-  'dnd5e.monsterfeatures',
-  'dnd5e.items',
-  'dnd5e.spells',
+  'dnd5e.classes24',
+  'dnd5e.feats24',
+  'dnd5e.equipment24',
+  'dnd5e.spells24',
 ] as const;
 
 const TYPE_DEFAULTS: Record<string, string> = {
@@ -73,6 +75,7 @@ for (const required of [inputPath, coreIconRoot, dnd5eIconRoot]) {
 const rawText = readFileSync(inputPath, 'utf-8');
 const source = JSON.parse(rawText) as PublicCompendiumExport;
 validateExport(source);
+validateIconSources();
 
 const coreFiles = scanIconFiles(coreIconRoot, 'icons', 'core');
 const dnd5eFiles = scanIconFiles(dnd5eIconRoot, 'systems/dnd5e/icons', 'dnd5e');
@@ -89,6 +92,7 @@ for (const [packPriority, packId] of PACK_ORDER.entries()) {
   const pack = source.packs.find((entry) => entry.id === packId);
   if (!pack) throw new Error(`Public Compendium export is missing ${packId}.`);
   for (const entry of pack.entries) {
+    if (entry.rules === '2014') continue;
     if (!entry.img || !filePaths.has(entry.img)) continue;
     compendium.push({
       id: entry._id,
@@ -116,9 +120,9 @@ compendium.sort((left, right) =>
 const catalog: V14IconCatalog = {
   schemaVersion: 1,
   target: {
-    foundryVersion: '14.364',
+    foundryVersion: FOUNDRY_V14_CORE_VERSION,
     systemId: 'dnd5e',
-    systemVersion: '5.3.3',
+    systemVersion: DND5E_V14_SYSTEM_VERSION,
   },
   provenance: {
     api: 'CompendiumCollection#getIndex',
@@ -155,13 +159,26 @@ function cliValue(name: string): string | undefined {
 function validateExport(source: PublicCompendiumExport): void {
   if (
     source.schemaVersion !== 1
-    || source.foundryVersion !== '14.364'
+    || source.foundryVersion !== FOUNDRY_V14_CORE_VERSION
     || source.systemId !== 'dnd5e'
-    || source.systemVersion !== '5.3.3'
+    || typeof source.systemVersion !== 'string'
+    || source.systemVersion.split('+', 1)[0] !== DND5E_V14_SYSTEM_VERSION
     || source.api !== 'CompendiumCollection#getIndex'
     || !Array.isArray(source.packs)
   ) {
-    throw new Error('Compendium export must come from Foundry 14.364 / dnd5e 5.3.3 getIndex().');
+    throw new Error(`Compendium export must come from Foundry ${FOUNDRY_V14_CORE_VERSION} / dnd5e ${DND5E_V14_SYSTEM_VERSION} getIndex().`);
+  }
+}
+
+function validateIconSources(): void {
+  const corePackage = JSON.parse(readFileSync(join(coreIconRoot, '..', '..', 'package.json'), 'utf-8'));
+  const system = JSON.parse(readFileSync(join(dnd5eIconRoot, '..', 'system.json'), 'utf-8'));
+  const coreVersion = `${corePackage.release?.generation}.${corePackage.release?.build}`;
+  if (coreVersion !== FOUNDRY_V14_CORE_VERSION
+    || system.id !== 'dnd5e'
+    || typeof system.version !== 'string'
+    || system.version.split('+', 1)[0] !== DND5E_V14_SYSTEM_VERSION) {
+    throw new Error(`Icon roots must come from Foundry ${FOUNDRY_V14_CORE_VERSION} / dnd5e ${DND5E_V14_SYSTEM_VERSION}; received ${coreVersion} / ${String(system.version)}.`);
   }
 }
 

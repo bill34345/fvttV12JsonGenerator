@@ -1,3 +1,4 @@
+import { DND5E_V14_SYSTEM_VERSION } from '@fvtt-json-generator/contracts/target';
 import type {
   ItemIntakeAbility,
   ItemIntakeCoverage,
@@ -105,7 +106,7 @@ export function normalizeItemIntakeIR(
           id: `DERIVED_SPELL_ACTIVATION:${uncertainty.path}:${index}`,
           code: 'DERIVED_SPELL_ACTIVATION',
           blocking: false,
-          message: `Spell activation ${ability.activation} is derived from the uniquely resolved locked dnd5e 5.3.3 spell record; source prose did not repeat the casting time.`,
+          message: `Spell activation ${ability.activation} is derived from the uniquely resolved locked dnd5e ${DND5E_V14_SYSTEM_VERSION} spell record; source prose did not repeat the casting time.`,
         };
       }
       return uncertainty;

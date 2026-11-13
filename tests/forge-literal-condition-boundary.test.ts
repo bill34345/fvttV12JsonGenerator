@@ -28,7 +28,7 @@ function fixture(row:{id:string;rule:string;conditions:CanonicalAppliedCondition
 async function generate(data:ReturnType<typeof fixture>) {
   const forbidden=async():Promise<never>=>{throw Error('No network, discovery, repair or AI review is authorized in this control');};
   const provider={providerName:'offline-fixture',extractionModel:'fixed-ir',reviewModel:'disabled',discover:forbidden,extract:async()=>structuredClone(data.ir),review:forbidden,repair:forbidden};
-  const input={source:data.source,sourceName:'condition-control.md',requestId:'condition-control',sourceScope:'single' as const,fvttVersion:'14.364',systemVersion:'5.3.3'};
+  const input={source:data.source,sourceName:'condition-control.md',requestId:'condition-control',sourceScope:'single' as const,fvttVersion:'14.370',systemVersion:'6.0.6'};
   const analysis=await analyzeBrowserActorSourceWithAi(input,provider);
   const result=await generateBrowserActorIntakeCandidate(input,analysis,provider);
   expect(result.status,JSON.stringify(result.findings)).toBe('ready_for_gm_review');
@@ -41,7 +41,7 @@ for(const row of cases)test(row.id+' retains typed conditions through the formal
   const data=fixture(row),{actor,markdown,ir}=await generate(data),item=actor.items.find((item:any)=>item.name==='Strike');
   const activity=Object.values<any>(item.system.activities)[0];
   expect(activity.attack).toMatchObject({bonus:'6',flat:true,type:{value:'melee',classification:'weapon'}});
-  expect(activity.range.reach).toBe(10);
+  expect(activity.range).toMatchObject({value:'10',override:true});
   expect(activity.damage.parts).toEqual([expect.objectContaining({number:1,denomination:10,bonus:'4',types:['slashing']})]);
   expect(item.system.description.value).toContain(row.rule);
   if(row.manual){
@@ -55,7 +55,7 @@ for(const row of cases)test(row.id+' retains typed conditions through the formal
   }else{
     expect(item.flags.fvttJsonGenerator.conditionLifecycle).toBeUndefined();
     expect(item.effects).toHaveLength(1);
-    expect(item.effects[0]).toMatchObject({statuses:['poisoned'],duration:{rounds:2}});
+    expect(item.effects[0]).toMatchObject({statuses:['poisoned'],duration:{value:2,units:'rounds'}});
     expect(activity.effects).toEqual([{_id:item.effects[0]._id}]);
   }
   expect(verifyMonsterIntake(data.source,ir,markdown,actor).findings).toEqual([]);
@@ -72,7 +72,7 @@ test('LF/CRLF and explicit condition fields preserve grouped state mechanics; ma
   const markdown=renderMonsterIntakeMarkdown(fixture(cases[0]!).ir),document=yaml.load(markdown.slice(4,-4)) as any;
   const retainsActor=async(copy:any)=>{
     const before=structuredClone(copy),content='---\n'+yaml.dump(copy)+'---\n';
-    const response=await convertFinalActorSource(buildForgeActorRequest({content,displayName:'Condition metadata control',requestId:'condition-metadata-control',fvttVersion:'14.364',systemVersion:'5.3.3'}));
+    const response=await convertFinalActorSource(buildForgeActorRequest({content,displayName:'Condition metadata control',requestId:'condition-metadata-control',fvttVersion:'14.370',systemVersion:'6.0.6'}));
     expect(copy).toEqual(before);
     if(!('result'in response)||!response.result.artifact)throw Error('The existing Actor and its actions must remain available.');
     const item=(response.result.artifact.items as any[]).find(item=>item.name==='Strike'),activity=Object.values<any>(item.system.activities)[0];
@@ -121,7 +121,7 @@ for(const nativeFirst of [false,true])test('mixed GM and native states retain na
   const data=fixture(row),{actor,ir,markdown}=await generate(data),item=actor.items[0],activity=Object.values<any>(item.system.activities)[0];
   expect(item.effects).toHaveLength(2);
   const poison=item.effects.find((effect:any)=>effect.statuses.includes('poisoned')),grapple=item.effects.find((effect:any)=>effect.statuses.includes('grappled'));
-  expect(poison).toMatchObject({statuses:['poisoned'],duration:{rounds:2},flags:{fvttJsonGenerator:{conditionLifecycle:{mode:'native'}}}});
+  expect(poison).toMatchObject({statuses:['poisoned'],duration:{value:2,units:'rounds'},flags:{fvttJsonGenerator:{conditionLifecycle:{mode:'native'}}}});
   expect(grapple).toMatchObject({statuses:['grappled','restrained'],flags:{fvttJsonGenerator:{conditionLifecycle:{mode:'gm',escapeDc:14}}}});
   expect(activity.effects).toEqual(item.effects.map((effect:any)=>({_id:effect._id})));
   expect(item.flags.fvttJsonGenerator.conditionLifecycle.statuses).toEqual(['grappled','restrained']);

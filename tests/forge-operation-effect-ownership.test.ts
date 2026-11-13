@@ -12,7 +12,7 @@ async function generate(features:any[],options:{ir?:any;source?:string}={}){
   const ir=options.ir??buildValidLurkerIr();
   if(!options.ir){ir.creature.traits=[];ir.creature.actions=features;ir.creature.bonusActions=[];ir.creature.reactions=[];ir.creature.legendaryActions=[];ir.claims=[];ir.coverage=[];}
   const before=structuredClone(ir),source=options.source??LURKER_SOURCE+'\n'+features.map(feature=>feature.description).join('\n');
-  const input={source,sourceName:'Operation effect ownership',sourceScope:'single' as const,requestId:'operation-effect-ownership',sourceId:'actor:v1:f87b16ef-4f83-4537-979d-cf01a1e4e5f8' as ForgeSourceId,fvttVersion:'14.368',systemVersion:'5.3.3'};
+  const input={source,sourceName:'Operation effect ownership',sourceScope:'single' as const,requestId:'operation-effect-ownership',sourceId:'actor:v1:f87b16ef-4f83-4537-979d-cf01a1e4e5f8' as ForgeSourceId,fvttVersion:'14.368',systemVersion:'6.0.6'};
   const analysis=analyzeBrowserActorIntakeDraft(input,ir,provider),result=await generateBrowserActorIntakeCandidate(input,analysis,provider);
   expect(result.candidateAvailable).toBe(true);expect(ir).toEqual(before);
   const actor=(result.candidateResponse as any)?.result?.artifact;expect(actor).toBeDefined();return actor;

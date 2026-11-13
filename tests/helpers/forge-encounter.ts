@@ -5,7 +5,7 @@ export const encounterSource = (name:string) => readFileSync('obsidian/dnd数据
 export function encounterFixture(): ForgeEncounterPackage {
   const command='void forgeEncounter.actors.main;';
   return {schema:'fvtt-json-forge-encounter',version:1,id:'test-encounter',label:'Encounter fixture',
-    target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:'main',
+    target:{foundry:'14.370',system:'dnd5e',systemVersion:'6.0.6',effectProfile:'core'},primaryActorKey:'main',
     actors:['main','summon'].map(key=>({key,label:key,source:encounterSource(key),sourceHash:hashSource(encounterSource(key))})),
     macros:[{key:'control',name:'Test encounter control',command,commandHash:hashSource(command),bindings:{main:'main',summon:'summon'},covers:[],notes:'Test-only inert script.'}],assets:[]};
 }

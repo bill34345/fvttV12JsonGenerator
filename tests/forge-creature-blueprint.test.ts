@@ -62,7 +62,7 @@ describe('Forge creature blueprint model', () => {
     expect(child.lineage!.changes.some(change=>change.path==='/components/8')).toBe(true);
     const source=renderCreatureBlueprintSource(child);expect(parseCreatureBlueprintSource(source)).toEqual(child);
     const response=await convertFinalActorSource(buildForgeActorRequest({content:source,displayName:child.name,
-      requestId:'nine-component-source',fvttVersion:'14.364',systemVersion:'5.3.3',sourceId:child.sourceId}));
+      requestId:'nine-component-source',fvttVersion:'14.370',systemVersion:'6.0.6',sourceId:child.sourceId}));
     if(!('result'in response)||!response.result.artifact)throw Error('The complete blueprint must generate an Actor.');
     const items=response.result.artifact.items as any[];
     expect(response.result.artifact.name).toBe(child.name);
@@ -75,7 +75,7 @@ describe('Forge creature blueprint model', () => {
     const source=renderCreatureBlueprintSource(blueprint);expect(new TextEncoder().encode(source).byteLength).toBeGreaterThan(256*1024);
     expect(parseCreatureBlueprintSource(source)).toEqual(blueprint);
     const response=await convertFinalActorSource(buildForgeActorRequest({content:source,displayName:blueprint.name,
-      requestId:'large-blueprint-source',fvttVersion:'14.364',systemVersion:'5.3.3',sourceId:blueprint.sourceId}));
+      requestId:'large-blueprint-source',fvttVersion:'14.370',systemVersion:'6.0.6',sourceId:blueprint.sourceId}));
     if(!('result'in response)||!response.result.artifact)throw Error('The large blueprint must generate an Actor.');
     const items=response.result.artifact.items as any[];
     expect(items.map(item=>item.name)).toEqual(blueprint.components.map(component=>component.name));
@@ -114,7 +114,7 @@ describe('Forge creature blueprint model', () => {
     expect(parseCreatureBlueprintSource(source)).toEqual(blueprint);
     const response = await convertFinalActorSource(buildForgeActorRequest({
       content: source, displayName: blueprint.name, requestId: 'zero-average',
-      fvttVersion: '14.364', systemVersion: '5.3.3',
+      fvttVersion: '14.370', systemVersion: '6.0.6',
     }));
     expect('result' in response && response.result.status).toBe('accepted');
     if (!('result' in response) || !('artifact' in response.result)) throw new Error('Missing generated artifact.');
@@ -146,8 +146,8 @@ describe('Forge creature blueprint model', () => {
       content: source,
       displayName: blueprint.name,
       requestId: 'creature-blueprint-formal-pipeline',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
       sourceId: blueprint.sourceId,
     }));
 
@@ -157,9 +157,9 @@ describe('Forge creature blueprint model', () => {
 
     const actor = response.result.artifact as Record<string, any>;
     expect(actor.name).toBe(blueprint.name);
-    expect(actor.system.attributes.ac.flat).toBe(blueprint.ac);
+    expect(actor.system.attributes.ac.override).toBe(blueprint.ac);
     expect(actor.system.attributes.hp.value).toBe(blueprint.hp);
-    expect(actor.system.attributes.movement.walk).toBe(blueprint.speed);
+    expect(actor.system.attributes.movement.speeds.walk).toBe(String(blueprint.speed));
     expect(actor.system.details.cr).toBe(blueprint.cr);
     expect(actor.system.details.type.value).toBe(blueprint.type);
     expect(actor.system.traits.size).toBe('med');
@@ -170,7 +170,7 @@ describe('Forge creature blueprint model', () => {
     expect(attackActivity).toMatchObject({
       attack: { bonus: '7' },
       damage: { parts: [{ number: 1, denomination: 8, bonus: '4', types: ['piercing'] }] },
-      range: { value: 150 },
+      range: { value: '150' },
       target: { affects: { count: 1, type: 'creature' } },
     });
 
@@ -179,7 +179,7 @@ describe('Forge creature blueprint model', () => {
     expect(saveActivity).toMatchObject({
       save: { ability: ['dex'], dc: { formula: '15' } },
       damage: { onSave: 'half', parts: [{ number: 4, denomination: 6, types: ['fire'] }] },
-      range: { value: 60 },
+      range: { value: '60' },
       target: { affects: { count: 1, type: 'creature' } },
     });
     expect(saveActivity?.target?.template?.type ?? '').not.toBe('sphere');

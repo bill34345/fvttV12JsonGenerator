@@ -2,6 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { hashEncounterBytes } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import { prepareForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
+import { FORGE_NATIVE_606_TARGET } from '@fvtt-json-generator/forge-browser-runtime';
+import { fixedEncounterCommand } from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import { encounterFixture, assistedEncounterFixture } from '../../../tests/helpers/forge-encounter';
 import { createEncounterAssetPort, importForgeEncounter, startForgeEncounterMacro, listForgeEncounterMacros, encounterDocumentId, type EncounterGame } from '../src/encounterRuntime';
 
@@ -13,11 +15,46 @@ function runtime() {
       documentClass:{async create(data:any){api.createCount++;if(api.fail)throw Error('fixture create failure');if(api.cancel)return undefined;data={...data,_id:api.overrideId??data._id};if(docs.has(data._id))throw Error('duplicate');
         const doc:any={id:data._id,uuid:`${kind}.${data._id}`,name:data.name,data:structuredClone(data),toObject(){return structuredClone(this.data);},async update(changes:any){if(api.failUpdate)throw Error('fixture phase update failure');for(const [path,value]of Object.entries(changes)){const keys=path.split('.');let owner=this.data;for(const key of keys.slice(0,-1))owner=owner[key]??={};owner[keys.at(-1)!]=value;}return this;},async delete(){api.deleteAttempts++;if(api.cancelDelete)return undefined;docs.delete(this.id);return this;},async execute(){executions++;}};docs.set(doc.id,doc);return doc;}}};return api;
   }
-  const game:any={version:'14.364',system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro')};
+  const game:any={version:'14.370',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro')};
   return {game:game as EncounterGame,get executions(){return executions;},assets:{async ensure(){throw Error('Unexpected asset upload');}}};
 }
 async function ready(){return prepareForgeEncounter(JSON.stringify(encounterFixture()));}
 describe('reviewed encounter import and explicit macro startup',()=>{
+  test('runtime admission binds a newly prepared native controller to the actual later runtime',async()=>{
+    for(const [core,system] of [['14.369','6.0.6'],['14.370','6.1.0']] as const){
+    const env=runtime(),original=encounterFixture(),sourceTarget=structuredClone(original.target);
+    const command=fixedEncounterCommand({version:1,rules:[],legendaryRecovery:[]});
+    const bundle={...original,macros:[{...original.macros[0]!,command,commandHash:hashEncounterBytes(new TextEncoder().encode(command))}]};
+    env.game.version=core;env.game.system.version=system;
+    const actual={coreVersion:env.game.version,systemId:'dnd5e' as const,systemVersion:env.game.system.version};
+    const prepared=await prepareForgeEncounter(JSON.stringify(bundle),undefined,{nativeProjection:{
+      target:FORGE_NATIVE_606_TARGET,runtime:actual,
+      project(_kind,input){
+        // The existing native606 contract double; real schema migration is accepted separately.
+        for(const effect of input.items.flatMap((item:any)=>item.effects??[])){
+          expect(effect.duration).toHaveProperty('value');
+        }
+        return input;
+      },
+    }});
+    expect(prepared.bundle.target).toEqual(sourceTarget);
+    expect(prepared.runtimeTarget).toEqual({foundry:core,system:'dnd5e',systemVersion:system,effectProfile:'core'});
+    expect(prepared.actors.every(actor=>(actor.artifact._stats as any).systemVersion==='6.0.6')).toBeTrue();
+    const result=await importForgeEncounter({...env,prepared,reviewed:true});
+    expect(result.failures.map(row=>row.message)).toEqual([]);
+    const macroRow=result.documents.find(row=>row.kind==='Macro')!;
+    const macro:any=env.game.macros.get(macroRow.id);
+    expect(macro.toObject().flags['fvtt-json-forge'].encounter.target).toEqual(prepared.runtimeTarget);
+    await startForgeEncounterMacro(env.game,macroRow.id);
+    expect(env.executions).toBe(1);
+    env.game.version=core==='14.369'?'14.370':'14.371';env.game.system.version='6.1.0';
+    await startForgeEncounterMacro(env.game,macroRow.id);
+    expect(env.executions).toBe(2);
+    env.game.version='14.368';env.game.system.version='5.3.3';
+    await expect(startForgeEncounterMacro(env.game,macroRow.id)).rejects.toThrow('Core 14');
+    expect(env.executions).toBe(2);
+    }
+  });
   test('materializes only missing native NPC artwork without mutating the reviewed artifact',async()=>{
     const env=runtime(),prepared=await ready(),before=JSON.stringify(prepared);
     const result=await importForgeEncounter({...env,prepared,reviewed:true});
@@ -42,15 +79,15 @@ describe('reviewed encounter import and explicit macro startup',()=>{
       env.game.actors.documentClass.create=async(data:any)=>{
         expect(data.system.skills.value).toBeUndefined();
         for(const key of ['walk','burrow','climb','fly','swim','bonus']){
-          const value=data.system.attributes.movement[key];
-          if(typeof value==='number')data.system.attributes.movement[key]=String(value);
-          if(value===null)delete data.system.attributes.movement[key];
+          const value=data.system.attributes.movement.speeds[key];
+          if(typeof value==='number')data.system.attributes.movement.speeds[key]=String(value);
+          if(value===null)delete data.system.attributes.movement.speeds[key];
         }
         data.system.attributes.init.bonus=String(data.system.attributes.init.bonus);
-        if(drift)data.system.attributes.movement.walk='999';
+        if(drift)data.system.attributes.movement.speeds.walk='999';
         return create(data);
       };
-      if(drift){const result=await importForgeEncounter({...env,prepared,reviewed:true});expect(result.documents.flatMap(d=>d.readbackWarnings??[]).join(' ')).toContain('movement.walk');expect(env.game.actors.contents?.length).toBeGreaterThan(0);}
+      if(drift){const result=await importForgeEncounter({...env,prepared,reviewed:true});expect(result.documents.flatMap(d=>d.readbackWarnings??[]).join(' ')).toContain('movement.speeds.walk');expect(env.game.actors.contents?.length).toBeGreaterThan(0);}
       else expect((await importForgeEncounter({...env,prepared,reviewed:true})).documents).toHaveLength(3);
     }
   });

@@ -46,7 +46,10 @@ describe('source Effect descriptions and versioned passive Item verification',()
     expect(item.effects).toHaveLength(2);
     expect(item.effects[0].description).toContain(first);expect(item.effects[0].description).not.toContain(second);
     expect(item.effects[1].description).toContain(second);expect(item.effects[1].description).not.toContain(first);
-    expect(item.effects.map((effect:any)=>effect.duration)).toEqual([expect.objectContaining({seconds:60}),expect.objectContaining({rounds:2})]);
+    expect(item.effects.map((effect:any)=>effect.duration)).toEqual([
+      {value:60,units:'seconds',expiry:'turnStart',expired:false},
+      {value:2,units:'rounds',expiry:'turnStart',expired:false},
+    ]);
     expect(new Set(item.effects.map((effect:any)=>effect._id)).size).toBe(2);
     const activity=Object.values(item.system.activities)[0] as any;
     expect(activity.effects.map((effect:any)=>effect._id)).toEqual(item.effects.map((effect:any)=>effect._id));

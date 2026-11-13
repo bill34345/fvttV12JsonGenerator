@@ -1,4 +1,5 @@
-import { isForgeCoreVersionSupported } from './mirror-core-compatibility';
+import { nativeProjectionForGame } from './nativeProjection';
+import { isForgeRuntimeTargetSupported } from './mirror-core-compatibility';
 import { createForgePaneBase, type ForgePaneBinding, type ForgePaneState } from './workspacePane';
 import {
   BROWSER_MAX_CONCURRENT_ACTOR_JOBS,
@@ -14,7 +15,6 @@ import {
   assertExactRuntime,
   assertGm,
   EXPECTED_FOUNDRY_VERSION,
-  EXPECTED_SYSTEM_VERSION,
 } from './runtime';
 import {
   createAcceptedForgeItem,
@@ -234,7 +234,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
         const finalSnapshot = { ...snapshot, source: request.source.content };
         const sourceInput = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
         if (sourceInput && sourceInput.value !== finalSnapshot.source) sourceInput.value = finalSnapshot.source;
-        const response = await this.services.convertFinalItemSource(request);
+        const response = await this.services.convertFinalItemSource(request,{nativeProjection:nativeProjectionForGame(environment.game)});
         assertItemResponseMatchesRequest(response, request);
         if (!this.isCurrentGeneration(controller, revision) || !sameSnapshot(finalSnapshot, readSnapshot(root))) return;
         this.response = response;
@@ -455,10 +455,9 @@ function isItemApplyable(response?: ForgeItemResponse): boolean {
     && result.verification.status === 'accepted'
     && Boolean(result.artifact && result.artifactHash)
     && !result.diagnostics.some((entry) => entry.severity === 'warning' || entry.severity === 'error')
-    && isForgeCoreVersionSupported(result.target.fvttRuntimeVersion)
+    && isForgeRuntimeTargetSupported(result.target.fvttRuntimeVersion,result.target.systemVersionObserved)
     && result.target.generatorProfile === 'v14'
     && result.target.systemId === 'dnd5e'
-    && result.target.systemVersionObserved === EXPECTED_SYSTEM_VERSION
     && result.target.effectProfile === 'core'
     && (result.target.iconMode === 'off' || result.target.iconMode === 'safe');
 }

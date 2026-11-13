@@ -10,7 +10,7 @@ describe('ItemGenerator Golden Master Verification', () => {
   describe('equipment item structure', () => {
     test('generated equipment matches reference structure', async () => {
       const parser = new ItemParser();
-      const generator = new ItemGenerator();
+      const generator = new ItemGenerator({ fvttVersion: '12' });
 
       const content = `
 ---
@@ -100,7 +100,7 @@ require-attunement: true
   describe('weapon item structure', () => {
     test('generated weapon matches reference structure', async () => {
       const parser = new ItemParser();
-      const generator = new ItemGenerator();
+      const generator = new ItemGenerator({ fvttVersion: '12' });
 
       const content = `
 ---
@@ -182,7 +182,7 @@ layout: item
   describe('consumable item with charges structure', () => {
     test('generated consumable with charges matches reference structure', async () => {
       const parser = new ItemParser();
-      const generator = new ItemGenerator();
+      const generator = new ItemGenerator({ fvttVersion: '12' });
 
       const content = `
 ---
@@ -256,7 +256,7 @@ layout: item
   describe('multi-stage item structure', () => {
     test('generated multi-stage item matches reference structure', async () => {
       const parser = new ItemParser();
-      const generator = new ItemGenerator();
+      const generator = new ItemGenerator({ fvttVersion: '12' });
 
       // Three-stage item (Dormant, Awakened, Exalted)
       const content = `

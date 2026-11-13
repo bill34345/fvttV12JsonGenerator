@@ -1,3 +1,4 @@
+import { nativeProjectionForGame } from './nativeProjection';
 import {
   BROWSER_MAX_CONCURRENT_ACTOR_JOBS,
   buildForgeActorRequest,
@@ -706,7 +707,7 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
             fvttVersion: environment.game.version,
             systemVersion: environment.game.system.version,
           });
-          const response = await this.services.convertFinalActorSource(request);
+          const response = await this.services.convertFinalActorSource(request,{nativeProjection:nativeProjectionForGame(environment.game)});
           if (!this.isCurrentGeneration(controller, revision)) return;
           if('result'in response&&response.result.artifact){
             this.response=response;this.intake=undefined;this.sourceSnapshot=JSON.stringify({mode,source,displayName});

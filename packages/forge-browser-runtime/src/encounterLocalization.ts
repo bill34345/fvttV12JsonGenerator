@@ -5,7 +5,7 @@ import {
 } from '@fvtt-json-generator/contracts/localization';
 import { createActorLocalizationRequest, projectActorLocalizationDraft, projectReviewedActorLocalization } from '@fvtt-json-generator/generation/reviewed-localization';
 import type { ReviewedTranslationServicePort } from '@fvtt-json-generator/generation/ports';
-import { assertPreparedForgeEncounter, prepareForgeEncounter, type PreparedForgeEncounter } from './encounterPreparation';
+import { assertPreparedForgeEncounter, prepareForgeEncounter, reprepareForgeEncounter, type PreparedForgeEncounter } from './encounterPreparation';
 import { serializeForgeEncounterPackage, type ForgeEncounterPackage } from './encounterPackage';
 import { createEncounterTextRequest, localizedEncounterId, previewEncounterTextRows } from './encounterLocalizationProjection';
 export { createEncounterTextRequest } from './encounterLocalizationProjection';
@@ -196,7 +196,7 @@ async function prepareApproved(prepared: PreparedForgeEncounter, localization: E
   signal?: AbortSignal): Promise<PreparedForgeEncounter> {
   signal?.throwIfAborted();
   const bundle = { ...prepared.bundle, id: localizedEncounterId(prepared.bundle.id, localization), localization };
-  return prepareForgeEncounter(serializeForgeEncounterPackage(bundle), signal);
+  return reprepareForgeEncounter(prepared,bundle,signal);
 }
 
 /** Called only after an actual GM confirmation event; no Provider is involved. */

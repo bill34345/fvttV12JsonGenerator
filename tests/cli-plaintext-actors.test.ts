@@ -45,7 +45,7 @@ describe('CLI plaintext actor import', () => {
 
     expect(proc.exitCode).toBe(0);
     expect(stdout).toContain('Ingested source:');
-    expect(stdout).toContain('Effect profile: modded-v12');
+    expect(stdout).toContain('Effect profile: core');
     expect(stdout).toContain('Detected creatures: 7');
     expect(existsSync(join(vaultPath, 'input'))).toBe(false);
     expect(stderr).toContain('[Legacy rule-based]');

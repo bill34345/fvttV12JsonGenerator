@@ -4,6 +4,9 @@ export interface LockedDnd5eV14Spell {
   identifier: string;
   name: string;
   uuid: string;
+  level?: number;
+  activation?: LockedDnd5eV14Activation;
+  castingTime?: { type:string; value:number|null };
 }
 
 export type LockedDnd5eV14Activation = 'action' | 'bonus' | 'reaction' | 'free';
@@ -28,7 +31,15 @@ export function resolveLockedDnd5eV14Spell(
   if (identifiers.length !== 1 || names.length !== 1) return undefined;
   const left = identifiers[0]!;
   const right = names[0]!;
-  return left.uuid === right.uuid ? { identifier: left.identifier, name: left.name, uuid: left.uuid } : undefined;
+  return left.uuid === right.uuid ? { ...left } : undefined;
+}
+
+export function resolveLockedDnd5eV14SpellByName(
+  name:string,
+  _environment?:Readonly<Record<string,string|undefined>>,
+):LockedDnd5eV14Spell|undefined {
+  const entries=BY_NAME.get(normalize(name))??[];
+  return entries.length===1?{...entries[0]!}:undefined;
 }
 
 export function resolveLockedDnd5eV14SpellActivation(

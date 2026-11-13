@@ -27,7 +27,7 @@ describe('configured state directory in the actual Forge entry',()=>{
     const configureButton:any={};
     const root:any={querySelector:(selector:string)=>selector==='[data-action="encounter-configure-conditions"]'?configureButton:null,querySelectorAll:()=>[]};
     class Base{element=root;render(){return this;}async close(){return this;}}
-    const game:any={version:'14.368',system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]},
+    const game:any={version:'14.368',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},macros:{contents:[]},
       modules:{get:()=>({active:true,api:{configuredConditions:{version:1,catalog:()=>[definition],openEditor:async()=>{opened++;}}}})}};
     const App=createForgeEncounterApplicationClass({game,foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}},
       getAiOptions:()=>({baseUrl:'https://provider.example/v1',apiKey:'test-key',model:'test'}),createEncounterIntakeProviders:()=>({provider:{},automationProvider:{}} as any),
@@ -53,7 +53,7 @@ describe('translated encounter report identity',()=>{
       'intake-biography-presentation: '+JSON.stringify({version:1,sourceLength:author.length,programNotes:notes}),
       '特性:','  - 名称: Quiet Watch','    类型: utility','    执行模式: gm-manual','    描述: Quiet Watch. It remains alert.','---'].join('\n');
     const bundle:any={schema:'fvtt-json-forge-encounter',version:1,id:'source-boundary-entry',label:'Boundary package',
-      target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:'keeper',
+      target:{foundry:'14.370',system:'dnd5e',systemVersion:'6.0.6',effectProfile:'core'},primaryActorKey:'keeper',
       actors:[{key:'keeper',label:'Forest Keeper',source:canonical,sourceHash:hashSource(canonical)}],macros:[],assets:[]};
     const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(bundle));
     const draft=await draftForgeEncounterLocalization({prepared,service:{
@@ -64,11 +64,11 @@ describe('translated encounter report identity',()=>{
           .replace('Quiet Watch.','静默守望。').replace('It remains alert.','它保持警觉。')}))}),
       review:async()=>{throw Error('No model review');},
     }});
-    let stored:any={version:2,kind:'uploaded-package',target:'14.368/dnd5e/5.3.3/core',catalogHash:hashSource('[]'),
+    let stored:any={version:2,kind:'uploaded-package',target:'14.368/dnd5e/6.0.6/core',catalogHash:hashSource('[]'),
       package:serializeForgeEncounterPackage(bundle),packageHash:prepared.hash,packageSha256:hashSource(serializeForgeEncounterPackage(bundle)),translationReport:[],localizationDraft:draft};
     let optionReads=0;
     class Base{element:any={querySelector:()=>null,querySelectorAll:()=>[]};render(){return this;}async close(){return this;}}
-    const game:any={version:'14.368',world:{id:'world'},system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}};
+    const game:any={version:'14.368',world:{id:'world'},system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},macros:{contents:[]}};
     const App=createForgeEncounterApplicationClass({game,foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}},
       getAiOptions:()=>{optionReads++;throw Error('Saved entry cannot access Provider');},getRecoverySecrets:()=>({apiKey:'',baseUrl:''}),
       recoveryStore:{load:async()=>stored,save:async value=>{stored=value;},clear:async()=>{stored=undefined;}}});
@@ -112,7 +112,7 @@ describe('translated encounter report identity',()=>{
     translationOverride?:(input:any,call:number,onPartial?:(value:any)=>void)=>any,twoActors=false,fixedNotes=false,sourceInput=source){
     const command=fixedEncounterCommand({version:1,rules:[{id:'manual',kind:'gm-manual',actorKey:'guard',itemName:'Bite',parameters:{}}],legendaryRecovery:[]});
     const bundle:any={schema:'fvtt-json-forge-encounter',version:1,id:'report-identity-fixture',label:'Guard package',
-      target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:'guard',
+      target:{foundry:'14.370',system:'dnd5e',systemVersion:'6.0.6',effectProfile:'core'},primaryActorKey:'guard',
       actors:[{key:'guard',label:'Marsh Guard',source:sourceInput,sourceHash:hashSource(sourceInput)}],
       macros:[{key:'control',name:'Guard control',command,commandHash:hashSource(command),bindings:{guard:'guard'},covers:[],
         notes:`原始资料SHA-256：${hashSource(sourceInput)}\n${fixedNotes?'Use the native activities. The GM resolves manual consequences from each Item’s complete rule.\n':''}GM handles timing.`}],assets:[]};
@@ -125,7 +125,7 @@ describe('translated encounter report identity',()=>{
     const browserWindow:any={Blob,URL:{createObjectURL:(blob:Blob)=>{blobs.push(blob);return`blob:review-${blobs.length}`;},revokeObjectURL:()=>{}},
       document:{body:{appendChild:()=>{}},createElement:()=>({click(){},remove(){}})}};
     class Base{element:any={querySelector:()=>null,querySelectorAll:()=>[]};render(){return this;}async close(){return this;}}
-    const game:any={version:'14.368',world:{id:'world'},system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}};
+    const game:any={version:'14.368',world:{id:'world'},system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},macros:{contents:[]}};
     const App=createForgeEncounterApplicationClass({window:browserWindow,game,
       foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}},
       recoveryStore,getRecoverySecrets:()=>({apiKey:'',baseUrl:''}),
@@ -477,7 +477,7 @@ describe('translated encounter report identity',()=>{
     const session=await harness();await session.app.translatePrepared();
     let optionsRead=0;
     class Base{element:any={querySelector:()=>null,querySelectorAll:()=>[]};render(){return this;}async close(){return this;}}
-    const game:any={version:'14.368',system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}};
+    const game:any={version:'14.368',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},macros:{contents:[]}};
     const App=createForgeEncounterApplicationClass({game,foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}},
       getAiOptions:()=>{optionsRead++;throw Error('No connection may be read for GM approval');}});
     const app:any=new App();app.prepared=session.prepared;app.localizationDraft=session.app.localizationDraft;app.translationReviewed=true;
@@ -497,7 +497,7 @@ describe('human source file lifecycle',()=>{
     const root:any={querySelector:(selector:string)=>selector==='[name="humanSourceFile"]'?file:selector==='[name="humanSource"]'?source:null,querySelectorAll:()=>[]};
     class Base{element=root;render(){return this;}async close(){return this;}}
     const foundry={applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}};
-    const game={version:'14.364',system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}};
+    const game={version:'14.370',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},macros:{contents:[]}};
     const App=createForgeEncounterApplicationClass({game,foundry,getAiOptions:()=>{providerOptionsRead++;throw new Error('Unexpected provider request');}});
     const app:any=new App();app.humanSource='Old source';app._onRender();file.onchange();
     expect(app.humanSource).toBe('');expect(app.busy).toBe(true);await app.generateFromHuman();expect(providerOptionsRead).toBe(0);
@@ -521,7 +521,7 @@ describe('local encounter AI waiting',()=>{
     class Base{element=root;render(){return this;}async close(){return this;}}
     return {applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}};
   };
-  const game=()=>({version:'14.364',system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}});
+  const game=()=>({version:'14.370',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},macros:{contents:[]}});
   const report=()=>({version:1 as const,source:'two creatures',sourceHash:'a'.repeat(64),model:'test',reviewModel:'test',evidenceMode:'standard' as const,status:'needs_review' as const,actors:[],findings:['review required']});
 
   test('uses the parent DS connection and never restores the removed Luna bridge path',async()=>{
@@ -553,7 +553,7 @@ describe('localized evidence candidate identity',()=>{
     const file:any={files:[{name:'package-b.json'}]};
     const root:any={querySelector:(selector:string)=>selector==='[name="encounterFile"]'?file:null,querySelectorAll:()=>[]};
     class Base{element=root;render(){return this;}async close(){return this;}}
-    const App=createForgeEncounterApplicationClass({game:{version:'14.364',system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}},
+    const App=createForgeEncounterApplicationClass({game:{version:'14.370',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},macros:{contents:[]}},
       foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}}});
     const app:any=new App();app.aiReport={source:'package-a'};app.translationReport=[{actorKey:'actor-a'}];app.prepared={bundle:{id:'package-a'}};
     app._onRender();file.onchange();
@@ -593,7 +593,7 @@ describe('current encounter review download',()=>{
     const browserWindow:any={Blob,URL:{createObjectURL:(blob:Blob)=>{blobs.push(blob);return `blob:http://127.0.0.1:30001/review-${blobs.length}`;},revokeObjectURL:(url:string)=>revoked.push(url)},
       document:{body:{appendChild:(link:any)=>{link.connected=true;}},createElement:()=>({connected:false,href:'',download:'',click(){requests.push({href:this.href,name:this.download,connected:this.connected});},remove(){this.connected=false;}})}};
     class Base{element=root;render(){return this;}async close(){return this;}}
-    const App=createForgeEncounterApplicationClass({window:browserWindow,game:{version:'14.368',system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}},
+    const App=createForgeEncounterApplicationClass({window:browserWindow,game:{version:'14.368',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},macros:{contents:[]}},
       getRecoverySecrets,
       foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}}});
     const app:any=new App();app._onRender();
@@ -644,10 +644,10 @@ describe('current encounter review download',()=>{
     const hostile='来源 </textarea><script>alert(1)</script> 原文';
     const report:any={version:1,source:hostile,sourceHash:hashSource(hostile),model:'test',reviewModel:'test',evidenceMode:'standard',status:'failed',actors:[],findings:['审核失败']};
     const snapshot:any={version:1,source:hostile,sourceHash:hashSource(hostile),label:'失败资料',outputLanguage:'source',
-      target:'14.368/dnd5e/5.3.3/core',catalogHash:hashSource('[]'),report};
+      target:'14.368/dnd5e/6.0.6/core',catalogHash:hashSource('[]'),report};
     const viewButton:any={},root:any={querySelector:(selector:string)=>selector==='[data-action="encounter-report-view"]'?viewButton:null,querySelectorAll:()=>[]};
     class Base{element=root;render(){return this;}async close(){return this;}}
-    const game:any={version:'14.368',world:{id:'world'},system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},macros:{contents:[]}};
+    const game:any={version:'14.368',world:{id:'world'},system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},macros:{contents:[]}};
     let aiCalls=0;const App=createForgeEncounterApplicationClass({game,foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}},
       recoveryStore:{load:async()=>snapshot,save:async()=>undefined,clear:async()=>undefined},getRecoverySecrets:()=>({apiKey:'',baseUrl:''}),
       getAiOptions:()=>{aiCalls++;throw new Error('AI must not start');}});

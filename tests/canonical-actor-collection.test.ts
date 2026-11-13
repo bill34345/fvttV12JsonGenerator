@@ -42,7 +42,7 @@ describe('canonical Actor collection workflow', () => {
       img?: string;
       system?: {
         details?: { type?: { value?: string } };
-        attributes?: { ac?: { flat?: number }; hp?: { value?: number } };
+        attributes?: { ac?: { override?: number }; hp?: { value?: number } };
         abilities?: { str?: { value?: number } };
       };
       items?: Array<{
@@ -57,7 +57,7 @@ describe('canonical Actor collection workflow', () => {
     };
     expect(actor.name).toBe('Yithian');
     expect(actor.system?.details?.type?.value).toBe('aberration');
-    expect(actor.system?.attributes?.ac?.flat).toBe(14);
+    expect(actor.system?.attributes?.ac?.override).toBe(14);
     expect(actor.system?.attributes?.hp?.value).toBe(180);
     expect(actor.system?.abilities?.str?.value).toBe(18);
     expect(actor.img).toContain('yithian.jpg');

@@ -118,7 +118,7 @@ describe('literal Save branches and explicit native Save profiles retain indepen
     expect(result.canonical.mechanics.filter(m => m.kind === 'damage').every(m => m.projection === 'literal-only')).toBe(true);
     const response = await convertFinalActorSource(buildForgeActorRequest({content:result.source,
       displayName:'Test-authored branch prerequisite',requestId:'test-authored-review-fix',
-      fvttVersion:'14.364',systemVersion:'5.3.3'}));
+      fvttVersion:'14.370',systemVersion:'6.0.6'}));
     expect('result' in response).toBe(true);
     if (!('result' in response)) throw new Error('Formal prerequisite request failed');
     expect(response.result.status).not.toBe('accepted');
@@ -129,7 +129,7 @@ describe('literal Save branches and explicit native Save profiles retain indepen
     const generated = await generate([save(grey, [part('6d10 + 40', 'necrotic','base',null)],{literalMechanics:true,saveOutcome:'half'})]);
     const response = await convertFinalActorSource(buildForgeActorRequest({ content: generated.source,
       displayName: 'Test-authored branch projection Actor', requestId: 'test-authored-branch-projection',
-      fvttVersion: '14.364', systemVersion: '5.3.3' }));
+      fvttVersion: '14.370', systemVersion: '6.0.6' }));
     expect('result' in response).toBe(true);
     if (!('result' in response) || !('artifact' in response.result) || !response.result.artifact) throw new Error('Missing formal Actor artifact');
     const activity = activities(response.result.artifact)[0];
@@ -247,7 +247,7 @@ describe('conditional damage and post-attack saves remain complete GM facts', ()
     if(shape==='embedded effect only')expect(result.diagnostics).toContainEqual(expect.objectContaining({code:'GEN_CONDITION_LIFECYCLE_INVALID',path:'actor/structuredActions/动作/0/effects/0'}));
     const response = await convertFinalActorSource(buildForgeActorRequest({content:result.source,
       displayName:'Test-authored sparse delayed save',requestId:'test-authored-sparse-review-fix',
-      fvttVersion:'14.364',systemVersion:'5.3.3'}));
+      fvttVersion:'14.370',systemVersion:'6.0.6'}));
     expect('result' in response).toBe(true);
     if (!('result' in response) || !('artifact' in response.result) || !response.result.artifact) throw new Error('Missing sparse formal artifact');
     const formalItem = (response.result.artifact as any).items[0];
@@ -276,7 +276,7 @@ describe('conditional damage and post-attack saves remain complete GM facts', ()
     expect(activities(generated.actor)[0].damage.parts).toHaveLength(1);
     const response = await convertFinalActorSource(buildForgeActorRequest({content:markdown([action]),
       displayName:'Test-authored ambiguous delayed status',requestId:'test-authored-ambiguous-review-fix',
-      fvttVersion:'14.364',systemVersion:'5.3.3'}));
+      fvttVersion:'14.370',systemVersion:'6.0.6'}));
     expect('result' in response).toBe(true);
     if (!('result' in response)) throw new Error('Missing ambiguous formal result');
     expect(response.result.status).toBe('needs_review');

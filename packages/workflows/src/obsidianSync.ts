@@ -101,7 +101,7 @@ export class ObsidianSyncWorkflow {
   }
 
   public async sync(options: ObsidianSyncOptions): Promise<ObsidianSyncResult> {
-    const fvttVersion = options.fvttVersion ?? '12';
+    const fvttVersion = options.fvttVersion ?? '14';
     const effectProfile = options.effectProfile ?? 'core';
     const iconWorkflow = this.options.iconWorkflow ?? disabledIconWorkflowPort;
     const iconFingerprint = iconWorkflow.fingerprint(options.iconOptions);

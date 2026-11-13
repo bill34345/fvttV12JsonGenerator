@@ -108,7 +108,7 @@ export async function runMonsterIntake(
   writeFileSync(join(runPath, 'source.txt'), options.source);
   const manifest: Manifest = {
     schemaVersion: 1, runId, sourceName: options.sourceName, sourceSha256, sourceLength: options.source.length,
-    fvttVersion: options.fvttVersion ?? '12', effectProfile: options.effectProfile ?? 'core',
+    fvttVersion: options.fvttVersion ?? '14', effectProfile: options.effectProfile ?? 'core',
     iconMode: options.iconOptions?.mode ?? 'off',
     ...(options.iconOptions?.overridePath ? { iconOverridePath: options.iconOptions.overridePath } : {}),
     status: 'failed', createdAt: new Date().toISOString(), creatures: [],
@@ -297,7 +297,7 @@ async function processIr(
   const actorPath = join(bundlePath, 'candidate-actor.json');
   const generated = await dependencies.convertMarkdownContentToJson({
     content: markdown, sourcePath: markdownPath, outputPath: actorPath,
-    fvttVersion: options.fvttVersion ?? '12', effectProfile: options.effectProfile ?? 'core', translationService: null,
+    fvttVersion: options.fvttVersion ?? '14', effectProfile: options.effectProfile ?? 'core', translationService: null,
     iconOptions: options.iconOptions,
   });
   // Persist the actual workflow output before any report or promotion can fail.
@@ -349,7 +349,7 @@ async function processSourceText(
   const markdownPath = join(bundlePath, 'standard.md'), actorPath = join(bundlePath, 'candidate-actor.json');
   writeFileSync(markdownPath, canonicalSource);
   const generated = await dependencies.convertMarkdownContentToJson({ content: canonicalSource, sourcePath: markdownPath,
-    outputPath: actorPath, fvttVersion: options.fvttVersion ?? '12', effectProfile: options.effectProfile ?? 'core',
+    outputPath: actorPath, fvttVersion: options.fvttVersion ?? '14', effectProfile: options.effectProfile ?? 'core',
     translationService: null, iconOptions: options.iconOptions });
   writeJson(actorPath, generated.rawJson);
   const findings: IntakeFinding[] = generated.diagnostics.map(diagnostic => ({
@@ -487,7 +487,7 @@ function applyDecisions(ir: MonsterIntakeIR, decisions: Map<string, IntakeDecisi
 
 function validateOptions(options: MonsterIntakeOptions): void {
   if (!options.source.trim()) throw new Error('AI monster intake source is empty.');
-  const version = options.fvttVersion ?? '12';
+  const version = options.fvttVersion ?? '14';
   const profile = options.effectProfile ?? 'core';
   if (!['12', '14'].includes(version)) throw new Error('AI monster intake supports only Foundry v12 and v14.');
   if (!['core', version === '12' ? 'modded-v12' : 'modded-v14'].includes(profile)) throw new Error(`Effect profile ${profile} is not valid for Foundry v${version}.`);

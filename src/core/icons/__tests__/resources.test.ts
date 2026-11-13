@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { IconConfigurationError, loadV14IconOverrides } from '../resources';
+import { DND5E_V14_SYSTEM_VERSION, FOUNDRY_V14_CORE_VERSION } from '@fvtt-json-generator/contracts/target';
+import { IconConfigurationError, loadV14IconCatalog, loadV14IconOverrides } from '../resources';
 import type { V14IconCatalog, V14IconOverrideFile } from '../types';
 
 const catalog: V14IconCatalog = {
   schemaVersion: 1,
-  target: { foundryVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3' },
+  target: { foundryVersion: FOUNDRY_V14_CORE_VERSION, systemId: 'dnd5e', systemVersion: DND5E_V14_SYSTEM_VERSION },
   provenance: {
     api: 'CompendiumCollection#getIndex',
     packIndexSha256: '',
@@ -25,6 +26,17 @@ function file(entries: V14IconOverrideFile['entries']): V14IconOverrideFile {
 }
 
 describe('v14 icon override validation', () => {
+  test.each([
+    { foundryVersion: '14.364', systemId: 'dnd5e', systemVersion: DND5E_V14_SYSTEM_VERSION },
+    { foundryVersion: FOUNDRY_V14_CORE_VERSION, systemId: 'dnd5e', systemVersion: '5.3.3' },
+  ])('rejects an obsolete catalog or override target %j', (target) => {
+    const obsoleteCatalog = JSON.parse(JSON.stringify({ ...catalog, target }));
+    const obsoleteOverrides = JSON.parse(JSON.stringify({ ...file([]), target }));
+    expect(() => loadV14IconCatalog({ catalog: obsoleteCatalog })).toThrow(IconConfigurationError);
+    expect(() => loadV14IconOverrides({ mode: 'safe', overrides: obsoleteOverrides }, catalog))
+      .toThrow(IconConfigurationError);
+  });
+
   test('accepts one version-locked core path', () => {
     expect(loadV14IconOverrides({
       mode: 'safe',

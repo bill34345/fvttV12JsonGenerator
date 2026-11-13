@@ -3,7 +3,7 @@ import { ActivityGenerator } from '../activity';
 import type { ActionData } from '../../parser/action';
 
 describe('ActivityGenerator - generatePassiveEffect', () => {
-  const generator = new ActivityGenerator();
+  const generator = new ActivityGenerator({ fvttVersion: '12' });
 
   it('should generate Active Effect for acBonus', () => {
     const action: ActionData = {

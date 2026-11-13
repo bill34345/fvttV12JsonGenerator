@@ -55,7 +55,7 @@ describe('explicit offline audit of frozen raw-input source contracts',()=>{
   });
   test('the default draft preserves AI rules and reports issues without source-derived completion',()=>{
     const data=sample('gazer'),before=structuredClone(data.ir);
-    const result=analyzeBrowserActorIntakeDraft({source:data.source,sourceName:'Default saved raw contract',requestId:'default-raw-contract',fvttVersion:'14.364',systemVersion:'5.3.3'},data.ir,provider);
+    const result=analyzeBrowserActorIntakeDraft({source:data.source,sourceName:'Default saved raw contract',requestId:'default-raw-contract',fvttVersion:'14.370',systemVersion:'6.0.6'},data.ir,provider);
     expect(result.ir!.creature.actions).toEqual(before.creature.actions);
     expect(result.ir!.creature.actions.every(feature=>feature.range===undefined)).toBe(true);
     expect(result.ir!.claims).toEqual(before.claims);
@@ -240,7 +240,7 @@ describe('explicit offline source-bound shared target/range audit',()=>{
     const result=auditSource(sample('gazer'));
     const markdown=renderMonsterIntakeMarkdown(result.ir!);
     const response=await convertFinalActorSource(buildForgeActorRequest({content:markdown,displayName:'Saved Gazer',requestId:'saved-range-workflow',
-      fvttVersion:'14.368',systemVersion:'5.3.3'}),{captureRulePresentation:true});
+      fvttVersion:'14.368',systemVersion:'6.0.6'}),{captureRulePresentation:true});
     // Range inheritance is independently observable on this retained candidate;
     // its unprojected state findings still prevent a successful strict verdict.
     expect('result'in response&&response.result.status).toBe('failed');

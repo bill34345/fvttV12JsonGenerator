@@ -202,6 +202,90 @@ describe('Forge wire safety boundaries', () => {
       'creatureType',
     )).toBe(true);
   });
+
+  test.each([{ units: null }, { units: 'ft' }, {}, { darkvision: null }, { ranges: { darkvision: null } }])('preserves nullable native senses through projection and response decoding: %o', (fields) => {
+    const senses = { ranges: { darkvision: 0, blindsight: 0, tremorsense: 0, truesight: 0 }, special: '', ...fields };
+    const projected = projectForgeVerification({
+      verification: { status: 'accepted', mechanicsCoverage: [] },
+      actorVerification: { ...actorVerification(), actor: { name: 'Safe Actor', type: 'npc', senses } },
+    });
+    const decoded = decodeForgeActorResponse(JSON.parse(JSON.stringify(response({ ...projected }))));
+    expect(decoded.ok).toBe(true);
+    if (!decoded.ok || !('result' in decoded.value)) throw new Error('Expected nullable native senses to decode.');
+    expect(decoded.value.result.status).toBe('accepted');
+    expect(decoded.value.result.actorVerification.actor.senses).toEqual(senses);
+  });
+
+  test.each([
+    { units: true }, { units: 0 }, { units: {} }, { units: [] },
+    { special: null }, { darkvision: '60' }, { ranges: { darkvision: '60' } },
+  ])('does not widen other senses fields or units types: %o', (senses) => {
+    const actorVerification = { actor: { name: 'Safe Actor', type: 'npc', senses }, items: [], warnings: [] };
+    expect(() => projectForgeVerification({ verification: { status: 'accepted', mechanicsCoverage: [] }, actorVerification })).toThrow();
+    const issue = 'units' in senses || 'special' in senses ? 'INVALID_STRING' : 'INVALID_NUMBER';
+    retainedReview(decodeForgeActorResponse(response({ actorVerification })), issue);
+  });
+
+  test.each([
+    { value: '60', long: 120, reach: null },
+    { value: '', long: null, reach: 5 },
+    { value: '  @abilities.str.mod * 5 + 30  ' },
+    { value: 60, long: 120, reach: 5 },
+    { value: 0 },
+    { value: null, long: null, reach: null },
+    {},
+  ])('preserves activity range values through projection and response decoding: %o', (values) => {
+    const range = { override: false, units: 'ft', special: '', ...values };
+    const projected = projectForgeVerification({
+      verification: { status: 'accepted', mechanicsCoverage: [] },
+      actorVerification: actorVerificationWithRange(range),
+    });
+    const decoded = decodeForgeActorResponse(JSON.parse(JSON.stringify(response({ ...projected }))));
+    expect(decoded.ok).toBe(true);
+    if (!decoded.ok || !('result' in decoded.value)) {
+      throw new Error('Expected the activity range response to decode.');
+    }
+    expect(decoded.value.result.status).toBe('accepted');
+    expect(decoded.value.result.diagnostics).toEqual([]);
+    expect(decoded.value.result.actorVerification.items[0]?.activities[0]?.range).toEqual(range);
+  });
+
+  test.each([true, false, {}, [], Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]
+    .map((value) => ({ value })))(
+    'rejects invalid activity range values without approving the report: %o',
+    ({ value }) => {
+      const actorVerification = actorVerificationWithRange({ value });
+      expect(() => projectForgeVerification({
+        verification: { status: 'accepted', mechanicsCoverage: [] },
+        actorVerification,
+      })).toThrow(/range\.value must be a finite number/u);
+      const retained = retainedReview(decodeForgeActorResponse(response({ actorVerification })), 'INVALID_NUMBER');
+      expect(retained.actorVerification.items[0]?.activities[0]?.range?.value).toBeUndefined();
+    },
+  );
+
+  test.each((['long', 'reach'] as const).flatMap((field) =>
+    ['60', '', '@abilities.str.mod * 5', true, {}, Number.NaN, Number.POSITIVE_INFINITY]
+      .map((value) => ({ field, value }))))('keeps activity range long and reach numeric or null: %o', ({ field, value }) => {
+    const actorVerification = actorVerificationWithRange({ value: '60', [field]: value });
+    expect(() => projectForgeVerification({
+      verification: { status: 'accepted', mechanicsCoverage: [] },
+      actorVerification,
+    })).toThrow(new RegExp(`range\\.${field} must be a finite number`, 'u'));
+    const retained = retainedReview(decodeForgeActorResponse(response({ actorVerification })), 'INVALID_NUMBER');
+    expect(retained.actorVerification.items[0]?.activities[0]?.range?.[field]).toBeUndefined();
+  });
+
+  test('keeps activity range fields closed during projection and decoding', () => {
+    const actorVerification = actorVerificationWithRange({ value: '60', unexpected: true });
+    const projected = projectForgeVerification({
+      verification: { status: 'accepted', mechanicsCoverage: [] },
+      actorVerification,
+    });
+    expect(projected.actorVerification.items[0]?.activities[0]?.range).toEqual({ value: '60' });
+    const retained = retainedReview(decodeForgeActorResponse(response({ actorVerification })), 'UNKNOWN_FIELD');
+    expect(retained.actorVerification.items[0]?.activities[0]?.range).toEqual({ value: '60' });
+  });
 });
 
 function retainedReview(decoded: ReturnType<typeof decodeForgeActorResponse>, issueCode: string) {
@@ -223,11 +307,11 @@ function response(overrides: Record<string, unknown> = {}): Record<string, unkno
     result: {
       sourceIdentity: { sourceId: SOURCE_ID, sourceHash: HASH },
       target: {
-        fvttRuntimeVersion: '14.364',
+        fvttRuntimeVersion: '14.370',
         generatorProfile: 'v14',
         generatorVersion: '0.1.0',
         systemId: 'dnd5e',
-        systemVersionObserved: '5.3.3',
+        systemVersionObserved: '6.0.6',
         effectProfile: 'core',
         iconMode: 'off',
       },
@@ -266,6 +350,20 @@ function actorVerification(creatureType?: string): Record<string, unknown> {
     },
     items: [],
     warnings: [],
+  };
+}
+
+function actorVerificationWithRange(range: Record<string, unknown>): Record<string, unknown> {
+  return {
+    ...actorVerification(),
+    items: [{
+      name: '倒刺 Barb',
+      type: 'weapon',
+      activation: 'action',
+      activityTypes: ['attack'],
+      activities: [{ type: 'attack', range }],
+      effects: [],
+    }],
   };
 }
 

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { JSDOM } from 'jsdom';
+const NATIVE_TARGET={foundry:'14.370',system:'dnd5e' as const,systemVersion:'6.0.6',effectProfile:'core' as const};
 import nativeConditions from './fixtures/native-conditions-5.3.3.json';
 import { configuredConditionFingerprint, type ConfiguredConditionDefinition } from '@fvtt-json-generator/contracts/configured-conditions';
 import {
@@ -55,14 +56,14 @@ class Effect {
       flags: structuredClone(this.flags),
     };
   }
-  async createRiderConditions() {
-    const parent = (this as any).parent as Actor;
+  system = { collectRiders: async () => {
+    const parent = (this as any).parent as Actor, data:any[]=[];
     for (const status of this.statuses) for (const rider of testStatusEffects[status]?.riders ?? []) {
       if (parent.effects.some(effect => effect.id === testStatusEffects[rider]?._id)) continue;
-      const document = await NativeActiveEffect.fromStatusEffect(rider, { parent });
-      await NativeActiveEffect.create(document.toObject(), { parent, keepId: true });
+      data.push((await NativeActiveEffect.fromStatusEffect(rider, { parent })).toObject());
     }
-  }
+    return data.length?[{action:'create',documentName:'ActiveEffect',data,parent,keepId:true}]:[];
+  }};
 }
 let effectNumber = 0;
 let testStatusEffects: Record<string, any> = {};
@@ -88,11 +89,15 @@ class NativeActiveEffect {
     if (parent.effects.some((effect) => effect.id === data._id)) throw new Error(`ActiveEffect ${data._id} already exists`);
     const created = new Effect({ ...data, parent });
     parent.effects.push(created);
-    // dnd5e 5.3.3 createRiderConditions: canonical-ID deduplication and an
+    // dnd5e 6.0.6 createRiderConditions: canonical-ID deduplication and an
     // independent factory-created rider, never a child removed with this effect.
-    await created.createRiderConditions();
+    await modifyNativeBatch(await created.system.collectRiders());
     return created;
   }
+}
+
+async function modifyNativeBatch(entries:any[]){
+  for(const entry of entries)for(const data of entry.data)await NativeActiveEffect.create(data,{parent:entry.parent,keepId:entry.keepId});
 }
 
 function mergeObjects(base: Record<string, any>, extra: Record<string, any>): Record<string, any> {
@@ -127,7 +132,7 @@ class Actor {
   constructor(readonly key: string, readonly uuid: string, items: Item[], hp = { value: 40, max: 40 }) {
     this.items = items; for (const item of items) item.actor = this;
     (this as any).name = key;
-    this.flags = { [ENCOUNTER_AUTOMATION_FLAG_SCOPE]: { encounter: { version: 1, kind: 'Actor', key, packageId: 'crystal-package', packageHash: 'package-hash' } } };
+    this.flags = { [ENCOUNTER_AUTOMATION_FLAG_SCOPE]: { encounter: { target: NATIVE_TARGET, version: 1, kind: 'Actor', key, packageId: 'crystal-package', packageHash: 'package-hash' } } };
     (this as any).system = { attributes: { hp, prof: 4, exhaustion: 0 }, resources: { legact: { spent: 0, max: key === 'dragon' ? 3 : 0 } } };
   }
   getRollData() { return {}; }
@@ -176,7 +181,7 @@ function fixture() {
   testStatusEffects = { dazed: { id: 'dazed', _id: 'dnd5edazed000000', name: 'Dazed', img: 'icons/svg/daze.svg', hud: true } };
   testStatusEffects.blinded = { id: 'blinded', _id: 'dnd5eblinded0000', name: 'Blinded', img: 'icons/svg/blind.svg', hud: true };
   testStatusEffects.paralyzed = { id: 'paralyzed', _id: 'dnd5eparalyzed000', name: 'Paralyzed', img: 'icons/svg/paralyze.svg', hud: true };
-  const env: any = { game: { version: '14.364', system: { id: 'dnd5e', version: '5.3.3' }, user: { id: 'gm-1', isGM: true }, users: { activeGM: { id: 'gm-1' } }, combat }, Hooks: hooks, canvas: { scene, grid: { size: 100, distance: 5 }, tokens: { placeables: tokens, get: (id: string) => tokens.find((entry) => entry.id === id) } }, CONFIG: { Dice: { DamageRoll: class { total: number; constructor(formula: string) { this.total = Number(formula); } async evaluate() { return this; } } }, DND5E: { healingTypes: { healing: {}, temphp: {}, maximum: {} } }, statusEffects: testStatusEffects }, foundry: { utils: { getDocumentClass: (name: string) => { expect(name).toBe('ActiveEffect'); return NativeActiveEffect; } } }, ui: { notifications: { info: (message: string) => notifications.push(message) } }, fromUuid: async (uuid: string) => ({ [dragon.uuid]: dragon, [crystal.uuid]: crystal } as any)[uuid], chooseAdjacentPlacement: async ({ candidates }: any) => candidates[0] };
+  const env: any = { game: { version: '14.370', system: { id: 'dnd5e', version: '6.0.6' }, user: { id: 'gm-1', isGM: true }, users: { activeGM: { id: 'gm-1' } }, combat }, Hooks: hooks, canvas: { scene, grid: { size: 100, distance: 5 }, tokens: { placeables: tokens, get: (id: string) => tokens.find((entry) => entry.id === id) } }, CONFIG: { Dice: { DamageRoll: class { total: number; constructor(formula: string) { this.total = Number(formula); } async evaluate() { return this; } } }, DND5E: { healingTypes: { healing: {}, temphp: {}, maximum: {} } }, statusEffects: testStatusEffects }, foundry: { documents: {modifyBatch: modifyNativeBatch}, utils: { getDocumentClass: (name: string) => { expect(name).toBe('ActiveEffect'); return NativeActiveEffect; } } }, ui: { notifications: { info: (message: string) => notifications.push(message) } }, fromUuid: async (uuid: string) => ({ [dragon.uuid]: dragon, [crystal.uuid]: crystal } as any)[uuid], chooseAdjacentPlacement: async ({ candidates }: any) => candidates[0] };
   return { env, hooks, dragon, crystal, target, corpse, tokens, combat, scene, notifications };
 }
 function token(id: string, actor: Actor, x: number, y: number) { return { id, actor, document: { id, x, y, width: 1, height: 1, elevation: 0, disposition: -1 } }; }
@@ -193,11 +198,11 @@ async function reconcileDaeStatuses(actor: Actor) {
 describe('fixed encounter automation runtime', () => {
   test('requires the exact runtime, GM, package-owned Actor UUIDs, and does not duplicate a start', async () => {
     const { env, hooks } = fixture();
-    const options = { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: 'Actor.dragon1', crystal: 'Actor.crystal1' }, config: config() };
+    const options = { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: 'Actor.dragon1', crystal: 'Actor.crystal1' }, config: config() };
     const first = await installEncounterAutomation(env, options);
     const duplicate = await installEncounterAutomation(env, options);
     expect(duplicate).toBe(first); expect(hooks.count('updateCombat')).toBe(1);
-    await expect(installEncounterAutomation({ ...env, game: { ...env.game, version: '14.365' } }, options)).rejects.toThrow('14.364');
+    await expect(installEncounterAutomation({ ...env, game: { ...env.game, version: '14.365' } }, options)).rejects.toThrow('Core 14');
     const other = fixture();
     await expect(installEncounterAutomation(other.env, { ...options, bindings: { ...options.bindings, dragon: 'Actor.notpackage' } })).rejects.toThrow('绑定 dragon');
     first.stop(); expect(hooks.count('updateCombat')).toBe(0);
@@ -205,7 +210,7 @@ describe('fixed encounter automation runtime', () => {
 
   test('save-summon consumes the native Item once, resolves success or failure, gives an independent HP token, and never pulses immediately', async () => {
     const { env, dragon, target, tokens, scene, combat, crystal, hooks } = fixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: config() });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: config() });
     target.saves.push(18); // success still summons
     const success: any = await handle.executeSaveSummon('salvo', tokens[0], tokens[2]);
     expect(success.save.success).toBe(true); expect(dragon.items[0]!.uses).toBe(1); expect(target.damages[0]!.options.multiplier).toBe(0.5);
@@ -225,7 +230,7 @@ describe('fixed encounter automation runtime', () => {
 
   test('creates one canonical native status and remains single after repeated failure and DAE reconciliation', async () => {
     const { env, dragon, target, tokens } = fixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: 'Actor.crystal1' }, config: config() });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: 'Actor.crystal1' }, config: config() });
     target.saves.push(1, 18, 1, 18);
     const first: any = await handle.executeSaveSummon('salvo', tokens[0], tokens[2]);
     expect(first.statusApplied).toBe(true);
@@ -245,7 +250,7 @@ describe('fixed encounter automation runtime', () => {
     const activeFixture = fixture();
     const foreign = new Effect({ name: 'External Dazed', statuses: ['dazed'], flags: { external: { source: 'other-module' } } });
     activeFixture.target.effects.push(foreign);
-    const activeHandle = await installEncounterAutomation(activeFixture.env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: activeFixture.dragon.uuid, crystal: activeFixture.crystal.uuid }, config: config() });
+    const activeHandle = await installEncounterAutomation(activeFixture.env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: activeFixture.dragon.uuid, crystal: activeFixture.crystal.uuid }, config: config() });
     activeFixture.target.saves.push(1, 18);
     const activeResult: any = await activeHandle.executeSaveSummon('salvo', activeFixture.tokens[0], activeFixture.tokens[2]);
     expect(activeResult.statusApplied).toBe(false);
@@ -256,7 +261,7 @@ describe('fixed encounter automation runtime', () => {
     const disabledFixture = fixture();
     const disabled = new Effect({ _id: 'dnd5edazed000000', name: 'Dazed', img: 'icons/svg/daze.svg', statuses: ['dazed'], disabled: true, flags: { external: { source: 'manual' } } });
     disabledFixture.target.effects.push(disabled);
-    const disabledHandle = await installEncounterAutomation(disabledFixture.env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: disabledFixture.dragon.uuid, crystal: disabledFixture.crystal.uuid }, config: config() });
+    const disabledHandle = await installEncounterAutomation(disabledFixture.env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: disabledFixture.dragon.uuid, crystal: disabledFixture.crystal.uuid }, config: config() });
     disabledFixture.target.saves.push(1, 18);
     const disabledResult: any = await disabledHandle.executeSaveSummon('salvo', disabledFixture.tokens[0], disabledFixture.tokens[2]);
     expect(disabledResult.statusApplied).toBe(false);
@@ -268,7 +273,7 @@ describe('fixed encounter automation runtime', () => {
 
   test('re-enables this package canonical status after expiry and assigns a fresh expiration', async () => {
     const { env, dragon, target, tokens, combat, hooks } = fixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: 'Actor.crystal1' }, config: config() });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: 'Actor.crystal1' }, config: config() });
     target.saves.push(1, 18);
     const first: any = await handle.executeSaveSummon('salvo', tokens[0], tokens[2]);
     const status = target.effects.find((effect) => effect.id === 'dnd5edazed000000')!;
@@ -291,7 +296,7 @@ describe('fixed encounter automation runtime', () => {
 
   test('stopping while the native status factory is pending prevents the effect write', async () => {
     const { env, dragon, target, tokens } = fixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: 'Actor.crystal1' }, config: config() });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: 'Actor.crystal1' }, config: config() });
     const factoryStarted = deferred<void>(); const releaseFactory = deferred<void>();
     NativeActiveEffect.factoryGate = { onStart: () => factoryStarted.resolve(undefined), released: releaseFactory.promise };
     target.saves.push(1, 18);
@@ -304,7 +309,7 @@ describe('fixed encounter automation runtime', () => {
 
   test('turn-start area runs only for its own token once per turn, includes a 0 HP target, and stops when its source is at 0 HP', async () => {
     const { env, crystal, target, corpse, tokens, combat } = fixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: 'Actor.dragon1', crystal: crystal.uuid }, config: config() });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: 'Actor.dragon1', crystal: crystal.uuid }, config: config() });
     target.saves.push(18); corpse.saves.push(18); // both in-range creatures save; no corruption
     combat.combatant = combat.combatants[1]; combat.turn = 1;
     await handle.executeTurnStartArea('pulse', tokens[1], combat);
@@ -323,7 +328,7 @@ describe('fixed encounter automation runtime', () => {
 
   test('staged corruption uses mutually exclusive marker then exhaustion branches', async () => {
     const { env, crystal, target, tokens } = fixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: 'Actor.dragon1', crystal: crystal.uuid }, config: config() });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: 'Actor.dragon1', crystal: crystal.uuid }, config: config() });
     target.saves.push(1, 1);
     const first: any = await handle.executeStagedCorruption('corruption', tokens[2]);
     const second: any = await handle.executeStagedCorruption('corruption', tokens[2]);
@@ -332,7 +337,7 @@ describe('fixed encounter automation runtime', () => {
 
   test('preUseActivity cancels the disposable activity and consumes only the matching embedded native activity', async () => {
     const { env, dragon, crystal, target, tokens, hooks } = fixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: config() });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: config() });
     target.saves.push(18);
     const result = hooks.call('dnd5e.preUseActivity', dragon.items[0]!.system.activities[0], { targets: [tokens[2]] }, {}, {});
     expect(result).toBe(false); await handle.settle();
@@ -346,7 +351,7 @@ describe('fixed encounter automation runtime', () => {
 
   test('stop during a native save or a pending placement prevents later damage, Token, Combatant, and initiative writes', async () => {
     const saveFixture = fixture();
-    const saveHandle = await installEncounterAutomation(saveFixture.env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: saveFixture.dragon.uuid, crystal: saveFixture.crystal.uuid }, config: config() });
+    const saveHandle = await installEncounterAutomation(saveFixture.env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: saveFixture.dragon.uuid, crystal: saveFixture.crystal.uuid }, config: config() });
     const saveStarted = deferred<void>(); const saveResult = deferred<any>();
     saveFixture.target.rollSavingThrow = async () => { saveStarted.resolve(); return saveResult.promise; };
     const savePending = saveHandle.executeSaveSummon('salvo', saveFixture.tokens[0], saveFixture.tokens[2]);
@@ -355,7 +360,7 @@ describe('fixed encounter automation runtime', () => {
     expect(saveFixture.target.damages).toHaveLength(0); expect(saveFixture.scene.created).toHaveLength(0); expect(saveFixture.combat.created).toHaveLength(0); expect(saveFixture.combat.initiatives).toHaveLength(0);
 
     const placementFixture = fixture();
-    const placementHandle = await installEncounterAutomation(placementFixture.env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: placementFixture.dragon.uuid, crystal: placementFixture.crystal.uuid }, config: config() });
+    const placementHandle = await installEncounterAutomation(placementFixture.env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: placementFixture.dragon.uuid, crystal: placementFixture.crystal.uuid }, config: config() });
     const placementStarted = deferred<void>(); const placement = deferred<any>();
     placementFixture.env.chooseAdjacentPlacement = async ({ candidates }: any) => { placementStarted.resolve(); return placement.promise.then(() => candidates[0]); };
     placementFixture.target.saves.push(18);
@@ -367,14 +372,14 @@ describe('fixed encounter automation runtime', () => {
 
   test('next-target-turn-end uses sorted combat.turns rather than combatant creation order', async () => {
     const later = fixture();
-    const laterHandle = await installEncounterAutomation(later.env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: later.dragon.uuid, crystal: later.crystal.uuid }, config: config() });
+    const laterHandle = await installEncounterAutomation(later.env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: later.dragon.uuid, crystal: later.crystal.uuid }, config: config() });
     later.combat.round = 4; later.combat.turns = [later.combat.combatants[0], later.combat.combatants[2], later.combat.combatants[1], later.combat.combatants[3]];
     later.combat.combatant = later.combat.turns[0]; later.combat.turn = 0; later.target.saves.push(1, 1);
     await laterHandle.executeSaveSummon('salvo', later.tokens[0], later.tokens[2]);
     expect(statusExpiry(later.target).round).toBe(4);
 
     const passed = fixture();
-    const passedHandle = await installEncounterAutomation(passed.env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: passed.dragon.uuid, crystal: passed.crystal.uuid }, config: config() });
+    const passedHandle = await installEncounterAutomation(passed.env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: passed.dragon.uuid, crystal: passed.crystal.uuid }, config: config() });
     passed.combat.round = 4; passed.combat.turns = [passed.combat.combatants[2], passed.combat.combatants[0], passed.combat.combatants[1], passed.combat.combatants[3]];
     passed.combat.combatant = passed.combat.turns[1]; passed.combat.turn = 1; passed.target.saves.push(1, 1);
     await passedHandle.executeSaveSummon('salvo', passed.tokens[0], passed.tokens[2]);
@@ -383,7 +388,7 @@ describe('fixed encounter automation runtime', () => {
 
   test('ward evaluates real DamageSummary arrays: it excludes healing from the threshold, preserves temp/max HP, weakens after native break depletion, and is inert while broken', async () => {
     const { env, dragon, crystal, tokens, hooks, combat, notifications } = fixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: config() });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: config() });
     const twenty: any = damageSummary([{ type: 'fire', value: 20, active: {} }], { amount: 20 }); hooks.call('dnd5e.calculateDamage', dragon, twenty); expect(twenty.amount).toBe(20); expect(twenty[0].value).toBe(20);
     const twentyOne: any = damageSummary([{ type: 'fire', value: 21, active: {} }], { amount: 21 }); hooks.call('dnd5e.calculateDamage', dragon, twentyOne); expect(twentyOne.amount).toBe(10); expect(twentyOne[0].value).toBe(10);
     const mixed: any = damageSummary([
@@ -412,7 +417,7 @@ describe('fixed encounter automation runtime', () => {
     tokens.push(syntheticToken);
     const syntheticCombatant = { id: 'c-unlinked-dragon', tokenId: syntheticToken.id };
     combat.combatants.push(syntheticCombatant);
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: config() });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: config() });
     hooks.call('dnd5e.postUseActivity', synthetic.items[2]!.system.activities[0]); await handle.settle();
     expect(handle.getWardState('ward', synthetic)).toBe('broken');
     expect(dragon.flags[ENCOUNTER_AUTOMATION_FLAG_SCOPE][ENCOUNTER_AUTOMATION_FLAG_KEY]).toBeUndefined();
@@ -426,7 +431,7 @@ describe('fixed encounter automation runtime', () => {
 
   test('ward-break expires at the actual next own turn: this round before the source, next round after or during its turn', async () => {
     const before = fixture();
-    const beforeHandle = await installEncounterAutomation(before.env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: before.dragon.uuid, crystal: before.crystal.uuid }, config: config() });
+    const beforeHandle = await installEncounterAutomation(before.env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: before.dragon.uuid, crystal: before.crystal.uuid }, config: config() });
     const enemy = before.combat.combatants[2]!;
     before.combat.turns = [enemy, before.combat.combatants[0], before.combat.combatants[1], before.combat.combatants[3]];
     before.combat.combatant = enemy; before.combat.turn = 0; before.combat.round = 4;
@@ -436,14 +441,14 @@ describe('fixed encounter automation runtime', () => {
     expect(beforeHandle.getWardState('ward', before.dragon)).toBe('full');
 
     const after = fixture();
-    const afterHandle = await installEncounterAutomation(after.env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: after.dragon.uuid, crystal: after.crystal.uuid }, config: config() });
+    const afterHandle = await installEncounterAutomation(after.env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: after.dragon.uuid, crystal: after.crystal.uuid }, config: config() });
     after.combat.turns = [after.combat.combatants[0], after.combat.combatants[2], after.combat.combatants[1], after.combat.combatants[3]];
     after.combat.combatant = after.combat.turns[1]; after.combat.turn = 1; after.combat.round = 4;
     after.hooks.call('dnd5e.postUseActivity', after.dragon.items[2]!.system.activities[0]); await afterHandle.settle();
     expect(wardUntil(after.dragon).round).toBe(5);
 
     const own = fixture();
-    const ownHandle = await installEncounterAutomation(own.env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: own.dragon.uuid, crystal: own.crystal.uuid }, config: config() });
+    const ownHandle = await installEncounterAutomation(own.env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: own.dragon.uuid, crystal: own.crystal.uuid }, config: config() });
     own.combat.turns = [own.combat.combatants[0], own.combat.combatants[2], own.combat.combatants[1], own.combat.combatants[3]];
     own.combat.combatant = own.combat.turns[0]; own.combat.turn = 0; own.combat.round = 4;
     own.hooks.call('dnd5e.postUseActivity', own.dragon.items[2]!.system.activities[0]); await ownHandle.settle();
@@ -455,7 +460,7 @@ describe('fixed encounter automation runtime', () => {
     let dialogOptions: any; let stoppedPackage: string | undefined;
     env.foundry = { applications: { api: { DialogV2: class { constructor(options: any) { dialogOptions = options; } render() { return this; } } } } };
     env.game.modules = new Map([[ENCOUNTER_AUTOMATION_FLAG_SCOPE, { api: { async stopEncounterAutomation(packageId: string) { stoppedPackage = packageId; } } }]]);
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: config() });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: config() });
     handle.showPanel();
     expect(dialogOptions.content).toContain('豁免伤害与召唤'); expect(dialogOptions.content).not.toContain('<li>salvo：'); expect(dialogOptions.content).toContain('守护状态'); expect(dialogOptions.content).toContain('dragon：完整');
     await dialogOptions.buttons.find((button: any) => button.action === 'stop').callback();
@@ -464,16 +469,15 @@ describe('fixed encounter automation runtime', () => {
 
   test('stop during a pending expired-effect update prevents the next effect and own-turn ward restoration writes', async () => {
     const { env, dragon, crystal, target, hooks, combat } = fixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: config() });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: config() });
     const expires = { tokenId: 'target-token', round: 1 };
-    const first = new Effect({ flags: { [ENCOUNTER_AUTOMATION_FLAG_SCOPE]: { [ENCOUNTER_AUTOMATION_FLAG_KEY]: { packageId: 'crystal-package', packageHash: 'package-hash', status: { expiration: expires } } } } });
-    const second = new Effect({ flags: { [ENCOUNTER_AUTOMATION_FLAG_SCOPE]: { [ENCOUNTER_AUTOMATION_FLAG_KEY]: { packageId: 'crystal-package', packageHash: 'package-hash', status: { expiration: expires } } } } });
+    const first = new Effect({ flags: { [ENCOUNTER_AUTOMATION_FLAG_SCOPE]: { [ENCOUNTER_AUTOMATION_FLAG_KEY]: { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', status: { expiration: expires } } } } });
+    const second = new Effect({ flags: { [ENCOUNTER_AUTOMATION_FLAG_SCOPE]: { [ENCOUNTER_AUTOMATION_FLAG_KEY]: { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', status: { expiration: expires } } } } });
     target.effects.push(first, second);
     const updateStarted = deferred<void>(); const releaseUpdate = deferred<void>(); let secondUpdates = 0;
     first.update = async (data: any) => { updateStarted.resolve(); await releaseUpdate.promise; Object.assign(first, data); };
     second.update = async (data: any) => { secondUpdates++; Object.assign(second, data); };
-    await dragon.setFlag(ENCOUNTER_AUTOMATION_FLAG_SCOPE, ENCOUNTER_AUTOMATION_FLAG_KEY, {
-      packageId: 'crystal-package', packageHash: 'package-hash', wards: { ward: { state: 'broken', until: { tokenId: 'dragon-token', round: 1 } } },
+    await dragon.setFlag(ENCOUNTER_AUTOMATION_FLAG_SCOPE, ENCOUNTER_AUTOMATION_FLAG_KEY, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', wards: { ward: { state: 'broken', until: { tokenId: 'dragon-token', round: 1 } } },
     });
     combat.combatant = combat.combatants[2]; combat.turn = 2; hooks.call('createCombat', combat);
     combat.combatant = combat.combatants[0]; combat.turn = 0; hooks.call('updateCombat', combat);
@@ -484,7 +488,7 @@ describe('fixed encounter automation runtime', () => {
 
   test('legendary recovery blocks only the bound actor turn-end reset and restores that actor at its own start', async () => {
     const { env, dragon, crystal, hooks, combat } = fixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: config() });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: config() });
     const dragonResult: any = { actor: { 'system.resources.legact.spent': 0 } }; const foreignResult: any = { actor: { 'system.resources.legact.spent': 0 } };
     hooks.call('dnd5e.combatRecovery', { id: 'c-dragon', actor: dragon }, ['turnEnd'], dragonResult); hooks.call('dnd5e.combatRecovery', { id: 'foreign', actor: new Actor('foreign', 'Actor.foreign', []) }, ['turnEnd'], foreignResult);
     expect(dragonResult.actor).toEqual({}); expect(foreignResult.actor['system.resources.legact.spent']).toBe(0);
@@ -496,7 +500,7 @@ describe('fixed encounter automation runtime', () => {
     dragon.flags.fvttJsonGenerator={sourceLegendaryLedger:{version:1,max:3,lairMax:4,recovery:'own-turn-start'}};
     dragon.system.resources={legact:{max:inside?4:3,spent:2},lair:{value:true,inside}};
     (dragon as any)._source={system:{resources:{legact:{max:3,spent:2},lair:{value:true,inside}}}};
-    const input={packageId:'crystal-package',packageHash:'package-hash',bindings:{dragon:dragon.uuid},config:{version:1 as const,rules:[],legendaryRecovery:[{actorKey:'dragon',max:3,when:'own-turn-start' as const}]}};
+    const input={ target: NATIVE_TARGET, packageId:'crystal-package',packageHash:'package-hash',bindings:{dragon:dragon.uuid},config:{version:1 as const,rules:[],legendaryRecovery:[{actorKey:'dragon',max:3,when:'own-turn-start' as const}]}};
     const first=await installEncounterAutomation(env,input);first.stop();const resumed=await installEncounterAutomation(env,input);
     const result:any={actor:{'system.resources.legact.spent':0}};hooks.call('dnd5e.combatRecovery',{id:'c-dragon',actor:dragon},['turnEnd'],result);
     expect(result.actor).toEqual({});expect(dragon.system.resources.legact.spent).toBe(2);
@@ -574,9 +578,9 @@ function eyeFixture() {
 test('different packages retain independent native status claims and serialize concurrent applications', async () => {
   const { env, dragon, crystal, target, tokens, hooks, combat, newConfig } = eyeFixture();
   const other = new Item('Other Gaze', 'other-gaze', saveActivity(15, 0)); other.system.activities[0].damage.parts = []; other.actor = crystal; crystal.items.push(other);
-  crystal.flags[ENCOUNTER_AUTOMATION_FLAG_SCOPE].encounter = { version: 1, kind: 'Actor', key: 'crystal', packageId: 'other-package', packageHash: 'other-hash' };
-  const first = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: { ...newConfig, rules: [newConfig.rules[0]!] } });
-  const second = await installEncounterAutomation(env, { packageId: 'other-package', packageHash: 'other-hash', bindings: { crystal: crystal.uuid }, config: { version: 1, legendaryRecovery: [], rules: [
+  crystal.flags[ENCOUNTER_AUTOMATION_FLAG_SCOPE].encounter = { target:NATIVE_TARGET, version: 1, kind: 'Actor', key: 'crystal', packageId: 'other-package', packageHash: 'other-hash' };
+  const first = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: { ...newConfig, rules: [newConfig.rules[0]!] } });
+  const second = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'other-package', packageHash: 'other-hash', bindings: { crystal: crystal.uuid }, config: { version: 1, legendaryRecovery: [], rules: [
     { id: 'other', kind: 'save-failure-effect', actorKey: 'crystal', itemName: other.name, parameters: { effect: 'blinded', expiry: 'next-source-turn-start', minFailureMargin: 1, removeOnDamage: false } },
   ] } });
   target.saves.push(1, 1);
@@ -605,16 +609,16 @@ test('generic hit lifecycle applies a canonical state, honors immunity, and clea
   env.game.modules = { get: () => ({ active: true, api: { apiVersion: 1, subscribe: (listener: any) => { subscribers.push(listener); return () => {}; } } }) };
   env.game.time = { worldTime: 0 }; env.CONFIG.time = { roundTime: 6 }; env.game.messages = new Map();
   env.game.user.targets = new Set([tokens[2]]); env.game.actors = [dragon, target]; env.DialogV2 = { confirm: async () => true };
-  const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: {
+  const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: {
     version: 1, legendaryRecovery: [], rules: [{ id: 'veil', kind: 'status-lifecycle', actorKey: 'dragon', itemName: strike.name,
       parameters: { trigger: 'attack-hit', status: 'blinded', duration: { value: 1, unit: 'minute' }, repeatSave: { ability: 'con', dc: 15, timing: 'target-turn-end', optional: true } } }],
   } });
   const hit = () => {
     const messageConfig: any = { data: { flags: {} } };
     hooks.call('dnd5e.preRollAttack', { subject: attack }, {}, messageConfig);
-    const message = { id: globalThis.crypto.randomUUID(), author: env.game.user, flags: { ...messageConfig.data.flags, dnd5e: {
-      roll: { type: 'attack' }, activity: { uuid: attack.uuid }, item: { uuid: (strike as any).uuid }, targets: [{ uuid: target.uuid, ac: 15 }],
-    } } };
+    const message = { id: globalThis.crypto.randomUUID(), type:'attack', author: env.game.user, flags:messageConfig.data.flags,system:{
+      activity: { uuid: attack.uuid }, item: { uuid: (strike as any).uuid }, targets: [{ actor: target.uuid, token:(tokens[2]!.document as any).uuid, ac: 15 }],
+    } };
     env.game.messages.set(message.id, message);
     hooks.call('dnd5e.postRollAttack', [{ parent: message, total: 20, isCritical: false, isFumble: false }], { subject: attack });
   };
@@ -662,16 +666,16 @@ function configuredLifecycleFixture() {
     (item as any).uuid = `${dragon.uuid}.Item.${item.id}`; attack.uuid = `${(item as any).uuid}.Activity.${attack.id}`; dragon.items.push(item);
     return { attack, item };
   });
-  const options = { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: {
+  const options = { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: {
     version: 1 as const, legendaryRecovery: [], rules: attacks.map(({ item }, index) => ({ id: `mark-${index}`, kind: 'status-lifecycle' as const, actorKey: 'dragon', itemName: item.name,
       parameters: { trigger: 'attack-hit' as const, status: definition.id, definition, duration: { value: 1, unit: 'minute' as const }, repeatSave: { ability: 'con' as const, dc: 13, timing: 'target-turn-end' as const, optional: true } } })),
   } };
   function hit(index: number, total = 20) {
     const { attack, item } = attacks[index]!;
     const config: any = { data: { flags: {} } }; hooks.call('dnd5e.preRollAttack', { subject: attack }, {}, config);
-    const message = { id: globalThis.crypto.randomUUID(), author: env.game.user, flags: { ...config.data.flags, dnd5e: {
-      roll: { type: 'attack' }, activity: { uuid: attack.uuid }, item: { uuid: (item as any).uuid }, targets: [{ uuid: target.uuid, ac: 15 }],
-    } } }; env.game.messages.set(message.id, message);
+    const message = { id: globalThis.crypto.randomUUID(), type:'attack', author: env.game.user, flags:config.data.flags,system:{
+      activity: { uuid: attack.uuid }, item: { uuid: (item as any).uuid }, targets: [{ actor: target.uuid, token:(tokens[2]!.document as any).uuid, ac: 15 }],
+    } }; env.game.messages.set(message.id, message);
     hooks.call('dnd5e.postRollAttack', [{ parent: message, total, isCritical: false, isFumble: false }], { subject: attack });
   }
   return { ...state, definition, options, api, applies, subscribers, hit, changeCatalog: (next: ConfiguredConditionDefinition[]) => { catalog = next; } };
@@ -788,7 +792,7 @@ test('every native condition preserves factory-derived statuses, honors immunity
     env.game.modules = { get: () => ({ active: true, api: { apiVersion: 1, subscribe: (listener: any) => { subscribers.push(listener); return () => {}; } } }) };
     env.game.time = { worldTime: 0 }; env.CONFIG.time = { roundTime: 6 }; env.game.messages = new Map();
     env.game.user.targets = new Set([tokens[2]]); env.game.actors = [dragon, target]; env.DialogV2 = { confirm: async () => true };
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: {
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: {
       version: 1, legendaryRecovery: [], rules: [{ id: 'condition', kind: 'status-lifecycle', actorKey: 'dragon', itemName: item.name,
         parameters: { trigger: 'attack-hit', status: condition.id as any, duration: { value: 1, unit: 'minute' },
           repeatSave: { ability: 'con', dc: 15, timing: 'target-turn-end', optional: true } } }],
@@ -796,9 +800,7 @@ test('every native condition preserves factory-derived statuses, honors immunity
     const hit = () => {
       const config: any = { data: { flags: {} } };
       hooks.call('dnd5e.preRollAttack', { subject: attack }, {}, config);
-      const message = { id: globalThis.crypto.randomUUID(), author: env.game.user, flags: { ...config.data.flags, dnd5e: {
-        roll: { type: 'attack' }, activity: { uuid: attack.uuid }, item: { uuid: (item as any).uuid }, targets: [{ uuid: target.uuid, ac: 15 }],
-      } } };
+      const message = { id: globalThis.crypto.randomUUID(), type:'attack', author: env.game.user, flags:config.data.flags, system:{activity:{uuid:attack.uuid}, item:{uuid:(item as any).uuid}, targets:[{actor:target.uuid,token:(tokens[2]!.document as any).uuid,ac:15}]} };
       env.game.messages.set(message.id, message);
       hooks.call('dnd5e.postRollAttack', [{ parent: message, total: 20, isCritical: false, isFumble: false }], { subject: attack });
     };
@@ -836,10 +838,10 @@ async function proneRiderFixture(withDae = false, statuses = ['prone', 'unconsci
   });
   const subscribers: Array<(context: any) => unknown> = [];
   const trigger = { active: true, api: { apiVersion: 1, subscribe: (listener: any) => { subscribers.push(listener); return () => {}; } } };
-  env.game.modules = new Map([['fvtt-trigger-engine', trigger], ...(withDae ? [['dae', { active: true, version: '14.0.12' }]] : [])] as any);
+  env.game.modules = new Map([['fvtt-trigger-engine', trigger], ...(withDae ? [['dae', { active: true, version: '14.6.5' }]] : [])] as any);
   env.game.time = { worldTime: 0 }; env.CONFIG.time = { roundTime: 6 }; env.game.messages = new Map();
   env.game.user.targets = new Set([tokens[2]]); env.game.actors = [dragon, target]; env.DialogV2 = { confirm: async () => true };
-  const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: {
+  const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: {
     version: 1, legendaryRecovery: [], rules: attacks.map(({ status, item }) => ({ id: status, kind: 'status-lifecycle' as const,
       actorKey: 'dragon', itemName: item.name, parameters: { trigger: 'attack-hit' as const, status: status as any,
         duration: { value: 1, unit: 'minute' as const }, repeatSave: { ability: 'con' as const, dc: 15, timing: 'target-turn-end' as const, optional: true } } })),
@@ -847,16 +849,14 @@ async function proneRiderFixture(withDae = false, statuses = ['prone', 'unconsci
   const hit = async (status: string) => {
     const { attack, item } = attacks.find(entry => entry.status === status)!;
     const config: any = { data: { flags: {} } }; hooks.call('dnd5e.preRollAttack', { subject: attack }, {}, config);
-    const message = { id: globalThis.crypto.randomUUID(), author: env.game.user, flags: { ...config.data.flags, dnd5e: {
-      roll: { type: 'attack' }, activity: { uuid: attack.uuid }, item: { uuid: (item as any).uuid }, targets: [{ uuid: target.uuid, ac: 15 }],
-    } } }; env.game.messages.set(message.id, message);
+    const message = { id: globalThis.crypto.randomUUID(), type:'attack', author: env.game.user, flags:config.data.flags, system:{activity:{uuid:attack.uuid}, item:{uuid:(item as any).uuid}, targets:[{actor:target.uuid,token:(tokens[2]!.document as any).uuid,ac:15}]} }; env.game.messages.set(message.id, message);
     hooks.call('dnd5e.postRollAttack', [{ parent: message, total: 20, isCritical: false, isFumble: false }], { subject: attack });
     await handle.settle();
   };
   const end = async (key: string) => {
     subscribers[0]!({ event: { type: 'combatTurnEnd' }, key, token: tokens[2], round: 1, turn: 2 }); await handle.settle();
   };
-  // Calibrated to installed DAE14.0.12: canonical documents are outputs;
+  // Calibrated to installed DAE14.6.5: canonical documents are outputs;
   // only their sub-statuses count as input, and only autoCreated outputs expire.
   const reconcile = async () => {
     const expected = new Set<string>();
@@ -964,14 +964,13 @@ test('prone immunity does not remove unconscious or its source when DAE removes 
 
 test('a source affected by another package still exposes and enforces its latest Activity lock', async () => {
   const { env, dragon, tokens, newConfig, glacial } = eyeFixture();
-  dragon.flags[ENCOUNTER_AUTOMATION_FLAG_SCOPE][ENCOUNTER_AUTOMATION_FLAG_KEY] = {
-    packageId: 'foreign-package', packageHash: 'foreign-hash', fixedNativeClaims: {},
+  dragon.flags[ENCOUNTER_AUTOMATION_FLAG_SCOPE][ENCOUNTER_AUTOMATION_FLAG_KEY] = { target: NATIVE_TARGET, packageId: 'foreign-package', packageHash: 'foreign-hash', fixedNativeClaims: {},
   };
   panelHarness(env);
-  const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+  const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
   await handle.setActivityDisabled('eyes', tokens[0], glacial.name, true);
   const playerHooks = new HookBus();
-  installPassiveActivityLockGuard({ game: { version: '14.364', system: { id: 'dnd5e', version: '5.3.3' }, user: { isGM: false } }, Hooks: playerHooks } as any);
+  installPassiveActivityLockGuard({ game: { version: '14.370', system: { id: 'dnd5e', version: '6.0.6' }, user: { isGM: false } }, Hooks: playerHooks } as any);
   const activity = glacial.system.activities[0];
   expect(playerHooks.call('dnd5e.preUseActivity', activity)).toBe(false);
   const panel: any = handle.showPanel(); await panel.ready;
@@ -986,7 +985,7 @@ test('a foreign timed canonical status remains separate from Forge and cannot ex
   const { env, dragon, target, tokens, newConfig, hooks } = eyeFixture();
   const foreign = new Effect({ _id: testStatusEffects.blinded._id, name: 'Other spell', statuses: ['blinded'], duration: { value: 1, units: 'rounds', expired: false } });
   (foreign as any).parent = target; target.effects.push(foreign);
-  const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+  const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
   target.saves.push(1); await handle.executeSaveFailureEffect('strobe', tokens[0], tokens[2]);
   const own = target.effects.find(effect => effect !== foreign && effect.statuses.has('blinded'))!;
   expect(own).toBeTruthy(); expect(own.id).not.toBe(foreign.id); expect((own as any).name).toContain('Forge');
@@ -1013,7 +1012,7 @@ function tenRayFixture() {
 describe('closed save failure and GM activity controls', () => {
   test('one native cone use checks every GM-selected target and consumes once', async () => {
     const { env, dragon, target, corpse, tokens, strobe, hooks, newConfig } = eyeFixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     target.saves.push(14); corpse.saves.push(15);
     expect(hooks.call('dnd5e.preUseActivity', strobe.system.activities[0], { targets: new Set([tokens[2], tokens[3]]) })).toBe(false);
     await handle.settle();
@@ -1023,7 +1022,7 @@ describe('closed save failure and GM activity controls', () => {
   });
   test('native save success stays clean; source start and target end use different next-turn anchors', async () => {
     const { env, dragon, target, tokens, combat, hooks, newConfig, strobe, glacial } = eyeFixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     target.saves.push(15, 14, 14);
     expect((await handle.executeSaveFailureEffect('strobe', tokens[0], tokens[2]) as any).applied).toBe(false);
     expect(target.effects).toHaveLength(0);
@@ -1044,7 +1043,7 @@ describe('closed save failure and GM activity controls', () => {
 
   test('paralysis ends on actual temp-HP damage, while Rend needs margin five and actual HP recovery', async () => {
     const { env, dragon, target, tokens, hooks, newConfig } = eyeFixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     target.saves.push(14, 11, 10);
     await handle.executeSaveFailureEffect('paroxysm', tokens[0], tokens[2]);
     expect(target.effects.some((effect) => effect.statuses.has('paralyzed'))).toBe(true);
@@ -1074,8 +1073,7 @@ describe('closed save failure and GM activity controls', () => {
     unrelated.flags[ENCOUNTER_AUTOMATION_FLAG_SCOPE].encounter.packageId = 'unrelated-package';
     const resolve = env.fromUuid;
     env.fromUuid = async (uuid: string) => uuid === unrelated.uuid ? unrelated : resolve(uuid);
-    const startUnrelated = () => installEncounterAutomation(env, {
-      packageId: 'unrelated-package', packageHash: 'package-hash', bindings: { dragon: unrelated.uuid },
+    const startUnrelated = () => installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'unrelated-package', packageHash: 'package-hash', bindings: { dragon: unrelated.uuid },
       config: { version: 1, legendaryRecovery: [], rules: [{
         id: 'foreign-paroxysm', kind: 'save-failure-effect', actorKey: 'dragon', itemName: 'Foreign Ray',
         parameters: { effect: 'paralyzed', expiry: 'next-source-turn-end', minFailureMargin: 1, removeOnDamage: true },
@@ -1083,7 +1081,7 @@ describe('closed save failure and GM activity controls', () => {
     });
     let foreign;
     if (unrelatedFirst) foreign = await startUnrelated();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     if (!unrelatedFirst) foreign = await startUnrelated();
     const options = {};
     const paralyze = async () => {
@@ -1120,7 +1118,7 @@ describe('closed save failure and GM activity controls', () => {
 
   test('immunity, missing CC and partial CC failure stop safely without changing foreign effects', async () => {
     const { env, dragon, target, tokens, newConfig, cc, rend, glacial, strobe } = eyeFixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     target.system.traits = { ci: { value: ['blinded'] } };
     target.saves.push(10);
     expect((await handle.executeSaveFailureEffect('strobe', tokens[0], tokens[2]) as any).applied).toBe(false);
@@ -1140,7 +1138,7 @@ describe('closed save failure and GM activity controls', () => {
   });
   test('Glacial and Rend immunity skips only the condition while native save, damage and use proceed', async () => {
     const { env, dragon, target, tokens, newConfig, glacial, rend } = eyeFixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     target.system.traits = { ci: { value: ['fvtt-custom-conditions.slowed'] } };
     target.saves.push(10);
     expect((await handle.executeSaveFailureEffect('glacial', tokens[0], tokens[2]) as any).applied).toBe(false);
@@ -1153,7 +1151,7 @@ describe('closed save failure and GM activity controls', () => {
   test('GM panel disables one bound Activity before use and explicit restore reopens it', async () => {
     const { env, dragon, tokens, hooks, newConfig, glacial, paroxysm } = eyeFixture();
     const { dialogs } = panelHarness(env);
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     const panel: any = handle.showPanel(); await panel.ready;
     expect(dialogs[0].data.buttons.map((button: any) => button.action)).toEqual(['stop', 'close']);
     expect(dialogs[0].data.buttons[1].default).toBe(true);
@@ -1176,7 +1174,7 @@ describe('closed save failure and GM activity controls', () => {
   test('ten distinct bound rays include the tenth in GM controls and passive zero-use guard', async () => {
     const { env, dragon, target, tokens, rays, newConfig, hooks } = tenRayFixture();
     const { dialogs, document } = panelHarness(env);
-    const options = { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig };
+    const options = { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig };
     const handle = await installEncounterAutomation(env, options);
     const panel: any = handle.showPanel(); await panel.ready;
     expect(dialogs[0].data.buttons).toHaveLength(2);
@@ -1187,7 +1185,7 @@ describe('closed save failure and GM activity controls', () => {
     expect(panel.element.querySelector('[data-lock-state]').textContent).toContain('Eye Ray 10：可用');
     await clickPanel(toggle);
     const playerHooks = new HookBus();
-    installPassiveActivityLockGuard({ game: { version: '14.368', system: { id: 'dnd5e', version: '5.3.3' } }, Hooks: playerHooks } as any);
+    installPassiveActivityLockGuard({ game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.6' } }, Hooks: playerHooks } as any);
     expect(playerHooks.call('dnd5e.preUseActivity', rays[9]!.system.activities[0])).toBe(false);
     expect(playerHooks.call('dnd5e.preUseActivity', rays[8]!.system.activities[0])).not.toBe(false);
     expect(hooks.call('dnd5e.preUseActivity', rays[9]!.system.activities[0], { targets: new Set([tokens[2]]) })).toBe(false);
@@ -1211,7 +1209,7 @@ describe('closed save failure and GM activity controls', () => {
     const first = makeSynthetic('first'), second = makeSynthetic('second');
     const firstToken = token('first', first.actor, 0, 0), secondToken = token('second', second.actor, 100, 0);
     tokens.splice(0, 1, firstToken, secondToken);
-    const options = { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig };
+    const options = { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig };
     let handle = await installEncounterAutomation(env, options);
     await handle.setActivityDisabled('eyes', firstToken, 'Eye Ray 10', true);
     expect(first.actor.flags[ENCOUNTER_AUTOMATION_FLAG_SCOPE][ENCOUNTER_AUTOMATION_FLAG_KEY].disabledActivities.eyes).toEqual([{ itemId: 'eye-ray-10', activityId: 'activity', itemName: 'Eye Ray 10' }]);
@@ -1246,7 +1244,7 @@ describe('closed save failure and GM activity controls', () => {
     }
     tokens.splice(0, 1, first, second);
     const { document } = panelHarness(env);
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     const panel: any = handle.showPanel(); await panel.ready;
     const source = panel.element.querySelector('[data-source]') as HTMLSelectElement;
     const ability = panel.element.querySelector('[data-lock-ability]') as HTMLSelectElement;
@@ -1287,7 +1285,7 @@ describe('closed save failure and GM activity controls', () => {
   test('panel keeps selection and focus during a pending lock write, then reports errors inline', async () => {
     const { env, dragon, newConfig } = eyeFixture();
     panelHarness(env);
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     const panel: any = handle.showPanel(); await panel.ready;
     const source = panel.element.querySelector('[data-source]') as HTMLSelectElement;
     const ability = panel.element.querySelector('[data-lock-ability]') as HTMLSelectElement;
@@ -1316,7 +1314,7 @@ describe('closed save failure and GM activity controls', () => {
     newConfig.rules.push({ id: 'manual-eye-rays', kind: 'gm-manual', actorKey: 'dragon', itemName: manual.name, parameters: {} });
     env.canvas.tokens.placeables = []; env.canvas.tokens.get = () => undefined;
     const { document } = panelHarness(env);
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     const panel: any = handle.showPanel(); await panel.ready;
     const source = panel.element.querySelector('[data-source]') as HTMLSelectElement;
     const toggle = panel.element.querySelector('[data-lock-toggle]') as HTMLButtonElement;
@@ -1347,7 +1345,7 @@ describe('closed save failure and GM activity controls', () => {
       { id: 'crystal-guide', kind: 'gm-manual', actorKey: 'crystal', itemName: 'Moonstone Spikes', parameters: {} },
     ] };
     const { document } = panelHarness(env);
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: manualConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: manualConfig });
     const panel: any = handle.showPanel(); await panel.ready;
     const source = panel.element.querySelector('[data-source]') as HTMLSelectElement;
     const manual = panel.element.querySelector('[data-manual-rule]') as HTMLSelectElement;
@@ -1371,7 +1369,7 @@ describe('closed save failure and GM activity controls', () => {
     (manual as any).sheet = { render: async (options: any) => { expect(options).toEqual({ force: true }); opened++; } };
     newConfig.rules.push({ id: 'manual-eye-rays', kind: 'gm-manual', actorKey: 'dragon', itemName: manual.name, parameters: {} });
     const { dialogs } = panelHarness(env);
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     const panel: any = handle.showPanel(); await panel.ready;
     expect(dialogs[0].data.content).toContain('GM 裁定');
     expect(dialogs[0].data.content).toContain('不会自动执行');
@@ -1385,7 +1383,7 @@ describe('closed save failure and GM activity controls', () => {
   });
   test('lock list and GM manual rule reject unbound, duplicate, missing, or unauthorized data', async () => {
     const { env, dragon, newConfig, rays } = tenRayFixture();
-    const options = { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig };
+    const options = { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig };
     const lock = newConfig.rules.find((rule) => rule.id === 'eyes')!;
     const names = rays.map((ray) => ray.name);
     for (const invalid of [[], [names[0], names[0]], Array.from({ length: 21 }, (_, index) => `Distinct Ray ${index + 1}`)]) {
@@ -1422,7 +1420,7 @@ describe('closed save failure and GM activity controls', () => {
     const first = makeSynthetic('eye1'), second = makeSynthetic('eye2');
     const firstToken = token('eye1', first.actor, 0, 0), secondToken = token('eye2', second.actor, 100, 0);
     tokens.splice(0, 1, firstToken, secondToken);
-    const options = { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig };
+    const options = { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig };
     let handle = await installEncounterAutomation(env, options);
     await handle.setActivityDisabled('eyes', firstToken, 'Glacial Ray', true);
     expect(first.actor.flags[ENCOUNTER_AUTOMATION_FLAG_SCOPE][ENCOUNTER_AUTOMATION_FLAG_KEY].disabledActivities.eyes).toEqual([{ itemId: 'glacial-item', activityId: 'activity', itemName: 'Glacial Ray' }]);
@@ -1440,7 +1438,7 @@ describe('closed save failure and GM activity controls', () => {
     tokens.push(secondToken);
     combat.combatants.splice(1, 0, { id: 'c-second-eye', tokenId: 'second-eye' });
     combat.turns = combat.combatants;
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     target.saves.push(14, 14);
     await handle.executeSaveFailureEffect('strobe', tokens[0], tokens[2]);
     await handle.executeSaveFailureEffect('strobe', secondToken, tokens[2]);
@@ -1464,7 +1462,7 @@ describe('closed save failure and GM activity controls', () => {
   test('queued healing removes only groups present at the healing event', async () => {
     const { env, dragon, target, tokens, hooks, combat, newConfig } = eyeFixture();
     newConfig.legendaryRecovery = [{ actorKey: 'dragon', max: 3, when: 'own-turn-start' }];
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     target.saves.push(10, 10);
     await handle.executeSaveFailureEffect('rend', tokens[0], tokens[2]);
     combat.turn = 2; combat.combatant = combat.combatants[2]; hooks.call('updateCombat', combat); await handle.settle();
@@ -1481,12 +1479,31 @@ describe('closed save failure and GM activity controls', () => {
     expect(target.effects.filter((effect) => effect.statuses.has('fvtt-custom-conditions.enfeebled'))).toHaveLength(1);
     expect(target.effects.filter((effect) => effect.statuses.has('fvtt-custom-conditions.clumsy'))).toHaveLength(1);
   });
+  test('a new-target activity lock preserves same-package legacy state without inheriting its disabled activities', async () => {
+    const { env, dragon, tokens, glacial, newConfig } = eyeFixture();
+    const target = { foundry: '14.369', system: 'dnd5e', systemVersion: '6.0.6', effectProfile: 'core' as const };
+    env.game.version = target.foundry; env.game.system.version = target.systemVersion;
+    dragon.flags[ENCOUNTER_AUTOMATION_FLAG_SCOPE].encounter.target = target;
+    const oldState = { packageId: 'crystal-package', packageHash: 'package-hash', disabledActivities: { eyes: [{ itemId: 'old-item', activityId: 'old-activity', itemName: 'Old Ray' }] } };
+    dragon.flags[ENCOUNTER_AUTOMATION_FLAG_SCOPE][ENCOUNTER_AUTOMATION_FLAG_KEY] = structuredClone(oldState);
+    const handle = await installEncounterAutomation(env, { target, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: { ...newConfig, rules: newConfig.rules.filter(rule => rule.kind === 'gm-activity-lock') } });
+    await handle.setActivityDisabled('eyes', tokens[0], 'Glacial Ray', true);
+    const states = dragon.flags[ENCOUNTER_AUTOMATION_FLAG_SCOPE][ENCOUNTER_AUTOMATION_FLAG_KEY].packages;
+    expect(states).toHaveLength(2);
+    expect(states.find((state: any) => !state.target)).toEqual(oldState);
+    expect(states.find((state: any) => state.target)?.disabledActivities).toEqual({ eyes: [{ itemId: glacial.id, activityId: glacial.system.activities[0].id, itemName: 'Glacial Ray' }] });
+    await handle.setActivityDisabled('eyes', tokens[0], 'Glacial Ray', false);
+    const after = dragon.flags[ENCOUNTER_AUTOMATION_FLAG_SCOPE][ENCOUNTER_AUTOMATION_FLAG_KEY].packages;
+    expect(after.find((state: any) => !state.target)).toEqual(oldState);
+    expect(after.find((state: any) => state.target)?.disabledActivities).toEqual({ eyes: [] });
+    handle.stop();
+  });
   test('player-side passive guard blocks an exact disabled Activity before any use', async () => {
     const { env, dragon, tokens, glacial, newConfig } = eyeFixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     await handle.setActivityDisabled('eyes', tokens[0], 'Glacial Ray', true);
     const playerHooks = new HookBus();
-    installPassiveActivityLockGuard({ game: { version: '14.368', system: { id: 'dnd5e', version: '5.3.3' } }, Hooks: playerHooks } as any);
+    installPassiveActivityLockGuard({ game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.6' } }, Hooks: playerHooks } as any);
     expect(playerHooks.call('dnd5e.preUseActivity', glacial.system.activities[0])).toBe(false);
     expect(glacial.uses).toBe(0);
     await handle.setActivityDisabled('eyes', tokens[0], 'Glacial Ray', false);
@@ -1497,9 +1514,9 @@ describe('closed save failure and GM activity controls', () => {
     const player = { id: 'player', isGM: false }, intruder = { id: 'intruder', isGM: false };
     env.game.users.get = (id: string) => ({ player, intruder } as any)[id];
     (target as any).testUserPermission = (user: any) => user === player;
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     const callerHooks = new HookBus();
-    installEncounterDamageBridge({ game: { version: '14.368', system: { id: 'dnd5e', version: '5.3.3' }, user: player, users: { activeGM: { id: 'gm-1' } } }, Hooks: callerHooks } as any);
+    installEncounterDamageBridge({ game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.6' }, user: player, users: { activeGM: { id: 'gm-1' } } }, Hooks: callerHooks } as any);
     target.system.attributes.hp.temp = 2;
     target.saves.push(10);
     await handle.executeSaveFailureEffect('paroxysm', tokens[0], tokens[2]);
@@ -1546,7 +1563,7 @@ describe('closed save failure and GM activity controls', () => {
   });
   test('manual removal of an owned native status clears claims without recreating the status', async () => {
     const { env, dragon, target, tokens, hooks, newConfig } = eyeFixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     target.saves.push(10);
     await handle.executeSaveFailureEffect('strobe', tokens[0], tokens[2]);
     const own = target.effects.find((effect) => effect.statuses.has('blinded'))!;
@@ -1557,7 +1574,7 @@ describe('closed save failure and GM activity controls', () => {
   });
   test('Actor HP recovery uses observed document values even when pre/post options differ', async () => {
     const { env, dragon, target, tokens, hooks, newConfig } = eyeFixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     target.system.attributes.hp.value = 40;
     target.saves.push(10);
     await handle.executeSaveFailureEffect('rend', tokens[0], tokens[2]);
@@ -1573,7 +1590,7 @@ describe('closed save failure and GM activity controls', () => {
   });
   test('a cancelled Actor update cannot clear paralysis even when dnd5e fires post-apply', async () => {
     const { env, dragon, target, tokens, hooks, newConfig } = eyeFixture();
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     target.system.attributes.hp.value = 10; target.system.attributes.hp.temp = 0;
     target.saves.push(10);
     await handle.executeSaveFailureEffect('paroxysm', tokens[0], tokens[2]);
@@ -1591,7 +1608,7 @@ describe('closed save failure and GM activity controls', () => {
   });
   test('controller reload seeds existing Rend target HP before its first recovery event', async () => {
     const { env, dragon, target, tokens, hooks, newConfig } = eyeFixture();
-    const options = { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig };
+    const options = { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig };
     target.system.attributes.hp.value = 40;
     let handle = await installEncounterAutomation(env, options);
     target.saves.push(10); await handle.executeSaveFailureEffect('rend', tokens[0], tokens[2]);
@@ -1604,7 +1621,7 @@ describe('closed save failure and GM activity controls', () => {
   test('zero-HP post-apply accepts only an unchanged native three-field update', async () => {
     const { env, dragon, target, tokens, hooks, newConfig } = eyeFixture();
     target.system.attributes.hp.value = 0; target.system.attributes.hp.temp = 0; target.system.attributes.hp.tempmax = 0;
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     target.saves.push(10); await handle.executeSaveFailureEffect('paroxysm', tokens[0], tokens[2]);
     const immune = {}, immuneUpdates = { 'system.attributes.hp.value': 0, 'system.attributes.hp.temp': 0, 'system.attributes.hp.tempmax': 0 };
     hooks.call('dnd5e.preApplyDamage', target, 0, immuneUpdates, immune);
@@ -1636,7 +1653,7 @@ describe('closed save failure and GM activity controls', () => {
   test('queued foreign-status deletion cannot recreate an expired native status claim', async () => {
     const { env, dragon, target, tokens, hooks, combat, newConfig } = eyeFixture();
     const foreign = new Effect({ statuses: ['blinded'] }); (foreign as any).parent = target; target.effects.push(foreign);
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     target.saves.push(10); await handle.executeSaveFailureEffect('strobe', tokens[0], tokens[2]);
     expect(target.effects).toContain(foreign);
     expect(target.effects.filter(effect => effect !== foreign && effect.statuses.has('blinded'))).toHaveLength(1);
@@ -1656,7 +1673,7 @@ describe('closed save failure and GM activity controls', () => {
   test('queued manual native removal clears only the claims present when the GM removed it', async () => {
     const { env, dragon, crystal, target, tokens, hooks, combat, newConfig } = eyeFixture();
     newConfig.legendaryRecovery = [{ actorKey: 'crystal', max: 0, when: 'own-turn-start' }];
-    const handle = await installEncounterAutomation(env, { packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: newConfig });
+    const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid, crystal: crystal.uuid }, config: newConfig });
     target.saves.push(10, 10);
     await handle.executeSaveFailureEffect('strobe', tokens[0], tokens[2]);
     const originalEffect = target.effects.find((effect) => effect.statuses.has('blinded'))!;

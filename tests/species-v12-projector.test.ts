@@ -122,11 +122,13 @@ describe('Species V12 static candidate projector', () => {
     expect(mutate((pkg) => { pkg.coverageLedger.find((entry: any) => entry.featureId === 'ogre-clumsiness' && entry.partId.endsWith('standing')).level = 5; })).toContain('MIXED_FEATURE_GRANT_LEVEL');
   });
 
-  test('preserves the complete established V14 Ogre projection and cross-target document identities', () => {
+  test('preserves historical and current cross-target document identities', () => {
     const expected = JSON.parse(readFileSync(resolve('obsidian/dnd数据转fvttjson/output/species/ogre.json'), 'utf8'));
     const v14 = compileSpeciesMarkdownV14(ogreMarkdown);
     const v12 = compileSpeciesMarkdown(ogreMarkdown, { fvttVersion: '12' });
-    expect(v14).toEqual(expected);
+    expect(v14.target).toEqual({ foundry: '14.370', dnd5e: '6.0.6', effectProfile: 'core', rules: '2024' });
+    expect(v14.logicalHash).not.toBe(expected.logicalHash);
+    expect([v14.species._id, ...v14.features.map((item) => item._id)]).toEqual([expected.species._id, ...expected.features.map((item: any) => item._id)]);
     expect([v12.species._id, ...v12.features.map((item) => item._id)].sort()).toEqual([v14.species._id, ...v14.features.map((item) => item._id)].sort());
     expect(v12.species.system.advancement.flatMap((entry: any) => entry.configuration?.items?.map((item: any) => item.uuid) ?? []).sort())
       .toEqual(v14.species.system.advancement.flatMap((entry: any) => entry.configuration?.items?.map((item: any) => item.uuid) ?? []).sort());

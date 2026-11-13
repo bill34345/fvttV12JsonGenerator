@@ -4,6 +4,7 @@ import { runTestProcess } from './helpers/subprocess';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { IconReviewReport } from '../src/core/icons/types';
+import { getFoundryTarget } from '@fvtt-json-generator/generation/target';
 
 const CLI = resolve(process.cwd(), 'src/index.ts');
 const NIGHTGAUNT = resolve(
@@ -43,7 +44,7 @@ describe('CLI v14 safe icon mode', () => {
       const report = JSON.parse(readFileSync(reportPath, 'utf-8')) as IconReviewReport;
       const flyby = actor.items.find((item) => item.name.includes('Flyby'));
 
-      expect(actor._stats).toMatchObject({ coreVersion: '14.364', systemVersion: '5.3.3' });
+      expect(actor._stats).toMatchObject(getFoundryTarget('14').stats);
       expect(flyby?.img).toBe('icons/creatures/abilities/wings-birdlike-blue.webp');
       expect(actor.items.every((item) =>
         !['icons/svg/mystery-man.svg', 'icons/svg/sword.svg', 'icons/svg/item-bag.svg'].includes(item.img)))

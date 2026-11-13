@@ -31,7 +31,7 @@ async function preparedCase(name:string,description:string,conditions:any[]){
   const rules=automation.rules.map((rule,i)=>({...rule,mechanicId:`encounter-rule-${i+1}`,capabilityKind:automation.selection!.rules[i]!.kind}));
   const finalSource=renderEncounterActorSource(ir,rules,source);
   const covers=[...rules.map(rule=>({actorKey:'actor-1',mechanicId:rule.mechanicId})),...encounterStagedConditionRequirements(ir,source).map(rule=>({actorKey:'actor-1',mechanicId:rule.mechanicId})),...encounterManualConditionRequirements(ir,rules).map(rule=>({actorKey:'actor-1',mechanicId:rule.mechanicId}))];
-  const bundle:any={schema:'fvtt-json-forge-encounter',version:1,id:'gm-manual-test',label:'GM adjudication',target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},primaryActorKey:'actor-1',
+  const bundle:any={schema:'fvtt-json-forge-encounter',version:1,id:'gm-manual-test',label:'GM adjudication',target:{foundry:'14.370',system:'dnd5e',systemVersion:'6.0.6',effectProfile:'core'},primaryActorKey:'actor-1',
     actors:[{key:'actor-1',label:'Source actor',source:finalSource,sourceHash:hashSource(finalSource)}],macros:[{key:'control',name:automation.name,command:automation.command,commandHash:hashSource(automation.command),bindings:{'actor-1':'actor-1'},covers,notes:automation.notes}],assets:[]};
   const prepared=await prepareForgeEncounter(serializeForgeEncounterPackage(bundle));
   return {source,ir,index,finalSource,bundle,prepared};

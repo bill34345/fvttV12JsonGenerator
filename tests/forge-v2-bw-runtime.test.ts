@@ -45,7 +45,7 @@ describe('explicit legacy base/whole-form extraction and correction compatibilit
 test('base + ONE whole form and current full-IR replay retain the formal Actor',async()=>fixture(async({provider,requests,stages,sink})=>{
   const fixed={providerName:provider.providerName,extractionModel:provider.extractionModel,reviewModel:provider.reviewModel,
     discover:async()=>({schemaVersion:1 as const,candidates:[candidate]}),extract:provider.extract.bind(provider),review:provider.review.bind(provider),repair:provider.repair.bind(provider)};
-  const input={source,sourceName:'Needle',requestId:'bw-browser-chain',fvttVersion:'14.364',systemVersion:'5.3.3'};
+  const input={source,sourceName:'Needle',requestId:'bw-browser-chain',fvttVersion:'14.370',systemVersion:'6.0.6'};
   const analysis=await analyzeBrowserActorSourceWithAi(input,fixed);
   expect(analysis.findings).toEqual([]);
   expect(analysis.status).toBe('ready_to_generate');
@@ -55,7 +55,7 @@ test('base + ONE whole form and current full-IR replay retain the formal Actor',
   expect(requests).toHaveLength(2);expect(sink).toHaveLength(2);
   expect(stages.filter(s=>s.status==='request').map(s=>[s.stage,s.unitId])).toEqual([['base',plan.base.id],['feature','all']]);
   expect(stages.at(-1)).toMatchObject({stage:'assembly',plannedCalls:2,retryCalls:0,status:'validated'});
-  const bundle={schema:'fvtt-json-forge-encounter',version:1,id:'bw-browser-chain',label:'Needle',target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'},
+  const bundle={schema:'fvtt-json-forge-encounter',version:1,id:'bw-browser-chain',label:'Needle',target:{foundry:'14.370',system:'dnd5e',systemVersion:'6.0.6',effectProfile:'core'},
     primaryActorKey:'main',actors:[{key:'main',label:'Needle',source:generation.markdown,sourceHash:hashSource(generation.markdown!)}],macros:[],assets:[]};
   const prepared=await prepareForgeEncounter(JSON.stringify(bundle));expect(prepared.actors).toHaveLength(1);
   await assertDefaultFullIrReplay(source,analysis.ir!,{actor:generation.actorProjection,markdown:generation.markdown!});
@@ -79,7 +79,7 @@ test('browser diagnostics expose independently blocked features and filter priva
   ]}});
   const fixed={providerName:provider.providerName,extractionModel:provider.extractionModel,reviewModel:provider.reviewModel,
     discover:async()=>({schemaVersion:1 as const,candidates:[candidate]}),extract:async()=>{throw error;},review:provider.review.bind(provider),repair:provider.repair.bind(provider)};
-  const result=await analyzeBrowserActorSourceWithAi({source,sourceName:'diagnostic fixture',requestId:'diagnostic-batch',fvttVersion:'14.364',systemVersion:'5.3.3'},fixed);
+  const result=await analyzeBrowserActorSourceWithAi({source,sourceName:'diagnostic fixture',requestId:'diagnostic-batch',fvttVersion:'14.370',systemVersion:'6.0.6'},fixed);
   expect(result.status).toBe('failed');expect(result.ir).toBeUndefined();expect(result.findings).toHaveLength(2);
   expect(result.findings[1]).toMatchObject({code:'V2_TARGET_OMITTED',path:'/features/unit-2/target',blocking:true});
   expect(JSON.stringify(result)).not.toContain('private');expect(Object.isFrozen(error.stagedDiagnostic?.related)).toBe(true);
@@ -96,7 +96,7 @@ test('source-proven self radius stays Self through the browser workflow instead 
   const text=damageUpgrade.case.units[0]!.text+`Actions\nRing. Each creature within 15 feet of the ${actorName} must make a DC 12 Wisdom saving throw, taking 7 (2d6) psychic damage on a failed save, or half as much damage on a successful one.\n`;
   await fixture(async({provider})=>{
     const ir=await provider.extract({source:text,sourceSha256:hashSource(text),candidate:{id:'ring',label:'Ring',start:0,end:text.length,quote:text}});
-    const input={source:text,sourceName:'Ring',requestId:'bw-self-radius',fvttVersion:'14.364',systemVersion:'5.3.3'};
+    const input={source:text,sourceName:'Ring',requestId:'bw-self-radius',fvttVersion:'14.370',systemVersion:'6.0.6'};
     const analysis=analyzeBrowserActorIntakeDraft(input,ir,provider);
     expect(analysis.status).toBe('ready_to_generate');
     const generated=await generateBrowserActorIntakeCandidate(input,analysis,provider);
@@ -126,7 +126,7 @@ test('source-bound actual-damage recovery retains native damage and full GM cons
     const action=ir.creature.actions![0]!;
     expect(action.manualRemainder).toContain('regains hit points equal to that amount');
     expect(action.healing).toBeUndefined();expect(action.sourceOperations?.map(o=>o.type)).toEqual(['attack']);
-    const input={source:text,sourceName:'Drain',requestId:'bw-dynamic-literal',fvttVersion:'14.364',systemVersion:'5.3.3'};
+    const input={source:text,sourceName:'Drain',requestId:'bw-dynamic-literal',fvttVersion:'14.370',systemVersion:'6.0.6'};
     const analysis=analyzeBrowserActorIntakeDraft(input,ir,provider);expect(analysis.status).toBe('ready_to_generate');
     const generated=await generateBrowserActorIntakeCandidate(input,analysis,provider);
     expect(generated.status).toBe('ready_for_gm_review');expect(generated.intakeVerificationStatus).toBe('accepted');
@@ -151,7 +151,7 @@ for(const shape of [
   await fixture(async({provider})=>{
     const ir=await provider.extract(request),op=ir.creature.actions![0]!.sourceOperations![0]!;
     expect(op.damage).toHaveLength(1);expect(op.damageAdjustment).toMatchObject({multiplier:0.5,condition:'source-actor-bloodied',actor:'the '+name});
-    const input={source:text,sourceName:'Neutral',requestId:'neutral-'+shape.type,fvttVersion:'14.364',systemVersion:'5.3.3'};
+    const input={source:text,sourceName:'Neutral',requestId:'neutral-'+shape.type,fvttVersion:'14.370',systemVersion:'6.0.6'};
     const analysis=analyzeBrowserActorIntakeDraft(input,ir,provider);expect(analysis.status).toBe('ready_to_generate');
     const generated=await generateBrowserActorIntakeCandidate(input,analysis,provider);expect(generated.status).toBe('ready_for_gm_review');
     const actor=generated.actorProjection as any,items=actor.items.filter((i:any)=>i.flags?.fvttJsonGenerator?.manualRule?.sourceOperations),activities=items.flatMap((i:any)=>Object.values<any>(i.system.activities));
@@ -165,7 +165,7 @@ for(const shape of [
     if(neutral){
       const roll=activities.find((a:any)=>a.type==='utility')!;
       expect(roll.roll).toEqual({formula:'1d20+6',name:'GM辅助攻击检定',prompt:true,visible:false});
-      expect(roll.attack).toBeUndefined();expect(roll.range.value).toBe(shape.range??shape.reach);
+      expect(roll.attack).toBeUndefined();expect(roll.range.value).toBe(String(shape.range??shape.reach));
       expect(damage.activation.type).toBe('special');expect(damage.consumption.targets).toEqual([]);
       expect(roll.target.affects.type).toBe(shape.target==='one object'?'object':shape.target==='one creature'?'creature':'any');
       if('uses'in shape){expect(roll.consumption.targets).toHaveLength(1);expect(roll.consumption.targets[0].value).toBe('1');expect(items[0].system.uses.max).toBe('2');}
@@ -240,7 +240,7 @@ function correctionWhole(payload:any){
     伤害:[{公式:'1d8+3',伤害类型:'piercing',生效条件:null,倍率:1,成功时倍率:null}]});
   return {markdown:yaml.dump(form,{noRefs:true,lineWidth:-1})};
 }
-const correctionInput={source,sourceName:'Needle',requestId:'pre-ir-correction',fvttVersion:'14.364',systemVersion:'5.3.3'};
+const correctionInput={source,sourceName:'Needle',requestId:'pre-ir-correction',fvttVersion:'14.370',systemVersion:'6.0.6'};
 
 test('one malformed base correction retains the reply and source, then passes only the original whole stage',async()=>correctionFixture(
   (stage,attempt,payload)=>stage==='base'&&attempt===1?{schemaVersion:1,creature:{},uncertainties:[]}:stage==='base'?correctionBase():correctionWhole(payload),

@@ -100,7 +100,8 @@ describe('generic structured lifecycle regressions', () => {
         expect(activity.range?.value).not.toBe(5);
         const effects = item.effects.filter((effect: any) => effect.statuses.includes(status));
         expect(effects).toHaveLength(1);
-        expect(effects[0].duration).toMatchObject(duration);
+        expect(effects[0].duration).toMatchObject(fvttVersion==='14'
+          ?{value:duration.seconds??duration.rounds,units:duration.seconds===null?'rounds':'seconds'}:duration);
         expect(effects[0].flags.fvttJsonGenerator.sourceDerivedEmbeddedEffect).toBe(true);
         if (fvttVersion === '14' && status === 'frightened') {
           expect(effects[0].flags.fvttJsonGenerator.conditionLifecycle).toMatchObject({ version: 1, mode: 'gm', statuses: [status] });

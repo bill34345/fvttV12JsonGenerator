@@ -13,7 +13,7 @@ import {expectSourceConditionEffects,withoutApprovedConditionEffects,expectFroze
 
 const noCall=async():Promise<never>=>{throw Error('Model requests are forbidden');};
 const provider={providerName:'frozen',extractionModel:'frozen',reviewModel:'disabled',discover:noCall,extract:noCall,repair:noCall,review:noCall};
-const input={source:LURKER_SOURCE,sourceName:'preserved candidate',requestId:'preservation-regression',sourceId:'actor:v1:362fd104-ae9b-48ba-b057-c9fbe4789d87' as ForgeSourceId,fvttVersion:'14.368',systemVersion:'5.3.3'};
+const input={source:LURKER_SOURCE,sourceName:'preserved candidate',requestId:'preservation-regression',sourceId:'actor:v1:362fd104-ae9b-48ba-b057-c9fbe4789d87' as ForgeSourceId,fvttVersion:'14.368',systemVersion:'6.0.6'};
 const analyze=(current=input)=>analyzeBrowserActorIntakeDraft(current,buildValidLurkerIr(),provider);
 
 test('the former delivery fallback preserves every original field even for invalid operations and literal=true callers',()=>{
@@ -51,7 +51,7 @@ test('new projection findings remain outside the Actor and do not cause a second
   const current={...input,renderMarkdown:(ir:any)=>{renders++;return renderMonsterIntakeMarkdown(ir).replace(/护甲等级: \d+/u,'护甲等级: 99');}};
   const analysis=analyze(current),before=structuredClone(analysis.ir);
   const result=await generateBrowserActorIntakeCandidate(current,analysis,provider);
-  expect(result.candidateAvailable).toBe(true);expect((result.actorProjection as any).system.attributes.ac.flat).toBe(99);
+  expect(result.candidateAvailable).toBe(true);expect((result.actorProjection as any).system.attributes.ac.override).toBe(99);
   expect(result.findings.some(f=>f.code==='ACTOR_AC_DRIFT')).toBe(true);expect(result.intakeVerificationStatus).toBe('needs_review');
   expect(renders).toBe(1);expect(result.finalSource).not.toContain('ACTOR_AC_DRIFT');expect(result.analysis.ir).toEqual(before);
   expect(approveBrowserActorIntakeCandidateForGm(current,result,'gm').candidateResponse).toEqual(result.candidateResponse);
@@ -113,7 +113,7 @@ for(const caseId of ['ankheg','roper','unicorn','spirit-naga'])test.skipIf(!froz
       const actual=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://offline.invalid/v1',apiKey:'fake-only',model:'frozen',reviewModel:'disabled',maxAttempts:1,timeoutMs:1000,repairTimeoutMs:1000,
         httpClient:async()=>{requests++;return new Response(JSON.stringify({choices:[{message:{content:rawReply}}]}));}});
       const current={source:prior.capture.source,sourceName:entry.name,sourceScope:'single' as const,
-        requestId:prior.capture.generation?.candidateResponse?.requestId??`forge-current-${entry.id}`,sourceId:identities[entry.id],fvttVersion:'14.368',systemVersion:'5.3.3'};
+        requestId:prior.capture.generation?.candidateResponse?.requestId??`forge-current-${entry.id}`,sourceId:identities[entry.id],fvttVersion:'14.368',systemVersion:'6.0.6'};
       const analysis=await analyzeBrowserActorSourceWithAi(current,actual),rawBefore=JSON.stringify(prior.capture.analysis.ir);
       const generated=await generateBrowserActorIntakeCandidate(current,analysis,actual);
       const old=read(`${frozenRoot}/continuation-1/${entry.id}/candidate.json`);

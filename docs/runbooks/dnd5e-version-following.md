@@ -2,13 +2,11 @@
 
 ## 选择版本线
 
-- **5.x 固定线**：开发与验收固定 dnd5e 5.3.3，不因 6.x 更新而升级 Mirror。5.3.3 当前也是官方最新稳定 5.x；若官方以后补发 5.x，先单独核对，不自动跨系列。
-- **6.x 跟随线**：ServerNext 使用官方最新稳定 6.x，不把某个补丁版本设为永久上限。排除 draft、prerelease、master／开发分支及 7.x。
-- V12 逐步弃用是已确定方向；本次不删除兼容代码或改变 CLI／Web 默认选择。正式生成器的现有 5.3.3 projector／来源验收不自动等于支持所有 6.x。
+默认生成目标为 Core 14.370／dnd5e 6.0.6；显式 v12／v13 兼容继续保留。普通生成无需连接 Foundry。历史 5.3.3 产物和验收保留其版本身份；不要把旧记录当成 6.x 验收。见[生成与 Forge 兼容范围](../acceptance/2026-11-13-native-dnd5e6.md)。
 
 ## 开工时的最短流程
 
-1. 任务先写清 5.x 或 6.x、目标实例及行为出口。5.x 的目标就是 5.3.3；6.x 从[官方发布 API](https://api.github.com/repos/foundryvtt/dnd5e/releases?per_page=100)选最新非 draft、非 prerelease 的 `release-6.*`，按版本号比较。这里的“最新”来自官方发布，不来自 Context7 排序。
+1. 先写清目标版本与行为出口。比较后续稳定 6.x 时，从[官方发布 API](https://api.github.com/repos/foundryvtt/dnd5e/releases?per_page=100)选最新非 draft、非 prerelease 的 `release-6.*`，按版本号比较。这里的“最新”来自官方发布，不来自 Context7 排序。
 2. 读取对应本地 `system.json`，涉及运行任务还核对正常客户端的实际版本、Core、world、dataPath、端口／PID和服务共用情况。不能拿源码缓存版本当作已安装版本。
 3. 以确定后的精确目标查询 Context7：5.x 写 `release-5.3.3`；6.x 写本次官方稳定 tag，例如 `release-6.0.5`，同时限定单一接口问题。结果必须检查引用来源；如果仍是 Wiki、master、6.0.x 或其他版本，只作为导航，回到目标 tag／提交的本地源码确认。
 4. Next 系统落后时，在本 thread 已明确的本地 6.x 跟随授权内，先完成系统更新和针对性验收，再开始依赖该版本的新开发。不因“文档较新”直接更新系统；先核官方稳定发布、Core 要求、当前已启用模块全集的 manifest 范围、代码版本门／本地适配及真实服务归属；不能仅抽查几个关键模块。
@@ -19,7 +17,7 @@
 
 共享源码缓存由 `FVTT_REFERENCE_CACHE_ROOT` 定位，本机配置为 `F:/FoundryLab/reference-cache`；不同 worktree 复用同一套版本化资料，不各下载完整手册。
 
-- 5.3.3：`dnd5e/5.3.3/repo`，由 `dnd5e-5.3.3` 清单登记。
+- 5.3.3 为历史来源，不随当前 reference manifest 获取。
 - 当前官方稳定 6.x 的已取得源码：`dnd5e/6.0.6/repo`（2026-10-12取得），由 `dnd5e-current-6` 清单登记精确提交 `87e94dbd9f930135e0694cd7e7d49f210603cd2c`。取得资料不表示Next已更新；本批取得时Next仍6.0.5，模块兼容前置和运行接受见本批预检记录。下一次升级同时更新该条目的 revision／target，而非永久固定补丁版本。
 - `references/dnd5e-6-current/system.json` 是对应官方发布清单，说明取得的目标，不证明 Next 已完成安装。
 - 本机旧 Foundry API 镜像 `14.361` 仅作导航；精确 Core 行为核对实际安装源码及发布说明。

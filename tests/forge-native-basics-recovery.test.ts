@@ -217,7 +217,7 @@ describe('saved Cloaker basic actions survive complete GM rules',()=>{
     expect(f.damage).toEqual([{formula,type:'slashing',relationship:'base'},{formula:'1d6',type:'cold',types:['cold','fire'],relationship:'additional'}]);expect(f.save).toBeUndefined();
     const item=actor.items.find((i:any)=>i.name.includes('Soul Blade'));expect(item.effects.map((e:any)=>e.statuses)).toEqual([['dead']]);expect(item.system.range).toMatchObject({reach:10,value:90,units:'ft'});
     const all=Object.values(item.system.activities) as any[],activities=all.filter(a=>a.type==='attack');expect(all.map(a=>a.type).sort()).toEqual(['attack','attack','save']);
-    expect(activities.map(a=>a.attack.type.value).sort()).toEqual(['melee','ranged']);expect(activities.find(a=>a.attack.type.value==='ranged').range).toMatchObject({value:90,units:'ft',override:true});
+    expect(activities.map(a=>a.attack.type.value).sort()).toEqual(['melee','ranged']);expect(activities.find(a=>a.attack.type.value==='ranged').range).toMatchObject({value:'90',units:'ft',override:true});
     for(const activity of activities){expect(activity.damage.parts.filter((p:any)=>p.number===1&&p.denomination===6)).toHaveLength(1);expect(activity.damage.parts.find((p:any)=>p.number===1&&p.denomination===6).types).toEqual(['cold','fire']);}
     expect(item.system.description.value).toContain('生命值降至0');expect(item.system.description.value).toContain('体质豁免：DC16');
     for(const mutate of [

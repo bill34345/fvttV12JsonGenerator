@@ -29,7 +29,7 @@ function actorProvider(){
 }
 describe('Forge AI content review stays disabled',()=>{
   test('Actor extraction/local generation/GM confirmation work through both generation entries with zero review',async()=>{
-    const {provider,calls}=actorProvider(),input={source:LURKER_SOURCE,sourceName:'Lurker',sourceScope:'single' as const,requestId:'review-disabled-actor',fvttVersion:'14.368',systemVersion:'5.3.3'};
+    const {provider,calls}=actorProvider(),input={source:LURKER_SOURCE,sourceName:'Lurker',sourceScope:'single' as const,requestId:'review-disabled-actor',fvttVersion:'14.368',systemVersion:'6.0.6'};
     const analysis=await analyzeBrowserActorSourceWithAi(input,provider);expect(calls.extract).toBe(1);
     for(const generate of [generateBrowserActorIntakeCandidate,generateAndReviewBrowserActorIntake]){
       const candidate=await generate(input,analysis,provider);expect(candidate.status).toBe('ready_for_gm_review');
@@ -45,14 +45,14 @@ describe('Forge AI content review stays disabled',()=>{
     }expect(calls.review).toBe(0);expect(calls.repair).toBe(0);
   });
   test('structural/AI extraction repair remains a separate explicit operation',async()=>{
-    const {provider,calls}=actorProvider(),input={source:LURKER_SOURCE,sourceName:'Lurker',sourceScope:'single' as const,requestId:'review-disabled-structural-repair',fvttVersion:'14.368',systemVersion:'5.3.3'};
+    const {provider,calls}=actorProvider(),input={source:LURKER_SOURCE,sourceName:'Lurker',sourceScope:'single' as const,requestId:'review-disabled-structural-repair',fvttVersion:'14.368',systemVersion:'6.0.6'};
     const ir=buildValidLurkerIr();ir.creature.abilities.str='bad' as any;
     const analysis=analyzeBrowserActorIntakeDraft(input,ir,provider);expect(analysis.status).toBe('needs_review');
     const repaired=await repairBrowserActorIntake(input,analysis,provider);expect(repaired.status).toBe('ready_to_generate');
     expect(calls.repair).toBe(1);expect(calls.review).toBe(0);expect(repaired.calls.review).toBe(0);
   });
   test('Item generation keeps strict local checks and GM confirmation without automatic or explicit review',async()=>{
-    const source=JEWEL_OF_THREE_PRAYERS_SOURCE,input={source,sourceName:'Jewel',requestId:'review-disabled-item',fvttVersion:'14.368',systemVersion:'5.3.3'};
+    const source=JEWEL_OF_THREE_PRAYERS_SOURCE,input={source,sourceName:'Jewel',requestId:'review-disabled-item',fvttVersion:'14.368',systemVersion:'6.0.6'};
     let reviews=0,extracts=0,repairs=0;const provider={providerName:'offline',extractionModel:'offline',reviewModel:'offline',
       discover:async()=>({schemaVersion:1 as const,candidates:[jewelCandidate()]}),extract:async()=>{extracts++;return buildJewelOfThreePrayersIr();},
       review:async():Promise<never>=>{reviews++;throw Error('Review must stay disabled');},repair:async(request:any)=>{repairs++;return request.ir;}};
@@ -116,7 +116,7 @@ describe('Forge AI content review stays disabled',()=>{
     }
     const connection=readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-connection.hbs','utf8');
     expect(connection).toContain(DISABLED);expect(connection).not.toContain('AI审核当前候选');
-    let called=0;const infos:string[]=[],game:any={version:'14.368',system:{id:'dnd5e',version:'5.3.3'},world:{id:'review-disabled'},user:{id:'gm',isGM:true}};
+    let called=0;const infos:string[]=[],game:any={version:'14.368',system:{id:'dnd5e',version:'6.0.6'},world:{id:'review-disabled'},user:{id:'gm',isGM:true}};
     class Base{render(){return this;}async close(){return this;}}
     const foundry:any={applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}};
     const Intake=createForgeIntakeApplicationClass({game,foundry,ui:{notifications:{info:(message:string)=>infos.push(message)}},services:{reviewBrowserActorIntakeCandidate:async()=>{called++;throw Error('No injected review');}}} as any);

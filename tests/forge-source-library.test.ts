@@ -244,7 +244,7 @@ function acceptedReview(requestId: string, attemptId: string, rawSource: string,
     repairCount: 0,
     canonicalSource,
     sourceIdentity: { sourceId, finalSourceHash: hashSource(canonicalSource) },
-    target: { generatorVersion: '0.1.0', fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3', generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' },
+    target: { generatorVersion: '0.1.0', fvttVersion: '14.370', systemId: 'dnd5e', systemVersion: '6.0.6', generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' },
     candidateResponse: { requestId, status: 'accepted', artifactHash: hashSource(`artifact:${requestId}`), verificationStatus: 'accepted', diagnostics: [] },
     history: [],
   })));

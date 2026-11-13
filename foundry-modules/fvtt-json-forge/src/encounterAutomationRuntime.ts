@@ -1,3 +1,4 @@
+import { isForgeRuntimeTargetSupported,isForgeAutomationTargetCompatible } from './mirror-core-compatibility';
 import { decodeStatusLifecycleParameters, NATIVE_LIFECYCLE_STATUSES, type StatusLifecycleParameters } from '@fvtt-json-generator/contracts/status-lifecycle';
 import { configuredConditionFingerprint } from '@fvtt-json-generator/contracts/configured-conditions';
 import { configuredConditionsApi } from './configuredConditions';
@@ -5,7 +6,7 @@ import { installStatusLifecycles, type StatusLifecycleRule } from './statusLifec
 import { ensureNativeStatusRiders } from './nativeStatusRiders';
 
 /**
- * Fixed, data-only encounter automation for Foundry 14.364 / dnd5e 5.3.3.
+ * Fixed, data-only encounter automation for Core 14 / dnd5e 6.
  *
  * This is deliberately not a macro interpreter. The package compiler can
  * select one of the rule kinds below and provide its small parameter object;
@@ -25,12 +26,12 @@ const committedDamageOptions = new WeakMap<object, { actor: object; amount: numb
 /** Pure read-only guard registered on every client so a player cannot use a GM-disabled Activity. */
 export function installPassiveActivityLockGuard(env: EncounterAutomationEnvironment): void {
   if (!env?.game || passiveLockClients.has(env.game) || !env.Hooks?.on) return;
-  if (!['14.364', '14.368'].includes(env.game.version) || env.game.system?.id !== 'dnd5e' || env.game.system?.version !== '5.3.3') return;
+  if (!isForgeRuntimeTargetSupported(env.game.version,env.game.system?.version) || env.game.system?.id !== 'dnd5e') return;
   passiveLockClients.add(env.game);
   env.Hooks.on('dnd5e.preUseActivity', (activity: any) => {
     const actor = activity?.item?.actor ?? activity?.actor;
     const identity = actor?.flags?.[ENCOUNTER_AUTOMATION_FLAG_SCOPE]?.encounter;
-    const state = automationStates(actor).find(entry => entry.packageId === identity?.packageId && entry.packageHash === identity?.packageHash);
+    const state = automationStates(actor).find(entry => currentAutomationTarget(env,entry) && entry.packageId === identity?.packageId && entry.packageHash === identity?.packageHash);
     if (identity?.version !== 1 || identity?.kind !== 'Actor' || state?.packageId !== identity.packageId || state?.packageHash !== identity.packageHash) return;
     const entries = Object.values(state.disabledActivities ?? {}).flat();
     if (entries.some((entry: any) => entry?.itemId === activity.item?.id && entry?.activityId === activity.id)) return false;
@@ -40,7 +41,7 @@ export function installPassiveActivityLockGuard(env: EncounterAutomationEnvironm
 /** Runs on every client. Post-apply records a bounded Actor document fact for the active GM. */
 export function installEncounterDamageBridge(env: EncounterAutomationEnvironment): void {
   if (!env?.game || damageBridgeClients.has(env.game) || !env.Hooks?.on) return;
-  if (!['14.364', '14.368'].includes(env.game.version) || env.game.system?.id !== 'dnd5e' || env.game.system?.version !== '5.3.3') return;
+  if (!isForgeRuntimeTargetSupported(env.game.version,env.game.system?.version) || env.game.system?.id !== 'dnd5e') return;
   damageBridgeClients.add(env.game);
   type DamageIntent = { actor: any; hp: number; temp: number; tempMax: number; expectedHp: number; expectedTemp: number; expectedTempMax: number; updates: any; committed: boolean; stamp?: string; stampedGroups?: string[] };
   const before = new WeakMap<object, DamageIntent>();
@@ -49,9 +50,10 @@ export function installEncounterDamageBridge(env: EncounterAutomationEnvironment
   const stampPath = `flags.${ENCOUNTER_AUTOMATION_FLAG_SCOPE}.encounterDamageStamp`;
   const damageGroups = (actor: any): string[] => {
     const groups = new Set<string>();
-    for (const owner of automationStates(actor)) for (const claims of Object.values(owner?.fixedNativeClaims ?? {}) as any[]) for (const claim of claims ?? []) if (claim?.removeOnDamage && typeof claim.groupId === 'string') groups.add(claim.groupId);
+    for (const owner of automationStates(actor).filter(state=>currentAutomationTarget(env,state))) for (const claims of Object.values(owner?.fixedNativeClaims ?? {}) as any[]) for (const claim of claims ?? []) if (claim?.removeOnDamage && typeof claim.groupId === 'string') groups.add(claim.groupId);
     for (const effect of collectionValues(actor.effects)) {
-      const claim = effect?.flags?.[ENCOUNTER_AUTOMATION_FLAG_SCOPE]?.[ENCOUNTER_AUTOMATION_FLAG_KEY]?.fixedEffect;
+      const state = effect?.flags?.[ENCOUNTER_AUTOMATION_FLAG_SCOPE]?.[ENCOUNTER_AUTOMATION_FLAG_KEY];
+      const claim = currentAutomationTarget(env,state)?state?.fixedEffect:undefined;
       if (claim?.removeOnDamage && typeof claim.groupId === 'string') groups.add(claim.groupId);
     }
     return [...groups];
@@ -201,6 +203,7 @@ type ValidatedEncounterAutomationConfig = {
 type ValidatedInstallOptions = Omit<EncounterAutomationInstallOptions, 'config'> & { config: ValidatedEncounterAutomationConfig };
 
 export interface EncounterAutomationInstallOptions {
+  target?: { foundry:string; system:string; systemVersion:string; effectProfile:string };
   packageId: string;
   packageHash: string;
   bindings: Record<string, string>;
@@ -289,6 +292,8 @@ export async function installEncounterAutomation(
   recovery: { resumeExisting?: boolean } = {},
 ): Promise<EncounterAutomationHandle> {
   assertEnvironment(env);
+  if(!isForgeAutomationTargetCompatible(env.game,options.target))
+    throw new Error('旧版或缺少准确目标的控制器不会在新系统运行。');
   const normalized = validateInstallOptions(options);
   const signature = stableStringify(normalized);
   const byPackage = installations.get(env.game) ?? new Map();
@@ -968,6 +973,7 @@ export async function installEncounterAutomation(
           await ensureNativeStatusRiders({ actor: target.actor,
             primary: collectionValues(target.actor.effects).find((effect: any) => moduleOwnsNativeStatus(effect, status)),
             status, configurationFor: id => configuredStatusEffect(env.CONFIG?.statusEffects, id),
+            modifyBatch: entries => env.foundry.documents.modifyBatch(entries),
             dae: env.game.modules?.get?.('dae'), assertLive, record: addHistory });
           await setState(target.actor, { ...(stateFor(target.actor) ?? packageState({})), fixedNativeClaims: {
             ...nativeClaims(target.actor), [status]: [...(nativeClaims(target.actor)[status] ?? []).filter((entry: any) => entry.groupId !== claim.groupId), claim],
@@ -1079,7 +1085,7 @@ export async function installEncounterAutomation(
     if (!observation || observation.actor !== actor || observation.amount !== amount || consumedDamageObservations.has(observation)) return;
     consumedDamageObservations.add(observation);
     // The bridge requires an observed updateActor before trusting this post
-    // hook: dnd5e 5.3.3 ignores Actor.update's cancellation return value.
+    // hook: dnd5e 6.0.6 ignores Actor.update's cancellation return value.
     if (amount > 0) queueGroupRemoval(actor, ownedGroups(actor, (state) => state.removeOnDamage), 'fixed-effect-removed-by-damage');
   });
   register('updateActor', (actor: any, changes: any, _options: any, userId: string) => {
@@ -1228,10 +1234,10 @@ export async function installEncounterAutomation(
   return handle;
 
   function packageState(value: Record<string, any>): Record<string, any> {
-    return { packageId: normalized.packageId, packageHash: normalized.packageHash, ...value };
+    return { ...(normalized.target?{target:normalized.target}:{}), packageId: normalized.packageId, packageHash: normalized.packageHash, ...value };
   }
   function stateFor(document: any): any {
-    return automationStates(document).find(state => state.packageId === normalized.packageId && state.packageHash === normalized.packageHash);
+    return automationStates(document).find(state => currentAutomationTarget(env,state)&&state.packageId === normalized.packageId && state.packageHash === normalized.packageHash);
   }
   function effectState(effect: any): any { return stateFor(effect); }
   async function setState(document: any, value: Record<string, any>): Promise<void> {
@@ -1240,7 +1246,7 @@ export async function installEncounterAutomation(
       assertLive();
       const raw = document.getFlag?.(ENCOUNTER_AUTOMATION_FLAG_SCOPE, ENCOUNTER_AUTOMATION_FLAG_KEY)
         ?? document.flags?.[ENCOUNTER_AUTOMATION_FLAG_SCOPE]?.[ENCOUNTER_AUTOMATION_FLAG_KEY];
-      const states = automationStates(document).filter(state => state.packageId !== normalized.packageId || state.packageHash !== normalized.packageHash);
+      const states = automationStates(document).filter(state => !currentAutomationTarget(env,state)||state.packageId !== normalized.packageId || state.packageHash !== normalized.packageHash);
       if (!states.length) await document.setFlag(ENCOUNTER_AUTOMATION_FLAG_SCOPE, ENCOUNTER_AUTOMATION_FLAG_KEY, value);
       else await document.setFlag(ENCOUNTER_AUTOMATION_FLAG_SCOPE, ENCOUNTER_AUTOMATION_FLAG_KEY, {
         ...raw, packages: [...states.map(({ packages: _packages, ...state }: any) => state), value],
@@ -1251,8 +1257,8 @@ export async function installEncounterAutomation(
 
 function assertEnvironment(env: EncounterAutomationEnvironment): void {
   if (!env?.game?.user?.isGM) throw new Error('战斗自动化只能由 GM 启动。');
-  if ((env.game.version !== '14.364' && env.game.version !== '14.368') || env.game.system?.id !== 'dnd5e' || env.game.system?.version !== '5.3.3') {
-    throw new Error('固定战斗自动化只支持 Foundry 14.364 / dnd5e 5.3.3。');
+  if (!isForgeRuntimeTargetSupported(env.game.version,env.game.system?.version) || env.game.system?.id !== 'dnd5e') {
+    throw new Error('固定战斗自动化只支持 Core 14／dnd5e 6.0.6 及同主版本后续版本。');
   }
   if (!env.Hooks?.on || !env.Hooks?.off || typeof env.fromUuid !== 'function') throw new Error('Foundry Hooks 或 UUID 解析接口不可用。');
 }
@@ -1265,13 +1271,14 @@ function isActiveGm(env: EncounterAutomationEnvironment): boolean {
 function assertBoundActor(actor: any, key: string, uuid: string, options: EncounterAutomationInstallOptions): void {
   if (!actor || actor.uuid !== uuid || !/^Actor\.[A-Za-z0-9]+$/u.test(uuid)) throw new Error(`绑定 ${key} 不是有效的 Actor UUID。`);
   const identity = actor.flags?.[ENCOUNTER_AUTOMATION_FLAG_SCOPE]?.encounter;
+  if(options.target && (identity?.target?.foundry!==options.target.foundry||identity?.target?.system!==options.target.system||identity?.target?.systemVersion!==options.target.systemVersion||identity?.target?.effectProfile!==options.target.effectProfile)) throw new Error('绑定 Actor 的运行目标与控制器不同。');
   if (identity?.version !== 1 || identity?.kind !== 'Actor' || identity?.key !== key || identity?.packageId !== options.packageId || identity?.packageHash !== options.packageHash) {
     throw new Error(`绑定 ${key} 不属于当前生物导入文件，拒绝按名称或近似身份运行。`);
   }
 }
 
 function validateInstallOptions(value: EncounterAutomationInstallOptions): ValidatedInstallOptions {
-  exactKeys(value, ['packageId', 'packageHash', 'bindings', 'config'], '安装参数');
+  exactKeys(value, ['packageId', 'packageHash', 'bindings', 'config',...(value.target?['target']:[])], '安装参数');
   text(value.packageId, 'packageId'); text(value.packageHash, 'packageHash');
   if (!plainRecord(value.bindings) || Object.keys(value.bindings).length === 0) throw new TypeError('bindings 必须包含至少一个 actorKey。');
   for (const [key, uuid] of Object.entries(value.bindings)) {
@@ -1444,7 +1451,7 @@ function applyThresholdWardToSummary(
   }
   // `amount` was calculated before dnd5e.calculateDamage. Preserve the
   // unchanged healing and temporary/max-HP components while substituting only
-  // the reduced damage values. This mirrors the locked 5.3.3 runtime helper.
+  // the reduced damage values. This mirrors the locked 6.0.6 runtime helper.
   const tempMax = Number(damages.tempMax ?? 0);
   damages.amount = Math.trunc(damages.reduce((sum: number, damage: any) =>
     sum + (damage.type === 'temphp' || damage.type === 'maximum' ? 0 : Number(damage.value)), 0)
@@ -1753,3 +1760,7 @@ function panelWardState(actor: any, options: EncounterAutomationInstallOptions, 
   return value === 'broken' || value === 'weakened' ? value : 'full';
 }
 function escapeHtml(value: string): string { return value.replace(/[&<>'"]/gu, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]!)); }
+
+function currentAutomationTarget(env:EncounterAutomationEnvironment,state:any):boolean {
+  return isForgeAutomationTargetCompatible(env.game,state?.target);
+}

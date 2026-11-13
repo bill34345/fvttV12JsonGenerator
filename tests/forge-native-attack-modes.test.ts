@@ -50,7 +50,7 @@ function assertOutput(c:any,result:any){
  }
  for(const attack of attacks){
   expect(attack.attack.flat).toBe(true);expect(Number(attack.attack.bonus)).toBe(e.toHit);expect(attack.activation.type).toBe('action');
-  if(e.kind!=='versatile')expect(attack.range.value).toBe(e.ranged?60:e.reach);
+  if(e.kind!=='versatile')expect(attack.range.value).toBe(String(e.ranged?60:e.reach));
   expect(attack.target.affects.special).toBe('one target');
   if(e.recharge)expect(attack.consumption.targets).toEqual([{type:'itemUses',target:'',value:'1',scaling:{mode:'',formula:''}}]);
  }

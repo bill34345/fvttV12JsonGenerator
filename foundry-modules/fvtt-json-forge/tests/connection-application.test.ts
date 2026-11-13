@@ -122,7 +122,7 @@ describe('Forge Connection ApplicationV2', () => {
     game.version = '14.365';
     await (application as any).testConnection(root);
     expect(calls).toBe(0);
-    expect(root.status.textContent).toMatch(/14\.364/u);
+    expect(root.status.textContent).toMatch(/Core 14/u);
   });
 
   test('opens a provider endpoint override without retaining its old profile key', () => {
@@ -175,7 +175,7 @@ describe('Forge Connection ApplicationV2', () => {
 
 function makeApplication(services: Partial<ForgeConnectionApplicationServices> = {}) {
   const notifications = { errors: [] as string[], infos: [] as string[] };
-  const game = { version: '14.364', system: { id: 'dnd5e', version: '5.3.3' }, user: { isGM: true } };
+  const game = { version: '14.370', system: { id: 'dnd5e', version: '6.0.6' }, user: { isGM: true } };
   const foundry = {
     applications: {
       api: {

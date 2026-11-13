@@ -18,7 +18,11 @@ import {
   type IconWorkflowPort,
 } from './iconPort';
 
+import { projectNativeDocument, type NativeDocumentProjection } from './nativeProjection';
+
 export interface ItemGenerationWorkflowOptions {
+  nativeProjection?: NativeDocumentProjection;
+  nativeSourceNormalizer?: (item: ItemDocument) => ItemDocument;
   sourceText?: string;
   sourcePath?: string;
   fvttVersion: FvttTargetVersion;
@@ -53,7 +57,7 @@ export async function generateItemArtifacts(
       sourceText: options.sourceText,
       sourcePath: options.sourcePath,
     });
-    const item = await projector.project(canonical, {
+    let item = await projector.project(canonical, {
       ...options,
       targetVersion: options.fvttVersion,
       iconResolver: iconSession.resolver,
@@ -67,7 +71,14 @@ export async function generateItemArtifacts(
         sourceDerived: entry.sourceMechanicsPresent,
       };
     }
+    let runtimeTarget;
+    if (options.nativeProjection) {
+      try { item = await projectNativeDocument(options.nativeProjection, 'Item', options.nativeSourceNormalizer?.(item)??item); runtimeTarget = options.nativeProjection.target; }
+      catch (error) { entry.diagnostics.push({code:'NATIVE_PROJECTION_INCOMPLETE',severity:'warning',stage:'schema',path:'item',
+        message:error instanceof Error?error.message:String(error)}); }
+    }
     const verification = verifyGeneratedDocument({
+      runtimeTarget,
       canonical,
       output: item,
       target: options.fvttVersion,

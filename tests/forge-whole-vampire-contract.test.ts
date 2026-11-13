@@ -61,7 +61,7 @@ for(const reference of ['id','name'] as const)test('legacy whole-form '+referenc
   expect(generation.modelReviewStatus).toBe('not_requested');expect(generation.calls.review).toBe(0);
   expect(auditMonsterIntakeSource(wholeVampireSource.source,ir).blocking).toEqual([]);
   await assertDefaultFullIrReplay(wholeVampireSource.source,ir,{actor,markdown:prepared.bundle.actors[0]!.source,discoveryCalls:1});
-  expect(actor.name).toBe('Vampire');expect(actor.system.attributes.hp.max).toBe(144);expect(actor.system.attributes.ac.flat).toBe(16);expect(actor.system.abilities.str.value).toBe(18);
+  expect(actor.name).toBe('Vampire');expect(actor.system.attributes.hp.max).toBe(144);expect(actor.system.attributes.ac.override).toBe(16);expect(actor.system.abilities.str.value).toBe(18);
   const coverage=plan.features.map(unit=>{
     const candidates=allFeatures(ir).filter(({feature})=>feature.name===unit.name&&feature.description===unit.quote.trim());expect(candidates).toHaveLength(1);
     const {feature,path}=candidates[0]!;expect(feature.evidence).toEqual([{start:unit.start,end:unit.end,quote:unit.quote}]);
@@ -89,7 +89,7 @@ for(const reference of ['id','name'] as const)test('legacy whole-form '+referenc
   expect(activities(item('Legendary Resistance (3/Day)'))[0].consumption.targets).toEqual([{type:'attribute',target:'resources.legres.value',value:'1',scaling:{mode:'',formula:''}}]);
   expect(item('Children of the Night (1/Day)').system.uses).toMatchObject({max:'1',recovery:[{period:'day',type:'recoverAll'}]});
   const bite=item('Bite (Bat or Vampire Form Only)'),biteAttack=activities(bite)[0]!;
-  expect(activities(bite)).toHaveLength(1);expect(biteAttack.type).toBe('attack');expect(biteAttack.attack.bonus).toBe('9');expect(biteAttack.range.value).toBe(5);
+  expect(activities(bite)).toHaveLength(1);expect(biteAttack.type).toBe('attack');expect(biteAttack.attack.bonus).toBe('9');expect(biteAttack.range.value).toBe('5');
   expect(biteAttack.damage.parts).toMatchObject([{number:1,denomination:6,bonus:'4',types:['piercing']},{number:3,denomination:6,types:['necrotic']}]);
   // Existing compound-recipient projection keeps the complete literal slot;
   // the GM enforces its one-creature alternatives, without native count claims.
@@ -98,7 +98,7 @@ for(const reference of ['id','name'] as const)test('legacy whole-form '+referenc
   expect(activities(bite).some(value=>value.type==='heal')).toBe(false);
   const unarmed=activities(item('Unarmed Strike (Vampire Form Only)'))[0]!;
   expect(unarmed.type).toBe('attack');expect(unarmed.attack.bonus).toBe('9');expect(unarmed.damage.parts).toMatchObject([{number:1,denomination:8,bonus:'4',types:['bludgeoning']}]);
-  const charm=activities(item('Charm'))[0]!;expect(charm.type).toBe('save');expect(charm.save).toMatchObject({ability:['wis'],dc:{formula:'17'}});expect(charm.range.value).toBe(30);
+  const charm=activities(item('Charm'))[0]!;expect(charm.type).toBe('save');expect(charm.save).toMatchObject({ability:['wis'],dc:{formula:'17'}});expect(charm.range.value).toBe('30');
   expect(charm.target.affects.special).toContain('one humanoid it can see');expect(charm.activation.condition).toContain('If the target can see the vampire');
   const weakness=item('Vampire Weaknesses');expect(activities(weakness)).toHaveLength(2);
   expect(activities(weakness).sort((a,b)=>a.damage.parts[0].types[0].localeCompare(b.damage.parts[0].types[0])).map(value=>value.damage.parts)).toMatchObject([[{custom:{enabled:true,formula:'20'},types:['acid']}],[{custom:{enabled:true,formula:'20'},types:['radiant']}]]);

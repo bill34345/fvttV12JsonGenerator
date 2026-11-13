@@ -129,7 +129,7 @@ describe('AI IR renderer uses explicit fields while preserving literal prose', (
     const before = structuredClone(ir), markdown = renderMonsterIntakeMarkdown(ir);
     const generated = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '14', effectProfile: 'core', translationService: null });
     const actor = generated.rawJson as any;
-    expect(actor.system.attributes.ac.flat).toBe(12);
+    expect(actor.system.attributes.ac.override).toBe(12);
     const bite = actor.items.find((item: any) => item.name.includes('啃咬'));
     const attack = Object.values(bite.system.activities)[0] as any;
     expect(Number(attack.attack.bonus)).toBe(4);

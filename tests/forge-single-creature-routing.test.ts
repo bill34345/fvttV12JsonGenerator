@@ -16,7 +16,7 @@ function fixture(source=RAT_WARLOCK_SOURCE,ir=buildRatWarlockIr()){
   discover:async()=>{calls.discover++;return{schemaVersion:1,candidates:[{id:'one',label:'Creature',start:0,end:source.length,quote:source}]};},
   extract:async request=>{calls.extract++;requests.push(structuredClone(request));return structuredClone(ir);},
   review:async()=>{calls.review++;throw Error('Unexpected model review');},repair:async()=>{calls.repair++;throw Error('Unexpected model repair');}};
- const input:BrowserActorIntakeInput={source,sourceName:'plain-statblock.txt',requestId:'routing-fixture',fvttVersion:'14.368',systemVersion:'5.3.3',
+ const input:BrowserActorIntakeInput={source,sourceName:'plain-statblock.txt',requestId:'routing-fixture',fvttVersion:'14.368',systemVersion:'6.0.6',
   sourceId:'actor:v1:00000000-0000-4000-8000-000000000001' as ForgeSourceId};
  return{input,provider,calls,requests};
 }

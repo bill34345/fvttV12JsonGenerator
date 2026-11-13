@@ -1,5 +1,7 @@
 # Current Support Matrix
 
+**当前生成基线：** CLI、Web、Forge 统一使用 Core 14.370／dnd5e 6.0.6；显式 v12／v13 兼容保留。Forge 0.6.0、旧资料读取和运行验证范围见[原生 dnd5e 6 兼容](2026-11-13-native-dnd5e6.md)。下方较早记录保留其原版本。
+
 **2026-10-31 Forge 文字型 PDF 入口：** Forge 生物来源可直接选择 PDF，输入目标名称，可选物理页码，默认保留来源语言。浏览器随模块分发 PDF.js 6.4.299；官方 Chrome 已核英文双栏属性表与中文跨页文字，SRD 5.2.1 Aboleth 实际 PDF → 原语言 MD → 现有 AI／workflow → Actor 的 60 项来源对照、Mirror14.368／dnd5e5.3.3 正常创建、刷新读回和零新请求恢复通过，既有世界对象最终基线恢复。此项只扩展 Forge 生物输入，不改变 CLI、Web、Item 的输入契约；下文旧版未覆盖 PDF 的记录仍按当时范围追溯。扫描件 OCR、任意排版／浏览器、完整战斗和生产未据此接受，首次失败和限制见[本轮 PDF 验收](2026-10-31-forge-pdf-input.md)。
 
 **2026-10-30 Forge 收尾与有界验收：** 提取 V54／显式纠错 V44 的十份既有冻结首答完成本地保留对照；四只新增怪物及 Unicorn 的正常 Forge 创建、配置和重载在 Mirror14.368／dnd5e5.3.3 上有界通过，Planetar 九法术水合与 Unicorn 传奇抗性一次原生消耗另有真实读回。原失败、部分成功与未覆盖机制保持各自历史结论；本次 Git 整合不新增模型调用，不推广生产、6.x 或完整战斗矩阵。运行与清理证据见[五只 Mirror 验收](2026-10-30-forge-four-plus-unicorn-mirror.md)，合并检查与 worktree 处置另见[本地收尾记录](2026-10-30-forge-local-merge-closeout.md)。
@@ -60,7 +62,7 @@
 
 **Current v14 module lock:** MIDI-QOL `14.0.11` + DAE `14.0.12`. Rows below that name MIDI-QOL `14.0.9` describe preserved historical runtime evidence; they have not been silently promoted to `14.0.11` acceptance.
 
-**Default selection boundary (verified 2026-09-06):** CLI and workflow callers that omit the version default to v12; the Web form initially selects v14. When a user does not specify a target, Codex explicitly requests Foundry `14.364` / dnd5e `5.3.3` / `core`. These are distinct entry-point defaults and do not retroactively upgrade v14 acceptance.
+**Default selection:** CLI, workflow, and Web default to v14 (Core 14.370 / dnd5e 6.0.6); explicit v12 and v13 remain compatible targets. Older acceptance entries below retain their original version.
 
 ## Status vocabulary
 

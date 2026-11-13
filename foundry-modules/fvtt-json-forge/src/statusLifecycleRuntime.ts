@@ -1,4 +1,5 @@
 import { decodeStatusLifecycleParameters, nativeLifecycleStatusLabel, type StatusLifecycleParameters } from '@fvtt-json-generator/contracts/status-lifecycle';
+import { isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
 
 interface StatusLifecycleEnvironment {
   game: any; canvas: any; CONFIG?: any; DialogV2?: any; foundry?: any; MidiQOL?: any;
@@ -97,7 +98,7 @@ export function installStatusLifecycles(env: StatusLifecycleEnvironment, rules: 
 
   const midiCompatible = () => {
     const module = env.game.modules?.get?.('midi-qol');
-    return module?.active === true && module.version === '14.0.11' && typeof env.MidiQOL?.Workflow?.getWorkflow === 'function';
+    return module?.active === true && isVersionInMajor(module.version, '14.6.7') && typeof env.MidiQOL?.Workflow?.getWorkflow === 'function';
   };
   const attackLifecycle = (frame: PendingAttack, messageId: string) => {
     const startedAt = worldTime(env), duration = frame.rule.parameters.duration;
@@ -134,7 +135,7 @@ export function installStatusLifecycles(env: StatusLifecycleEnvironment, rules: 
     if (!result || pending.get(frame.nonce) !== frame || !midiCompatible()) return;
     live();
     const message = env.game.messages?.get?.(result.messageId), flags = message?.flags?.['midi-qol'];
-    const native = message?.flags?.dnd5e, targets = native?.targets;
+    const native = message?.system, targets = native?.targets;
     const currentTarget = env.canvas?.tokens?.get?.(tokenId(frame.target));
     const stored = values(message?.rolls).filter(roll => roll?.options?.['midi-qol']?.rollType === 'attack');
     // MIDI can defer its card update. Wait for the exact attack counter and persisted roll, never read its cached clone.
@@ -142,12 +143,10 @@ export function installStatusLifecycles(env: StatusLifecycleEnvironment, rules: 
       || message.speaker?.actor !== (frame.source.actor.id ?? frame.source.actor.uuid.split('.').at(-1))
       || message.speaker?.token !== tokenId(frame.source)
       || native?.activity?.uuid !== frame.activity.uuid || native?.item?.uuid !== frame.activity.item.uuid
-      || !Array.isArray(targets) || targets.length !== 1 || targets[0].uuid !== frame.target.actor.uuid
+      || !Array.isArray(targets) || targets.length !== 1 || targets[0].actor !== frame.target.actor.uuid || targets[0].token !== tokenUuid(frame.target)
       || typeof targets[0].ac !== 'number' || !Number.isFinite(targets[0].ac)
       || tokenUuid(currentTarget) !== tokenUuid(frame.target) || currentTarget?.actor?.uuid !== frame.target.actor.uuid
-      || flags?.messageType !== 'attack' || flags.activityUuid !== frame.activity.uuid
-      || flags.attackingTokenUuid !== tokenUuid(frame.source) || flags.attackRollCount !== result.attackRollCount
-      || flags.attackTotal !== result.total || flags.isHit !== result.hit
+      || flags?.messageType !== 'attack' || native.midi?.attackRollCount !== result.attackRollCount || flags.isHit !== result.hit
       || !Array.isArray(flags.targets) || flags.targets.length !== 1 || flags.targets[0]?.uuid !== tokenUuid(frame.target)
       || !Array.isArray(flags.hitTargetUuids) || flags.hitTargetUuids.length !== Number(result.hit)
       || (result.hit && flags.hitTargetUuids[0] !== tokenUuid(frame.target))
@@ -242,16 +241,16 @@ export function installStatusLifecycles(env: StatusLifecycleEnvironment, rules: 
     try {
       live();
       const activity = config?.subject;
-      const flags = message.flags?.dnd5e;
+      const native = message.system;
       const author = message.author?.id ?? message.user?.id;
-      const targets = flags?.targets;
+      const targets = native?.targets;
       const currentTarget = env.canvas?.tokens?.get?.(tokenId(frame.target));
       if (marker.version !== 1 || marker.targetTokenUuid !== tokenUuid(frame.target)
         || env.game.messages?.get?.(message.id) !== message || author !== frame.authorId || author !== env.game.user.id
         || activity?.uuid !== frame.activity?.uuid || activity?.item?.uuid !== frame.activity?.item?.uuid
         || activity?.actor?.uuid !== frame.source.actor.uuid
-        || flags?.roll?.type !== 'attack' || flags?.activity?.uuid !== activity.uuid || flags?.item?.uuid !== activity.item.uuid
-        || !Array.isArray(targets) || targets.length !== 1 || targets[0].uuid !== frame.target.actor.uuid
+        || message.type !== 'attack' || native?.activity?.uuid !== activity.uuid || native?.item?.uuid !== activity.item.uuid
+        || !Array.isArray(targets) || targets.length !== 1 || targets[0].actor !== frame.target.actor.uuid || targets[0].token !== tokenUuid(frame.target)
         || currentTarget?.actor?.uuid !== frame.target.actor.uuid || tokenUuid(currentTarget) !== tokenUuid(frame.target)
         || typeof targets[0].ac !== 'number' || !Number.isFinite(targets[0].ac)
         || typeof roll.total !== 'number' || !Number.isFinite(roll.total)

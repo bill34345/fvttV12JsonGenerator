@@ -70,19 +70,19 @@ describe("ItemTextWorkflow", () => {
 
       const dormant = JSON.parse(
         readFileSync(join(vaultPath, "output", "items", "jewel-of-three-prayers__三祷之坠 (Dormant State).json"), "utf-8"),
-      ) as { name?: string; type?: string; system?: { rarity?: string; activities?: Record<string, any> } };
+      ) as { name?: string; type?: string; system?: { rarities?: string[]; activities?: Record<string, any> } };
       const shield = JSON.parse(
         readFileSync(join(vaultPath, "output", "items", "shield-of-the-cavalier__骑士之盾.json"), "utf-8"),
-      ) as { name?: string; type?: string; system?: { rarity?: string; activities?: Record<string, any> } };
+      ) as { name?: string; type?: string; system?: { rarities?: string[]; activities?: Record<string, any> } };
 
       expect(dormant.name).toContain("三祷之坠");
       expect(dormant.type).toBe("equipment");
-      expect(dormant.system?.rarity).toBe("legendary");
+      expect(dormant.system?.rarities).toEqual(["legendary"]);
       expect(Object.values(dormant.system?.activities ?? {}).map((activity) => activity.type)).toContain("cast");
 
       expect(shield.name).toContain("骑士之盾");
       expect(shield.type).toBe("equipment");
-      expect(shield.system?.rarity).toBe("veryRare");
+      expect(shield.system?.rarities).toEqual(["veryRare"]);
       expect(JSON.stringify(shield.system?.activities ?? {})).toContain("2d6+2+@mod");
       expect(JSON.stringify(shield.system?.activities ?? {})).toContain("你力量调整值");
     } finally {
@@ -124,9 +124,9 @@ describe("ItemTextWorkflow", () => {
       };
 
       expect(item._stats).toMatchObject({
-        coreVersion: "14.364",
+        coreVersion: "14.370",
         systemId: "dnd5e",
-        systemVersion: "5.3.3",
+        systemVersion: "6.0.6",
       });
       expect(item.system?.activation).toBeUndefined();
     } finally {

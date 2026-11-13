@@ -1,6 +1,6 @@
 # Species AI Intake：TXT → Markdown → Foundry V12/V14 race/feat
 
-`--intake-species` 是不规则 TXT 或已人工编辑 Species Markdown 的正式入口。允许的精确目标只有 Foundry `12.331` / dnd5e `4.3.9` / `core` / 2024（`V12 static candidate`），或 Foundry `14.364` / dnd5e `5.3.3` / `core` / 2024（保留既有 V14 运行验收）。V13、legacy/2014、`modded-v12` 和第三方模块兼容均 fail-closed。
+`--intake-species` 是不规则 TXT 或已人工编辑 Species Markdown 的正式入口。常规 `--fvtt-version 14` 与省略版本均生成 Foundry `14.370` / dnd5e `6.0.6` / `core` / 2024 原生数据。显式 `14.368` 保留既有 dnd5e `6.0.2` 内容身份和接受来源链；显式 V12 保留 `12.331 / 4.3.9 / core / 2024` 静态候选。V13、legacy/2014、`modded-v12` 和第三方模块兼容均 fail-closed。旧 `14.364 / 5.3.3` 包与记录只读保留，不能直接充当新 6.x accepted artifact。
 
 ## 数据链与状态
 
@@ -14,8 +14,9 @@ TXT → discovery → Species Evidence IR → deterministic Markdown
 
 AI 不直接编写正式 JSON。证据范围、完整 coverage、字段范围、mechanic allowlist、Markdown parser、目标 projector、package validator 与 AI cross-review 全部通过后，候选才会推广到：
 
-- V14：`input/species/<identifier>.md`；V12：`input/species/v12/<identifier>.md`，两个目标的已接受来源分别保存，避免一次修改使另一个版本的 ledger 失效。
+- 普通 V14：`input/species/<identifier>.md`；既有 `14.368`：`input/species/v14-368/<identifier>.md`；V12：`input/species/v12/<identifier>.md`。各目标的已接受来源分别保存，避免一次修改使另一个版本的 ledger 失效。
 - V14：`output/species/<identifier>.json`
+- 既有 `14.368`：`output/species/v14-368/<identifier>.json`
 - V12：`output/species/v12/<identifier>.json`
 - `output/species/accepted-ledger.json`
 
@@ -84,7 +85,9 @@ bun run build:homebrew-species:v12-candidate
 bun run verify:homebrew-species:v12-candidate
 ```
 
-`fvtt-homebrew-species` 是纯内容模块，只有 `species` 和 `features` 两个 Item Compendium。V14 默认输出仍为 `dist/`；V12 static candidate 输出为 `dist/v12-candidate/`，identity 带 `supportStatus: "static-candidate"`。build 只读取当前目标的 accepted ledger 条目和 Markdown，重新走 parser/projector/validator，在随机临时根生成两次 LevelDB 与确定性 ZIP，并检查 identity/coverage/UUID 闭合。V12/V14 的 module ID、pack 名、Race/Feature/Effect/Advancement ID 与 Compendium UUID 相同，版本 metadata 和 Activity 形状是允许差异。
+`fvtt-homebrew-species` 是纯内容模块，只有 `species` 和 `features` 两个 Item Compendium。build／verify 省略版本或选择 `14` 时使用 `14.370 / 6.0.6` 当前目标，输出 `dist/`；显式 `14.368` 使用既有 `6.0.2` 来源，输出 `dist/v14-368-candidate/`。V12 static candidate 输出为 `dist/v12-candidate/`，identity 带 `supportStatus: "static-candidate"`。build 只读取当前目标的 accepted ledger 条目和 Markdown，重新走 parser/projector/validator，在随机临时根生成两次 LevelDB 与确定性 ZIP，并检查 identity/coverage/UUID 闭合。V12/V14 的 module ID、pack 名、Race/Feature/Effect/Advancement ID 与 Compendium UUID 相同，版本 metadata 和 Activity 形状是允许差异。
+
+旧 5.3.3 ledger 不会被改标成 6.0.6：当前默认 build 要求先对当前目标重新 Intake，缺少对应 accepted artifact 时拒绝构建。本轮可复用已接受的 `14.368 / 6.0.2` 原生来源重建本地包，保留其目标、来源 hash 和历史接受身份；这不等于所有物种已经通过新环境玩法验收。
 
 V12 candidate 可以在隔离测试中使用显式 `FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY` 写入并回读 LevelDB；任何未来可安装 V12 build 必须使用真实 `app/12.331/node_modules/classic-level`。本轮没有扩展安装器、创建 V12 Lab、安装模块或运行 Foundry。
 
@@ -102,7 +105,9 @@ V12 candidate 可以在隔离测试中使用显式 `FVTT_OPS_TEST_CLASSIC_LEVEL_
 - 食人魔笨拙使用 transfer ADD `system.attributes.ac.bonus = -2`；倒地后花费全部速度站起保持 `gm-assisted`。
 - 不添加来源未声明的 ASI、语言、触及、负重、武器熟练、徒手伤害、抗性或大型生物额外收益。
 
-## 当前验收边界
+## 历史验收边界与当前目标
+
+下列 V14 食人魔结果属于当时的 `14.364 / 5.3.3`，V12 仍是静态候选；它们不会因默认目标更新而升级为 `14.370 / 6.0.6` 实机 Pass。既有 6.0.2 原生包及限定 6.0.6 运行记录独立保留，新目标的实际结果见[兼容范围](acceptance/2026-11-13-native-dnd5e6.md)。
 
 V12 当前只通过静态候选层：锁定 4.3.9 模型的 Race、Size、ItemGrant、Utility Activity、itemUses、lr/sr recoverAll、Race 升级流以及 HP/AC Effect 路径有参考契约；Ogre V12 package 已逐条核对语义；两次 clean candidate build 的树、logical hash、UUID 和 ZIP 可确定重现。当前机器没有 V12 Lab，因此尚未验收 Token 2×2、真实 Add Species UI、1→5 级升级、AC/HP 运行值、次数消耗、Long Rest 或重开读回。只能声明“V12 静态候选支持”，不能声明“V12 可用”或“V12 正式支持”。
 
@@ -112,24 +117,15 @@ V12 当前只通过静态候选层：锁定 4.3.9 模型的 Race、Size、ItemGr
 
 这仍不是无边界的 runtime Pass：本次没有完成精确 2×2 Token 放置、现有武器应用种族前后的字节级比较或 Actor 导出/读回。长期跑团也未验收。
 
-## 2026-08-13 线上 8080 部署记录
+## 既有 ServerNext 内容身份与运行兼容
 
-- 用户明确授权把该模块安装到线上 `8080` 并重启；本次只操作 `fvtt-production` 的 `8080`，`51020` 的 v14 进程保持运行且未写入。
-- 用户同时明确要求本地和线上不创建备份，也不以在线人数为执行门槛。本次没有创建模块或世界备份；只使用唯一的 ZIP 暂存与构建验证目录，不保留旧模块副本。
-- 远端模块目录 `E:\Bill\fvtt_v13\data\Data\modules\fvtt-homebrew-species` 已落盘 10 个文件、31,577 bytes；manifest 为 `fvtt-homebrew-species` / `1.0.0`，包含 `species` 与 `features` 两个 Item pack。线上 HTTP 可读 `module.json` 与 `data/identity-manifest.json`，logical hash 为 `d9bd6759dc378333f314431e7839d2d3beadd6eb0e6faf9b9a440168f07258fd`，1 race / 5 features。
-- 重启后的精确命令为 `E:\Bill\v14\code\main.js --port=8080 --dataPath="E:\Bill\fvtt_v13\data" --world=cor-cotn`；最终 `/api/status` 为 active、Foundry `14.364`、dnd5e `5.3.3`、world `cor-cotn`，监听 PID 为 9852。日志记录 `Server started and listening on port 8080`，没有新增该模块错误。
-- 为清除无进程占用的启动锁，删除了 `E:\Bill\fvtt_v13\data\Config\options.json.lock`；没有直接编辑世界 LevelDB。
-- 生产模块文件已安装并可由 Foundry 服务提供，但未取得 `Gamemaster` 密码，不能通过 UI 证明 `cor-cotn` 已启用该模块；因此“已安装/服务已恢复”为 Pass，“世界已启用/食人魔已在生产界面可用”保持未验收，不把文件落盘冒充启用。
-- 线上部署使用的 ZIP SHA-256 是 `38390d2e1554eac683c5e065c6c2404d4f569b4f662868319f4523977290581e`。master 集成前的 Markdown revision review 只更新 accepted Markdown hash/run 证据，Foundry documents 与 module logical hash 未变；当前本地重建 ZIP SHA-256 为 `77281eac8e0c5e3f7bd6f2ec3d44603da53b9d2eb0845b450bf4721cd9466e11`，本轮合并没有重新部署线上模块。
-## ServerNext 内容目标与运行兼容（2026-10-01）
+接续既有 Next 来源链时，Species Intake／resume 和内容构建可显式使用 `--fvtt-version 14.368 --effect-profile core`。这个内容目标仍绑定 dnd5e **6.0.2** 的来源投影、接受记录和 logical hash；`14.368` 是该既有来源的兼容别名，普通 `14` 已使用 `14.370 / 6.0.6`。它只属于 Species 路径，不扩大 Actor／Item CLI 的版本集合。
 
-接续既有 Next 来源链时，Species Intake／resume 和内容构建可显式使用 `--fvtt-version 14.368 --effect-profile core`。这个内容目标仍绑定 dnd5e **6.0.2** 的来源投影、接受记录和 logical hash；它只属于 Species 路径，不扩大 Actor／Item CLI 的版本集合。5.3.3 与 V12 的原有目标、默认值及拒绝门保持。
-
-ServerNext 当前系统已升级6.0.5，模块兼容候选可另加 `--dnd5e-runtime-maximum 6.0.5`：
+`--dnd5e-runtime-maximum` 只用于显式 `14.368` 的旧 6.0.2 内容，接受 `6.0.2`、`6.0.5`、`6.0.6` 或默认的 `6.999.999`；Core 默认上限为 `14.999`，同主版本向前准入不代表未来玩法已验。需要复现限定的 6.0.6 包时：
 
 ```text
-bun run build:homebrew-species --fvtt-version 14.368 --dnd5e-runtime-maximum 6.0.5
-bun run verify:homebrew-species --fvtt-version 14.368 --dnd5e-runtime-maximum 6.0.5
+bun run build:homebrew-species --fvtt-version 14.368 --dnd5e-runtime-maximum 6.0.6
+bun run verify:homebrew-species --fvtt-version 14.368 --dnd5e-runtime-maximum 6.0.6
 ```
 
-运行兼容上限不重标接受来源，不代表已完成6.0.5种族玩法验收；本次模块恢复保留已安装合集数据。入口、记录和当前接受边界见[十模块恢复记录](reviews/2026-10-01-next-605-custom-module-restoration.md)。
+运行兼容上限不重标接受来源，也不扩大玩法验收；既有模块恢复保留已安装合集数据。历史入口及范围见[十模块恢复记录](reviews/2026-10-01-next-605-custom-module-restoration.md)，后续 6.0.6 限定接受与本轮开发状态按[环境维护入口](runbooks/foundry-environment-maintenance.md)查阅。

@@ -240,7 +240,7 @@ export class ActorGenerator {
   constructor(options: ActorGeneratorOptions = {}) {
     this.reviewDelivery = options.reviewDelivery ?? 'document';
     this.translationService = options.translationService ?? undefined;
-    this.fvttVersion = options.fvttVersion ?? '12';
+    this.fvttVersion = options.fvttVersion ?? '14';
     this.activityGenerator = new ActivityGenerator({ fvttVersion: this.fvttVersion });
     this.effectProfile = options.effectProfile ?? 'core';
     this.iconResolver = options.iconResolver;
@@ -302,8 +302,6 @@ export class ActorGenerator {
     }
 
     // Patch Core Fields
-    // The Actor title is already rendered. Parentheses present in that source
-    // title belong to its name; only explicit aliases are joined by renderers.
     actor.name = parsed.name || actor.name;
     if (typeof parsed.img === 'string' && parsed.img.trim()) {
       actor.img = parsed.img.trim();
@@ -338,21 +336,32 @@ export class ActorGenerator {
         actor.system.attributes.hp.formula = parsed.attributes.hp.formula || '';
       }
       if (parsed.attributes.ac) {
-        actor.system.attributes.ac.flat = parsed.attributes.ac.value;
-        actor.system.attributes.ac.calc = parsed.attributes.ac.calc;
+        if (this.isV14()) {
+          actor.system.attributes.ac = parsed.attributes.ac.calc === 'natural'
+            ? { calcs: ['natural'], flat: parsed.attributes.ac.value, formulas: [], override: null }
+            : { calcs: ['unarmored', 'armored'], formulas: [], override: parsed.attributes.ac.value };
+        } else {
+          actor.system.attributes.ac.flat = parsed.attributes.ac.value;
+          actor.system.attributes.ac.calc = parsed.attributes.ac.calc;
+        }
       }
       if (parsed.attributes.init !== undefined) {
         const dexScore = typeof parsed.abilities?.dex === 'number' ? parsed.abilities.dex : 10;
         const dexModifier = Math.floor((dexScore - 10) / 2);
-        actor.system.attributes.init = { bonus: parsed.attributes.init - dexModifier };
+        actor.system.attributes.init = this.isV14()
+          ? { roll: { bonus: this.formatSignedBonus(parsed.attributes.init - dexModifier) } }
+          : { bonus: parsed.attributes.init - dexModifier };
       }
       if (parsed.attributes.movement) {
-        actor.system.attributes.movement = {
+        const speeds = {
           walk: parsed.attributes.movement.walk ?? null,
           fly: parsed.attributes.movement.fly ?? null,
           swim: parsed.attributes.movement.swim ?? null,
           climb: parsed.attributes.movement.climb ?? null,
           burrow: parsed.attributes.movement.burrow ?? null,
+        };
+        actor.system.attributes.movement = {
+          ...(this.isV14() ? { speeds: Object.fromEntries(Object.entries(speeds).filter(([, speed]) => speed !== null).map(([key, speed]) => [key, String(speed)])) } : speeds),
           hover: parsed.attributes.movement.hover ?? false,
           units: parsed.attributes.movement.units ?? 'ft'
         };
@@ -372,7 +381,8 @@ export class ActorGenerator {
     }
 
     if (typeof parsed.details.spellLevel === 'number' && Number.isInteger(parsed.details.spellLevel)) {
-      actor.system.details.spellLevel = parsed.details.spellLevel;
+      if (this.isV14()) actor.system.attributes.spell = { level: parsed.details.spellLevel };
+      else actor.system.details.spellLevel = parsed.details.spellLevel;
     }
     if(parsed.sourceLegendaryLedger){
       const ledger=parsed.sourceLegendaryLedger;
@@ -464,7 +474,8 @@ export class ActorGenerator {
           actor.system.skills[key] = {
             value: 0,
             ability: SKILL_ABILITIES[key] || 'int',
-            bonuses: { check: "", passive: "" }
+            bonuses: this.isV14() ? { passive: '' } : { check: "", passive: "" },
+            ...(this.isV14() ? { roll: { bonus: '' } } : {}),
           };
         }
         actor.system.skills[key].value = val;
@@ -474,7 +485,8 @@ export class ActorGenerator {
     if (parsed.skillBonuses) {
       for (const [key, bonus] of Object.entries(parsed.skillBonuses)) {
         if (actor.system.skills[key]) {
-          actor.system.skills[key].bonuses.check = this.formatSignedBonus(bonus);
+          if (this.isV14()) actor.system.skills[key].roll = { bonus: this.formatSignedBonus(bonus) };
+          else actor.system.skills[key].bonuses.check = this.formatSignedBonus(bonus);
         }
       }
     }
@@ -491,7 +503,8 @@ export class ActorGenerator {
     if (parsed.saveBonuses) {
       for (const [key, bonus] of Object.entries(parsed.saveBonuses)) {
         if (actor.system.abilities[key]) {
-          actor.system.abilities[key].bonuses.save = this.formatSignedBonus(bonus);
+          if (this.isV14()) actor.system.abilities[key].save = { roll: { bonus: this.formatSignedBonus(bonus) } };
+          else actor.system.abilities[key].bonuses.save = this.formatSignedBonus(bonus);
         }
       }
     }
@@ -592,7 +605,7 @@ export class ActorGenerator {
           newItems.push(this.createSpellcastingDescriptionItem(lines));
         }
       } else {
-        this.appendLegacySpellItems(newItems, parsed.spellcasting);
+        this.appendLegacySpellItems(newItems, parsed.spellcasting, parsed.attributes.spellcasting ?? this.extractSpellcastingAbility(parsed.spellcasting));
       }
     }
 
@@ -810,10 +823,17 @@ export class ActorGenerator {
     }
 
     if (actor.system?.attributes) {
-      if (actor.system.attributes.init && typeof actor.system.attributes.init === 'object') {
+      if (this.isV14()) {
+        actor.system.attributes.init = { roll: { bonus: '' } };
+        actor.system.attributes.ac = { calcs: ['unarmored', 'armored'], formulas: [], override: null };
+        for (const key of ['concentration', 'death']) {
+          const config = actor.system.attributes[key];
+          if (config) { delete config.bonuses; config.roll = { ...config.roll, bonus: '' }; }
+        }
+      } else if (actor.system.attributes.init && typeof actor.system.attributes.init === 'object') {
         actor.system.attributes.init.bonus = '';
       }
-      actor.system.attributes.movement = {
+      actor.system.attributes.movement = this.isV14() ? { speeds: {}, hover: false, units: 'ft' } : {
         walk: null, fly: null, swim: null, climb: null, burrow: null, hover: false
       };
       actor.system.attributes.senses = this.emptySenses();
@@ -836,6 +856,10 @@ export class ActorGenerator {
         if (ability && typeof ability === 'object') {
           ability.value = 10;
           ability.proficient = 0;
+          if (this.isV14()) {
+            delete ability.bonuses;
+            for (const roll of ['check', 'save']) ability[roll] = { roll: { bonus: '' } };
+          }
         }
       }
     }
@@ -845,6 +869,7 @@ export class ActorGenerator {
       for (const skill of Object.values(skills) as any[]) {
         if (skill && typeof skill === 'object') {
           skill.value = 0;
+          if (this.isV14()) { skill.bonuses = { passive: '' }; skill.roll = { bonus: '' }; }
         }
       }
     }
@@ -861,7 +886,11 @@ export class ActorGenerator {
     if (actor.system?.attributes) {
       actor.system.attributes.spellcasting = '';
       if (actor.system.details) {
-        actor.system.details.spellLevel = 0;
+        if (this.isV14()) {
+          delete actor.system.details.spellLevel;
+          actor.system.attributes.spell = { level: 0 };
+          delete actor.system.bonuses;
+        } else actor.system.details.spellLevel = 0;
       }
     }
   }
@@ -1510,8 +1539,8 @@ export class ActorGenerator {
     return String(value);
   }
 
-  private appendLegacySpellItems(items: any[], spellcasting: ParsedNPC['spellcasting']): void {
-    appendLegacySpellItemsExt(items, spellcasting, this.activityGenerator, this.fvttVersion);
+  private appendLegacySpellItems(items: any[], spellcasting: ParsedNPC['spellcasting'], spellcastingAbility?: string): void {
+    appendLegacySpellItemsExt(items, spellcasting, this.activityGenerator, this.fvttVersion, { spellcastingAbility });
   }
 
   private createSpellcastingDescriptionItem(lines: string[]): any {
@@ -1762,7 +1791,12 @@ export class ActorGenerator {
   }
 
   private buildItemRange(action: GeneratedActionData): Record<string, number | string | null> {
-    return buildItemRangeExt(action);
+    const range = buildItemRangeExt(action);
+    if (this.isV14() && action.attack?.type === 'mwak') {
+      const thrown = action.attack.range?.match(/(\d+)\s*\/\s*(\d+)/);
+      if (thrown) { range.value = Number(thrown[1]); range.long = Number(thrown[2]); }
+    }
+    return range;
   }
 
   private resolveDisplaySectionFixed(
@@ -3289,15 +3323,16 @@ export class ActorGenerator {
 
     const effect = this.createCustomEffect({
       name: displayName(action.name, action.englishName),
-      img: parsed.kind === 'flat'
+      img: this.isV14() ? 'icons/svg/shield.svg' : parsed.kind === 'flat'
         ? 'systems/dnd5e/icons/svg/statuses/downgrade.svg'
         : 'systems/dnd5e/icons/svg/statuses/shield.svg',
       changes: [
         {
           key: parsed.kind === 'flat'
-            ? 'system.attributes.ac.flat'
-            : this.isV14() ? 'system.attributes.ac.formula' : 'system.attributes.ac.bonus',
+            ? this.isV14() ? 'system.attributes.ac.override' : 'system.attributes.ac.flat'
+            : this.isV14() ? 'system.attributes.ac.value' : 'system.attributes.ac.bonus',
           mode: parsed.kind === 'flat' ? 5 : 2,
+          ...(this.isV14() && parsed.kind !== 'flat' ? { phase: 'final' } : {}),
           value: String(parsed.value),
           priority: null,
         },
@@ -3318,6 +3353,7 @@ export class ActorGenerator {
 
   private extractEffectDuration(text: string): Record<string, unknown> | undefined {
     if (/直到其?下一回合开始|until (?:the )?(?:start of|beginning of) (?:its|their|your) next turn/i.test(text)) {
+      if (this.isV14()) return { value: 1, units: 'rounds', expiry: 'turnStart', expired: false };
       return {
         startTime: null,
         seconds: null,
@@ -3330,6 +3366,7 @@ export class ActorGenerator {
     }
 
     if (/直到其?下一回合结束|until (?:the )?end of (?:its|their|your) next turn/i.test(text)) {
+      if (this.isV14()) return { value: 1, units: 'rounds', expiry: 'turnEnd', expired: false };
       return {
         startTime: null,
         seconds: null,
@@ -3343,6 +3380,7 @@ export class ActorGenerator {
 
     const rounds = text.match(/(?:持续\s*)?(\d+)\s*(?:轮|rounds?)/i)?.[1];
     if (rounds) {
+      if (this.isV14()) return { value: Number(rounds), units: 'rounds', expiry: 'turnStart', expired: false };
       return {
         startTime: null,
         seconds: null,
@@ -3829,7 +3867,7 @@ export class ActorGenerator {
     const derivedProf = Math.floor((Math.max(Number(actor.system?.details?.cr ?? 0), Number(actor.system?.details?.level ?? 0), 1) + 7) / 4);
     const profBonus = Number(actor.system?.attributes?.prof ?? derivedProf);
     const skillValue = Number(skill.value ?? 0);
-    const checkBonus = this.parseSignedBonus(skill.bonuses?.check);
+    const checkBonus = this.parseSignedBonus(this.isV14() ? skill.roll?.bonus : skill.bonuses?.check);
 
     return 10 + baseMod + skillValue * profBonus + checkBonus;
   }
@@ -3930,7 +3968,9 @@ export class ActorGenerator {
         attributes: { hp: { value: 10, max: 10 }, ac: { flat: 10, calc: 'flat' }, movement: {}, init: { bonus: 0 } },
         details: { cr: 0, xp: { value: 0 }, biography: { value: '' } },
         traits: { dr: { value: [] }, di: { value: [] }, ci: { value: [] }, languages: { value: [] }, senses: {} },
-        skills: { ste: { value: 0 }, prc: { value: 0 } } // Mock common skills
+        skills: { ste: { value: 0 }, prc: { value: 0 } },
+        resources: { legact: {}, legres: {}, lair: { value: false, initiative: null, inside: false } },
+        spells: Object.fromEntries([...Array.from({ length: 9 }, (_, index) => `spell${index + 1}`), 'pact'].map(key => [key, { value: 0, override: null }])),
       },
       items: []
     };

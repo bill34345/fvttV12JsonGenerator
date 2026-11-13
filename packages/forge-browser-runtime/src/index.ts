@@ -1,3 +1,5 @@
+export * from './nativeTarget';
+import { projectionForRuntime, runtimeIdentityAfterProjection, type NativeDocumentProjection } from './nativeTarget';
 import {withActorSourceReviews} from './actorSourceReviewContext';
 import {
   attachForgeSourceId,
@@ -26,7 +28,7 @@ import { createBundledIconResolutionSession } from '@fvtt-json-generator/assets-
 import { buildBrowserActorVerificationSummary } from './actorVerification';
 import { LEGACY_BROWSER_SPELLS } from './browser-legacy-spell-data';
 import { LOCKED_DND5E_V14_SPELLS } from './browser-v14-spell-data';
-import { normalizeForgeActorArtifact } from './artifact';
+import { normalizeForgeActorArtifact,prepareForgeActorForNativeProjection } from './artifact';
 import type { ReviewedLocalization } from '@fvtt-json-generator/contracts/localization';
 import { withActorRulePresentation } from './actorRulePresentationContext';
 
@@ -103,7 +105,7 @@ export function buildForgeActorRequest(options: BuildForgeActorRequestOptions): 
   };
 }
 
-export async function convertFinalActorSource(request: ForgeActorRequest, options: { reviewedLocalization?: ReviewedLocalization; captureRulePresentation?: boolean } = {}): Promise<ForgeActorResponse> {
+export async function convertFinalActorSource(request: ForgeActorRequest, options: { reviewedLocalization?: ReviewedLocalization; captureRulePresentation?: boolean; nativeProjection?: NativeDocumentProjection } = {}): Promise<ForgeActorResponse> {
   const decoded = decodeForgeActorRequest(request);
   if (!decoded.ok) return errorResponse(requestIdOf(request), decoded.issues);
   const value = decoded.value;
@@ -118,6 +120,8 @@ export async function convertFinalActorSource(request: ForgeActorRequest, option
     const parsed = parserFactory.parse(value.source.content);
     const generated = await generateActorArtifact({
       parsed,
+      nativeProjection: projectionForRuntime(value.foundryRuntime.fvttVersion, value.foundryRuntime.systemVersion, options.nativeProjection),
+      nativeSourceNormalizer:prepareForgeActorForNativeProjection,
       sourceText: value.source.content,
       route,
       fvttVersion: targetVersion,
@@ -188,7 +192,8 @@ export async function convertFinalActorSource(request: ForgeActorRequest, option
     const finalActorVerification = status === verification.status
       ? projection.actorVerification
       : projectForgeVerification({ verification: { ...verification, status, diagnostics }, actorVerification }).actorVerification;
-    const base = { ...makeResultBase(value, formalVerification.target.stats.systemVersion, finalVerification, finalActorVerification, safeDiagnostics),
+    const runtime = runtimeIdentityAfterProjection(formalVerification.target.stats.systemVersion, value.foundryRuntime, options.nativeProjection);
+    const base = { ...makeResultBase(value, runtime.systemVersion, finalVerification, finalActorVerification, safeDiagnostics, runtime.fvttVersion),
       ...(generated.iconReview ? { iconReview: generated.iconReview } : {}) };
     if (status === 'accepted') {
       if (!acceptedVerification) throw new TypeError('Accepted Forge verification was not proven by the closed projection.');
@@ -231,11 +236,12 @@ function makeResultBase(
   verification: ReturnType<typeof projectForgeVerification>['verification'],
   actorVerification: ForgeActorVerificationSummary,
   diagnostics: ForgeDiagnostic[],
+  fvttRuntimeVersion = request.foundryRuntime.fvttVersion,
 ) {
   return {
     sourceIdentity: { sourceId: request.source.sourceId, sourceHash: request.source.utf8Sha256 },
     target: {
-      fvttRuntimeVersion: request.foundryRuntime.fvttVersion,
+      fvttRuntimeVersion,
       generatorProfile: request.resolvedTarget.generatorProfile,
       generatorVersion: BROWSER_GENERATOR_VERSION,
       systemId: 'dnd5e' as const,
@@ -268,7 +274,7 @@ function failedWorkflowResponse(
   };
   const verification = { status: 'failed' as const, mechanicsCoverage: [] };
   const projected = projectForgeVerification({ verification, actorVerification });
-  const base = makeResultBase(request, request.foundryRuntime.systemVersion, projected.verification, projected.actorVerification, projectActorDiagnostics([diagnostic]));
+  const base = makeResultBase(request, artifact?._stats?.systemVersion??(request.resolvedTarget.generatorProfile==='v14'?'6.0.6':'4.3.9'), projected.verification, projected.actorVerification, projectActorDiagnostics([diagnostic]));
   const retained=artifact?JSON.parse(JSON.stringify(artifact)):undefined;
   return { protocolVersion: 1, requestId: request.requestId, result: { ...base, status: 'failed',...(retained?{artifact:retained,artifactHash:hashArtifact(retained)}:{}) } };
 }
@@ -367,7 +373,7 @@ function unresolvedLegacySpellWarnings(actor: unknown): GenerationDiagnostic[] {
         severity: 'warning',
         stage: 'semantic',
         path: `actor/items/${itemIndex}/system/activities/${activityId}/spell/uuid`,
-        message: `Legacy spell "${legacy.name}" has no unique dnd5e 5.3.3 core Item mapping.`,
+        message: `Legacy spell "${legacy.name}" has no unique dnd5e 6 core Item mapping.`,
       });
     }
   }

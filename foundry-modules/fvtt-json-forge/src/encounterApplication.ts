@@ -1,3 +1,4 @@
+import { nativeProjectionForGame } from './nativeProjection';
 import { decodeForgeEncounterPackageZip, serializeForgeEncounterPackage, encodeForgeEncounterPackageZip } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import { prepareForgeEncounter, type PreparedForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
 import { actorLocalizationDisplayRows, encounterPackageLocalizationDisplayRows, approveForgeEncounterLocalization, assertForgeEncounterLocalizationDraft, draftForgeEncounterLocalization,
@@ -499,7 +500,7 @@ export function createForgeEncounterApplicationClass(environment: {
             discover:localUnavailable,extract:localUnavailable,repair:localUnavailable,review:localUnavailable},
           automationProvider:{generate:localUnavailable,review:localUnavailable},requestedOptions:{...prior!.requestedOptions,
             protocol:prior!.requestedOptions?.protocol,reasoning:prior!.requestedOptions?.reasoning,autoCorrect:false}};
-        const output=await (environment.generateEncounterFromHumanMarkdown??generateEncounterFromHumanMarkdown)({source,label,...providers,conditionCatalog,outputLanguage:this.outputLanguage,reviewPolicy:'deferred',drafts,draftParentHash,previousReport:resume?prior:undefined,signal:controller.signal,
+        const output=await (environment.generateEncounterFromHumanMarkdown??generateEncounterFromHumanMarkdown)({source,label,...providers,nativeProjection:nativeProjectionForGame(game),conditionCatalog,outputLanguage:this.outputLanguage,reviewPolicy:'deferred',drafts,draftParentHash,previousReport:resume?prior:undefined,signal:controller.signal,
           onProgress:message=>{if(this.closed||this.controller!==controller||revision!==this.fileRevision||source!==this.humanSource)return;this.status=message;this.progressDetail=message;const status=(this.element as HTMLElement)?.querySelector('[data-encounter-status]');if(status)status.textContent=message;const detail=(this.element as HTMLElement)?.querySelector('[data-encounter-progress]');if(detail)detail.textContent=message;},
           onReport:report=>{assertEncounterSecretsAbsent(JSON.stringify(report),this.forbiddenValues);if(!this.closed&&this.controller===controller&&revision===this.fileRevision&&source===this.humanSource){continuationPublished=true;this.aiReport=report;this.recoveryReport=report;this.queueRecoverySave();}}});
         if(this.closed||this.controller!==controller||revision!==this.fileRevision||source!==this.humanSource)throw new Error('原始资料已改变，请重新生成。');
@@ -659,7 +660,7 @@ export function createForgeEncounterApplicationClass(environment: {
         const bytes=new Uint8Array(await file.arrayBuffer());
         const text=bytes[0]===0x50&&bytes[1]===0x4b
           ? serializeForgeEncounterPackage(await decodeForgeEncounterPackageZip(bytes)) : new TextDecoder('utf-8',{fatal:true}).decode(bytes);
-        const prepared=await prepareForgeEncounter(text,this.controller.signal);
+        const prepared=await prepareForgeEncounter(text,this.controller.signal,{nativeProjection:nativeProjectionForGame(game)});
         if(revision!==this.fileRevision)throw new Error('文件已改变，请重新预览。');
         assertGm(game);assertExactRuntime(game);this.prepared=prepared;
         this.recoveryPackage=serializeForgeEncounterPackage(prepared.bundle);
@@ -681,7 +682,7 @@ export function createForgeEncounterApplicationClass(environment: {
         if(this.recoveryCatalogHash!==binding.catalogHash||(report&&(report.source!==this.humanSource||report.sourceHash!==hashSource(this.humanSource))))
           this.error='当前输入或状态目录与保存快照不同；正在读取原保存产物。';
         assertEncounterSecretsAbsent(serialized,this.forbiddenValues);
-        const prepared=await prepareForgeEncounter(serialized,controller.signal);
+        const prepared=await prepareForgeEncounter(serialized,controller.signal,{nativeProjection:nativeProjectionForGame(game)});
         if(this.closed||revision!==this.fileRevision||this.controller!==controller)throw new Error('预览已取消或输入已改变；原保存记录保留。');
         if(prepared.hash!==(report?.packageHash??uploadedHash))this.error='保存记录的包指纹与当前可读内容不同；Actor 已保留，请核对来源快照。';
         assertGm(game);assertExactRuntime(game);
@@ -973,7 +974,9 @@ function encounterActorPreview(actor:PreparedForgeEncounter['actors'][number]){
     if(typeof value==='string'&&value.trim()||typeof value==='number'&&Number.isFinite(value))return value;
     previewIssues.push(`${label}未提供可显示的值。`);return'未提供';
   };
-  const hp=scalar(record(attributes.hp).max,'生命值'),ac=scalar(record(attributes.ac).flat,'护甲等级'),cr=scalar(details.cr,'挑战等级');
+  const armor=record(attributes.ac);
+  const hp=scalar(record(attributes.hp).max,'生命值'),ac=scalar(armor.value??armor.override??armor.flat
+    ??(Array.isArray(armor.formulas)?armor.formulas.map(entry=>record(entry).formula).filter(Boolean).join('；')||undefined:undefined),'护甲等级'),cr=scalar(details.cr,'挑战等级');
   const abilities:Array<{name:string;description:string}>=[];
   const manualSourceRules:Array<{actorKey:string;actorName:string;name:string;sourceText:string}>=[];
   if(!Array.isArray(artifact.items))previewIssues.push('能力列表无法预览。');

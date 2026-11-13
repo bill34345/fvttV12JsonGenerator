@@ -6,9 +6,9 @@ test('explicit natural AC kind survives formal rendering when a separate note wa
   const ir=buildRatWarlockIr();ir.creature.attributes.acKind='natural';delete ir.creature.attributes.acNote;
   const markdown=renderMonsterIntakeMarkdown(ir);
   expect(markdown).toContain('天生护甲');
-  const response=await convertFinalActorSource(buildForgeActorRequest({content:markdown,displayName:ir.creature.identity.name,requestId:'natural-ac-note-fixture',fvttVersion:'14.364',systemVersion:'5.3.3'}));
+  const response=await convertFinalActorSource(buildForgeActorRequest({content:markdown,displayName:ir.creature.identity.name,requestId:'natural-ac-note-fixture',fvttVersion:'14.370',systemVersion:'6.0.6'}));
   if(!('result' in response)||!('artifact' in response.result))throw new Error('Expected formal Actor artifact');
-  expect((response.result.artifact!.system as any).attributes.ac).toMatchObject({flat:ir.creature.attributes.ac,calc:'flat'});
+  expect((response.result.artifact!.system as any).attributes.ac).toMatchObject({override:ir.creature.attributes.ac,calcs:['unarmored','armored'],formulas:[]});
   expect((response.result.artifact!.system as any).details.biography.value).toContain('天生护甲');
 });
 test('flat AC does not invent an armor note and an explicit source note is preserved exactly',async()=>{
@@ -18,7 +18,7 @@ test('flat AC does not invent an armor note and an explicit source note is prese
   const markdown=renderMonsterIntakeMarkdown(ir);expect(markdown).toContain('天生护甲；举盾时19');
   // Source-presentation metadata and composed display both retain the note;
   // assert the actual visible artifact rather than counting YAML serialization.
-  const response=await convertFinalActorSource(buildForgeActorRequest({content:markdown,displayName:ir.creature.identity.name,requestId:'flat-ac-source-note-fixture',fvttVersion:'14.364',systemVersion:'5.3.3'}));
+  const response=await convertFinalActorSource(buildForgeActorRequest({content:markdown,displayName:ir.creature.identity.name,requestId:'flat-ac-source-note-fixture',fvttVersion:'14.370',systemVersion:'6.0.6'}));
   if(!('result' in response)||!('artifact' in response.result))throw new Error('Expected formal Actor artifact');
   const biography=String((response.result.artifact!.system as any).details.biography.value);
   expect(biography.match(/天生护甲/g)).toHaveLength(1);

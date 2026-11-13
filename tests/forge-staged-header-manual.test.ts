@@ -39,7 +39,7 @@ describe('complete manual stat-header rules without false native defenses',()=>{
     expect(verified.creature.identity.creatureTypeCustom).toBe(type.startsWith('Medium')?'Gith':'吉斯人');
     const ir=await runStagedMonsterExtraction({source,sourceSha256:sha256(source),candidate:{id:'header-regression',label:'Header regression',start:0,end:source.length,quote:source}},async()=>structuredClone(raw),{baseMode:'facts',featureMode:'source'});
     const output=await actor(ir);
-    expect(output.system.attributes.ac.flat).toBe(18);
+    expect(output.system.attributes.ac.override).toBe(18);
     expect(output.system.details.type.custom).toBe(verified.creature.identity.creatureTypeCustom);
     const defense=output.items.find((item:any)=>item.name.includes('灵能护体'));
     expect(defense.system.description.value).toContain('未着装任何护甲也未持用任何盾牌');

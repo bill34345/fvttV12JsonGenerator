@@ -1,3 +1,4 @@
+import { DND5E_V14_SYSTEM_VERSION } from '@fvtt-json-generator/contracts/target';
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { basename, extname, join, resolve } from 'node:path';
 import {
@@ -523,7 +524,7 @@ async function runAiItemIntake(
   const fvttVersion = optionFvttVersion(body.options);
   const effectProfile = optionEffectProfile(body.options, fvttVersion);
   if (fvttVersion !== '14' || effectProfile !== 'core') {
-    throw new Error('AI Item Intake only supports Foundry V14 / dnd5e 5.3.3 / core profile.');
+    throw new Error(`AI Item Intake only supports Foundry V14 / dnd5e ${DND5E_V14_SYSTEM_VERSION} / core profile.`);
   }
   setJobProgress(job.id, 1, 4, 'AI 发现、证据提取与 Item 终审');
   const audit: IntakeProviderAuditEvent[] = [];

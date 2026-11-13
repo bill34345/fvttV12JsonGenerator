@@ -4,7 +4,7 @@ import type { ParsedNPC } from '../../../config/mapping';
 import { spellsMapper } from '../../mapper/spells';
 
 describe('ActorGenerator E2E Comprehensive Tests', () => {
-  const generator = new ActorGenerator({ translationService: null });
+  const generator = new ActorGenerator({ translationService: null, fvttVersion: '12' });
   let previousFireball: unknown;
   let hadFireball = false;
   beforeEach(() => {

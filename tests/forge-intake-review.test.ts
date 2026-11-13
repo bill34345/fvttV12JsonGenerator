@@ -32,8 +32,8 @@ describe('Forge Intake review state and safe export', () => {
       endpoint: 'https://provider.example/v1?secret=query',
       model: 'extractor',
       reviewModel: 'reviewer',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
       effectProfile: 'core',
       iconMode: 'off',
     };

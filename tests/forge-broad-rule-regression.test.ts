@@ -222,7 +222,7 @@ describe('base facts retain their source owner',()=>{
  for(const id of ['roper-independent-appendage-hp','chain-devil-controlled-object-actions'])test(id+' accepts separate object AC but rejects using it as the Actor AC',async()=>{
   const c=get(id);for(const path of ['ordinary','staged']){
    const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
-   expect(r.actor.system.attributes.ac.flat).toBe(15);expect(r.actor.system.attributes.hp.value).toBe(30);
+   expect(r.actor.system.attributes.ac.override).toBe(15);expect(r.actor.system.attributes.hp.value).toBe(30);
   }
   const wrong=raw(c);wrong.creature.attributes.ac=20;
   expect(auditMonsterIntakeSource(c.source,wrong).blocking.some(f=>f.path==='/creature/attributes/ac')).toBe(true);
@@ -290,7 +290,7 @@ for(const relation of ['of','from','measured from'])test('a remote effect radius
  for(const u of c.units)if(u.destination==='feature')u.text=f.text+'\n';c.source=c.units.map((u:any)=>u.text).join('');
  for(const path of ['ordinary','staged']){
   const good=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(good);
-  expect((Object.values(good.actor.items[0].system.activities)as any[])[0].range.value).toBe(15);
+  expect((Object.values(good.actor.items[0].system.activities)as any[])[0].range.value).toBe('15');
   const changed=structuredClone(c);changed.features[0].operations[0].range=5;changed.features[0].operations[0].proof.range=changed.features[0].operations[0].proof.save;
   const bad=await chain(changed,()=>path==='ordinary'?ordinary(changed,raw(changed)):staged(changed));expectSourceAuditFinding(bad,'SOURCE_OPERATION_CARRIER_CONFLICT','/creature/actions/0/sourceOperations~10~1range');
  }
@@ -303,7 +303,7 @@ test('a remote template keeps its placement range instead of becoming self',asyn
  const c:any=structuredClone(secondCorpus.cases.find(c=>c.id==='r2-djinni-create-whirlwind'));
  for(const path of ['ordinary','staged']){
   const good=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(good);
-  const activity=(Object.values(good.actor.items[0].system.activities)as any[])[0];expect(activity.range.value).toBe(120);expect(activity.range.units).toBe('ft');expect(Number(activity.target.template.size)).toBe(5);
+  const activity=(Object.values(good.actor.items[0].system.activities)as any[])[0];expect(activity.range.value).toBe('120');expect(activity.range.units).toBe('ft');expect(Number(activity.target.template.size)).toBe(5);
   const drift=structuredClone(good.actor);(Object.values(drift.items[0].system.activities)as any[])[0].range={override:true,units:'self',special:''};
   expect(auditMonsterIntakeSourceProjection(c.source,good.ir,good.markdown,drift).findings.some(f=>f.code==='ACTOR_SOURCE_OPERATION_RANGE_DRIFT')).toBe(true);
   const badCase=structuredClone(c);delete badCase.features[0].operations[0].range;delete badCase.features[0].operations[0].proof.range;
@@ -318,7 +318,7 @@ for(const placement of [80,undefined])test('radius projection preserves independ
  for(const u of c.units)if(u.destination==='feature'){u.name=f.name;u.text=f.text+'\n';}c.source=c.units.map((u:any)=>u.text).join('');
  for(const path of ['ordinary','staged']){
   const r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
-  const activity=(Object.values(r.actor.items[0].system.activities)as any[])[0];expect(activity.range).toEqual(placement?{override:true,value:placement,units:'ft',special:''}:{override:true,units:'self',special:''});expect(activity.target.template).toEqual({type:'radius',size:String(radius),units:'ft'});
+  const activity=(Object.values(r.actor.items[0].system.activities)as any[])[0];expect(activity.range).toEqual(placement?{override:true,value:String(placement),units:'ft',special:''}:{override:true,value:'',units:'self',special:''});expect(activity.target.template).toEqual({type:'radius',size:String(radius),units:'ft'});
   const drift=structuredClone(r.actor);(Object.values(drift.items[0].system.activities)as any[])[0].range=placement?{units:'self'}:{value:80,units:'ft'};
   expect(auditMonsterIntakeSourceProjection(c.source,r.ir,r.markdown,drift).findings.some(f=>f.code==='ACTOR_SOURCE_OPERATION_RANGE_DRIFT')).toBe(true);
  }
@@ -433,7 +433,7 @@ const iterativeCase=(id:string):any=>structuredClone(iterate50Corpus.cases.find(
 for(const id of ['r10m-dryad-fey-charm','r10m-cloaker-moan','r10m-druid-quarterstaff','r10m-insect-swarms-variant','r10r-bag-of-beans'])for(const path of ['ordinary','staged'])test('iterative source repair '+id+' '+path,async()=>{
  const c=iterativeCase(id),r=await chain(c,()=>path==='ordinary'?ordinary(c,raw(c)):staged(c));requireProjectedChain(r);
  expect(normalize(r.actor.items[0].system.description.value)).toContain(normalize(c.features[0].text));
- if(id==='r10m-dryad-fey-charm')expect((Object.values(r.actor.items[0].system.activities)as any[])[0].range.value).toBe(30);
+ if(id==='r10m-dryad-fey-charm')expect((Object.values(r.actor.items[0].system.activities)as any[])[0].range.value).toBe('30');
  if(id==='r10m-cloaker-moan'){
   const save=(Object.values(r.actor.items[0].system.activities)as any[]).find(a=>a.type==='save');expect(save.target.template.type).toBe('radius');expect(save.target.template.size).toBe('60');expect(save.range.units).toBe('self');
  }
@@ -441,7 +441,7 @@ for(const id of ['r10m-dryad-fey-charm','r10m-cloaker-moan','r10m-druid-quarters
   const activities=Object.values(r.actor.items[0].system.activities)as any[];expect(activities.filter(a=>a.type==='attack').map(a=>a.attack.bonus)).toEqual(['2','4']);expect(activities.filter(a=>a.type==='damage')).toHaveLength(3);expect(r.actor.items[0].system.properties??[]).not.toContain('ver');
  }
  if(id==='r10m-insect-swarms-variant'){
-  expect(r.ir.creature.identity.creatureType).toBe('construct');expect(r.actor.items).toHaveLength(1);expect(r.actor.system.attributes.movement.fly).toBe(40);expect(r.actor.system.attributes.movement.burrow??0).toBe(0);
+  expect(r.ir.creature.identity.creatureType).toBe('construct');expect(r.actor.items).toHaveLength(1);expect(r.actor.system.attributes.movement.speeds.fly).toBe('40');expect(r.actor.system.attributes.movement.speeds.burrow??'0').toBe('0');
  }
  if(id==='r10r-bag-of-beans'){
   const trait=r.ir.creature.traits[0];assert.ok(trait);expect(trait.healing).toBeUndefined();expect(Object.values(r.actor.items[0].system.activities).some((a:any)=>a.type==='heal')).toBe(false);
@@ -451,7 +451,7 @@ for(const gender of ['female','male','renamed'])test('gendered range requires th
  let c=iterativeCase('r10m-dryad-fey-charm');
  if(gender==='male')c=JSON.parse(JSON.stringify(c).replace(/\bshe\b/gu,'he').replace(/\bher\b/gu,'him'));
  if(gender==='renamed')c=JSON.parse(JSON.stringify(c).replace(/Dryad/gu,'Priestess').replace(/dryad/gu,'priestess'));
- const r=await chain(c,()=>ordinary(c,raw(c)));requireProjectedChain(r);expect((Object.values(r.actor.items[0].system.activities)as any[])[0].range.value).toBe(30);
+ const r=await chain(c,()=>ordinary(c,raw(c)));requireProjectedChain(r);expect((Object.values(r.actor.items[0].system.activities)as any[])[0].range.value).toBe('30');
 });
 for(const edit of ['foreign-subject','different-pronoun'])test('a foreign or mismatched gendered origin cannot borrow Actor range '+edit,async()=>{
  let c=iterativeCase('r10m-dryad-fey-charm');c=JSON.parse(JSON.stringify(c).replaceAll(edit==='foreign-subject'?'The dryad targets':'feet of her.',edit==='foreign-subject'?"The dryad's ally targets":'feet of him.'));
@@ -594,7 +594,7 @@ for(const path of ['ordinary','staged']){
   expect(acts[0].damage.parts[0].number).toBe(2);expect(acts[2].damage.parts[0].number).toBe(2);
   for(const roll of [acts[1],acts[3]]){expect(roll.roll.formula).toBe('1d20+8');expect(roll.attack).toBeUndefined();expect(roll.damage).toBeUndefined();}
   expect(item.type).not.toBe('weapon');expect(item.effects.map((effect:any)=>effect.statuses)).toEqual([['grappled']]);expect(item.effects[0].flags.fvttJsonGenerator.sourceOperationId).toBe('lever-five-down-extended-claw-grapple');expect(item.effects[0].flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(acts[3].effects).toEqual([{_id:item.effects[0]._id}]);
-  expect(r.actor.system.attributes.ac.flat).toBe(c.creature.attributes.ac);expect(r.actor.system.attributes.hp.max).toBe(c.creature.attributes.hp.value);
+  expect(r.actor.system.attributes.ac.override).toBe(c.creature.attributes.ac);expect(r.actor.system.attributes.hp.max).toBe(c.creature.attributes.hp.value);
   expect(c.source).toBe(frozen.source);expect(c.features[0].text).toBe(frozen.features[0].text);expect(JSON.stringify(frozen)).toBe(before);
  });
 }
@@ -681,7 +681,7 @@ test('round5 Heal parser and Activity preserve proven recipients; missing legacy
   const parsed=parser.parseStructuredSection([{名称:s.name,类型:'heal',治疗:{公式:s.formula,类型:s.type,target:s.target}}],'traits')[0]!;
   const action:any={name:s.name,type:'heal',healing:parsed.healing};const activity:any=Object.values(generator.generate(action))[0];
   assert.deepEqual(activity.target,{override:false,prompt:s.target.type==='creature',template:{count:'',contiguous:false,type:'',size:'',width:'',height:'',units:'ft'},affects:{count:'1',type:s.target.type,choice:false,special:s.target.special}});
-  assert.deepEqual(activity.range,s.target.type==='creature'?{units:'spec',special:s.target.special,override:false}:undefined);assert.equal(activity.healing.types[0],s.type);
+  assert.deepEqual(activity.range,s.target.type==='creature'?{value:'',units:'spec',special:s.target.special,override:false}:undefined);assert.equal(activity.healing.types[0],s.type);
  }
  const legacy=parser.parseStructuredSection([{名称:'Legacy',类型:'heal',治疗:{公式:'1d6',类型:'healing'}}],'traits')[0]!;assert.equal(legacy.healing?.target,undefined);const pending:any=Object.values(generator.generate({name:'Legacy',type:'heal',healing:legacy.healing}))[0];assert.deepEqual(pending.target.affects,{count:'',type:'any',choice:false,special:'GM：治疗目标未提供，请按完整原文确认对象、数量与范围。'});assert.equal(pending.target.prompt,true);assert.equal(pending.range.units,'spec');
  const optionalNote=parser.parseStructuredSection([{名称:'Explicit recipient',类型:'heal',治疗:{公式:'1d6',类型:'healing',target:{type:'creature',count:1}}}],'traits')[0]!;assert.deepEqual(optionalNote.healing?.target,{type:'creature',count:1,special:''});
@@ -787,7 +787,7 @@ test('round6 selection range is restored only from its adjacent same-source sing
  const {c,f}=r6HealingCases().find(({c})=>c.id.includes('unicorn'))!,ir=anchorIrEvidence(c.source,request(c.source).candidate,raw(c));
  const feature:any=ir.creature.legendaryActions[0];assert.equal(feature.range,undefined);assert.ok('legacy' in f);assert.ok(f.legacy);assert.deepEqual(feature.healing,f.legacy.healing);
  const parsed=new StructuredActionParser().parseStructuredSection([{名称:f.name,类型:'heal',范围:'60 尺',治疗:{公式:feature.healing.formula,类型:feature.healing.type,target:feature.healing.target}}],'legendaryActions')[0]!;
- const activity:any=Object.values(new ActivityGenerator({fvttVersion:'14'}).generate(structuredActionToActivityData(parsed)))[0];assert.deepEqual(activity.range,{value:60,units:'ft',special:'',override:false});assert.equal(activity.target.affects.type,'creature');assert.equal(activity.target.affects.special,feature.healing.target.special);
+ const activity:any=Object.values(new ActivityGenerator({fvttVersion:'14'}).generate(structuredActionToActivityData(parsed)))[0];assert.deepEqual(activity.range,{value:'60',units:'ft',special:'',override:false});assert.equal(activity.target.affects.type,'creature');assert.equal(activity.target.affects.special,feature.healing.target.special);
  const plan=splitStagedMonsterSource(request(c.source)),unit=plan.features.find(u=>u.name===f.name)!;assert.equal(assembleStagedFeature(plan,unit,{schemaVersion:1,unitId:unit.id,mode:'manual',facts:{}},c.creature.identity.name).range,60);
  for(const changed of [f.text.replace('The unicorn targets','The target targets'),f.text.replace('one creature','two creatures'),f.text.replace('of itself.','of an ally.'),f.text.replace('The target gains','The unicorn looks away. The target gains')])assert.equal(sourceFixedHealing(changed,f.name,c.creature.identity.name),undefined);
  const wrong=structuredClone(ir);wrong.creature.legendaryActions[0]!.range=90;assert.equal(auditMonsterIntakeSource(c.source,wrong).blocking.some(f=>f.code==='MIXED_FEATURE_SOURCE_CONFLICT'),true);
@@ -920,7 +920,7 @@ test('round9 source-bound legacy Attack stays literal through IR Markdown workfl
   const activity:ReturnType<ActivityGenerator['generate']>[string]=Object.values(item.system.activities)[0];
   assert.deepEqual(activity.attack,{ability:'',bonus:'5',flat:true,type:{value:name==='Rend'?'melee':'ranged',classification:'weapon'}});assert.equal(activity.flags?.fvttJsonGenerator?.sourceOperation,undefined);
   assert.deepEqual(activity.damage.parts.map((p:any)=>[p.number,p.denomination,p.bonus,p.types]),[[1,8,'3',[type]]]);assert.equal(item.system.damage?.base,undefined);
-  assert.equal(name==='Rend'?activity.range.reach:activity.range.value,range);if(long!==undefined)assert.equal(activity.range.long,long);
+  assert.equal(activity.range.value,String(range));assert.equal(Object.hasOwn(activity.range,'reach'),false);assert.equal(Object.hasOwn(activity.range,'long'),false);if(long!==undefined)assert.equal(activity.range.special,'远射程 '+long+' 尺');
   assert.equal(normalize(item.system.description.value).includes(normalize(c.features.find((f:any)=>f.name===name).text)),true);
  }
  // Without the existing Intake literal boundary this is CLI structured input; its
@@ -973,13 +973,13 @@ const r10RangeFindings=(r:any,actor:any)=>auditMonsterIntakeSourceProjection(r.c
 test('round10 unknown target range stays special and independently rejects missing Self or invented feet',async()=>{
  for(const [corpus,id]of [[iterate50Round9,'r18r-energy-bow'],[iterate50Round10,'r19r-contagion']] as const){
   const c:any=structuredClone(corpus.cases.find(c=>c.id===id)),r=await r10RangeProjection(c),index=r.actor.items.findIndex((i:any)=>Object.values(i.system.activities).some((a:any)=>a.flags?.fvttJsonGenerator?.sourceOperation));assert.ok(index>=0);
-  const item=r.actor.items[index],idOf=Object.keys(item.system.activities)[0]!,activity=item.system.activities[idOf];assert.deepEqual(activity.range,{override:true,units:'spec',special:r10RangeNote});assert.ok(activity.range.special.length<40);assert.equal(item.system.range,undefined);
+  const item=r.actor.items[index],idOf=Object.keys(item.system.activities)[0]!,activity=item.system.activities[idOf];assert.deepEqual(activity.range,{override:true,value:'',units:'spec',special:r10RangeNote});assert.ok(activity.range.special.length<40);assert.equal(item.system.range,undefined);
   for(const edit of [(a:any)=>delete a.range,(a:any)=>a.range={override:true,units:'self',special:''},(a:any)=>a.range={override:true,units:'ft',value:60,special:''},(a:any)=>a.range.override=false,(a:any)=>a.range.special='']){const bad=structuredClone(r.actor);edit(bad.items[index].system.activities[idOf]);assert.ok(r10RangeFindings(r,bad).length>0);}
   const badTarget=structuredClone(r.actor);badTarget.items[index].system.activities[idOf].target.affects.special='';assert.ok(auditMonsterIntakeSourceProjection(c.source,r.ir,r.markdown,badTarget).findings.some(f=>f.code==='ACTOR_SOURCE_OPERATION_TARGET_DRIFT'));
  }
 });
 test('round10 known Self preserves old omitted native range but not a foreign inherited Item range',async()=>{
- const c:any=structuredClone(iterate50Round10.cases.find(c=>c.id==='r19r-relentless-rage')),r=await r10RangeProjection(c),item=r.actor.items[0],id=Object.keys(item.system.activities)[0]!;assert.deepEqual(item.system.activities[id].range,{override:true,units:'self',special:''});
+ const c:any=structuredClone(iterate50Round10.cases.find(c=>c.id==='r19r-relentless-rage')),r=await r10RangeProjection(c),item=r.actor.items[0],id=Object.keys(item.system.activities)[0]!;assert.deepEqual(item.system.activities[id].range,{override:true,value:'',units:'self',special:''});
  const old=structuredClone(r.actor);delete old.items[0].system.activities[id].range;assert.deepEqual(r10RangeFindings(r,old),[]);
  const inherited=structuredClone(old);inherited.items[0].system.range={units:'ft',value:60};assert.ok(r10RangeFindings(r,inherited).length>0);
  const wrong=structuredClone(r.actor);wrong.items[0].system.activities[id].range={override:true,units:'spec',special:r10RangeNote};assert.ok(r10RangeFindings(r,wrong).length>0);
@@ -988,7 +988,7 @@ test('round10 own Emanation and first Save-header Cone retain Self while a nearb
  for(const [corpus,id]of [[iterate50Round8,'r17m-srd52-cloaker-moan'],[iterate50Round3,'r12m-srd52-tarrasque-thunderous-bellow']] as const){
   const c:any=structuredClone(corpus.cases.find(c=>c.id===id)),r=await r10RangeProjection(c),item=r.actor.items[0],key=Object.keys(item.system.activities)[0]!;assert.equal(item.system.activities[key].range.units,'self');const legacy=structuredClone(r.actor);delete legacy.items[0].system.activities[key].range;assert.deepEqual(r10RangeFindings(r,legacy),[]);
  }
- const c:any=structuredClone(iterate50Round8.cases.find(c=>c.id==='r17r-fire-casting-statue')),r=await r10RangeProjection(c),activities:any[]=Object.values(r.actor.items[0].system.activities);assert.deepEqual(activities.map(a=>Number(a.target.template.size)),[15,30,60,120]);for(const a of activities)assert.deepEqual(a.range,{override:true,units:'spec',special:r10RangeNote});
+ const c:any=structuredClone(iterate50Round8.cases.find(c=>c.id==='r17r-fire-casting-statue')),r=await r10RangeProjection(c),activities:any[]=Object.values(r.actor.items[0].system.activities);assert.deepEqual(activities.map(a=>Number(a.target.template.size)),[15,30,60,120]);for(const a of activities)assert.deepEqual(a.range,{override:true,value:'',units:'spec',special:r10RangeNote});
 });
 test('round10 bilingual display identity agrees between generation and verifier for a full English of-name Self centre',async()=>{
  let c:any=structuredClone(iterate50Round3.cases.find(c=>c.id==='r12m-srd52-sphinx-valor-roar'));c=JSON.parse(JSON.stringify(c).replace(/the sphinx\b/giu,'the Sphinx of Valor'));const english=c.creature.identity.name;c.creature.identity.englishName=english;c.creature.identity.name='英勇斯芬克斯';c.units[0].text=c.units[0].text.replace(english+' CR 2','英勇斯芬克斯 ('+english+') CR 2');c.source=c.units.map((u:any)=>u.text).join('');

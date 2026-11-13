@@ -1,6 +1,6 @@
 # Foundry VTT NPC 导入器使用手册
 
-一个将 Obsidian NPC 笔记转换为 Foundry VTT 可导入 JSON 的命令行工具。支持中文笔记格式和英文 Bestiary，适配 Foundry VTT v12 + dnd5e 4.3.x。
+一个将 Obsidian NPC 笔记转换为 Foundry VTT 可导入 JSON 的命令行工具。支持中文笔记格式和英文 Bestiary；默认生成 Foundry Core 14／dnd5e 6 原生数据，当前生成身份为 `14.370 / 6.0.6`。显式 V12／V13 的 dnd5e 4.3.9 兼容入口继续保留。
 
 ---
 
@@ -322,7 +322,7 @@ AI Intake 生成的施法者 Actor 在项目输出阶段应保持 `pending`。�
 使用顺序：
 
 1. 用项目 CLI 或 AI Intake 生成 Foundry v14 Actor JSON；不要手工添加 Spell 或 Compendium UUID。
-2. 在 Foundry `14.364` / dnd5e `5.3.3` 世界中启用目标世界法术解析器。
+2. 在符合解析器当前版本准入的 Core 14／dnd5e 6 世界中启用目标世界法术解析器，并核对模块说明里的已验范围。
 3. 通过 Foundry 的普通 Actor JSON 导入功能导入 Actor。
 4. 以 GM 身份检查 Actor 标题栏中的解析状态；必要时选择“解析或重新解析法术”。
 5. 如果出现歧义或人工修改，明确选择来源、保留人工修改、用生成内容覆盖，或取消。取消和关闭窗口都不得修改 Actor。
@@ -477,8 +477,8 @@ bun run src/index.ts "path/to/bestiary.md" -o "output/dragon.json"
 
 ## Foundry v14 Item artwork
 
-Name-driven artwork is opt-in and restricted to the locked Foundry `14.364` /
-dnd5e `5.3.3` target:
+Name-driven artwork is opt-in for the Foundry V14 / dnd5e 6 target. The catalog
+records Core `14.370` and dnd5e `6.0.6`, including the native 2024 Item packs:
 
 ```bash
 bun run src/index.ts "obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md" \

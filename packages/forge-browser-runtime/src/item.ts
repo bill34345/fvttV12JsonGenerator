@@ -1,3 +1,4 @@
+import { projectionForRuntime, runtimeIdentityAfterProjection, type NativeDocumentProjection } from './nativeTarget';
 import {
   attachForgeItemSourceId,
   decodeForgeItemRequest,
@@ -24,7 +25,7 @@ import type { GenerationDiagnostic } from '@fvtt-json-generator/generation/types
 import { parseForgeItemSource } from '@fvtt-json-generator/parser/forge-item-source';
 import { createBundledIconResolutionSession } from '@fvtt-json-generator/assets-icons/icon-browser';
 import { generateItemArtifacts } from '@fvtt-json-generator/workflows/item-generation';
-import { normalizeForgeItemArtifact } from './artifact';
+import { normalizeForgeItemArtifact,prepareForgeItemForNativeProjection } from './artifact';
 import { buildBrowserItemVerificationSummary } from './itemVerification';
 
 export interface BuildForgeItemRequestOptions {
@@ -79,7 +80,7 @@ export function buildForgeItemRequest(options: BuildForgeItemRequestOptions): Fo
   };
 }
 
-export async function convertFinalItemSource(request: ForgeItemRequest): Promise<ForgeItemResponse> {
+export async function convertFinalItemSource(request: ForgeItemRequest, options: { nativeProjection?: NativeDocumentProjection } = {}): Promise<ForgeItemResponse> {
   const decoded = decodeForgeItemRequest(request);
   if (!decoded.ok) return itemErrorResponse(requestIdOf(request), decoded.issues);
   const value = decoded.value;
@@ -92,6 +93,8 @@ export async function convertFinalItemSource(request: ForgeItemRequest): Promise
     }
     const artifacts = await generateItemArtifacts(parsed.item, {
       fvttVersion: targetVersion,
+      nativeProjection: projectionForRuntime(value.foundryRuntime.fvttVersion, value.foundryRuntime.systemVersion, options.nativeProjection),
+      nativeSourceNormalizer:prepareForgeItemForNativeProjection,
       effectProfile: 'core',
       iconWorkflow: { createResolutionSession: createBundledIconResolutionSession },
       iconOptions: { mode: value.resolvedTarget.iconMode },
@@ -107,6 +110,7 @@ export async function convertFinalItemSource(request: ForgeItemRequest): Promise
     const formalVerification = verifyGeneratedDocument({
       canonical: generated.canonical,
       output: artifact,
+      runtimeTarget: generated.verification.target.stats.systemVersion==='6.0.6' ? generated.verification.target : undefined,
       target: targetVersion,
       effectProfile: 'core',
     });
@@ -139,13 +143,16 @@ export async function convertFinalItemSource(request: ForgeItemRequest): Promise
         verification = projectForgeVerificationSummary({ ...formalVerification, status, diagnostics });
       }
     }
+    const runtime = runtimeIdentityAfterProjection(formalVerification.target.stats.systemVersion, value.foundryRuntime, options.nativeProjection);
     const base = { ...makeItemResultBase(
       value,
-      formalVerification.target.stats.systemVersion,
+      runtime.systemVersion,
       verification,
       itemVerification,
       itemDocument,
-      projectForgeDiagnostics(diagnostics),
+      projectForgeDiagnostics(diagnostics.map(diagnostic=>diagnostic.code.startsWith('NATIVE_')
+        ?{...diagnostic,message:safeErrorMessage(diagnostic.message)}:diagnostic)),
+      runtime.fvttVersion,
     ), ...(generated.iconReview ? { iconReview: generated.iconReview } : {}) };
     if (status === 'accepted') {
       if (!acceptedVerification) throw new TypeError('Accepted Forge Item verification was not proven by the closed projection.');
@@ -225,11 +232,12 @@ function makeItemResultBase(
   itemVerification: ForgeItemVerificationSummary,
   itemDocument: ForgeItemDocumentSummary,
   diagnostics: ForgeDiagnostic[],
+  fvttRuntimeVersion = request.foundryRuntime.fvttVersion,
 ) {
   return {
     sourceIdentity: { sourceId: request.source.sourceId, sourceHash: request.source.utf8Sha256 },
     target: {
-      fvttRuntimeVersion: request.foundryRuntime.fvttVersion,
+      fvttRuntimeVersion,
       generatorProfile: request.resolvedTarget.generatorProfile,
       generatorVersion: '0.1.0',
       systemId: 'dnd5e' as const,
@@ -343,7 +351,9 @@ function requireNonEmpty(value: string, label: string): string {
 function safeErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return message
-    .replace(/[A-Za-z]:\\[^\s"']+/gu, '<local path>')
+    .replace(/[A-Za-z]:[\\/][^\s"']+/gu, '<local path>')
     .replace(/(?:^|\s)\/[^\s"']+/gu, ' <local path>')
+    .replace(/\b(?:actorPath|dnd5eRepo|localCache|sourcePath)\b/gu,'source location')
+    .replace(/[\\/]/gu,'／')
     .slice(0, 500);
 }

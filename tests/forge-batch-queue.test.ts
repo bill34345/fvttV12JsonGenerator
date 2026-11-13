@@ -64,7 +64,7 @@ describe('Forge browser-local batch queue core', () => {
     const candidate = { jobId: id, objectKind: 'actor' as const, sourceId: proof.sourceIdentity!.sourceId,
       sourceHash: proof.sourceIdentity!.finalSourceHash, artifactHash: proof.candidateResponse!.artifactHash!,
       documentId: hashArtifact({ sourceId: proof.sourceIdentity!.sourceId }).slice(0, 16),
-      target: { fvttVersion: '14.364', systemId: 'dnd5e' as const, systemVersion: '5.3.3',
+      target: { fvttVersion: '14.370', systemId: 'dnd5e' as const, systemVersion: '6.0.6',
         generatorProfile: 'v14' as const, effectProfile: 'core' as const, iconMode: 'off' as const } };
     expect(createForgeBatchApplyManifest(state, [candidate]).items).toEqual([candidate]);
     await queue.beginApply(id);
@@ -175,7 +175,7 @@ describe('Forge browser-local batch queue core', () => {
       sourceHash: hashSource(`---\nforge-source-id: actor:v1:123e4567-e89b-42d3-a456-426614174000\n---\ncanonical actor source`),
       artifactHash: hashSource('actor artifact'),
       documentId: hashArtifact({ sourceId: 'actor:v1:123e4567-e89b-42d3-a456-426614174000' }).slice(0, 16),
-      target: { fvttVersion: '14.364', systemId: 'dnd5e' as const, systemVersion: '5.3.3', generatorProfile: 'v14' as const, effectProfile: 'core' as const, iconMode: 'off' as const },
+      target: { fvttVersion: '14.370', systemId: 'dnd5e' as const, systemVersion: '6.0.6', generatorProfile: 'v14' as const, effectProfile: 'core' as const, iconMode: 'off' as const },
     };
     const manifest = createForgeBatchApplyManifest(state, [candidate], TIMES[3]);
     expect(manifest.items).toEqual([candidate]);
@@ -407,7 +407,7 @@ function importedReview(rawSource: string, mode: 'plaintext-actor' | 'ai-item', 
     calls: { discovery: 0, extraction: 0, review: 0, repair: 0 },
     repairCount: 0,
     ...(accepted ? { canonicalSource, sourceIdentity: { sourceId, finalSourceHash: hashSource(canonicalSource) } } : {}),
-    target: { generatorVersion: '0.1.0', fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3', generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' },
+    target: { generatorVersion: '0.1.0', fvttVersion: '14.370', systemId: 'dnd5e', systemVersion: '6.0.6', generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' },
     ...(accepted ? { candidateResponse: { requestId, status: 'accepted' as const, artifactHash: hashSource(`${objectKind} artifact`), verificationStatus: 'accepted' as const, diagnostics: [] } } : {}),
     history: [],
   })));
@@ -417,7 +417,7 @@ function gmActorReview(status: 'ready_for_gm_review' | 'reviewed_candidate') {
   const rawSource = 'Actor source', sourceId = 'actor:v1:123e4567-e89b-42d3-a456-426614174000';
   const canonicalSource = `---\nforge-source-id: ${sourceId}\n---\ncanonical actor source`;
   const candidateHash = hashSource('current Actor candidate'), artifactHash = hashSource('Actor artifact');
-  const target = { generatorVersion: '0.1.0', fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3',
+  const target = { generatorVersion: '0.1.0', fvttVersion: '14.370', systemId: 'dnd5e', systemVersion: '6.0.6',
     generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' };
   return decodeForgeIntakeReviewBundleText(serializeForgeIntakeReviewBundleV2(buildForgeIntakeReviewBundleV2({
     objectKind: 'actor', mode: 'ai-monster', requestId: 'queue-actor', attemptId: 'queue-actor:attempt-1',
@@ -441,7 +441,7 @@ function gmItemReview(status: 'ready_for_gm_review' | 'accepted') {
   const canonicalSource = `---\nforge-source-id: ${sourceId}\n---\ncanonical item source`;
   const candidateHash = hashSource('current candidate');
   const artifactHash = hashSource('item artifact');
-  const target = { generatorVersion: '0.1.0', fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3',
+  const target = { generatorVersion: '0.1.0', fvttVersion: '14.370', systemId: 'dnd5e', systemVersion: '6.0.6',
     generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' };
   const gmApproval = { gmId: 'gm', sourceHash: hashSource(rawSource), finalSourceHash: hashSource(canonicalSource),
     artifactHash, targetHash: forgeGmTargetHash(target), candidateHash,

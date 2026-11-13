@@ -1,11 +1,12 @@
 import { createHash } from 'node:crypto';
 import type { CanonicalSpecies, SpeciesFeature, SpeciesMechanic } from '@fvtt-json-generator/models/species';
 import { parseSpeciesMarkdown } from '@fvtt-json-generator/parser/species-parser';
+import { DND5E_V14_SYSTEM_VERSION, FOUNDRY_V14_CORE_VERSION } from '@fvtt-json-generator/contracts/target';
 import { createStableDocumentId } from './stableId';
 
 export const SPECIES_V14_TARGET = Object.freeze({
-  foundry: '14.364',
-  dnd5e: '5.3.3',
+  foundry: FOUNDRY_V14_CORE_VERSION,
+  dnd5e: DND5E_V14_SYSTEM_VERSION,
   effectProfile: 'core',
   rules: '2024',
 } as const);
@@ -123,7 +124,7 @@ export function compileCanonicalSpecies(
     type: 'Size',
     configuration: { sizes: species.size.options },
     level: 0,
-    ...(options.fvttVersion === '14.368' ? { name: '' } : { title: '' }),
+    ...(options.fvttVersion !== '12' ? { name: '' } : { title: '' }),
     hint: species.size.hint,
     value: options.fvttVersion === '12' ? { size: '' } : {},
   }];
@@ -134,7 +135,7 @@ export function compileCanonicalSpecies(
       configuration: { items, optional: false, spell: null },
       value: {},
       level,
-      ...(options.fvttVersion === '14.368' ? { name: `${species.displayName}特性` } : { title: `${species.displayName}特性` }),
+      ...(options.fvttVersion !== '12' ? { name: `${species.displayName}特性` } : { title: `${species.displayName}特性` }),
       hint: '',
     });
   }
@@ -147,10 +148,10 @@ export function compileCanonicalSpecies(
       description: { value: speciesDescription(species), chat: '' },
       source: { custom: 'Private homebrew', rules: '2024', revision: species.source.irRevision, book: '', license: '' },
       advancement,
-      movement: options.fvttVersion === '14.368'
+      movement: options.fvttVersion !== '12'
         ? { speeds: { burrow: null, climb: null, fly: null, swim: null, walk: species.movement.walk }, units: 'ft', hover: false }
         : { burrow: null, climb: null, fly: null, swim: null, walk: species.movement.walk, units: 'ft', hover: false },
-      senses: options.fvttVersion === '14.368' ? {
+      senses: options.fvttVersion !== '12' ? {
         ranges: { darkvision: species.senses.darkvision ?? null, blindsight: null, tremorsense: null, truesight: null },
         units: 'ft', special: '',
       } : {
@@ -231,7 +232,6 @@ function projectFeature(species: CanonicalSpecies, feature: SpeciesFeature, fvtt
       uses: { spent: 0, recovery: [], max: '' },
       roll: { prompt: false, visible: false, name: '', formula: '' },
       img: SPECIES_FALLBACK_ICON,
-      ...(fvttVersion === '14.368' ? {} : { appliedEffects: [] }),
     },
   } : {};
   const level = Math.min(...feature.parts.map((part) => part.level));
@@ -264,7 +264,7 @@ function projectEffect(species: CanonicalSpecies, feature: SpeciesFeature, mecha
   const key = EFFECT_ALLOWLIST.get(mechanic.kind);
   if (!key || (mechanic.kind !== 'hp-per-level' && mechanic.kind !== 'ac-bonus')) return [];
   const effectId = createStableDocumentId(['species', species.identifier, 'feature', feature.id, 'effect', index]);
-  const dnd6 = fvttVersion === '14.368';
+  const dnd6 = fvttVersion !== '12';
   return [{
     name: feature.name,
     img: SPECIES_FALLBACK_ICON,
@@ -328,7 +328,7 @@ export function validateNativeSpeciesPackage(pkg: NativeSpeciesPackage, expected
         if (Object.keys(effect.system ?? {}).length || Object.keys(effect.flags ?? {}).length) add('V12_EFFECT_EXTENSION', `/documents/${index}/effects/${effectIndex}`, 'V12 Core Species effects must not carry extension system data or flags.');
       }
       if (effect.transfer !== true) add('EFFECT_TRANSFER', `/documents/${index}/effects/${effectIndex}/transfer`, 'Species permanent effects must transfer.');
-      if (fvttVersion === '14.368') {
+      if (fvttVersion === '14' || fvttVersion === '14.368') {
         const effectPath = `/documents/${index}/effects/${effectIndex}`;
         rejectUnexpectedFields(effect, ['name', 'img', '_id', 'type', 'system', 'disabled', 'start', 'duration', 'description', 'origin', 'tint', 'transfer', 'statuses', 'showIcon', 'folder', 'sort', 'flags'], effectPath, add, 'V14_368');
         rejectUnexpectedFields(effect.system, ['changes', 'conditions', 'magical', 'rider', 'origin'], `${effectPath}/system`, add, 'V14_368');
@@ -342,10 +342,10 @@ export function validateNativeSpeciesPackage(pkg: NativeSpeciesPackage, expected
           add('V14_368_EFFECT_DOCUMENT', effectPath, 'Foundry 14 effects require native start, duration, icon, and folder fields.');
         }
       }
-      const changes = fvttVersion === '14.368' ? effect.system?.changes : effect.changes;
+      const changes = fvttVersion !== '12' ? effect.system?.changes : effect.changes;
       for (const [changeIndex, change] of (Array.isArray(changes) ? changes : []).entries()) {
         if (![...EFFECT_ALLOWLIST.values()].includes(change.key)) add('EFFECT_KEY', `/documents/${index}/effects/${effectIndex}/changes/${changeIndex}/key`, `Effect key ${String(change.key)} is not allowlisted.`);
-        if (fvttVersion === '14.368') {
+        if (fvttVersion === '14' || fvttVersion === '14.368') {
           rejectUnexpectedFields(change, ['_id', 'key', 'type', 'value', 'phase', 'priority', 'conditions', 'replacement'], `/documents/${index}/effects/${effectIndex}/system/changes/${changeIndex}`, add, 'V14_368');
           if (!/^[a-f0-9]{16}$/u.test(String(change._id ?? '')) || change.type !== 'add' || change.phase !== 'initial'
             || change.priority !== null || change.conditions !== '{}' || change.replacement !== '') {
@@ -356,7 +356,7 @@ export function validateNativeSpeciesPackage(pkg: NativeSpeciesPackage, expected
     }
   }
   if (pkg.species?.type !== 'race' || pkg.species?.system?.source?.rules !== '2024') add('RACE_STRUCTURE', '/species', 'Species document must be a 2024 race Item.');
-  if (fvttVersion === '14.368') {
+  if (fvttVersion === '14' || fvttVersion === '14.368') {
     const movement = pkg.species?.system?.movement;
     const senses = pkg.species?.system?.senses;
     if (movement?.speeds?.walk == null || Object.hasOwn(movement ?? {}, 'walk')) add('V14_368_MOVEMENT', '/species/system/movement', 'dnd5e 6 movement must use speeds.walk without a flat walk field.');
@@ -406,7 +406,7 @@ export function validateNativeSpeciesPackage(pkg: NativeSpeciesPackage, expected
     if (new Set(coverage.map((entry) => entry.level)).size > 1) add('MIXED_FEATURE_GRANT_LEVEL', `${featurePath}/coverage`, 'All parts of one granted Feature must use the same level.');
     const kinds = coverage.flatMap((entry) => entry.mechanicKinds);
     const expectedEffectKeys = kinds.flatMap((kind) => EFFECT_ALLOWLIST.has(kind) ? [EFFECT_ALLOWLIST.get(kind)!] : []);
-    const actualEffectKeys = (feature.effects ?? []).flatMap((effect: any) => (fvttVersion === '14.368' ? effect.system?.changes ?? [] : effect.changes ?? []).map((change: any) => change.key));
+    const actualEffectKeys = (feature.effects ?? []).flatMap((effect: any) => (fvttVersion !== '12' ? effect.system?.changes ?? [] : effect.changes ?? []).map((change: any) => change.key));
     for (const key of actualEffectKeys) if (!expectedEffectKeys.includes(key)) add('UNDECLARED_EFFECT', `${featurePath}/effects`, `Effect ${String(key)} is not declared by the coverage ledger.`);
     if (actualEffectKeys.length !== expectedEffectKeys.length || expectedEffectKeys.some((key) => !actualEffectKeys.includes(key))) add('EFFECT_COVERAGE_MISMATCH', `${featurePath}/effects`, 'Native Effect mechanics and coverage must be bidirectionally complete.');
     const activities = Object.values(feature.system?.activities ?? {}) as any[];
@@ -415,7 +415,7 @@ export function validateNativeSpeciesPackage(pkg: NativeSpeciesPackage, expected
     for (const [activityIndex, activity] of activities.entries()) {
       if (activity.type !== 'utility' || activity.consumption?.spellSlot !== false || !activity.consumption?.targets?.some((target: any) => target.type === 'itemUses' && Number(target.value) >= 1)) add('INVALID_LIMITED_UTILITY', `${featurePath}/system/activities/${activityIndex}`, 'Limited Utility must consume item uses without consuming a spell slot.');
       if (activity.target?.affects?.type !== 'self' || activity.target?.template?.type) add('INVALID_UTILITY_TARGET', `${featurePath}/system/activities/${activityIndex}/target`, 'Species Limited Utility must target only the owning character and must not create a template.');
-      if (fvttVersion === '14.368' && Object.hasOwn(activity, 'appliedEffects')) add('V14_368_ACTIVITY_FIELD', `${featurePath}/system/activities/${activityIndex}/appliedEffects`, 'dnd5e 6 activities use effects and cannot contain appliedEffects.');
+      if (fvttVersion !== '12' && Object.hasOwn(activity, 'appliedEffects')) add('V14_368_ACTIVITY_FIELD', `${featurePath}/system/activities/${activityIndex}/appliedEffects`, 'dnd5e 6 activities use effects and cannot contain appliedEffects.');
       if (fvttVersion === '12') {
         if (Object.hasOwn(activity, 'appliedEffects')) add('V14_ACTIVITY_FIELD', `${featurePath}/system/activities/${activityIndex}/appliedEffects`, 'V12 activities must use effects and cannot contain appliedEffects.');
         const allowedActivityFields = new Set(['type', 'name', '_id', 'sort', 'activation', 'consumption', 'description', 'duration', 'effects', 'range', 'target', 'uses', 'roll', 'img']);

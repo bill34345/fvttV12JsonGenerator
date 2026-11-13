@@ -53,13 +53,10 @@ describe.each(['12', '14'] as const)('Netherdeep real resource actors for v%s', 
       types: ['force'],
       scaling: { mode: 'whole', number: 0, formula: '3' },
     }));
-    expect(crack.effects).toContainEqual(expect.objectContaining({
-      changes: [expect.objectContaining({
-        key: 'system.attributes.ac.flat',
-        mode: 5,
-        value: '11',
-      })],
-    }));
+    const acEffect = crack.effects.find((effect: any) => effect.flags?.fvttJsonGenerator?.sourceDerivedAcEffect);
+    expect((acEffect.system?.changes ?? acEffect.changes)[0]).toMatchObject(target === '14'
+      ? { key: 'system.attributes.ac.override', type: 'override', phase: 'initial', value: '11' }
+      : { key: 'system.attributes.ac.flat', mode: 5, value: '11' });
   });
 
   it('keeps all twelve Urchin spikes, native costs, long-rest recovery, and exact AC tiers', async () => {
@@ -84,15 +81,15 @@ describe.each(['12', '14'] as const)('Netherdeep real resource actors for v%s', 
         value,
       }));
     }
-    expect(carrier.effects.map((effect: any) => effect.changes[0].value))
+    expect(carrier.effects.map((effect: any) => (effect.system?.changes ?? effect.changes)[0].value))
       .toEqual(['12', '14', '16', '18', '20']);
     if (target === '14') {
-      expect(carrier.effects.map((effect: any) => effect.changes[0])).toEqual(expect.arrayContaining([
+      expect(carrier.effects.map((effect: any) => (effect.system?.changes ?? effect.changes)[0])).toEqual(expect.arrayContaining([
         expect.objectContaining({ key: 'system.attributes.ac.value', phase: 'final', value: '12' }),
         expect.objectContaining({ key: 'system.attributes.ac.value', phase: 'final', value: '20' }),
       ]));
     } else {
-      expect(carrier.effects.map((effect: any) => effect.changes[0])).toEqual(expect.arrayContaining([
+      expect(carrier.effects.map((effect: any) => (effect.system?.changes ?? effect.changes)[0])).toEqual(expect.arrayContaining([
         expect.objectContaining({ key: 'system.attributes.ac.flat', value: '12' }),
         expect.objectContaining({ key: 'system.attributes.ac.flat', value: '20' }),
       ]));

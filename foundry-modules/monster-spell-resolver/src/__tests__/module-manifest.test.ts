@@ -28,7 +28,7 @@ describe('Foundry companion module contract', () => {
     expect(manifest.id).toBe(RESOLVER_MODULE_ID);
     expect(manifest.version).toBe('0.1.7');
     expect(manifest.version).toBe(packageMetadata.version);
-    expect(manifest.compatibility).toEqual({ minimum: '14.364', verified: '14.364', maximum: '14.368' });
+    expect(manifest.compatibility).toEqual({ minimum: '14.364', verified: '14.364', maximum: '14.999' });
     expect(manifest.esmodules).toEqual(['scripts/index.js']);
     expect(manifest.styles).toEqual([{ src: 'styles/resolver.css' }]);
     expect(manifest.languages).toEqual([
@@ -36,7 +36,7 @@ describe('Foundry companion module contract', () => {
       { lang: 'zh-CN', name: '简体中文', path: 'lang/zh-CN.json' },
     ]);
     expect(manifest.relationships).toEqual({
-      systems: [{ id: 'dnd5e', type: 'system', compatibility: { minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.6' } }],
+      systems: [{ id: 'dnd5e', type: 'system', compatibility: { minimum: '5.3.3', verified: '5.3.3', maximum: '6.999.999' } }],
     });
     expect(manifest.socket).toBe(false);
     expect(manifest.scripts ?? []).toEqual([]);
@@ -273,7 +273,10 @@ describe('Foundry companion module contract', () => {
     [{ foundry: '14.368', dnd5e: '6.0.4' }, 'UNSUPPORTED_DND5E_VERSION'],
     [{ foundry: '14.364', dnd5e: '6.0.5' }, 'UNSUPPORTED_RUNTIME_PAIR'],
     [{ foundry: '14.364', dnd5e: '6.0.6' }, 'UNSUPPORTED_RUNTIME_PAIR'],
-    [{ foundry: '14.368', dnd5e: '6.0.7' }, 'UNSUPPORTED_DND5E_VERSION'],
+    [{ foundry: '15.0', dnd5e: '6.0.6' }, 'UNSUPPORTED_FOUNDRY_VERSION'],
+    [{ foundry: '14.368', dnd5e: '7.0.0' }, 'UNSUPPORTED_DND5E_VERSION'],
+    [{ foundry: '14.370', dnd5e: '6.0.4' }, 'UNSUPPORTED_DND5E_VERSION'],
+    [{ foundry: '14.370', dnd5e: '7.0.0' }, 'UNSUPPORTED_DND5E_VERSION'],
     [{ foundry: '', dnd5e: '5.3.3' }, 'MISSING_RUNTIME_VERSION'],
     [{ foundry: '14.364', dnd5e: '' }, 'MISSING_RUNTIME_VERSION'],
   ] as const)('fails closed for runtime %j', async (versions, code) => {
@@ -291,7 +294,10 @@ describe('Foundry companion module contract', () => {
     { foundry: '14.368', dnd5e: '6.0.2' },
     { foundry: '14.368', dnd5e: '6.0.5' },
     { foundry: '14.368', dnd5e: '6.0.6' },
-  ] as const)('permits only the exact source-reviewed runtime pair %j', async (versions) => {
+    { foundry: '14.369', dnd5e: '6.0.6' },
+    { foundry: '14.368', dnd5e: '6.0.7' },
+    { foundry: '14.370', dnd5e: '6.1.0' },
+  ] as const)('permits retained or same-major native6 runtime pair %j', async (versions) => {
     expect(evaluateRuntimeCompatibility(versions)).toEqual({ ...versions, supported: true, diagnostics: [] });
     const adapter = new FakeRuntimeAdapter(versions);
     registerResolverLifecycle(adapter);

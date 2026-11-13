@@ -8,17 +8,17 @@ describe('foundryTarget', () => {
     expect(parseFvttTargetVersion('14')).toBe('14');
   });
 
-  it('describes v14 as dnd5e 5.3.3 with v14 reference paths', () => {
+  it('describes v14 as dnd5e 6.0.6 with v14 reference paths', () => {
     const target = getFoundryTarget('14');
 
     expect(target.fvttVersion).toBe('14');
-    expect(target.dnd5eVersion).toBe('5.3.3');
-    expect(target.stats.systemVersion).toBe('5.3.3');
-    expect(target.reference.dnd5eRepo).toBe('.local/references/dnd5e/5.3.3/repo');
+    expect(target.dnd5eVersion).toBe('6.0.6');
+    expect(target.stats.systemVersion).toBe('6.0.6');
+    expect(target.reference.dnd5eRepo).toBe('.local/references/dnd5e/6.0.6/repo');
     expect(target.effectProfiles).toEqual(['core', 'modded-v14']);
     expect(target.modules).toEqual({
-      midiQol: '14.0.11',
-      dae: '14.0.12',
+      midiQol: '14.6.7',
+      dae: '14.6.5',
       timesUp: null,
       itemMacro: null,
     });
@@ -27,14 +27,14 @@ describe('foundryTarget', () => {
   it('treats the v14 full reference as an optional local verification cache', () => {
     const target = getFoundryTarget('14');
 
-    expect(target.reference.localCache).toBe('.local/references/dnd5e/5.3.3/repo');
+    expect(target.reference.localCache).toBe('.local/references/dnd5e/6.0.6/repo');
     expect(target.reference.requiredForGeneration).toBe(false);
   });
 
   it('can project v14 reference metadata onto an independently configured cache root', () => {
     const target = getFoundryTarget('14', { referenceCacheRoot: 'J:\\fvtt-reference-cache' });
-    expect(target.reference.dnd5eRepo).toBe('J:/fvtt-reference-cache/dnd5e/5.3.3/repo');
-    expect(target.reference.localCache).toBe('J:/fvtt-reference-cache/dnd5e/5.3.3/repo');
+    expect(target.reference.dnd5eRepo).toBe('J:/fvtt-reference-cache/dnd5e/6.0.6/repo');
+    expect(target.reference.localCache).toBe('J:/fvtt-reference-cache/dnd5e/6.0.6/repo');
     expect(getFoundryTarget('12').reference.dnd5eRepo).toBe('references/dnd5e-4.3.9/repo');
   });
 

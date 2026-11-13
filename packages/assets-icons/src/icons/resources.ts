@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { DND5E_V14_SYSTEM_VERSION, FOUNDRY_V14_CORE_VERSION } from '@fvtt-json-generator/contracts/target';
 import { overrideSelectorKey } from './selectors';
 export { overrideSelectorKey } from './selectors';
 import type {
@@ -93,13 +94,13 @@ function assertTarget(
   label: string,
 ): void {
   if (
-    target?.foundryVersion !== '14.364'
+    target?.foundryVersion !== FOUNDRY_V14_CORE_VERSION
     || target.systemId !== 'dnd5e'
-    || target.systemVersion !== '5.3.3'
+    || target.systemVersion !== DND5E_V14_SYSTEM_VERSION
   ) {
     throw new IconConfigurationError(
       'ICON_TARGET_MISMATCH',
-      `The ${label} must target Foundry 14.364 and dnd5e 5.3.3.`,
+      `The ${label} must target Foundry ${FOUNDRY_V14_CORE_VERSION} and dnd5e ${DND5E_V14_SYSTEM_VERSION}.`,
     );
   }
 }

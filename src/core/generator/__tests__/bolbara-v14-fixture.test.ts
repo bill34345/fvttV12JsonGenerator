@@ -14,22 +14,25 @@ describe('Bolbara v14 structured fixture', () => {
       effectProfile: 'core',
     }).generateForRoute(parsed, 'chinese');
 
-    expect(actor.system.attributes.ac.flat).toBe(13);
+    expect(actor.system.attributes.ac.override).toBe(13);
     expect(actor.system.attributes.hp.formula).toBe('9d6 + 9');
-    expect(actor.system.attributes.init.bonus).toBe('');
+    expect(actor.system.attributes.init.roll.bonus).toBe('');
     expect(actor.system.details.type).toMatchObject({ value: 'humanoid', custom: '地精类' });
     expect(actor.system.resources.legact).toEqual({ max: 2, spent: 0 });
 
     const dagger = actor.items.find((item: any) => item.name.includes('Dagger'));
     const daggerActivity = Object.values(dagger.system.activities)[0] as any;
     expect(daggerActivity.attack).toMatchObject({ bonus: '4', flat: true, type: { value: 'melee', classification: 'weapon' } });
-    expect(daggerActivity.range).toMatchObject({ reach: 5, value: 20, long: 60, units: 'ft' });
+    expect(daggerActivity.range).toMatchObject({ value: '5', units: 'ft', override: true, special: '远射程 20/60 尺' });
+    expect(daggerActivity.range.reach).toBeUndefined();
+    expect(daggerActivity.range.long).toBeUndefined();
+    expect(dagger.system.range).toMatchObject({ reach: 5, value: 20, long: 60, units: 'ft' });
     expect(daggerActivity.damage.parts[0]).toMatchObject({ number: 1, denomination: 4, bonus: '2', types: ['piercing'] });
 
     const blast = actor.items.find((item: any) => item.name.includes('Eldritch Blast'));
     const blastActivity = Object.values(blast.system.activities)[0] as any;
     expect(blastActivity.attack).toMatchObject({ bonus: '4', flat: true, type: { value: 'ranged', classification: 'spell' } });
-    expect(blastActivity.range).toMatchObject({ value: 120, long: null, units: 'ft' });
+    expect(blastActivity.range).toMatchObject({ value: '120', units: 'ft' });
     expect(blastActivity.damage.parts[0]).toMatchObject({ number: 1, denomination: 10, bonus: '2', types: ['force'] });
 
     const dash = actor.items.find((item: any) => item.name.includes('Incorporeal Dash'));

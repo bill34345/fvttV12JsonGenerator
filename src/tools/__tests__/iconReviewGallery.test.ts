@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { DND5E_V14_SYSTEM_VERSION, FOUNDRY_V14_CORE_VERSION } from '@fvtt-json-generator/contracts/target';
 import { resolve } from 'node:path';
 import {
   renderIconReviewGallery,
@@ -10,7 +11,7 @@ import type { IconReviewReport } from '../../core/icons/types';
 describe('v14 icon review gallery', () => {
   test('maps tracked logical paths to the locked local runtime without copying artwork', () => {
     expect(resolveInstalledIconPath('icons/creatures/abilities/wings-birdlike-blue.webp'))
-      .toContain('.local\\foundry-v14\\app\\14.364\\public\\icons\\creatures\\abilities');
+      .toContain(`.local\\foundry-v14\\app\\${FOUNDRY_V14_CORE_VERSION}\\public\\icons\\creatures\\abilities`);
     expect(resolveInstalledIconPath('systems/dnd5e/icons/svg/items/feature.svg'))
       .toContain('.local\\foundry-v14\\data\\server-mirror\\Data\\systems\\dnd5e\\icons\\svg\\items');
     expect(() => resolveInstalledIconPath('modules/example/icon.webp')).toThrow('Unsupported icon path');
@@ -22,7 +23,7 @@ describe('v14 icon review gallery', () => {
     const roots = resolveInstalledIconRoots(workspaceRoot, { FVTT_OPS_LAB_ROOT: labRoot });
 
     expect(resolveInstalledIconPath('icons/creatures/abilities/wings-birdlike-blue.webp', roots))
-      .toBe(resolve(labRoot, 'app/14.364/public/icons/creatures/abilities/wings-birdlike-blue.webp'));
+      .toBe(resolve(labRoot, `app/${FOUNDRY_V14_CORE_VERSION}/public/icons/creatures/abilities/wings-birdlike-blue.webp`));
     expect(resolveInstalledIconPath('systems/dnd5e/icons/svg/items/feature.svg', roots))
       .toBe(resolve(labRoot, 'data/server-mirror/Data/systems/dnd5e/icons/svg/items/feature.svg'));
   });
@@ -30,7 +31,7 @@ describe('v14 icon review gallery', () => {
   test('renders review provenance and escapes untrusted names', () => {
     const report: IconReviewReport = {
       schemaVersion: 1,
-      target: { foundryVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3' },
+      target: { foundryVersion: FOUNDRY_V14_CORE_VERSION, systemId: 'dnd5e', systemVersion: DND5E_V14_SYSTEM_VERSION },
       mode: 'safe',
       summary: { total: 1, override: 0, existing: 0, exact: 1, semantic: 0, fallback: 0 },
       entries: [{

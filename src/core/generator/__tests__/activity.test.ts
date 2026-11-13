@@ -3,7 +3,7 @@ import { ActivityGenerator } from '../activity';
 import type { ActionData } from '../../parser/action';
 
 describe('ActivityGenerator', () => {
-  const generator = new ActivityGenerator();
+  const generator = new ActivityGenerator({ fvttVersion: '12' });
 
   it('should generate attack activity', () => {
     const action: ActionData = {
@@ -94,12 +94,12 @@ describe('ActivityGenerator', () => {
   });
 
   it('generates stable 16-character IDs with broad uniqueness', () => {
-    const first = new ActivityGenerator().generate({
+    const first = new ActivityGenerator({ fvttVersion: '12' }).generate({
       name: 'Stable Strike',
       type: 'attack',
       attack: { type: 'mwak', toHit: 5, range: 'reach 5 ft.', damage: [{ formula: '1d6+3', type: 'slashing' }] },
     });
-    const second = new ActivityGenerator().generate({
+    const second = new ActivityGenerator({ fvttVersion: '12' }).generate({
       name: 'Stable Strike',
       type: 'attack',
       attack: { type: 'mwak', toHit: 5, range: 'reach 5 ft.', damage: [{ formula: '1d6+3', type: 'slashing' }] },
@@ -111,7 +111,7 @@ describe('ActivityGenerator', () => {
 
     const ids = new Set<string>();
     for (let index = 0; index < 10_000; index++) {
-      const generated = new ActivityGenerator().generate({
+      const generated = new ActivityGenerator({ fvttVersion: '12' }).generate({
         name: `Generated Activity ${index}`,
         type: 'utility',
         desc: `source ordinal ${index}`,

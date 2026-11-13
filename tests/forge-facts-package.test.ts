@@ -52,7 +52,7 @@ describe('internal rule presentation is not a Forge response field', () => {
     '- Bite. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6+2) piercing damage.',
   ].join('\n');
   test('prepare capture preserves the same public response and cannot be serialized as proof', async () => {
-    const request = buildForgeActorRequest({content:source,displayName:'Marsh Guard',requestId:'facts-context-boundary',fvttVersion:'14.368',systemVersion:'5.3.3'});
+    const request = buildForgeActorRequest({content:source,displayName:'Marsh Guard',requestId:'facts-context-boundary',fvttVersion:'14.368',systemVersion:'6.0.6'});
     const ordinary = await convertFinalActorSource(request);
     const captured = await convertFinalActorSource(request, {captureRulePresentation:true});
     expect('result' in ordinary && ordinary.result.status).toBe('accepted');

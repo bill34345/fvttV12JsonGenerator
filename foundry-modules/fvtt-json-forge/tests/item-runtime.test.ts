@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { buildForgeItemRequest, convertFinalItemSource } from '@fvtt-json-generator/forge-browser-runtime';
+import { buildForgeItemRequest, convertFinalItemSource, FORGE_NATIVE_606_TARGET } from '@fvtt-json-generator/forge-browser-runtime';
 import {
   hashArtifact,
   projectForgeItemDocument,
@@ -24,8 +24,8 @@ beforeAll(async () => {
     sourceId: 'item:v1:123e4567-e89b-42d3-a456-426614174000' as ForgeItemSourceId,
     displayName: 'Shield',
     requestId: 'item-runtime-test',
-    fvttVersion: '14.364',
-    systemVersion: '5.3.3',
+    fvttVersion: '14.370',
+    systemVersion: '6.0.6',
   }));
   if (!('result' in acceptedResponse) || acceptedResponse.result.status !== 'accepted') {
     throw new Error(`Expected accepted Item fixture: ${JSON.stringify(acceptedResponse)}`);
@@ -33,6 +33,32 @@ beforeAll(async () => {
 });
 
 describe('Forge world Item adapter', () => {
+  test('runtime admission creates a formally projected Item on a later native6 runtime', async () => {
+    for (const requestRuntime of [{fvttVersion:'14.370',systemVersion:'6.1.0'},{fvttVersion:'14.369',systemVersion:'6.0.6'}]) {
+    const world = makeWorld();
+    world.game.version = '14.370'; world.game.system.version = '6.1.0';
+    const request = buildForgeItemRequest({ content: SHIELD_SOURCE, sourceId: 'item:v1:123e4567-e89b-42d3-a456-426614174000' as ForgeItemSourceId,
+      displayName: 'Shield', requestId: 'future-native-item', ...requestRuntime });
+    const response: any = await convertFinalItemSource(request, { nativeProjection: {
+      target: FORGE_NATIVE_606_TARGET,
+      runtime: { coreVersion: world.game.version, systemId: 'dnd5e', systemVersion: world.game.system.version },
+      project(_kind, input) {
+        for (const effect of input.effects) {
+          effect.duration = { value: null, units: 'seconds', expiry: null, expired: false }; effect.start = null;
+        }
+        input.system.armor.magicalBonus = '2'; input.system.rarities = ['veryRare']; delete input.system.rarity;
+        return input;
+      },
+    } });
+    expect(response.result.target.fvttRuntimeVersion).toBe(world.game.version);
+    expect(response.result.target.systemVersionObserved).toBe(world.game.system.version);
+    expect(response.result.artifact._stats).toMatchObject(FORGE_NATIVE_606_TARGET.stats);
+    const result = await createAcceptedForgeItem({ game: world.game, response });
+    expect(result.status).toBe('created');
+    expect(world.createCalls).toBe(1);
+    expect((result.item.toObject() as any).flags['fvtt-json-forge'].target.systemVersionObserved).toBe(world.game.system.version);
+    }
+  });
   test('creates once, readbacks complete flags, reuses exactly, and never changes Actor count', async () => {
     const world = makeWorld();
     const actorCount = world.game.actors.contents.length;
@@ -197,9 +223,20 @@ describe('Forge world Item adapter', () => {
     await expect(createAcceptedForgeItem({ game: world.game, response: acceptedResponse })).rejects.toThrow(/GM/u);
     world.game.user.isGM = true;
     world.game.version = '14.365';
-    await expect(createAcceptedForgeItem({ game: world.game, response: acceptedResponse })).rejects.toThrow(/14\.364/u);
+    await expect(createAcceptedForgeItem({ game: world.game, response: acceptedResponse })).rejects.toThrow(/Core 14/u);
     expect(world.createCalls).toBe(0);
     expect(world.items).toHaveLength(0);
+  });
+
+  test('runtime admission on later native6 versions accepts direct native Item output', async () => {
+    const world = makeWorld();
+    world.game.version = '14.370';
+    world.game.system.version = '6.1.0';
+    const response = clone(acceptedResponse) as any;
+    response.result.target.fvttRuntimeVersion = world.game.version;
+    response.result.target.systemVersionObserved = world.game.system.version;
+    expect((await createAcceptedForgeItem({ game: world.game, response })).status).toBe('created');
+    expect(world.createCalls).toBe(1);
   });
 
   test('deletes only the newly created Item after readback drift', async () => {
@@ -364,8 +401,8 @@ function makeWorld() {
     return item;
   };
   state.game = {
-    version: '14.364',
-    system: { id: 'dnd5e', version: '5.3.3' },
+    version: '14.370',
+    system: { id: 'dnd5e', version: '6.0.6' },
     user: { isGM: true },
     items: collection,
     actors: { contents: [{ id: 'control-actor' }] },

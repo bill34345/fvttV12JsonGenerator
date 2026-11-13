@@ -1015,7 +1015,7 @@ function readActorSummary(value: unknown, path: string, issues: ForgeDecodeIssue
   const creatureType = readOptionalString(record, 'creatureType', path, issues);
   const hp = readOptionalHitPointSummary(record, 'hp', path, issues);
   const ac = readOptionalArmorClassSummary(record, 'ac', path, issues);
-  const cr = readOptionalNumber(record, 'cr', path, issues);
+  const cr = readOptionalNumberOrNull(record, 'cr', path, issues);
   let damageVulnerability:ForgeActorVerificationSummary['actor']['damageVulnerability'];
   if(record.damageVulnerability!==undefined){
     const entryPath=path+'/damageVulnerability',entry=readRecord(record.damageVulnerability,entryPath,new Set(['value','custom']),issues);
@@ -1047,8 +1047,8 @@ function readOptionalHitPointSummary(
   const entry = readRecord(value, entryPath, new Set(['value', 'max', 'temp', 'tempmax', 'formula']), issues);
   if (!entry) return undefined;
   const result: ForgeHitPointSummary = {};
-  const valueNumber = readOptionalNumber(entry, 'value', entryPath, issues);
-  const max = readOptionalNumber(entry, 'max', entryPath, issues);
+  const valueNumber = readOptionalNumberOrNull(entry, 'value', entryPath, issues);
+  const max = readOptionalNumberOrNull(entry, 'max', entryPath, issues);
   const temp = readOptionalNumberOrNull(entry, 'temp', entryPath, issues);
   const tempmax = readOptionalNumberOrNull(entry, 'tempmax', entryPath, issues);
   const formula = readOptionalString(entry, 'formula', entryPath, issues);
@@ -1069,12 +1069,14 @@ function readOptionalArmorClassSummary(
   if (!Object.prototype.hasOwnProperty.call(record, key)) return undefined;
   const value = record[key];
   const entryPath = path + '/' + key;
-  const entry = readRecord(value, entryPath, new Set(['value', 'flat', 'bonus', 'formula', 'calc']), issues);
+  const entry = readRecord(value, entryPath, new Set(['value', 'flat', 'bonus', 'formula', 'calc', 'override', 'calcs', 'formulas']), issues);
   if (!entry) return undefined;
   const result: ForgeArmorClassSummary = {};
   const valueNumber = readOptionalNumber(entry, 'value', entryPath, issues);
-  const flat = readOptionalNumber(entry, 'flat', entryPath, issues);
-  const bonus = readOptionalNumber(entry, 'bonus', entryPath, issues);
+  const flat = readOptionalNumberOrNull(entry, 'flat', entryPath, issues);
+  const bonus = typeof entry.bonus === 'string'
+    ? readOptionalString(entry, 'bonus', entryPath, issues)
+    : readOptionalNumber(entry, 'bonus', entryPath, issues);
   const formula = readOptionalString(entry, 'formula', entryPath, issues);
   const calc = readOptionalString(entry, 'calc', entryPath, issues);
   if (valueNumber !== undefined) result.value = valueNumber;
@@ -1082,6 +1084,27 @@ function readOptionalArmorClassSummary(
   if (bonus !== undefined) result.bonus = bonus;
   if (formula !== undefined) result.formula = formula;
   if (calc !== undefined) result.calc = calc;
+  const override = readOptionalNumberOrNull(entry, 'override', entryPath, issues);
+  if (override !== undefined) result.override = override;
+  if (Object.hasOwn(entry, 'calcs')) result.calcs = readNonEmptyStringArray(entry.calcs, entryPath + '/calcs', issues);
+  if (Object.hasOwn(entry, 'formulas')) {
+    if (!isDenseArray(entry.formulas)) issue(issues, entryPath + '/formulas', 'INVALID_ARRAY', 'Expected a dense AC formula array.');
+    else result.formulas = entry.formulas.flatMap((value, index) => {
+      const formulaPath = entryPath + '/formulas/' + index;
+      const formula = readRecord(value, formulaPath, new Set(['formula', 'label', 'armored', 'shielded']), issues);
+      if (!formula) return [];
+      const projected: NonNullable<ForgeArmorClassSummary['formulas']>[number] = {};
+      for (const key of ['formula', 'label'] as const) {
+        const value = readOptionalString(formula, key, formulaPath, issues);
+        if (value !== undefined) projected[key] = value;
+      }
+      for (const key of ['armored', 'shielded'] as const) {
+        const value = formula[key] === null ? null : readOptionalBoolean(formula, key, formulaPath, issues);
+        if (value !== undefined) projected[key] = value;
+      }
+      return [projected];
+    });
+  }
   return result;
 }
 
@@ -1099,13 +1122,16 @@ function readSensesSummary(value: unknown, path: string, issues: ForgeDecodeIssu
   if (!record) return undefined;
   const ranges = readOptionalSenseRanges(record, path, issues);
   const result: ForgeSensesSummary = {};
-  const directKeys = ['darkvision', 'blindsight', 'tremorsense', 'truesight', 'passive'] as const;
+  const directKeys = ['darkvision', 'blindsight', 'tremorsense', 'truesight'] as const;
   for (const key of directKeys) {
-    const number = readOptionalNumber(record, key, path, issues);
+    const number = readOptionalNumberOrNull(record, key, path, issues);
     if (number !== undefined) result[key] = number;
   }
+  const passive = readOptionalNumber(record, 'passive', path, issues);
+  if (passive !== undefined) result.passive = passive;
   const special = readOptionalString(record, 'special', path, issues);
-  const units = readOptionalString(record, 'units', path, issues);
+  const units = Object.hasOwn(record, 'units') && record.units === null
+    ? null : readOptionalString(record, 'units', path, issues);
   if (ranges) result.ranges = ranges;
   if (special !== undefined) result.special = special;
   if (units !== undefined) result.units = units;
@@ -1123,7 +1149,7 @@ function readOptionalSenseRanges(
   if (!entry) return undefined;
   const result: NonNullable<ForgeSensesSummary['ranges']> = {};
   for (const key of ['darkvision', 'blindsight', 'tremorsense', 'truesight'] as const) {
-    const number = readOptionalNumber(entry, key, entryPath, issues);
+    const number = readOptionalNumberOrNull(entry, key, entryPath, issues);
     if (number !== undefined) result[key] = number;
   }
   return result;
@@ -1173,7 +1199,9 @@ function readOptionalActivityRange(record: Record<string, unknown>, path: string
   if (!entry) return undefined;
   const result: ForgeActivityRangeSummary = {};
   const override = readOptionalBoolean(entry, 'override', entryPath, issues);
-  const value = readOptionalNumberOrNull(entry, 'value', entryPath, issues);
+  const value = typeof entry.value === 'string'
+    ? readOptionalString(entry, 'value', entryPath, issues)
+    : readOptionalNumberOrNull(entry, 'value', entryPath, issues);
   const long = readOptionalNumberOrNull(entry, 'long', entryPath, issues);
   const reach = readOptionalNumberOrNull(entry, 'reach', entryPath, issues);
   const units = readOptionalString(entry, 'units', entryPath, issues);

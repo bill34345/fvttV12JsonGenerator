@@ -1,3 +1,5 @@
+import { DND5E_V14_SYSTEM_VERSION, FOUNDRY_V14_CORE_VERSION } from './target';
+
 export type IconMode = 'off' | 'safe';
 
 export type IconResolutionSource =
@@ -10,10 +12,16 @@ export type IconResolutionSource =
 export type IconConfidence = 'exact' | 'high' | 'fallback';
 
 export interface V14IconCatalogTarget {
+  foundryVersion: typeof FOUNDRY_V14_CORE_VERSION;
+  systemId: 'dnd5e';
+  systemVersion: typeof DND5E_V14_SYSTEM_VERSION;
+}
+
+export type IconReviewReportTarget = V14IconCatalogTarget | {
   foundryVersion: '14.364';
   systemId: 'dnd5e';
   systemVersion: '5.3.3';
-}
+};
 
 export interface V14IconCatalogEntry {
   id: string;
@@ -100,7 +108,7 @@ export interface IconReviewEntry {
 
 export interface IconReviewReport {
   schemaVersion: 1;
-  target: V14IconCatalogTarget;
+  target: IconReviewReportTarget;
   mode: 'safe';
   entries: IconReviewEntry[];
   summary: {
@@ -117,8 +125,10 @@ export interface IconReviewReport {
 export function decodeIconReviewReport(value: unknown): IconReviewReport {
   const record = closedRecord(value, ['schemaVersion', 'target', 'mode', 'entries', 'summary']);
   const target = closedRecord(record.target, ['foundryVersion', 'systemId', 'systemVersion']);
+  const currentTarget = target.foundryVersion === FOUNDRY_V14_CORE_VERSION && target.systemVersion === DND5E_V14_SYSTEM_VERSION;
+  const historicalTarget = target.foundryVersion === '14.364' && target.systemVersion === '5.3.3';
   if (record.schemaVersion !== 1 || record.mode !== 'safe'
-    || target.foundryVersion !== '14.364' || target.systemId !== 'dnd5e' || target.systemVersion !== '5.3.3') {
+    || (!currentTarget && !historicalTarget) || target.systemId !== 'dnd5e') {
     throw new TypeError('Invalid icon review version or target.');
   }
   const entries = boundedArray(record.entries, 10000).map(readEntry);
@@ -134,7 +144,10 @@ export function decodeIconReviewReport(value: unknown): IconReviewReport {
   for (const key of Object.keys(expected) as Array<keyof typeof expected>) {
     if (summary[key] !== expected[key]) throw new TypeError('Icon review summary does not match its entries.');
   }
-  return { schemaVersion: 1, target: { foundryVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3' },
+  const reportTarget: IconReviewReportTarget = historicalTarget
+    ? { foundryVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3' }
+    : { foundryVersion: FOUNDRY_V14_CORE_VERSION, systemId: 'dnd5e', systemVersion: DND5E_V14_SYSTEM_VERSION };
+  return { schemaVersion: 1, target: reportTarget,
     mode: 'safe', entries, summary: expected };
 }
 

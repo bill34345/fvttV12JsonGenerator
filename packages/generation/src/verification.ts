@@ -1,6 +1,8 @@
 import type { EffectProfile } from './effectProfileApplier';
-import { resolveLockedDnd5eV14Spell } from './v14SpellCatalog';
-import { getFoundryTarget, type FvttTargetVersion } from './target';
+import { DND5E_V14_SYSTEM_VERSION } from '@fvtt-json-generator/contracts/target';
+import { isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
+import { resolveLockedDnd5eV14Spell, resolveLockedDnd5eV14SpellByName } from './v14SpellCatalog';
+import { getFoundryTarget, type FvttTargetVersion, type FoundryTarget } from './target';
 import { isFoundryHtmlDescription } from './item-description';
 import { sourceConditionLifecycle, extractExplicitlyInflictedStatuses, simpleConditionDuration, officialCondition,inferredAppliedConditions,operationConditionSource,officialConditionStatuses } from './actor-effects';
 import { readConditionInstance } from '@fvtt-json-generator/contracts/conditions';
@@ -27,12 +29,18 @@ interface VerifyGeneratedDocumentOptions {
   output: any;
   target: FvttTargetVersion;
   effectProfile: EffectProfile;
+  runtimeTarget?: FoundryTarget;
 }
 
 export function verifyGeneratedDocument(
   options: VerifyGeneratedDocumentOptions,
 ): GenerationVerification {
   const diagnostics: GenerationDiagnostic[] = [];
+  const runtimeTarget = options.runtimeTarget;
+  if (runtimeTarget && (options.target !== '14' || runtimeTarget.fvttVersion !== '14'
+    || !isVersionInMajor(runtimeTarget.stats.coreVersion, '14.369') || runtimeTarget.stats.systemId !== 'dnd5e'
+    || runtimeTarget.stats.systemVersion !== DND5E_V14_SYSTEM_VERSION || runtimeTarget.dnd5eVersion !== DND5E_V14_SYSTEM_VERSION))
+    throw new Error('Unsupported verifier runtime target.');
   if(options.canonical.kind==='actor'&&(hasSourceCandidateFindings(options.canonical.candidateReview)||hasSourceCandidateFindings(options.output?.flags?.fvttJsonGenerator?.candidateReview))){
     diagnostics.push({code:'GEN_SOURCE_CANDIDATE_REVIEW_REQUIRED',severity:'warning',stage:'semantic',path:'actor/candidateReview',
       message:'The complete Actor retains unresolved source findings for user review; candidate delivery does not accept those findings.'});
@@ -70,13 +78,19 @@ export function verifyGeneratedDocument(
   }
 
   for (const [documentIndex, document] of documents.entries()) {
+    for (const pending of document?.flags?.fvttJsonGenerator?.pendingSpells ?? []) diagnostics.push({
+      code: 'GEN_V14_SPELLCAST_PENDING', severity: 'warning', stage: 'semantic', path: `items/${documentIndex}/spellcasting`,
+      message: `${pending.name}: ${pending.reason}`,
+    });
     const candidate=document?.flags?.fvttJsonGenerator?.candidateReview;
     if(hasSourceCandidateFindings(candidate))diagnostics.push({code:'GEN_SOURCE_CANDIDATE_REVIEW_REQUIRED',severity:'warning',stage:'semantic',
       path:`items/${documentIndex}/candidateReview`,message:'This source and model proposal is available for GM review; its retained semantic findings have not been accepted.'});
     verifyIdsAndLinks(document, documentIndex, diagnostics);
-    verifyDnd5eDocumentSchema(document, documentIndex, diagnostics, options.target);
+    // schema-derived: dnd5e 6.0.6 UsesField leaves its FormulaField max optional.
+    verifyDnd5eDocumentSchema(document, documentIndex, diagnostics, options.target, options.target === '14');
   }
   if (options.canonical.kind === 'actor') {
+    if (options.target === '14') verifyDnd6ActorSchema(options.output, diagnostics);
     verifyActorResourceLinks(options.output, diagnostics);
     verifyActorBehaviorLinks(options.output, diagnostics);
   }
@@ -99,16 +113,41 @@ export function verifyGeneratedDocument(
     ||!(mechanic.kind==='uses'&&(mechanic.value as {nativeResistanceLedgerOnly?:boolean})?.nativeResistanceLedgerOnly)).map((mechanic) =>
     verifyMechanicCoverage(mechanic, documents, diagnostics, options.target, options.effectProfile,options.canonical.kind==='actor'?options.output:undefined));
 
-  verifyTargetMetadata(options.output, options.target, diagnostics);
+  verifyTargetMetadata(options.output, options.target, diagnostics, runtimeTarget);
 
   const hasError = diagnostics.some((entry) => entry.severity === 'error');
   const needsReview = diagnostics.some((entry) => entry.severity === 'warning');
   return {
     status: hasError ? 'failed' : needsReview ? 'needs_review' : 'accepted',
     diagnostics,
-    target: getFoundryTarget(options.target),
+    target: runtimeTarget ?? getFoundryTarget(options.target),
     mechanicsCoverage,
   };
+}
+
+function verifyDnd6ActorSchema(actor: any, diagnostics: GenerationDiagnostic[]): void {
+  const attributes = actor?.system?.attributes ?? {};
+  const legacy: Array<[string, boolean]> = [
+    ['system/attributes/ac', ['calc', 'formula'].some(key => Object.hasOwn(attributes.ac ?? {}, key))],
+    ['system/attributes/movement', ['walk', 'fly', 'swim', 'climb', 'burrow'].some(key => Object.hasOwn(attributes.movement ?? {}, key))],
+    ['system/attributes/init/bonus', Object.hasOwn(attributes.init ?? {}, 'bonus')],
+    ['system/details/spellLevel', Object.hasOwn(actor?.system?.details ?? {}, 'spellLevel')],
+  ];
+  for (const key of Object.keys(actor?.system?.bonuses ?? {})) {
+    if (key !== 'spell') legacy.push([`system/bonuses/${key}`, true]);
+  }
+  for (const key of Object.keys(actor?.system?.bonuses?.spell ?? {})) {
+    if (key !== 'dc') legacy.push([`system/bonuses/spell/${key}`, true]);
+  }
+  for (const [key, ability] of Object.entries<any>(actor?.system?.abilities ?? {})) {
+    legacy.push([`system/abilities/${key}/bonuses`, Object.hasOwn(ability, 'bonuses')]);
+  }
+  for (const [key, skill] of Object.entries<any>(actor?.system?.skills ?? {})) {
+    legacy.push([`system/skills/${key}/bonuses/check`, Object.hasOwn(skill.bonuses ?? {}, 'check')]);
+  }
+  for (const [path, present] of legacy) if (present) diagnostics.push(error(
+    'GEN_DND6_LEGACY_ACTOR_FIELD', 'schema', path, `The v14 target requires native dnd5e 6 Actor fields; legacy field ${path.replaceAll('/', '.')}.`,
+  ));
 }
 
 function verifyDnd5eDocumentSchema(
@@ -116,6 +155,7 @@ function verifyDnd5eDocumentSchema(
   documentIndex: number,
   diagnostics: GenerationDiagnostic[],
   target: FvttTargetVersion,
+  allowOmittedUsesMax: boolean,
 ): void {
   if (document?.system?.activation !== undefined) {
     diagnostics.push(error(
@@ -125,7 +165,7 @@ function verifyDnd5eDocumentSchema(
       'Item-level activation is legacy; activation must be owned by Activities.',
     ));
   }
-  verifyUses(document?.system?.uses, `documents/${documentIndex}/system/uses`, diagnostics);
+  verifyUses(document?.system?.uses, `documents/${documentIndex}/system/uses`, diagnostics, allowOmittedUsesMax);
 
   const activities = document?.system?.activities ?? {};
   for (const [key, activity] of Object.entries(activities) as Array<[string, any]>) {
@@ -144,6 +184,7 @@ function verifyDnd5eDocumentSchema(
       activity?.uses,
       `documents/${documentIndex}/system/activities/${key}/uses`,
       diagnostics,
+      allowOmittedUsesMax,
     );
   }
 }
@@ -152,12 +193,14 @@ function verifyUses(
   uses: any,
   path: string,
   diagnostics: GenerationDiagnostic[],
+  allowOmittedMax: boolean,
 ): void {
   if (uses === undefined || uses === null) return;
   if (
     typeof uses !== 'object'
     || typeof uses.spent !== 'number'
-    || (typeof uses.max !== 'string' && typeof uses.max !== 'number')
+    || (typeof uses.max !== 'string' && typeof uses.max !== 'number'
+      && !(allowOmittedMax && !Object.hasOwn(uses, 'max')))
     || !Array.isArray(uses.recovery)
   ) {
     diagnostics.push(error(
@@ -556,7 +599,9 @@ function verifyMechanicCoverage(
             if(lifecycle?.version!==1||effect.transfer!==false||effect.disabled===true||!links.length||links.some(({activity,link})=>activity.flags?.fvttJsonGenerator?.sourceOperation?.role==='attack-roll'&&!gmHitRollTemplateValid(activity,effect,allActivities)||(activity.type==='save'?link.onSave!==false:link.onSave!==undefined)))valid=false;
             if(value?.sourceText&&lifecycle?.sourceText!==value.sourceText)valid=false;
             if(manual&&lifecycle?.mode!=='gm'||value?.condition&&!String(effect.description).includes(value.condition)||value?.escapeDc!==undefined&&lifecycle?.escapeDc!==value.escapeDc||value?.staged===true&&lifecycle?.staged!==true||status==='exhaustion'&&value?.exhaustionLevels!==undefined&&lifecycle?.exhaustionLevels!==value.exhaustionLevels)valid=false;
-            if(expected&&(effect.duration?.seconds!==(expected.seconds??null)||effect.duration?.rounds!==(expected.rounds??null)))diagnostics.push(error('GEN_CONDITION_DURATION_INVALID','semantic',mechanic.path,'The optional template must preserve its explicit numeric duration.'));
+            if(expected&&(target==='14'
+              ? effect.duration?.value!==(expected.seconds??expected.rounds)||effect.duration?.units!==(expected.seconds!==undefined?'seconds':'rounds')
+              : effect.duration?.seconds!==(expected.seconds??null)||effect.duration?.rounds!==(expected.rounds??null)))diagnostics.push(error('GEN_CONDITION_DURATION_INVALID','semantic',mechanic.path,'The optional template must preserve its explicit numeric duration.'));
           }
         }
         if(valid)outputPaths.push(`documents/${documentIndex}/effects`);
@@ -682,7 +727,9 @@ function verifyItemSpecificMechanic(
     const actual = document?.system?.armor;
     if (!actual || actual.value !== expected.value
       || (actual.dex ?? null) !== (expected.dex ?? null)
-      || (actual.magicalBonus ?? null) !== (expected.magicalBonus ?? null)
+      || (document?._stats?.systemVersion === '6.0.6'
+        ? String(actual.magicalBonus ?? '') !== String(expected.magicalBonus ?? '')
+        : (actual.magicalBonus ?? null) !== (expected.magicalBonus ?? null))
       || document?.system?.type?.value !== (expected.type ?? 'trinket')
       || document?.system?.type?.baseItem !== (expected.baseItem ?? '')) {
       diagnostics.push(error('GEN_ITEM_ARMOR_MISMATCH', 'semantic', mechanic.path,
@@ -879,10 +926,9 @@ function verifyItemSpecificMechanic(
   if (mechanic.kind === 'spell') {
     const expected = mechanic.value as { identifier?: string; name?: string; consumption?: number; activation?: string };
     const hasFormalIdentifier = typeof expected.identifier === 'string' && expected.identifier.trim().length > 0;
-    // Only AI Item Intake gives the canonical identifier that activates the
-    // V14 fail-closed UUID contract.  Old strict Markdown has no such proof
-    // and therefore keeps its pre-existing cast/utility compatibility path.
-    if (!hasFormalIdentifier) {
+    // Legacy targets retain cast/utility compatibility; V14 always proves a
+    // unique 2024 spell reference, including strict Markdown without an identifier.
+    if (!hasFormalIdentifier && target !== '14') {
       for (const [activityId, activity] of scopedEntries) {
         const targetUse = (activity?.consumption?.targets ?? []).find((entry: any) => entry?.type === 'itemUses');
         if (
@@ -902,10 +948,9 @@ function verifyItemSpecificMechanic(
       return [];
     }
     if (target !== '14') return undefined;
-    const resolved = resolveLockedDnd5eV14Spell(
-      String(expected.identifier ?? ''),
-      String(expected.name ?? ''),
-    );
+    const resolved = expected.identifier
+      ? resolveLockedDnd5eV14Spell(String(expected.identifier), String(expected.name ?? ''))
+      : resolveLockedDnd5eV14SpellByName(String(expected.name ?? ''));
     if (!resolved) {
       diagnostics.push(error(
         'GEN_ITEM_SPELL_UNRESOLVED',
@@ -1374,10 +1419,16 @@ function verifyTargetMetadata(
   output: any,
   target: FvttTargetVersion,
   diagnostics: GenerationDiagnostic[],
+  runtimeTarget?: FoundryTarget,
 ): void {
-  const expected = getFoundryTarget(target).stats;
+  const expected = (runtimeTarget ?? getFoundryTarget(target)).stats;
   const stats = output?._stats;
-  if (stats?.systemVersion && stats.systemVersion !== expected.systemVersion) {
+  if (stats || runtimeTarget) {
+    for (const key of ['coreVersion', 'systemId'] as const) if (stats?.[key] !== expected[key])
+      diagnostics.push(error('GEN_TARGET_METADATA_MISMATCH','schema',`_stats/${key}`,
+        `Expected ${expected[key]}, received ${String(stats?.[key])}.`));
+  }
+  if ((runtimeTarget || stats?.systemVersion) && stats?.systemVersion !== expected.systemVersion) {
     diagnostics.push(error(
       'GEN_TARGET_SYSTEM_VERSION_MISMATCH',
       'schema',

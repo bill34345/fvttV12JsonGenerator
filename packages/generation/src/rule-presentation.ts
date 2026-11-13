@@ -474,3 +474,19 @@ export function restoreRulePresentationPlan(
 export function rulePresentationField(plan: RulePresentationPlan, path: RuleDisplayPath): RulePresentationField | undefined {
   return plan.fields.find(field => pathKey(field.path) === pathKey(path));
 }
+
+/** The workflow has already checked native schema projection fidelity. Keep
+ * the same source facts and prose slots, binding their display to its new shape. */
+export function rebindRulePresentationAfterProjection(plan: RulePresentationPlan, before: any, after: any, sourceIdentity: string): RulePresentationPlan {
+  assertRulePresentationPlan(plan, before, sourceIdentity);
+  if (plan.fields.some(field => at(after, field.path) !== field.source)) throw new TypeError('Native projection changed a source-bound rule display field.');
+  const normalizer = planNormalizers.get(plan)!;
+  const next = { ...structuredClone(plan), mechanicalHash: actorMechanicalHash(after, normalizer) };
+  next.sourceHash = localizationHash({ sourceIdentityHash: next.sourceIdentityHash, templateHash: next.templateHash,
+    factsHash: next.factsHash, mechanicalHash: next.mechanicalHash,
+    fields: next.fields.map(field => ({ path: field.path, source: field.source, segments: field.segments })),
+    uncoveredMechanics: next.uncoveredMechanics });
+  trustedPlans.add(next); planNormalizers.set(next, normalizer);
+  assertRulePresentationPlan(next, after, sourceIdentity);
+  return freeze(next);
+}

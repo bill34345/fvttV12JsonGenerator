@@ -2,6 +2,7 @@ import {decodeEncounterRuntimeConfiguration} from '@fvtt-json-generator/forge-br
 import {validateFixedEncounterEntry} from './encounterRuntime';
 import {installEncounterAutomation} from './encounterAutomationRuntime';
 import {assertExactRuntime,assertGm,MODULE_ID} from './runtime';
+import {isForgeAutomationTargetCompatible} from './mirror-core-compatibility';
 
 /** No timers or code execution from world flags: resume only exact compiled, enabled data. */
 export function createEncounterAutomationLifecycle(env:any,install=installEncounterAutomation){
@@ -9,6 +10,8 @@ export function createEncounterAutomationLifecycle(env:any,install=installEncoun
   const key='fixedAutomation';
   async function start(context:any,input:unknown,options:{persist?:boolean;showPanel?:boolean}={}){
     assertGm(env.game);assertExactRuntime(env.game);
+    if(!isForgeAutomationTargetCompatible(env.game,context?.target))
+      throw new Error('旧版或缺少目标的控制状态不会在新系统自动恢复；原记录保留。');
     const config=decodeEncounterRuntimeConfiguration(input);
     const macro:any=validateFixedEncounterEntry(env.game,context,config);
     const id=context.packageId;
@@ -17,7 +20,7 @@ export function createEncounterAutomationLifecycle(env:any,install=installEncoun
     if(current&&hashes.get(id)===context.packageHash){if(options.showPanel!==false)await current.showPanel();return current;}
     if(current)await current.stop();
     const promise=(async()=>{
-      const runtime=await install(env,{packageId:id,packageHash:context.packageHash,bindings:context.actors,config},{resumeExisting:options.persist===false});
+      const runtime=await install(env,{...(context.target?{target:context.target}:{}),packageId:id,packageHash:context.packageHash,bindings:context.actors,config},{resumeExisting:options.persist===false});
       try{
         if(options.persist!==false)await macro.setFlag(MODULE_ID,key,{version:1,enabled:true,context,config});
         const originalStop=runtime.stop.bind(runtime);

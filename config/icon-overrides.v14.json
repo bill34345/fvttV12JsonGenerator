@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "target": {
-    "foundryVersion": "14.364",
+    "foundryVersion": "14.370",
     "systemId": "dnd5e",
-    "systemVersion": "5.3.3"
+    "systemVersion": "6.0.6"
   },
   "entries": [
     { "selector": { "itemType": "feat", "englishName": "Antimagic Shell", "actorEnglishName": "Caelian Sea Snail" }, "img": "icons/magic/defensive/shield-barrier-glowing-triangle-purple-orange.webp" },

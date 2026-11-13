@@ -1,5 +1,7 @@
 # 怪物法术解析器
 
+原生 6 路径允许 Core 14.368 起的 14.x 和 dnd5e 6.0.6 起的 6.x，既有旧版配对保留。版本准入不等于所有法术或版本已通过实机检查。详见[兼容范围](../../docs/acceptance/2026-11-13-native-dnd5e6.md)。
+
 本地未发布修复（2026-10-28）：怪物portable manifest的附带引文允许缺省，内部group/ref编号在接收入口统一整理；生成、计划、自动hook、水合与事务使用同一怪物契约。缺施法属性时保留法术身份、次数和完整规则，不猜属性或承诺可直接施法。独立Item／Species的来源证据契约未放宽。Mirror14.368／dnd5e5.3.3已从冻结Priest正常生成并导入七法术缓存和七Cast，独立1/day与四法术共享3/day、WIS及附赠动作归属均读回，刷新保持；DC13来自系统派生，不是原答显式DC。本批未实际Cast或消费资源，详见[保留修复验收](../../docs/acceptance/2026-10-28-forge-preservation-fixes.md)。
 
 本地候选修复（2026-10-27）：portable manifest已有的day／shortRest／longRest分别投影为原生day／sr／lr，独立次数、共享父池及单法术父池沿用同一来源周期，不再将休息恢复强制写成每日恢复。完整中文“四环版本”“6环版本”和既有英文“level N version”都进入同一固定环阶适配；仅提及环阶或含未解析附加条件的文字继续保留，不猜施法等级。明确castingLevel也可用于随意／天生施法。Forge与Resolver须配套安装，旧角色不自动迁移。本批只验Activity／Cast配置、实际导入及刷新保存，不投骰、不推进休息或世界时间；详见[四怪修复记录](../../docs/acceptance/2026-10-27-forge-four-chm-fixes.md)。

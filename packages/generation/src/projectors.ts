@@ -41,9 +41,9 @@ class Dnd5e439Projector implements GenerationProjector {
   }
 }
 
-class Dnd5e533Projector implements GenerationProjector {
+class Dnd5e606Projector implements GenerationProjector {
   public readonly targetVersions = ['14'] as const;
-  public readonly systemVersion = '5.3.3' as const;
+  public readonly systemVersion = '6.0.6' as const;
 
   public async project(
     document: CanonicalGenerationDocument,
@@ -74,8 +74,8 @@ class Dnd5e533Projector implements GenerationProjector {
 }
 
 const DND5E_439_PROJECTOR = new Dnd5e439Projector();
-const DND5E_533_PROJECTOR = new Dnd5e533Projector();
+const DND5E_606_PROJECTOR = new Dnd5e606Projector();
 
 export function getGenerationProjector(target: FvttTargetVersion): GenerationProjector {
-  return target === '14' ? DND5E_533_PROJECTOR : DND5E_439_PROJECTOR;
+  return target === '14' ? DND5E_606_PROJECTOR : DND5E_439_PROJECTOR;
 }

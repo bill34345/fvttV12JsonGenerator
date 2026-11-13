@@ -1,3 +1,4 @@
+import { NativeDocumentFixture } from './native-document-fixture';
 import { beforeAll, describe, expect, test } from 'bun:test';
 import type {BrowserActorGenerationResult} from '@fvtt-json-generator/forge-browser-runtime/ai';
 import { MemoryIntakeCandidateStore, captureIntakeCandidate, revalidateIntakeCandidate, INTAKE_CANDIDATE_MAX_AGE_MS,
@@ -58,10 +59,10 @@ let acceptedItem: ForgeItemResponse;
 
 beforeAll(async () => {
   acceptedActor = await convertFinalActorSource(buildForgeActorRequest({
-    content: ACTOR_SOURCE, displayName: 'Intake Actor', requestId: 'intake-actor-fixture', fvttVersion: '14.364', systemVersion: '5.3.3',
+    content: ACTOR_SOURCE, displayName: 'Intake Actor', requestId: 'intake-actor-fixture', fvttVersion: '14.370', systemVersion: '6.0.6',
   }));
   acceptedItem = await convertFinalItemSource(buildForgeItemRequest({
-    content: ITEM_SOURCE, displayName: 'Intake Item', requestId: 'intake-item-fixture', fvttVersion: '14.364', systemVersion: '5.3.3',
+    content: ITEM_SOURCE, displayName: 'Intake Item', requestId: 'intake-item-fixture', fvttVersion: '14.370', systemVersion: '6.0.6',
   }));
   if (!('result' in acceptedActor) || acceptedActor.result.status !== 'accepted') throw new Error('Actor fixture is not accepted.');
   if (!('result' in acceptedItem) || acceptedItem.result.status !== 'accepted') throw new Error('Item fixture is not accepted.');
@@ -102,7 +103,7 @@ describe('Forge Intake Application review workspace', () => {
       x.root.apiKey.value='';x.root.model.value='changed';x.root.source.value='next source';
       x.game.version='unavailable';x.game.system.version='unavailable';x.application.invalidateReview(x.root);
       await x.application.generate(x.root);
-      expect(inputs).toHaveLength(1);expect(inputs[0]).toMatchObject({source:'original source',fvttVersion:'14.364',systemVersion:'5.3.3'});
+      expect(inputs).toHaveLength(1);expect(inputs[0]).toMatchObject({source:'original source',fvttVersion:'14.370',systemVersion:'6.0.6'});
       expect(factories).toBe(1);expect(x.application.generation.candidateAvailable).toBe(true);
       expect(x.root.downloadActor.disabled).toBe(false);
     }finally{await x.application.close();}
@@ -131,7 +132,7 @@ describe('Forge Intake Application review workspace', () => {
       candidate:{status:'ready_for_gm_review',analysis:{},findings:[],candidateResponse:structuredClone(acceptedActor)}};
     record.candidate.candidateResponse.result.artifact.system.details.biography={value:'x'.repeat(INTAKE_CANDIDATE_MAX_BYTES+1)};
     const store=new MemoryIntakeCandidateStore({single:record}),loaded=(await store.load()).single!;
-    const restored=await revalidateIntakeCandidate(loaded,{fvttVersion:'14.364',systemVersion:'5.3.3'});
+    const restored=await revalidateIntakeCandidate(loaded,{fvttVersion:'14.370',systemVersion:'6.0.6'});
     expect((restored.candidate.candidateResponse as any).result.artifact.system.details.biography.value).toHaveLength(INTAKE_CANDIDATE_MAX_BYTES+1);
     expect(record.candidate.gmApproval).toBeUndefined();
   });
@@ -350,8 +351,8 @@ describe('Forge Intake Application review workspace', () => {
       })) as any,
       createAcceptedForgeActor: (async () => { creates += 1; return { ...actorCreateResult(), actor }; }) as any,
     }, undefined, undefined, undefined, undefined, { initialMode: 'plaintext-actor', directoryKind: 'Actor' });
-    (game as any).actors = { contents: [] };
-    (game as any).items = { contents: [] };
+    (game as any).actors = { documentClass:NativeDocumentFixture, contents: [] };
+    (game as any).items = { documentClass:NativeDocumentFixture, contents: [] };
 
     expect(root.dataset.currentStep).toBe('input');
     expect(root.workspace.dataset.currentStep).toBe('input');
@@ -1288,7 +1289,7 @@ describe('Forge Intake Application review workspace', () => {
     expect(bundle.rawSourceHash).toBe(hashSource(source));
     expect(bundle.provider).toMatchObject({ name: 'fake-monster', extractionModel: 'extract', reviewModel: 'review' });
     expect(bundle.target).toMatchObject({
-      generatorVersion: '0.1.0', fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3',
+      generatorVersion: '0.1.0', fvttVersion: '14.370', systemId: 'dnd5e', systemVersion: '6.0.6',
       generatorProfile: 'v14', effectProfile: 'core', iconMode: 'safe',
     });
     expect(exported).not.toMatch(/must-not-export|query-secret|Authorization|rawResponse|endpoint/iu);
@@ -2514,7 +2515,7 @@ describe('explicit creature source routing and complete ordinary candidate refre
     expect(f.counts).toEqual({discover:0,extract:1,create:0});
     const record=(await store.load()).single!;
     expect(record.candidate.candidateResponse).toEqual(previous.candidateResponse);
-    await expect(revalidateIntakeCandidate(record,{fvttVersion:'14.364',systemVersion:'5.3.3'})).resolves.toEqual(record);
+    await expect(revalidateIntakeCandidate(record,{fvttVersion:'14.370',systemVersion:'6.0.6'})).resolves.toEqual(record);
     await first.application.close();
   });
 
@@ -2561,7 +2562,7 @@ describe('explicit creature source routing and complete ordinary candidate refre
       finalSourceHash:candidate.finalSourceHash,response:candidate.candidateResponse}));
     record.bundle.candidateHash=candidate.candidateHash;
     const {checksum,...body}=record;record.checksum=hashSource(JSON.stringify(body));
-    const restored=await revalidateIntakeCandidate(record,{fvttVersion:'14.364',systemVersion:'5.3.3'});
+    const restored=await revalidateIntakeCandidate(record,{fvttVersion:'14.370',systemVersion:'6.0.6'});
     expect(restored.candidate.candidateResponse).toEqual(original.candidate.candidateResponse);
     expect((restored.candidate as BrowserActorGenerationResult).analysis.ir!.creature).toHaveProperty('unexpectedStructure');
     expect((await store.load()).single).toEqual(original);expect(f.counts).toEqual({discover:0,extract:1,create:0});
@@ -2575,7 +2576,7 @@ describe('explicit creature source routing and complete ordinary candidate refre
     setAiForm(first.application, first.root, mode, f.source);
     await first.application.runAnalysis(first.root, false); await first.application.generate(first.root);
     const record = (await store.load()).single!;
-    expect(record, JSON.stringify(first.notifications)).toBeDefined(); expect(record.candidate.gmApproval).toBeUndefined();
+    expect(record, JSON.stringify({notifications:first.notifications,status:first.application.status,analysis:first.application.analysis?.findings,generation:first.application.generation?.findings})).toBeDefined(); expect(record.candidate.gmApproval).toBeUndefined();
     expect(record.input.sourceScope).toBe(mode === 'ai-monster' ? 'single' : undefined);
     expect((record.candidate.analysis as any).sourceScope).toBe(mode === 'ai-monster' ? 'single' : undefined);
     expect(record.candidate.calls.discovery).toBe(mode === 'ai-monster' ? 0 : 1);
@@ -2767,7 +2768,7 @@ describe('explicit creature source routing and complete ordinary candidate refre
     const first = makeApplication(f.services, undefined, undefined, undefined, undefined, { candidateStore: store });
     await settleBatch(first.application, first.root); setAiForm(first.application, first.root, 'ai-monster', f.source);
     await first.application.runAnalysis(first.root, false); await first.application.generate(first.root);
-    const record = (await store.load()).single!, baseline = JSON.stringify(record), target = { fvttVersion: '14.364', systemVersion: '5.3.3' };
+    const record = (await store.load()).single!, baseline = JSON.stringify(record), target = { fvttVersion: '14.370', systemVersion: '6.0.6' };
     const changedChecksum=await revalidateIntakeCandidate({...record,checksum:'bad'},target);
     expect(changedChecksum.candidate.candidateResponse).toEqual(record.candidate.candidateResponse);
     expect(changedChecksum.candidate.findings).toContainEqual(expect.objectContaining({code:'SAVED_CANDIDATE_CHECKSUM_MISMATCH'}));
@@ -2803,7 +2804,7 @@ describe('other official2024 spellcasting and legendary monsters', () => {
     expect(saved, JSON.stringify(first.notifications)).toBeDefined();
     const originalCalls = { discovers, extracts }; expect(extracts).toBe(1);
     const result = (saved.candidate.candidateResponse as any).result, actor = result.artifact, expected = seed.expected;
-    expect(result.status).toBe('accepted'); expect(actor.system.attributes.ac.flat).toBe(expected.ac);
+    expect(result.status).toBe('accepted'); expect(actor.system.attributes.ac.override).toBe(expected.ac);
     expect(actor.system.attributes.hp.value).toBe(expected.hp); expect(actor.system.details.cr).toBe(expected.cr);
     expect(actor.system.attributes.hp.formula).toBe(seed.ir.creature.attributes.hp.formula);
     expect(actor.system.resources.legact.max).toBe(3); expect(actor.system.resources.legres.max).toBe(3);
@@ -2873,7 +2874,7 @@ test('legacy candidate recovery retains saved native capacity without reconstruc
     legacy.version=1;delete legacy.generationContract;
     const {checksum:_legacyChecksum,...legacyBody}=legacy;legacy.checksum=hashSource(JSON.stringify(legacyBody));
     await store.put('single', legacy);
-    const before = JSON.stringify(await store.load()), target = { fvttVersion: '14.364', systemVersion: '5.3.3' };
+    const before = JSON.stringify(await store.load()), target = { fvttVersion: '14.370', systemVersion: '6.0.6' };
     expect((await revalidateIntakeCandidate(legacy,target)).candidate.candidateResponse).toEqual(current.candidate.candidateResponse);
     const currentClaim=structuredClone(legacy);currentClaim.version=2;currentClaim.generationContract=INTAKE_CANDIDATE_GENERATION_CONTRACTS['ai-monster'];
     const {checksum:_currentChecksum,...currentBody}=currentClaim;currentClaim.checksum=hashSource(JSON.stringify(currentBody));
@@ -2912,7 +2913,7 @@ describe('reviewed candidate repair and versioned recovery',()=>{
     expect(first.application.status,JSON.stringify(first.notifications)).toBe('ready_for_gm_review');
     return{...first,store,counts,provider,changed,probe};
   }
-  const target={fvttVersion:'14.364',systemVersion:'5.3.3'};
+  const target={fvttVersion:'14.370',systemVersion:'6.0.6'};
   const rehash=(record:IntakeCandidateRecord)=>{const{checksum,...body}=record;record.checksum=hashSource(JSON.stringify(body));return record;};
 
   test('restored candidate and retested replacement key cannot reopen disabled review or review-driven repair [review disabled]',async()=>{
@@ -3036,7 +3037,8 @@ function makeApplication(
   applicationOptions: Record<string, unknown> = {},
 ) {
   const notifications = { errors: [] as string[], infos: [] as string[] };
-  const game = { version: '14.364', system: { id: 'dnd5e', version: '5.3.3' }, world: { id: 'test-world' }, user: { id: 'test-user', isGM: true } };
+  const game = { version: '14.370', system: { id: 'dnd5e', version: '6.0.6' }, world: { id: 'test-world' }, user: { id: 'test-user', isGM: true },
+    actors:{documentClass:NativeDocumentFixture},items:{documentClass:NativeDocumentFixture} };
   const hookCallbacks = new Map<string, Set<() => void>>();
   let nextHookId = 0;
   const hooks = {
@@ -3222,7 +3224,7 @@ function currentSnapshot(_application: any, root: FakeRoot): any {
     endpoint: root.mode.value === 'plaintext-actor' ? '' : root.endpoint.value,
     model: root.mode.value === 'plaintext-actor' ? '' : root.model.value,
     reviewModel: root.mode.value === 'plaintext-actor' ? '' : root.reviewModel.value || root.model.value,
-    fvttVersion: '14.364', systemVersion: '5.3.3', effectProfile: 'core', iconMode: 'safe',
+    fvttVersion: '14.370', systemVersion: '6.0.6', effectProfile: 'core', iconMode: 'safe',
   });
 }
 
@@ -3343,7 +3345,7 @@ function acceptedReviewBundleText(): string {
     reviewVerdict: 'accepted',
     deterministicFindings: [], aiReviewFindings: [], calls: { discovery: 1, extraction: 1, review: 1, repair: 0 }, repairCount: 0,
     canonicalSource, sourceIdentity: { sourceId, finalSourceHash: hashSource(canonicalSource) },
-    target: { generatorVersion: '0.1.0', fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3', generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' },
+    target: { generatorVersion: '0.1.0', fvttVersion: '14.370', systemId: 'dnd5e', systemVersion: '6.0.6', generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' },
     candidateResponse: { requestId: 'old-request', status: 'accepted', artifactHash: hashSource('historical-artifact'), verificationStatus: 'accepted', diagnostics: [] },
     history: [],
   }));
@@ -3355,7 +3357,7 @@ function plaintextReviewBundleText(): string {
     objectKind: 'actor', mode: 'plaintext-actor', requestId: 'old-plaintext-request', attemptId: 'old-plaintext-attempt', status: 'needs_review',
     rawSource, rawSourceHash: hashSource(rawSource), candidate: { id: 'rat', label: 'Rat', start: 0, end: 3, quote: 'Rat' },
     deterministicFindings: [], aiReviewFindings: [], calls: { discovery: 9, extraction: 9, review: 9, repair: 1 }, repairCount: 1,
-    target: { generatorVersion: '0.1.0', fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3', generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' },
+    target: { generatorVersion: '0.1.0', fvttVersion: '14.370', systemId: 'dnd5e', systemVersion: '6.0.6', generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' },
     history: [{ sequence: 1, action: 'repair', attemptId: 'old-plaintext-attempt', resultingStatus: 'needs_review' }],
   }));
 }

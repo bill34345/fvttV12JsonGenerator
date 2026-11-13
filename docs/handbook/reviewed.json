@@ -1,28 +1,28 @@
 {
   "web-workbench": {
-    "fingerprint": "3ff925bb631f95eaf58f40cc08484f5db47130ea407ae9c74ad9ee2d93c81e97",
-    "reviewedOn": "2026-10-29",
-    "note": "已核Web协议与Item/Species独立入口：仅新增精确原生legres报告路径；Monster语言投影/verifier及Monster提取/显式纠错prompt变化不改连接配置、Item或Species流程/版本/验收边界。现有说明保持。"
+    "fingerprint": "094d3ec3608bb34944b4a9ccd701eca48d76b725a6f5ccde22bdfc6ef821e5cb",
+    "reviewedOn": "2026-11-13",
+    "note": "核对Web上传默认目标、下载JSON和现有任务提示。"
   },
   "markdown-convert": {
-    "fingerprint": "65432104356f33174c3dc9f705e1d9ba38a3610c9de6820654e75c9f590a1e95",
-    "reviewedOn": "2026-10-30",
-    "note": "已人工核对支持矩阵新增段：仅登记Forge文字型PDF的Chrome/14.368/5.3.3限定接受，不改变CLI/Web/Item输入或任何Core/系统支持线；既有条目命令、默认值和版本限制仍准确。历史PDF未覆盖继续按其原版本追溯。"
+    "fingerprint": "f4ba3cb4310b66cf9e31c9c4da8283d83bf8d67492849fb949207d5c2979453b",
+    "reviewedOn": "2026-11-13",
+    "note": "核对CLI默认v14、显式v12/v13和原生dnd5e6输出及来源验证。"
   },
   "monster-intake": {
-    "fingerprint": "14e2e59e62dce48b23ea670fbc497a4e249b479d09df869feeda02d587ec091e",
-    "reviewedOn": "2026-10-30",
-    "note": "已人工核对支持矩阵新增段：仅登记Forge文字型PDF的Chrome/14.368/5.3.3限定接受，不改变CLI/Web/Item输入或任何Core/系统支持线；既有条目命令、默认值和版本限制仍准确。历史PDF未覆盖继续按其原版本追溯。"
+    "fingerprint": "876ef3fd5a6adecb8935f7214a1a63b5db130482e634c519eb718a9c6ca8e496",
+    "reviewedOn": "2026-11-13",
+    "note": "核对默认目标、既有来源链及生物候选与审查分离；旧运行证据保留。"
   },
   "item-intake": {
-    "fingerprint": "c917b01ec9f4fb8ca0475b2110e5da39ef9570560bd0b6d2bfd8df629650f269",
-    "reviewedOn": "2026-10-30",
-    "note": "已核对intake-ai差异：只增加既有Provider证据/脱敏函数的公开出口，提取、转换、接受及Item/Species契约均未改。PDF使用Forge专属适配器，不使CLI或Item/Species直接接收PDF。"
+    "fingerprint": "20742603328edcb1427a5f9184d308394db36528f53c7d22ac36c755f96efa03",
+    "reviewedOn": "2026-11-13",
+    "note": "核对原生6/core目标、法术索引和已审结果才可登记的约束。"
   },
   "species-intake": {
-    "fingerprint": "ae74ff1c2a9fd2210a26490bfa144067c639901107978645340d8cc8fae0b1f0",
-    "reviewedOn": "2026-10-30",
-    "note": "已核对intake-ai差异：只增加既有Provider证据/脱敏函数的公开出口，提取、转换、接受及Item/Species契约均未改。PDF使用Forge专属适配器，不使CLI或Item/Species直接接收PDF。"
+    "fingerprint": "ab12c7268146d4563fb403ca9a2000d306d73a0f8d8252df8bbe76106fbd66bc",
+    "reviewedOn": "2026-11-13",
+    "note": "核对默认606、显式602/4.3.9目标与接受账本隔离。"
   },
   "document-extraction": {
     "fingerprint": "1fadc1f19a0a8346a15306bb247d90ae4b2bbaf709177747d8aded524ec25bcc",
@@ -30,29 +30,29 @@
     "note": "已对照文档规则：仅报告/元数据显示改变且原MD、顺序、候选及下游行为有未变证据时缩小验收；正文或消费变化/证据不足仍核完整来源链。"
   },
   "vault-sync": {
-    "fingerprint": "043126c4504fd10f3d0c79390d24daef2f3632882c38e16ae6b4933d7836306b",
-    "reviewedOn": "2026-10-30",
-    "note": "逐项核对本轮差异：这些条目仅因共同引用根README而过期；README只新增Forge文字型PDF入口段落。各自CLI、同步、采集、图标、翻译及血猎手的实现、输入输出、版本与操作未改，原说明保持正确。"
+    "fingerprint": "1c82def1cbcd0eeddabbadfcf28f766ca5fda6785e147fe3dcad48e15e538969",
+    "reviewedOn": "2026-11-13",
+    "note": "核对共享目标默认14及原有同步范围和写入边界。"
   },
   "goddessfantasy-crawl": {
-    "fingerprint": "551be2b4c7ca339ee542e118a45978da5a3bb6261dec2250d1734cc60e5731f9",
-    "reviewedOn": "2026-10-30",
-    "note": "逐项核对本轮差异：这些条目仅因共同引用根README而过期；README只新增Forge文字型PDF入口段落。各自CLI、同步、采集、图标、翻译及血猎手的实现、输入输出、版本与操作未改，原说明保持正确。"
+    "fingerprint": "47d03f2396d59230cf77a47663a7344028599af48fdea5c2e2cf96efe3e239c7",
+    "reviewedOn": "2026-11-13",
+    "note": "共享README更新了生成器版本；该工具的采集入口和权限边界未改。"
   },
   "artwork-icons": {
-    "fingerprint": "ffcc565447adec8c55d10e7484406ffd3c79226b2f274dcf1b27ddb8613e3c71",
-    "reviewedOn": "2026-10-30",
-    "note": "逐项核对本轮差异：这些条目仅因共同引用根README而过期；README只新增Forge文字型PDF入口段落。各自CLI、同步、采集、图标、翻译及血猎手的实现、输入输出、版本与操作未改，原说明保持正确。"
+    "fingerprint": "a828c4396f5f9bdf5a98555851c9ac7a97e3adc73ddf6fc5a1115dcece6310e6",
+    "reviewedOn": "2026-11-13",
+    "note": "核对14.370/6.0.6图标索引、safe可选且默认off、审阅报告及低置信边界。"
   },
   "legacy-text": {
-    "fingerprint": "8e26478d1794a6e7082b91e9779a229889a0d260125a7bf615fcf904717c8575",
-    "reviewedOn": "2026-10-30",
-    "note": "逐项核对本轮差异：这些条目仅因共同引用根README而过期；README只新增Forge文字型PDF入口段落。各自CLI、同步、采集、图标、翻译及血猎手的实现、输入输出、版本与操作未改，原说明保持正确。"
+    "fingerprint": "0655e3a4653a5babf1bbd5bf393f69377bb2e74b42dc21e28d33e9d23ecd7ed5",
+    "reviewedOn": "2026-11-13",
+    "note": "共享README更新了生成器版本；旧纯文本入口及写入约束保持。"
   },
   "json-translation": {
-    "fingerprint": "2aed6be60bdf67911ab0e4d2fc0fe22ad7fa5182baa1b1efd77d632c11205ffd",
-    "reviewedOn": "2026-10-30",
-    "note": "逐项核对本轮差异：这些条目仅因共同引用根README而过期；README只新增Forge文字型PDF入口段落。各自CLI、同步、采集、图标、翻译及血猎手的实现、输入输出、版本与操作未改，原说明保持正确。"
+    "fingerprint": "4a287323ac939e8c41202a3c4c79116d31373b1d987e2585b45ba4947bd35f0f",
+    "reviewedOn": "2026-11-13",
+    "note": "共享README更新了生成器版本；独立JSON翻译队列的入口和输出规则未改。"
   },
   "foundry-ops": {
     "fingerprint": "43a40b33c09c5c4b1dd131f7e786d533dd052910f0a878514a5ab9f2c6d461f9",
@@ -60,14 +60,14 @@
     "note": "对照tools/foundry-ops/AGENTS.md，仅将Bun版本依据从已删除CI配置改为根README；本地检查包装、临时沙箱、只读依赖、生产权限、目标路径和失败关闭要求保持。"
   },
   "verification-development": {
-    "fingerprint": "5c71c0b5e65dfd61748a0d43f8398b2ee74ba5e57ecc13d472f30c4bd0c10f9e",
-    "reviewedOn": "2026-10-30",
-    "note": "已人工核对支持矩阵新增段：仅登记Forge文字型PDF的Chrome/14.368/5.3.3限定接受，不改变CLI/Web/Item输入或任何Core/系统支持线；既有条目命令、默认值和版本限制仍准确。历史PDF未覆盖继续按其原版本追溯。"
+    "fingerprint": "35bf78500678fa13997ac502de717438ef91e3ac8587d344876cbea1ff64a631",
+    "reviewedOn": "2026-11-13",
+    "note": "核对原生6来源、正式验收报告的版本与字段检查、离线边界和历史证据。"
   },
   "human-encounter-intake": {
-    "fingerprint": "2d54d7cf48b87d4d203d6b97f358bac82104690ecefff666786559e734494171",
-    "reviewedOn": "2026-10-30",
-    "note": "已核对新增PDF browser公共子路径、精确依赖与两个安全聚焦测试命令；它们由Forge调用，既有Markdown/CLI生成、翻译默认及创建权限未改。110项旧生物链和架构检查通过；未扩大说明的规则/版本范围，watch覆盖保留。"
+    "fingerprint": "18480831d4d3c65a7afe21846f6d5e798455d8059cf1ffff4abd753910dd26ee",
+    "reviewedOn": "2026-11-13",
+    "note": "核对原生6生成、旧生物包重新生成或只读，以及源文件与配套规则行为。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -80,9 +80,9 @@
     "note": "逐项核对变化仅来自历史测试输入runbook及对应本地入口说明：移除公共CI自动执行承诺，保留严格历史源码门、显式portable选择、固定来源版本/哈希、缺失失败条件和Git外材料。各模块功能、候选安装与玩法接受范围保持。"
   },
   "version-selection": {
-    "fingerprint": "2edc800ed467ba9631af48dd6fec066af464eefd22af61e748cb7e2d16454536",
-    "reviewedOn": "2026-10-30",
-    "note": "已人工核对支持矩阵新增段：仅登记Forge文字型PDF的Chrome/14.368/5.3.3限定接受，不改变CLI/Web/Item输入或任何Core/系统支持线；既有条目命令、默认值和版本限制仍准确。历史PDF未覆盖继续按其原版本追溯。"
+    "fingerprint": "cefb7ad0abe2ef9f46716ddf854faae57bf2faf82ed2fc7934743603e5b76160",
+    "reviewedOn": "2026-11-13",
+    "note": "核对固定生成目标、运行准入和旧版本历史证据三者的区别。"
   },
   "legacy-next-test-inputs": {
     "fingerprint": "3169623f383d7b69f9114e0012c701b7f8ee20dbeb7dc6554688355596264d06",
@@ -115,14 +115,14 @@
     "note": "已核6.0.6 FireI事务、Region成本/linked falling、重载、非GM入口和权限拒绝及原生清理代表链。绘制仍仅向GM开放；全目录、更多组合、长时和生产范围未扩大。 本次AGENTS同步同一限定接受，不改变操作权限。"
   },
   "fvtt-blood-hunter-2024": {
-    "fingerprint": "7c9e94c1c64d1345ddd0e7e1bcd0c6d47f41e8365980fb2df70fd04527189919",
-    "reviewedOn": "2026-10-30",
-    "note": "逐项核对本轮差异：这些条目仅因共同引用根README而过期；README只新增Forge文字型PDF入口段落。各自CLI、同步、采集、图标、翻译及血猎手的实现、输入输出、版本与操作未改，原说明保持正确。"
+    "fingerprint": "d6d7cb0acc4538716e943714e8a4782775c40b3d5b7f00667f86469ca9c23bdb",
+    "reviewedOn": "2026-11-13",
+    "note": "共享README更新；本批未带入血猎手版本或玩法改动，保留原说明。"
   },
   "fvtt-homebrew-species": {
-    "fingerprint": "81fd95c8dccd1df26a50bf7a2654e54d2a7bb1ff3bd16d3322965501b19d8e21",
-    "reviewedOn": "2026-10-25",
-    "note": "已核Ogre原生授予、野蛮人1/5级HP与移动、两次资源/第三次拒绝、长休、重载和清理代表链。内容身份仍6.0.2；ASI属性分配、全物种/等级、武器自动化和生产未扩大。 已核Next manifest投影：verified/content602与maximum606分开，不重造pack或改accepted ledger。"
+    "fingerprint": "8ab4da7ae0c36f43fa6c9c7bade468465d85feb5c03091ff6d7bccf1c656e495",
+    "reviewedOn": "2026-11-13",
+    "note": "核对原生6构建及旧ledger拒绝、显式602与静态v12候选。"
   },
   "fvtt-house-rules": {
     "fingerprint": "6c542a545338790149452aaa01967150a744457586e2ac92d1ee7f0cd4e83dcf",
@@ -140,14 +140,14 @@
     "note": "已对照主线活动GM重新验权、排队与CC订阅接口，以及topic配置状态消费者的独立边界；说明和既有606限定接受保持，本次无新runtime、玩家或多GM接受。"
   },
   "fvtt-custom-conditions": {
-    "fingerprint": "f3d7e7d541f96467ec98791660e6246bdfc1b5892611476f1ee50b6d2c962cc1",
-    "reviewedOn": "2026-10-29",
-    "note": "已核configuredConditions与combatRewind/awaitIdle接口共同保留，whenIdle职责未扩大；AC5e精确Mirror14.368/5.3.3/14.533.8及已审核6.x版本门共同保留，203项局部通过。十九状态/玩家/长时未验限制不变。"
+    "fingerprint": "96e9d35bd33b1bedc0aa3e8b42bea35601e33a1343a867793ecc5eb908d671b0",
+    "reviewedOn": "2026-11-13",
+    "note": "核对共享状态函数的批处理接口接线；没有推广版本准入或新增编辑器支持。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "2d428f45c8a58d3e6560efdf2696d2ff125b069f06ac8a7fbf16a0e922307e37",
+    "fingerprint": "5bba3c9b1bdde36d54b183c6e0d50b2f89ef4df8ddd20da443fe2797478f78b3",
     "reviewedOn": "2026-11-13",
-    "note": "公开版核对 PDF 入口、验收结论及限制。验收文档已移除本机证据路径与测试世界、文档标识。"
+    "note": "核对原生6接收、PDF入口和恢复、旧包的只读与重新生成路径。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "b888eae16a4a0dc1c058805448887553cb8617c6e81dc15bf345e9b0a6b353eb",
@@ -155,9 +155,9 @@
     "note": "已核6.0.6 GM原生HUD/等级边界/叠层/移动、同GM两客户端Poisoned、玩家帮助和无权限边界及原生终态。玩家同步写入与长时未接受；旧CalendarA按用户决定保留B，完整已采safeMLD恢复。实装后备帮助仍为旧文案，不作已部署新说明的证明。 本次AGENTS同步已有接受；未重新部署后备帮助。 整合时仅清理新增文件末尾多余空行，共享视图/TE事件逻辑及用户步骤不变；已核差异，不扩大运行接受。"
   },
   "monster-spell-resolver": {
-    "fingerprint": "6aeeb145afd591cf449e46390b004bfc37f94c752fde837ce7143ad9a4061e5b",
-    "reviewedOn": "2026-10-29",
-    "note": "已核新manual.json单一来源、suite-handbook帮助、ForcedReplacement预写恢复与提交后核验，以及完整缓存维护/5.3.3 origin补偿；547项事务/解析检查通过，parse5正文等价与全部原限制保持。606仅沿用既有Rat限定接受，不推广本次新组合runtime。"
+    "fingerprint": "01b9d9310da90ebf3db8f0ed0da76842efabb617782868ef4288c47e1deaf13d",
+    "reviewedOn": "2026-11-13",
+    "note": "核对Core和dnd5e原生6主版本准入、旧配对及目标世界法术解析边界。"
   },
   "open-session-deck": {
     "fingerprint": "1489cbc845e0376a18f82b0492dfe58212ec8e4f90c6b2d1f113ea7e15c09128",

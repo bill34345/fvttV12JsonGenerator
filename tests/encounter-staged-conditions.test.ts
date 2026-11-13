@@ -37,7 +37,7 @@ function stagedFixture() {
   };
   const input: BrowserActorIntakeInput = {
     source, sourceName: 'Staged fixture', displayName: 'Staged fixture', requestId: 'encounter-staged-fixture',
-    fvttVersion: '14.364', systemVersion: '5.3.3',
+    fvttVersion: '14.370', systemVersion: '6.0.6',
     renderMarkdown: (candidate) => renderEncounterActorSource(candidate, [], source),
   };
   return { source, quote, ir, input };

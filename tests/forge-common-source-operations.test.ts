@@ -473,7 +473,7 @@ describe('common source operation contract through the complete Actor chain',()=
   });
   test('fixed damage and zero-foot reach remain literal',async()=>{
     const {actor}=await formal('fixed'),activity=Object.values(actor.items[0].system.activities)[0] as any;
-    expect(activity.range).toMatchObject({value:0,units:'ft',override:true});expect(activity.damage.parts[0]).toMatchObject({custom:{enabled:true,formula:'1'},types:['bludgeoning']});
+    expect(activity.range).toMatchObject({value:'0',units:'ft',override:true});expect(activity.damage.parts[0]).toMatchObject({custom:{enabled:true,formula:'1'},types:['bludgeoning']});
   });
   for(const [failure,status]of [['The target immediately dies.','dead'],['The target is blinded.','blinded'],['The target is poisoned.','poisoned']] as const)test('existing ordinary failure status remains linked only to its Save: '+status,async()=>{
     const feature=fixture.attack.replace('The target cannot recover until its next turn.',failure),{actor}=await formal('attack',header+'Actions\n'+feature+'\n',feature),item=actor.items[0],activities=Object.values(item.system.activities) as any[];
@@ -492,7 +492,7 @@ describe('common source operation contract through the complete Actor chain',()=
     expect(activities.map(activity=>activity.type)).toEqual(['attack','save']);expect(item.effects).toHaveLength(1);
     expect(item.effects[0].flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(item.effects[0].description).toContain(failure);
     expect(activities[0].effects).toEqual([]);expect(activities[1].effects).toEqual([{_id:item.effects[0]._id,onSave:false}]);
-    expect(item.effects[0].duration.seconds).toBe(failure.includes('1 minute')?60:null);
+    expect(item.effects[0].duration).toEqual({value:failure.includes('1 minute')?60:null,units:'seconds',expiry:failure.includes('1 minute')?'turnStart':null,expired:false});
   });
   test('local no-damage on success does not negate the failed-save damage',async()=>{
     const feature=fixture.choice.replace('or half as much damage on a successful one','and no damage on a successful save');
@@ -1142,7 +1142,7 @@ describe('round seven narrow semantics and native geometry',()=>{
     const q='Constitution Saving Throw: DC 16, each creature in a '+geometry+' originating from a point within 90 feet.',damage='Failure: 2d6 Cold damage.',source='Column Burst. '+q+' '+damage+' Success: Half damage.',op=saveOp(q,damage);op.aoe={shape:'cylinder',radius};op.range=90;op.proof={...op.proof,aoe:q,range:q};
     const bound=bindSourceOperations(source,[op]);expect(bound[0]!.aoe).toEqual({shape:'cylinder',radius,height});
     for(const value of [radius,90,height+1]){const wrong=structuredClone(op);wrong.aoe.height=value;expect(auditSourceOperationIssues(source,[wrong])).toContain('aoe/height');}
-    const {actor,ir,markdown,source:full}=await formal('choice',header+'Actions\n'+source+'\n',source,()=>[op]),activity=Object.values(actor.items[0].system.activities)[0] as any;expect(activity.target.template).toEqual({type:'cylinder',size:String(radius),height:String(height),units:'ft'});expect(activity.range.value).toBe(90);
+    const {actor,ir,markdown,source:full}=await formal('choice',header+'Actions\n'+source+'\n',source,()=>[op]),activity=Object.values(actor.items[0].system.activities)[0] as any;expect(activity.target.template).toEqual({type:'cylinder',size:String(radius),height:String(height),units:'ft'});expect(activity.range.value).toBe('90');
     const changed=structuredClone(actor);(Object.values(changed.items[0].system.activities)[0] as any).target.template.height='5';expect(auditMonsterIntakeSourceProjection(full,ir,markdown,changed).findings).toContainEqual(expect.objectContaining({code:'ACTOR_SOURCE_OPERATION_AREA_DRIFT'}));
   });
   test('the rectangle compatibility alias projects only a source-proven square and preserves unrelated Cone output',async()=>{

@@ -7,13 +7,14 @@ import { pathToFileURL } from 'node:url';
 import {
   compileSpeciesMarkdown,
   validateNativeSpeciesPackage,
+  SPECIES_V14_TARGET,
   type NativeSpeciesPackage,
   type SpeciesTargetVersion,
 } from '@fvtt-json-generator/generation/species';
 
 export const MODULE_ID = 'fvtt-homebrew-species' as const;
 export const MODULE_VERSION = '1.0.0' as const;
-export type SpeciesNextDnd5eRuntimeMaximum = '6.0.2' | '6.0.5' | '6.0.6';
+export type SpeciesNextDnd5eRuntimeMaximum = '6.0.2' | '6.0.5' | '6.0.6' | '6.999.999';
 
 interface SpeciesAcceptedLedger {
   schemaVersion: 1 | 2;
@@ -45,7 +46,7 @@ export interface SpeciesBuildResult { distRoot: string; moduleRoot: string; zipP
 export async function buildHomebrewSpeciesModule(options: SpeciesBuildOptions = {}): Promise<SpeciesBuildResult> {
   const fvttVersion = options.fvttVersion ?? '14';
   if (options.dnd5eRuntimeMaximum !== undefined && fvttVersion !== '14.368') throw new Error('A dnd5e runtime maximum override is only valid for the ServerNext 14.368 target.');
-  const dnd5eRuntimeMaximum = options.dnd5eRuntimeMaximum ?? '6.0.2';
+  const dnd5eRuntimeMaximum = options.dnd5eRuntimeMaximum ?? '6.999.999';
   const vault = resolve(options.vaultPath ?? resolve(import.meta.dir, '../../obsidian/dnd数据转fvttjson'));
   const ledgerPath = resolve(options.ledgerPath ?? resolve(vault, 'output/species/accepted-ledger.json'));
   const packages = await loadAcceptedPackages(vault, ledgerPath, fvttVersion);
@@ -60,14 +61,11 @@ export async function buildHomebrewSpeciesModule(options: SpeciesBuildOptions = 
     const distRoot = resolve(options.distRoot ?? resolve(import.meta.dir, fvttVersion === '12' ? 'dist/v12-candidate' : fvttVersion === '14.368' ? 'dist/v14-368-candidate' : 'dist'));
     if (options.publish !== false) {
       const next = `${distRoot}.next-${process.pid}`;
-      await rm(next, { recursive: true, force: true });
+      if (existsSync(next)) throw new Error(`Refusing to overwrite stale Species build staging: ${next}`);
       await mkdir(next, { recursive: true });
       await copyTree(first.root, next);
-      const old = `${distRoot}.old-${process.pid}`;
-      await rm(old, { recursive: true, force: true });
-      if (existsSync(distRoot)) await rename(distRoot, old);
+      if (existsSync(distRoot)) await rm(distRoot, { recursive: true });
       await rename(next, distRoot);
-      await rm(old, { recursive: true, force: true });
     }
     const finalRoot = options.publish === false ? first.root : distRoot;
     return { distRoot: finalRoot, moduleRoot: resolve(finalRoot, 'module'), zipPath: resolve(finalRoot, `${MODULE_ID}.zip`), zipSha256: first.zipSha256, logicalHash, counts: { species: packages.length, features: packages.reduce((sum, pkg) => sum + pkg.features.length, 0) }, uuids: moduleUuids(packages) };
@@ -78,6 +76,7 @@ export async function loadAcceptedPackages(vault: string, ledgerPath: string, fv
   const ledger = JSON.parse(await readFile(ledgerPath, 'utf8')) as SpeciesAcceptedLedger;
   if (![1, 2].includes(ledger.schemaVersion) || ledger.moduleId !== MODULE_ID || !Array.isArray(ledger.entries) || !ledger.entries.length) throw new Error('Species module build requires a non-empty accepted ledger.');
   if (ledger.schemaVersion === 1 && ledger.entries.some((entry) => entry.fvttVersion !== undefined || entry.effectProfile !== undefined || entry.rules !== undefined)) throw new Error('Schema v1 Species ledger cannot contain explicit target identities.');
+  if (ledger.schemaVersion === 1 && fvttVersion === '14') throw new Error('Historical schema v1 Species acceptance targets dnd5e 5.3.3. Re-run --intake-species for the current Core 14 / dnd5e 6 target.');
   if (ledger.schemaVersion === 2 && ledger.entries.some((entry) => !['12', '14', '14.368'].includes(entry.fvttVersion ?? '') || entry.effectProfile !== 'core' || entry.rules !== '2024')) throw new Error('Schema v2 Species ledger contains an invalid target identity.');
   const targetEntries = ledger.entries.filter((entry) => (ledger.schemaVersion === 1 ? '14' : entry.fvttVersion) === fvttVersion
     && (entry.effectProfile ?? 'core') === 'core' && (entry.rules ?? '2024') === '2024');
@@ -92,7 +91,7 @@ export async function loadAcceptedPackages(vault: string, ledgerPath: string, fv
     const pkg = compileSpeciesMarkdown(markdown, { fvttVersion });
     const validation = validateNativeSpeciesPackage(pkg);
     if (!validation.ok) throw new Error(`Species package validation failed for ${entry.identifier}: ${validation.findings.map((finding) => finding.code).join(', ')}.`);
-    if (pkg.sourceSha256 !== entry.sourceSha256 || pkg.logicalHash !== entry.logicalHash || pkg.markdownSha256 !== entry.markdownSha256) throw new Error(`Accepted ledger hashes do not match current projection for ${entry.identifier}.`);
+    if (pkg.sourceSha256 !== entry.sourceSha256 || pkg.logicalHash !== entry.logicalHash || pkg.markdownSha256 !== entry.markdownSha256) throw new Error(`Accepted ledger hashes do not match current projection for ${entry.identifier}. Re-run --intake-species for this target; historical acceptance is not relabeled.`);
     if (!existsSync(packagePath)) throw new Error(`Accepted audit package is missing: ${entry.packagePath}.`);
     const stored = JSON.parse(await readFile(packagePath, 'utf8')) as NativeSpeciesPackage;
     if (stored.logicalHash !== pkg.logicalHash || canonicalJson(stored.target) !== canonicalJson(pkg.target) || canonicalJson(stored.species) !== canonicalJson(pkg.species) || canonicalJson(stored.features) !== canonicalJson(pkg.features)) throw new Error(`Accepted audit package drifted from Markdown projection for ${entry.identifier}.`);
@@ -112,8 +111,8 @@ async function writeCandidate(root: string, packages: NativeSpeciesPackage[], lo
     ? { foundry: '12.331', dnd5e: '4.3.9', effectProfile: 'core', rules: '2024' }
     : fvttVersion === '14.368'
       ? { foundry: '14.368', dnd5e: '6.0.2', effectProfile: 'core', rules: '2024' }
-      : { foundry: '14.364', dnd5e: '5.3.3', effectProfile: 'core' };
-  const identity = { schemaVersion: 1, moduleId: MODULE_ID, version: MODULE_VERSION, target, ...(fvttVersion === '12' || fvttVersion === '14.368' ? { supportStatus: 'static-candidate' } : {}), logicalHash, counts: { species: species.length, features: features.length }, packs: [{ name: 'species', documentIds: species.map((item) => item._id), uuids: species.map((item) => uuid('species', item._id)) }, { name: 'features', documentIds: features.map((item) => item._id), uuids: features.map((item) => uuid('features', item._id)) }] };
+      : SPECIES_V14_TARGET;
+  const identity = { schemaVersion: 1, moduleId: MODULE_ID, version: MODULE_VERSION, target, supportStatus: 'static-candidate', logicalHash, counts: { species: species.length, features: features.length }, packs: [{ name: 'species', documentIds: species.map((item) => item._id), uuids: species.map((item) => uuid('species', item._id)) }, { name: 'features', documentIds: features.map((item) => item._id), uuids: features.map((item) => uuid('features', item._id)) }] };
   await mkdir(resolve(moduleRoot, 'data'), { recursive: true });
   await writeCanonicalJson(resolve(moduleRoot, 'data/identity-manifest.json'), identity);
   await writeCanonicalJson(resolve(moduleRoot, 'data/accepted-packages.json'), packages);
@@ -142,21 +141,20 @@ async function writeLevelDbPack(path: string, documents: Record<string, any>[], 
 function resolveClassicLevelEntry(fvttVersion: SpeciesTargetVersion, explicit?: string): string {
   const labRoot = process.env.FVTT_OPS_LAB_ROOT?.trim();
   const testEntry = process.env.FVTT_OPS_TEST_CLASSIC_LEVEL_ENTRY?.trim();
-  const foundryVersion = fvttVersion === '12' ? '12.331' : fvttVersion === '14.368' ? '14.368' : '14.364';
+  const foundryVersion = fvttVersion === '12' ? '12.331' : '14.370';
   const entry = resolve(explicit ?? testEntry ?? (labRoot ? resolve(labRoot, `app/${foundryVersion}/node_modules/classic-level/index.js`) : ''));
-  const isHermeticStaticCandidate = (fvttVersion === '12' || fvttVersion === '14.368')
-    && Boolean(testEntry) && entry === resolve(testEntry!);
+  const isHermeticStaticCandidate = Boolean(testEntry) && entry === resolve(testEntry!);
   if (!isAbsolute(entry) || !existsSync(entry) || (!isHermeticStaticCandidate && !entry.toLowerCase().endsWith(`app\\${foundryVersion}\\node_modules\\classic-level\\index.js`))) {
     throw new Error(`Species ${fvttVersion} build requires ${isHermeticStaticCandidate ? 'the hermetic candidate' : `the read-only Foundry ${foundryVersion}`} classic-level entry.`);
   }
   return entry;
 }
-export function moduleManifest(source: any, fvttVersion: SpeciesTargetVersion, dnd5eRuntimeMaximum: SpeciesNextDnd5eRuntimeMaximum = '6.0.2'): any {
+export function moduleManifest(source: any, fvttVersion: SpeciesTargetVersion, dnd5eRuntimeMaximum: SpeciesNextDnd5eRuntimeMaximum = '6.999.999'): any {
   if (fvttVersion === '14') return source;
   if (fvttVersion === '14.368') return {
     ...source,
     description: `Static candidate content-only Foundry 14.368 compendia projected for dnd5e 6.0.2; runtime compatibility maximum ${dnd5eRuntimeMaximum}. Runtime acceptance is tracked separately.`,
-    compatibility: { minimum: '14.368', verified: '14.368', maximum: '14.368' },
+    compatibility: { minimum: '14.368', verified: '14.368', maximum: dnd5eRuntimeMaximum === '6.999.999' ? '14.999' : dnd5eRuntimeMaximum === '6.0.6' ? '14.369' : '14.368' },
     relationships: { systems: [{ id: 'dnd5e', type: 'system', compatibility: { minimum: '6.0.2', verified: '6.0.2', maximum: dnd5eRuntimeMaximum } }] },
   };
   return {
@@ -194,6 +192,6 @@ if (import.meta.main) {
   if (!['12', '14', '14.368'].includes(fvttVersion ?? '')) throw new Error('Species module build --fvtt-version must be 12, 14, or 14.368.');
   const maximumIndex = process.argv.indexOf('--dnd5e-runtime-maximum');
   const dnd5eRuntimeMaximum = maximumIndex >= 0 ? process.argv[maximumIndex + 1] : undefined;
-  if (dnd5eRuntimeMaximum !== undefined && !['6.0.2', '6.0.5', '6.0.6'].includes(dnd5eRuntimeMaximum)) throw new Error('Species module --dnd5e-runtime-maximum must be 6.0.2, 6.0.5, or 6.0.6.');
+  if (dnd5eRuntimeMaximum !== undefined && !['6.0.2', '6.0.5', '6.0.6', '6.999.999'].includes(dnd5eRuntimeMaximum)) throw new Error('Species module --dnd5e-runtime-maximum must be 6.0.2, 6.0.5, 6.0.6, or 6.999.999.');
   buildHomebrewSpeciesModule({ fvttVersion: fvttVersion as SpeciesTargetVersion, ...(dnd5eRuntimeMaximum ? { dnd5eRuntimeMaximum: dnd5eRuntimeMaximum as SpeciesNextDnd5eRuntimeMaximum } : {}) }).then((result) => console.log(JSON.stringify(result, null, 2))).catch((error) => { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; });
 }

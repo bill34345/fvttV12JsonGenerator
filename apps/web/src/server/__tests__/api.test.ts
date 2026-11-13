@@ -17,6 +17,7 @@ import { resetRateLimitForTests } from '../security/rateLimit';
 import { createHash } from 'node:crypto';
 import { ParserFactory } from '@fvtt-json-generator/parser';
 import { ActorValidator } from '@fvtt-json-generator/generation/validator';
+import { getFoundryTarget } from '@fvtt-json-generator/generation/target';
 
 const SAMPLE_SOURCE = resolve(
   process.cwd(),
@@ -744,8 +745,7 @@ describe('web API', () => {
     expect(download.status).toBe(200);
     expect(download.headers.get('content-type')).toContain('application/json');
     const actor = await download.json();
-    expect(actor._stats.coreVersion).toBe('14.364');
-    expect(actor._stats.systemVersion).toBe('5.3.3');
+    expect(actor._stats).toMatchObject(getFoundryTarget('14').stats);
   });
 
   it.each(['needs_review', 'failed'] as const)('keeps the Actor download available when a post-generation report fails or needs review (%s)', async checkStatus => {

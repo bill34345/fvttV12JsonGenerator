@@ -44,7 +44,7 @@ describe('source participant categories at the approval boundary',()=>{
 
 describe('current v14 descriptions retain exact English after Chinese',()=>{
  const source='generic-bilingual-description-fixture';
- const original:any={name:'Forest Keeper',type:'npc',_stats:{coreVersion:'14.368',systemVersion:'5.3.3'},
+ const original:any={name:'Forest Keeper',type:'npc',_stats:{coreVersion:'14.368',systemVersion:'6.0.6'},
   system:{attributes:{hp:{value:20,max:20}},details:{biography:{value:'<p>It guards a quiet library.</p>'}},traits:{languages:{custom:'It speaks old languages.'}}},
   items:[{_id:'abcdefghijklmnop',name:'Stone Ward',type:'feat',system:{description:{value:'<p>The ward ends if the door opens.</p>'},
    activities:{ward:{_id:'ward',type:'utility',description:{chatFlavor:'<p>The target escapes at the end of its turn.</p>'}}}},effects:[]}],
@@ -90,7 +90,7 @@ describe('current v14 descriptions retain exact English after Chinese',()=>{
 
 describe('author source and generated GM instructions have separate ownership',()=>{
  function sample(source:string,zh:string,marker:'valid'|'missing'|'mismatched'='valid'){
-  const original:any={name:'Forest Keeper',type:'npc',_stats:{coreVersion:'14.368',systemVersion:'5.3.3'},
+  const original:any={name:'Forest Keeper',type:'npc',_stats:{coreVersion:'14.368',systemVersion:'6.0.6'},
    system:{details:{biography:{value:''}}},effects:[],items:[{name:'Stone Ward',type:'feat',effects:[],
     flags:marker==='missing'?{}:{fvttJsonGenerator:{manualRule:{version:1,mode:'gm-manual',
      sourceText:source+(marker==='mismatched'?' Additional rule.':''),logicalPath:'actions/0'}}},
@@ -285,7 +285,7 @@ describe('same consumed facts render Actor and fixed Chinese rules', () => {
 
   test('a source viewer name must match whole Actor words, not a substring', () => {
     const rule = 'A creature the cat can see within 60 feet, forcing it to make a Constitution Saving Throw: DC 15. Failure: 22 (5d8) Acid damage plus 22 (5d8) Necrotic damage. Success: Half damage.';
-    const actor: any = { name: 'Catoblepas', _stats: { coreVersion: '14.364', systemVersion: '5.3.3' },
+    const actor: any = { name: 'Catoblepas', _stats: { coreVersion: '14.370', systemVersion: '6.0.6' },
       system: { details: { biography: { value: '' } } }, effects: [],
       items: [{ name: 'Bilebrine', system: { description: { value: rule, chat: '' }, activities: {} }, effects: [] }] };
     const action: ActionData = { name: 'Bilebrine', type: 'save', desc: rule,
@@ -354,7 +354,7 @@ describe('same consumed facts render Actor and fixed Chinese rules', () => {
   test('fixed blocks have no model text ID and approval is bound to current facts', () => {
     const rule = 'One creature Grappled by the mezzoloth takes 9 (2d8) Slashing damage, or half as much if it is wearing Heavy Armor.';
     const actor: any = { name: 'Mezzoloth Sellblade',
-      _stats: { coreVersion: '14.364', systemVersion: '5.3.3' },
+      _stats: { coreVersion: '14.370', systemVersion: '6.0.6' },
       system: { details: { biography: { value: '' } } },
       items: [{ name: 'Shred', system: { description: { value: '<ul><li>Shred. ' + rule + '</li></ul>', chat: '' },
         activities: { damage: { description: { chatFlavor: rule } } } }, effects: [] }],
@@ -387,7 +387,7 @@ describe('same consumed facts render Actor and fixed Chinese rules', () => {
   test('one target-choice fact fixes area, status duration and repeat-save outcome together', () => {
     const rule = 'A veil fills a 15-foot Emanation. Each creature in the area must make a Intelligence or Wisdom Saving Throw: (Target’s Choice) DC 15. Failure: The creature is Frightened for 1 minute (Save Ends at end of turn).';
     const actor: any = { name: 'Veil Guardian',
-      _stats: { coreVersion: '14.364', systemVersion: '5.3.3' },
+      _stats: { coreVersion: '14.370', systemVersion: '6.0.6' },
       system: { details: { biography: { value: '' } } }, effects: [],
       items: [{ name: 'Dread Veil', system: { description: { value: '<p>' + rule + '</p>', chat: '' },
         activities: { utility: { description: { chatFlavor: rule } } } }, effects: [] }] };
@@ -406,7 +406,7 @@ describe('same consumed facts render Actor and fixed Chinese rules', () => {
   });
 
   test('Chinese-only structured source still assembles fixed facts without a model field', () => {
-    const actor: any = { name: '规则兽', _stats: { coreVersion: '14.364', systemVersion: '5.3.3' },
+    const actor: any = { name: '规则兽', _stats: { coreVersion: '14.370', systemVersion: '6.0.6' },
       system: { details: { biography: { value: '' } } }, effects: [],
       items: [{ name: '重击', system: { description: { value: '目标受到1d8火焰伤害。', chat: '' },
         activities: {} }, effects: [] }] };

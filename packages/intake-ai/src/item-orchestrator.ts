@@ -1,3 +1,4 @@
+import { DND5E_V14_SYSTEM_VERSION } from '@fvtt-json-generator/contracts/target';
 import { createHash, randomUUID } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -325,7 +326,7 @@ function validateOptions(options: ItemIntakeOptions): void {
   if (!options.source.trim()) throw new Error('AI Item Intake source is empty.');
   if (options.source.length > ITEM_INTAKE_LIMITS.maxSourceLength) throw new Error(`AI Item Intake source exceeds ${ITEM_INTAKE_LIMITS.maxSourceLength} UTF-16 characters.`);
   if ((options.fvttVersion ?? '14') !== '14' || (options.effectProfile ?? 'core') !== 'core') {
-    throw new Error('AI Item Intake currently supports only Foundry VTT 14 / dnd5e 5.3.3 / core profile.');
+    throw new Error(`AI Item Intake currently supports only Foundry VTT 14 / dnd5e ${DND5E_V14_SYSTEM_VERSION} / core profile.`);
   }
 }
 

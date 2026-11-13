@@ -74,7 +74,8 @@ describe('Species TXT Intake and Ogre v14 projection', () => {
     const pkg = compileSpeciesMarkdownV14(markdown);
     expect(validateNativeSpeciesPackage(pkg)).toEqual({ ok: true, findings: [] });
     expect(pkg.species.system.type).toEqual({ value: 'giant', custom: '', subtype: 'Ogre' });
-    expect(pkg.species.system.movement.walk).toBe(40); expect(pkg.species.system.senses.darkvision).toBe(60);
+    expect(pkg.target).toEqual({ foundry: '14.370', dnd5e: '6.0.6', effectProfile: 'core', rules: '2024' });
+    expect(pkg.species.system.movement.speeds.walk).toBe(40); expect(pkg.species.system.senses.ranges.darkvision).toBe(60);
     expect(pkg.species.system.advancement[0].configuration.sizes).toEqual(['lg']);
     expect(pkg.species.system.advancement.filter((entry: any) => entry.type === 'ItemGrant').map((entry: any) => [entry.level, entry.configuration.items.length])).toEqual([[0, 4], [5, 1]]);
     const giantWeapon = pkg.features.find((item) => item.system.identifier === 'giant-weapon-use')!;
@@ -87,14 +88,14 @@ describe('Species TXT Intake and Ogre v14 projection', () => {
     const activity = Object.values(escape.system.activities)[0] as any;
     expect(activity.activation.type).toBe('bonus'); expect(activity.consumption.targets[0].value).toBe('1'); expect(activity.consumption.spellSlot).toBe(false); expect(activity.description.chatFlavor).toContain('不自动选择属性');
     const toughness = pkg.features.find((item) => item.system.identifier === 'ogre-toughness')!;
-    expect(toughness.effects[0].changes).toEqual([{ key: 'system.attributes.hp.bonuses.level', mode: 2, value: '3', priority: null }]);
+    expect(toughness.effects[0].system.changes).toEqual([{ _id: expect.stringMatching(/^[a-f0-9]{16}$/u), key: 'system.attributes.hp.bonuses.level', type: 'add', phase: 'initial', value: '3', priority: null, conditions: '{}', replacement: '' }]);
     const clumsy = pkg.features.find((item) => item.system.identifier === 'ogre-clumsiness')!;
-    expect(clumsy.effects[0].changes).toEqual([{ key: 'system.attributes.ac.bonus', mode: 2, value: '-2', priority: null }]);
+    expect(clumsy.effects[0].system.changes).toEqual([{ _id: expect.stringMatching(/^[a-f0-9]{16}$/u), key: 'system.attributes.ac.bonus', type: 'add', phase: 'initial', value: '-2', priority: null, conditions: '{}', replacement: '' }]);
     expect(JSON.stringify(pkg)).not.toMatch(/ability-score|language|reach|carrying|weaponProficien|unarmed|resistance/iu);
     const arbitraryMarkdown = markdown.replace('kind: hp-per-level', 'kind: hp-per-level\n            system-path: system.attributes.hp.value');
     expect(() => parseSpeciesMarkdown(arbitraryMarkdown)).toThrow('Arbitrary');
     const arbitraryPackage = structuredClone(pkg);
-    arbitraryPackage.features.find((item) => item.system.identifier === 'ogre-toughness')!.effects[0].changes[0].key = 'system.attributes.hp.max';
+    arbitraryPackage.features.find((item) => item.system.identifier === 'ogre-toughness')!.effects[0].system.changes[0].key = 'system.attributes.hp.max';
     expect(validateNativeSpeciesPackage(arbitraryPackage).findings.some((finding) => finding.code === 'EFFECT_KEY')).toBeTrue();
   });
 

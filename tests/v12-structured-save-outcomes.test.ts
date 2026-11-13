@@ -41,7 +41,8 @@ describe('source-derived save damage outcomes on every supported target', () => 
       expect(clawActivity.type).toBe('attack');
       expect(clawActivity.damage).not.toHaveProperty('onSave');
       expect(clawActivity.save).toBeUndefined();
-      expect(clawActivity.range.reach).toBe(5);
+      if (fvttVersion === '14') expect(clawActivity.range).toMatchObject({ value: '5', override: true });
+      else expect(clawActivity.range.reach).toBe(5);
       expect(claw.system.damage.base).toMatchObject({ number: 1, denomination: 6, types: ['slashing'] });
     });
     it(`preserves structured recharge, area and effect lifecycle on v${fvttVersion}`, () => {
@@ -59,7 +60,9 @@ describe('source-derived save damage outcomes on every supported target', () => 
         expect(activity.range?.value).not.toBe(5);
         const effects = item.effects.filter((effect: any) => effect.statuses.includes(status));
         expect(effects).toHaveLength(1);
-        expect(effects[0].duration).toMatchObject(duration);
+        expect(effects[0].duration).toMatchObject(fvttVersion === '14'
+          ? { value: duration.seconds ?? duration.rounds, units: duration.seconds === null ? 'rounds' : 'seconds', expiry: 'turnStart' }
+          : duration);
         expect(effects[0].flags.fvttJsonGenerator.sourceDerivedEmbeddedEffect).toBe(true);
         expect(activity.effects.filter((effect: any) => effect._id === effects[0]._id)).toHaveLength(1);
       }

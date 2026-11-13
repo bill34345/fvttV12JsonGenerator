@@ -57,7 +57,7 @@ describe('referenceIndex', () => {
     const foundryCore = join(root, 'references', 'foundry-v12-api-core', 'classes');
     const foundryV14Core = join(root, '.local', 'references', 'foundry', '14.361', 'api-core', 'classes');
     const dndRepo = join(root, 'references', 'dnd5e-4.3.9', 'repo', 'module', 'documents');
-    const dndV14Repo = join(root, '.local', 'references', 'dnd5e', '5.3.3', 'repo', 'module', 'data', 'activity');
+    const dndV14Repo = join(root, '.local', 'references', 'dnd5e', '6.0.6', 'repo', 'module', 'data', 'activity');
     mkdirSync(foundryCore, { recursive: true });
     mkdirSync(foundryV14Core, { recursive: true });
     mkdirSync(dndRepo, { recursive: true });
@@ -92,14 +92,19 @@ describe('referenceIndex', () => {
       'export default class BaseSaveActivityData {}\n',
     );
     writeFileSync(
-      join(root, '.local', 'references', 'dnd5e', '5.3.3', 'repo', 'system.json'),
-      '{"id":"dnd5e","version":"5.3.3"}',
+      join(root, '.local', 'references', 'dnd5e', '6.0.6', 'repo', 'system.json'),
+      '{"id":"dnd5e","version":"6.0.6"}',
     );
+
+    const retiredRepo = join(root, '.local', 'references', 'dnd5e', '5.3.3', 'repo');
+    mkdirSync(retiredRepo, { recursive: true });
+    writeFileSync(join(retiredRepo, 'old-module.mjs'), 'export class RetiredActivityData {}');
 
     const summary = buildReferenceIndexes(root);
 
     expect(summary.foundryApiDocs).toBe(4);
     expect(summary.dndRepoFiles).toBe(4);
+    expect(existsSync(join(root, '.local', 'references', 'indexes', 'dnd5e-5.3.3-file-index.json'))).toBe(false);
     expect(existsSync(join(root, '.local', 'references', 'generated-text', 'foundry-v12-api-core', 'classes', 'client.Actor.txt'))).toBe(true);
     expect(existsSync(join(root, '.local', 'references', 'generated-text', 'foundry-v14-api-core', 'classes', 'foundry.documents.Actor.txt'))).toBe(true);
 
@@ -114,7 +119,7 @@ describe('referenceIndex', () => {
     expect(dndTokenIndex.actor).toContain('module/documents/actor.mjs');
 
     const dndV14TokenIndex = JSON.parse(
-      readFileSync(join(root, '.local', 'references', 'indexes', 'dnd5e-5.3.3-token-index.json'), 'utf8'),
+      readFileSync(join(root, '.local', 'references', 'indexes', 'dnd5e-6.0.6-token-index.json'), 'utf8'),
     ) as Record<string, string[]>;
     expect(dndV14TokenIndex.save).toContain('module/data/activity/save-data.mjs');
   });
@@ -123,14 +128,14 @@ describe('referenceIndex', () => {
     const root = mkdtempSync(join(tmpdir(), 'reference-index-external-'));
     roots.push(root);
     const cacheRoot = join(root, 'external-cache');
-    const dndRepo = join(cacheRoot, 'dnd5e', '5.3.3', 'repo');
+    const dndRepo = join(cacheRoot, 'dnd5e', '6.0.6', 'repo');
     mkdirSync(dndRepo, { recursive: true });
-    writeFileSync(join(dndRepo, 'system.json'), '{"id":"dnd5e","version":"5.3.3"}');
+    writeFileSync(join(dndRepo, 'system.json'), '{"id":"dnd5e","version":"6.0.6"}');
 
     const summary = buildReferenceIndexes(join(root, 'repo'), cacheRoot);
 
     expect(summary.dndRepoFiles).toBe(1);
-    expect(existsSync(join(cacheRoot, 'indexes', 'dnd5e-5.3.3-file-index.json'))).toBe(true);
+    expect(existsSync(join(cacheRoot, 'indexes', 'dnd5e-6.0.6-file-index.json'))).toBe(true);
     expect(existsSync(join(root, 'repo', '.local', 'references'))).toBe(false);
   });
 });

@@ -115,7 +115,7 @@ test('preserves explicit reference bodies through real Forge analysis without an
     repair:async()=>{throw new Error('Literal reference preservation must not require repair.');},
     review:async()=>{reviewed++;throw new Error('Paid review must remain opt-in.');}};
   expect(auditMonsterIntakeSource(source,proposal).blocking.some(f=>f.code==='SOURCE_DEFINITION_OMITTED')).toBe(true);
-  const analysis=await analyzeBrowserActorSourceWithAi({source,sourceName:'Reference fixture',requestId:'reference-preservation',fvttVersion:'14.364',systemVersion:'5.3.3'},provider);
+  const analysis=await analyzeBrowserActorSourceWithAi({source,sourceName:'Reference fixture',requestId:'reference-preservation',fvttVersion:'14.370',systemVersion:'6.0.6'},provider);
   expect(analysis.status).toBe('ready_to_generate');
   expect(analysis.validation?.blocking).toEqual([]);
   expect(analysis.candidate!.quote).toContain(body);

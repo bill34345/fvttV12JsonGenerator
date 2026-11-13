@@ -253,7 +253,7 @@ function seaSourceVariant(from: string, to: string) {
 function analyzeSea(ir: MonsterIntakeIR, source = seaOld.source) {
   return analyzeBrowserActorIntakeDraft({
     source, sourceName: 'Historical Sea Hag', requestId: 'facts-history-sea-hag',
-    fvttVersion: '14.364', systemVersion: '5.3.3',
+    fvttVersion: '14.370', systemVersion: '6.0.6',
   }, ir, provider);
 }
 describe('saved historical facts through the formal offline source chain', () => {
@@ -266,7 +266,7 @@ describe('saved historical facts through the formal offline source chain', () =>
     const item = (actor.artifact as any).items.find((entry: any) => entry.name === 'Weaverot Volley');
     const activity: any = Object.values(item.system.activities)[0];
     expect(activity.target.template).toMatchObject({ type: 'sphere', size: 15, units: 'ft' });
-    expect(activity.range).toMatchObject({ value: 60, units: 'ft' });
+    expect(activity.range).toMatchObject({ value: '60', units: 'ft' });
     expect(activity.save.dc).toMatchObject({ formula: '18', calculation: '' });
     const note = actor.rulePresentation!.uncoveredMechanics.find((entry) => entry.source.includes('Weaverot Volley'));
     expect(note).toBeDefined();
@@ -361,7 +361,7 @@ describe('saved historical facts through the formal offline source chain', () =>
     for (const entry of cases) {
       const analysis = analyzeBrowserActorIntakeDraft({
         source: entry.source, sourceName: entry.label, requestId: 'historical-conflict-replay',
-        fvttVersion: '14.364', systemVersion: '5.3.3',
+        fvttVersion: '14.370', systemVersion: '6.0.6',
       }, entry.ir, provider);
       expect(analysis.ir!.creature).toEqual(entry.ir.creature);
       expect(auditMonsterIntakeSource(entry.source,entry.ir).blocking.length,entry.label).toBeGreaterThan(0);
@@ -408,7 +408,7 @@ describe('saved historical facts through the formal offline source chain', () =>
       expect(ir.coverage).toEqual(entry.ir.coverage);
       const analysis = analyzeBrowserActorIntakeDraft({
         source: entry.source, sourceName: entry.label, requestId: 'historical-structured-conflict',
-        fvttVersion: '14.364', systemVersion: '5.3.3',
+        fvttVersion: '14.370', systemVersion: '6.0.6',
       }, ir, provider);
       expect(analysis.ir!.creature).toEqual(ir.creature);
       expect(auditMonsterIntakeSource(entry.source,ir).blocking.length,entry.label).toBeGreaterThan(0);
@@ -430,7 +430,7 @@ describe('saved historical facts through the formal offline source chain', () =>
     expect(ir.creature.actions[3]!.description).toBe(mezz.ir.creature.actions[3]!.description);
     const analysis = analyzeBrowserActorIntakeDraft({
       source, sourceName: 'Toxic full feature quote with title-only parent claim',
-      requestId: 'historical-feature-claim-union', fvttVersion: '14.364', systemVersion: '5.3.3',
+      requestId: 'historical-feature-claim-union', fvttVersion: '14.370', systemVersion: '6.0.6',
     }, ir, provider);
     expect(analysis.ir!.creature).toEqual(ir.creature);
     expect(auditMonsterIntakeSource(source,ir).findings).toContainEqual(expect.objectContaining({
@@ -453,7 +453,7 @@ describe('saved historical facts through the formal offline source chain', () =>
     expect(ir.creature.actions[3]!.description).toBe(mezz.ir.creature.actions[3]!.description);
     const analysis = analyzeBrowserActorIntakeDraft({
       source, sourceName: 'Toxic overlapping exact damage quote',
-      requestId: 'historical-overlapping-source-span', fvttVersion: '14.364', systemVersion: '5.3.3',
+      requestId: 'historical-overlapping-source-span', fvttVersion: '14.370', systemVersion: '6.0.6',
     }, ir, provider);
     expect(analysis.ir!.creature).toEqual(ir.creature);
     expect(auditMonsterIntakeSource(source,ir).findings.filter(finding=>finding.code==='SOURCE_STRUCTURED_RULE_MISMATCH')).toEqual([]);
@@ -508,7 +508,7 @@ describe('saved historical facts through the formal offline source chain', () =>
       expect(bow.system.range).toMatchObject({ value: 150, long: 600, units: 'ft' });
       const nativeAttacks = Object.values(bow.system.activities).filter((activity: any) => activity.type === 'attack') as any[];
       expect(nativeAttacks).toHaveLength(1);
-      expect(nativeAttacks[0].range).toMatchObject({ value: 150, long: 600, units: 'ft' });
+      expect(nativeAttacks[0].range).toMatchObject({ value: '150', special: '远射程 600 尺', units: 'ft' });
       expect(nativeAttacks[0].attack).toMatchObject({flat:true,bonus:'5',ability:''});
       expect(nativeAttacks[0].damage.parts).toContainEqual(expect.objectContaining({number:1,denomination:8,bonus:'3',types:['piercing']}));
     }

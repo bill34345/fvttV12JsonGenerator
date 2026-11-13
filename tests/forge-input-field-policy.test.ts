@@ -14,7 +14,7 @@ const originalFetch=globalThis.fetch;globalThis.fetch=Object.assign(noCall,{prec
 const provider={providerName:'field-policy',extractionModel:'frozen',reviewModel:'disabled',discover:noCall,extract:noCall,review:noCall,repair:noCall};
 const extra='\nRestoration. The creature regains 10 Hit Points.\n';
 const source=LURKER_SOURCE+extra;
-const input={source,sourceName:'field policy',sourceScope:'single' as const,requestId:'field-policy-regression',sourceId:'actor:v1:ce7b17fa-9447-49a7-bf18-d4cf2eead852' as ForgeSourceId,fvttVersion:'14.368',systemVersion:'5.3.3',autoCorrect:false};
+const input={source,sourceName:'field policy',sourceScope:'single' as const,requestId:'field-policy-regression',sourceId:'actor:v1:ce7b17fa-9447-49a7-bf18-d4cf2eead852' as ForgeSourceId,fvttVersion:'14.368',systemVersion:'6.0.6',autoCorrect:false};
 function base():any{const ir=buildValidLurkerIr();ir.source={sha256:hashSource(source),length:source.length};return ir;}
 function feature(carrier:'operations'|'flat',special?:unknown):any{
  const healing={formula:'10',type:'healing',target:{type:'self',count:1,...(special===undefined?{}:{special})}};
@@ -144,7 +144,7 @@ test.skipIf(!frozen)('input field policy: untouched real Shield Guardian first a
   responseEvidence:{record:row=>{evidence.push(row);}},httpClient:async()=>{responses++;return Response.json({choices:[{message:{content:raw}}]});}});
  const current={...input,source:actualSource,sourceName:'Shield Guardian'},analysis=await analyzeBrowserActorSourceWithAi(current,real),generation=await generateBrowserActorIntakeCandidate(current,analysis,provider),actor=(generation.candidateResponse as any)?.result?.artifact;
  expect(responses).toBe(1);expect(evidence[0].content).toBe(raw);expect(analysis.validation?.blocking).toEqual([]);expect(generation.findings).toEqual([]);expect(generation.candidateAvailable).toBe(true);
- expect(actor.system.attributes.hp.value).toBe(142);expect(actor.system.attributes.ac.flat).toBe(17);expect(actor.system.details.cr).toBe(7);expect(actor.items).toHaveLength(6);
+ expect(actor.system.attributes.hp.value).toBe(142);expect(actor.system.attributes.ac.override).toBe(17);expect(actor.system.details.cr).toBe(7);expect(actor.items).toHaveLength(6);
  const regen=actor.items.find((item:any)=>item.name==='Regeneration'),heal=Object.values(regen.system.activities).find((entry:any)=>entry.type==='heal') as any;expect(heal.target.affects.type).toBe('self');
  expect(actor.items.some((item:any)=>item.type==='spell')).toBe(false);expect(actor.items.find((item:any)=>item.name==='Spell Storing').system.description.value).toContain('parameters set by the original caster');
  expect(readFileSync(sourcePath)).toEqual(sourceBytes);expect(readFileSync(replyPath)).toEqual(replyBytes);expect(JSON.parse(raw).creature.traits[1].sourceOperations[0].healing.target.special).toBeUndefined();

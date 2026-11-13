@@ -12,7 +12,7 @@ import {buildValidLurkerIr,LURKER_SOURCE} from '../src/core/intake/__tests__/fix
 
 const noCall=async():Promise<never>=>{throw Error('No extra model request is permitted');};
 const offline={providerName:'local-only',extractionModel:'frozen',reviewModel:'disabled',discover:noCall,extract:noCall,repair:noCall,review:noCall};
-const input={source:LURKER_SOURCE,sourceName:'Reception fixture',sourceScope:'single' as const,requestId:'reception-fixture',sourceId:'actor:v1:22600a3f-8819-41e1-ade8-998768910011' as ForgeSourceId,fvttVersion:'14.368',systemVersion:'5.3.3'};
+const input={source:LURKER_SOURCE,sourceName:'Reception fixture',sourceScope:'single' as const,requestId:'reception-fixture',sourceId:'actor:v1:22600a3f-8819-41e1-ade8-998768910011' as ForgeSourceId,fvttVersion:'14.368',systemVersion:'6.0.6'};
 const connection={authMode:'api-key' as const,baseUrl:'https://fixture.invalid',apiKey:'fixture-key',model:'fixture',reviewModel:'fixture',timeoutMs:1000,repairTimeoutMs:1000,maxAttempts:1 as const};
 function completed(content:string){return 'event: response.completed\ndata: '+JSON.stringify({type:'response.completed',sequence_number:0,response:{id:'fixture-response',status:'completed',output:[{type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:content}]}]}})+'\n\n';}
 function stream(body:string){return new Response(body,{status:200,headers:{'content-type':'text/event-stream'}});}
@@ -97,7 +97,7 @@ test.skipIf(!frozenRoot)('the Berserker failure-evidence excerpt can be replayed
   const answerPath=join(frozenRoot!,'results','berserker','raw-answer.txt'),before=readFileSync(answerPath,'utf8'),source=readFileSync(join(frozenRoot!,'sources-r2','berserker.md'),'utf8');
   const fixture=actorProvider(completed(before)),current={...input,source,sourceName:'Berserker evidence-excerpt synthetic replay'};
   const analysis=await analyzeBrowserActorSourceWithAi(current,fixture.provider),result=await generateBrowserActorIntakeCandidate(current,analysis,offline),actor=(result.candidateResponse as any)?.result?.artifact;
-  expect(result.candidateAvailable).toBe(true);expect(actor.system.attributes.hp.value).toBe(67);expect(actor.system.attributes.ac.flat).toBe(13);
+  expect(result.candidateAvailable).toBe(true);expect(actor.system.attributes.hp.value).toBe(67);expect(actor.system.attributes.ac.override).toBe(13);
   expect(actor.items.some((item:any)=>item.name.includes('Bloodied Fury'))).toBe(true);const attack=actor.items.find((item:any)=>item.name.includes('Greataxe'));
   const activities=Object.values<any>(attack.system.activities);expect(activities.some(activity=>activity.roll?.formula==='1d20+5')).toBe(true);
   expect(activities.some(activity=>activity.damage?.parts?.some((part:any)=>part.number===1&&part.denomination===12&&part.bonus==='3'&&part.types.includes('slashing')))).toBe(true);

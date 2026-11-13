@@ -155,7 +155,7 @@ describe('appendStructuredActionItems', () => {
       }));
       const item = actor.items.find((entry: any) => entry.name.includes('Dread Tether')), activity = getActivities(item)[0];
       expect(item.effects).toHaveLength(1);
-      expect(item.effects[0]).toMatchObject({ statuses: ['frightened'], duration: { seconds: 86400 }, flags: { fvttJsonGenerator: { conditionLifecycle: { version: 1, mode: 'gm', sourceText: describe } } } });
+      expect(item.effects[0]).toMatchObject({ statuses: ['frightened'], duration: { value: 86400, units: 'seconds' }, flags: { fvttJsonGenerator: { conditionLifecycle: { version: 1, mode: 'gm', sourceText: describe } } } });
       expect(activity.effects).toEqual([{ _id: item.effects[0]._id, onSave: false }]);
       expect(activity).toMatchObject({ type: 'save', activation: { type: 'bonus' }, save: { dc: { formula: '14' }, ability: ['wis'] } });
       expect(item.system.uses).toMatchObject({ max: '1', recovery: [{ period: 'sr' }] });
@@ -166,7 +166,7 @@ describe('appendStructuredActionItems', () => {
     });
 
     it('projects exact simple condition durations including Chinese 日 without changing untimed conditions', () => {
-      for (const [duration, native] of [['1日', { seconds: 86400 }], ['1天', { seconds: 86400 }], ['1 day', { seconds: 86400 }], ['1 minute', { seconds: 60 }], ['2轮', { rounds: 2 }], [undefined, {}]] as const) {
+      for (const [duration, native] of [['1日', { value: 86400, units: 'seconds' }], ['1天', { value: 86400, units: 'seconds' }], ['1 day', { value: 86400, units: 'seconds' }], ['1 minute', { value: 60, units: 'seconds' }], ['2轮', { value: 2, units: 'rounds' }], [undefined, { value: null, units: 'seconds' }]] as const) {
         const describe = `The target becomes blinded${duration ? ' for ' + duration : ''}.`;
         const actor = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(createMinimalParsedNPC({ 动作: [{ name: 'Light Veil', type: 'save', DC: 13, ability: 'con', describe, embeddedEffects: [{ type: 'blinded', describe, duration }] }] }));
         const item = actor.items.find((entry: any) => entry.name.includes('Light Veil'));
@@ -181,7 +181,7 @@ describe('appendStructuredActionItems', () => {
       const item = actor.items.find((entry: any) => entry.name.includes('Brief Shock'));
       expect(item.effects).toHaveLength(1);
       expect(item.effects[0]).toMatchObject({ statuses: ['stunned', 'incapacitated'], flags: { fvttJsonGenerator: { conditionLifecycle: { mode: 'gm', duration: 'until the end of its next turn' } } } });
-      expect(item.effects[0].duration.seconds).toBeNull();
+      expect(item.effects[0].duration).toMatchObject({ value: null, units: 'seconds' });
       expect(item.effects[0].description).toContain('until the end of its next turn');
       expect(getActivities(item)[0].effects).toEqual([{ _id: item.effects[0]._id, onSave: false }]);
     });
@@ -192,7 +192,7 @@ describe('appendStructuredActionItems', () => {
         expect(actor.items[0].effects).toHaveLength(1);
         expect(actor.items[0].effects[0]).toMatchObject({ statuses: ['charmed'], flags: { fvttJsonGenerator: { conditionLifecycle: { mode: 'gm', sourceText: describe } } } });
         expect(actor.items[0].effects[0].description).toContain(describe);
-        expect(actor.items[0].effects[0].duration.seconds).toBeNull();
+        expect(actor.items[0].effects[0].duration).toMatchObject({ value: null, units: 'seconds' });
         expect(actor.items[0].flags.fvttJsonGenerator.conditionLifecycle.statuses).toEqual(['charmed']);
       }
     });
@@ -212,7 +212,7 @@ describe('appendStructuredActionItems', () => {
       for (const describe of ['The target becomes blinded and deafened for 1 minute.', '目标陷入目盲和耳聋，持续1分钟。']) {
         const actor = new ActorGenerator({ fvttVersion: '14', effectProfile: 'core' }).generate(createMinimalParsedNPC({ 动作: [{ name: 'Sensory Flash', type: 'save', DC: 13, ability: 'con', describe, embeddedEffects: [{ type: 'blinded', describe }, { type: 'deafened', describe }] }] }));
         expect(actor.items[0].effects).toHaveLength(2);
-        expect(actor.items[0].effects.map((effect: any) => effect.duration.seconds)).toEqual([60, 60]);
+        expect(actor.items[0].effects.map((effect: any) => effect.duration)).toEqual([expect.objectContaining({ value: 60, units: 'seconds' }), expect.objectContaining({ value: 60, units: 'seconds' })]);
       }
     });
 
@@ -337,7 +337,7 @@ describe('appendStructuredActionItems', () => {
       expect(item.effects).toHaveLength(1);
       expect(item.effects[0]).toMatchObject({
         statuses: ['frightened'],
-        duration: { seconds: 60 },
+        duration: { value: 60, units: 'seconds' },
         flags: { fvttJsonGenerator: { sourceDerivedEmbeddedEffect: true, sourceDuration: '1 minute' } },
       });
       expect(activity.effects).toEqual([{ _id: item.effects[0]._id, onSave: false }]);
@@ -403,8 +403,8 @@ describe('appendStructuredActionItems', () => {
       expect(item.effects[0].description).not.toContain('Second fear');
       expect(item.effects[1].description).not.toContain('First fear');
       expect(item.effects.map((effect: any) => effect.duration)).toEqual([
-        expect.objectContaining({ seconds: 60 }),
-        expect.objectContaining({ rounds: 2 }),
+        expect.objectContaining({ value: 60, units: 'seconds' }),
+        expect.objectContaining({ value: 2, units: 'rounds' }),
       ]);
       expect(activity.effects).toEqual(item.effects.map((effect: any) => ({ _id: effect._id, onSave: false })));
     });
@@ -543,7 +543,7 @@ describe('appendStructuredActionItems', () => {
       const attackActivity = activities.find((a: any) => a.type === 'attack');
       expect(attackActivity).toBeDefined();
       expect(attackActivity.activation?.type).toBe('action');
-      expect(attackActivity.attack?.type?.value).toBe('mwak');
+      expect(attackActivity.attack?.type).toEqual({ value: 'melee', classification: 'weapon' });
       expect(item.system.activation).toBeUndefined();
     });
 
@@ -571,7 +571,7 @@ describe('appendStructuredActionItems', () => {
       expect(item).toBeDefined();
       const activities = getActivities(item);
       const attackActivity = activities.find((a: any) => a.type === 'attack');
-      expect(attackActivity.attack?.type?.value).toBe('rwak');
+      expect(attackActivity.attack?.type).toEqual({ value: 'ranged', classification: 'weapon' });
     });
   });
 
@@ -600,7 +600,7 @@ describe('appendStructuredActionItems', () => {
       const activities = getActivities(item);
       const saveActivity = activities.find((a: any) => a.type === 'save');
       expect(saveActivity).toBeDefined();
-      expect(saveActivity.save?.dc?.value).toBe(15);
+      expect(saveActivity.save?.dc).toEqual({ formula: '15', calculation: '' });
     });
 
     it('generates save action with recharge', () => {
@@ -661,9 +661,9 @@ describe('appendStructuredActionItems', () => {
         expect.objectContaining({
           calculation: 'wis',
           formula: '',
-          value: 15,
         }),
       );
+      expect(Object.hasOwn(saveActivity.save.dc, 'value')).toBe(false);
     });
 
     it.each(['5-6', '5–6', '5 至 6'])('parses renderer-compatible recharge range %s while rejecting a near non-range literal', (recharge) => {
@@ -682,20 +682,20 @@ describe('appendStructuredActionItems', () => {
       expect(nearMiss.items.find((entry: any) => entry.name === 'Recharge Breath').system.uses).toBeUndefined();
     });
 
-    it('projects renderer-style recharge through the public Foundry 14.364 / dnd5e 5.3.3 workflow', async () => {
+    it('projects renderer-style recharge through the public Foundry 14.370 / dnd5e 6.0.6 workflow', async () => {
       const response = await convertFinalActorSource(buildForgeActorRequest({
         content: rechargeMarkdown('5-6'),
         displayName: 'Recharge Fixture',
         requestId: 'recharge-formal-workflow',
-        fvttVersion: '14.364',
-        systemVersion: '5.3.3',
+        fvttVersion: '14.370',
+        systemVersion: '6.0.6',
       }));
       expect('result' in response).toBeTrue();
       if (!('result' in response)) throw new Error('Expected a Forge Actor result.');
       if (!('artifact' in response.result)) throw new Error('Expected a formal Actor artifact.');
       const item = (response.result.artifact!.items as any[]).find((entry) => entry.name === 'Recharge Breath');
       const activity = getActivities(item)[0];
-      expect(response.result.artifact!._stats).toMatchObject({ coreVersion: '14.364', systemVersion: '5.3.3' });
+      expect(response.result.artifact!._stats).toMatchObject({ coreVersion: '14.370', systemVersion: '6.0.6' });
       expect(item.system.uses).toEqual({
         spent: 0,
         max: '1',

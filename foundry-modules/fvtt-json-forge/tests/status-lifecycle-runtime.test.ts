@@ -36,10 +36,10 @@ function fixture(status: StatusLifecycleRule['parameters']['status'] = 'blinded'
   const attack = (total = 18, options: any = {}) => {
     const data: any = { data: { flags: {} } };
     hooks.get('dnd5e.preRollAttack')?.({ subject: activity }, {}, data);
-    const message: any = { id: globalThis.crypto.randomUUID(), author: { id: options.author ?? 'gm' }, flags: {
-      ...data.data.flags, dnd5e: { roll: { type: 'attack' }, activity: { uuid: activity.uuid }, item: { uuid: item.uuid },
-        targets: [{ uuid: actor.uuid, ac: options.ac === undefined ? 15 : options.ac }] },
-    } };
+    const message: any = { id: globalThis.crypto.randomUUID(), type: 'attack', author: { id: options.author ?? 'gm' }, flags: data.data.flags,
+      system: { activity: { uuid: activity.uuid }, item: { uuid: item.uuid },
+        targets: [{ actor: actor.uuid, token: target.uuid, ac: options.ac === undefined ? 15 : options.ac }] }
+    };
     env.game.messages.set(message.id, message);
     const roll = { total, parent: message, isCritical: options.critical ?? false, isFumble: options.fumble ?? false };
     if (options.mutate) options.mutate({ message, roll, data });
@@ -61,14 +61,23 @@ function midiFixture(index = 1, options: any = {}) {
   f.target.uuid = flags['midi-qol'].targets[0].uuid; f.target.id = f.target.uuid.split('.').at(-1)!;
   f.env.canvas.tokens = new Map([[f.source.id, f.source], [f.target.id, f.target]]);
   f.env.game.combat.combatants = [{ tokenId: f.source.id }, { tokenId: f.target.id }];
-  f.env.game.modules.set('midi-qol', { active: true, version: options.version ?? '14.0.11' });
+  f.env.game.modules.set('midi-qol', { active: true, version: options.version ?? '14.6.7' });
   const workflows = new Map<string, any>();
   f.env.MidiQOL = { Workflow: { getWorkflow: (id: string) => workflows.get(id) } };
-  const card: any = { id: observed.id, author: { id: 'gm' }, speaker: observed.speaker, flags, rolls: [] };
+  // Historical capture supplies roll facts; these explicit fields model the native6/Midi14.6.5 contract.
+  const system={activity:flags.dnd5e.activity,item:flags.dnd5e.item,
+    targets:flags.dnd5e.targets.map((target:any)=>({actor:target.uuid,token:f.target.uuid,ac:target.ac})),
+    midi:{attackRollCount:flags['midi-qol'].attackRollCount}};
+  delete flags.dnd5e;
+  delete flags['midi-qol'].attackRollCount;
+  delete flags['midi-qol'].activityUuid;
+  delete flags['midi-qol'].attackTotal;
+  delete flags['midi-qol'].attackingTokenUuid;
+  const card: any = { id: observed.id, author: { id: 'gm' }, speaker: observed.speaker, flags, system, rolls: [] };
   f.env.game.messages.set(card.id, card);
   const workflow: any = { id: `ChatMessage.${card.id}`, activity: f.activity, actor: f.source.actor, item: f.item, token: f.source,
     targets: new Set([f.target]), hitTargets: new Set(flags['midi-qol'].isHit ? [f.target] : []), itemCardId: card.id,
-    attackRollCount: flags['midi-qol'].attackRollCount, aborted: false };
+    attackRollCount: system.midi.attackRollCount, aborted: false };
   workflows.set(workflow.id, workflow);
   const config = { subject: f.activity, workflow }, messageConfig: any = { create: false, data: { flags: {} } };
   const stop = f.start();
@@ -83,7 +92,7 @@ function midiFixture(index = 1, options: any = {}) {
   };
 }
 
-test('actual MIDI same-card miss/hit shapes wait for confirmed hit and consume one native roll once', async () => {
+test('MIDI6 same-card miss/hit contracts wait for confirmed hit and consume one native roll once', async () => {
   const miss = midiFixture(0); miss.native(); miss.complete(); await miss.settle(); expect(miss.entries).toHaveLength(0); miss.stop();
   const hit = midiFixture(1); hit.native(); await hit.settle(); expect(hit.entries).toHaveLength(0);
   hit.complete(); await hit.settle(); expect(hit.entries).toHaveLength(1);
@@ -97,19 +106,18 @@ test('an unverified MIDI version fails closed with a GM-visible explanation', as
 });
 
 test('MIDI waits for the persistent card rather than a cached clone and ignores duplicate card updates', async () => {
-  const f = midiFixture(), finalFlags = structuredClone(f.card.flags), finalRolls = f.card.rolls;
-  f.workflow.chatCard = { ...f.card, flags: finalFlags, rolls: finalRolls };
-  f.card.flags = { ...f.card.flags, 'midi-qol': { ...f.card.flags['midi-qol'], attackRollCount: 0 } }; f.card.rolls = [];
+  const f = midiFixture(), finalCount=f.card.system.midi.attackRollCount, finalRolls = f.card.rolls;
+  f.workflow.chatCard = { ...f.card, system:structuredClone(f.card.system), rolls: finalRolls };
+  f.card.system.midi.attackRollCount=0; f.card.rolls = [];
   f.native(); f.complete(); await f.settle(); expect(f.entries).toHaveLength(0);
-  f.card.flags = finalFlags; f.card.rolls = finalRolls;
+  f.card.system.midi.attackRollCount=finalCount; f.card.rolls = finalRolls;
   f.hooks.get('updateChatMessage')?.(f.card); await f.settle(); expect(f.entries).toHaveLength(1);
   f.hooks.get('updateChatMessage')?.(f.card); f.complete(); await f.settle(); expect(f.entries).toHaveLength(1); f.stop();
 });
 
 test('MIDI confirmed targets decide the hit even if a separate native message would suggest a hit', async () => {
   const f = midiFixture();
-  f.roll.parent = { id: 'native', author: { id: 'gm' }, flags: { ...f.messageConfig.data.flags,
-    dnd5e: { ...f.card.flags.dnd5e, roll: { type: 'attack' } } } };
+  f.roll.parent = { id: 'native', type:'attack', author: { id: 'gm' }, flags:f.messageConfig.data.flags,system:f.card.system };
   f.env.game.messages.set('native', f.roll.parent);
   f.native(); await f.settle(); expect(f.entries).toHaveLength(0);
   f.workflow.hitTargets.clear(); f.card.flags['midi-qol'].isHit = false; f.card.flags['midi-qol'].hitTargetUuids = [];
@@ -120,26 +128,26 @@ test('MIDI confirmed targets decide the hit even if a separate native message wo
 
 test('delayed MIDI persistence retains the confirmed hit time and cannot renew an expired minute or round', async () => {
   for (const unit of ['minute', 'round']) {
-    const f = midiFixture(1, { unit }), count = f.card.flags['midi-qol'].attackRollCount;
-    f.card.flags['midi-qol'].attackRollCount = 0; f.complete(); await f.settle(); expect(f.entries).toHaveLength(0);
+    const f = midiFixture(1, { unit }), count = f.card.system.midi.attackRollCount;
+    f.card.system.midi.attackRollCount = 0; f.complete(); await f.settle(); expect(f.entries).toHaveLength(0);
     if (unit === 'minute') f.env.game.time.worldTime = 60;
     else f.env.game.combat.round = 2;
-    f.card.flags['midi-qol'].attackRollCount = count; f.hooks.get('updateChatMessage')?.(f.card); await f.settle();
+    f.card.system.midi.attackRollCount = count; f.hooks.get('updateChatMessage')?.(f.card); await f.settle();
     expect(f.entries).toHaveLength(0);
     expect(f.history.some(entry => entry.type === 'status-lifecycle-expired-before-apply')).toBe(true); f.stop();
   }
-  const f = midiFixture(), count = f.card.flags['midi-qol'].attackRollCount;
-  f.card.flags['midi-qol'].attackRollCount = 0; f.complete(); await f.settle(); f.env.game.time.worldTime = 30;
-  f.card.flags['midi-qol'].attackRollCount = count; f.hooks.get('updateChatMessage')?.(f.card); await f.settle();
+  const f = midiFixture(), count = f.card.system.midi.attackRollCount;
+  f.card.system.midi.attackRollCount = 0; f.complete(); await f.settle(); f.env.game.time.worldTime = 30;
+  f.card.system.midi.attackRollCount = count; f.hooks.get('updateChatMessage')?.(f.card); await f.settle();
   expect(f.entries[0]!.claim.lifecycle).toMatchObject({ startedAt: 0, expiresAt: 60 }); f.stop();
 });
 
 test('changing the current combat while a MIDI card persists does not move the hit combat anchor', async () => {
-  const f = midiFixture(1, { unit: 'round' }), original = f.env.game.combat, count = f.card.flags['midi-qol'].attackRollCount;
-  f.card.flags['midi-qol'].attackRollCount = 0; f.complete(); await f.settle();
+  const f = midiFixture(1, { unit: 'round' }), original = f.env.game.combat, count = f.card.system.midi.attackRollCount;
+  f.card.system.midi.attackRollCount = 0; f.complete(); await f.settle();
   f.env.game.combat = { ...original, uuid: 'Combat.other', round: 10, turn: 1 };
   f.env.game.combats = [original, f.env.game.combat];
-  f.card.flags['midi-qol'].attackRollCount = count; f.hooks.get('updateChatMessage')?.(f.card); await f.settle();
+  f.card.system.midi.attackRollCount = count; f.hooks.get('updateChatMessage')?.(f.card); await f.settle();
   expect(f.entries[0]!.claim.lifecycle).toMatchObject({ combatUuid: original.uuid, startRound: 1, startTurn: 0 }); f.stop();
 });
 
@@ -155,9 +163,9 @@ test('MIDI rejects unregistered/replaced rolls, wrong identities, targets, card 
     f => { f.workflow.targets = new Set([{ ...f.target, uuid: 'Scene.foreign.Token.foreign' }]); },
     f => { f.workflow.hitTargets = new Set([{ ...f.target, uuid: 'Scene.foreign.Token.foreign' }]); },
     f => { f.card.author.id = 'other'; },
-    f => { f.card.flags.dnd5e.targets[0].ac = null; },
-    f => { f.card.flags['midi-qol'].activityUuid = 'foreign'; },
-    f => { f.card.flags['midi-qol'].attackRollCount++; },
+    f => { f.card.system.targets[0].ac = null; },
+    f => { f.card.system.activity.uuid = 'foreign'; },
+    f => { f.card.system.midi.attackRollCount++; },
     f => { f.card.flags['midi-qol'].hitTargetUuids = ['Scene.foreign.Token.foreign']; },
     f => { f.card.rolls[0].total++; },
     f => { f.env.game.messages.delete(f.card.id); },
@@ -222,7 +230,7 @@ test('round duration remains tied to bound combat round and turn, despite unrela
 
 test('identity mismatch, ambiguous targets, inactive GM and stopping during a save cannot apply/remove effects', async () => {
   const f = fixture(), stop = f.start();
-  f.attack(20, { author: 'other' }); f.attack(20, { mutate: ({ message }: any) => { message.flags.dnd5e.targets[0].uuid = 'Actor.wrong'; } });
+  f.attack(20, { author: 'other' }); f.attack(20, { mutate: ({ message }: any) => { message.system.targets[0].actor = 'Actor.wrong'; } });
   await f.settle(); expect(f.entries).toHaveLength(0);
   f.env.game.user.targets.add({ id: 'other', actor: { uuid: 'Actor.other' } }); f.attack(); await f.settle(); expect(f.entries).toHaveLength(0);
   f.env.game.user.targets = new Set([f.target]); f.attack(); await f.settle();

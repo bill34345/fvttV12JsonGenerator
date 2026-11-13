@@ -112,8 +112,8 @@ describe('source-derived Actor behavior semantics', () => {
       const shellEffect = shell.effects.find((effect: any) =>
         effect.flags?.fvttJsonGenerator?.behaviorState?.stateId === 'shell-guard-ac');
       expect(shellEffect).toBeDefined();
-      expect(shellEffect.changes[0]).toMatchObject(target === '14'
-        ? { key: 'system.attributes.ac.value', phase: 'final', mode: 2, value: '4' }
+      expect((shellEffect.system?.changes ?? shellEffect.changes)[0]).toMatchObject(target === '14'
+        ? { key: 'system.attributes.ac.value', phase: 'final', type: 'add', value: '4' }
         : { key: 'system.attributes.ac.flat', mode: 2, value: '4' });
       const applyShell = Object.values(shell.system.activities).find((activity: any) =>
         activity.flags?.fvttJsonGenerator?.behaviorOperation?.operationId === 'apply-shell-guard') as any;

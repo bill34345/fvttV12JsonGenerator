@@ -110,7 +110,7 @@ export function renderActorStatblock(artifact: unknown): string {
 
   const alignment = scalarText(details.alignment);
   const init = asRecord(attributes.init);
-  // In locked dnd5e 5.3.3, init.mod is only the ability contribution. init.total/score
+  // In locked dnd5e 6.0.6, init.mod is only the ability contribution. init.total/score
   // are prepared totals and are absent from an unprepared generated artifact.
   const initiativeTotal = explicitSignedTotal(init.total);
   const initiativeScore = formatScalar(init.score);
@@ -275,10 +275,10 @@ function renderAbilities(value: unknown, draft = false): string {
   const cells = ABILITY_KEYS.map((key) => {
     const ability = asRecord(abilities[key]);
     const score = draft ? strictAbilityScore(abilities[key]) : strictAbilityScore(ability.value);
-    // MOD is the base ability modifier (score - 10) / 2 in locked dnd5e 5.3.3.
+    // MOD is the base ability modifier (score - 10) / 2 in locked dnd5e 6.0.6.
     // It is not the full check or save total.
     const modifier = safeModifier(score);
-    // dnd5e 5.3.3 stores roll options under ability.save; only its prepared
+    // dnd5e 6.0.6 stores roll options under ability.save; only its prepared
     // .value is the total saving throw modifier. bonuses.save is additive.
     const save = draft ? undefined : explicitSignedTotal(asRecord(ability.save).value);
     return [
@@ -307,7 +307,7 @@ function renderActorMeta(system: Record<string, unknown>): string {
   const explicitSkills = Object.entries(asRecord(system.skills)).slice(0, MAX_ITEMS)
     .map(([key, value]) => {
       const skill = asRecord(value);
-      // dnd5e 5.3.3 prepareSkill sets .mod to the ability modifier and
+      // dnd5e 6.0.6 prepareSkill sets .mod to the ability modifier and
       // .total to mod + proficiency/other bonuses. Never present .mod as total.
       const total = explicitSignedTotal(skill.total);
       return total ? `${key.toUpperCase()} ${total}` : undefined;
@@ -387,8 +387,10 @@ function formatHitPoints(value: unknown): string {
 
 function formatArmorClass(value: unknown): string {
   const ac = asRecord(value);
-  const flat = formatScalar(ac.flat);
-  const formula = scalarText(ac.formula) ?? scalarText(ac.calc);
+  const flat = formatScalar(ac.override ?? ac.flat);
+  const formula = scalarText(ac.formula) ?? (Array.isArray(ac.formulas)
+    ? ac.formulas.map((entry: unknown) => scalarText(asRecord(entry).formula)).filter(Boolean).join('；') || undefined
+    : undefined) ?? scalarText(ac.calc);
   if (!flat && !formula) return UNKNOWN;
   if (flat && formula) return formula === 'flat' ? flat : `${flat}（${formula}）`;
   return flat ?? formula ?? UNKNOWN;
@@ -396,10 +398,11 @@ function formatArmorClass(value: unknown): string {
 
 function formatMovement(value: unknown): string {
   const movement = asRecord(value);
+  const speeds = movement.speeds ? asRecord(movement.speeds) : movement;
   const units = scalarText(movement.units);
   const entries = (['walk', 'fly', 'swim', 'climb', 'burrow'] as const)
     .map((key) => {
-      const distance = formatScalar(movement[key]);
+      const distance = formatScalar(speeds[key]);
       if (!distance) return undefined;
       const label = key === 'walk' ? '步行' : key === 'fly' ? '飞行' : key === 'swim' ? '游泳' : key === 'climb' ? '攀爬' : '掘穴';
       return `${label} ${distance}${units ? ` ${units}` : ''}`;

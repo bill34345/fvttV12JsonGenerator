@@ -393,8 +393,8 @@ function makeApplication(
   Object.defineProperty(globalThis, 'document', { configurable: true, value: dom.window.document });
   const notifications = { errors: [] as string[], infos: [] as string[] };
   const game = {
-    version: '14.364',
-    system: { id: 'dnd5e', version: '5.3.3' },
+    version: '14.370',
+    system: { id: 'dnd5e', version: '6.0.6' },
     world: { id: 'blueprint-edge-world' },
     user: { id: 'blueprint-edge-user', isGM: true },
   };
@@ -468,8 +468,8 @@ function acceptedResponse(): Promise<ForgeActorResponse> {
     content: NIGHTGAUNT_SOURCE,
     displayName: 'Blueprint edge test actor',
     requestId: 'blueprint-edge-test',
-    fvttVersion: '14.364',
-    systemVersion: '5.3.3',
+    fvttVersion: '14.370',
+    systemVersion: '6.0.6',
   }));
   return accepted;
 }

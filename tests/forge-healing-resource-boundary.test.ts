@@ -40,7 +40,7 @@ describe('healing resource boundary',()=>{
     expect(heal.target).toEqual({override:false,prompt:true,
       template:{count:'',contiguous:false,type:'',size:'',width:'',height:'',units:'ft'},
       affects:{count:'',type:'any',choice:false,special:pendingTarget}});
-    expect(heal.range).toEqual({units:'spec',special:pendingTarget,override:false});
+    expect(heal.range).toEqual({value:'',units:'spec',special:pendingTarget,override:false});
     expect(heal.healing).toMatchObject(id===aboleth?{number:1,denomination:10,types:['healing']}:{number:2,denomination:10,bonus:'5',types:['temphp']});
     const checked=verifyMonsterIntake(c.source,result.ir,result.markdown,result.actor,request(c.source).candidate);
     expect(checked.findings.filter(f=>f.code==='HEALING_TARGET_UNSPECIFIED')).toMatchObject([{blocking:false,path:expect.stringContaining('/healing/target')}]);
@@ -86,7 +86,7 @@ describe('healing resource boundary',()=>{
     carrier.sourceOperations=[{id:'existing-damage',name:'Existing damage',type:'damage',relationship:'primary',sourceText:damageText,damage:[{formula:'1',type:'force',relationship:'base'}],proof:{damage:[damageText]}}];
     const noCall=async():Promise<never>=>{throw Error('Mixed healing boundary forbids model calls');};
     const provider={providerName:'fixed-mixed-boundary',extractionModel:'frozen',reviewModel:'disabled',discover:noCall,extract:noCall,review:noCall,repair:noCall};
-    const input={source:c.source,sourceName:'mixed-healing',sourceScope:'single' as const,sourceId:'actor:v1:66d2fb85-4894-4fba-81e5-ac60b74f0170' as ForgeSourceId,requestId:'mixed-healing-'+(target?.type??'missing'),fvttVersion:'14.364',systemVersion:'5.3.3'};
+    const input={source:c.source,sourceName:'mixed-healing',sourceScope:'single' as const,sourceId:'actor:v1:66d2fb85-4894-4fba-81e5-ac60b74f0170' as ForgeSourceId,requestId:'mixed-healing-'+(target?.type??'missing'),fvttVersion:'14.370',systemVersion:'6.0.6'};
     const analysis=analyzeBrowserActorIntakeDraft(input,structuredClone(ir),provider);
     const generated=await generateBrowserActorIntakeCandidate(input,analysis,provider);expect(generated.candidateAvailable).toBe(true);
     const actor=generated.actorProjection as any;expect(actor).toBeDefined();
@@ -112,7 +112,7 @@ describe('healing resource boundary',()=>{
     const heal=healer(result.actor);expect(heal.target).toEqual({override:false,prompt:expected.type!=='self',
       template:{count:'',contiguous:false,type:'',size:'',width:'',height:'',units:'ft'},
       affects:{count:String(expected.count),type:expected.type,choice:false,special:expected.special}});
-    if(expected.type==='creature')expect(heal.range).toEqual({units:'spec',special:expected.special,override:false});
+    if(expected.type==='creature')expect(heal.range).toEqual({value:'',units:'spec',special:expected.special,override:false});
     expect(verifyMonsterIntake(c.source,result.ir,result.markdown,result.actor,request(c.source).candidate).findings.some(f=>f.code==='HEALING_TARGET_UNSPECIFIED')).toBe(false);
     for(const mutate of [(value:any)=>{value.target.affects.type=expected.type==='self'?'creature':'self';},(value:any)=>{value.target.affects.count='2';},(value:any)=>{value.target.affects.special='Different eligibility';},(value:any)=>{value.healing.number=99;}]){
       const changed=structuredClone(result.actor);mutate(healer(changed));

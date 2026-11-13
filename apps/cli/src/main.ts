@@ -61,7 +61,7 @@ program
   .option('--enable-ai-normalize', '[legacy strict Item Markdown only] Enable optional compatibility normalization; failures preserve source parsing')
   .option('--dry-run', 'Preview outputs without writing files')
   .option('--effect-profile <profile>', 'Effect automation profile: core, modded-v12, or modded-v14')
-  .option('--fvtt-version <version>', 'Target Foundry version (12, 13, or 14; Species also accepts exact 14.368)', '12')
+  .option('--fvtt-version <version>', 'Target Foundry version (14 / dnd5e 6 by default; legacy 12 or 13; Species also accepts exact 14.368)', '14')
   .option('--icon-mode <mode>', 'v14 Item artwork mode: off or safe', 'off')
   .option('--icon-overrides <path>', 'v14 icon override JSON path')
   .option('--image-mode <mode>', 'Image asset workflow mode: none or ssh', 'none')
@@ -98,7 +98,7 @@ program
       }
       if ((options.intakeSpecies || options.resumeSpeciesIntake)
         && !options.intakeMonsters && !options.resumeIntake && !options.intakeItems && !options.resumeItemIntake) {
-        const speciesVersion = parseSpeciesTargetVersion(options.fvttVersion ?? '12');
+        const speciesVersion = parseSpeciesTargetVersion(options.fvttVersion ?? '14');
         if ((options.effectProfile ?? 'core') !== 'core') throw new Error('Species Intake only supports --effect-profile core with 2024 rules.');
         const speciesIconMode = parseIconMode(options.iconMode);
         if (speciesIconMode === 'safe' && speciesVersion !== '14') throw new Error(`--icon-mode safe requires --fvtt-version 14, not ${speciesVersion}.`);
@@ -127,7 +127,7 @@ program
         process.exitCode = intakeExitCode(result.status);
         return;
       }
-      const fvttVersion = parseFvttTargetVersion(options.fvttVersion ?? '12');
+      const fvttVersion = parseFvttTargetVersion(options.fvttVersion ?? '14');
       const iconMode = parseIconMode(options.iconMode);
       if (iconMode === 'safe' && fvttVersion !== '14') {
         throw new Error(`--icon-mode safe requires --fvtt-version 14, not ${fvttVersion}.`);

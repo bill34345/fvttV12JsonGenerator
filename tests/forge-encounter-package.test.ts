@@ -100,7 +100,7 @@ function validBundle(): ForgeEncounterPackage {
     version: 1,
     id: 'goblin-ambush',
     label: 'Goblin Ambush',
-    target: { foundry: '14.364', system: 'dnd5e', systemVersion: '5.3.3', effectProfile: 'core' },
+    target: { foundry: '14.370', system: 'dnd5e', systemVersion: '6.0.6', effectProfile: 'core' },
     primaryActorKey: 'goblin',
     actors: [{ key: 'goblin', label: 'Goblin', source, sourceHash: hashSource(source) }],
     macros: [{

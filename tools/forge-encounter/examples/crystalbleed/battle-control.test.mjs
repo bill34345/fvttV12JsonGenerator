@@ -39,7 +39,7 @@ function runtimeEnvironment() {
   const oldCrystal = actorDocument('crystal', '4444444444444444');
   const hooks = new Map();
   const env = {
-    game: { user: { isGM: true }, version: '14.364', system: { id: 'dnd5e', version: '5.3.3' },
+    game: { user: { isGM: true }, version: '14.370', system: { id: 'dnd5e', version: '6.0.6' },
       time: { worldTime: 100 }, actors: [dragon, crystal, oldDragon, oldCrystal] },
     canvas: { ready: true, scene: { id: 'test-scene' }, tokens: { placeables: [] } },
     Hooks: { on(name, callback) { hooks.set(name, callback); return name; }, off(name) { hooks.delete(name); } },

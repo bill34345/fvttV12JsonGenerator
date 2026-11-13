@@ -54,11 +54,35 @@ describe('intake Markdown renderer and deterministic verifier', () => {
 
   test('checks actual native duration and complete GM boundary rather than status or metadata alone', async () => {
     const simple = await lifecycleFixture('The target makes a DC 14 Wisdom saving throw. On a failure, the target becomes frightened for 1 day.', '1 day');
-    expect(simple.check()).toEqual([]); simple.item.effects[0].duration.seconds = null;
+    expect(simple.check()).toEqual([]); simple.item.effects[0].duration.value = null;
     expect(simple.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_DURATION_DRIFT' }));
     const complex = await lifecycleFixture('The target becomes frightened for 1 minute. The effect ends when the target takes damage.', '1 minute');
     expect(complex.check()).toEqual([]); delete complex.item.effects[0].flags.fvttJsonGenerator.conditionLifecycle;
     expect(complex.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_GM_METADATA_DRIFT', path: '/creature/actions/0/appliedConditions/0' }));
+  });
+
+  test('checks native condition expiry as well as its source interval', async () => {
+    const f = await lifecycleFixture('The target becomes frightened for 1 minute.', '1 minute');
+    expect(f.item.effects[0].duration).toMatchObject({ value: 60, units: 'seconds', expiry: 'turnStart' });
+    expect(f.check()).toEqual([]);
+    f.item.effects[0].duration.expiry = 'turnEnd';
+    expect(f.check()).toContainEqual(expect.objectContaining({ code: 'ACTOR_CONDITION_DURATION_DRIFT' }));
+  });
+
+  test('projects numeric Formula range literals and native skill roll bonuses without evaluating expressions', () => {
+    const actor = { system: { abilities: { wis: { value: 14 }, dex: { value: 12, proficient: 1, save: { roll: { bonus: '+1' } } } }, attributes: {}, details: {},
+      skills: { prc: { ability: 'wis', value: 0, roll: { bonus: '+1' }, bonuses: { passive: '' } } } },
+      items: [{ name: 'Reach', type: 'feat', system: { activities: { attack: {
+        type: 'attack', attack: { type: { value: 'melee', classification: 'weapon' } },
+        range: { override: true, value: '5', units: 'ft' },
+      } } } }] };
+    const projection = projectActor(actor, { skillKeys: ['perception'] });
+    expect(projection.skills).toEqual({ perception: 3 });
+    expect(projection.saves).toMatchObject({ dex: 4 });
+    expect((projection.senses as any).passivePerception).toBe(13);
+    expect((projection.items as any[])[0]).toMatchObject({ reach: 5, range: 5 });
+    actor.items[0]!.system.activities.attack.range.value = '5 + 5';
+    expect((projectActor(actor).items as any[])[0].range).toBe('5 + 5');
   });
 
   test('checks omitted source duration and independent status lifecycles against actual Effects', async () => {
@@ -116,6 +140,21 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     actor.system.details.type.custom = '';
     const report = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
     expect(report.findings).toContainEqual(expect.objectContaining({ code: 'ACTOR_CREATURE_TYPE_CUSTOM_DRIFT' }));
+  });
+
+  test('verifies current v14 armor class, initiative and movement from generated source data', async () => {
+    const ir = buildValidLurkerIr();
+    const markdown = renderMonsterIntakeMarkdown(ir);
+    const generated = await convertMarkdownContentToJson({ content: markdown, fvttVersion: '14', effectProfile: 'core' });
+    const actor = generated.rawJson as any;
+    expect(actor.system.attributes.ac.override).toBe(ir.creature.attributes.ac);
+    expect(actor.system.attributes.movement.speeds.walk).toBe(String(ir.creature.attributes.movement.walk));
+    const projection = projectActor(actor);
+    expect(projection.ac).toBe(ir.creature.attributes.ac);
+    expect(projection.initiative).toBe(ir.creature.attributes.initiative);
+    expect(projection.movement).toMatchObject(ir.creature.attributes.movement);
+    const report = verifyMonsterIntake(LURKER_SOURCE, ir, markdown, actor);
+    expect(report.findings.filter(finding => ['ACTOR_AC_DRIFT', 'ACTOR_INITIATIVE_DRIFT', 'ACTOR_MOVEMENT_DRIFT'].includes(finding.code))).toEqual([]);
   });
 
   test('preserves block separation when projecting list-form Actor biography HTML', () => {
@@ -226,7 +265,7 @@ describe('intake Markdown renderer and deterministic verifier', () => {
     });
 
     expect(markdown).toContain('(hover)');
-    expect((generated.rawJson as any).system.attributes.movement).toMatchObject({ fly: 40, hover: true });
+    expect((generated.rawJson as any).system.attributes.movement).toMatchObject({ speeds: { fly: '40' }, hover: true });
     expect((projectActor(generated.rawJson).movement as Record<string, unknown>).hover).toBe(true);
   });
 
@@ -729,11 +768,17 @@ describe('intake Markdown renderer and deterministic verifier', () => {
 
     expect(markdown).toContain('范围: 触及 5 尺或射程 20/60 尺');
     expect(activity.attack.type).toEqual({ value: 'melee', classification: 'weapon' });
-    expect(activity.range).toMatchObject({ reach: 5, value: 20, long: 60, units: 'ft' });
+    expect(activity.range).toMatchObject({ value: '5', units: 'ft' });
+    expect(item.system.range).toMatchObject({ reach: 5, value: 20, long: 60, units: 'ft' });
+    const ranged = (Object.values(item.system.activities) as any[]).find(entry => entry.attack?.type.value === 'ranged');
+    expect(ranged.range).toMatchObject({ value: '20', special: '远射程 60 尺', units: 'ft' });
     const projection = projectActor(generated.rawJson);
     expect((projection.items as Array<Record<string, unknown>>).find((candidate) => String(candidate.name).includes('Claw')))
       .toMatchObject({ reach: 5, range: 20, longRange: 60 });
     expect(verifyMonsterIntake(LURKER_SOURCE, ir, markdown, generated.rawJson).findings).toEqual([]);
+    ranged.range.value = '21';
+    expect(verifyMonsterIntake(LURKER_SOURCE, ir, markdown, generated.rawJson).findings)
+      .toContainEqual(expect.objectContaining({ code: 'ACTOR_RANGE_DRIFT' }));
   });
 
   test('renders and verifies a source-explicit two-action legendary cost', async () => {

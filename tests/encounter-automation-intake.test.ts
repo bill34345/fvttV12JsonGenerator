@@ -242,7 +242,7 @@ describe('encounter automation Intake', () => {
     expect(command).not.toContain('registeredHooks');
 
     const response = await convertFinalActorSource(buildForgeActorRequest({
-      content: source, displayName: 'Rat', requestId: 'encounter-automation-shape', fvttVersion: '14.364', systemVersion: '5.3.3',
+      content: source, displayName: 'Rat', requestId: 'encounter-automation-shape', fvttVersion: '14.370', systemVersion: '6.0.6',
     }));
     expect('result' in response).toBeTrue();
     if (!('result' in response)) throw new Error('Expected a browser runtime result.');
@@ -267,7 +267,7 @@ describe('encounter automation Intake', () => {
     try {
       scope.forgeEncounter = undefined;
       const starts:any[]=[];
-      scope.game = { user: { isGM: true }, version: '14.364', system: { id: 'dnd5e', version: '5.3.3' },
+      scope.game = { user: { isGM: true }, version: '14.370', system: { id: 'dnd5e', version: '6.0.6' },
         modules:new Map([['fvtt-json-forge',{api:{startEncounterAutomation:async(binding:unknown,configuration:unknown)=>{
           starts.push({binding,configuration});await startGate;return companion;
         }}}]]) };
@@ -305,7 +305,7 @@ describe('encounter automation Intake', () => {
     const firstStartGate = new Promise<void>((resolve) => { releaseFirstStart = resolve; });
     const hookCalls: string[] = [];
     try {
-      scope.game = { user: { isGM: true }, version: '14.364', system: { id: 'dnd5e', version: '5.3.3' } };
+      scope.game = { user: { isGM: true }, version: '14.370', system: { id: 'dnd5e', version: '6.0.6' } };
       scope.canvas = { scene: {}, tokens: { controlled: [] } };
       scope.Hooks = {
         on: (name: string) => { hookCalls.push(`on:${name}`); return hookCalls.length; },

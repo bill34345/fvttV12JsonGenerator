@@ -3,10 +3,12 @@ import assert from 'node:assert/strict';
 import { createBundledIconResolutionSession } from '@fvtt-json-generator/assets-icons/icon-browser';
 import { iconWorkflowAdapter } from '@fvtt-json-generator/assets-icons/icon-adapter';
 import { readFileSync } from 'node:fs';
+import { NATIVE_RECEIVER_CAPTURE } from './helpers/forge-native-receiver';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { load as loadYaml } from 'js-yaml';
 import {
   attachForgeSourceId,
   decodeForgeActorRequest,
@@ -21,6 +23,7 @@ import {
 import {
   buildForgeActorRequest,
   convertFinalActorSource,
+  FORGE_NATIVE_606_TARGET,
   resolveFoundrySpellUuid,
   resolveLegacySpellUuid,
 } from '@fvtt-json-generator/forge-browser-runtime';
@@ -84,9 +87,47 @@ const ENGLISH_SOURCE = [
   '### Actions',
   '- Bite. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6+2) piercing damage.',
 ].join('\n');
-const NIGHTGAUNT_CASTER_SOURCE = NIGHTGAUNT_SOURCE.replace('背景: |-', '施法:\n  - "随意: Fireball"\n背景: |-');
+const NIGHTGAUNT_CASTER_SOURCE = NIGHTGAUNT_SOURCE.replace('背景: |-', '施法属性: int\n施法:\n  - "随意: Fireball"\n背景: |-');
 
 describe('browser Forge Actor runtime', () => {
+  test.each(NATIVE_RECEIVER_CAPTURE.cases.filter(entry=>entry.kind==='Actor'))('round-trips the complete captured native receiver Actor $key through the closed response codec',async(captured)=>{
+    expect(String(hashArtifact(captured.input))).toBe(captured.inputHash);expect(String(hashArtifact(captured.output))).toBe(captured.outputHash);
+    const runtime=NATIVE_RECEIVER_CAPTURE.provenance;let observedInputHash:string|undefined;
+    const response=await convertFinalActorSource(buildForgeActorRequest({content:captured.source,displayName:captured.key,requestId:`captured-${captured.key}`,fvttVersion:runtime.core,systemVersion:runtime.systemVersion}),{
+      nativeProjection:{target:FORGE_NATIVE_606_TARGET,runtime:{coreVersion:runtime.core,systemId:runtime.systemId,systemVersion:runtime.systemVersion},project(kind,input){
+        expect(kind).toBe('Actor');observedInputHash=hashArtifact(input);return structuredClone(captured.output);
+      }},
+    });
+    expect(observedInputHash).toBe(captured.inputHash);
+    expect(decodeForgeActorResponse(response)).toMatchObject({ok:true});
+    if(!('result' in response)||!response.result.artifact)throw Error(JSON.stringify(response));
+    expect(response.result.status).toBe(captured.key==='sentinel'?'needs_review':'accepted');
+    expect(response.result.diagnostics.map(diagnostic=>diagnostic.code)).toEqual(captured.key==='sentinel'?['GEN_V14_SPELLCAST_PENDING']:[]);
+    expect(response.result.artifact).toEqual(normalizeForgeActorArtifact(captured.output,'14'));
+    expect(response.result.artifactHash).toBe(hashArtifact(response.result.artifact));
+    expect(String(hashArtifact(captured.output))).toBe(captured.outputHash);
+    expect(response.result.actorVerification.actor.ac).toMatchObject((captured.output.system as Record<string,any>).attributes.ac);
+    expect(response.result.actorVerification.actor.hp).toMatchObject((captured.output.system as Record<string,any>).attributes.hp);
+  });
+
+  test.each([
+    [{spell:{dc:''}}, 'accepted'],
+    [{spell:{dc:''},mwak:{attack:'+2'}}, 'failed'],
+  ] as const)('preserves native receiver bonuses and rejects legacy siblings: %j',async(bonuses,status)=>{
+    const response=await convertFinalActorSource(buildForgeActorRequest({content:ENGLISH_SOURCE,displayName:'Receiver bonus schema',requestId:'native-bonuses',fvttVersion:'14.370',systemVersion:'6.0.6+local.3'}),{
+      nativeProjection:{target:FORGE_NATIVE_606_TARGET,runtime:{coreVersion:'14.370',systemId:'dnd5e',systemVersion:'6.0.6+local.3'},project(_kind,source){
+        const output=structuredClone(source) as Record<string,any>;output.system.bonuses=structuredClone(bonuses);return output;
+      }},
+    });
+    expect('result' in response).toBe(true);if(!('result' in response)||!response.result.artifact)throw Error('Expected a retained formal candidate.');
+    const artifact=response.result.artifact as Record<string,any>|undefined;
+    expect(response.result.status).toBe(status);expect(artifact?.system.bonuses).toEqual(bonuses);
+    expect(response.result.artifactHash).toBe(hashArtifact(response.result.artifact));
+    const legacy=response.result.diagnostics.filter(diagnostic=>diagnostic.code==='GEN_DND6_LEGACY_ACTOR_FIELD');
+    expect(legacy).toHaveLength(status==='failed'?1:0);
+    if(status==='failed')expect(legacy[0]!.message).toContain('system.bonuses.mwak');
+  });
+
   test('uses 180-second browser observation cycles and asks after four cycles', () => {
     expect(BROWSER_AI_STAGE_TIMEOUT_MS).toBe(180_000);
     expect(BROWSER_AI_REPAIR_TIMEOUT_MS).toBe(180_000);
@@ -97,7 +138,7 @@ describe('browser Forge Actor runtime', () => {
   test.each([
     ['12.331', '12', '4.3.9'],
     ['13.340', '12', '4.3.9'],
-    ['14.364', '14', '5.3.3'],
+    ['14.370', '14', '6.0.6'],
   ] as const)('matches the formal Node artifact hash for FVTT %s', async (fvttVersion, workflowTarget, systemVersion) => {
     const finalSource = attachForgeSourceId(NIGHTGAUNT_SOURCE, SOURCE_ID).content;
     const request = buildForgeActorRequest({
@@ -144,8 +185,8 @@ describe('browser Forge Actor runtime', () => {
       sourceId: SOURCE_ID,
       displayName: 'Stable Nightgaunt',
       requestId: 'stable-browser-artifact',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     });
     const runtime = await browserRuntime();
     const first = await runtime.convertFinalActorSource(request);
@@ -173,46 +214,64 @@ describe('browser Forge Actor runtime', () => {
     });
   });
 
-  test('classifies every legacy spell reference as uniquely mapped or explicitly unresolved for dnd5e 5.3.3', () => {
+  test('classifies every legacy spell reference as uniquely mapped or explicitly unresolved for dnd5e 6.0.6', () => {
     const mapped = LEGACY_BROWSER_SPELLS.filter((spell) => resolveFoundrySpellUuid(spell.uuid));
     const unresolved = LEGACY_BROWSER_SPELLS.filter((spell) => !resolveFoundrySpellUuid(spell.uuid));
-    expect(mapped).toHaveLength(160);
-    expect(unresolved).toHaveLength(45);
+    expect(mapped).toHaveLength(171);
+    expect(unresolved).toHaveLength(34);
     for (const spell of mapped) {
       const foundryUuid = resolveFoundrySpellUuid(spell.uuid);
       expect(foundryUuid).toBeTruthy();
       expect(resolveLegacySpellUuid(foundryUuid!)).toBe(spell.uuid);
     }
-    expect(resolveFoundrySpellUuid('e2de216f26943e8b')).toBe('Compendium.dnd5e.spells.Item.8RTDOt80u8aBv9qx');
-    expect(resolveFoundrySpellUuid('23af52db33017be0')).toBe('Compendium.dnd5e.spells.Item.ztgcdrWPshKRpFd0');
+    expect(resolveFoundrySpellUuid('e2de216f26943e8b')).toBe('Compendium.dnd5e.spells24.Item.phbsplAlterSelf0');
+    expect(resolveFoundrySpellUuid('23af52db33017be0')).toBe('Compendium.dnd5e.spells24.Item.phbsplFireball00');
   });
 
-  test('checked-in v14 spell data is a deterministic full snapshot of the locked dnd5e 5.3.3 cache', async () => {
+  test('checked-in v14 spell data is a deterministic full snapshot of the locked dnd5e 6.0.6 cache', async () => {
     const referenceCacheRoot = process.env.FVTT_REFERENCE_CACHE_ROOT?.trim();
     if (!referenceCacheRoot) throw new Error('FVTT_REFERENCE_CACHE_ROOT is required for v14 spell snapshot parity.');
     const snapshot = await buildV14SpellSnapshot(referenceCacheRoot);
     expect(snapshot.entries).toEqual([...LOCKED_DND5E_V14_SPELLS]);
-    expect(snapshot.entries).toHaveLength(319);
+    expect(snapshot.entries).toHaveLength(340);
     expect(renderV14SpellSnapshot(snapshot)).toBe(readFileSync(
       'packages/forge-browser-runtime/src/browser-v14-spell-data.ts',
       'utf8',
     ));
   });
 
-  test('the actual browser-built v14 adapter matches the Node resolver for all 319 locked spells', async () => {
+  test('the actual browser-built v14 adapter matches the Node resolver for all 340 locked spells', async () => {
     const runtime = await browserRuntime();
     for (const spell of LOCKED_DND5E_V14_SPELLS) {
-      expect(runtime.resolveLockedDnd5eV14Spell(spell.identifier, spell.name)).toEqual({
-        identifier: spell.identifier,
-        name: spell.name,
-        uuid: spell.uuid,
-      });
-      expect(resolveNodeV14Spell(spell.identifier, spell.name)).toEqual({
-        identifier: spell.identifier,
-        name: spell.name,
-        uuid: spell.uuid,
-      });
+      expect(runtime.resolveLockedDnd5eV14Spell(spell.identifier, spell.name)).toEqual(spell);
+      expect(runtime.resolveLockedDnd5eV14SpellByName(spell.name)).toEqual(spell);
+      expect(resolveNodeV14Spell(spell.identifier, spell.name)).toEqual(spell);
     }
+  });
+
+  test.each([
+    ['Shield','1st-level/shield.yml','reaction',1],
+    ['Misty Step','2nd-level/misty-step.yml','bonus',2],
+    ['Animate Dead','3rd-level/animate-dead.yml','minute',3],
+  ] as const)('uses the official parent casting time for %s instead of its inherited child action',async(name,path,castingTime,level)=>{
+    const cache=process.env.FVTT_REFERENCE_CACHE_ROOT?.trim();
+    if(!cache)throw Error('FVTT_REFERENCE_CACHE_ROOT is required for casting-time source verification.');
+    const source=loadYaml(readFileSync(resolve(cache,'dnd5e/6.0.6/repo/packs/_source/spells24',path),'utf8')) as any;
+    expect(source.system.activation.type).toBe(castingTime);
+    expect(Object.values<any>(source.system.activities).some(activity=>activity.activation.type==='action'&&activity.activation.override===false)).toBe(true);
+    const expectedActivation=castingTime==='minute'?undefined:castingTime;
+    const spell=LOCKED_DND5E_V14_SPELLS.find(entry=>entry.name===name)!;
+    expect(spell).toMatchObject({level});expect(spell.activation).toBe(expectedActivation);
+    expect((spell as any).castingTime).toEqual({type:castingTime,value:source.system.activation.value??null});
+    const runtime=await browserRuntime();expect(runtime.resolveLockedDnd5eV14SpellByName(name)).toEqual(spell);
+    const request=buildForgeActorRequest({content:NIGHTGAUNT_CASTER_SOURCE.replace('Fireball',name),displayName:`Casting-time ${name}`,
+      requestId:`casting-time-${spell.identifier}`,fvttVersion:'14.370',systemVersion:'6.0.6'});
+    const response=await runtime.convertFinalActorSource(request);
+    if(!('result'in response)||!response.result.artifact)throw Error('Expected the complete casting-time candidate.');
+    const feature=(response.result.artifact.items as any[]).find(item=>item.name==='施法 Spellcasting');
+    const activities=Object.values<any>(feature.system.activities);
+    if(expectedActivation){expect(activities).toHaveLength(1);expect(activities[0].activation).toMatchObject({type:expectedActivation,value:source.system.activation.value??null});expect(activities[0].spell).toMatchObject({level,ability:'int',uuid:spell.uuid});}
+    else{expect(activities).toHaveLength(0);expect(feature.flags.fvttJsonGenerator.pendingSpells).toContainEqual(expect.objectContaining({name}));expect(feature.system.description.value).toContain(name);}
   });
 
   test.each([
@@ -254,8 +313,8 @@ describe('browser Forge Actor runtime', () => {
       content: NIGHTGAUNT_CASTER_SOURCE,
       displayName: 'Nightgaunt V14 Caster',
       requestId: 'browser-caster-v14',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     });
     const nodeResponse = await convertFinalActorSource(request);
     const browserResponse = await browserRuntime().then((runtime) => runtime.convertFinalActorSource(request));
@@ -265,32 +324,33 @@ describe('browser Forge Actor runtime', () => {
     if (!('result' in browserResponse) || browserResponse.result.status !== 'accepted' || !('artifact' in browserResponse.result)) {
       throw new Error(`Expected accepted browser v14 caster response: ${JSON.stringify(browserResponse)}`);
     }
-    const nodeSpellcasting = (nodeResponse.result.artifact.items as Array<Record<string, any>>).find((item) => item.name === '施法');
-    const browserSpellcasting = (browserResponse.result.artifact.items as Array<Record<string, any>>).find((item) => item.name === '施法');
+    const nodeSpellcasting = (nodeResponse.result.artifact.items as Array<Record<string, any>>).find((item) => item.name === '施法 Spellcasting');
+    const browserSpellcasting = (browserResponse.result.artifact.items as Array<Record<string, any>>).find((item) => item.name === '施法 Spellcasting');
     const nodeActivity = Object.values(nodeSpellcasting?.system?.activities ?? {})[0] as Record<string, any> | undefined;
-    expect(nodeActivity).toMatchObject({ type: 'cast', spell: { uuid: '23af52db33017be0' } });
+    expect(nodeActivity).toMatchObject({ type: 'cast', spell: { uuid: 'Compendium.dnd5e.spells24.Item.phbsplFireball00',ability:'int',level:3 },consumption:{targets:[],spellSlot:false} });
     expect(browserSpellcasting?.system?.activities).toEqual(nodeSpellcasting?.system?.activities);
     expect(browserResponse.result.artifactHash).toBe(nodeResponse.result.artifactHash);
   });
 
-  test('browser-built runtime downgrades an accepted legacy cast when dnd5e 5.3.3 has no unique Item target', async () => {
-    const unresolvedCaster = NIGHTGAUNT_SOURCE.replace('背景: |-', '施法:\n  - "随意: ArcaneGate"\n背景: |-');
+  test('browser-built runtime preserves an unresolved 2024 spell as a GM-owned source without a guessed spell Item', async () => {
+    const unresolvedCaster = NIGHTGAUNT_SOURCE.replace('背景: |-', '施法属性: int\n施法:\n  - "随意: ArcaneGate"\n背景: |-');
     const response = await (await browserRuntime()).convertFinalActorSource(buildForgeActorRequest({
       content: unresolvedCaster,
       displayName: 'Nightgaunt Unresolved Caster',
       requestId: 'browser-unresolved-caster-v14',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }));
     const decoded = decodeForgeActorResponse(response);
     expect(decoded.ok).toBe(true);
     if (!decoded.ok || !('result' in decoded.value)) throw new Error('Expected a decoded unresolved caster response.');
     expect(decoded.value.result.status).toBe('needs_review');
     expect(decoded.value.result.diagnostics).toContainEqual(expect.objectContaining({
-      code: 'FORGE_LEGACY_SPELL_TARGET_UNRESOLVED',
+      code: 'GEN_V14_SPELLCAST_PENDING',
       severity: 'warning',
     }));
     expect(decoded.value.result.artifactHash).toBe(hashArtifact(decoded.value.result.artifact!));
+    expect((decoded.value.result.artifact!.items as any[]).some(item=>item.type==='spell')).toBe(false);
   });
 
   test('parses an English source with Forge metadata and keeps the output applyable', async () => {
@@ -299,8 +359,8 @@ describe('browser Forge Actor runtime', () => {
       sourceId: SOURCE_ID,
       displayName: 'Forge English Actor',
       requestId: 'english-browser',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }));
     const decoded = decodeForgeActorResponse(response);
     expect(decoded.ok).toBe(true);
@@ -315,8 +375,8 @@ describe('browser Forge Actor runtime', () => {
       content: NIGHTGAUNT_SOURCE,
       displayName: 'generated-id',
       requestId: 'generated-id',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     });
     expect(request.source.content).toMatch(/forge-source-id:\s*actor:v1:[0-9a-f-]{36}/u);
     expect(request.source.sourceId).toBeTruthy();
@@ -329,8 +389,8 @@ describe('browser Forge Actor runtime', () => {
       sourceId: SOURCE_ID,
       displayName: 'Bolbara',
       requestId: 'needs-review-browser',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }));
     const decoded = decodeForgeActorResponse(response);
     expect(decoded.ok).toBe(true);
@@ -346,8 +406,8 @@ describe('browser Forge Actor runtime', () => {
       sourceId: SOURCE_ID,
       displayName: 'empty',
       requestId: 'empty',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     })).toThrow(/empty/u);
 
     const exact = boundarySource(200_000);
@@ -400,8 +460,8 @@ describe('browser Forge Actor runtime', () => {
       sourceName: 'rat-warlock.raw.txt',
       displayName: '鼠神邪术师',
       requestId: 'fake-ai-browser',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
       sourceId: SOURCE_ID,
       autoCorrect: true,
       onStage: (stage) => stageEvents.push(`${stage.stage}:${stage.status}`),
@@ -414,7 +474,7 @@ describe('browser Forge Actor runtime', () => {
     expect(result.finalSourceHash).toBe(hashSource(result.finalSource!));
     expect(result.response).toBeDefined();
     expect(result.findings.map(finding => finding.code)).toContain('GM_CONFIRMATION_REQUIRED');
-    expect(result.findings.some((finding) => finding.blocking)).toBe(false);
+    expect(result.findings.filter((finding) => finding.blocking)).toEqual([]);
     expect(result.findings.map((finding) => finding.code)).not.toContain('SOURCE_HASH_MISMATCH');
     expect(result.findings.map((finding) => finding.code)).not.toContain('INVALID_SOURCE_SHA256');
     expect(result.stages.map((stage) => stage.stage)).toEqual(['discover', 'extract', 'validate', 'repair', 'generate', 'review', 'finalize']);
@@ -798,8 +858,8 @@ describe('browser Forge Actor runtime', () => {
       source: RAT_WARLOCK_SOURCE,
       sourceName: 'multiple',
       requestId: 'multiple',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }, provider);
     expect(multiple.status).toBe('needs_review');
     expect(multiple.errorCode).toBe('multiple_entities');
@@ -812,8 +872,8 @@ describe('browser Forge Actor runtime', () => {
       source: RAT_WARLOCK_SOURCE,
       sourceName: 'cancelled',
       requestId: 'cancelled',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }, provider, controller.signal);
     expect(cancelled.status).toBe('failed');
     expect(cancelled.errorCode).toBe('cancelled');
@@ -842,8 +902,8 @@ describe('browser Forge Actor runtime', () => {
       source: longSource,
       sourceName: 'overlap',
       requestId: 'overlap',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }, provider);
 
     expect(extractionCalls).toBe(0);
@@ -901,8 +961,8 @@ describe('browser Forge Actor runtime', () => {
       source: RAT_WARLOCK_SOURCE,
       sourceName: 'invalid-second-candidate',
       requestId: 'invalid-second-candidate',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }, provider);
 
     expect(result.status).toBe('needs_review');
@@ -917,8 +977,8 @@ describe('browser Forge Actor runtime', () => {
       source: ' \n\t ',
       sourceName: 'empty',
       requestId: 'empty-ai',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }, unusedProvider);
     expect(empty.status).toBe('failed');
     expect(empty.errorCode).toBe('input_empty');
@@ -929,8 +989,8 @@ describe('browser Forge Actor runtime', () => {
       sourceName: 'large',
       sourceScope:'single',
       requestId: 'large-ai',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }, ratWarlockProvider());
     expect(tooLarge.status).toBe('needs_review');
     expect(tooLarge.errorCode).not.toBe('input_too_large');
@@ -958,8 +1018,8 @@ describe('browser Forge Actor runtime', () => {
           source: RAT_WARLOCK_SOURCE,
           sourceName: scenario.name,
           requestId: `provider-${scenario.name}`,
-          fvttVersion: '14.364',
-          systemVersion: '5.3.3',
+          fvttVersion: '14.370',
+          systemVersion: '6.0.6',
         }, createBrowserAiProvider({
           apiKey: 'secret-key',
           baseUrl: 'https://provider.example/v1',
@@ -979,8 +1039,8 @@ describe('browser Forge Actor runtime', () => {
         source: RAT_WARLOCK_SOURCE,
         sourceName: 'invalid-response',
         requestId: 'provider-invalid-response',
-        fvttVersion: '14.364',
-        systemVersion: '5.3.3',
+        fvttVersion: '14.370',
+        systemVersion: '6.0.6',
       }, createBrowserAiProvider({
         apiKey: 'secret-key',
         baseUrl: 'https://provider.example/v1',
@@ -999,8 +1059,8 @@ describe('browser Forge Actor runtime', () => {
         source: RAT_WARLOCK_SOURCE,
         sourceName: 'browser-transport',
         requestId: 'provider-browser-transport',
-        fvttVersion: '14.364',
-        systemVersion: '5.3.3',
+        fvttVersion: '14.370',
+        systemVersion: '6.0.6',
       }, createBrowserAiProvider({
         apiKey: 'secret-key',
         baseUrl: 'https://provider.example/v1',
@@ -1022,8 +1082,8 @@ describe('browser Forge Actor runtime', () => {
         source: RAT_WARLOCK_SOURCE,
         sourceName: 'timeout',
         requestId: 'provider-timeout',
-        fvttVersion: '14.364',
-        systemVersion: '5.3.3',
+        fvttVersion: '14.370',
+        systemVersion: '6.0.6',
       }, createBrowserAiProvider({
         apiKey: 'secret-key',
         baseUrl: 'https://provider.example/v1',
@@ -1190,8 +1250,8 @@ function actorAiInput(requestId: string): BrowserActorIntakeInput {
     sourceName: `${requestId}.raw.txt`,
     displayName: '鼠神邪术师',
     requestId,
-    fvttVersion: '14.364',
-    systemVersion: '5.3.3',
+    fvttVersion: '14.370',
+    systemVersion: '6.0.6',
     sourceId: SOURCE_ID,
   };
 }
@@ -1259,7 +1319,7 @@ function makeRequest(content: string): ForgeActorRequest {
       sourceId: SOURCE_ID,
       utf8Sha256: hashSource(content),
     },
-    foundryRuntime: { fvttVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3' },
+    foundryRuntime: { fvttVersion: '14.370', systemId: 'dnd5e', systemVersion: '6.0.6' },
     resolvedTarget: { generatorProfile: 'v14', effectProfile: 'core', iconMode: 'off' },
   };
 }
@@ -1273,11 +1333,13 @@ function boundarySource(byteLength: number): string {
 
 let builtBrowserRuntime: Promise<{
   convertFinalActorSource: (request: ForgeActorRequest) => Promise<ForgeActorResponse>;
+  resolveLockedDnd5eV14SpellByName: (name:string) => { identifier:string; name:string; uuid:string; level?:number; activation?:string } | undefined;
   resolveLockedDnd5eV14Spell: (identifier: string, name: string) => { identifier: string; name: string; uuid: string } | undefined;
 }> | undefined;
 
 async function browserRuntime(): Promise<{
   convertFinalActorSource: (request: ForgeActorRequest) => Promise<ForgeActorResponse>;
+  resolveLockedDnd5eV14SpellByName: (name:string) => { identifier:string; name:string; uuid:string; level?:number; activation?:string } | undefined;
   resolveLockedDnd5eV14Spell: (identifier: string, name: string) => { identifier: string; name: string; uuid: string } | undefined;
 }> {
   if (!builtBrowserRuntime) {
@@ -1290,7 +1352,8 @@ async function browserRuntime(): Promise<{
         expect(bundle).not.toMatch(/process\.env|\bBun\.|(?:from|require)\s*\(?\s*["'](?:node:|fs|path|sharp|crawlee)/iu);
         return await import(pathToFileURL(bundlePath).href) as {
           convertFinalActorSource: (request: ForgeActorRequest) => Promise<ForgeActorResponse>;
-          resolveLockedDnd5eV14Spell: (identifier: string, name: string) => { identifier: string; name: string; uuid: string } | undefined;
+          resolveLockedDnd5eV14SpellByName: (name:string) => { identifier:string; name:string; uuid:string; level?:number; activation?:string } | undefined;
+  resolveLockedDnd5eV14Spell: (identifier: string, name: string) => { identifier: string; name: string; uuid: string } | undefined;
         };
       } finally {
         await rm(outdir, { recursive: true });

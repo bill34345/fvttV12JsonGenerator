@@ -8,6 +8,6 @@
 
 localCodexResponses仅适配已审本机桥的Responses框架：由完整且同一响应的assistant completed item补齐空终态、移除终态后的单个代理结束标记。不得把部分delta、跨响应内容或未知协议错误提升为完成，不放宽共享解析器。测试不读取凭据或访问真实服务。
 
-打包不会执行脚本或写Foundry世界。AI只能返回固定能力与参数；控制入口由工具编译，拒绝AI返回的可执行代码。固定配置在明确启用后通过模块flags恢复，停用必须持久生效。运行时关联通过forgeEncounter.actors中的确定性Actor UUID提供；不得硬编码用户世界ID、凭据或API Key。目标固定14.364/5.3.3/core。
+打包不会执行脚本或写Foundry世界。AI只能返回固定能力与参数；控制入口由工具编译，拒绝AI返回的可执行代码。固定配置在明确启用后通过模块flags恢复，停用必须持久生效。运行时关联通过forgeEncounter.actors中的确定性Actor UUID提供；不得硬编码用户世界ID、凭据或API Key。当前生成目标为14.370/6.0.6/core。
 
 修改样本宏时对照来源与锁定API，生成包后经过当前正式预览和本地运行验收。禁止把包内自称accepted作为自动执行代码的许可。

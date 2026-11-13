@@ -96,7 +96,7 @@ export async function convertMarkdownPathToOutput(
 export async function convertMarkdownContentToJson(
   options: ConvertMarkdownContentOptions,
 ): Promise<ConversionResult> {
-  const fvttVersion = options.fvttVersion ?? '12';
+  const fvttVersion = options.fvttVersion ?? '14';
   const effectProfile = options.effectProfile ?? 'core';
   const sourcePath = options.sourcePath ? resolvePath(options.sourcePath) : undefined;
   const iconWorkflow = options.iconWorkflow ?? disabledIconWorkflowPort;

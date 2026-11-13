@@ -405,8 +405,8 @@ async function makeAcceptedResponse(): Promise<ForgeActorResponse> {
     content: NIGHTGAUNT_SOURCE,
     displayName: 'Application Test Actor',
     requestId: 'application-test',
-    fvttVersion: '14.364',
-    systemVersion: '5.3.3',
+    fvttVersion: '14.370',
+    systemVersion: '6.0.6',
   }));
   if (!('result' in response) || response.result.status !== 'accepted') {
     throw new Error(`Expected accepted response fixture: ${JSON.stringify(response)}`);
@@ -424,8 +424,8 @@ function makeApplication(services: Partial<ForgeApplicationServices> = {}): {
 } {
   const notifications = { errors: [] as string[], infos: [] as string[] };
   const game = {
-    version: '14.364',
-    system: { id: 'dnd5e', version: '5.3.3' },
+    version: '14.370',
+    system: { id: 'dnd5e', version: '6.0.6' },
     user: { isGM: true },
   };
   const hooks = new FakeHooks();

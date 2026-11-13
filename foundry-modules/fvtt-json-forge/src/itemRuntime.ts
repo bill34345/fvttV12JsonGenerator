@@ -1,3 +1,4 @@
+import { isNativeForgeRuntimeTargetSupported } from '@fvtt-json-generator/forge-browser-runtime';
 import {
   decodeForgeItemResponse,
   hashArtifact,
@@ -106,6 +107,9 @@ export async function createAcceptedForgeItem(
     throw new Error('Forge Item response is not applyable.');
   }
 
+  if(isNativeForgeRuntimeTargetSupported(input.game.version,input.game.system?.version)
+    && !isNativeForgeRuntimeTargetSupported(asRecord(result.artifact._stats).coreVersion,asRecord(result.artifact._stats).systemVersion))
+    throw new Error('Item artifact does not use the Core 14 / dnd5e 6 native schema.');
   const collection = input.game.items;
   if (!collection) throw new Error('Foundry world Item collection is unavailable.');
   const documentId = forgeItemDocumentId(result.sourceIdentity.sourceId);

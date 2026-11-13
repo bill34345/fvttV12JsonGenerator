@@ -1,4 +1,5 @@
 import { hashSource } from '@fvtt-json-generator/forge-gateway-protocol';
+import { isForgeRuntimeTargetSupported } from './mirror-core-compatibility';
 import { decodeForgeEncounterPackageText, encounterPackageHash } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import { assertEncounterSecretsAbsent, type EncounterIntakeReport } from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import type { EncounterLocalizationProgress, ForgeEncounterLocalizationDraft } from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
@@ -151,7 +152,7 @@ export function decodeEncounterRecovery(value: string): EncounterRecoverySnapsho
   const warnings:string[]=Array.isArray(record.recoveryWarnings)?record.recoveryWarnings.filter((entry):entry is string=>typeof entry==='string'):[];
   if(record.version===2){
     if(record.kind!=='uploaded-package'||typeof record.target!=='string'
-      ||!/^14\.(?:364|368)\/dnd5e\/5\.3\.3\/core$/.test(record.target)
+      ||!isSupportedRecoveryTarget(record.target)
       ||typeof record.catalogHash!=='string'||!/^[a-f0-9]{64}$/.test(record.catalogHash)
       ||typeof record.package!=='string'||!record.package.length||record.package.length>MAX_BYTES
       ||typeof record.packageHash!=='string'||!/^[a-f0-9]{64}$/.test(record.packageHash)
@@ -177,7 +178,7 @@ export function decodeEncounterRecovery(value: string): EncounterRecoverySnapsho
     || (record.outputLanguage !== 'source' && record.outputLanguage !== 'zh-CN')
     || typeof record.sourceHash !== 'string'
     || typeof record.catalogHash !== 'string' || !/^[a-f0-9]{64}$/.test(record.catalogHash)
-    || typeof record.target !== 'string' || !/^14\.(?:364|368)\/dnd5e\/5\.3\.3\/core$/.test(record.target))
+    || typeof record.target !== 'string' || !isSupportedRecoveryTarget(record.target))
     throw new TypeError('生物生成任务记录与来源或目标不符。');
   if(record.pdfReceipt!==undefined&&!isPdfReceipt(record.pdfReceipt,record.source)){
     delete record.pdfReceipt;
@@ -221,6 +222,14 @@ export function decodeEncounterRecovery(value: string): EncounterRecoverySnapsho
     throw new TypeError('无效的中文审核进度。');
   if(warnings.length)record.recoveryWarnings=[...new Set(warnings)];
   return record as unknown as EncounterRecoverySnapshot;
+}
+
+function isSupportedRecoveryTarget(value:string):boolean{
+  const match=/^([^/]+)\/dnd5e\/([^/]+)\/core$/u.exec(value);
+  if(!match)return false;
+  // Historical tasks are readable sources; current generation and world writes have separate gates.
+  return isForgeRuntimeTargetSupported(match[1],match[2])
+    || (['14.364','14.368'].includes(match[1]!)&&match[2]==='5.3.3');
 }
 
 function isPdfReceipt(value:unknown,source:string):value is ForgePdfInputReceipt {

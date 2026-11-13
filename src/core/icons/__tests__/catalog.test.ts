@@ -16,19 +16,22 @@ describe('tracked Foundry v14 icon catalog', () => {
 
     expect(catalog.schemaVersion).toBe(1);
     expect(catalog.target).toEqual({
-      foundryVersion: '14.364',
+      foundryVersion: '14.370',
       systemId: 'dnd5e',
-      systemVersion: '5.3.3',
+      systemVersion: '6.0.6',
     });
     expect(catalog.provenance.api).toBe('CompendiumCollection#getIndex');
     expect(catalog.provenance.packs).toEqual([
       { id: 'dnd5e.monsterfeatures24', count: 391 },
-      { id: 'dnd5e.monsterfeatures', count: 252 },
-      { id: 'dnd5e.items', count: 872 },
-      { id: 'dnd5e.spells', count: 319 },
+      { id: 'dnd5e.classes24', count: 282 },
+      { id: 'dnd5e.feats24', count: 17 },
+      { id: 'dnd5e.equipment24', count: 635 },
+      { id: 'dnd5e.spells24', count: 341 },
     ]);
-    expect(catalog.files).toHaveLength(7337);
-    expect(catalog.compendium).toHaveLength(1834);
+    expect(catalog.provenance.packIndexSha256).toBe('78c1a44067c3ed4bfbbc8253d38841ddb5640b29d1380673e524d626dccf7335');
+    expect(catalog.files).toHaveLength(7340);
+    expect(catalog.compendium).toHaveLength(1661);
+    expect(catalog.compendium.every((entry) => entry.rules === '2024')).toBe(true);
     expect(paths).toEqual([...paths].sort((left, right) => left.localeCompare(right, 'en')));
     expect(catalog.compendium).toEqual(sortedCompendium);
 

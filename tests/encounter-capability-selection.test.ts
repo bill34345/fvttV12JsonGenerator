@@ -53,7 +53,7 @@ describe('fixed capability selection and compilation',()=>{
   });
   test('a supported bilingual source alias remains accepted and retains the actual candidate',async()=>{
     const ir=buildValidLurkerIr();ir.creature.traits[0]={name:'两次能力 [2/日]（Daily Power）',englishName:'Daily Power',description:'This power is used twice per day.',activityType:'utility'};
-    const result=await convertFinalActorSource(buildForgeActorRequest({content:renderMonsterIntakeMarkdown(ir),displayName:'Name warning test',requestId:'name-warning',fvttVersion:'14.364',systemVersion:'5.3.3'}));
+    const result=await convertFinalActorSource(buildForgeActorRequest({content:renderMonsterIntakeMarkdown(ir),displayName:'Name warning test',requestId:'name-warning',fvttVersion:'14.370',systemVersion:'6.0.6'}));
     if(!('result' in result))throw Error('Missing formal result');
     expect(result.result.status).toBe('accepted');expect(result.result.diagnostics.some(d=>d.code==='FORGE_ACTOR_VERIFICATION_WARNING')).toBe(false);
     expect(result.result.diagnostics.some(d=>d.code==='FORGE_WORKFLOW_FAILED')).toBe(false);

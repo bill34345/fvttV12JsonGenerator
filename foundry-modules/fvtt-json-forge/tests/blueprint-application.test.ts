@@ -231,8 +231,8 @@ async function makeAcceptedResponse(): Promise<ForgeActorResponse> {
     content: NIGHTGAUNT_SOURCE,
     displayName: 'Blueprint Application Test Actor',
     requestId: 'blueprint-application-test',
-    fvttVersion: '14.364',
-    systemVersion: '5.3.3',
+    fvttVersion: '14.370',
+    systemVersion: '6.0.6',
   }));
   if (!('result' in response) || response.result.status !== 'accepted') throw new Error('Expected accepted fixture.');
   return response;
@@ -245,8 +245,8 @@ function makeApplication(
 ): { application: any; root: BlueprintRoot; game: any; notifications: { errors: string[]; infos: string[] } } {
   const notifications = { errors: [] as string[], infos: [] as string[] };
   const game = {
-    version: '14.364',
-    system: { id: 'dnd5e', version: '5.3.3' },
+    version: '14.370',
+    system: { id: 'dnd5e', version: '6.0.6' },
     world: { id: 'blueprint-test-world' },
     user: { id: 'blueprint-test-user', isGM: true },
   };

@@ -189,7 +189,7 @@ describe('partial candidates through the normal encounter UI and recovery',()=>{
     const store={load:async()=>stored,save:async(value:EncounterRecoverySnapshot)=>{saves++;stored=decodeEncounterRecovery(serializeEncounterRecovery(value));},clear:async()=>{stored=undefined;}};
     const create=()=>{
       class Base{element:any={querySelector:()=>null,querySelectorAll:()=>[]};render(){return this;}async close(){return this;}}
-      const game:any={version:'14.368',world:{id:'rejection-world'},system:{id:'dnd5e',version:'5.3.3'},user:{id:'offline-gm',isGM:true},macros:{contents:[]}};
+      const game:any={version:'14.368',world:{id:'rejection-world'},system:{id:'dnd5e',version:'6.0.6'},user:{id:'offline-gm',isGM:true},macros:{contents:[]}};
       const App=createForgeEncounterApplicationClass({game,foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}},
         recoveryStore:store,getRecoverySecrets:()=>({apiKey:'',baseUrl:''}),getAiOptions:()=>({apiKey:'offline-key',baseUrl:'https://offline.example',model:currentProvider.extractionModel}),
         createEncounterIntakeProviders:()=>({provider:currentProvider,automationProvider:env.automationProvider} as any)});
@@ -209,12 +209,12 @@ describe('partial candidates through the normal encounter UI and recovery',()=>{
     await app.close();
   });
 
-  test('shows and downloads the whole available Actor, survives reload, resumes only missing work and revokes on source edit',async()=>{
+  test('shows and downloads the whole available Actor, survives reload, resumes only missing work and retains original-source access on edit',async()=>{
     const env=fixture({failSecond:true});let stored:EncounterRecoverySnapshot|undefined;
     const store={load:async()=>stored,save:async(value:EncounterRecoverySnapshot)=>{stored=decodeEncounterRecovery(serializeEncounterRecovery(value));},clear:async()=>{stored=undefined;}};
     const appFactory=()=>{
       class Base{element:any={querySelector:()=>null,querySelectorAll:()=>[]};render(){return this;}async close(){return this;}}
-      const game:any={version:'14.368',world:{id:'offline-world'},system:{id:'dnd5e',version:'5.3.3'},user:{id:'offline-gm',isGM:true},macros:{contents:[]}};
+      const game:any={version:'14.368',world:{id:'offline-world'},system:{id:'dnd5e',version:'6.0.6'},user:{id:'offline-gm',isGM:true},macros:{contents:[]}};
       const App=createForgeEncounterApplicationClass({game,foundry:{applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}},
         recoveryStore:store,getRecoverySecrets:()=>({apiKey:'',baseUrl:''}),getAiOptions:()=>({apiKey:'offline-key',baseUrl:'https://offline.example',model:'fixture'}),
         createEncounterIntakeProviders:()=>({provider:env.provider,automationProvider:env.automationProvider} as any)});
@@ -250,8 +250,16 @@ describe('partial candidates through the normal encounter UI and recovery',()=>{
     const sourceControl=restored.element.querySelector('[name="humanSource"]') as HTMLTextAreaElement;
     sourceControl.value+='changed';sourceControl.dispatchEvent(new complete.dom.window.Event('input'));
     expect(restored.aiReport.actors[0].generation.candidateHash).toBe(originalCandidateHash);expect(restored.prepared).toBeDefined();
-    const editedContext=await restored._prepareContext();expect(editedContext.actorDeliveries.filter((entry:any)=>entry.available)).toHaveLength(0);expect(editedContext.canImport).toBe(false);expect(encounterActorCandidate(restored.aiReport,'actor-1').artifact).toEqual(responseArtifact(restored.aiReport));
-    oldDownload.click();expect(restored.error).toContain('来源已改变');
+    const editedContext=await restored._prepareContext();expect(editedContext.actorDeliveries.filter((entry:any)=>entry.available)).toHaveLength(2);expect(editedContext.canImport).toBe(false);expect(restored.reviewed).toBe(false);expect(encounterActorCandidate(restored.aiReport,'actor-1').artifact).toEqual(responseArtifact(restored.aiReport));
+    expect(restored.aiReport.source).not.toBe(restored.humanSource);
+    for(const entry of editedContext.actorDeliveries)expect(entry.source).toBe(encounterActorCandidate(restored.aiReport,entry.key).source);
+    try{
+      (globalThis as any).document=complete.dom.window.document;
+      URL.createObjectURL=(blob:Blob)=>{downloaded.push(blob);return 'blob:offline-candidate';};URL.revokeObjectURL=()=>{};
+      complete.dom.window.HTMLAnchorElement.prototype.click=()=>{clicks++;};
+      oldDownload.click();expect(restored.error).toBe('');expect(clicks).toBe(2);expect(downloaded).toHaveLength(2);
+      expect(JSON.parse(await downloaded[1]!.text())).toEqual(responseArtifact(restored.aiReport));
+    }finally{(globalThis as any).document=originalDocument;URL.createObjectURL=createUrl;URL.revokeObjectURL=revokeUrl;}
     await restored.close();
   });
 });

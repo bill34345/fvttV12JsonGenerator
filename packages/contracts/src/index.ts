@@ -15,6 +15,7 @@ export type {
   FoundryTarget,
   FvttTargetVersion,
 } from './target';
+export { FOUNDRY_V14_CORE_VERSION, DND5E_V14_SYSTEM_VERSION } from './target';
 export type {
   CanonicalActorSource,
   CanonicalActorSourceMetadata,

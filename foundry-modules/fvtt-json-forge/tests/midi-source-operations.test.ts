@@ -10,13 +10,13 @@ import {importForgeEncounter} from '../src/encounterRuntime';
 
 const formalSource=recorded.nativeActivitySchema.formalSource;
 let response:ForgeActorResponse,artifact:any;
-beforeAll(async()=>{response=await convertFinalActorSource(buildForgeActorRequest({content:formalSource,displayName:'Independent source operations',requestId:'midi-independent-source',fvttVersion:'14.364',systemVersion:'5.3.3'}));if(!('result'in response)||response.result.status!=='accepted')throw Error('Formal source did not generate an accepted Actor');artifact=response.result.artifact;});
+beforeAll(async()=>{response=await convertFinalActorSource(buildForgeActorRequest({content:formalSource,displayName:'Independent source operations',requestId:'midi-independent-source',fvttVersion:'14.370',systemVersion:'6.0.6'}));if(!('result'in response)||response.result.status!=='accepted')throw Error('Formal source did not generate an accepted Actor');artifact=response.result.artifact;});
 const activities=(actor:any)=>actor.items.flatMap((item:any)=>Object.values(item.system?.activities??{})).filter((activity:any)=>activity.flags?.fvttJsonGenerator?.sourceOperation) as any[];
 const nativeActivities=(actor:any)=>activities(actor).map(({midiProperties,otherActivityId,...activity})=>activity);
-const moduleState=(version='14.0.11',active=true)=>({get:(id:string)=>id==='midi-qol'?{active,version}:undefined});
-function runtime(version:string|undefined='14.0.11',drift?:(data:any)=>void){
+const moduleState=(version='14.6.7',active=true)=>({get:(id:string)=>id==='midi-qol'?{active,version}:undefined});
+function runtime(version:string|undefined='14.6.7',drift?:(data:any)=>void){
   function collection(kind:string){const docs=new Map<string,any>();const api={createCount:0,deleteCount:0,get:(id:string)=>docs.get(id),get contents(){return[...docs.values()];},documentClass:{async create(data:any){api.createCount++;const copy=structuredClone(data);drift?.(copy);const doc:any={id:copy._id,uuid:kind+'.'+copy._id,name:copy.name,data:copy,get flags(){return this.data.flags;},toObject(){return structuredClone(this.data);},async update(changes:Record<string,unknown>){for(const[path,value]of Object.entries(changes)){const parts=path.split('.');let owner=this.data;for(const key of parts.slice(0,-1))owner=owner[key]??={};owner[parts.at(-1)!]=value;}return this;},async delete(){api.deleteCount++;docs.delete(this.id);}};docs.set(doc.id,doc);return doc;}}};return api;}
-  const game={version:'14.364',system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro'),...(version?{modules:moduleState(version)}:{})};
+  const game={version:'14.370',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro'),...(version?{modules:moduleState(version)}:{})};
   return{game,assets:{async ensure(){throw Error('No assets in this fixture');}}};
 }
 
@@ -93,7 +93,7 @@ describe('locked Midi independent source-operation import adapter',()=>{
     const existing=env.game.actors.contents[0],activity=activities(existing.data).find(activity=>activity.type==='attack');activity.otherActivityId='';const original=JSON.stringify(existing.data);
     expect((await createAcceptedForgeActor({game:env.game,response})).readbackWarnings?.join(' ')).toContain('Midi safety');expect(JSON.stringify(existing.data)).toBe(original);expect(env.game.actors.createCount).toBe(1);expect(env.game.actors.deleteCount).toBe(0);
   });
-  test('a changed native safety field retains the created Actor and reports the mismatch',async()=>{const env=runtime('14.0.11',data=>{activities(data)[0].midiProperties.otherActivityCompatible=true;});expect((await createAcceptedForgeActor({game:env.game,response})).readbackWarnings?.join(' ')).toContain('Midi safety');expect(env.game.actors.createCount).toBe(1);expect(env.game.actors.deleteCount).toBe(0);expect(env.game.actors.contents).toHaveLength(1);});
+  test('a changed native safety field retains the created Actor and reports the mismatch',async()=>{const env=runtime('14.6.7',data=>{activities(data)[0].midiProperties.otherActivityCompatible=true;});expect((await createAcceptedForgeActor({game:env.game,response})).readbackWarnings?.join(' ')).toContain('Midi safety');expect(env.game.actors.createCount).toBe(1);expect(env.game.actors.deleteCount).toBe(0);expect(env.game.actors.contents).toHaveLength(1);});
   test('Encounter import, all preflight conflicts and reuse use the same safety contract',async()=>{
     const bundle:any=encounterFixture();bundle.id='midi-independent-encounter';bundle.actors=[{key:'main',label:'Independent operations',source:formalSource,sourceHash:hashSource(formalSource)}];bundle.macros=[];const prepared=await prepareForgeEncounter(JSON.stringify(bundle)),sealed=JSON.stringify(prepared);
     const unknown=runtime('14.0.12'),unverified=await importForgeEncounter({...unknown,prepared,reviewed:true});

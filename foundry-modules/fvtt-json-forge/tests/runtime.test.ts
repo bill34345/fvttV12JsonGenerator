@@ -1,7 +1,17 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
-import { buildForgeActorRequest, convertFinalActorSource } from '@fvtt-json-generator/forge-browser-runtime';
+import { buildForgeActorRequest, convertFinalActorSource, FORGE_NATIVE_606_TARGET, isForgeRuntimeTargetSupported } from '@fvtt-json-generator/forge-browser-runtime';
+import { projectNativeDocument } from '@fvtt-json-generator/workflows/native-projection';
+import { createEncounterAutomationLifecycle } from '../src/encounterAutomationLifecycle';
+import { assertExactRuntime } from '../src/runtime';
+import { nativeProjectionForGame } from '../src/nativeProjection';
+import { isForgeAutomationTargetCompatible } from '../src/mirror-core-compatibility';
+import { projectionForRuntime } from '../../../packages/forge-browser-runtime/src/nativeTarget';
+import { installEncounterDamageBridge, installPassiveActivityLockGuard } from '../src/encounterAutomationRuntime';
+import { actorRulePresentation } from '../../../packages/forge-browser-runtime/src/actorRulePresentationContext';
+import { assertRulePresentationPlan } from '@fvtt-json-generator/generation/rule-presentation';
+import { prepareForgeActorForNativeProjection } from '../../../packages/forge-browser-runtime/src/artifact';
 import { analyzePlaintextActorSource } from '@fvtt-json-generator/forge-browser-runtime/plaintext';
-import { hashArtifact, type ForgeActorResponse, type JsonObject } from '@fvtt-json-generator/forge-gateway-protocol';
+import { decodeForgeActorResponse, hashArtifact, type ForgeActorResponse, type JsonObject } from '@fvtt-json-generator/forge-gateway-protocol';
 import { splitCollection } from '@fvtt-json-generator/ingest-plaintext/plaintext-core';
 import {
   createAcceptedForgeActor,
@@ -19,14 +29,291 @@ import {
 
 let acceptedResponse: ForgeActorResponse;
 
+describe('native 606 projection contract', () => {
+  test('runtime admission uses native6 major ranges and refuses retired runtime pairs', () => {
+    for (const [core, system] of [['14.370','6.0.6'],['14.368','6.0.6'],['14.369','6.0.6+local.3'],['14.370','6.0.7'],['14.999','6.1.0']])
+      expect(() => assertExactRuntime({ version:core, system:{id:'dnd5e',version:system} })).not.toThrow();
+    for (const [core, system] of [['14.364','5.3.3'],['14.368','5.3.3'],['14.367','6.0.6'],['14.370','6.0.5'],['15.0','6.0.6'],['14.369','7.0.0']])
+      expect(isForgeRuntimeTargetSupported(core,system)).toBe(false);
+  });
+
+  test('runtime admission retains native construction and exact automation bindings on later releases', () => {
+    let constructions = 0;
+    class NativeDocument {
+      constructor(private source: JsonObject, options: { strict: boolean }) {
+        expect(options.strict).toBe(true);
+        constructions += 1;
+      }
+      validate(options: { strict: boolean }) { expect(options.strict).toBe(true); return true; }
+      toObject() { return this.source; }
+    }
+    const game = { version: '14.370', system: { id: 'dnd5e', version: '6.1.0' }, actors: { documentClass: NativeDocument } };
+    const projection = nativeProjectionForGame(game);
+    expect(projection).toBeDefined();
+    expect(projection!.runtime).toEqual({coreVersion:'14.370',systemId:'dnd5e',systemVersion:'6.1.0'});
+    expect(projectionForRuntime(game.version, game.system.version, projection)).toBe(projection);
+    expect(projectionForRuntime('14.368', '5.3.3', projection)).toBeUndefined();
+    const projected = projection!.project('Actor', { name: 'Native constructor fixture', items: [] });
+    expect(projected._stats).toEqual(FORGE_NATIVE_606_TARGET.stats);
+    expect(constructions).toBe(1);
+    expect(() => prepareFoundryImportArtifact({ name: 'Old 533 artifact' }, game)).toThrow('native schema');
+    const target = { foundry: game.version, system: 'dnd5e', systemVersion: game.system.version, effectProfile: 'core' };
+    expect(isForgeAutomationTargetCompatible(game, target)).toBeTrue();
+    expect(isForgeAutomationTargetCompatible(game, { ...target, foundry: '14.369', systemVersion: '6.0.6' })).toBeTrue();
+    expect(isForgeAutomationTargetCompatible(game, { ...target, foundry: '14.369+local.1', systemVersion: '6.0.6+local.1' })).toBeTrue();
+    expect(isForgeAutomationTargetCompatible(game, { ...target, foundry: '14.371' })).toBeTrue();
+    expect(isForgeAutomationTargetCompatible(game, { ...target, systemVersion: '6.2.0' })).toBeTrue();
+    expect(isForgeAutomationTargetCompatible(game, { ...target, foundry: '15.0' })).toBeFalse();
+    expect(isForgeAutomationTargetCompatible(game, { ...target, systemVersion: '7.0.0' })).toBeFalse();
+    expect(isForgeAutomationTargetCompatible(game, { ...target, system: 'pathfinder2e' })).toBeFalse();
+    expect(isForgeAutomationTargetCompatible(game, { ...target, effectProfile: 'midi' })).toBeFalse();
+    expect(isForgeAutomationTargetCompatible(game, undefined)).toBeFalse();
+  });
+
+  test('runtime admission creates a formally projected Actor on a later native6 runtime', async () => {
+    for (const requestRuntime of [{fvttVersion:'14.370',systemVersion:'6.1.0'},{fvttVersion:'14.369',systemVersion:'6.0.6'}]) {
+    const collection = new FakeActorCollection();
+    const game = { ...supportedGame(collection), version: '14.370', system: { id: 'dnd5e', version: '6.1.0' } };
+    const source = await Bun.file('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md').text();
+    const request = buildForgeActorRequest({ content: source, displayName: 'Nightgaunt', requestId: 'future-native-actor', ...requestRuntime });
+    const response: any = await convertFinalActorSource(request, { nativeProjection: {
+      target: FORGE_NATIVE_606_TARGET,
+      runtime: { coreVersion: game.version, systemId: 'dnd5e', systemVersion: game.system.version },
+      project(_kind, input) {
+        for (const effect of input.items.flatMap((item: any) => item.effects ?? [])) {
+          expect(effect.duration).toHaveProperty('value');
+        }
+        return input;
+      },
+    } });
+    expect(response.result.target.fvttRuntimeVersion).toBe(game.version);
+    expect(response.result.target.systemVersionObserved).toBe(game.system.version);
+    expect(response.result.artifact._stats).toMatchObject(FORGE_NATIVE_606_TARGET.stats);
+    const result = await createAcceptedForgeActor({ game, response });
+    expect(result.status).toBe('created');
+    expect(collection.contents).toHaveLength(1);
+    expect((result.actor.toObject() as any).flags[MODULE_ID].sourceId).toBe(request.source.sourceId);
+    expect((result.actor.toObject() as any)._stats).toMatchObject(FORGE_NATIVE_606_TARGET.stats);
+    }
+  });
+
+  test('offline generation and failed receiver normalization retain the complete native6 candidate', async () => {
+    const source = await Bun.file('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md').text();
+    const request=buildForgeActorRequest({content:source,displayName:'Nightgaunt',requestId:'native606-missing',fvttVersion:'14.369',systemVersion:'6.0.6'});
+    for (const nativeProjection of [undefined,{target:FORGE_NATIVE_606_TARGET,project(){throw new Error('Native validation rejected candidate');}}]) {
+      const response:any=await convertFinalActorSource(request,{nativeProjection});
+      expect(response.result.artifact.items.length).toBeGreaterThan(0);
+      expect(response.result.target.systemVersionObserved).toBe('6.0.6');
+      expect(response.result.artifact._stats.systemVersion).toBe('6.0.6');
+      expect(response.result.diagnostics.some((entry:any)=>entry.code.startsWith('NATIVE_PROJECTION'))).toBe(Boolean(nativeProjection));
+      expect(()=>prepareFoundryImportArtifact(response.result.artifact,{version:'14.369',system:{id:'dnd5e',version:'6.0.6'}})).not.toThrow();
+    }
+  });
+
+  test('preserves stable member identities, source and finite uses without mutating caller input',async()=>{
+    const source:any={name:'Port contract fixture',type:'npc',system:{source:{rules:'2024'}},items:[{name:'Limited feature',type:'feat',system:{uses:{max:'3',spent:1,recovery:[{period:'day',type:'recoverAll'}]},activities:{AAAAAAAAAAAAAAAA:{_id:'AAAAAAAAAAAAAAAA',type:'utility',uses:{max:'2',spent:0,recovery:[]},consumption:{targets:[]}}}},effects:[{name:'Owned effect',disabled:true,duration:{value:60,units:'seconds',expiry:'turnStart',expired:false},changes:[{key:'system.bonuses.abilities.save',mode:2,value:'1',phase:'final'}]}]}],effects:[]};
+    const original=structuredClone(source);
+    const port={target:FORGE_NATIVE_606_TARGET,project:(_kind:any,value:any)=>value};
+    const first=await projectNativeDocument(port,'Actor',source),second=await projectNativeDocument(port,'Actor',source);
+    expect(first).toEqual(second);expect(source).toEqual(original);
+    const reordered={...source,items:source.items.map(({name,type,...rest}:any)=>({...rest,type,name}))};
+    expect(await projectNativeDocument(port,'Actor',reordered)).toEqual(first);
+    expect(first.items[0]._id).toMatch(/^[a-f0-9]{16}$/u);
+    expect(first.items[0].effects[0]._id).toMatch(/^[a-f0-9]{16}$/u);
+    expect(first.items[0].system.uses).toEqual(source.items[0].system.uses);
+    for (const breakProjection of [
+      (value:any)=>{value.items=[];},
+      (value:any)=>{value.items[0].system.activities={};},
+      (value:any)=>{value.items[0].effects=[];},
+      (value:any)=>{value.items[0].effects[0].changes[0].phase='initial';},
+      (value:any)=>{value.items[0].system.uses.max='';},
+      (value:any)=>{value.system.source.rules='2014';},
+    ]) await expect(projectNativeDocument({target:FORGE_NATIVE_606_TARGET,project(_kind,value){breakProjection(value);return value;}},'Actor',source)).rejects.toThrow('Native projection');
+  });
+
+  test('native migration guard accepts exact schema representations and rejects changed mechanics',async()=>{
+    const cases:any[]=[
+      {kind:'Actor',before:{name:'Flat fixture',type:'npc',system:{abilities:{str:{value:14,bonuses:{save:'2'}}},attributes:{ac:{calc:'flat',flat:12},movement:{walk:30,units:'ft'}}}},
+        after:{abilities:{str:{value:14,save:{roll:{bonus:'2'}}}},attributes:{ac:{override:12},movement:{speeds:{walk:'30'},units:'ft'}}}},
+      {kind:'Actor',before:{name:'Formula fixture',type:'npc',system:{attributes:{ac:{calc:'custom',formula:'10 + @abilities.dex.mod'}}}},
+        after:{attributes:{ac:{formulas:[{formula:'10 + @abilities.dex.mod'}]}}}},
+      {kind:'Item',before:{name:'Equipment fixture',type:'equipment',system:{armor:{value:14,magicalBonus:3},rarity:'veryRare',uses:{max:'@prof',spent:0,recovery:[]}}},
+        after:{armor:{value:14,magicalBonus:'3'},rarities:['veryRare'],uses:{max:'@prof',spent:0,recovery:[]}}},
+    ];
+    for(const entry of cases){
+      const result=await projectNativeDocument({target:FORGE_NATIVE_606_TARGET,project(_kind,input){input.system=structuredClone(entry.after);return input;}},entry.kind,entry.before);
+      expect(result.system).toEqual(entry.after);
+    }
+    await expect(projectNativeDocument({target:FORGE_NATIVE_606_TARGET,project(_kind,input){input.system=structuredClone(cases[2].after);input.system.armor.magicalBonus='@prof';return input;}},'Item',cases[2].before)).rejects.toThrow('armor/magicalBonus');
+  });
+
+  test('native606: legacy permanent, timed and combat durations retain their canonical duration and start',async()=>{
+    const cases=[
+      {before:{startTime:null,seconds:null,combat:null,rounds:null,turns:null,startRound:null,startTurn:null},duration:{value:null,units:'seconds',expiry:null,expired:false},start:null},
+      {before:{startTime:600,seconds:60,combat:null,startRound:2,startTurn:1},duration:{value:60,units:'seconds',expiry:'turnStart',expired:false},start:{combat:null,time:600,round:2,turn:1}},
+      {before:{startTime:null,rounds:2,turns:null},duration:{value:2,units:'rounds',expiry:'turnStart',expired:false},start:null},
+      {before:{startTime:null,rounds:2,turns:1},duration:{value:1,units:'turns',expiry:'turnStart',expired:false},start:null},
+      {before:{seconds:60,value:5,units:'minutes',expiry:'turnEnd'},duration:{value:5,units:'minutes',expiry:'turnEnd',expired:false},start:null},
+    ];
+    for(const entry of cases){
+      const source={name:'Duration contract',type:'npc',effects:[{name:'Effect',duration:entry.before,changes:[]}]};
+      const port={target:FORGE_NATIVE_606_TARGET,project(_kind:any,input:any){input.effects[0].duration=entry.duration;input.effects[0].start=entry.start;return input;}};
+      const result=await projectNativeDocument(port,'Actor',source);expect(result.effects[0].duration).toEqual(entry.duration);
+      await expect(projectNativeDocument({target:FORGE_NATIVE_606_TARGET,project(_kind,input){input.effects[0].duration={...entry.duration,value:999};input.effects[0].start=entry.start;return input;}},'Actor',source)).rejects.toThrow('/duration/value');
+    }
+  });
+
+  test('native606: source-preserving preclean keeps natural reach, thrown long range and inactive template defaults',async()=>{
+    const activity=(range:any)=>({_id:'AAAAAAAAAAAAAAAA',type:'attack',range,target:{template:{type:'',count:'',size:'',width:'',height:'',units:''}}});
+    const source:any={name:'Range contract',type:'npc',items:[
+      {name:'Natural',type:'feat',system:{activities:{AAAAAAAAAAAAAAAA:activity({reach:10,override:false,units:'ft'})}}},
+      {name:'Thrown',type:'weapon',system:{range:{value:30,long:null,units:'ft'},activities:{AAAAAAAAAAAAAAAA:activity({value:30,long:120,override:false,units:'ft'})}}},
+      {name:'Melee',type:'weapon',system:{range:{value:5,reach:5,long:null,units:'ft'},activities:{AAAAAAAAAAAAAAAA:activity({value:null,reach:5,override:false,units:'ft'})}}},
+    ]};
+    const input=prepareForgeActorForNativeProjection(source);
+    expect((input.items as any[])[0].system.activities.AAAAAAAAAAAAAAAA.range).toMatchObject({override:true,value:10});
+    expect((input.items as any[])[1].system.range.long).toBe(120);
+    expect((input.items as any[])[2].system.activities.AAAAAAAAAAAAAAAA.range).not.toHaveProperty('value');
+    const clean=(_kind:any,value:any)=>{for(const item of value.items)for(const activity of Object.values(item.system.activities) as any[]){
+      expect(activity.target.template).not.toHaveProperty('units');activity.target.template.units='ft';
+      delete activity.range.reach;delete activity.range.long;if(activity.range.value!==undefined)activity.range.value=String(activity.range.value);
+    }return value;};
+    const result=await projectNativeDocument({target:FORGE_NATIVE_606_TARGET,project:clean},'Actor',input);
+    expect(result.items[0].system.activities.AAAAAAAAAAAAAAAA.range.value).toBe('10');
+    expect(result.items[1].system.range.long).toBe(120);
+    expect(result.items[2].system.range.reach).toBe(5);
+    expect(source.items[0].system.activities.AAAAAAAAAAAAAAAA.range.reach).toBe(10);
+  });
+
+  test('native606: native target FormulaFields keep literal count and dimensions and reject changed size',async()=>{
+    const source:any={name:'Area contract',type:'feat',system:{activities:{AAAAAAAAAAAAAAAA:{_id:'AAAAAAAAAAAAAAAA',type:'save',target:{template:{count:1,type:'cone',size:30,width:5,height:10,units:'ft'},affects:{count:2}}}}}};
+    const target={template:{count:'1',type:'cone',size:'30',width:'5',height:'10',units:'ft'},affects:{count:'2'}};
+    const result=await projectNativeDocument({target:FORGE_NATIVE_606_TARGET,project(_kind,input){input.system.activities.AAAAAAAAAAAAAAAA.target=structuredClone(target);return input;}},'Item',source);
+    expect(result.system.activities.AAAAAAAAAAAAAAAA.target).toEqual(target);
+    await expect(projectNativeDocument({target:FORGE_NATIVE_606_TARGET,project(_kind,input){input.system.activities.AAAAAAAAAAAAAAAA.target=structuredClone(target);input.system.activities.AAAAAAAAAAAAAAAA.target.template.size='31';return input;}},'Item',source)).rejects.toThrow('/target/template/size');
+  });
+
+  test('saved controllers refuse a different runtime target before installing or persisting', async()=>{
+    for(const {version,systemVersion,target} of [
+      {version:'14.369',systemVersion:'6.0.6',target:undefined},
+      {version:'14.369',systemVersion:'6.0.6',target:{foundry:'14.364',system:'dnd5e',systemVersion:'5.3.3',effectProfile:'core'}},
+      {version:'14.368',systemVersion:'5.3.3',target:{foundry:'14.369',system:'dnd5e',systemVersion:'6.0.6',effectProfile:'core'}},
+    ]){
+      let installed=0,written=0;
+      const saved={version:1,enabled:true,context:{packageId:'old',...(target?{target}:{})},config:{version:1,rules:[],legendaryRecovery:[]}};
+      const env:any={game:{version,system:{id:'dnd5e',version:systemVersion},user:{id:'gm',isGM:true},macros:{contents:[{flags:{[MODULE_ID]:{fixedAutomation:saved}},setFlag(){written++;}}]}},canvas:{ready:true},ui:{notifications:{warn(){}}}};
+      const before=structuredClone(saved);
+      const lifecycle=createEncounterAutomationLifecycle(env,async()=>{installed++;throw Error('must not install');});
+      await lifecycle.resume();expect(installed).toBe(0);expect(written).toBe(0);expect(saved).toEqual(before);
+    }
+  });
+
+  test('a caller port runs between formal generation and target verification', async()=>{
+    const source=await Bun.file('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md').text();
+    const request=buildForgeActorRequest({content:source,displayName:'Nightgaunt',requestId:'native606-port-contract',fvttVersion:'14.369',systemVersion:'6.0.6'});
+    let calls=0;
+    const response:any=await convertFinalActorSource(request,{captureRulePresentation:true,nativeProjection:{target:FORGE_NATIVE_606_TARGET,project(kind,input){
+      calls++;expect(kind).toBe('Actor');expect(input.system.attributes.hp.max).toBe(136);expect(input.items.length).toBeGreaterThan(0);
+      // Contract double: native schema behavior is accepted separately in Foundry.
+      for(const effect of input.items.flatMap((item:any)=>item.effects??[])){
+        expect(effect.duration).toHaveProperty('units');
+        expect(effect.duration).toHaveProperty('value');
+      }
+      return input;
+    }}});
+    expect(calls).toBe(1);expect(response.result.target.systemVersionObserved).toBe('6.0.6');
+    expect(response.result.artifact._stats.coreVersion).toBe('14.370');
+    expect(response.result.sourceIdentity).toEqual({sourceId:request.source.sourceId,sourceHash:request.source.utf8Sha256});
+    expect(response.result.diagnostics.filter((entry:any)=>entry.code==='NATIVE_PROJECTION_INCOMPLETE')).toEqual([]);
+    const plan=actorRulePresentation(response);
+    expect(plan).toBeDefined();expect(()=>assertRulePresentationPlan(plan,response.result.artifact,request.source.content)).not.toThrow();
+  });
+
+  test('native606: omitted empty uses maxima preserve senses through formal conversion and response decoding', async () => {
+    const source = await Bun.file('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md').text();
+    const request = buildForgeActorRequest({ content: source, displayName: 'Nightgaunt', requestId: 'native606-optional-fields', fvttVersion: '14.369', systemVersion: '6.0.6' });
+    let itemUses = 0, activityUses = 0;
+    const response: any = await convertFinalActorSource(request, { nativeProjection: { target: FORGE_NATIVE_606_TARGET, project(_kind, input) {
+      // Contract double for the exact UsesField and SensesField shapes read from native 6.0.6.
+
+
+      for (const item of input.items) {
+        expect(item.system.uses?.max ?? '').toBe('');
+        item.system.uses = { spent: 0, recovery: [] }; itemUses++;
+        for (const activity of Object.values(item.system.activities ?? {}) as any[]) {
+          expect(activity.uses?.max ?? '').toBe('');
+          activity.uses = { spent: 0, recovery: [] }; activityUses++;
+        }
+        for (const effect of item.effects ?? []) {
+          expect(effect.duration).toHaveProperty('units');
+          expect(effect.duration).toHaveProperty('value');
+        }
+      }
+      return input;
+    } } });
+    expect(itemUses).toBe(6); expect(activityUses).toBe(6);
+    expect(response.result.diagnostics).toEqual([]);
+    expect(response.result.status).toBe('accepted');
+    expect(response.result.actorVerification.actor.senses.units).toBe('ft');
+    for (const item of response.result.artifact.items) {
+      expect(item.system.uses).toEqual({ spent: 0, recovery: [] });
+      for (const activity of Object.values(item.system.activities) as any[]) expect(activity.uses).toEqual({ spent: 0, recovery: [] });
+    }
+    const decoded = decodeForgeActorResponse(JSON.parse(JSON.stringify(response)));
+    expect(decoded.ok).toBe(true);
+    if (!decoded.ok || !('result' in decoded.value)) throw new Error('Expected the formally converted native field shapes to decode.');
+    expect(decoded.value.result.status).toBe('accepted');
+    expect(decoded.value.result.actorVerification.actor.senses.units).toBe('ft');
+  });
+
+  test('new global hooks ignore old controller claims without altering them',()=>{
+    const handlers=new Map<string,Function>();let writes=0;
+    const oldState={packageId:'old',packageHash:'oldhash',disabledActivities:{rule:[{itemId:'item',activityId:'activity'}]},fixedNativeClaims:{stunned:[{groupId:'oldgroup',removeOnDamage:true}]}};
+    const actor:any={id:'actor',uuid:'Actor.actor',flags:{[MODULE_ID]:{encounter:{version:1,kind:'Actor',packageId:'old',packageHash:'oldhash'},encounterAutomation:oldState}},effects:[],system:{attributes:{hp:{value:0,temp:0,tempmax:0}}},setFlag(){writes++;}};
+    const env:any={game:{version:'14.369',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true}},Hooks:{on(name:string,fn:Function){handlers.set(name,fn);return name;}}};
+    const before=structuredClone(actor.flags);
+    installEncounterDamageBridge(env);installPassiveActivityLockGuard(env);
+    const updates={'system.attributes.hp.value':0,'system.attributes.hp.temp':0,'system.attributes.hp.tempmax':0},options={};
+    handlers.get('dnd5e.preApplyDamage')!(actor,3,updates,options);
+    handlers.get('dnd5e.applyDamage')!(actor,3,options);
+    expect(handlers.get('dnd5e.preUseActivity')!({id:'activity',item:{id:'item',actor}})).toBeUndefined();
+    expect(Object.keys(updates)).toHaveLength(3);expect(writes).toBe(0);expect(actor.flags).toEqual(before);
+  });
+
+  test('native606: only an unlinked nonattack null default is equivalent to no other Activity',()=>{
+    const artifact:any=structuredClone((acceptedResponse as any).result.artifact),item=artifact.items[0],text='Separate damage source.';
+    artifact._stats={...artifact._stats,...FORGE_NATIVE_606_TARGET.stats};
+    item.flags={fvttJsonGenerator:{manualRule:{mode:'native-with-gm',sourceText:text,sourceOperations:[{id:'damage'}]}}};
+    item.system.activities={AAAAAAAAAAAAAAAA:{_id:'AAAAAAAAAAAAAAAA',type:'damage',damage:{parts:[]},
+      midiProperties:{otherActivityCompatible:false,triggeredActivityId:'none'},
+      flags:{fvttJsonGenerator:{sourceOperation:{id:'damage',role:'damage',damageMode:'ordinary',sourceText:text}}}}};
+    const actual=structuredClone(artifact);actual.items[0].system.activities.AAAAAAAAAAAAAAAA.otherActivityId=null;
+    expect(()=>assertActorSemantics(artifact,actual)).not.toThrow();
+    actual.items[0].system.activities.AAAAAAAAAAAAAAAA.otherActivityId='linked';
+    expect(()=>assertActorSemantics(artifact,actual)).toThrow('Midi safety');
+    actual.items[0].system.activities.AAAAAAAAAAAAAAAA.otherActivityId=null;
+    artifact._stats.systemVersion='5.3.3';expect(()=>assertActorSemantics(artifact,actual)).toThrow('Midi safety');
+  });
+  test('native6 effect readback rejects changed duration value, unit and expiry',()=>{
+    const artifact:any=structuredClone((acceptedResponse as any).result.artifact);
+    artifact.items[0].effects=[{_id:'duration-effect',name:'Timed condition',system:{changes:[]},statuses:['blinded'],
+      duration:{value:1,units:'minutes',expiry:'turnEnd',expired:false},start:null}];
+    for(const patch of [{value:2},{units:'rounds'},{expiry:'turnStart'}]){
+      const actual=structuredClone(artifact);Object.assign(actual.items[0].effects[0].duration,patch);
+      expect(()=>assertActorSemantics(artifact,actual)).toThrow('effects');
+    }
+    expect(()=>assertActorSemantics(artifact,structuredClone(artifact))).not.toThrow();
+  });
+});
+
 beforeAll(async () => {
   const source = await Bun.file('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md').text();
   acceptedResponse = await convertFinalActorSource(buildForgeActorRequest({
     content: source,
     displayName: 'Forge Actor',
     requestId: 'runtime-test',
-    fvttVersion: '14.364',
-    systemVersion: '5.3.3',
+    fvttVersion: '14.370',
+    systemVersion: '6.0.6',
   }));
   if (!('result' in acceptedResponse) || acceptedResponse.result.status !== 'accepted') {
     throw new Error(`Expected an accepted response fixture: ${JSON.stringify(acceptedResponse)}`);
@@ -168,7 +455,7 @@ describe('Foundry Forge Actor creation boundary', () => {
     const source = await Bun.file('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md').text();
     const response = await convertFinalActorSource(buildForgeActorRequest({
       content: source, displayName: 'Mirror 368 Actor', requestId: 'mirror-core368-runtime',
-      fvttVersion: '14.368', systemVersion: '5.3.3',
+      fvttVersion: '14.368', systemVersion: '6.0.6',
     }));
     if (!('result' in response) || response.result.status !== 'accepted') throw new Error('Formal 368 source generation failed');
     expect(response.result.target.fvttRuntimeVersion).toBe('14.368');
@@ -246,8 +533,8 @@ describe('Foundry Forge Actor creation boundary', () => {
       content: source,
       sourceId: acceptedResponse.result.sourceIdentity.sourceId,
       displayName: 'Forge Actor',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     } as const;
     const firstResponse = await convertFinalActorSource(buildForgeActorRequest({ ...common, requestId: 'fresh-first' }));
     await Bun.sleep(25);
@@ -271,8 +558,8 @@ describe('Foundry Forge Actor creation boundary', () => {
       content: source,
       displayName: 'Scuttling Serpentmaw',
       requestId: 'runtime-v14-effect-change-value',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }));
     if (!('result' in response) || response.result.status !== 'accepted') {
       throw new Error(`Expected an accepted Scuttling Serpentmaw response: ${JSON.stringify(response)}`);
@@ -280,8 +567,8 @@ describe('Foundry Forge Actor creation boundary', () => {
 
     const brittleShell = (response.result.artifact.items as Array<Record<string, any>>)
       .find((item) => item.name === '脆壳反震 Brittle Shell');
-    expect(brittleShell?.effects?.[0]?.changes?.[0]?.mode).toBe(5);
-    expect(brittleShell?.effects?.[0]?.changes?.[0]?.value).toBe('14');
+    expect(brittleShell?.effects?.[0]?.system?.changes?.[0]?.type).toBe('override');
+    expect(brittleShell?.effects?.[0]?.system?.changes?.[0]?.value).toBe('14');
 
     const collection = new FakeActorCollection();
     const result = await createAcceptedForgeActor({ game: supportedGame(collection), response });
@@ -293,7 +580,7 @@ describe('Foundry Forge Actor creation boundary', () => {
     expect(result.status).toBe('created');
     expect(importedEffect?.system?.changes?.[0]?.type).toBe('override');
     expect(importedEffect?.system?.changes?.[0]).not.toHaveProperty('mode');
-    expect(importedEffect?.system?.changes?.[0]?.value).toBe(14);
+    expect(importedEffect?.system?.changes?.[0]?.value).toBe('14');
 
     const persistedBrittleShell = (collection.contents[0]!.data.items as Array<Record<string, any>>)
       .find((item) => item.name === '脆壳反震 Brittle Shell');
@@ -301,8 +588,8 @@ describe('Foundry Forge Actor creation boundary', () => {
     const canonicalChanges = structuredClone(persistedEffect.system.changes);
     delete persistedEffect.system.changes;
     persistedEffect.changes = canonicalChanges.map((change: Record<string, any>) => ({ ...change, value: '14' }));
-    await expect(createAcceptedForgeActor({ game: supportedGame(collection), response }))
-      .resolves.toMatchObject({status:'existing',readbackWarnings:expect.arrayContaining([expect.any(String)])});
+    const equivalent=await createAcceptedForgeActor({ game: supportedGame(collection), response });
+    expect(equivalent.status).toBe('existing');expect(equivalent.readbackWarnings??[]).toEqual([]);
 
     delete persistedEffect.changes;
     persistedEffect.system.changes = canonicalChanges.map((change: Record<string, any>) => ({ ...change, value: 15 }));
@@ -338,8 +625,8 @@ describe('Foundry Forge Actor creation boundary', () => {
       content: analysis.canonicalSource,
       displayName: 'Slithering Bloodfin',
       requestId: 'runtime-v14-embedded-feat-reach',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }));
     if (!('result' in response) || response.result.status !== 'accepted') {
       throw new Error(`Expected an accepted Slithering Bloodfin response: ${JSON.stringify(response)}`);
@@ -351,7 +638,7 @@ describe('Foundry Forge Actor creation boundary', () => {
       .find(([, activity]) => asRecord(activity).type === 'attack');
     if (!attackEntry) throw new Error('Swallow attack Activity was not found.');
     const [attackId, attack] = attackEntry;
-    expect(asRecord(attack).range).toMatchObject({ override: true, value: 5, units: 'ft' });
+    expect(asRecord(attack).range).toMatchObject({ override: true, value: '5', units: 'ft' });
     expect(asRecord(attack).range).not.toHaveProperty('reach');
 
     const collection = new FakeActorCollection();
@@ -359,7 +646,7 @@ describe('Foundry Forge Actor creation boundary', () => {
     const imported = collection.contents[0]!.toObject() as Record<string, any>;
     expect(result.status).toBe('created');
     expect(findActivity(imported, '吞咽 Swallow', attackId).range)
-      .toMatchObject({ override: true, value: 5, units: 'ft' });
+      .toMatchObject({ override: true, value: '5', units: 'ft' });
   });
 
   test('ignores only inactive Activity template unit defaults and rejects active-template unit drift', async () => {
@@ -368,8 +655,8 @@ describe('Foundry Forge Actor creation boundary', () => {
       content: source,
       displayName: 'Scuttling Serpentmaw',
       requestId: 'runtime-v14-inactive-template-units',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }));
     if (!('result' in response) || response.result.status !== 'accepted') {
       throw new Error(`Expected an accepted Scuttling Serpentmaw response: ${JSON.stringify(response)}`);
@@ -489,8 +776,8 @@ describe('Foundry Forge Actor creation boundary', () => {
       content: source,
       displayName: 'White Tusk Orc',
       requestId: 'runtime-thrown-range',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }));
     if (!('result' in response) || response.result.status !== 'accepted') {
       throw new Error(`Expected an accepted thrown-range response: ${JSON.stringify(response)}`);
@@ -498,10 +785,10 @@ describe('Foundry Forge Actor creation boundary', () => {
     const sourceArtifact = response.result.artifact;
     const javelinArtifact = (sourceArtifact.items as Array<Record<string, any>>).find((item) => item.name === 'Javelin');
     if (!javelinArtifact) throw new Error('Expected the White Tusk Orc fixture to contain a Javelin item.');
-    expect(javelinArtifact?.system?.range?.long).toBeNull();
-    expect(javelinArtifact?.system?.activities).toMatchObject({
-      [Object.keys(javelinArtifact.system.activities)[0]!]: { range: { value: 30, long: 120 } },
-    });
+    expect(javelinArtifact?.system?.range?.long).toBe(120);
+    const attacks=Object.values(javelinArtifact.system.activities) as any[];
+    expect(attacks.find(activity=>activity.attack?.type?.value==='melee')?.range).toMatchObject({value:'5'});
+    expect(attacks.find(activity=>activity.attack?.type?.value==='ranged')?.range).toMatchObject({value:'30'});
 
     const collection = new FakeActorCollection();
     const result = await createAcceptedForgeActor({ game: supportedGame(collection), response });
@@ -514,30 +801,36 @@ describe('Foundry Forge Actor creation boundary', () => {
   });
 
   test.each([
-    ['Fireball', '23af52db33017be0', 'Compendium.dnd5e.spells.Item.ztgcdrWPshKRpFd0'],
-    ['AlterSelf', 'e2de216f26943e8b', 'Compendium.dnd5e.spells.Item.8RTDOt80u8aBv9qx'],
-  ] as const)('qualifies the %s legacy spell ID only in the Foundry import copy and preserves the protocol artifact', async (spellName, legacyUuid, foundryUuid) => {
+    ['Fireball', '23af52db33017be0', 'Compendium.dnd5e.spells24.Item.phbsplFireball00'],
+    ['Alter Self', 'e2de216f26943e8b', 'Compendium.dnd5e.spells24.Item.phbsplAlterSelf0'],
+  ] as const)('qualifies a saved %s legacy reference and preserves the formally generated 2024 artifact', async (spellName, legacyUuid, foundryUuid) => {
     const source = await Bun.file('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md').text();
-    const casterSource = source.replace('背景: |-', `施法:\n  - "随意: ${spellName}"\n背景: |-`);
+    const casterSource = source.replace('背景: |-', `施法属性: int\n施法:\n  - "随意: ${spellName}"\n背景: |-`);
     const response = await convertFinalActorSource(buildForgeActorRequest({
       content: casterSource,
       displayName: `Nightgaunt ${spellName}`,
       requestId: `runtime-legacy-spell-${spellName}`,
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }));
     if (!('result' in response) || response.result.status !== 'accepted') {
       throw new Error(`Expected an accepted caster response: ${JSON.stringify(response)}`);
     }
     const sourceArtifact = response.result.artifact;
-    const spellcastingArtifact = (sourceArtifact.items as Array<Record<string, any>>).find((item) => item.name === '施法');
+    const spellcastingArtifact = (sourceArtifact.items as Array<Record<string, any>>).find((item) => item.name === '施法 Spellcasting');
     const activity = Object.values(spellcastingArtifact?.system?.activities ?? {})[0] as Record<string, any> | undefined;
-    expect(activity?.spell?.uuid).toBe(legacyUuid);
+    expect(activity?.spell?.uuid).toBe(foundryUuid);
+    const savedLegacy=structuredClone(sourceArtifact) as any;
+    const savedFeature=savedLegacy.items.find((item:any)=>item.name==='施法 Spellcasting');
+    (Object.values(savedFeature.system.activities)[0] as any).spell.uuid=legacyUuid;
+    const savedHash=hashArtifact(savedLegacy),importCopy:any=prepareFoundryImportArtifact(savedLegacy,supportedGame(new FakeActorCollection()));
+    expect((Object.values(importCopy.items.find((item:any)=>item.name==='施法 Spellcasting').system.activities)[0] as any).spell.uuid).toBe(foundryUuid);
+    expect(hashArtifact(savedLegacy)).toBe(savedHash);
 
     const collection = new FakeActorCollection();
     const result = await createAcceptedForgeActor({ game: supportedGame(collection), response });
     const imported = collection.contents[0]!.toObject() as Record<string, any>;
-    const spellcastingImported = (imported.items as Array<Record<string, any>>).find((item) => item.name === '施法');
+    const spellcastingImported = (imported.items as Array<Record<string, any>>).find((item) => item.name === '施法 Spellcasting');
     const importedActivity = Object.values(spellcastingImported?.system?.activities ?? {})[0] as Record<string, any> | undefined;
     expect(result.status).toBe('created');
     expect(importedActivity?.spell?.uuid).toBe(foundryUuid);
@@ -566,7 +859,7 @@ describe('Foundry Forge Actor creation boundary', () => {
     await expect(createAcceptedForgeActor({
       game: { ...supportedGame(wrongVersionCollection), version: '15.0.0' },
       response: acceptedResponse,
-    })).rejects.toThrow(/14\.364/u);
+    })).rejects.toThrow(/Core 14/u);
     expect(wrongVersionCollection.createCount).toBe(0);
   });
 
@@ -598,8 +891,8 @@ describe('Foundry Forge Actor creation boundary', () => {
       content: casterSource,
       displayName: 'Nightgaunt Unresolved Spell',
       requestId: 'runtime-unresolved-legacy-spell',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }));
     if (!('result' in response)) throw new Error(`Expected an unresolved spell result: ${JSON.stringify(response)}`);
     expect(response.result.status).toBe('needs_review');
@@ -741,7 +1034,7 @@ class FakeActorCollection implements ForgeActorCollectionLike {
 }
 
 function supportedGame(actors: FakeActorCollection): ForgeGameLike {
-  return { version: '14.364', system: { id: 'dnd5e', version: '5.3.3' }, user: { isGM: true }, actors };
+  return { version: '14.370', system: { id: 'dnd5e', version: '6.0.6' }, user: { isGM: true }, actors };
 }
 
 function reviewedCandidateResponse(status: 'needs_review' | 'failed'): ForgeActorResponse {
@@ -776,7 +1069,7 @@ function withCanonicalEffectChanges(response: ForgeActorResponse, itemName: stri
   const artifact = structuredClone(response.result.artifact) as Record<string, any>;
   const item = (artifact.items as Array<Record<string, any>>).find((entry) => entry.name === itemName);
   const effect = item?.effects?.[0] as Record<string, any>;
-  const changes = structuredClone(effect.changes).map(simulateFoundryV14LegacyEffectChangeMode);
+  const changes = structuredClone(effect.system?.changes??effect.changes).map(simulateFoundryV14LegacyEffectChangeMode);
   delete effect.changes;
   effect.system = { ...asRecord(effect.system), changes };
   return {

@@ -72,8 +72,8 @@ describe('conversion application facade', () => {
     expect(facade.kind).toBe('actor');
     expect(facade.status).toBe('accepted');
     expect(facade.fvttVersion).toBe('14');
-    expect(facade.verification.target.stats.coreVersion).toBe('14.364');
-    expect(facade.verification.target.stats.systemVersion).toBe('5.3.3');
+    expect(facade.verification.target.stats.coreVersion).toBe('14.370');
+    expect(facade.verification.target.stats.systemVersion).toBe('6.0.6');
     expect(facade.actorVerification?.warnings).toEqual([]);
     expect(facade.itemCount).toBe(6);
   });

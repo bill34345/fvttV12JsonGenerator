@@ -1,3 +1,4 @@
+import { DND5E_V14_SYSTEM_VERSION } from '@fvtt-json-generator/contracts/target';
 import { sha256 } from '@fvtt-json-generator/contracts';
 import type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';
 import type { ItemCoreSpellResolver } from './item-core';
@@ -173,11 +174,11 @@ function validateAbility(
     }
     const resolvedSpell = resolver.resolveSpell(ability.spell.identifier, ability.spell.name);
     if (!resolvedSpell) {
-      add('UNRESOLVED_SPELL', `${path}/spell`, `No unique locked dnd5e 5.3.3 spell resolves "${ability.spell.identifier}".`, 'semantic', evidence);
+      add('UNRESOLVED_SPELL', `${path}/spell`, `No unique locked dnd5e ${DND5E_V14_SYSTEM_VERSION} spell resolves "${ability.spell.identifier}".`, 'semantic', evidence);
     } else {
       const canonicalActivation = resolver.resolveActivation(ability.spell.identifier, ability.spell.name);
       if (canonicalActivation && ability.activation !== canonicalActivation) {
-        add('SPELL_ACTIVATION_MISMATCH', `${path}/activation`, `Spell activation ${ability.activation} does not match the locked dnd5e 5.3.3 spell activation ${canonicalActivation}.`, 'semantic', evidence);
+        add('SPELL_ACTIVATION_MISMATCH', `${path}/activation`, `Spell activation ${ability.activation} does not match the locked dnd5e ${DND5E_V14_SYSTEM_VERSION} spell activation ${canonicalActivation}.`, 'semantic', evidence);
       }
     }
     return;

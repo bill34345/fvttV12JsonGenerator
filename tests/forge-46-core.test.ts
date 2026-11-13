@@ -17,7 +17,7 @@ import {buildValidLurkerIr,LURKER_SOURCE} from '../src/core/intake/__tests__/fix
 
 const noCall=async():Promise<never>=>{throw Error('Model requests are forbidden');};
 const provider={providerName:'frozen-46',extractionModel:'frozen',reviewModel:'disabled',discover:noCall,extract:noCall,repair:noCall,review:noCall};
-const input={source:LURKER_SOURCE,sourceName:'46项回归',sourceScope:'single' as const,requestId:'forge-46-core',sourceId:'actor:v1:7d1ada39-7b83-40dc-a109-636f8b1c467b' as ForgeSourceId,fvttVersion:'14.368',systemVersion:'5.3.3'};
+const input={source:LURKER_SOURCE,sourceName:'46项回归',sourceScope:'single' as const,requestId:'forge-46-core',sourceId:'actor:v1:7d1ada39-7b83-40dc-a109-636f8b1c467b' as ForgeSourceId,fvttVersion:'14.368',systemVersion:'6.0.6'};
 async function generate(ir:any,current=input){
   const analysis=analyzeBrowserActorIntakeDraft(current,ir,provider);
   const generation=await generateBrowserActorIntakeCandidate(current,analysis,provider);

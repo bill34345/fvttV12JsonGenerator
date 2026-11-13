@@ -140,7 +140,7 @@ export function buildReferenceIndexes(
   ].filter((entry) => existsSync(entry.path));
   const dndVersions = [
     { name: 'dnd5e-4.3.9', path: join(referencesDir, 'dnd5e-4.3.9', 'repo') },
-    { name: 'dnd5e-5.3.3', path: join(localReferencesDir, 'dnd5e', '5.3.3', 'repo') },
+    { name: 'dnd5e-6.0.6', path: join(localReferencesDir, 'dnd5e', '6.0.6', 'repo') },
   ].filter((entry) => existsSync(entry.path));
 
   let foundryApiDocs = 0;

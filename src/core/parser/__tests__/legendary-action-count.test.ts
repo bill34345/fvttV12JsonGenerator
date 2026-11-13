@@ -75,7 +75,8 @@ The dragon can take 3 legendary actions, choosing from the options below.
         items: []
       };
       const actor = generator.generate(parsed);
-      expect(actor.system.resources.legact.value).toBe(3);
+      expect(actor.system.resources.legact).toMatchObject({ max: 3, spent: 0 });
+      expect(actor.system.resources.legact.value).toBeUndefined();
       expect(actor.system.resources.legact.max).toBe(3);
     });
   });

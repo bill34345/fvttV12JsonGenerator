@@ -10,7 +10,7 @@ import type {SourceOperation} from '@fvtt-json-generator/models/source-operation
 
 const stop=async():Promise<never>=>{throw Error('No model service request is permitted');};
 const provider={providerName:'condition-dc-contract',extractionModel:'frozen',reviewModel:'disabled',discover:stop,extract:stop,review:stop,repair:stop};
-const input=(source:string)=>({source,sourceName:'condition DC roles',sourceScope:'single' as const,sourceId:'actor:v1:71ebf592-2eb2-4af3-ad27-f55d86892814' as ForgeSourceId,requestId:'condition-dc-roles',fvttVersion:'14.368',systemVersion:'5.3.3'});
+const input=(source:string)=>({source,sourceName:'condition DC roles',sourceScope:'single' as const,sourceId:'actor:v1:71ebf592-2eb2-4af3-ad27-f55d86892814' as ForgeSourceId,requestId:'condition-dc-roles',fvttVersion:'14.368',systemVersion:'6.0.6'});
 async function project(source:string,op:SourceOperation){
   const ir=buildValidLurkerIr();ir.claims=[];ir.coverage=[];
   ir.creature.traits=[{name:'Condition DC Roles',description:op.sourceText,activationType:'special',sourceOperations:[op]}];

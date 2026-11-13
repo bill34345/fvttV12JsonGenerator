@@ -142,16 +142,29 @@ describe('native status display identity', () => {
     const v14 = await new ItemGenerator({ fvttVersion: '14' }).generate(parsed);
     expect(v12.effects).toHaveLength(1);
     expect(v14.effects).toHaveLength(1);
-    expect(v12.effects![0].name).toBe('被擒抱 Grappled');
-    expect(v14.effects![0].name).toBe('受擒 Grappled');
     expect(v14.effects![0].statuses).toEqual(['grappled']);
-    const v14Shape = structuredClone(v14.effects![0]);
-    v14Shape.name = v12.effects![0].name;
-    v14Shape.origin = v12.effects![0].origin;
-    v14Shape._stats = v12.effects![0]._stats;
-    expect(v14Shape).toEqual(v12.effects![0]);
-    expect(Object.values(v14.system.activities).flatMap((activity: any) => activity.effects.map((effect: any) => effect._id)))
-      .toEqual([v14.effects![0]._id]);
+    const { name: nativeName, origin: nativeOrigin, _stats: nativeStats, duration: nativeDuration,
+      system: nativeSystem, start: nativeStart, ...nativeMechanics } = v14.effects![0];
+    const { name: legacyName, origin: legacyOrigin, _stats: legacyStats, duration: legacyDuration,
+      system: legacySystem, changes: legacyChanges, ...legacyMechanics } = v12.effects![0];
+    expect(nativeName).toBe('受擒 Grappled');
+    expect(legacyName).toBe('被擒抱 Grappled');
+    expect(nativeMechanics).toEqual(legacyMechanics);
+    expect(nativeStats).toMatchObject({ coreVersion: '14.370', systemVersion: '6.0.6' });
+    expect(legacyStats).toMatchObject({ coreVersion: '12.331', systemVersion: '4.3.9' });
+    expect(nativeOrigin).toBe(`Item.${v14._id}`);
+    expect(legacyOrigin).toBe(`Item.${v12._id}`);
+    expect(nativeDuration).toEqual({ value: null, units: 'seconds', expiry: null, expired: false });
+    expect(nativeStart).toBeNull();
+    expect(nativeSystem).toEqual({ changes: [] });
+    expect(Object.hasOwn(v14.effects![0], 'changes')).toBe(false);
+    expect(legacyDuration).toEqual({ startTime: null, seconds: null, combat: null, rounds: null, turns: null, startRound: null, startTurn: null });
+    expect(legacySystem).toEqual({});
+    expect(legacyChanges).toEqual([]);
+    for (const item of [v12, v14]) {
+      expect(Object.values(item.system.activities).flatMap((activity: any) => activity.effects.map((effect: any) => effect._id)))
+        .toEqual([item.effects![0]._id]);
+    }
   });
   test('projects every registered native status from its ID without a model text slot', () => {
     const effects = Object.entries(NATIVE_LIFECYCLE_STATUS_DEFINITIONS).map(([status]) => ({

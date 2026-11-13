@@ -30,7 +30,7 @@ async function generate(source: string, reply: string, sourceId: ForgeSourceId =
   const allowed = {providerName: replay.provider.providerName, extractionModel: 'frozen-replay', reviewModel: 'disabled',
     discover: forbidden, extract: replay.provider.extract.bind(replay.provider), extractAnswer: replay.provider.extractAnswer.bind(replay.provider), review: forbidden, repair: forbidden};
   const input = {source, sourceName: 'CHM spell projection fixture', sourceScope: 'single' as const,
-    sourceId, requestId: 'chm-spell-projection', fvttVersion: '14.368', systemVersion: '5.3.3', autoCorrect: false};
+    sourceId, requestId: 'chm-spell-projection', fvttVersion: '14.368', systemVersion: '6.0.6', autoCorrect: false};
   const analysis = await analyzeBrowserActorSourceWithAi(input, allowed);
   const generation = await generateBrowserActorIntakeCandidate(input, analysis, {...allowed, extract: forbidden, extractAnswer: forbidden});
   expect(replay.replayRequests()).toBe(1);

@@ -75,7 +75,7 @@ describe('Forge browser AI Item Intake review stages', () => {
         expect(prompt).toContain('Do not add uuid or any other keys');
         expect(prompt).toContain('Required mechanical claim paths use stable ability ids, not array indexes');
       }
-      expect(prompts[0]).toContain('Invisibility from the locked dnd5e 5.3.3 catalog has activation "action"');
+      expect(prompts[0]).toContain('Invisibility from the locked dnd5e 6.0.6 catalog has activation "action"');
       expect(prompts[1]).toContain('Return a complete corrected ItemIntakeIR schemaVersion 1, not a patch');
     } finally {
       globalThis.fetch = originalFetch;
@@ -331,6 +331,7 @@ describe('Forge browser AI Item Intake review stages', () => {
     const item = result.response.result.artifact as any;
     const ac = item.effects.find((effect: any) => effect.transfer === true);
     expect(ac?.system?.changes).toEqual([{
+      _id: expect.stringMatching(/^[A-Za-z0-9]{16}$/u),
       key: 'system.attributes.ac.bonus', type: 'add', value: 1, phase: 'initial', priority: null,
     }]);
     expect(item.system.uses).toMatchObject({ max: '3', recovery: [{ period: 'dawn', type: 'recoverAll' }] });
@@ -488,8 +489,8 @@ function itemInput(requestId: string): BrowserItemIntakeInput {
     sourceName: 'jewel-dormant.raw.txt',
     displayName: '三祷之坠（休眠态）',
     requestId,
-    fvttVersion: '14.364',
-    systemVersion: '5.3.3',
+    fvttVersion: '14.370',
+    systemVersion: '6.0.6',
   };
 }
 
@@ -515,8 +516,8 @@ function multiStageInput(): BrowserItemIntakeInput {
     source: MULTI_STAGE_JEWEL,
     sourceName: 'jewel-all-stages.md',
     requestId: 'item-multi-stage',
-    fvttVersion: '14.364',
-    systemVersion: '5.3.3',
+    fvttVersion: '14.370',
+    systemVersion: '6.0.6',
   };
 }
 

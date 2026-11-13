@@ -27,12 +27,12 @@ test('new PDF full formal chain keeps attack, both area Saves, conditional daily
   const actor=result.prepared!.actors[0]!.artifact as any,items=actor.items;
   const item=(word:string)=>items.find((i:any)=>i.name.includes(word)),activity=(word:string)=>(Object.values(item(word).system.activities) as any[])[0]!;
   expect(actor.system.traits.size).toBe('huge');expect(actor.system.traits.dr.value).toEqual(['fire']);expect(JSON.stringify(items)).toContain('Damage from Attacks');expect(actor.system.details.biography.value).toContain('Swarm of');
-  expect(activity('Spindly').type).toBe('attack');expect(activity('Spindly').range).toMatchObject({reach:0,units:'ft',override:false});expect(item('Spindly').system.description.value).toContain('Bloodied');
-  expect(activity('Weaverot')).toMatchObject({type:'save',save:{ability:['dex'],dc:{formula:'18'}},damage:{onSave:'none'},range:{value:60},target:{template:{type:'sphere',size:15}}});
+  expect(activity('Spindly').type).toBe('attack');expect(activity('Spindly').range).toMatchObject({value:'0',units:'ft',override:true});expect(item('Spindly').system.description.value).toContain('Bloodied');
+  expect(activity('Weaverot')).toMatchObject({type:'save',save:{ability:['dex'],dc:{formula:'18'}},damage:{onSave:'none'},range:{value:'60'},target:{template:{type:'sphere',size:15}}});
   expect(activity('Weaverot').damage.parts).toHaveLength(2);expect(item('Weaverot').system.description.value).toContain('SUCCESS OR FAILURE');
   expect(activity('Toxic')).toMatchObject({type:'save',activation:{type:'bonus'},save:{ability:['con'],dc:{formula:'17'}},damage:{onSave:'half'},target:{template:{type:'radius',size:10}}});
   expect(item('Toxic').system.description.value).toContain('until the end');expect(item('Toxic').effects).toHaveLength(1);expect(item('Toxic').effects[0].flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');expect(item('Toxic').effects[0].flags.fvttJsonGenerator.conditionLifecycle.sourceText).toContain('Toxic Emission');
-  expect(activity('Strike-Gate')).toMatchObject({type:'save',activation:{type:'bonus'},save:{ability:['cha'],dc:{formula:'16'}}});expect(item('Strike-Gate').system.uses.max).toBe('1');expect(activity('Strike-Gate').range?.value).not.toBe(120);
+  expect(activity('Strike-Gate')).toMatchObject({type:'save',activation:{type:'bonus'},save:{ability:['cha'],dc:{formula:'16'}}});expect(item('Strike-Gate').system.uses.max).toBe('1');expect(activity('Strike-Gate').range?.value).not.toBe('120');
   expect(actor.flags?.['fvtt-json-generator-spell-resolver']?.spellManifest).toBeUndefined();
   expect(auditMonsterIntakeSourceProjection(source,ir,result.prepared!.bundle.actors[0]!.source,actor).findings).toEqual([]);
   const empty=structuredClone(actor),effect=empty.items.find((entry:any)=>entry.name.includes('Toxic')).effects[0];
@@ -96,7 +96,7 @@ test('actual staged source creates six real portable spell refs instead of fake 
 test('new bilingual Actor name has no generated parentheses',async()=>{const {actor}=await replay();expect(actor.name).toBe('死亡天使 Angel of Death');});
 test('actual source survives locked native StringField trimming at import readback',async()=>{
   const {actor}=await replay(),native=structuredClone(actor);
-  // Core14.368 StringField defaults trim:true; dnd5e5.3.3 base-activity
+  // Core14.368 StringField defaults trim:true; dnd5e6.0.6 base-activity
   // description.chatFlavor uses this field. Actual import failed on this path.
   for(const item of native.items)for(const activity of Object.values(item.system.activities) as any[])if(typeof activity.description?.chatFlavor==='string')activity.description.chatFlavor=activity.description.chatFlavor.trim();
   expect(()=>assertActorSemantics(actor,native)).not.toThrow();
@@ -113,12 +113,12 @@ function lifecycleWorld(options:{drift?:boolean;failMacro?:boolean;failRelease?:
     docs.set(d.id,d);if(kind==='Actor'){
       events.push('create:'+d.flags?.['fvtt-json-forge']?.[FORGE_SPELL_IMPORT_PHASE]);
       expect(coordinator.onActorEvent(d,{userId:'gm'})).toBe('ignored');
-      if(options.drift)d.data.system.attributes.movement.walk='999';
+      if(options.drift)d.data.system.attributes.movement.speeds.walk='999';
       // Exact external StringField behavior observed on this actual source.
       for(const item of d.data.items)for(const a of Object.values(item.system.activities) as any[])if(typeof a.description?.chatFlavor==='string')a.description.chatFlavor=a.description.chatFlavor.trim();
     }return d;
   }}};}
-  const game:any={version:'14.368',system:{id:'dnd5e',version:'5.3.3'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro')};
+  const game:any={version:'14.368',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro')};
   return{game,events,scheduled,resolved,assets:{ensure:async()=>{throw Error('No assets expected');}}};
 }
 test('actual caster import verifies first and releases Resolver on the persisted metadata update',async()=>{
@@ -130,7 +130,7 @@ test('actual caster import verifies first and releases Resolver on the persisted
 test('readback drift retains the imported Actor with a concrete warning and Resolver lifecycle',async()=>{
   const {result}=await replay(),env=lifecycleWorld({drift:true});
   const imported=await importForgeEncounter({...env,prepared:result.prepared!,reviewed:true});
-  expect(imported.documents).toHaveLength(1);expect(imported.documents[0]!.readbackWarnings?.join(' ')).toContain('movement.walk');
+  expect(imported.documents).toHaveLength(1);expect(imported.documents[0]!.readbackWarnings?.join(' ')).toContain('movement.speeds.walk');
   expect(env.game.actors.contents).toHaveLength(1);expect(env.events).toEqual(['create:pending','release:verified']);expect(env.scheduled).toHaveLength(1);
 });
 test('late package failure leaves no resolver operation; a release failure retains the committed Actor',async()=>{

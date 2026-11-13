@@ -5,6 +5,7 @@ import {
 } from '@fvtt-json-generator/forge-browser-runtime';
 import { renderActorStatblock, renderBlueprintDraftStatblock } from '../src/actorStatblock';
 import { createBlueprintComponent, createEmptyBlueprintDraft } from '../src/creatureBlueprintEditor';
+import {NATIVE_RECEIVER_CAPTURE} from '../../../tests/helpers/forge-native-receiver';
 
 const BASIC_ACTOR_SOURCE = `---
 名称: 试验兽 (Test Beast)
@@ -31,12 +32,27 @@ const BASIC_ACTOR_SOURCE = `---
 `;
 
 describe('Forge Actor statblock renderer', () => {
+  test.each(NATIVE_RECEIVER_CAPTURE.cases.filter(entry=>entry.kind==='Actor'))('renders the actual captured nullable native AC source for $key',captured=>{
+    const before=structuredClone(captured.output),html=renderActorStatblock(captured.output);
+    expect(html).toContain(`AC 护甲等级</dt><dd>${captured.key==='sentinel'?17:5}`);
+    expect(html).toContain('HP 生命值</dt><dd>100');expect(html).not.toContain('AC 护甲等级</dt><dd>0');
+    expect(captured.output).toEqual(before);
+  });
+
+  test('native606: renders native AC override, formulas and nested literal or dynamic speeds',()=>{
+    const artifact={name:'Native display fixture',type:'npc',system:{attributes:{ac:{override:17},movement:{speeds:{walk:'30',fly:'@abilities.dex.value'},units:'ft'}}}};
+    const html=renderActorStatblock(artifact);
+    expect(html).toContain('AC 护甲等级</dt><dd>17');
+    expect(html).toContain('步行 30 ft');expect(html).toContain('飞行 @abilities.dex.value ft');
+    const formula=renderActorStatblock({...artifact,system:{...artifact.system,attributes:{...artifact.system.attributes,ac:{formulas:[{formula:'10 + @abilities.dex.mod'}]}}}});
+    expect(formula).toContain('10 + @abilities.dex.mod');
+  });
   test('renders the actual generated native artifact with stats, attack, save, and base damage', async () => {
     const artifact = await generateBasicActor();
     const html = renderActorStatblock(artifact);
 
     expect(html).toContain('class="forge-statblock"');
-    expect(html).toContain('试验兽 (Test Beast)'); // Authored title, not an appended alias.
+    expect(html).toContain('试验兽 (Test Beast)'); // Preserve the authored Actor title.
     expect(html).toContain('中型 · beast');
     expect(html).toContain('HP 生命值</dt><dd>22（4d8+4）');
     expect(html).toContain('AC 护甲等级');
@@ -206,8 +222,8 @@ async function generateBasicActor(): Promise<Record<string, unknown>> {
     content: BASIC_ACTOR_SOURCE,
     displayName: 'Test Beast',
     requestId: `actor-statblock-${Date.now()}`,
-    fvttVersion: '14.364',
-    systemVersion: '5.3.3',
+    fvttVersion: '14.370',
+    systemVersion: '6.0.6',
   }));
   if (!('result' in response) || response.result.status !== 'accepted') {
     throw new Error(`Expected an accepted generated Actor: ${JSON.stringify(response)}`);

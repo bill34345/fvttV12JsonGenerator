@@ -1,3 +1,4 @@
+import { FORGE_NATIVE_606_TARGET, isForgeRuntimeTargetSupported } from './nativeTarget';
 import type {RulePresentationPlan} from '@fvtt-json-generator/generation/rule-presentation';
 import { sha256 } from '@fvtt-json-generator/contracts/hash';
 import { decodeEncounterLocalization, type EncounterLocalization } from '@fvtt-json-generator/contracts/localization';
@@ -10,9 +11,9 @@ export const FORGE_ENCOUNTER_PACKAGE_MAX_ASSET_BYTES = 4 * 1024 * 1024;
 export const FORGE_ENCOUNTER_PACKAGE_MAX_ZIP_BYTES = FORGE_ENCOUNTER_PACKAGE_MAX_BYTES + 1024;
 
 const TARGET = Object.freeze({
-  foundry: '14.364',
+  foundry: FORGE_NATIVE_606_TARGET.stats.coreVersion,
   system: 'dnd5e',
-  systemVersion: '5.3.3',
+  systemVersion: FORGE_NATIVE_606_TARGET.dnd5eVersion,
   effectProfile: 'core',
 } as const);
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
@@ -45,9 +46,9 @@ const ZIP_PATH = 'encounter.json';
 export function encounterPackageFindings(bundle:Readonly<ForgeEncounterPackage>):readonly string[]{return bundle.reviewFindings??[];}
 
 export interface ForgeEncounterPackageTarget {
-  readonly foundry: '14.364';
+  readonly foundry: string;
   readonly system: 'dnd5e';
-  readonly systemVersion: '5.3.3';
+  readonly systemVersion: string;
   readonly effectProfile: 'core';
 }
 
@@ -236,11 +237,13 @@ function normalizeEncounterPackage(value: unknown): Readonly<ForgeEncounterPacka
 
 function decodeTarget(value: unknown, path: string): ForgeEncounterPackageTarget {
   const record = exactRecord(value, path, TARGET_KEYS);
-  literal(record.foundry, TARGET.foundry, `${path}.foundry`);
+  const legacySource = (record.foundry === '14.364' || record.foundry === '14.368') && record.systemVersion === '5.3.3';
+  if (typeof record.foundry !== 'string' || typeof record.systemVersion !== 'string'
+    || (!legacySource && !isForgeRuntimeTargetSupported(record.foundry, record.systemVersion))) throw new TypeError(`${path} has an unsupported source target.`);
   literal(record.system, TARGET.system, `${path}.system`);
-  literal(record.systemVersion, TARGET.systemVersion, `${path}.systemVersion`);
+
   literal(record.effectProfile, TARGET.effectProfile, `${path}.effectProfile`);
-  return { ...TARGET };
+  return { ...TARGET, foundry:record.foundry, systemVersion:record.systemVersion };
 }
 
 function validActorKey(value:unknown):value is string{return typeof value==='string'&&value.length<=MAX_SLUG_LENGTH&&SLUG_PATTERN.test(value);}

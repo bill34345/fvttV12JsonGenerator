@@ -39,7 +39,7 @@ describe('AI owns default creature content across program boundaries',()=>{
   original.uncertainties=[{id:'ai-casting',code:'AI_UNCERTAIN_USES',path:'/creature/spellcasting/0',message:'The AI requests GM handling',blocking:true,evidence:[]}];
   const before=structuredClone(original),normalized=normalizeMonsterIntakeProposal(RAT_WARLOCK_SOURCE,original,candidate),expected=structuredClone(original);
   expected.creature.spellcasting![0]!.usageGroups=[];expect(normalized).toEqual(expected);expect(original).toEqual(before);
-  const input={source:RAT_WARLOCK_SOURCE,sourceName:'manual-casting',requestId:'manual-casting',fvttVersion:'14.364',systemVersion:'5.3.3'};
+  const input={source:RAT_WARLOCK_SOURCE,sourceName:'manual-casting',requestId:'manual-casting',fvttVersion:'14.370',systemVersion:'6.0.6'};
   const analysis=analyzeBrowserActorIntakeDraft(input,original,provider());
   expect(analysis.findings.map(f=>f.code)).toEqual(['AI_UNCERTAIN_USES']);
   const generated=await generateBrowserActorIntakeCandidate(input,analysis,provider());
@@ -60,12 +60,12 @@ describe('AI owns default creature content across program boundaries',()=>{
  });
  test('saved proposal uses the same data boundary and keeps AI uncertainty and fixed AC',async()=>{
   const ir=buildRatWarlockIr();ir.uncertainties=[{id:'ai-note',code:'AI_NOTE',path:'/creature',message:'AI requests GM review',blocking:false,evidence:[]}];
-  const input={source:RAT_WARLOCK_SOURCE,displayName:'Owner',sourceName:'fixture',requestId:'ai-owned-save',fvttVersion:'14.364',systemVersion:'5.3.3'};
+  const input={source:RAT_WARLOCK_SOURCE,displayName:'Owner',sourceName:'fixture',requestId:'ai-owned-save',fvttVersion:'14.370',systemVersion:'6.0.6'};
   const analysis=analyzeBrowserActorIntakeDraft(input,ir,provider());
   expect(analysis.ir?.creature).toEqual(ir.creature);expect(analysis.ir?.uncertainties).toEqual(ir.uncertainties);
   const generated=await generateBrowserActorIntakeCandidate(input,analysis,provider());
   expect(generated.candidateAvailable).toBe(true);
-  expect((generated.actorProjection as any).system.attributes.ac.flat).toBe(ir.creature.attributes.ac);
+  expect((generated.actorProjection as any).system.attributes.ac.override).toBe(ir.creature.attributes.ac);
   expect(generated.findings.filter(finding=>finding.blocking)).toEqual([]);
  });
  test('owner and associated summon use identical extraction, structure and conversion gates',async()=>{

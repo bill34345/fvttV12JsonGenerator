@@ -6,8 +6,7 @@ import { createIconReviewReport, V14IconResolver } from './resolver';
 import type { IconReviewEntry, V14IconCatalog, V14IconOverrideFile } from './types';
 
 // Static build inputs: no filesystem, HTTP, Compendium loading or AI calls at runtime.
-// Provenance remains the captured 14.364 / dnd5e 5.3.3 catalog, including on the
-// separately supported 14.368 Mirror patch. Do not relabel it as a new capture.
+// Target identity and capture hashes come from the generated catalog.
 const catalog = catalogData as V14IconCatalog;
 const overrides = overrideData as V14IconOverrideFile;
 

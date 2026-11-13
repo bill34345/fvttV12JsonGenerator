@@ -4,6 +4,8 @@ import { assertPreparedForgeEncounter, type PreparedForgeEncounter } from '@fvtt
 import { actorReadbackWarnings, assertExactRuntime, assertGm, MODULE_ID, prepareFoundryImportArtifact, markForgeSpellImportPending, completeForgeSpellImport,type ForgeGameLike } from './runtime';
 import {fixedEncounterCommand,decodeEncounterRuntimeConfiguration,readFixedEncounterConfiguration} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
 import {isForgeSpellImportPending} from '@fvtt-json-generator/contracts/forge-import-lifecycle';
+import {isForgeAutomationTargetCompatible} from './mirror-core-compatibility';
+import { isNativeForgeRuntimeTargetSupported } from '@fvtt-json-generator/forge-browser-runtime';
 
 export interface EncounterDocument {
   id: string; uuid: string; name: string;
@@ -99,13 +101,15 @@ export async function importForgeEncounter(input: {
 interface DocumentPlan { key:string;kind:'Actor'|'Macro';data:any;warnings?:string[] }
 function createDocumentPlans(prepared:PreparedForgeEncounter,game:EncounterGame,failures:EncounterImportResult['failures'],uploadedAssets:ReadonlySet<string>):DocumentPlan[]{
   const { bundle, hash } = prepared;
-  const identity = (kind: string, key: string) => ({ version: 1, packageId: bundle.id, packageHash: hash, key, kind });
+  const runtimeTarget=prepared.runtimeTarget??bundle.target;
+  const target = isNativeForgeRuntimeTargetSupported(runtimeTarget.foundry,runtimeTarget.systemVersion)?{target:runtimeTarget}:{};
+  const identity = (kind: string, key: string) => ({ ...target, version: 1, packageId: bundle.id, packageHash: hash, key, kind });
   const plans:DocumentPlan[]=[];
   for(const actor of prepared.actors){
     try{
     const warnings:string[]=[];
     const data:any=prepareFoundryImportArtifact(actor.artifact,game,warnings);
-    // Exact dnd5e 5.3.3 NPC create normalization, observed in the local Lab.
+    // Exact dnd5e 6.0.6 NPC create normalization, observed in the local Lab.
     // Only absent artwork receives the native default; explicit source art remains strict.
     if(data.type==='npc'){
       if(!data.img)data.img='systems/dnd5e/icons/svg/actors/npc.svg';
@@ -131,7 +135,7 @@ function createDocumentPlans(prepared:PreparedForgeEncounter,game:EncounterGame,
     readFixedEncounterConfiguration(macro.command);
     const bindings = Object.fromEntries(Object.entries(macro.bindings).map(([name, actorKey]) => [name,
       `Actor.${encounterDocumentId(bundle.id, 'Actor', actorKey)}`]));
-    const context = { packageId: bundle.id, packageHash: hash, actors: bindings, bindingKeys: macro.bindings, covers: macro.covers };
+    const context = { ...target, packageId: bundle.id, packageHash: hash, actors: bindings, bindingKeys: macro.bindings, covers: macro.covers };
     const command = `${contextPrefix(context)}${macro.command}`.trim();
     plans.push({ key: macro.key, kind: 'Macro', data: {
       _id: encounterDocumentId(bundle.id, 'Macro', macro.key), name: macro.name, type: 'script', scope: 'global',
@@ -175,10 +179,10 @@ function verifyDocument(document: EncounterDocument, plan: DocumentPlan,allowPen
 }
 function assertExpectedFields(actual:any,expected:any,path:string):void {
   if (expected === undefined) return;
-  // dnd5e 5.3.3 stores these FormulaFields as strings, including numeric source literals.
-  if (/^system\.attributes\.(movement\.(walk|burrow|climb|fly|swim|bonus)|init\.bonus)$/.test(path)
+  // dnd5e 6.0.6 stores these FormulaFields as strings, including numeric source literals.
+  if (/^system\.attributes\.(movement\.(?:speeds\.)?(walk|burrow|climb|fly|swim|bonus)|init\.(?:roll\.)?bonus)$/.test(path)
     && typeof expected === 'number' && actual === String(expected)) return;
-  if (/^system\.attributes\.movement\.(walk|burrow|climb|fly|swim|bonus)$/.test(path)
+  if (/^system\.attributes\.movement\.(?:speeds\.)?(walk|burrow|climb|fly|swim|bonus)$/.test(path)
     && expected === null && actual === undefined) return;
   if (Array.isArray(expected)) {
     if (!Array.isArray(actual) || actual.length !== expected.length) throw new Error(`角色回读不一致：${path}`);
@@ -200,9 +204,10 @@ export function listForgeEncounterMacros(game: EncounterGame): Array<{id:string;
 export function validateForgeEncounterMacro(game: EncounterGame, id: string): EncounterDocument {
   assertEncounterEnvironment(game);
   const macro = game.macros.get(id); const data = macro?.toObject(); const identity = data?.flags?.[MODULE_ID]?.encounter;
+  if(!isForgeAutomationTargetCompatible(game,identity?.target)) throw new Error('旧版或缺少目标的控制宏不会在新系统运行；原记录保留。');
   if (!macro?.execute || identity?.version !== 1 || identity.kind !== 'Macro' || data.type !== 'script') throw new Error('未找到已导入的战斗控制宏。');
   if (hashEncounterBytes(new TextEncoder().encode(data.command)) !== identity.commandHash) throw new Error('宏代码在导入后已改变，请重新审阅；没有执行。');
-  const prefix=contextPrefix({packageId:identity.packageId,packageHash:identity.packageHash,actors:identity.bindings,bindingKeys:identity.bindingKeys,covers:identity.covers});
+  const prefix=contextPrefix({...(identity.target?{target:identity.target}:{}),packageId:identity.packageId,packageHash:identity.packageHash,actors:identity.bindings,bindingKeys:identity.bindingKeys,covers:identity.covers});
   if (!identity.bindingKeys || !Array.isArray(identity.covers)
     || !data.command.startsWith(prefix)) throw new Error('宏绑定或机制声明在导入后已改变。');
   readFixedEncounterConfiguration(data.command.slice(prefix.length));
@@ -227,7 +232,7 @@ export function validateFixedEncounterEntry(game:EncounterGame,context:any,confi
   if(!context||typeof context.packageId!=='string')throw new Error('缺少战斗配置身份。');
   const macro=validateForgeEncounterMacro(game,encounterDocumentId(context.packageId,'Macro','battle-control'));
   const identity=macro.toObject().flags[MODULE_ID].encounter;
-  const expectedContext={packageId:identity.packageId,packageHash:identity.packageHash,actors:identity.bindings,bindingKeys:identity.bindingKeys,covers:identity.covers};
+  const expectedContext={...(identity.target?{target:identity.target}:{}),packageId:identity.packageId,packageHash:identity.packageHash,actors:identity.bindings,bindingKeys:identity.bindingKeys,covers:identity.covers};
   if(stableContext(context)!==stableContext(expectedContext)||macro.toObject().command!==`${contextPrefix(expectedContext)}${fixedEncounterCommand(config)}`.trim())throw new Error('固定自动化配置与已审核导入内容不一致。');
   for(const rule of config.rules){if(!context.actors[rule.actorKey]||(rule.parameters.summonedActorKey&&!context.actors[String(rule.parameters.summonedActorKey)]))throw new Error('自动化引用了未绑定角色。');}
   for(const recovery of config.legendaryRecovery)if(!context.actors[recovery.actorKey])throw new Error('资源恢复引用了未绑定角色。');

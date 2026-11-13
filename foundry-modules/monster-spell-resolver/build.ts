@@ -129,9 +129,9 @@ async function validateBuiltManifest(outputDir: string): Promise<void> {
   };
   if (manifest.id !== MODULE_ID) throw new Error(`Built module ID must be ${MODULE_ID}.`);
   const systemCompatibility = manifest.relationships?.systems?.find((system) => system.id === 'dnd5e')?.compatibility;
-  if (manifest.compatibility?.minimum !== '14.364' || manifest.compatibility?.verified !== '14.364' || manifest.compatibility?.maximum !== '14.368'
-    || systemCompatibility?.minimum !== '5.3.3' || systemCompatibility?.verified !== '5.3.3' || systemCompatibility?.maximum !== '6.0.6') {
-    throw new Error('Built manifest must retain verified 14.364/5.3.3 and admit only through the 14.368/6.0.6 candidate range.');
+  if (manifest.compatibility?.minimum !== '14.364' || manifest.compatibility?.verified !== '14.364' || manifest.compatibility?.maximum !== '14.999'
+    || systemCompatibility?.minimum !== '5.3.3' || systemCompatibility?.verified !== '5.3.3' || systemCompatibility?.maximum !== '6.999.999') {
+    throw new Error('Built manifest must retain verified 14.364/5.3.3 and admit Core 14 and dnd5e 6 while retaining the verified versions.');
   }
   const referenced = [
     ...(manifest.esmodules ?? []),

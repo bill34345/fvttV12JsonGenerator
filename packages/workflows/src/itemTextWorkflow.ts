@@ -73,7 +73,7 @@ export class ItemTextWorkflow {
         }
       : await this.dependencies.syncWorkflow.sync({
           vaultPath: options.vaultPath,
-          fvttVersion: options.fvttVersion ?? "12",
+          fvttVersion: options.fvttVersion ?? "14",
           effectProfile: options.effectProfile ?? "core",
           iconOptions: options.iconOptions,
           includeInputPaths: promotedInputPaths,

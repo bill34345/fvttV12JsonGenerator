@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import {
   formatGitCommandFailure,
@@ -102,12 +102,14 @@ export async function bootstrapReferenceCache(
   const installed: string[] = [];
   for (const [index, component] of manifest.components.entries()) {
     const target = targets[index]!;
-    const staging = `${target}.staging-${process.pid}-${Date.now()}`;
-    const backup = `${target}.backup-${process.pid}-${Date.now()}`;
-    mkdirSync(dirname(target), { recursive: true });
-    rmSync(staging, { recursive: true, force: true });
-
+    let staging: string | undefined;
     try {
+      if (existsSync(target)) {
+        requireReusableReference(component, target);
+        continue;
+      }
+      mkdirSync(dirname(target), { recursive: true });
+      staging = mkdtempSync(`${target}.staging-`);
       const cloned = git(['clone', '--no-checkout', component.source, staging], false);
       if (cloned === null) throw new Error(`clone failed for ${component.source}`);
       if (git(['-C', staging, 'checkout', '--detach', component.revision], false) === null) {
@@ -118,24 +120,34 @@ export async function bootstrapReferenceCache(
         throw new Error(`expected ${component.revision}, received ${actual ?? 'unknown'}`);
       }
 
-      const hadTarget = existsSync(target);
-      if (hadTarget) renameSync(target, backup);
-      try {
-        renameSync(staging, target);
-        rmSync(backup, { recursive: true, force: true });
-      } catch (error) {
-        if (existsSync(target)) rmSync(target, { recursive: true, force: true });
-        if (hadTarget && existsSync(backup)) renameSync(backup, target);
-        throw error;
-      }
+      if (existsSync(target)) throw new Error(`Existing reference cache appeared at ${target}; refusing replacement.`);
+      renameSync(staging, target);
       installed.push(component.id);
     } catch (error) {
-      rmSync(staging, { recursive: true, force: true });
+      if (staging && existsSync(staging)) rmSync(staging, { recursive: true });
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Reference acquisition failed for ${component.id}: ${message}`);
     }
   }
   return { planned, installed };
+}
+
+function requireReusableReference(component: ReferenceComponent, target: string): void {
+  const refuse = (reason: string): never => {
+    throw new Error(`Existing reference cache cannot be reused: ${reason}. Refusing to replace, move or delete ${target}.`);
+  };
+  const info = lstatSync(target);
+  if (!info.isDirectory() || info.isSymbolicLink()) refuse('target is not a plain checkout directory');
+  const root = git(['-C', target, 'rev-parse', '--show-toplevel'], false);
+  // Native realpath expands Windows 8.3 aliases, matching Git's long checkout path.
+  const normalize = (path: string) => process.platform === 'win32' ? realpathSync.native(path).toLowerCase() : realpathSync.native(path);
+  if (!root || normalize(root) !== normalize(target)) refuse('Git checkout root differs from the target');
+  const origin = git(['-C', target, 'remote', 'get-url', 'origin'], false);
+  if (origin !== component.source) refuse('Git origin differs from the registered source');
+  const actual = git(['-C', target, 'rev-parse', 'HEAD'], false);
+  if (actual?.toLowerCase() !== component.revision.toLowerCase()) refuse(`expected revision ${component.revision}, received ${actual ?? 'unknown'}`);
+  const changes = git(['--no-optional-locks', '-C', target, 'status', '--porcelain=v1', '--untracked-files=all', '--ignored'], false);
+  if (changes !== '') refuse('checkout has changed, missing, untracked or ignored content, or its status could not be read');
 }
 
 function git(args: string[], throwOnError: boolean): string | null {

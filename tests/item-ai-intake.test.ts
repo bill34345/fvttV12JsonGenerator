@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { DND5E_V14_SYSTEM_VERSION } from '@fvtt-json-generator/contracts/target';
+import { getFoundryTarget } from '@fvtt-json-generator/generation/target';
+import { OpenAICompatibleItemIntakeProvider, ITEM_INTAKE_PROMPT_VERSIONS } from '@fvtt-json-generator/intake-ai/item-provider';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -19,6 +22,36 @@ import {
 } from '../src/core/intake/__tests__/fixtures/jewel-of-three-prayers';
 
 describe('AI Item Intake V14 mechanics', () => {
+  test('sends the current v14 catalog and transferable AC Effect contract to Item AI', async () => {
+    const prompts: string[] = [];
+    const auditVersions: string[] = [];
+    const ir = buildJewelOfThreePrayersIr();
+    const candidate = jewelCandidate();
+    const provider = new OpenAICompatibleItemIntakeProvider({
+      authMode: 'api-key', apiKey: 'fixture-key', baseUrl: 'https://provider.example/v1', model: 'fixture-model', reviewModel: 'fixture-model',
+      timeoutMs: 1000, repairTimeoutMs: 1000,
+      audit: event => auditVersions.push(event.promptVersion),
+      httpClient: async (_url, request) => {
+        const body = JSON.parse(request.body);
+        prompts.push(body.messages[0].content);
+        return { ok: true, status: 200, json: async () => ({ choices: [{ message: {
+          content: JSON.stringify(prompts.length === 2 ? { schemaVersion: 1, verdict: 'accepted', findings: [] } : ir),
+        } }] }) };
+      },
+    });
+    await provider.extract({ source: JEWEL_OF_THREE_PRAYERS_SOURCE, sourceSha256: ir.source.sha256, candidate });
+    const review = { source: JEWEL_OF_THREE_PRAYERS_SOURCE, candidate, ir, markdown: '', itemProjection: {}, deterministicFindings: [] };
+    await provider.review(review);
+    await provider.repair(review);
+    for (const prompt of prompts) {
+      expect(prompt).toContain(`locked dnd5e ${DND5E_V14_SYSTEM_VERSION}`);
+      expect(prompt).not.toContain('5.3.3');
+    }
+    expect(prompts[1]).toContain('a base Effect with transfer true');
+    expect(prompts[1]).toContain('"value":1,"phase":"initial"');
+    expect(auditVersions).toEqual([ITEM_INTAKE_PROMPT_VERSIONS.extract, ITEM_INTAKE_PROMPT_VERSIONS.review, ITEM_INTAKE_PROMPT_VERSIONS.repair]);
+  });
+
   test('preserves a source Item image and exact HTML description through formal Markdown generation', async () => {
     const sourceImage = 'worlds/cor-cotn/packs/%E4%B8%89%E7%A5%B7%E4%B9%8B%E5%9D%A0%201.png';
     const sourceDescription = '<div><p>奇物，传说（需同调）</p></div><div><p>三祷之坠是一件诀别遗物。</p></div><div><p>一面闪闪发光的黄金圆盘，系在一条精致的金链上。链条可以魔法般调整大小，变成适合佩戴者的项链尺寸。</p><p></p></div><div><p>在<span style="color:blue">休眠态Dormant状态</span>下，这件坠饰有着以下属性：</p></div><div><ul><li><p>佩戴者的 AC +1。</p></li><li><p>当佩戴或手握这件坠饰时，你可以以一个<span style="color:blue">动作</span>令它发出 15 尺半径的明亮光照和在此之外 15 尺的微光光照。光照会持续到你将其熄灭（无需动作）。</p></li><li><p>这件饰物具有 <strong>3</strong> 发充能，并且在每天黎明恢复所有被消耗的充能。</p><div><p>坠饰额外获得以下属性，当你手持或佩戴它时，你可以：</p><ul><li><p>消耗 1 发充能施展 隐形术 invisibility。</p></li></ul></div></li></ul></div><div><p></p></div>';
@@ -203,7 +236,7 @@ describe('AI Item Intake V14 mechanics', () => {
     expect(item.system.description.value).not.toContain('###');
     expect(item.system.description.value).not.toContain('**');
     expect(item.system.description.value).not.toContain('\n- ');
-    expect(item._stats).toEqual(expect.objectContaining({ coreVersion: '14.364', systemId: 'dnd5e', systemVersion: '5.3.3' }));
+    expect(item._stats).toEqual(expect.objectContaining(getFoundryTarget('14').stats));
   });
 
   test('rejects a V14 Item whose description regresses to raw Markdown', async () => {
@@ -251,11 +284,14 @@ describe('AI Item Intake V14 mechanics', () => {
     }
   });
 
-  test('resolves a formal spell only when its identifier and English name agree in the locked 5.3.3 catalog', () => {
+  test('resolves a formal spell only when its identifier and English name agree in the current v14 catalog', () => {
     expect(resolveLockedDnd5eV14Spell('INVISIBILITY', 'inVisibility')).toEqual({
       identifier: 'invisibility',
       name: 'Invisibility',
-      uuid: 'Compendium.dnd5e.spells.Item.1N8dDMMgZ1h1YJ3B',
+      uuid: 'Compendium.dnd5e.spells24.Item.phbsplInvisibili',
+      level: 2,
+      activation: 'action',
+      castingTime: { type: 'action', value: 1 },
     });
     expect(resolveLockedDnd5eV14Spell('invisibility', 'Fireball')).toBeUndefined();
   });
@@ -288,11 +324,11 @@ describe('AI Item Intake V14 mechanics', () => {
       const ac = item.effects.find((effect: any) => effect.transfer === true);
       expect(ac.type).toBe('base');
       expect(ac.changes).toBeUndefined();
-      expect(ac.system.changes).toEqual([{ key: 'system.attributes.ac.bonus', type: 'add', value: 1, phase: 'initial', priority: null }]);
+      expect(ac.system.changes).toEqual([{ _id: expect.stringMatching(/^[A-Za-z0-9]{16}$/), key: 'system.attributes.ac.bonus', type: 'add', value: 1, phase: 'initial', priority: null }]);
       const lightEffect = item.effects.find((effect: any) => effect.transfer === false);
       expect(lightEffect.system.changes).toEqual(expect.arrayContaining([
-        { key: 'token.light.bright', type: 'override', value: 15, phase: 'initial', priority: null },
-        { key: 'token.light.dim', type: 'override', value: 30, phase: 'initial', priority: null },
+        { _id: expect.stringMatching(/^[A-Za-z0-9]{16}$/), key: 'token.light.bright', type: 'override', value: 15, phase: 'initial', priority: null },
+        { _id: expect.stringMatching(/^[A-Za-z0-9]{16}$/), key: 'token.light.dim', type: 'override', value: 30, phase: 'initial', priority: null },
       ]));
       const activities = Object.values(item.system.activities) as any[];
       const light = activities.find((activity) => activity.effects?.some((reference: any) => reference._id === lightEffect._id));
@@ -300,8 +336,8 @@ describe('AI Item Intake V14 mechanics', () => {
       expect(light.consumption).toEqual(expect.objectContaining({ targets: [], spellSlot: false }));
       const invisibility = activities.find((activity) => activity.type === 'cast');
       expect(invisibility).toEqual(expect.objectContaining({
-        spell: { uuid: 'Compendium.dnd5e.spells.Item.1N8dDMMgZ1h1YJ3B' },
-        activation: expect.objectContaining({ type: 'action' }),
+        spell: { uuid: 'Compendium.dnd5e.spells24.Item.phbsplInvisibili', level: 2 },
+        activation: { type: 'action', value: 1, override: false },
       }));
       expect(invisibility.consumption).toEqual(expect.objectContaining({ spellSlot: false }));
       expect(invisibility.consumption.targets).toEqual([{ type: 'itemUses', target: '', value: '1', scaling: { mode: '', formula: '' } }]);

@@ -51,7 +51,7 @@ describe('Forge protocol/workflow conformance', () => {
   test.each([
     ['12.331', '12', '12.331', '4.3.9'],
     ['13.340', '13', '13.340', '4.3.9'],
-    ['14.364', '14', '14.364', '5.3.3'],
+    ['14.370', '14', '14.370', '6.0.6'],
   ] as const)('passes one final Nightgaunt source through request, workflow, and response for FVTT %s', async (runtimeVersion, workflowTargetVersion, expectedCoreVersion, systemVersion) => {
     const request = actorRequest(FINAL_SOURCE, runtimeVersion, systemVersion);
     const decodedRequest = decodeForgeActorRequest(request);
@@ -97,7 +97,7 @@ describe('Forge protocol/workflow conformance', () => {
   });
 
   test('accepts an English Actor source carrying the same Forge identity field', async () => {
-    const request = actorRequest(ENGLISH_SOURCE, '14.364', '5.3.3');
+    const request = actorRequest(ENGLISH_SOURCE, '14.370', '6.0.6');
     const decodedRequest = decodeForgeActorRequest(request);
     expect(decodedRequest.ok).toBe(true);
     if (!decodedRequest.ok) throw new Error('Expected the English Forge source request to decode.');
@@ -112,7 +112,7 @@ describe('Forge protocol/workflow conformance', () => {
 
     const response = toForgeAcceptedResponse(
       generated,
-      '14.364',
+      '14.370',
       'v14',
       decodedRequest.value.source.sourceId,
       decodedRequest.value.source.content,
@@ -123,7 +123,7 @@ describe('Forge protocol/workflow conformance', () => {
   test('keeps optional hit-dice outcomes JSON-safe through the full Forge response', async () => {
     for (const sourcePath of OPTIONAL_HIT_DICE_OUTCOME_SOURCES) {
       const finalSource = attachForgeSourceId(readFileSync(sourcePath, 'utf8'), SOURCE_ID).content;
-      const decodedRequest = decodeForgeActorRequest(actorRequest(finalSource, '14.364', '5.3.3'));
+      const decodedRequest = decodeForgeActorRequest(actorRequest(finalSource, '14.370', '6.0.6'));
       expect(decodedRequest.ok).toBe(true);
       if (!decodedRequest.ok) throw new Error(`Expected ${sourcePath} Forge request to decode.`);
 
@@ -135,7 +135,7 @@ describe('Forge protocol/workflow conformance', () => {
       expect(generated.status).toBe('accepted');
       const response = toForgeAcceptedResponse(
         generated,
-        '14.364',
+        '14.370',
         'v14',
         decodedRequest.value.source.sourceId,
         decodedRequest.value.source.content,
@@ -152,7 +152,7 @@ describe('Forge protocol/workflow conformance', () => {
 
     for (const [sourcePath, expectation] of cases) {
       const finalSource = attachForgeSourceId(readFileSync(resolve(sourcePath), 'utf8'), SOURCE_ID).content;
-      const decodedRequest = decodeForgeActorRequest(actorRequest(finalSource, '14.364', '5.3.3'));
+      const decodedRequest = decodeForgeActorRequest(actorRequest(finalSource, '14.370', '6.0.6'));
       expect(decodedRequest.ok).toBe(true);
       if (!decodedRequest.ok) throw new Error(`Expected ${sourcePath} to decode as a Forge request.`);
 
@@ -181,7 +181,7 @@ describe('Forge protocol/workflow conformance', () => {
 
       const response = toForgeAcceptedResponse(
         generated,
-        '14.364',
+        '14.370',
         'v14',
         decodedRequest.value.source.sourceId,
         decodedRequest.value.source.content,
@@ -199,7 +199,7 @@ describe('Forge protocol/workflow conformance', () => {
 
   test('carries a real needs-review Actor through the safe response without making it applyable', async () => {
     const finalSource = attachForgeSourceId(readFileSync(BOLBARA_SOURCE, 'utf8'), SOURCE_ID).content;
-    const decodedRequest = decodeForgeActorRequest(actorRequest(finalSource, '14.364', '5.3.3'));
+    const decodedRequest = decodeForgeActorRequest(actorRequest(finalSource, '14.370', '6.0.6'));
     expect(decodedRequest.ok).toBe(true);
     if (!decodedRequest.ok) throw new Error('Expected Bolbara Forge request to decode.');
 
@@ -225,7 +225,7 @@ describe('Forge protocol/workflow conformance', () => {
           sourceHash: decodedRequest.value.source.utf8Sha256,
         },
         target: {
-          fvttRuntimeVersion: '14.364',
+          fvttRuntimeVersion: '14.370',
           generatorProfile: 'v14',
           generatorVersion: '0.1.0',
           systemId: 'dnd5e',

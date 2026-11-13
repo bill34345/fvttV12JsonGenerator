@@ -60,6 +60,27 @@ export async function assertServerMirrorStopped(): Promise<void> {
   } catch (error) { throw new Error(`Refusing module upgrade while server-mirror state is unverified: ${String(error)}`); }
 }
 
+export async function assertNoHeldLevelDbLocks(paths: readonly string[]): Promise<void> {
+  if (process.platform !== 'win32') throw new Error('LevelDB LOCK ownership probe requires Windows.');
+  if (!paths.length) return;
+  const script = [
+    "$ErrorActionPreference = 'Stop'",
+    '$paths = ConvertFrom-Json -InputObject $env:FVTT_OPS_LEVELDB_LOCK_PATHS',
+    'foreach ($lockPath in @($paths)) {',
+    '  $stream = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::None)',
+    '  try {} finally { $stream.Dispose() }',
+    '}',
+  ].join('\n');
+  try {
+    await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
+      windowsHide: true, timeout: 10_000,
+      env: { ...process.env, FVTT_OPS_LEVELDB_LOCK_PATHS: JSON.stringify(paths) },
+    });
+  } catch (error) {
+    throw new Error(`Module LevelDB LOCK is held or its ownership cannot be verified: ${paths.join(', ')}`, { cause: error });
+  }
+}
+
 export async function hashOwnedTree(root: string): Promise<TreeEntry[]> {
   await assertPlainDirectory(root);
   const entries: TreeEntry[] = [];

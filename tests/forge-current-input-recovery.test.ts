@@ -17,7 +17,7 @@ const source=(id:string)=>captured.cases.find(entry=>entry.id===id)!;
 const stop=async():Promise<never>=>{throw Error('This recovery test forbids model, review and repair calls');};
 const provider={providerName:'frozen-current-first-reply',extractionModel:'frozen',reviewModel:'disabled',discover:stop,extract:stop,review:stop,repair:stop};
 async function formal(record:{source:string;ir:unknown},name:string){
-  const input={source:record.source,sourceName:name,sourceScope:'single' as const,sourceId:SOURCE_ID,requestId:'current-input-'+name,fvttVersion:'14.368',systemVersion:'5.3.3'};
+  const input={source:record.source,sourceName:name,sourceScope:'single' as const,sourceId:SOURCE_ID,requestId:'current-input-'+name,fvttVersion:'14.368',systemVersion:'6.0.6'};
   const analysis=analyzeBrowserActorIntakeDraft(input,structuredClone(record.ir) as MonsterIntakeIR,provider);
   const generated=await generateBrowserActorIntakeCandidate(input,analysis,provider);
   return{input,analysis,generated,actor:generated.actorProjection as any};
@@ -51,8 +51,8 @@ describe('new current first replies recover through the formal workflow without 
     const activity=sleep.system.activities.ea765c5d65735a9b;expect(activity.type).toBe('save');
     expect(sleep.effects).toHaveLength(2);
     const first=sleep.effects.find((effect:any)=>effect.name==='失能 Incapacitated'),second=sleep.effects.find((effect:any)=>effect.name==='昏迷 Unconscious');
-    expect(first.statuses).toEqual(['incapacitated']);expect(first.duration.seconds).toBeNull();
-    expect(second.statuses).toEqual(['unconscious','incapacitated']);expect(second.duration.seconds).toBe(600);
+    expect(first.statuses).toEqual(['incapacitated']);expect(first.duration).toMatchObject({value:null,units:'seconds'});
+    expect(second.statuses).toEqual(['unconscious','incapacitated']);expect(second.duration).toMatchObject({value:600,units:'seconds'});
     for(const effect of [first,second]){expect(effect.flags.fvttJsonGenerator.sourceOperationId).toBe('sleep-breath-save');expect(effect.flags.fvttJsonGenerator.conditionLifecycle.mode).toBe('gm');}
     expect(first.flags.fvttJsonGenerator.conditionLifecycle.condition).toContain('Failure:');expect(first.flags.fvttJsonGenerator.conditionLifecycle.condition.replace(/\s+/gu,' ')).toContain('at which point it repeats the save');
     expect(second.flags.fvttJsonGenerator.conditionLifecycle.condition).toBe('Second Failure: The target has the Unconscious condition for 10 minutes.');
@@ -85,7 +85,7 @@ describe('new current first replies recover through the formal workflow without 
     expect(result.actor.items.find((item:any)=>item.name==='Legendary Resistance (3/Day)').system.uses?.max).not.toBe('3');
     const shield=result.actor.items.find((item:any)=>item.name==='Shimmering Shield'),heal=Object.values<any>(shield.system.activities).find(activity=>activity.type==='heal');
     expect(heal.healing).toMatchObject({types:['temphp'],number:3,denomination:6});
-    expect(heal.range).toMatchObject({override:true,value:60,units:'ft'});
+    expect(heal.range).toMatchObject({override:true,value:'60',units:'ft'});
     expect(result.generated.calls).toEqual({discovery:0,extraction:0,review:0,repair:0});expect(JSON.stringify(record)).toBe(before);
   });
   test('Spirit Naga complete singleton spell group becomes one group without changing its eight grants or restrictions',async()=>{
@@ -158,7 +158,7 @@ describe('closed normalization and explicit base-only resistance projection',()=
   });
   test('native lair mode cannot silently increase an undeclared resistance lair capacity',async()=>{
     // Synthetic projection control, never a repaired or re-scored Brass reply:
-    // 5.3.3 increments both native counters with the same lair checkbox. The
+    // 6.0.6 increments both native counters with the same lair checkbox. The
     // missing resistance declaration must remain an error, never a filled 4.
     const ir=structuredClone(brass.ir) as any;delete ir.creature.legendary.resistanceLairMax;
     const result=await formal({source:brass.source,ir},'synthetic-missing-lair-counter');
@@ -175,8 +175,8 @@ describe('closed normalization and explicit base-only resistance projection',()=
       const result=await formal({source:record.source,ir},'synthetic-heal-range-'+String(range));
       expect(result.generated.findings).toEqual([]);const item=result.actor.items.find((entry:any)=>entry.name==='Shimmering Shield');
       const activity=Object.values<any>(item.system.activities).find(entry=>entry.type==='heal');
-      if(range===undefined){expect(activity.range.units).toBe('spec');expect(activity.range.value).toBeUndefined();}
-      else expect(activity.range).toMatchObject({override:true,value:0,units:'ft'});
+      if(range===undefined){expect(activity.range.units).toBe('spec');expect(activity.range.value).toBe('');}
+      else expect(activity.range).toMatchObject({override:true,value:'0',units:'ft'});
     }
   });
   test('verifier detects base-only max/spent/type/lair tampering without reading a capacity from prose',async()=>{

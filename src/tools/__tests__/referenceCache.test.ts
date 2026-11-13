@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'bun:test';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import {
   bootstrapReferenceCache,
   formatReferenceCacheStatus,
@@ -9,6 +9,7 @@ import {
   type ReferenceManifest,
 } from '../referenceCache';
 import { resolveReferenceCacheRoot } from '../referencePaths';
+import { requireGitText } from '../gitCommand';
 
 const roots: string[] = [];
 
@@ -17,6 +18,77 @@ afterEach(() => {
 });
 
 describe('reference cache', () => {
+  it('bootstraps an absent target from a real locked source without backup siblings', async () => {
+    const { root, target, manifest } = sourceFixture();
+    expect(existsSync(target)).toBe(false);
+    const result = await bootstrapReferenceCache(manifest, root);
+    expect(result.installed).toEqual(['dnd5e-5.3.3']);
+    expect(verifyReferenceCache(manifest, root).ok).toBe(true);
+    expect(readFileSync(join(target, 'reference.txt'), 'utf8')).toContain('revision one');
+    expect(readdirSync(dirname(target))).toEqual(['repo']);
+  });
+
+  it('reuses a complete identical checkout read-only even when its source is offline', async () => {
+    const { root, source, target, manifest } = sourceFixture();
+    await bootstrapReferenceCache(manifest, root);
+    const before = statSync(target, { bigint: true });
+    const index = join(target, '.git/index');
+    const indexBytes = readFileSync(index);
+    const indexTime = statSync(index, { bigint: true }).mtimeNs;
+    expect(dirname(source)).toBe(root);
+    rmSync(source, { recursive: true });
+    const reused = await bootstrapReferenceCache(manifest, root);
+    expect(reused.installed).toEqual([]);
+    expect(statSync(target, { bigint: true }).ino).toBe(before.ino);
+    expect(readFileSync(index)).toEqual(indexBytes);
+    expect(statSync(index, { bigint: true }).mtimeNs).toBe(indexTime);
+    expect(readdirSync(dirname(target))).toEqual(['repo']);
+  });
+
+  it('refuses a different available revision without moving or replacing the existing checkout', async () => {
+    const { root, source, target, manifest } = sourceFixture();
+    await bootstrapReferenceCache(manifest, root);
+    const before = readFileSync(join(target, 'reference.txt'));
+    const inode = statSync(target, { bigint: true }).ino;
+    writeFileSync(join(source, 'reference.txt'), 'revision two\n');
+    commitSource(source);
+    manifest.components[0]!.revision = requireGitText(['-C', source, 'rev-parse', 'HEAD']).trim();
+    await expect(bootstrapReferenceCache(manifest, root)).rejects.toThrow('expected revision');
+    expect(readFileSync(join(target, 'reference.txt'))).toEqual(before);
+    expect(statSync(target, { bigint: true }).ino).toBe(inode);
+    expect(readdirSync(dirname(target))).toEqual(['repo']);
+  });
+
+  it.each(['tracked', 'missing', 'untracked', 'ignored'])('refuses %s content changes at the same revision and preserves them', async (change) => {
+    const { root, target, manifest } = sourceFixture();
+    await bootstrapReferenceCache(manifest, root);
+    const file = join(target, change === 'tracked' || change === 'missing' ? 'reference.txt' : `${change}.txt`);
+    if (change === 'missing') rmSync(file);
+    else writeFileSync(file, `preserve ${change}\n`);
+    await expect(bootstrapReferenceCache(manifest, root)).rejects.toThrow('checkout has changed');
+    if (change === 'missing') expect(existsSync(file)).toBe(false);
+    else expect(readFileSync(file, 'utf8')).toBe(`preserve ${change}\n`);
+    expect(readdirSync(dirname(target))).toEqual(['repo']);
+  });
+
+  it('refuses a foreign source identity at the same revision', async () => {
+    const { root, target, manifest } = sourceFixture();
+    await bootstrapReferenceCache(manifest, root);
+    const foreign = 'https://example.invalid/foreign-reference.git';
+    requireGitText(['-C', target, 'remote', 'set-url', 'origin', foreign]);
+    await expect(bootstrapReferenceCache(manifest, root)).rejects.toThrow('origin differs');
+    expect(requireGitText(['-C', target, 'remote', 'get-url', 'origin']).trim()).toBe(foreign);
+    expect(readdirSync(dirname(target))).toEqual(['repo']);
+  });
+
+  it('cleans only its new staging when the initial source cannot be acquired', async () => {
+    const root = tempRoot();
+    const target = join(root, '.local/references/dnd5e/5.3.3/repo');
+    await expect(bootstrapReferenceCache(fixtureManifest('deadbeef'), root)).rejects.toThrow('clone failed');
+    expect(existsSync(target)).toBe(false);
+    expect(readdirSync(dirname(target))).toEqual([]);
+  });
+
   it('keeps bootstrap dry-run read-only', async () => {
     const root = tempRoot();
     const manifest = fixtureManifest('deadbeef');
@@ -161,6 +233,24 @@ function tempRoot(): string {
   const root = mkdtempSync(join(tmpdir(), 'reference-cache-'));
   roots.push(root);
   return root;
+}
+
+function sourceFixture(): { root: string; source: string; target: string; manifest: ReferenceManifest } {
+  const root = tempRoot();
+  const source = join(root, 'source');
+  mkdirSync(source);
+  requireGitText(['init', '--quiet', source]);
+  writeFileSync(join(source, 'reference.txt'), 'revision one\n');
+  writeFileSync(join(source, '.gitignore'), 'ignored.txt\n');
+  commitSource(source);
+  const manifest = fixtureManifest(requireGitText(['-C', source, 'rev-parse', 'HEAD']).trim());
+  manifest.components[0]!.source = source;
+  return { root, source, target: join(root, '.local/references/dnd5e/5.3.3/repo'), manifest };
+}
+
+function commitSource(source: string): void {
+  requireGitText(['-C', source, 'add', '.']);
+  requireGitText(['-C', source, '-c', 'user.name=Reference Cache Fixture', '-c', 'user.email=reference@example.invalid', 'commit', '--quiet', '-m', 'reference fixture']);
 }
 
 function fixtureManifest(revision: string): ReferenceManifest {

@@ -47,8 +47,8 @@ function resourceProjection(actor: any): unknown {
       tiers: item.effects
         .filter((effect: any) => effect.flags?.fvttJsonGenerator?.resourceTier)
         .map((effect: any) => ({
-          changes: effect.changes.map((change: any) => ({
-            mode: change.mode,
+          changes: (effect.system?.changes ?? effect.changes).map((change: any) => ({
+            mode: change.mode ?? ({custom:0,multiply:1,add:2,downgrade:3,upgrade:4,override:5} as Record<string,number>)[change.type],
             value: change.value,
           })),
           transfer: effect.transfer,
@@ -201,9 +201,9 @@ describe('source-derived Actor resource semantics', () => {
       expect(spikes.effects.filter((effect: any) =>
         effect.flags?.fvttJsonGenerator?.resourceTier)).toHaveLength(5);
       const expectedChange = target === '14'
-        ? { key: 'system.attributes.ac.value', mode: 5, phase: 'final' }
+        ? { key: 'system.attributes.ac.value', type: 'override', phase: 'final' }
         : { key: 'system.attributes.ac.flat', mode: 5 };
-      expect(spikes.effects.map((effect: any) => effect.changes?.[0])).toEqual(expect.arrayContaining([
+      expect(spikes.effects.map((effect: any) => (effect.system?.changes ?? effect.changes)?.[0])).toEqual(expect.arrayContaining([
         expect.objectContaining({ ...expectedChange, value: '12' }),
         expect.objectContaining({ ...expectedChange, value: '20' }),
       ]));
@@ -227,7 +227,9 @@ describe('source-derived Actor resource semantics', () => {
     const closeActor = closeNegative.rawJson as any;
 
     expect(closeActor.items.some((item: any) => item.flags?.fvttJsonGenerator?.resource)).toBe(false);
-    expect(closeActor.items.every((item: any) => item._id === undefined)).toBe(true);
+    expect(closeActor.items.every((item: any) => /^[A-Za-z0-9]{16}$/.test(item._id))).toBe(true);
+    const repeated = await convertMarkdownContentToJson({ content: fixture('actor-resource-close-negative.md'), fvttVersion: '14', effectProfile: 'core' });
+    expect((repeated.rawJson as any).items.map((item: any) => item._id)).toEqual(closeActor.items.map((item: any) => item._id));
 
     const unrelated = new ParserFactory().parse(fixture('actor-resource-close-negative.md')) as any;
     expect(unrelated.resourceSemantics).toBeUndefined();

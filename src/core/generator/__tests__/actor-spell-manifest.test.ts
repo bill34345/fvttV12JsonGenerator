@@ -312,7 +312,8 @@ describe('portable Actor spell manifest boundary', () => {
     expect(v12.flags?.[RESOLVER_MODULE_ID]).toBeUndefined();
     expect(v14.flags?.[RESOLVER_MODULE_ID]).toBeUndefined();
     expect(v12.items.some((item: any) => item.type === 'spell')).toBe(true);
-    expect(v14.items.some((item: any) => item.type === 'spell')).toBe(true);
+    expect(v14.items.some((item: any) => item.type === 'spell')).toBe(false);
+    expect(v14.items.find((item: any) => item.name === '施法 Spellcasting').system.description.value).toContain('Unknown Legacy Spell');
 
     const lurker = baseParsed('Lurker');
     lurker.structuredActions = { 特性: [{ name: 'False Appearance', type: 'utility', describe: 'The lurker is indistinguishable from stone.' }] };

@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { runTestProcess } from './helpers/subprocess';
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { getFoundryTarget } from '@fvtt-json-generator/generation/target';
 
 describe("CLI item import", () => {
   const writeItemCollection = (sourcePath: string) => {
@@ -19,7 +20,7 @@ describe("CLI item import", () => {
     );
   };
 
-  it.each([true, false])("publishes only explicit shield mechanics (explicit=%s)", async (explicit) => {
+  it.each([true, false])("defaults to the current v14 target and publishes only explicit shield mechanics (explicit=%s)", async (explicit) => {
     const root = mkdtempSync(join(tmpdir(), "fvtt-cli-items-"));
     const sourcePath = join(root, "items.md");
     const vaultPath = join(root, "vault");
@@ -35,8 +36,6 @@ describe("CLI item import", () => {
           sourcePath,
           "--vault",
           vaultPath,
-          "--fvtt-version",
-          "14",
         ], cwd: process.cwd() }, 15_000);
 
       if (!explicit) {
@@ -58,8 +57,7 @@ describe("CLI item import", () => {
       };
       expect(item.name).toContain("骑士之盾");
       expect(item.type).toBe("equipment");
-      expect(item._stats?.coreVersion).toBe("14.364");
-      expect(item._stats?.systemVersion).toBe("5.3.3");
+      expect(item._stats).toMatchObject(getFoundryTarget('14').stats);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

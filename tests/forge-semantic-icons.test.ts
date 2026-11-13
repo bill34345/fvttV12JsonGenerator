@@ -20,7 +20,7 @@ function withoutVisuals(value: unknown): unknown {
 describe('Forge content icons through the formal workflow', () => {
   test('uses distinct content icons across action categories without changing source mechanics', async () => {
     const request = buildForgeActorRequest({ content: source, displayName: 'Icon Acceptance Beast',
-      requestId: 'semantic-icons', fvttVersion: '14.368', systemVersion: '5.3.3',
+      requestId: 'semantic-icons', fvttVersion: '14.368', systemVersion: '6.0.6',
       sourceId: 'actor:v1:123e4567-e89b-42d3-a456-426614174099' as ForgeSourceId });
     expect(request.resolvedTarget.iconMode).toBe('safe');
     const safe = await convertFinalActorSource(request);
@@ -54,14 +54,14 @@ describe('Forge content icons through the formal workflow', () => {
     for (const item of items) {
       for (const entry of Object.values(item.system.activities) as Array<Record<string, any>>) expect(entry.img).toBeTruthy();
     }
-    assertResponseTarget(safe.result.target, { version: '14.368', system: { id: 'dnd5e', version: '5.3.3' } });
-    assertResponseTarget(off.result.target, { version: '14.368', system: { id: 'dnd5e', version: '5.3.3' } });
+    assertResponseTarget(safe.result.target, { version: '14.368', system: { id: 'dnd5e', version: '6.0.6' } });
+    assertResponseTarget(off.result.target, { version: '14.368', system: { id: 'dnd5e', version: '6.0.6' } });
   });
 
   test('supports safe Item projection while historical off requests remain valid', async () => {
     const content = readFileSync(new URL('../obsidian/dnd数据转fvttjson/input/items/骑士之盾.md', import.meta.url), 'utf8');
     const request = buildForgeItemRequest({ content, displayName: 'Shield', requestId: 'semantic-item',
-      fvttVersion: '14.368', systemVersion: '5.3.3', sourceId: 'item:v1:123e4567-e89b-42d3-a456-426614174099' as ForgeItemSourceId });
+      fvttVersion: '14.368', systemVersion: '6.0.6', sourceId: 'item:v1:123e4567-e89b-42d3-a456-426614174099' as ForgeItemSourceId });
     const safe = await convertFinalItemSource(request);
     const off = await convertFinalItemSource({ ...request, resolvedTarget: { ...request.resolvedTarget, iconMode: 'off' } });
     expect(decodeForgeItemResponse(safe).ok).toBe(true);
@@ -126,15 +126,20 @@ describe('Forge fuzzy content icons', () => {
       {name:'Hidden Scent',source:'The creature can determine, by smell, whether creatures are nearby.',path:'icons/magic/perception/eye-ringed-glow-angry-large-teal.webp'},
       {name:'Taloned Paws',source:'Melee Attack Roll: +7. This attack has Disadvantage if it is not Flying.',path:'icons/creatures/claws/claw-curved-jagged-gray.webp'},
       {name:'Poor Flyer',source:'At the end of its turn while Flying it falls Prone.',path:'icons/creatures/abilities/wings-birdlike-blue.webp'},
-      {name:'Unknown Burst',source:'It emits a burst of colored light. It cannot use this ability while flying.',path:'icons/magic/light/explosion-star-glow-yellow.webp'},
+      {name:'Unknown Burst',source:'It emits a burst of colored light. It cannot use this ability while flying.',path:'icons/magic/air/air-burst-spiral-teal-green.webp'},
       {name:'Unknown Pulse',source:'It emits a burst of colored light. It can’t use this ability while flying.',path:'icons/magic/symbols/cog-glowing-green.webp'},
     ];
     const items=inputs.map(({name,source})=>({name,type:'feat',img:'icons/magic/fire/projectile-wave-arrow.webp',
       flags:{fvttJsonGenerator:{manualRule:{mode:'gm-manual',sourceText:source}}},system:{description:{value:'GM不自动移动棋子。'},
         activities:{one:{type:'utility',img:'icons/magic/fire/projectile-wave-arrow.webp',description:{chatFlavor:'GM不自动移动棋子。'}}}}}));
-    const {actor}=resolve(items);
+    const {actor,report}=resolve(items);
     actor.items.forEach((item,index)=>{expect(item.img).toBe(inputs[index]!.path);expect(item.system.activities.one.img).toBe(item.img);
       if(index>=3){expect(item.img).not.toBe('icons/magic/movement/portal-vortex-orange.webp');expect(item.img).not.toBe('icons/creatures/abilities/wings-birdlike-blue.webp');}});
+    // The passive Burst name now matches a 2024 class entry; the old 2014 Death Burst is retired.
+    const burst=report.entries.find(entry=>entry.itemName==='Unknown Burst');
+    expect(burst).toMatchObject({source:'semantic',confidence:'fallback'});
+    expect(burst?.reasons).toContain('Nearest catalog name: Misty Visions.');
+    expect(burst?.alternatives).toContainEqual(expect.objectContaining({name:'Misty Visions',source:'dnd5e.classes24',path:inputs[3]!.path}));
     expect(actor.items.map(withoutVisuals)).toEqual(items.map(withoutVisuals));
   });
 
@@ -172,7 +177,7 @@ describe('Forge fuzzy content icons', () => {
     expect(withoutVisuals(actor.items[0])).toEqual(withoutVisuals(base));
   });
 
-  test('uses only locked dnd5e 5.3.3 weapon damage.base, excluding versatile and sibling parts', () => {
+  test('uses only locked dnd5e 6.0.6 weapon damage.base, excluding versatile and sibling parts', () => {
     const input = { name: 'Neutral Launcher', type: 'weapon', img: 'icons/svg/sword.svg', system: {
       damage: {
         base: { number: 1, denomination: 6, types: ['fire'] },

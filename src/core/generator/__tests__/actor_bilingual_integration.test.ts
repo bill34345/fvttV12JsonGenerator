@@ -49,7 +49,7 @@ describe('ActorGenerator english bilingual integration', () => {
         }), { status: 200, headers: { 'content-type': 'application/json' } });
       }) as unknown as typeof fetch;
 
-      const actor = await new ActorGenerator().generateForRoute({
+      const actor = await new ActorGenerator({ fvttVersion: '12' }).generateForRoute({
         ...createEnglishParsed(),
         name: 'Deterministic Fixture',
         actions: [
@@ -155,7 +155,7 @@ describe('ActorGenerator english bilingual integration', () => {
   });
 
   it('uses local glossary fallback when no translation service is configured', async () => {
-    const generator = new ActorGenerator({ translationService: null });
+    const generator = new ActorGenerator({ translationService: null, fvttVersion: '12' });
     const actor = await generator.generateForRoute(createEnglishParsed(), 'english');
 
     expect(actor.name).toBe('成年红龙Adult Red Dragon');
@@ -166,7 +166,7 @@ describe('ActorGenerator english bilingual integration', () => {
   });
 
   it('clears golden-master-only defaults for english route when source does not provide them', async () => {
-    const generator = new ActorGenerator({ translationService: null });
+    const generator = new ActorGenerator({ translationService: null, fvttVersion: '12' });
     const actor = await generator.generateForRoute(createEnglishParsed(), 'english');
 
     expect(actor.system.resources.legact.value).toBe(0);
@@ -186,7 +186,7 @@ describe('ActorGenerator english bilingual integration', () => {
   });
 
   it('keeps bonus actions and reactions as distinct activation types', async () => {
-    const generator = new ActorGenerator({ translationService: null });
+    const generator = new ActorGenerator({ translationService: null, fvttVersion: '12' });
     const input: ParsedNPC = {
       name: 'Skirmisher',
       type: 'npc',
@@ -232,7 +232,7 @@ describe('ActorGenerator english bilingual integration', () => {
       ],
     };
 
-    const generator = new ActorGenerator({ translationService: null });
+    const generator = new ActorGenerator({ translationService: null, fvttVersion: '12' });
     const actor = await generator.generateForRoute(input, 'english');
 
     expect(actor.items.map((item: { name: string }) => item.name)).toEqual(['Multiattack', 'War Cry']);
@@ -254,7 +254,7 @@ describe('ActorGenerator english bilingual integration', () => {
       ],
     };
 
-    const generator = new ActorGenerator({ translationService: null });
+    const generator = new ActorGenerator({ translationService: null, fvttVersion: '12' });
     const actor = await generator.generateForRoute(input, 'english');
 
     expect(actor.items.map((item: { name: string }) => item.name)).toEqual(['War Cry']);
@@ -279,7 +279,7 @@ describe('ActorGenerator english bilingual integration', () => {
       items: [],
     };
 
-    const generator = new ActorGenerator({ translationService: null });
+    const generator = new ActorGenerator({ translationService: null, fvttVersion: '12' });
     const actor = await generator.generateForRoute(input, 'english');
 
     expect(actor.items.map((item: { name: string }) => item.name)).toEqual(['Minion: Savage Horde', 'War Cry']);
@@ -300,7 +300,7 @@ describe('ActorGenerator english bilingual integration', () => {
       items: [],
     };
 
-    const generator = new ActorGenerator({ translationService: null });
+    const generator = new ActorGenerator({ translationService: null, fvttVersion: '12' });
     const actor = await generator.generateForRoute(input, 'english');
 
     expect(actor.items.map((item: { name: string }) => item.name)).toEqual([]);
@@ -323,7 +323,7 @@ describe('ActorGenerator english bilingual integration', () => {
     ].join('\n');
 
     const parser = new EnglishBestiaryParser();
-    const generator = new ActorGenerator({ translationService: null });
+    const generator = new ActorGenerator({ translationService: null, fvttVersion: '12' });
     const actor = await generator.generateForRoute(parser.parse(source), 'english');
 
     expect(actor.items.map((item: { name: string }) => item.name)).toEqual(['Magic Resistance', 'Multiattack']);
@@ -336,7 +336,7 @@ describe('ActorGenerator english bilingual integration', () => {
       'utf-8',
     );
     const parser = new EnglishBestiaryParser();
-    const generator = new ActorGenerator({ translationService: null });
+    const generator = new ActorGenerator({ translationService: null, fvttVersion: '12' });
     const actor = await generator.generateForRoute(parser.parse(source), 'english');
 
     expect(actor.items.map((item: any) => ({
@@ -372,7 +372,7 @@ describe('ActorGenerator english bilingual integration', () => {
   });
 
   it('keeps english spellcasting as description feat instead of spell items', async () => {
-    const generator = new ActorGenerator({ translationService: null });
+    const generator = new ActorGenerator({ translationService: null, fvttVersion: '12' });
     const input: ParsedNPC = {
       name: 'Pinna',
       type: 'npc',
@@ -445,7 +445,7 @@ describe('ActorGenerator english bilingual integration', () => {
   });
 
   it('infers bonus/reaction activation from trait text outside action sections', async () => {
-    const generator = new ActorGenerator({ translationService: null });
+    const generator = new ActorGenerator({ translationService: null, fvttVersion: '12' });
     const input: ParsedNPC = {
       name: 'Bonebreaker Dorokor',
       type: 'npc',

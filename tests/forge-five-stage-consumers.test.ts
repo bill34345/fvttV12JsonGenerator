@@ -31,7 +31,7 @@ async function generated(stage=false,damage=false,pool=false,shape:'op'|'gm'|'fl
     ir.creature.traits[1]={name:'另一入口',englishName:'Other Entry',description:'Other Entry spends one use from the shared stage pool.',activityType:'utility',executionMode:'gm-manual',sourceFeatureId:'51a6e5a0e0000003',uses:{max:3,period:'day'}};
     ir.creature.sourceResourcePools=[{id:'51a6e5a0e0000002',name:'Shared stage pool',max:3,period:'day',members:[{collection:'traits',index:0,featureId:'51a6e5a0e0000001',cost:1},{collection:'traits',index:1,featureId:'51a6e5a0e0000003',cost:1}],evidence:[]}];
   }
-  const input={source,sourceName:'stage consumers',sourceScope:'single' as const,requestId:'stage-consumer-check',sourceId:createForgeSourceId(()=> '57a6846d-62f0-4934-a0a4-6e91e310d906'),fvttVersion:'14.368',systemVersion:'5.3.3'};
+  const input={source,sourceName:'stage consumers',sourceScope:'single' as const,requestId:'stage-consumer-check',sourceId:createForgeSourceId(()=> '57a6846d-62f0-4934-a0a4-6e91e310d906'),fvttVersion:'14.368',systemVersion:'6.0.6'};
   const analysis=analyzeBrowserActorIntakeDraft(input,ir,provider),result=await generateBrowserActorIntakeCandidate(input,analysis,provider);
   expect(analysis.validation?.findings.filter(finding=>finding.origin==='schema'&&finding.blocking),JSON.stringify(analysis.validation?.findings)).toEqual([]);
   expect(result.candidateAvailable).toBe(true);

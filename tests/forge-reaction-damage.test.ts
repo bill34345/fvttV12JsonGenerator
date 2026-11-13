@@ -30,7 +30,7 @@ describe('three-blocker reaction damage projection',()=>{
     const reaction=actor.items.find((i:any)=>i.name==='Pelliton’s Archer');
     const activity=Object.values(reaction.system.activities)[0] as any;
     expect(reaction.type).toBe('feat');
-    expect(activity.range).toEqual({override:true,value:150,special:'远射程 600 尺',units:'ft'});
+    expect(activity.range).toEqual({override:true,value:'150',special:'远射程 600 尺',units:'ft'});
     expect(activity).toMatchObject({type:'attack',activation:{type:'reaction'},attack:{ability:'',flat:true,bonus:'5'},damage:{includeBase:true,parts:[{number:1,denomination:8,bonus:'3',types:['piercing']}]}});
     expect((projectActor(actor).items as any[]).find(i=>i.name==='Pelliton’s Archer').damageFormula).toBe('1d8+3');
     const note='GM射程：正常 150 尺，远射程 600 尺。远射程由GM按原文判断。';
@@ -75,7 +75,7 @@ describe('three-blocker reaction damage projection',()=>{
   });
 });
 
-// The installed 5.3.3 RangeField contains value/units/special/override, not
+// The installed 6.0.6 RangeField contains value/units/special/override, not
 // reach/long. The existing runtime comparison may reconstruct those fields only
 // from a real parent Item range; it must never ignore their source values.
 function rangeFieldReadback(actor:any){
@@ -138,7 +138,7 @@ describe('three-blocker native long-range readback',()=>{
     if(_label==='captured structured reaction'){
       expect(item.type).toBe('feat');
       expect(activity).toMatchObject({type:'attack',attack:{flat:true,bonus:'5',ability:''},activation:{type:activation},damage:{parts:[{number:1,denomination:8,bonus:'3',types:['piercing']}]}});
-      expect(activity.range).toEqual({override:true,value:normal,units:'ft',special:`远射程 ${long} 尺`});
+      expect(activity.range).toEqual({override:true,value:String(normal),units:'ft',special:`远射程 ${long} 尺`});
       expect(Object.values<any>(rangeFieldReadback(actor).items.find((entry:any)=>entry.name===name).system.activities)[0].range).toEqual(activity.range);
       Object.values<any>(wrongItem.system.activities)[0].range.special=`远射程 ${long/2} 尺`;
     }else{
@@ -155,7 +155,7 @@ describe('three-blocker native long-range readback',()=>{
     const actor=output.rawJson as any,item=actor.items.find((entry:any)=>entry.name==='Synthetic Arc'),activity=Object.values<any>(item.system.activities)[0];
     expect(item.type).toBe('feat');
     expect(activity).toMatchObject({activation:{type:'bonus'},attack:{flat:true,bonus:'7',ability:'',type:{value:'ranged',classification:'spell'}},damage:{parts:[{number:2,denomination:6,bonus:'',types:['fire']}]}});
-    expect(activity.range).toEqual({override:true,value:30,special:'远射程 120 尺',units:'ft'});
+    expect(activity.range).toEqual({override:true,value:'30',special:'远射程 120 尺',units:'ft'});
     expect(item.system.description.value).toContain('GM射程：正常 30 尺，远射程 120 尺。远射程由GM按原文判断。');
     expect(()=>assertActorSemantics(actor,rangeFieldReadback(actor))).not.toThrow();
   });
@@ -168,9 +168,14 @@ describe('three-blocker native long-range readback',()=>{
     const flat=await convertMarkdownContentToJson({content:bonusRanged.replace('命中: 4','命中: 9'),fvttVersion:'14',effectProfile:'core',translationService:null});
     const flatItem=(flat.rawJson as any).items.find((i:any)=>i.name==='反手投掷'),flatActivity=Object.values<any>(flatItem.system.activities)[0];
     expect(flatItem.type).toBe('feat');
-    expect(flatActivity.range).toEqual({override:true,value:20,special:'远射程 60 尺',units:'ft'});
+    expect(flatActivity.range).toEqual({override:true,value:'20',special:'远射程 60 尺',units:'ft'});
     expect(flatItem.system.description.value).toContain('GM射程：正常 20 尺，远射程 60 尺。远射程由GM按原文判断。');
-    const unsupportedThrow=await convertMarkdownContentToJson({content:bonusThrow,fvttVersion:'14',effectProfile:'core',translationService:null});
-    expect((unsupportedThrow.rawJson as any).items.find((i:any)=>i.name==='反手投掷').type).toBe('feat');
+    const dualUseThrow=await convertMarkdownContentToJson({content:bonusThrow,fvttVersion:'14',effectProfile:'core',translationService:null});
+    const dualItem=(dualUseThrow.rawJson as any).items.find((i:any)=>i.name==='反手投掷');
+    expect(dualItem).toMatchObject({type:'weapon',system:{range:{reach:5,value:20,long:60}}});
+    const dualAttacks=Object.values<any>(dualItem.system.activities).filter(activity=>activity.type==='attack');
+    expect(dualAttacks).toHaveLength(2);
+    expect(dualAttacks.find(activity=>activity.attack.type.value==='melee').range).toMatchObject({value:'5',override:true});
+    expect(dualAttacks.find(activity=>activity.attack.type.value==='ranged').range).toMatchObject({value:'20',override:true});
   });
 });

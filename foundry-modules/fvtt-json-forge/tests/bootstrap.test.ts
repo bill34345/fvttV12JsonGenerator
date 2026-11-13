@@ -17,7 +17,7 @@ describe('FVTT JSON Forge bootstrap and client settings', () => {
     };
     const environment: any = {
       Hooks: hooks,
-      game: { version: '14.368', system: { id: 'dnd5e', version: '5.3.3' }, user: { id: 'player', isGM: false }, users: { activeGM: { id: 'gm' } } },
+      game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.6' }, user: { id: 'player', isGM: false }, users: { activeGM: { id: 'gm' } } },
       canvas: { ready: true },
     };
     initializeForgeModule(environment);
@@ -45,8 +45,8 @@ describe('FVTT JSON Forge bootstrap and client settings', () => {
         },
       },
       game: {
-        version: '14.364',
-        system: { id: 'dnd5e', version: '5.3.3' },
+        version: '14.370',
+        system: { id: 'dnd5e', version: '6.0.6' },
         user: { isGM: true },
         modules: { get: (id: string) => id === 'fvtt-json-forge' ? module : undefined },
         settings: { registerMenu: (_id: string, _key: string, definition: Record<string, unknown>) => menus.push(definition) },
@@ -147,8 +147,8 @@ describe('FVTT JSON Forge bootstrap and client settings', () => {
       Hooks: { once: (name: string, callback: () => void) => callbacks.set(name, [...(callbacks.get(name) ?? []), callback]) },
       foundry: {},
       game: {
-        version: '14.364',
-        system: { id: 'dnd5e', version: '5.3.3' },
+        version: '14.370',
+        system: { id: 'dnd5e', version: '6.0.6' },
         user: { isGM: true },
         modules: { get: (id: string) => id === 'fvtt-json-forge' ? module : undefined },
         settings: { registerMenu: (_id: string, _key: string, definition: Record<string, unknown>) => menus.push(definition) },

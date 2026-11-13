@@ -2,7 +2,7 @@
 
 本仓库包含 Foundry VTT 的资料生成工具与独立跑团模块。中文 YAML/Markdown、英文 bestiary 和正式 Intake 来源通过共享流程生成 dnd5e Actor/Item JSON；Web 工作台与 Forge 提供不同使用入口。
 
-当前主要平台为 Foundry V14，dnd5e 5.3.3 与 6.x 按功能分别适配和验收。CLI 省略版本仍默认 V12，常规生成请显式使用 `--fvtt-version 14 --effect-profile core --icon-mode off`；模块的 6.x 适配不代表生成器全部支持 6.x。详见[当前支持矩阵](docs/acceptance/current-support-matrix.md)和[版本流程](docs/runbooks/dnd5e-version-following.md)。
+当前生成主线为 Foundry Core 14／dnd5e 6，生成来源目标为 `14.370 / 6.0.6`。CLI／workflow 省略版本与 Web 初始选择均为 V14；常规生成可显式使用 `--fvtt-version 14 --effect-profile core --icon-mode off`。原生 6 JSON 可离线生成，可选 `nativeProjection` 用于接收端规范化与保真检查。5.3.3 来源和验收记录按原身份只读保留；当前运行接受范围见[支持矩阵](docs/acceptance/current-support-matrix.md)和[版本流程](docs/runbooks/dnd5e-version-following.md)。
 
 ## 离线中文工具手册
 
@@ -14,21 +14,21 @@
 
 | 目标 | 系统版本 | Effect profile | 当前状态 |
 | --- | --- | --- | --- |
-| Foundry v12 | dnd5e 4.3.9 | `core`、`modded-v12` | 默认目标；严格结构验证 |
+| Foundry v12 | dnd5e 4.3.9 | `core`、`modded-v12` | 显式选择的兼容目标；严格结构验证 |
 | Foundry v13 | dnd5e 4.3.9 | `core`、`modded-v12` | 与 v12 共用 4.3.9 投影器；严格结构验证 |
-| Foundry v14 | dnd5e 5.3.3 | `core`、`modded-v14` | 独立 5.3.3 投影器；运行时证据按验收报告限定 |
+| Foundry v14 | dnd5e 6.0.6 | `core`、`modded-v14` | 默认目标；原生 6 投影；运行时证据按验收报告限定 |
 
-`modded-v14` 当前锁定 MIDI-QOL 14.0.11 和 DAE 14.0.12；旧的 14.0.9 实机结果保留为历史证据，不能自动升级为 14.0.11 的运行时验收。完整生产模组集合整体兼容性状态仍是 **Partial**。详见 [`docs/acceptance/current-support-matrix.md`](docs/acceptance/current-support-matrix.md)。
+`modded-v14` 当前参考 MIDI-QOL `14.6.7` 和 DAE `14.6.5` 的 6.x 接口；模块按各自最低版本、启用状态和实际 API 检查准入。旧 `14.0.x`／5.3.3 实机结果保留为历史证据，不能转为本轮 6.x 运行时验收。完整模块组合按各自记录判断，详见 [`docs/acceptance/current-support-matrix.md`](docs/acceptance/current-support-matrix.md)。
 
 Actor、Item、单文件、合集、Vault Sync、CLI 和 Web Job 共享 `parse → canonical IR → validate IR → target projector → validate output → write` 管线。Actor 一经生成即交付文件和实际路径，`failed`／`needs_review` 只表达检查结论；正式登记及已有目标覆盖分别处理。独立 Item／Species 保持各自接受与推广契约。`core` profile 不包含 MIDI-QOL、DAE、Times Up 或 Item Macro 专属字段。
 
 ## FVTT JSON Forge（Foundry 模块）
 
-`fvtt-json-forge` 是面向 GM 的浏览器模块。当前候选支持 Foundry `14.364`／`14.368`、dnd5e `5.3.3`、`core`，提供生物及关联召唤物生成、独立 Item 生成、来源库、审核记录、完整候选恢复，以及顺序执行的可恢复批量队列。当前分支实现及限定验收见模块说明和唯一当前状态；本地候选通过不代表已发布或部署到生产。
+`fvtt-json-forge` 是面向 GM 的浏览器模块。当前 `0.6.0` 候选支持 Core `14.368` 及以后的 14.x、dnd5e `6.0.6` 及以后的 6.x、`core`，提供生物及关联召唤物生成、独立 Item 生成、来源库、审核记录、完整候选恢复，以及顺序执行的可恢复批量队列。旧 5.3.3 包仍可只读恢复、预览和下载；采用为当前 6.x 资料须从来源经 workflow 重新生成，没有来源的旧包保持只读。当前兼容范围见[验收说明](docs/acceptance/2026-11-13-native-dnd5e6.md)。
 
 生物 AI 来源支持直接选择文字型 PDF，填写目标生物名后自动得到原语言 MD 并继续生成；可选物理页码，默认保留来源语言。PDF 来源记录及 MD 可查看、下载和恢复，无需另开转换服务；扫描件 OCR 尚不支持。操作与实际接受范围见[模块 PDF 说明](foundry-modules/fvtt-json-forge/README.zh-CN.md#在-forge-中读取-pdf)。
 
-2026-10-17共用契约候选将同一能力的攻击、伤害、独立豁免与次数分别保留，完整特殊规则明确交GM；多个来源明确的共享法术池分别计次，真实施法继续交目标世界Resolver匹配。排版整理使用原文行身份，完整能力事实仍逐项核对来源，不能因后果复杂而整体变成文字占位。旧卡、旧失败原件和CLI默认版本保留，旧卡不自动迁移。本轮离线、正常DeepSeek与实机进度见[执行记录](docs/plans/2026-10-17-forge-common-contract-restoration.md)，未完成层级不算通过。
+2026-10-17共用契约候选将同一能力的攻击、伤害、独立豁免与次数分别保留，完整特殊规则明确交GM；多个来源明确的共享法术池分别计次，真实施法继续交目标世界Resolver匹配。排版整理使用原文行身份，完整能力事实仍逐项核对来源，不能因后果复杂而整体变成文字占位。该历史批次保留当时的旧卡、失败原件和CLI默认版本，旧卡不自动迁移。当时离线、正常DeepSeek与实机进度见[执行记录](docs/plans/2026-10-17-forge-common-contract-restoration.md)，未完成层级不算通过。
 
 正式发行版通过 Foundry Setup 的 **Install Module** 安装，manifest URL 为：
 
@@ -70,7 +70,7 @@ GitHub 自动 CI 已停用，专用工作流与依赖配置已移除；push 和 
 
 `总加值` 必须是唯一字段且为整数；AI Intake 生成的 Markdown 使用此写法。旧 `察觉: 1`／`熟练`、`察觉: 2`／`专精` 和 `0.5`／`半熟练` 仍表示熟练倍率，原有含义不变。该新增写法沿用原生技能与额外加值投影，不要求 Foundry 新接口或模块。
 
-默认生成 Foundry v12 core JSON：
+默认生成 Foundry v14／dnd5e 6 core JSON：
 
 ```powershell
 bun run src/index.ts "templates/npc-example.md" `
@@ -86,7 +86,7 @@ bun run src/index.ts "templates/npc-example.md" `
   --effect-profile core
 ```
 
-需要锁定的 MIDI-QOL/DAE 自动化时使用：
+需要对应 MIDI-QOL/DAE 自动化字段时使用：
 
 ```powershell
 bun run src/index.ts "templates/npc-example.md" `
@@ -111,7 +111,7 @@ bun run src/index.ts "templates/npc-example.md" `
   --icon-mode safe
 ```
 
-`safe` 只使用锁定的 Foundry `14.364` 核心图标和 dnd5e `5.3.3` 图标。解析顺序为外部 override、已有有效图标、精确 Compendium 名称、带来源结构证据的高置信语义匹配、dnd5e 类型默认图标；低置信候选不会强行采用。生成结果旁会写入 `*.icon-review.json`，合集和 Vault Sync 会生成聚合 `icon-review.json`。
+`safe` 只使用目录登记的 Foundry `14.370` 核心图标和 dnd5e `6.0.6` 原生 Item 图标；2024 目录来自 `monsterfeatures24`、`classes24`、`feats24`、`equipment24`、`spells24`。解析顺序为外部 override、已有有效图标、精确 Compendium 名称、带来源结构证据的高置信语义匹配、dnd5e 类型默认图标；低置信候选不会强行采用。生成结果旁会写入 `*.icon-review.json`，合集和 Vault Sync 会生成聚合 `icon-review.json`。默认仍为 `off`。
 
 可用 `--icon-overrides <path>` 指定独立 override 文件；Web 服务器只从 `FVTT_V14_ICON_OVERRIDES` 读取该服务器端路径。v12/v13 不接受 `safe`。
 
@@ -165,7 +165,7 @@ Item 专用运行只处理本次推广的 Item 文件，不会顺带重生成或
 
 ## AI Item Intake（Foundry V14/core）
 
-原始 TXT 或格式不规则的 Item Markdown 使用正式 `--intake-items`，而不是旧的 `--ingest-items` / `--ingest-items-json`。它先由 AI 提取带原文位置的 Item IR，再由确定性规则验证证据、渲染项目 Markdown 的 `item-mechanics` 契约、走既有 Item generator，并逐项验证生成 JSON。AI 从不直接写最终 JSON；任一证据、法术唯一性或机制投影不成立都会停在 `needs_review` / `failed`，不会以空能力或 Utility Activity 退化。正式法术必须由 identifier 与英文名共同唯一命中锁定 dnd5e `5.3.3` 目录，且不使用角色法术位。
+原始 TXT 或格式不规则的 Item Markdown 使用正式 `--intake-items`，而不是旧的 `--ingest-items` / `--ingest-items-json`。它先由 AI 提取带原文位置的 Item IR，再由确定性规则验证证据、渲染项目 Markdown 的 `item-mechanics` 契约、走既有 Item generator，并逐项验证生成 JSON。AI 从不直接写最终 JSON；任一证据、法术唯一性或机制投影不成立都会停在 `needs_review` / `failed`，不会以空能力或 Utility Activity 退化。正式法术必须由 identifier 与英文名共同唯一命中锁定 dnd5e `6.0.6` 的 2024 `spells24` 目录，且不使用角色法术位。
 
 ```powershell
 bun run src/index.ts --intake-items "path/to/raw-item.txt" `
@@ -174,7 +174,7 @@ bun run src/index.ts --intake-items "path/to/raw-item.txt" `
   --effect-profile core
 ```
 
-此入口只接受 Foundry `14.364` / dnd5e `5.3.3` / `core`。单次最多 50 个物品、200,000 个 UTF-16 字符。accepted 的 Markdown 和 JSON 分别推广到 vault `input/items/` 与 `output/items/`；完整来源、IR、诊断、审查与 provider 审计保留在 `.local/item-intake-runs/<run-id>/`。恢复审查使用：
+此入口只接受当前 Foundry V14／dnd5e 6／`core` 目标，生成身份为 `14.370 / 6.0.6`。单次最多 50 个物品、200,000 个 UTF-16 字符。accepted 的 Markdown 和 JSON 分别推广到 vault `input/items/` 与 `output/items/`；完整来源、IR、诊断、审查与 provider 审计保留在 `.local/item-intake-runs/<run-id>/`。恢复审查使用：
 
 ```powershell
 bun run src/index.ts --resume-item-intake ".local/item-intake-runs/<run-id>" `
@@ -199,7 +199,7 @@ bun run test:homebrew-species
 bun run verify:homebrew-species
 ```
 
-Intake 成功不会自动重建模块；`build:homebrew-species` 是独立显式步骤。任何 accepted Markdown 编辑都会使 ledger hash stale，必须再次经 `--intake-species` 审查，未更新前模块 build 会拒绝。模块只有 `species` 与 `features` 两个 Item Compendium，无 runtime JavaScript 或世界扫描。完整契约、食人魔自动化边界与验收层级见 [`docs/species-ai-intake-v14.md`](docs/species-ai-intake-v14.md)。
+Intake 成功不会自动重建模块；`build:homebrew-species` 是独立显式步骤，默认使用 `14.370 / 6.0.6` 的 accepted artifact。旧 5.3.3 ledger 需要对当前目标重新 Intake；显式 `--fvtt-version 14.368` 可复用既有 `6.0.2` 原生内容来源，保留其身份与 hash。任何 accepted Markdown 编辑都会使 ledger hash stale，必须再次经 `--intake-species` 审查，未更新前模块 build 会拒绝。模块只有 `species` 与 `features` 两个 Item Compendium，无 runtime JavaScript 或世界扫描。完整契约、食人魔自动化边界与验收层级见 [`docs/species-ai-intake-v14.md`](docs/species-ai-intake-v14.md)。
 
 ## AI 怪物资料整理（推荐）
 
@@ -281,6 +281,8 @@ bun run verify:blood-hunter-v14-install
 
 ## Foundry 目标世界法术解析（v14）
 
+怪物法术解析器的原生 6 路径允许 Core 14.368 起的 14.x 和 dnd5e 6.0.6 起的 6.x。它负责在目标世界选择并填入实际法术；离线生成不要求安装它。旧版支持和证据保留原范围。
+
 带法术清单的 AI Intake Actor 会保持便携：项目生成阶段只写入带来源证据的法术清单，并将状态标为 `pending`；不会写占位 Spell、世界内 UUID 或本机 Compendium UUID。把 Actor JSON 正常导入 Foundry 后，由目标世界模块扫描所有已启用且当前 GM 可读取的 Item Compendium，完成实际法术选择和水合。
 
 当前解析器只支持 Foundry `14.364` / dnd5e `5.3.3`。匹配规则是精确身份优先：存在同名且事实一致的 2024 法术时只能选择 2024；只有不存在同键 2024 候选项时，才允许使用带明确报告的唯一 2014 回退。模糊、冲突、缺失或人工修改都会进入检查，不会部分写入。
@@ -357,7 +359,7 @@ bun run web:build
 
 ## 参考缓存
 
-完整 dnd5e 5.3.3 源码、Foundry API 页面和生成索引存放在忽略的 `.local/references`，不是生成器运行依赖：
+版本化 dnd5e 源码、Foundry API 页面和生成索引存放在 `FVTT_REFERENCE_CACHE_ROOT` 指向的忽略缓存，不是生成器运行依赖。活跃系统来源为 dnd5e `6.0.6`；5.3.3 资料只读保留：
 
 ```powershell
 bun run references bootstrap --dry-run
@@ -366,7 +368,7 @@ bun run references verify
 bun run src/tools/referenceIndex.ts
 ```
 
-获取器先在 staging 中检出 manifest 固定的 revision，通过验证后才原子替换本地缓存。详情见 [`docs/REFERENCE_INDEX.md`](docs/REFERENCE_INDEX.md)。
+获取器只为不存在的目标在 staging 中检出 manifest 固定 revision，再移入目标。已有目标须为自身Git根目录，origin、HEAD与清单一致，且Git工作树完整干净，包括没有untracked／ignored内容；符合时原地复用，不联网或重新clone。其他差异拒绝并保留现有目标，不创建备份。详情见 [`docs/REFERENCE_INDEX.md`](docs/REFERENCE_INDEX.md)和[版本资料流程](docs/runbooks/dnd5e-version-following.md)。
 
 ## 验证与验收
 

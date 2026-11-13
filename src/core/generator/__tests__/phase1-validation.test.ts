@@ -11,7 +11,7 @@ function loadAndGenerate(filename: string): any {
   const factory = new ParserFactory();
   const content = readFileSync(join(VAULT_DIR, filename), 'utf-8');
   const parsed = factory.parse(content);
-  const generator = new ActorGenerator();
+  const generator = new ActorGenerator({ fvttVersion: '12' });
   return generator.generate(parsed);
 }
 

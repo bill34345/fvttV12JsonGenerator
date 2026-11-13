@@ -50,7 +50,7 @@ describe('explicit offline native status lifecycle audit', () => {
       const source = renderEncounterActorSource(request.actors[0]!.ir,
         compiled.rules.map(rule => ({ ...rule, mechanicId: 'lifecycle-condition', capabilityKind: 'status-lifecycle' })), request.source);
       const response = await convertFinalActorSource(buildForgeActorRequest({ content: source,
-        displayName: condition.id, requestId: `lifecycle-${condition.id}`, fvttVersion: '14.364', systemVersion: '5.3.3' }));
+        displayName: condition.id, requestId: `lifecycle-${condition.id}`, fvttVersion: '14.370', systemVersion: '6.0.6' }));
       if (!('result' in response)) throw Error('Formal conversion returned no result');
       if (response.result.status === 'failed') throw Error('Formal conversion failed');
       expect(response.result.status).toBe('needs_review');
@@ -78,7 +78,7 @@ describe('explicit offline native status lifecycle audit', () => {
       expect(document.行为机制.机制.some((mechanic:any) => mechanic.ID === 'encounter-manual-action-1')).toBe(true);
       if (entry === cases[0]) {
         const response = await convertFinalActorSource(buildForgeActorRequest({ content: source,
-          displayName: 'Native lifecycle', requestId: 'native-lifecycle', fvttVersion: '14.364', systemVersion: '5.3.3' }));
+          displayName: 'Native lifecycle', requestId: 'native-lifecycle', fvttVersion: '14.370', systemVersion: '6.0.6' }));
         if (!('result' in response)) throw Error('Formal Actor conversion returned no result');
         if (response.result.status === 'failed') throw Error('Formal Actor conversion failed');
         expect(response.result.status).toBe('needs_review');
@@ -89,7 +89,7 @@ describe('explicit offline native status lifecycle audit', () => {
         expect(item.effects).toHaveLength(1);
         expect(item.effects[0].flags.fvttJsonGenerator.conditionLifecycle).toMatchObject({ version: 1, mode: 'gm', statuses: [entry.status] });
         const bundle:any = { schema: 'fvtt-json-forge-encounter', version: 1, id: 'native-lifecycle-test',
-          label: 'Native lifecycle', target: { foundry: '14.364', system: 'dnd5e', systemVersion: '5.3.3', effectProfile: 'core' },
+          label: 'Native lifecycle', target: { foundry: '14.370', system: 'dnd5e', systemVersion: '6.0.6', effectProfile: 'core' },
           primaryActorKey: 'creature', actors: [{ key: 'creature', label: 'Source creature', source, sourceHash: hashSource(source) }],
           macros: [{ key: 'control', name: compiled.name, command: compiled.command, commandHash: hashSource(compiled.command),
             bindings: { creature: 'creature' }, covers: [{ actorKey: 'creature', mechanicId: 'lifecycle-condition' },

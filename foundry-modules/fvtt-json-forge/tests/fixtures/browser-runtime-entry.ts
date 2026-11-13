@@ -4,4 +4,4 @@ export {
   convertFinalActorSource,
   convertFinalItemSource,
 } from '@fvtt-json-generator/forge-browser-runtime';
-export { resolveLockedDnd5eV14Spell } from '@fvtt-json-generator/generation/v14-spell-catalog';
+export { resolveLockedDnd5eV14Spell, resolveLockedDnd5eV14SpellByName } from '@fvtt-json-generator/generation/v14-spell-catalog';

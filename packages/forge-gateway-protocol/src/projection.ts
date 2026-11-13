@@ -84,7 +84,7 @@ export function projectForgeItemDocument(value: unknown): ForgeItemDocumentSumma
     name: requireNonEmptyString(item.name, 'itemDocument.name'),
     type: requireNonEmptyString(item.type, 'itemDocument.type'),
     description: projectDeclaredObject(system.description, 'itemDocument.description', ITEM_DESCRIPTION_POLICY),
-    rarity: requireSummaryScalarValue(system.rarity, 'itemDocument.rarity'),
+    rarity: requireSummaryScalarValue(system.rarity ?? (Array.isArray(system.rarities) ? system.rarities.join(', ') : undefined), 'itemDocument.rarity'),
     attunement: requireSummaryScalarValue(system.attunement, 'itemDocument.attunement'),
     armor,
     itemType: projectDeclaredObject(system.type, 'itemDocument.itemType', ITEM_TYPE_POLICY),
@@ -223,7 +223,7 @@ function projectActorVerification(value: unknown): ForgeActorVerificationSummary
     : requireString(actorRecord.creatureType, 'actorVerification.actor.creatureType');
   const hp = optionalHitPointSummary(actorRecord.hp, 'actorVerification.actor.hp');
   const ac = optionalArmorClassSummary(actorRecord.ac, 'actorVerification.actor.ac');
-  const cr = optionalNumber(actorRecord.cr, 'actorVerification.actor.cr');
+  const cr = optionalNumberOrNull(actorRecord.cr, 'actorVerification.actor.cr');
   if(actorRecord.damageVulnerability!==undefined){
     const vulnerability=requireRecord(actorRecord.damageVulnerability,'actorVerification.actor.damageVulnerability');
     actor.damageVulnerability={value:requireStringArray(vulnerability.value,'actorVerification.actor.damageVulnerability.value'),custom:requireString(vulnerability.custom,'actorVerification.actor.damageVulnerability.custom')};
@@ -244,8 +244,8 @@ function optionalHitPointSummary(value: unknown, label: string): ForgeHitPointSu
   if (value === undefined) return undefined;
   const record = requireRecord(value, label);
   const result: ForgeHitPointSummary = {};
-  if (hasValue(record, 'value')) result.value = requireNumber(record.value, `${label}.value`);
-  if (hasValue(record, 'max')) result.max = requireNumber(record.max, `${label}.max`);
+  if (hasValue(record, 'value')) result.value = requireNumberOrNull(record.value, `${label}.value`);
+  if (hasValue(record, 'max')) result.max = requireNumberOrNull(record.max, `${label}.max`);
   if (hasValue(record, 'temp')) result.temp = requireNumberOrNull(record.temp, `${label}.temp`);
   if (hasValue(record, 'tempmax')) result.tempmax = requireNumberOrNull(record.tempmax, `${label}.tempmax`);
   if (hasValue(record, 'formula')) result.formula = requireString(record.formula, `${label}.formula`);
@@ -256,12 +256,25 @@ function optionalArmorClassSummary(value: unknown, label: string): ForgeArmorCla
   if (value === undefined) return undefined;
   const record = requireRecord(value, label);
   const result: ForgeArmorClassSummary = {};
-  for (const key of ['value', 'flat', 'bonus'] as const) {
-    if (hasValue(record, key)) result[key] = requireNumber(record[key], `${label}.${key}`);
-  }
+  if (hasValue(record, 'value')) result.value = requireNumber(record.value, `${label}.value`);
+  if (hasValue(record, 'flat')) result.flat = requireNumberOrNull(record.flat, `${label}.flat`);
+  if (hasValue(record, 'bonus')) result.bonus = typeof record.bonus === 'string' ? record.bonus : requireNumber(record.bonus, `${label}.bonus`);
   for (const key of ['formula', 'calc'] as const) {
     if (hasValue(record, key)) result[key] = requireString(record[key], `${label}.${key}`);
   }
+  if (hasValue(record, 'override')) result.override = requireNumberOrNull(record.override, `${label}.override`);
+  if (hasValue(record, 'calcs')) result.calcs = requireStringArray(record.calcs, `${label}.calcs`);
+  if (hasValue(record, 'formulas')) result.formulas = requireArray(record.formulas, `${label}.formulas`).map((value, index) => {
+    const formula = requireRecord(value, `${label}.formulas[${index}]`);
+    const projected: NonNullable<ForgeArmorClassSummary['formulas']>[number] = {};
+    for (const key of ['formula', 'label'] as const) {
+      if (hasValue(formula, key)) projected[key] = requireString(formula[key], `${label}.formulas[${index}].${key}`);
+    }
+    for (const key of ['armored', 'shielded'] as const) {
+      if (hasValue(formula, key)) projected[key] = formula[key] === null ? null : requireBoolean(formula[key], `${label}.formulas[${index}].${key}`);
+    }
+    return projected;
+  });
   return result;
 }
 
@@ -272,15 +285,17 @@ function projectSenses(value: unknown): ForgeSensesSummary {
     const ranges = requireRecord(record.ranges, 'actorVerification.actor.senses.ranges');
     const rangeResult: NonNullable<ForgeSensesSummary['ranges']> = {};
     for (const key of ['darkvision', 'blindsight', 'tremorsense', 'truesight'] as const) {
-      if (hasValue(ranges, key)) rangeResult[key] = requireNumber(ranges[key], `actorVerification.actor.senses.ranges.${key}`);
+      if (hasValue(ranges, key)) rangeResult[key] = requireNumberOrNull(ranges[key], `actorVerification.actor.senses.ranges.${key}`);
     }
     result.ranges = rangeResult;
   }
-  for (const key of ['darkvision', 'blindsight', 'tremorsense', 'truesight', 'passive'] as const) {
-    if (hasValue(record, key)) result[key] = requireNumber(record[key], `actorVerification.actor.senses.${key}`);
+  for (const key of ['darkvision', 'blindsight', 'tremorsense', 'truesight'] as const) {
+    if (hasValue(record, key)) result[key] = requireNumberOrNull(record[key], `actorVerification.actor.senses.${key}`);
   }
-  for (const key of ['special', 'units'] as const) {
-    if (hasValue(record, key)) result[key] = requireString(record[key], `actorVerification.actor.senses.${key}`);
+  if (hasValue(record, 'passive')) result.passive = requireNumber(record.passive, 'actorVerification.actor.senses.passive');
+  if (hasValue(record, 'special')) result.special = requireString(record.special, 'actorVerification.actor.senses.special');
+  if (hasValue(record, 'units')) {
+    result.units = record.units === null ? null : requireString(record.units, 'actorVerification.actor.senses.units');
   }
   return result;
 }
@@ -310,7 +325,10 @@ function projectRange(value: unknown, label: string): ForgeActivityRangeSummary 
   const record = requireRecord(value, label);
   const result: ForgeActivityRangeSummary = {};
   if (hasValue(record, 'override')) result.override = requireBoolean(record.override, `${label}.override`);
-  for (const key of ['value', 'long', 'reach'] as const) {
+  if (hasValue(record, 'value')) {
+    result.value = typeof record.value === 'string' ? record.value : requireNumberOrNull(record.value, `${label}.value`);
+  }
+  for (const key of ['long', 'reach'] as const) {
     if (hasValue(record, key)) result[key] = requireNumberOrNull(record[key], `${label}.${key}`);
   }
   for (const key of ['units', 'special'] as const) {
@@ -707,9 +725,9 @@ function requireNumber(value: unknown, label: string): number {
   return value;
 }
 
-function optionalNumber(value: unknown, label: string): number | undefined {
+function optionalNumberOrNull(value: unknown, label: string): number | null | undefined {
   if (value === undefined) return undefined;
-  return requireNumber(value, label);
+  return requireNumberOrNull(value, label);
 }
 
 function requireNumberOrNull(value: unknown, label: string): number | null {

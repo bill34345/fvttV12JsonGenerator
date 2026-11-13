@@ -31,7 +31,7 @@ export function displayNameIdentityCandidates(itemName:string):string[]{
 export function sourceMentionsDisplayName(source:string,itemName:string):boolean{
   const candidates=new Set<string>([itemName]);
   const localized=itemName.match(/（(.+)）$/u)?.[1];if(localized)candidates.add(localized);
-  for(const candidate of displayNameIdentityCandidates(itemName))if(/^[A-Za-z]/u.test(candidate))candidates.add(candidate);
+  for(const candidate of displayNameIdentityCandidates(itemName))candidates.add(candidate);
   const bilingual=itemName.match(/\(([^)]+)\)/u)?.[1];if(bilingual)candidates.add(bilingual);
   const withoutParen=itemName.replace(/\s*\([^)]*\)\s*/gu,'').trim();if(withoutParen)candidates.add(withoutParen);
   const fold=(value:string)=>value.toLowerCase().replace(/[()（）]/gu,' ').replace(/\s+/gu,' ').trim();

@@ -1,4 +1,5 @@
-import type { FvttTargetVersion } from '@fvtt-json-generator/contracts/target';
+import { DND5E_V14_SYSTEM_VERSION, type FvttTargetVersion } from '@fvtt-json-generator/contracts/target';
+import { isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
 import {
   FORGE_CAPABILITY_IDS,
   FORGE_GENERATOR_PROFILES,
@@ -24,7 +25,7 @@ export const FORGE_VERSION_ROUTING = Object.freeze([
 
 export const FORGE_DND5E_VERSION_BY_PROFILE = Object.freeze({
   v12: '4.3.9',
-  v14: '5.3.3',
+  v14: DND5E_V14_SYSTEM_VERSION,
 } as const);
 
 export const FORGE_ACTOR_CAPABILITY: ForgeActorCapability = Object.freeze({
@@ -127,7 +128,9 @@ export function assertForgeTargetProfile(
 export function getForgeDnd5eVersionWarning(runtimeVersion: string, observedSystemVersion: string): string | undefined {
   const target = resolveForgeTarget(runtimeVersion);
   const expectedSystemVersion = FORGE_DND5E_VERSION_BY_PROFILE[target.generatorProfile];
-  if (observedSystemVersion === expectedSystemVersion) return undefined;
+  if (target.generatorProfile === 'v14'
+    ? isVersionInMajor(observedSystemVersion, expectedSystemVersion)
+    : observedSystemVersion === expectedSystemVersion) return undefined;
   return 'Observed dnd5e ' + observedSystemVersion + ' for FVTT ' + runtimeVersion
     + '; the ' + target.generatorProfile + ' generator is pinned to dnd5e ' + expectedSystemVersion
     + '. The generator mapping is unchanged.';

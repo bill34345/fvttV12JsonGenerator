@@ -22,7 +22,7 @@ import {adaptParsedActorToCanonical} from '@fvtt-json-generator/generation/adapt
 import {verifyGeneratedDocument} from '@fvtt-json-generator/generation/verification';
 import {expectSourceConditionEffects,withoutApprovedConditionEffects,expectFrozenSourceDescriptions} from './helpers/forge-approved-projections';
 
-const input={source:LURKER_SOURCE,sourceName:'candidate fixture',requestId:'candidate-output',fvttVersion:'14.364',systemVersion:'5.3.3'};
+const input={source:LURKER_SOURCE,sourceName:'candidate fixture',requestId:'candidate-output',fvttVersion:'14.370',systemVersion:'6.0.6'};
 const noCall=async():Promise<never>=>{throw Error('Unexpected model request');};
 
 test('typed native resistance contract verifies count and consumption without an independent pool',async()=>{
@@ -86,7 +86,7 @@ describe('monster output intentionally omits ordinary inventory',()=>{
     const {provider}=fixture(),current={...input,source},analysis=analyzeBrowserActorIntakeDraft(current,ir,provider);
     const result=await generateBrowserActorIntakeCandidate(current,analysis,provider),actor=result.actorProjection as any;
     expect(result.findings.filter(f=>f.code==='SOURCE_PART_NOT_PROJECTED')).toEqual([]);
-    expect(actor.system.attributes.ac).toMatchObject({calc:'flat',flat:ir.creature.attributes.ac});
+    expect(actor.system.attributes.ac).toMatchObject({override:ir.creature.attributes.ac,calcs:['unarmored','armored'],formulas:[]});
     expect(actor.items.some((item:any)=>['equipment','loot'].includes(item.type))).toBe(false);
     expect(actor.items.some((item:any)=>/^(?:Shield|Spear|Studded Leather Armor)$/u.test(item.name))).toBe(false);
     expect(actor.items.find((item:any)=>item.name.includes(ir.creature.actions[0]!.name))?.type).toBe('feat');

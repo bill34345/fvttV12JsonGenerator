@@ -1,3 +1,4 @@
+import { NativeDocumentFixture } from './native-document-fixture';
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import Handlebars from 'handlebars';
@@ -185,7 +186,7 @@ describe('unified Forge workspace using its actual templates', () => {
       expect(JSON.parse(downloads[0]!)).toEqual((record.candidate.candidateResponse as any).result.artifact);
       expect(second.button(second.intake(),'create').disabled).toBe(true);
       await second.app.intake.create(second.intake());expect(second.app.intake.createdDocument).toBeUndefined();
-      game.user.isGM=true;game.version='14.364';game.system.version='5.3.3';second.app.intake.renderResult(second.intake());
+      game.user.isGM=true;game.version='14.370';game.system.version='6.0.6';second.app.intake.renderResult(second.intake());
       expect(second.button(second.intake(),'create').disabled).toBe(false);second.button(second.intake(),'create').click();
       for(let count=0;count<50&&second.app.intake.creating;count++)await new Promise(resolve=>setTimeout(resolve,0));
       expect(second.notifications.some(message=>message.includes('response target'))).toBe(true);
@@ -486,7 +487,8 @@ async function makeWorkspace(overrides: Partial<ForgeWorkspaceEnvironment> = {})
   const batchQueue = new ManagedForgeBatchQueue(new MemoryForgeBatchQueueStore());
   const kind = overrides.directoryKind ?? 'Actor';
   const Class = createForgeWorkspaceApplicationClass({
-    game: { version: '14.368', system: { id: 'dnd5e', version: '5.3.3' }, user: { id: 'gm', isGM: true }, world: { id: 'fixture-world' } },
+    game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.6' }, user: { id: 'gm', isGM: true }, world: { id: 'fixture-world' },
+      actors:{documentClass:NativeDocumentFixture},items:{documentClass:NativeDocumentFixture} },
     ui: { notifications: { error: (text: string) => notifications.push(text), info() {} } },
     window: dom.window as any,
     hooks: { on: (_event, fn) => { hooks.set(++nextHook, fn); return nextHook; }, off: (_event, id) => { hooks.delete(id as number); } },

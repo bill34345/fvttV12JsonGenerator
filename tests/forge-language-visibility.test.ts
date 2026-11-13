@@ -67,7 +67,7 @@ async function replay(root:string,id:string){
   const provider=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',apiKey:'frozen',baseUrl:'https://offline.invalid',model:'frozen',reviewModel:'disabled',maxAttempts:1,timeoutMs:60_000,repairTimeoutMs:60_000,
     httpClient:async()=>{expect(++reads).toBe(1);return Response.json({choices:[{message:{content:raw}}]});}});
   const allowed={providerName:provider.providerName,extractionModel:provider.extractionModel,reviewModel:'disabled',discover:forbidden,extract:provider.extract.bind(provider),extractAnswer:provider.extractAnswer.bind(provider),review:forbidden,repair:forbidden};
-  const input={source,sourceName:entry.name,sourceScope:'single' as const,sourceId:'actor:v1:61382994-656d-4438-99af-66069e8bd233' as ForgeSourceId,requestId:'frozen-language-visibility-'+id,fvttVersion:'14.368',systemVersion:'5.3.3',autoCorrect:false};
+  const input={source,sourceName:entry.name,sourceScope:'single' as const,sourceId:'actor:v1:61382994-656d-4438-99af-66069e8bd233' as ForgeSourceId,requestId:'frozen-language-visibility-'+id,fvttVersion:'14.368',systemVersion:'6.0.6',autoCorrect:false};
   const analysis=await analyzeBrowserActorSourceWithAi(input,allowed);
   const generated=await generateBrowserActorIntakeCandidate(input,analysis,{...allowed,extract:forbidden,extractAnswer:forbidden});
   expect(generated.candidateAvailable).toBe(true);

@@ -21,7 +21,7 @@ globalThis.fetch = Object.assign((async()=>{networkCalls++;throw Error('Preserva
 afterAll(()=>{globalThis.fetch=originalFetch;expect(networkCalls).toBe(0);});
 
 async function generate(ir:any,source=frozen.source){
-  const input={source,sourceName:'preservation contract',sourceScope:'single' as const,requestId:'preservation-content',sourceId:'actor:v1:36e185d4-2cf0-4071-b840-513eaa1efc15' as any,fvttVersion:'14.368',systemVersion:'5.3.3'};
+  const input={source,sourceName:'preservation contract',sourceScope:'single' as const,requestId:'preservation-content',sourceId:'actor:v1:36e185d4-2cf0-4071-b840-513eaa1efc15' as any,fvttVersion:'14.368',systemVersion:'6.0.6'};
   const analysis=analyzeBrowserActorIntakeDraft(input,ir,provider);
   const generated=await generateBrowserActorIntakeCandidate(input,analysis,provider);
   expect(generated.candidateAvailable).toBe(true);
@@ -207,7 +207,7 @@ for(const location of ['ref','restriction'] as const)test.skipIf(!dustRoot)('pre
   if(location==='ref')ref.evidence=[null];else ref.restrictions[0].evidence=[null];
   const canonical='---\n'+yaml.dump(document,{lineWidth:-1,noRefs:true})+'---\n',parsed=new ParserFactory().parse(canonical);
   expect(refs(parsed.spellManifest)).toHaveLength(1);
-  const response=await convertFinalActorSource(buildForgeActorRequest({content:canonical,sourceId:'actor:v1:36e185d4-2cf0-4071-b840-513eaa1efc15' as any,displayName:'Dust evidence shape',requestId:'canonical-evidence-shape',fvttVersion:'14.368',systemVersion:'5.3.3'}));
+  const response=await convertFinalActorSource(buildForgeActorRequest({content:canonical,sourceId:'actor:v1:36e185d4-2cf0-4071-b840-513eaa1efc15' as any,displayName:'Dust evidence shape',requestId:'canonical-evidence-shape',fvttVersion:'14.368',systemVersion:'6.0.6'}));
   expect('result'in response).toBe(true);if(!('result'in response))throw Error(JSON.stringify(response));
   const actor=response.result.artifact as any,manifest=actor.flags[RESOLVER_MODULE_ID].spellManifest;
   expect(refs(manifest).map(ref=>ref.englishName)).toEqual(['Sleep']);

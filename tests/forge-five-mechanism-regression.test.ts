@@ -18,7 +18,7 @@ async function statusItem(description:string,operations?:SourceOperation[],field
   ir.creature.traits[0]={name:'状态边界',englishName:'Status Boundary',description,activityType:'utility',executionMode:'gm-manual',...fields};
   if(operations)ir.creature.traits[0]!.sourceOperations=operations;
   const before=structuredClone(ir);
-  const input={source,sourceName:'five mechanisms',sourceScope:'single' as const,requestId:'five-mechanisms',sourceId:createForgeSourceId(()=> '765b87ae-9898-47ef-921d-8b583ff90473'),fvttVersion:'14.368',systemVersion:'5.3.3'};
+  const input={source,sourceName:'five mechanisms',sourceScope:'single' as const,requestId:'five-mechanisms',sourceId:createForgeSourceId(()=> '765b87ae-9898-47ef-921d-8b583ff90473'),fvttVersion:'14.368',systemVersion:'6.0.6'};
   const analysis=analyzeBrowserActorIntakeDraft(input,ir,provider),generated=await generateBrowserActorIntakeCandidate(input,analysis,provider);
   expect(generated.candidateAvailable).toBe(true);expect(ir).toEqual(before);
   const actor=generated.actorProjection as any,item=actor.items.find((entry:any)=>entry.name==='状态边界 Status Boundary');
@@ -233,7 +233,7 @@ describe('five mechanisms R01 evidence repair history and unresolved evidence ar
   for(const id of ['unicorn','spirit-naga'])test(id+' original reply keeps its Actor and original offsets without false incomplete messages',async()=>{
     const record=currentReplies.cases.find(entry=>entry.id===id)!,responses:any[]=[];
     const actual=new OpenAICompatibleMonsterIntakeProvider({authMode:'api-key',baseUrl:'https://offline.invalid',apiKey:'frozen',model:'frozen',reviewModel:'disabled',maxAttempts:1,timeoutMs:10000,repairTimeoutMs:10000,responseEvidence:{record:value=>{responses.push(value);}},httpClient:async()=>Response.json({choices:[{message:{content:record.rawReply}}]})});
-    const input={source:record.source,sourceName:id,sourceScope:'single' as const,requestId:'five-evidence-'+id,sourceId:createForgeSourceId(()=> '765b87ae-9898-47ef-921d-8b583ff90473'),fvttVersion:'14.368',systemVersion:'5.3.3'};
+    const input={source:record.source,sourceName:id,sourceScope:'single' as const,requestId:'five-evidence-'+id,sourceId:createForgeSourceId(()=> '765b87ae-9898-47ef-921d-8b583ff90473'),fvttVersion:'14.368',systemVersion:'6.0.6'};
     const raw=await actual.extract({source:record.source,sourceSha256:record.sourceSha256,candidate:{id,label:id,start:0,end:record.source.length,quote:record.source}});
     expect(raw.creature.candidateReview?.findings??[]).toEqual([]);expect(responses[0].content).toBe(record.rawReply);
     const original=(raw.creature.candidateReview!.proposal as {original:any}).original;

@@ -4,6 +4,7 @@
  */
 import { CUSTOM_CONDITIONS_MODULE_ID, buildConditionFlag, createConditionInstance, isConditionId, projectedConditionStatusId, readConditionInstance } from '@fvtt-json-generator/contracts/conditions';
 import { displayName, splitBilingualName } from '@fvtt-json-generator/models/display-name';
+import { isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
 
 export const RUNTIME_VERSION = '2.1.2';
 const FLAG = 'crystalbleedV14';
@@ -98,7 +99,7 @@ export function legendarySpendUpdate(resource, amount) {
 }
 
 export function preserveOwnTurnLegendaryBudget(periods, updates) {
-  // The source uses the legacy own-turn budget, while 5.3.3 NPC defaults reset
+  // The source uses the legacy own-turn budget, while 6.0.6 NPC defaults reset
   // legendary uses at every creature's turn end. Keep other recovery intact.
   if (periods.includes('turnEnd')) delete updates['system.resources.legact.spent'];
 }
@@ -114,7 +115,7 @@ export function applyWardToSummary(damages, state, proficiency, healingTypes) {
     damage.active ??= {};
     damage.active[FLAG] = true;
   }
-  // dnd5e 5.3.3 computes the aggregate BEFORE this hook; applyDamage reads it.
+  // dnd5e 6.0.6 computes the aggregate BEFORE this hook; applyDamage reads it.
   // Preserve healing and temporary/max-HP accounting while replacing damage.
   damages.amount = Math.trunc(damages.reduce((sum, damage) =>
     sum + (['temphp', 'maximum'].includes(damage.type) ? 0 : damage.value), 0)
@@ -128,8 +129,8 @@ export async function installCrystalbleedRuntime(env = globalThis, options = {})
     throw new Error('缺少 Foundry V14 API 绑定；请重新导入完整 V14 战斗宏。');
   }
   if (!game?.user?.isGM) throw new Error('请由 GM 运行晶血龙兽战斗控制。');
-  if ((game.version !== '14.364' && game.version !== '14.368') || game.system?.id !== 'dnd5e' || game.system.version !== '5.3.3') {
-    throw new Error('此宏适用 Foundry 14.364 或 14.368 / dnd5e 5.3.3；V12 请使用原版控制宏。');
+  if (!isVersionInMajor(game.version, '14.368') || game.system?.id !== 'dnd5e' || !isVersionInMajor(game.system.version, '6.0.6')) {
+    throw new Error('此宏适用 Foundry Core 14 / dnd5e 6；请使用当前 Forge 生物导入文件。');
   }
   if (!canvas?.ready || !canvas.scene) throw new Error('请先打开战斗场景，再运行此宏。');
   if (!options.actors || !/^Actor\.[0-9a-f]{16}$/.test(options.actors.dragon) || !/^Actor\.[0-9a-f]{16}$/.test(options.actors.crystal)) {

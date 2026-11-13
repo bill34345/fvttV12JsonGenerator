@@ -3,7 +3,7 @@ import { ActorGenerator } from '../actor';
 import type { ParsedNPC } from '../../../config/mapping';
 
 describe('ActorGenerator Upgrade', () => {
-  const generator = new ActorGenerator();
+  const generator = new ActorGenerator({ fvttVersion: '12' });
 
   it('should handle new traits (dv, dm)', () => {
     const input: ParsedNPC = {

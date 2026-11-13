@@ -5,6 +5,7 @@
   "summary": "读取生成 Actor 的可移植法术清单，在目标世界可读的 dnd5e Item pack 中选择法术，并安全水合模块拥有的 Spell 与 Cast Activity。",
   "when": "生成 Actor 已携带有效 spell manifest，需要把便携法术引用解析到当前世界的具体法术资料包时使用。",
   "requires": [
+    "原生 6 路径允许 Core 14.368 起的 14.x 和 dnd5e 6.0.6 起的 6.x；旧版配对与已验证范围保留。",
     "精确配对14.364/5.3.3、14.368/5.3.3、14.368/6.0.2、6.0.5或6.0.6（606仅接受限定 Rat NPC 运行链）",
     "GM/活动 GM 权威",
     "带有效 spellManifest 的生成 Actor",

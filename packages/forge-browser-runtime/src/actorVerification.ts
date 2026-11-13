@@ -54,9 +54,9 @@ export function buildBrowserActorVerificationSummary(
       }
       const acChange = effect.changes.find((change) => change.key.startsWith('system.attributes.ac.'));
       const expectedKey = parsed.kind === 'flat'
-        ? 'system.attributes.ac.flat'
+        ? foundryMajor === '14' ? 'system.attributes.ac.override' : 'system.attributes.ac.flat'
         : foundryMajor === '14'
-          ? 'system.attributes.ac.formula'
+          ? 'system.attributes.ac.value'
           : foundryMajor === '12'
             ? 'system.attributes.ac.bonus'
             : undefined;
@@ -112,7 +112,7 @@ function summarizeEffect(value: unknown): BrowserActorVerificationSummary['items
   const flags = getRecord(getRecord(effect.flags).fvttJsonGenerator);
   return {
     name: String(effect.name ?? ''),
-    changes: Array.isArray(effect.changes) ? effect.changes.map(summarizeChange) : [],
+    changes: ((getRecord(effect.system).changes ?? effect.changes) as unknown[] | undefined)?.map(summarizeChange) ?? [],
     sourceDerivedAcEffect: flags.sourceDerivedAcEffect === true,
     sourceText: String(flags.sourceText ?? ''),
   };
@@ -122,9 +122,9 @@ function summarizeChange(value: unknown): { key: string; mode: unknown; value: s
   const change = getRecord(value);
   return {
     key: String(change.key ?? ''),
-    mode: change.mode,
+    mode: change.mode ?? change.type,
     value: String(change.value ?? ''),
-    priority: change.priority,
+    priority: change.priority ?? change.phase,
   };
 }
 

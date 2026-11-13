@@ -85,15 +85,15 @@ describe('Forge browser-safe plaintext Actor analysis', () => {
       content: analysis.canonicalSource,
       displayName: 'Plaintext semantic acceptance',
       requestId: 'plaintext-semantic-acceptance',
-      fvttVersion: '14.364',
-      systemVersion: '5.3.3',
+      fvttVersion: '14.370',
+      systemVersion: '6.0.6',
     }));
     expect(response).toHaveProperty('result.status', 'accepted');
     if (!('result' in response) || response.result.status !== 'accepted') throw new Error('Expected accepted Actor response.');
     expect(response.result.actorVerification.actor).toMatchObject({
       name: '蛇口蛮蟹 (Scuttling Serpentmaw)',
       hp: { value: 75, max: 75 },
-      ac: { flat: 17, calc: 'flat' },
+      ac: { override: 17, calcs: ['unarmored','armored'], formulas: [] },
       senses: { ranges: { blindsight: 60 } },
     });
     expect(response.result.actorVerification.items).toEqual(expect.arrayContaining([

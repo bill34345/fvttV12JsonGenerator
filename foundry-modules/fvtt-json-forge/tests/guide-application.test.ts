@@ -16,7 +16,7 @@ function environment() {
   }
   return { calls, requests,
     fetch:async(url:any,options:any)=>{requests.push({url,options});return new Response('<!doctype html><html><head></head><body><h1>从一页 PDF 到中文怪物卡</h1><a href="guide.pdf" download>下载 PDF 手册</a></body></html>',{headers:{'Content-Type':'text/plain; charset=utf-8'}});},
-    game: { version: '14.368', system: { id: 'dnd5e', version: '5.3.3' }, user: { isGM: true } },
+    game: { version: '14.368', system: { id: 'dnd5e', version: '6.0.6' }, user: { isGM: true } },
     foundry: { applications: { api: { ApplicationV2: Application, HandlebarsApplicationMixin: (Base: any) => Base } } },
   };
 }
