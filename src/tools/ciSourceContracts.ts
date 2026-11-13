@@ -9,26 +9,6 @@ export interface LocalSourceContract {
 // callbacks that read historical inputs, leaving their portable companions in CI.
 export const LOCAL_SOURCE_CONTRACTS: readonly LocalSourceContract[] = [
   {
-    id: 'midi-workflow-sources',
-    files: [
-      'foundry-modules/midi-qol/tests/bundle-identity.test.ts',
-      'foundry-modules/midi-qol/tests/damage-target-render.test.ts',
-      'foundry-modules/midi-qol/tests/manual-isdamaged.test.ts',
-      'foundry-modules/midi-qol/tests/real-workflow-source.test.ts',
-      'foundry-modules/midi-qol/tests/restored-workflow-item.test.ts',
-    ],
-    reason: 'Locked Midi Git blobs, patched Workflow/component sources, TypeScript 5.7.3 and historical dnd5e 6.0.2 inputs are local-only.',
-  },
-  {
-    id: 'midi-core-source-probes',
-    files: [
-      'foundry-modules/midi-qol/tests/effect-create-id.test.ts',
-      'foundry-modules/midi-qol/tests/effect-model-source.test.ts',
-      'foundry-modules/midi-qol/tests/enchantment-clone.test.ts',
-    ],
-    reason: 'The existing probes execute licensed Foundry Core 14.368 with local Node 24.17 and pinned Midi/dnd5e historical sources.',
-  },
-  {
     id: 'classpack-historical-sources',
     files: [
       'foundry-modules/server-next-external-candidates/classpack/offline-candidate.test.ts',
@@ -41,33 +21,6 @@ export const LOCAL_SOURCE_CONTRACTS: readonly LocalSourceContract[] = [
     id: 'classpack-core-migration',
     files: ['foundry-modules/server-next-external-candidates/classpack/source-safe-native-migration.test.ts'],
     reason: 'Every migration case uses the exact licensed Core 14.368 merge helpers and data operators imported by suite setup.',
-  },
-  {
-    id: 'dae-release-source',
-    files: [
-      'foundry-modules/server-next-external-candidates/dae/compendium-status-guard.test.mjs',
-      'foundry-modules/server-next-external-candidates/dae/should-apply-change.test.mjs',
-    ],
-    reason: 'Shared setup verifies the retained DAE 14.0.14 archive; phase cases additionally extract the actual local Core and dnd5e methods.',
-  },
-  {
-    id: 'item-piles-core-and-receipts',
-    files: [
-      'foundry-modules/server-next-external-candidates/item-piles/registration.test.mjs',
-      'foundry-modules/server-next-external-candidates/item-piles/reset.test.mjs',
-      'foundry-modules/server-next-external-candidates/item-piles/currency-metadata.test.mjs',
-    ],
-    reason: 'Suite setup imports licensed Core 14.368 helpers or retained private migration receipts; registration and currency cases also use actual retained Item Piles source.',
-  },
-  {
-    id: 'item-piles-adapter-sources',
-    files: ['foundry-modules/server-next-external-candidates/item-piles/tests.mjs'],
-    reason: 'The existing explicit package suite evaluates retained Item Piles adapter and base bundles in shared setup.',
-  },
-  {
-    id: 'vision-and-item-macro-sources',
-    files: ['foundry-modules/server-next-external-candidates/vision-macro/tests.mjs'],
-    reason: 'The existing explicit package suite imports and evaluates retained Vision and Item Macro source in shared setup.',
   },
   {
     id: 'external-candidate-bundles',

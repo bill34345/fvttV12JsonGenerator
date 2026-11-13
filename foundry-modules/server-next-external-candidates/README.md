@@ -1,37 +1,9 @@
-# 历史测试输入复用
+# 第三方补丁与本地联调
 
-新工作树可以通过显式绝对 `FVTT_LEGACY_NEXT_INPUT_ROOT` 只读复用已经核对的 ignored 输入，仍测试当前候选实现。适用于原始包、候选产物及历史证据；不会重定位当前源码或补丁，不操作运行世界。各包原有版本、来源 SHA 和语义断言保持。配置和接受边界见[历史输入复用说明](../../docs/runbooks/midi-qol-source-patch-build-install.md#在独立工作树复用历史测试输入)。
+[Foundry 兼容补丁仓库](https://github.com/bill34345/foundry-compat-patches) 维护独立的源码补丁。保留生成器根目录的战斗补丁命令。先把补丁仓库检出为生成器的同级目录 foundry-compat-patches，或设置绝对路径 FVTT_PATCH_ROOT，再按补丁说明安装锁定依赖。补丁命令会从选定目录运行，不会下载、更新或安装模块。Forge 的构建和安装可以单独使用。
 
-## ServerNext external candidates
+DAE 14.0.14 的历史补丁也由兼容补丁仓库维护。旧入口 test:dae 和 build:dae 仍可通过本目录运行，准备输入时参照补丁仓库的 DAE 说明。
 
-For the optional fixes tested on Foundry 14.370, see the [combat compatibility notes](../../docs/reviews/2026-11-13-foundry-combat-compatibility.md). Each component has its own pinned upstream inputs and can be prepared separately.
+历史 Item Piles、Vision／Item Macro、Droppables 与 Clocks 的源码、版本锁与旧构建入口见生成器 Git 提交 81ee47a510c7d9db33633729e196335f4f0b023d。使用时核对当时的 Core、dnd5e、上游包和实际接受范围。[迁移记录](../../docs/plan/server-next-migration-handoff-20260927.md) 保存当时的组合与验收证据。
 
-The original builds below retain the historical `NEXT-EXT-20260929-01` target,
-Foundry14.368 / dnd5e6.0.2. The later 6.0.5 migration is also historical.
-Do not reuse old runtime contracts or the 6.0.2-only launcher on newer versions.
-The migration record is `docs/plan/server-next-migration-handoff-20260927.md`.
-
-The2026-10-02 [DAE phase-chain candidate](./dae/README.md) is a separate narrow
-14.0.14+servernext.1 correction on Core14.368/dnd5e6.0.5. It restores native
-conditions/suppression/applied-marker handling after DAE phase routing. Use
-`bun run --cwd foundry-modules/server-next-external-candidates test:dae` for the
-9 source-contract cases and `build:dae` only with the locked release input and
-author license prepared. Installed-file proof and actual startup/no-new-error
-acceptance are separate; paid package validation is excluded by the user.
-
-- Convenient Effects 9.2.7 uses unchanged official package files. Its archive in `dist` is a locally repacked transport; original release archive and digest are preserved in `upstream` and `upstream-lock.json`.
-- Droppables 6.2.1+servernext.1 builds fixed upstream commit with one functional patch: literal string namespace. Local source/package/manifest versions agree. Original source manifest was 1.2.5 because upstream release workflow substitutes the release tag after build.
-- Clocks 1.3.3+servernext.1 replaces its only GSAP call with native Element.animate, and removes the missing script declaration. Package allowlist follows the source release workflow's existing paths; the source has no `images` directory. MIT licenses are included in both local packages.
-- Local manifests retain author/source URLs, but remove official manifest/download update links and show a local title/version. They are not unmodified upstream releases.
-
-`acquire.py` records complete release bodies and verifies public asset SHA-256. Once `upstream-lock.json` exists it fetches those exact releases, never silently chooses a different candidate. `patch.py` requires exact source preimages and preserves functional unified diffs. In `sources/drop`, use `npm ci --ignore-scripts --no-audit --no-fund` then `npm run build` (upstream TypeScript + Vite production build). `assemble.py` packages into `dist`, verifies declared resources and records file hashes. It refuses arbitrary replacement; after a partial failure inspect its precise output before recovery.
-
-`npm test` runs package-owned Node tests against the actual built namespace/animation code and the persistent UI Macro's target, ownership, partial-write and reload behavior. These tests are not browser acceptance.
-
-`install-next.py` accepts only three absent allowlisted packages, checks exact target and offline process/listener state, checks world LOCK handles without writing database contents, verifies dependency hashes, then records every installed file. It never replaces an existing directory. A partial failure requires readback; do not blindly rerun. No Mirror or system files are changed.
-
-`acceptance-macro.js` is imported through normal Macro UI as a new, named batch tool. It stores its ledger on its own Macro document, creates only explicitly flagged fixtures, rejects collisions, resumes partial preparation without duplicate documents, and restores settings/cleans exact owned IDs once. User-visible actions remain real UI tests. It never calls module drag handlers to manufacture success. Delete the tool itself through UI only after saving cleanup evidence.
-
-`launch-next.ps1` is a prepared, bounded service operation for the executor, gated by its actual host Full Access receipt. It leaves the verified resident service running; existing lock directories are not cleared. On startup failure preserve the exact process/log state and send a blocker callback.
-
-The [DND5E classpack candidate](./classpack/README.md) is a separate approved content adaptation for dnd5e6.0.5. It preserves the v4.3.4 pack/document identities, applies source-established link repairs, and uses explicit source-preserving native API migration with backend verification. Missing custom summons/helpers remain deferred. Use the classpack README and the unique migration ledger for current gates; code/file/source evidence and real UI/reload/cleanup acceptance remain distinct.
+[Classpack](classpack/README.md) 的合集内容适配和迁移、历史 Item Piles／Vision 联调夹具仍在此处。只有原组合满足的真实行为记录能用于对应版本。

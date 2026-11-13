@@ -1309,13 +1309,13 @@
     "steps": [
       {
         "title": "检查官方更新",
-        "text": "查询官方 release、分支和开放 MR。检查只给出建议，构建仍使用来源锁定中的完整提交 SHA。",
-        "command": "bun run midi-qol:upstream-check"
+        "text": "在 README 指定的历史提交工作区查询官方 release、分支和开放 MR。构建仍使用来源锁定中的完整提交 SHA。",
+        "command": ""
       },
       {
         "title": "测试并构建历史锁定候选",
-        "text": "这些入口仍绑定原6.0.2来源，不是完整local.10构建路线。维护原来源时从锁定源码重建依赖、比较补丁前后诊断并打包；历史回归可直接使用已核对的独立测试输入库，当前与新worktree自动定位，不再指向旧迁移树。不得用结果覆盖当前6.0.5安装；固定6.0.2分发源不替换为现行系统文件。",
-        "command": "bun run midi-qol:build\nbun run midi-qol:test"
+        "text": "在 README 指定的历史提交工作区使用这些入口，仍绑定原6.0.2来源，不是完整local.10构建路线。维护原来源时从锁定源码重建依赖、比较补丁前后诊断并打包；历史回归可直接使用已核对的独立测试输入库，当前与新worktree自动定位，不再指向旧迁移树。不得用结果覆盖当前6.0.5安装；固定6.0.2分发源不替换为现行系统文件。",
+        "command": ""
       },
       {
         "title": "区分旧资源更新与 local.9 精确离线更新",
@@ -1323,8 +1323,8 @@
       },
       {
         "title": "准备 C/F 运行时夹具",
-        "text": "生成可导入的测试宏；通过正常 API 创建标记临时对象，读回 1 分钟、Circle 30 ft、creature 和模板提示后才允许走实际 activity.use。核对 effect 类型与依赖删除，不以缺少 toast 判通过。",
-        "command": "bun run midi-qol:prepare-cf"
+        "text": "在同一历史工作区生成可导入的测试宏；通过正常 API 创建标记临时对象，读回 1 分钟、Circle 30 ft、creature 和模板提示后才允许走实际 activity.use。核对 effect 类型与依赖删除，不以缺少 toast 判通过。",
+        "command": ""
       },
       {
         "title": "分层验收",
@@ -1444,7 +1444,7 @@
       {
         "title": "运行当前候选回归",
         "text": "清除非空的历史输入根覆盖后运行当前候选；测试、补丁、锁定和报告来自当前 checkout，材料来自独立输入库。",
-        "command": "bun run test:legacy-next-inputs\nbun run midi-qol:test\nbun run test:classpack-next"
+        "command": "bun run test:legacy-next-inputs\nbun run test:classpack-next"
       },
       {
         "title": "运行严格本地历史源码门",
@@ -1551,7 +1551,7 @@
     "when": "正在维护与实测版本一致的 Foundry 14.370 环境，并遇到对应问题时。",
     "requires": [
       "按需准备 Monk’s Combat Details 14.03、dnd5e 6.0.6 或 Dice So Nice 6.4.4 的官方文件。各组件分别核对版本与来源。",
-      "在仓库根安装锁定依赖。按对应源码说明准备 Git、Node 22 或以上，以及系统构建所需的 Rollup。"
+      "准备同级 foundry-compat-patches 补丁仓库，或将 FVTT_PATCH_ROOT 设为其绝对路径。在补丁仓库运行 npm ci。系统补丁按说明另备 Node 22 或以上和 Rollup。"
     ],
     "steps": [
       {
@@ -1586,7 +1586,9 @@
     "watch": [
       "foundry-modules/server-next-external-candidates/retained-tools/",
       "foundry-modules/server-next-external-candidates/system-runtime/",
-      "foundry-modules/server-next-external-candidates/animation-stack/"
+      "foundry-modules/server-next-external-candidates/animation-stack/",
+      "tools/run-foundry-patch.ts",
+      "tools/foundry-patch-root.mjs"
     ]
   },
   {

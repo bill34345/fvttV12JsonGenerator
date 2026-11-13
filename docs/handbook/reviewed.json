@@ -60,9 +60,9 @@
     "note": "对照tools/foundry-ops/AGENTS.md，仅将Bun版本依据从已删除CI配置改为根README；本地检查包装、临时沙箱、只读依赖、生产权限、目标路径和失败关闭要求保持。"
   },
   "verification-development": {
-    "fingerprint": "70bc9aaf622d9931f9eb5938f5433ef933316ac0563261047aa869b922b7d9fa",
+    "fingerprint": "249f30f2d36211f7824ec0949be5c0b0bbe1f5cbef45d79a387dde7041690bb2",
     "reviewedOn": "2026-11-13",
-    "note": "新增外部战斗补丁的离线入口，手册按工程维护内容登记；本条既有验证命令、范围和运行要求保持。"
+    "note": "核对主项目不再把移出的历史补丁源测试列入默认检查，保留生成器历史输入与 Classpack 单独复现入口。"
   },
   "human-encounter-intake": {
     "fingerprint": "18480831d4d3c65a7afe21846f6d5e798455d8059cf1ffff4abd753910dd26ee",
@@ -75,9 +75,9 @@
     "note": "人工核对新tracked AGENTS两目录登记及Scope/Verification标题，显式清单32→34，作用域/功能/版本/权限未变，检查器19回归及production类型通过；运行模块代码和build输入无变化。"
   },
   "midi-qol-server-next-patch": {
-    "fingerprint": "e73d2e5e03d3937269400b953a8569e3a8af683f9e5e26c99654cb64a5db70f7",
-    "reviewedOn": "2026-10-30",
-    "note": "逐项核对变化仅来自历史测试输入runbook及对应本地入口说明：移除公共CI自动执行承诺，保留严格历史源码门、显式portable选择、固定来源版本/哈希、缺失失败条件和Git外材料。各模块功能、候选安装与玩法接受范围保持。"
+    "fingerprint": "de2cc6ad94e9fd580ea9680a8cf61dd75b1e5064666d20cdf9c968636afee27b",
+    "reviewedOn": "2026-11-13",
+    "note": "核对当前分支只保留历史入口说明及原提交，历史构建与安装命令在指定旧 checkout 运行。"
   },
   "version-selection": {
     "fingerprint": "cefb7ad0abe2ef9f46716ddf854faae57bf2faf82ed2fc7934743603e5b76160",
@@ -85,9 +85,9 @@
     "note": "核对固定生成目标、运行准入和旧版本历史证据三者的区别。"
   },
   "legacy-next-test-inputs": {
-    "fingerprint": "3169623f383d7b69f9114e0012c701b7f8ee20dbeb7dc6554688355596264d06",
-    "reviewedOn": "2026-10-30",
-    "note": "逐项核对变化仅来自历史测试输入runbook及对应本地入口说明：移除公共CI自动执行承诺，保留严格历史源码门、显式portable选择、固定来源版本/哈希、缺失失败条件和Git外材料。各模块功能、候选安装与玩法接受范围保持。"
+    "fingerprint": "19e7fec91c2e3bd2ab1d4ab8f46e2086f24571ef99642195d4613335394001b8",
+    "reviewedOn": "2026-11-13",
+    "note": "保留输入锁和严格缺件检查，当前说明的命令改为生成器仍提供的历史输入和 Classpack 检查。"
   },
   "babele-zh-maintenance": {
     "fingerprint": "1b9623a7ea556db39772d7316f302f30eb1fee823778a96a894bb94cc07ed269",
@@ -95,9 +95,9 @@
     "note": "首版收尾已对照独立项目当前交付页、包与验收记录：增加current-state接续入口，历史验收明确为快照；命令、版本及安装授权边界不变，Force标签和动画精确匹配仍列待办。"
   },
   "foundry-combat-compatibility": {
-    "fingerprint": "26e4f43e0327b0658d78670f4696c1ba7653d8c3cb4e96e9188fbb2f29946725",
+    "fingerprint": "e5a1300a7a96895c5de7282dd6c01c5cbbfdc2f44c3cc7b08b29d492df7ec0bb",
     "reviewedOn": "2026-11-13",
-    "note": "核对官方版本、输入来源与摘要、补丁顺序和构建入口。说明适用条件、生成文件及首次绘制仍可能短停。"
+    "note": "核对八个原补丁入口通过明确的补丁 checkout 调用，Forge 构建独立，适用版本和运行证据沿用原记录。"
   },
   "foundry-mcp-readiness": {
     "fingerprint": "ff32939eec664f97d2f51ad40b36144673224becc139c18a1e1b1c654615770e",
@@ -180,14 +180,14 @@
     "note": "已核源码active/API/能力门和持久marker，并对照总账WMP R5/R6：606单GM Sap预约取消、Club伤害/Slow、重复提交零重复结算、重载/清理已接受。README/手册/AGENTS统一该范围，manifest verified仍605；旧User UNKNOWN与完整精通/玩家/多GM/长时/生产缺口保留。"
   },
   "midi-qol": {
-    "fingerprint": "6db912cccd26cdd29982aacbe419aad7d86c73a4cec1283b12ac69498b797885",
-    "reviewedOn": "2026-10-30",
-    "note": "逐项核对变化仅来自历史测试输入runbook及对应本地入口说明：移除公共CI自动执行承诺，保留严格历史源码门、显式portable选择、固定来源版本/哈希、缺失失败条件和Git外材料。各模块功能、候选安装与玩法接受范围保持。"
+    "fingerprint": "adce0fa2bd245d23bd076855fe14a331544dc87bdfe5008a8ca998f2fe9610cd",
+    "reviewedOn": "2026-11-13",
+    "note": "旧版源码定位改到原提交；手册中的历史玩法证据仍对应原版本。"
   },
   "server-next-external-candidates": {
-    "fingerprint": "e45a84110a6fba6036c277c5f90e797cb942b60d6efc4945668b40044a2f79ba",
+    "fingerprint": "41880ed13254bcadbc42afefb71dc272a8d9c7ce395bee084353157ca376d841",
     "reviewedOn": "2026-11-13",
-    "note": "保留历史候选入口，核对新战斗补丁的独立说明和各组件官方输入。"
+    "note": "核对战斗补丁和历史 DAE 的独立入口，以及主项目保留的 Classpack 与联调夹具。"
   },
   "fvtt-suite-console": {
     "fingerprint": "37c38bc9045eaaf55d8942d23c00d2ecb8b44fe5ec6519c6db3d9b14072a2b9c",

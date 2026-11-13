@@ -21,7 +21,6 @@ describe('audited local source contracts', () => {
 
   test('portable scope removes only exact whole-source files and reports every mandatory local group', () => {
     const portable = [
-      'foundry-modules/midi-qol/tests/browser-update.test.ts',
       'foundry-modules/server-next-external-candidates/classpack/next-migration.test.ts',
       'tests/legacy-next-inputs.test.ts',
       'tools/legacy-next-inputs/index.test.mjs',
@@ -110,16 +109,16 @@ test('portable companion',()=>expect(true).toBe(true));`);
       const reportPath = join(root, 'report.json');
       const child = Bun.spawn([
         process.execPath, 'run', resolve(repositoryRoot, 'src/tools/runLocalSourceContracts.ts'),
-        '--contract=midi-workflow-sources', `--report=${reportPath}`,
+        '--contract=classpack-historical-sources', `--report=${reportPath}`,
       ], { env: { ...process.env, FVTT_LEGACY_NEXT_INPUT_ROOT: join(root, 'absent-inputs') }, stdout: 'pipe', stderr: 'pipe' });
       const [stdout, stderr, exitCode] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
       expect(exitCode).not.toBe(0);
-      expect(stdout + stderr).toContain('missing source is never skipped');
+      expect(stdout + stderr).toContain('absent-inputs');
       const report = JSON.parse(await readFile(reportPath, 'utf8'));
       expect(report.status).toBe('FAIL');
       expect(report.commands[0].status).toBe('FAIL');
       expect(report.commands[0].exitCode).not.toBe(0);
-      expect(report.sourceScope.map((contract: { id: string }) => contract.id)).toEqual(['midi-workflow-sources']);
+      expect(report.sourceScope.map((contract: { id: string }) => contract.id)).toEqual(['classpack-historical-sources']);
       expect(report.codeScope.revision).toMatch(/^[a-f0-9]{40}$/);
     } finally { await rm(root, { recursive: true }); }
   });

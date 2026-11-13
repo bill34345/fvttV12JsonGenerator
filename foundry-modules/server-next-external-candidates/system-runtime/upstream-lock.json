@@ -1,9 +1,0 @@
-{
-  "system": "dnd5e",
-  "version": "6.0.6",
-  "commit": "87e94dbd9f930135e0694cd7e7d49f210603cd2c",
-  "sourcePath": "module/tooltips.mjs",
-  "sourceUrl": "https://github.com/foundryvtt/dnd5e/blob/87e94dbd9f930135e0694cd7e7d49f210603cd2c/module/tooltips.mjs",
-  "sourceSha256Lf": "3b32a3a7a6d888c280b6ab7fc1d4bd64a27d1b2d6918c221bb02aed9dd954639",
-  "observedWindowsSourceSha256": "ce855fa8044aec85e657811d167a68458f875028231f8d2db284a4ad50991524"
-}
