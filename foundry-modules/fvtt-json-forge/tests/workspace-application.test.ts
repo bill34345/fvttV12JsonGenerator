@@ -19,6 +19,35 @@ const itemSource = readFileSync('obsidian/dnd数据转fvttjson/input/items/骑�
 const template = (name: string, context: object) => Handlebars.compile(readFileSync(`foundry-modules/fvtt-json-forge/src/templates/${name}.hbs`, 'utf8'))(context);
 
 describe('unified Forge workspace using its actual templates', () => {
+  test('shows a direct setup action in both workspaces and updates it when the shared connection is verified or loses its key', async () => {
+    saveForgeSessionSettings({ model: '', apiKey: '' });
+    let opened = 0;
+    const actor = await makeWorkspace({ initialMode: 'structured', openConnectionSettings: () => opened++ });
+    const item = await makeWorkspace({ directoryKind: 'Item', initialMode: 'ai', openConnectionSettings: () => opened++ });
+    try {
+      const notice = (workspace: typeof actor) => workspace.root.querySelector<HTMLElement>('[data-workspace-connection-notice]')!;
+      for (const workspace of [actor, item]) {
+        expect(notice(workspace).hidden).toBe(false);
+        notice(workspace).querySelector('button')!.click();
+      }
+      expect(opened).toBe(2);
+      expect(actor.formal().hidden).toBe(false);
+      saveForgeSessionSettings({ model: 'fresh-provider-id', apiKey: 'fixture-key' });
+      expect(notice(item).textContent).toContain('测试当前配置');
+      markForgeSessionConnectionTested();
+      expect(notice(item).hidden).toBe(true);
+      expect(notice(actor).hidden).toBe(true);
+      expect(actor.root.querySelector('[data-workspace-connection-summary]')!.textContent).toContain('fresh-provider-id');
+      clearAllForgeSessionApiKeys();
+      expect(notice(actor).hidden).toBe(false);
+      expect(notice(actor).textContent).toContain('重新输入 API Key');
+    } finally {
+      saveForgeSessionSettings({ model: '', apiKey: '' });
+      await item.cleanup();
+      await actor.cleanup();
+    }
+  });
+
   test('actor source limits: the actual file input reads and formally generates an Actor source larger than 200KB',async()=>{
     const biography='Long source biography remains available. '.repeat(6000);
     const largeSource=source.replace(/^(?:\uFEFF)?---\r?\n/u,'---\n传记: '+JSON.stringify(biography)+'\n');

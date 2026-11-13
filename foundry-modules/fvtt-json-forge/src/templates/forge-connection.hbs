@@ -1,9 +1,4 @@
 <form class="fvtt-json-forge-form forge-connection-panel" data-connection-form>
-  <header class="forge-connection-header">
-    <h2>Forge · AI连接</h2>
-    <p>这里管理 Provider、模型和凭据。生物及其关联召唤物从角色目录生成；物品从物品目录生成。</p>
-  </header>
-
   <section class="forge-connection-card" aria-labelledby="forge-connection-basics-heading">
     <h3 id="forge-connection-basics-heading">基本连接</h3>
     <div class="forge-connection-grid">
@@ -22,37 +17,64 @@
           <option value="custom">Custom Provider</option>
         </select>
       </label>
-      <label for="forge-connection-model">模型
-        <input id="forge-connection-model" name="model" type="search" list="forge-provider-model-options" autocomplete="off" placeholder="输入精确 model ID">
-        <datalist id="forge-provider-model-options" data-model-options></datalist>
-      </label>
+      <div class="forge-model-field" data-model-field>
+        <label for="forge-connection-model">模型</label>
+        <div class="forge-field-controls forge-model-controls">
+          <input id="forge-connection-model" name="model" type="text" role="combobox" aria-autocomplete="list"
+            aria-expanded="false" aria-controls="forge-provider-model-options" aria-describedby="forge-model-help"
+            autocomplete="off" spellcheck="false" placeholder="选择或输入模型 ID">
+          <button type="button" data-action="clear-model" aria-label="清空模型 ID" title="清空模型 ID" disabled>
+            <i class="fas fa-xmark" aria-hidden="true"></i>
+          </button>
+          <button type="button" data-action="show-models" aria-label="选择 Provider 模型" title="选择 Provider 模型"
+            aria-expanded="false" aria-controls="forge-provider-model-options">
+            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+          </button>
+        </div>
+        <p class="forge-field-note" id="forge-model-help">输入 API Key 后可查询模型，也可以直接填入模型 ID。</p>
+        <div class="forge-model-picker" data-model-picker hidden>
+          <div class="forge-model-picker-header">
+            <p data-model-status role="status" aria-live="polite"></p>
+            <button type="button" data-action="refresh-models">刷新列表</button>
+          </div>
+          <ul id="forge-provider-model-options" data-model-options role="listbox" aria-label="Provider 模型"></ul>
+        </div>
+      </div>
       <label for="forge-connection-api-key">API Key
-        <span class="forge-secret-input">
+        <span class="forge-field-controls forge-secret-input">
           <input id="forge-connection-api-key" name="apiKey" type="password" autocomplete="off" spellcheck="false" aria-describedby="forge-connection-key-note">
           <button type="button" data-action="toggle-key" aria-label="显示 API Key">显示</button>
         </span>
       </label>
     </div>
     <p id="forge-connection-key-note" class="forge-key-memory-badge" role="status">Key 默认只保留在当前 Foundry 页面；刷新后需要重新输入。</p>
-    <p data-connection-summary class="forge-connection-summary">请选择 Provider。</p>
   </section>
 
-  <section class="forge-connection-card" aria-labelledby="forge-connection-review-heading">
-    <h3 id="forge-connection-review-heading">纠错与审核</h3>
-    <label class="forge-inline-field" for="forge-connection-auto-correct">
-      <input id="forge-connection-auto-correct" name="autoCorrect" type="checkbox" aria-describedby="forge-connection-correction-note">
-      开启自动纠错（额外 API 费用）
-    </label>
-    <p id="forge-connection-correction-note">默认关闭。开启后，每只生物最多追加一次纠错请求。语义检查有疑点或纠错失败时，仍保留可用候选和问题提示，由你决定是否使用。</p>
-    <p>AI 内容复核已暂时关闭。此连接用于提取、生成及明确发起的资料修正；请由 GM 核对完整来源、候选和程序检查结果后确认创建。</p>
+  <section class="forge-connection-actions-card">
+    <p data-connection-status role="status" aria-live="polite" aria-atomic="true">尚未测试当前连接。</p>
+    <div class="forge-connection-actions">
+      <a data-provider-docs target="_blank" rel="noreferrer">Provider 文档</a>
+      <button type="button" data-action="save">保存配置</button>
+      <button type="button" data-action="test-connection">测试连接</button>
+    </div>
   </section>
 
   <details class="forge-advanced-settings">
+    <summary>纠错设置</summary>
+    <div class="forge-connection-section-body">
+      <label class="forge-inline-field" for="forge-connection-auto-correct">
+        <input id="forge-connection-auto-correct" name="autoCorrect" type="checkbox" aria-describedby="forge-connection-correction-note">
+        开启自动纠错（额外 API 费用）
+      </label>
+      <p id="forge-connection-correction-note" class="forge-field-note">默认关闭。开启后每只生物最多追加一次请求。纠错失败时仍可查看已有候选和问题提示。</p>
+    </div>
+  </details>
+
+  <details class="forge-advanced-settings">
     <summary>高级连接设置</summary>
-    <p class="forge-advanced-help">一般情况下使用 Provider 默认值。只有接入兼容网关、切换协议或调整结构化输出时才需要修改这里。</p>
     <div class="forge-advanced-grid">
       <label for="forge-connection-endpoint">HTTPS endpoint
-        <span class="forge-secret-input">
+        <span class="forge-field-controls forge-secret-input">
           <input id="forge-connection-endpoint" name="endpoint" type="url" placeholder="https://example.com/v1" aria-describedby="forge-connection-endpoint-note">
           <button type="button" data-action="toggle-endpoint">自定义 endpoint</button>
         </span>
@@ -90,22 +112,18 @@
     </div>
   </details>
 
-  <section class="forge-connection-actions-card" aria-labelledby="forge-connection-actions-heading">
-    <h3 id="forge-connection-actions-heading">验证并保存</h3>
-    <p data-connection-status role="status" aria-live="polite" aria-atomic="true">尚未测试当前连接。</p>
-    <div class="forge-actions forge-connection-actions">
-      <button type="button" data-action="test-connection">测试连接</button>
-      <button type="button" data-action="save">保存配置</button>
-      <a data-provider-docs target="_blank" rel="noreferrer">打开 Provider 文档</a>
+  <details class="forge-advanced-settings forge-key-settings">
+    <summary>API Key 保存与清除</summary>
+    <div class="forge-connection-section-body">
+      <label class="forge-inline-field" for="forge-connection-persist-key">
+        <input id="forge-connection-persist-key" name="persistApiKey" type="checkbox" aria-describedby="forge-persist-note">
+        保存 API Key 到当前浏览器
+      </label>
+      <p id="forge-persist-note" class="forge-field-note">同一 Foundry 站点的其他模块可能读取保存在浏览器中的 Key。</p>
+      <div class="forge-secondary-actions">
+        <button type="button" data-action="clear-key">清除当前 API Key</button>
+        <button type="button" data-action="clear-all-keys">清除全部已保存 Key</button>
+      </div>
     </div>
-    <p class="forge-key-warning">勾选保存 API Key 后，它会写入当前浏览器的 client-only setting；其他同源模块理论上可能读取它。</p>
-    <label class="forge-inline-field" for="forge-connection-persist-key">
-      <input id="forge-connection-persist-key" name="persistApiKey" type="checkbox">
-      保存 API Key 到当前浏览器（非默认）
-    </label>
-    <div class="forge-secondary-actions">
-      <button type="button" data-action="clear-key">清除当前 API Key</button>
-      <button type="button" data-action="clear-all-keys">清除全部已保存 Key</button>
-    </div>
-  </section>
+  </details>
 </form>

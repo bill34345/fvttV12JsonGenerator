@@ -1,4 +1,6 @@
 import {
+  discoverForgeProviderModels,
+  FORGE_PROVIDER_PRESETS,
   getForgeProviderPreset,
   normalizeBaseUrlIdentity,
   normalizeForgeProviderConnection,
@@ -24,6 +26,7 @@ import {
   subscribeForgeSessionSettings,
   type ForgeClientSettings,
 } from './settings';
+import { mountForgeModelPicker } from './modelPicker';
 
 export interface ForgeConnectionApplicationEnvironment {
   game: any;
@@ -35,25 +38,15 @@ export interface ForgeConnectionApplicationEnvironment {
 
 export interface ForgeConnectionApplicationServices {
   testForgeProviderConnection: typeof testForgeProviderConnection;
+  discoverForgeProviderModels: typeof discoverForgeProviderModels;
 }
 
 const DEFAULT_SERVICES: ForgeConnectionApplicationServices = {
   testForgeProviderConnection,
+  discoverForgeProviderModels,
 };
 
-const PROVIDER_OPTIONS: readonly { value: ForgeProviderId; label: string }[] = [
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'anthropic', label: 'Anthropic (Claude)' },
-  { value: 'google-gemini', label: 'Google Gemini' },
-  { value: 'deepseek', label: 'DeepSeek' },
-  { value: 'xai', label: 'xAI (Grok)' },
-  { value: 'mistral', label: 'Mistral' },
-  { value: 'openrouter', label: 'OpenRouter' },
-  { value: 'alibaba-qwen', label: 'Alibaba Qwen' },
-  { value: 'moonshot-kimi', label: 'Moonshot / Kimi' },
-  { value: 'zhipu-glm', label: 'Zhipu GLM' },
-  { value: 'custom', label: 'Custom Provider' },
-];
+const PROVIDER_OPTIONS = FORGE_PROVIDER_PRESETS.map(preset => ({ value: preset.id, label: preset.label }));
 
 export function createForgeConnectionApplicationClass(environment: ForgeConnectionApplicationEnvironment): any {
   const foundryGlobal = environment.foundry ?? (globalThis as any).foundry;
@@ -67,7 +60,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
     static DEFAULT_OPTIONS = {
       id: 'fvtt-json-forge-connection',
       classes: ['fvtt-json-forge', 'forge-connection-window'],
-      position: { width: 660, height: 760 },
+      position: { width: 680, height: 680 },
       window: { title: 'Forge · AI连接', resizable: true },
     };
 
@@ -81,7 +74,8 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
     private testRevision = 0;
     private testedDraftIdentity = '';
     private statusOverride?: { kind: 'success' | 'error' | 'info' | 'pending'; message: string };
-    private discoveredModels: string[] = [];
+    private modelPicker?: ReturnType<typeof mountForgeModelPicker>;
+    private modelPickerRoot?: HTMLElement;
     private unsubscribeSession?: () => void;
     private readonly services: ForgeConnectionApplicationServices = { ...DEFAULT_SERVICES, ...(environment.services ?? {}) };
 
@@ -92,6 +86,8 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
     _onRender(_context: unknown, _options: unknown): void {
       const root = this.element as HTMLElement | undefined;
       if (!root) return;
+      const form = root.querySelector<HTMLFormElement>('[data-connection-form]');
+      if (form) form.onsubmit = event => event.preventDefault();
       this.settings = readForgeSessionSettings();
       if (!this.unsubscribeSession) {
         this.unsubscribeSession = subscribeForgeSessionSettings(() => {
@@ -100,7 +96,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
           if (!currentRoot) return;
           this.statusOverride = undefined;
           this.testedDraftIdentity = '';
-          this.discoveredModels = [];
+          this.modelPicker?.reset();
           this.settings = readForgeSessionSettings();
           this.fillSettings(currentRoot);
           this.refreshProviderUi(currentRoot);
@@ -109,6 +105,11 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       }
       this.fillSettings(root);
       this.bindInputEvents(root);
+      if (this.modelPickerRoot !== root.querySelector('[data-model-field]')) {
+        this.modelPicker?.reset();
+        this.modelPickerRoot = root.querySelector<HTMLElement>('[data-model-field]') ?? undefined;
+        this.modelPicker = mountForgeModelPicker(root, signal => this.loadModels(root, signal));
+      }
       this.bind(root, 'test-connection', () => void this.testConnection(root));
       this.bind(root, 'save', () => this.save(root));
       this.bind(root, 'toggle-key', () => this.toggleSecret(root, 'apiKey', 'toggle-key'));
@@ -120,6 +121,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
     }
 
     async close(options?: unknown): Promise<unknown> {
+      this.modelPicker?.reset();
       this.testController?.abort();
       this.testController = undefined;
       this.testing = false;
@@ -132,7 +134,6 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
     }
 
     private bindInputEvents(root: HTMLElement): void {
-      const provider = root.querySelector('[name="provider"]') as HTMLSelectElement | null;
       const fields = ['provider', 'model', 'apiKey', 'endpoint', 'protocol', 'authScheme', 'region', 'reasoning', 'structuredOutput', 'autoCorrect'];
       for (const name of fields) {
         const input = root.querySelector(`[name="${name}"]`) as HTMLInputElement | HTMLSelectElement | null;
@@ -141,15 +142,15 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
         const handler = () => {
           if (this.testing) return;
           if (name === 'provider') {
-            this.discoveredModels = [];
             this.applyProviderDefaults(root);
           }
-          if (['provider', 'endpoint', 'protocol', 'region'].includes(name)) {
+          if (['provider', 'endpoint', 'protocol', 'authScheme', 'region'].includes(name)) {
             // Credentials belong to a provider profile. A field edit that
             // changes that profile must never silently reuse the old key.
             const key = root.querySelector('[name="apiKey"]') as HTMLInputElement | null;
             if (key) key.value = '';
           }
+          if (['provider', 'endpoint', 'protocol', 'authScheme', 'region', 'apiKey'].includes(name)) this.modelPicker?.reset();
           this.invalidateDraft(root);
           this.refreshProviderUi(root);
           this.renderStatus(root);
@@ -157,7 +158,6 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
         if (eventName === 'change') input.onchange = handler;
         else input.oninput = handler;
       }
-      if (provider && !provider.onchange) provider.onchange = () => undefined;
     }
 
     private applyProviderDefaults(root: HTMLElement): void {
@@ -168,14 +168,14 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       const authScheme = root.querySelector('[name="authScheme"]') as HTMLSelectElement | null;
       const region = root.querySelector('[name="region"]') as HTMLSelectElement | null;
       const model = root.querySelector('[name="model"]') as HTMLInputElement | null;
-      if (endpoint && provider !== 'custom') {
+      if (endpoint) {
         endpoint.value = preset.regions?.[0]?.baseUrl ?? preset.defaultBaseUrl;
         endpoint.dataset.forgeEndpointOverride = 'false';
       }
       if (protocol) protocol.value = preset.defaultProtocol;
       if (authScheme) authScheme.value = preset.authSchemes[0] ?? 'bearer';
       if (region) region.value = preset.regions?.[0]?.id ?? '';
-      if (model) model.value = preset.recommendedModels[0] ?? '';
+      if (model) model.value = '';
     }
 
     private invalidateDraft(root: HTMLElement): void {
@@ -184,6 +184,27 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       this.testRevision += 1;
       if (isForgeSessionConnectionReady() && sameConnection(readConnectionForm(root), readForgeSessionSettings())) {
         invalidateForgeSessionConnectionTest();
+      }
+    }
+
+    private async loadModels(root: HTMLElement, signal: AbortSignal): ReturnType<typeof discoverForgeProviderModels> {
+      try {
+        assertGm(environment.game);
+        assertExactRuntime(environment.game);
+        const form = readConnectionForm(root);
+        const preset = getForgeProviderPreset(form.providerId);
+        const publicCatalog = form.providerId === 'openrouter'
+          && normalizeBaseUrlIdentity(form.endpoint) === preset.defaultBaseUrl;
+        if (!publicCatalog && !form.apiKey && form.authScheme !== 'none') {
+          return { status: 'authentication', models: [], message: '填入 API Key 后可刷新列表，也可直接填写模型 ID。' };
+        }
+        const connection = normalizeForgeProviderConnection({
+          providerId: form.providerId, baseUrl: form.endpoint, protocol: form.protocol,
+          authScheme: form.authScheme, region: form.region, apiKey: form.apiKey,
+        });
+        return await this.services.discoverForgeProviderModels(connection, { signal });
+      } catch {
+        return { status: 'configuration', models: [], message: '请检查 Provider、区域和 HTTPS 地址后再刷新列表。' };
       }
     }
 
@@ -202,6 +223,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       const controller = new AbortController();
       this.testController = controller;
       this.testing = true;
+      this.modelPicker?.close();
       this.renderStatus(root);
       try {
         const result = await this.services.testForgeProviderConnection({
@@ -216,7 +238,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
           reasoning: form.reasoning,
           structuredOutput: form.structuredOutput,
           apiKey: form.apiKey,
-        }, { signal: controller.signal });
+        }, { signal: controller.signal, loadModels: false });
         if (this.testController !== controller || this.testRevision !== revision) return;
         if (identity !== connectionIdentity(readConnectionForm(root))) {
           this.testedDraftIdentity = '';
@@ -224,7 +246,6 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
           return;
         }
         if (result.status === 'connected') {
-          this.discoveredModels = [...result.models];
           this.testedDraftIdentity = identity;
           const current = readForgeSessionSettings();
           if (sameConnection(form, current)) markForgeSessionConnectionTested();
@@ -233,7 +254,6 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
             : '连接测试通过；请点击“保存配置”后供其他 Forge 窗口使用。');
           environment.ui?.notifications?.info?.(result.message);
         } else {
-          this.discoveredModels = [];
           this.testedDraftIdentity = '';
           const current = readForgeSessionSettings();
           if (sameConnection(form, current)) invalidateForgeSessionConnectionTest();
@@ -309,7 +329,11 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       const button = root.querySelector(`[data-action="${action}"]`) as HTMLButtonElement | null;
       if (!input) return;
       input.type = input.type === 'password' ? 'text' : 'password';
-      if (button) button.textContent = input.type === 'password' ? '显示' : '隐藏';
+      if (button) {
+        const label = input.type === 'password' ? '显示' : '隐藏';
+        button.textContent = label;
+        button.setAttribute('aria-label', label + ' API Key');
+      }
     }
 
     private toggleEndpoint(root: HTMLElement): void {
@@ -323,11 +347,12 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       endpoint.readOnly = provider !== 'custom' && !nextOverride;
       if (!nextOverride && provider !== 'custom') {
         const preset = getForgeProviderPreset(provider);
-        endpoint.value = preset.regions?.[0]?.baseUrl ?? preset.defaultBaseUrl;
+        endpoint.value = preset.regions?.find(region => region.id === inputValue(root, 'region'))?.baseUrl ?? preset.defaultBaseUrl;
       }
       if (button) button.textContent = endpoint.readOnly ? '自定义 endpoint' : '使用官方 endpoint';
       const key = root.querySelector('[name="apiKey"]') as HTMLInputElement | null;
       if (key) key.value = '';
+      this.modelPicker?.reset();
       this.invalidateDraft(root);
       this.renderStatus(root);
     }
@@ -340,6 +365,8 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       setChecked(root, 'persistApiKey', settings.persistApiKey);
       setChecked(root, 'autoCorrect', settings.autoCorrect);
       setValue(root, 'endpoint', settings.endpoint);
+      const endpoint = root.querySelector<HTMLInputElement>('[name="endpoint"]');
+      if (endpoint) delete endpoint.dataset.forgeEndpointOverride;
       setValue(root, 'protocol', settings.protocol);
       setValue(root, 'authScheme', settings.authScheme);
       setValue(root, 'region', settings.region);
@@ -352,30 +379,41 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       const preset = getForgeProviderPreset(provider);
       const model = inputValue(root, 'model');
       const protocol = inputValue(root, 'protocol') as ForgeProviderProtocol || preset.defaultProtocol;
-      const capabilities = resolveForgeProviderCapabilities(provider, protocol, model || preset.recommendedModels[0] || '');
+      const capabilities = resolveForgeProviderCapabilities(provider, protocol, model);
       populateSelect(root, 'provider', PROVIDER_OPTIONS, provider, false);
       populateSelect(root, 'protocol', preset.protocols.map((value) => ({ value, label: protocolLabel(value) })), protocol, false);
       populateSelect(root, 'authScheme', preset.authSchemes.map((value) => ({ value, label: authSchemeLabel(value) })), inputValue(root, 'authScheme'), false);
       populateSelect(root, 'region', (preset.regions ?? []).map((value) => ({ value: value.id, label: value.label })), inputValue(root, 'region'), true, '默认');
       populateSelect(root, 'reasoning', capabilities.reasoning.map((value) => ({ value, label: value === 'auto' ? 'Auto' : value })), inputValue(root, 'reasoning') || 'auto', false);
       populateSelect(root, 'structuredOutput', capabilities.structuredOutput.map((value) => ({ value, label: structuredOutputLabel(value) })), inputValue(root, 'structuredOutput'), false);
-      populateModels(root, this.discoveredModels.length > 0 ? this.discoveredModels : preset.recommendedModels);
       const endpoint = root.querySelector('[name="endpoint"]') as HTMLInputElement | null;
       const endpointToggle = root.querySelector('[data-action="toggle-endpoint"]') as HTMLButtonElement | null;
-      const endpointCustomized = Boolean(endpoint?.value.trim())
-        && Boolean(preset.defaultBaseUrl)
-        && normalizeBaseUrlIdentity(endpoint!.value) !== normalizeBaseUrlIdentity(preset.defaultBaseUrl);
-      const endpointOverride = endpoint?.dataset.forgeEndpointOverride === 'true' || endpointCustomized;
-      if (endpoint && endpointCustomized) endpoint.dataset.forgeEndpointOverride = 'true';
-      if (endpoint) endpoint.readOnly = provider !== 'custom' && !endpointOverride;
-      if (endpoint && !endpoint.value.trim() && provider !== 'custom' && !endpointOverride) {
-        endpoint.value = preset.regions?.[0]?.baseUrl ?? preset.defaultBaseUrl;
+      const regionalEndpoint = preset.regions?.find(region => region.id === inputValue(root, 'region'))?.baseUrl ?? preset.defaultBaseUrl;
+      if (endpoint && provider !== 'custom') {
+        const override = endpoint.dataset.forgeEndpointOverride ?? String(Boolean(endpoint.value.trim())
+          && ![preset.defaultBaseUrl, ...(preset.regions ?? []).map(region => region.baseUrl)]
+            .some(base => normalizeBaseUrlIdentity(base) === normalizeBaseUrlIdentity(endpoint.value)));
+        endpoint.dataset.forgeEndpointOverride = override;
+        endpoint.readOnly = override !== 'true';
+        if (endpoint.readOnly) endpoint.value = regionalEndpoint;
+      } else if (endpoint) {
+        endpoint.readOnly = false;
       }
       if (endpointToggle) endpointToggle.textContent = endpoint?.readOnly ? '自定义 endpoint' : '使用官方 endpoint';
       const docs = root.querySelector('[data-provider-docs]') as HTMLAnchorElement | null;
-      if (docs) docs.href = preset.docsUrl ?? '#';
-      const summary = root.querySelector('[data-connection-summary]') as HTMLElement | null;
-      if (summary) summary.textContent = `${preset.label} · ${protocolLabel(protocol)} · 模型 ${model || '未选择'} · ${inputValue(root, 'apiKey') ? 'Key 已设置' : 'Key 未设置'}`;
+      if (docs) {
+        docs.hidden = !preset.docsUrl;
+        if (preset.docsUrl) docs.href = preset.docsUrl;
+        else docs.removeAttribute?.('href');
+      }
+      if (endpointToggle) endpointToggle.hidden = provider === 'custom';
+      const modelHelp = root.querySelector<HTMLElement>('#forge-model-help');
+      if (modelHelp) {
+        const publicCatalog = provider === 'openrouter' && normalizeBaseUrlIdentity(endpoint?.value ?? '') === preset.defaultBaseUrl;
+        modelHelp.textContent = publicCatalog || inputValue(root, 'authScheme') === 'none'
+          ? '打开下拉查询模型，也可以直接填入模型 ID。'
+          : '输入 API Key 后可查询模型，也可以直接填入模型 ID。';
+      }
     }
 
     private renderStatus(root: HTMLElement): void {
@@ -392,13 +430,15 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
         else if (this.testedDraftIdentity === connectionIdentity(form)) setStatusElement(status, 'success', same
           ? '连接测试通过，点击“保存配置”后供其他 Forge 窗口使用。'
           : '连接测试通过；当前配置尚未保存。');
-        else if (!same) setStatusElement(status, 'info', '配置尚未保存；保存后请测试连接。');
+        else if (form.authScheme !== 'none' && !form.apiKey) setStatusElement(status, 'info', '输入 API Key 后，选择或填写模型 ID。');
+        else if (!form.model.trim()) setStatusElement(status, 'info', '选择或填写模型 ID，再保存并测试连接。');
+        else if (!same) setStatusElement(status, 'info', '配置尚未保存，可先测试，也可保存后再测试。');
         else setStatusElement(status, 'info', '尚未测试当前连接。');
       } else if (status && this.testing) {
         setStatusElement(status, 'pending', '正在测试连接并验证结构化输出…');
       }
-      if (save) save.disabled = this.testing;
-      if (test) test.disabled = this.testing;
+      if (save) save.disabled = this.testing || !form.model.trim();
+      if (test) test.disabled = this.testing || !form.model.trim() || (form.authScheme !== 'none' && !form.apiKey);
       for (const name of ['provider', 'model', 'apiKey', 'endpoint', 'protocol', 'authScheme', 'region', 'reasoning', 'structuredOutput', 'persistApiKey', 'autoCorrect']) {
         const input = root.querySelector(`[name="${name}"]`) as HTMLInputElement | HTMLSelectElement | null;
         if (input) input.disabled = this.testing;
@@ -407,6 +447,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
         const button = root.querySelector(`[data-action="${action}"]`) as HTMLButtonElement | null;
         if (button) button.disabled = this.testing;
       }
+      this.modelPicker?.draw();
     }
 
     private setStatus(root: HTMLElement, kind: 'success' | 'error' | 'info' | 'pending', message: string): void {
@@ -535,17 +576,6 @@ function populateSelect(
     return option;
   }));
   select.value = choices.some((entry) => entry.value === preferred) ? preferred : (choices[0]?.value ?? '');
-}
-
-function populateModels(root: HTMLElement, models: readonly string[]): void {
-  const list = root.querySelector('[data-model-options]') as HTMLDataListElement | null;
-  const document = (globalThis as any).document as Document | undefined;
-  if (!list || !document?.createElement || typeof (list as any).replaceChildren !== 'function') return;
-  list.replaceChildren(...[...new Set(models)].map((model) => {
-    const option = document.createElement('option');
-    option.value = model;
-    return option;
-  }));
 }
 
 function setStatusElement(element: HTMLElement, kind: string, message: string): void {

@@ -2,7 +2,7 @@ import { createForgeActorApplicationClass, type ForgeApplicationEnvironment } fr
 import { createForgeItemApplicationClass, type ForgeItemApplicationEnvironment } from './itemApplication';
 import { createForgeIntakeApplicationClass, type ForgeIntakeApplicationEnvironment } from './intakeApplication';
 import { assertExactRuntime, assertGm } from './runtime';
-import { isForgeSessionConnectionReady, readForgeSessionSettings } from './settings';
+import { forgeConnectionSetupMessage, isForgeSessionConnectionReady, readForgeSessionSettings, subscribeForgeSessionSettings } from './settings';
 import type { ForgePaneState, ForgeWorkspacePane } from './workspacePane';
 
 export type ForgeWorkspaceMode = 'blueprint' | 'structured' | 'ai';
@@ -48,6 +48,7 @@ export function createForgeWorkspaceApplicationClass(environment: ForgeWorkspace
       ? environment.initialMode! : kind === 'Actor' ? 'blueprint' : 'ai';
     private formal!: ForgeWorkspacePane;
     private intake!: ForgeWorkspacePane;
+    private unsubscribeSession?: () => void;
     private drafts = new Map<string, Record<string, string>>();
 
     constructor(...args: any[]) {
@@ -96,11 +97,11 @@ export function createForgeWorkspaceApplicationClass(environment: ForgeWorkspace
       root.querySelectorAll<HTMLButtonElement>('[data-forge-mode]').forEach(button => {
         button.onclick = () => this.selectMode(button.dataset.forgeMode as ForgeWorkspaceMode);
       });
-      const connection = root.querySelector<HTMLButtonElement>('[data-workspace-connection]');
-      if (connection) connection.onclick = () => {
+      this.unsubscribeSession ??= subscribeForgeSessionSettings(() => this.refreshNavigation());
+      root.querySelectorAll<HTMLButtonElement>('[data-workspace-connection]').forEach(button => button.onclick = () => {
         try { assertGm(environment.game); assertExactRuntime(environment.game); environment.openConnectionSettings?.(); }
         catch (error) { this.report(error); }
-      };
+      });
       const encounter = root.querySelector<HTMLButtonElement>('[data-workspace-encounter]');
       if (encounter) encounter.onclick = () => {
         if (this.locked()) return;
@@ -140,6 +141,8 @@ export function createForgeWorkspaceApplicationClass(environment: ForgeWorkspace
         this.report(new Error('当前资料正在保存或提交，完成前不能关闭工作台。'));
         return this;
       }
+      this.unsubscribeSession?.();
+      this.unsubscribeSession = undefined;
       await this.formal.dispose();
       await this.intake.dispose();
       return super.close(options);
@@ -165,11 +168,19 @@ export function createForgeWorkspaceApplicationClass(environment: ForgeWorkspace
       const active = this.mode === 'ai' ? this.intake : this.formal;
       const state: ForgePaneState = active?.workspaceState() ?? { stage: 'input', locked: false };
       const locked = this.locked();
+      const settings = readForgeSessionSettings();
+      const ready = isForgeSessionConnectionReady();
+      const notice = root.querySelector<HTMLElement>('[data-workspace-connection-notice]');
+      const guidance = root.querySelector<HTMLElement>('[data-workspace-connection-guidance]');
       const connection = root.querySelector<HTMLElement>('[data-workspace-connection-summary]');
+      const settingsButton = root.querySelector<HTMLButtonElement>('.forge-workspace-tools [data-workspace-connection]');
+      if (notice) notice.hidden = ready;
+      if (settingsButton) settingsButton.hidden = !ready;
+      if (guidance) guidance.textContent = ready ? '' : forgeConnectionSetupMessage(settings);
       if (connection) {
-        const settings = readForgeSessionSettings();
-        connection.textContent = isForgeSessionConnectionReady()
-          ? `AI 已连接 · ${settings.model}` : settings.model ? `AI 待测试 · ${settings.model}` : 'AI 尚未配置';
+        connection.hidden = !ready;
+        connection.textContent = ready ? 'AI 已连接 · ' + settings.model : '';
+        connection.title = connection.textContent;
       }
       root.querySelectorAll<HTMLButtonElement>('[data-forge-mode]').forEach(button => {
         button.setAttribute('aria-pressed', String(button.dataset.forgeMode === this.mode));

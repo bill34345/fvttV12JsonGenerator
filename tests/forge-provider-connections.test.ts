@@ -27,7 +27,6 @@ describe('Forge provider-first connections', () => {
     expect(JSON.stringify(FORGE_PROVIDER_PRESETS)).not.toMatch(/"apiKey"|authorization|deepseek-v4-pro/iu);
     expect(FORGE_PROVIDER_PRESETS.find((preset) => preset.id === 'anthropic')?.protocols).toEqual(['anthropic-messages']);
     expect(FORGE_PROVIDER_PRESETS.find((preset) => preset.id === 'openai')?.defaultProtocol).toBe('openai-responses');
-    expect(FORGE_PROVIDER_PRESETS.find((preset) => preset.id === 'deepseek')?.recommendedModels).toEqual(['deepseek-flash']);
     expect(FORGE_PROVIDER_PRESETS.find((preset) => preset.id === 'custom')?.protocols).toHaveLength(3);
   });
 
@@ -188,6 +187,43 @@ describe('Forge provider-first connections', () => {
       httpClient: async () => { throw new Error('CORS blocked'); },
     });
     expect(transport.status).toBe('browser_transport');
+  });
+
+  test('keeps manual model tests usable when the provider model list is unavailable', async () => {
+    const calls: string[] = [];
+    const result = await testForgeProviderConnection({
+      providerId: 'custom', baseUrl: 'https://provider.example/v1', model: 'private-model', apiKey: 'secret-key',
+    }, {
+      fetch: async url => { calls.push(url); return response(403, { error: 'directory denied' }); },
+      httpClient: async (url, init) => {
+        calls.push(url);
+        expect(JSON.parse(init.body).model).toBe('private-model');
+        return response(200, { choices: [{ message: { content: '{"ok":true}' } }] });
+      },
+    });
+    expect(calls).toEqual(['https://provider.example/v1/models', 'https://provider.example/v1/chat/completions']);
+    expect(result.status).toBe('connected');
+  });
+
+  test('uses live OpenRouter popularity and text metadata without a built-in model name', async () => {
+    const connection = normalizeForgeProviderConnection({ providerId: 'openrouter', apiKey: 'directory-key' });
+    expect(connection.model).toBe('');
+    const result = await discoverForgeProviderModels(connection, {
+      fetch: async (url, init) => {
+        const endpoint = new URL(url);
+        expect(endpoint.pathname).toBe('/api/v1/models');
+        expect(endpoint.searchParams.get('sort')).toBe('most-popular');
+        expect(endpoint.searchParams.get('output_modalities')).toBe('text');
+        expect(init.method).toBe('GET');
+        return response(200, { data: [
+          { id: 'vendor/z-new-model' },
+          { id: 'vendor/voice', architecture: { output_modalities: ['audio'] } },
+          { id: 'vendor/a-old-model' },
+          { id: 'vendor/z-new-model' },
+        ] });
+      },
+    });
+    expect(result.models).toEqual(['vendor/z-new-model', 'vendor/a-old-model']);
   });
 
   test('classifies probe HTTP failures without guessing the cause or exposing raw errors', async () => {

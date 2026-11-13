@@ -60,14 +60,14 @@
     "note": "对照tools/foundry-ops/AGENTS.md，仅将Bun版本依据从已删除CI配置改为根README；本地检查包装、临时沙箱、只读依赖、生产权限、目标路径和失败关闭要求保持。"
   },
   "verification-development": {
-    "fingerprint": "249f30f2d36211f7824ec0949be5c0b0bbe1f5cbef45d79a387dde7041690bb2",
+    "fingerprint": "bd639f07464a9e37ccb03b92e75b94b6bb6484c1c8d159c4fa620c40adfafa2d",
     "reviewedOn": "2026-11-13",
-    "note": "核对主项目不再把移出的历史补丁源测试列入默认检查，保留生成器历史输入与 Classpack 单独复现入口。"
+    "note": "保留 GitHub master 的开发检查说明，核对本次 Forge 改动涉及的手册与验收入口"
   },
   "human-encounter-intake": {
-    "fingerprint": "18480831d4d3c65a7afe21846f6d5e798455d8059cf1ffff4abd753910dd26ee",
+    "fingerprint": "010daa4ce7ce1108b3df470698ba099b62d14816e61ced13c66ca5e40041a821",
     "reviewedOn": "2026-11-13",
-    "note": "核对原生6生成、旧生物包重新生成或只读，以及源文件与配套规则行为。"
+    "note": "核对召唤物入口的连接提示、实时目录和文字型 PDF 操作"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -150,9 +150,9 @@
     "note": "核对共享状态函数的批处理接口接线；没有推广版本准入或新增编辑器支持。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "5bba3c9b1bdde36d54b183c6e0d50b2f89ef4df8ddd20da443fe2797478f78b3",
+    "fingerprint": "e7002d3ed13c10365a080867f8f5c308d8ad89e1375cab0479d5946163c13c24",
     "reviewedOn": "2026-11-13",
-    "note": "核对原生6接收、PDF入口和恢复、旧包的只读与重新生成路径。"
+    "note": "核对 Forge 的连接提示、实时模型目录和手填筛选，与已验收的界面和源码一致"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "b888eae16a4a0dc1c058805448887553cb8617c6e81dc15bf345e9b0a6b353eb",

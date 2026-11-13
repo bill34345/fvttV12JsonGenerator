@@ -15,7 +15,7 @@ import { encounterReviewCards, statusLifecycleSummary } from './encounterReviewC
 import { encounterReviewNavigation } from './encounterReviewNavigation';
 import { iconReviewPresentation } from './iconReviewPresentation';
 import { decodeEncounterRecovery, serializeEncounterRecovery, IndexedDbEncounterRecoveryStore, type EncounterRecoveryStore, type EncounterRecoverySnapshot } from './encounterRecoveryStore';
-import { readForgeSessionSettings, subscribeForgeSessionSettings } from './settings';
+import { forgeConnectionSetupMessage, isForgeSessionConnectionReady, readForgeSessionSettings, subscribeForgeSessionSettings } from './settings';
 import { claimForgeAiJob, releaseForgeAiJob } from './aiJobGate';
 import { assertExactRuntime, assertGm } from './runtime';
 import { createEncounterAssetPort, importForgeEncounter, listForgeEncounterMacros, startForgeEncounterMacro, type EncounterImportResult } from './encounterRuntime';
@@ -39,7 +39,7 @@ export function createForgeEncounterApplicationClass(environment: {
   const { game, foundry, ui } = environment;
   const Base = foundry.applications.api.HandlebarsApplicationMixin(foundry.applications.api.ApplicationV2);
   return class ForgeEncounterApplication extends Base {
-    static DEFAULT_OPTIONS = { id:'fvtt-json-forge-encounter', classes:['fvtt-json-forge'],
+    static DEFAULT_OPTIONS = { id:'fvtt-json-forge-encounter', classes:['fvtt-json-forge','forge-encounter-window'],
       position:{width:850,height:850},window:{title:'Forge 生物与召唤物',resizable:true} };
     static PARTS = { form:{template:'modules/fvtt-json-forge/templates/forge-encounter.hbs'} };
     private prepared?: PreparedForgeEncounter;
@@ -101,11 +101,21 @@ export function createForgeEncounterApplicationClass(environment: {
       this.sessionUnsubscribe=subscribeForgeSessionSettings(()=>{
         let next:string|undefined;
         try{next=sessionSettingsHash();}catch{next=undefined;}
+        this.refreshConnectionNotice();
         if(next===this.sessionFingerprint)return;
         this.sessionFingerprint=next;this.sessionRevision++;this.generationReviewBinding=undefined;
         if(this.reviewingCandidate)this.controller?.abort();
         if(!this.closed)void this.render();
       });
+    }
+
+    private refreshConnectionNotice(): void {
+      const root = this.element as HTMLElement | undefined;
+      const notice = root?.querySelector?.<HTMLElement>('[data-encounter-ai-notice]');
+      const guidance = notice?.querySelector<HTMLElement>('[data-encounter-ai-guidance]');
+      if (!notice || !guidance) return;
+      notice.hidden = isForgeSessionConnectionReady();
+      guidance.textContent = notice.hidden ? '' : forgeConnectionSetupMessage(readForgeSessionSettings());
     }
 
     async _prepareContext() {
@@ -310,6 +320,7 @@ export function createForgeEncounterApplicationClass(environment: {
     }
     _onRender() {
       this.observeConnectionSession();
+      this.refreshConnectionNotice();
       const root=this.element as HTMLElement;
       const invalidate=(_keepDraft=false)=>{
         this.generationReviewBinding=undefined;this.reviewed=false;this.error='';this.progressDetail='';

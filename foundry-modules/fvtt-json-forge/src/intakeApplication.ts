@@ -2899,11 +2899,11 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         if (providerChanged) endpoint.dataset.forgeEndpointOverride = 'false';
       }
       const model = root.querySelector('[name="model"]') as HTMLInputElement | null;
-      if (model && (!model.value || providerChanged)) {
-        model.value = preset.recommendedModels[0] ?? '';
+      if (model && providerChanged) {
+        model.value = '';
         model.dataset.forgePreset = providerId;
       }
-      const effectiveModel = model?.value.trim() || preset.recommendedModels[0] || '';
+      const effectiveModel = model?.value.trim() ?? form.model;
       const effectiveProtocol = (protocolSelect?.value || form.protocol) as ForgeProviderProtocol;
       const capabilities = resolveForgeProviderCapabilities(providerId, effectiveProtocol, effectiveModel);
       const reasoning = root.querySelector('[name="reasoning"]') as HTMLSelectElement | null;
@@ -2938,7 +2938,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         const protocolState = preset.protocols.length > 1 ? `协议 ${effectiveProtocol}` : `协议 ${preset.defaultProtocol}`;
         status.textContent = `${preset.label} · ${protocolState} · 模型 ${effectiveModel || '未选择'} · ${keyState}`;
       }
-      renderModelOptions(root, this.connectionProbe?.models ?? preset.recommendedModels);
+      renderModelOptions(root, this.connectionProbe?.models ?? []);
       if (separate) separate.onchange = () => { if (review) review.hidden = separate.checked !== true; this.invalidateReview(root); };
       if (connection && form.reasoning !== connection.reasoning) {
         const reasoningInput = root.querySelector('[name="reasoning"]') as HTMLSelectElement | null;

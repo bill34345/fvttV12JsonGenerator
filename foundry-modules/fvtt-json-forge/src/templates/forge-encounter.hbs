@@ -1,6 +1,14 @@
 <section class="fvtt-json-forge-form forge-encounter-panel">
   <h2>从规则资料生成生物与召唤物</h2>
   <p>提供完整生物资料。若能力涉及召唤其他生物或物件，可同时提供其资料和规则；这仍属于生物生成。AI提取生物与配套配置，工具使用已实现的能力生成控制入口。AI不编写宏代码；资料缺项会显示出来，确认导入前不创建角色或启动自动化。</p>
+  <div class="forge-ai-setup" data-encounter-ai-notice hidden>
+    <i class="fas fa-plug" aria-hidden="true"></i>
+    <div>
+      <strong>设置 AI 连接</strong>
+      <p data-encounter-ai-guidance role="status"></p>
+    </div>
+    <button type="button" data-action="encounter-open-ai-connection" {{#if busy}}disabled{{/if}}>打开连接设置</button>
+  </div>
   <label>资料名称<input name="humanLabel" value="{{humanLabel}}" maxlength="160" {{#if busy}}disabled{{/if}}></label>
   <label>卡片语言<select name="outputLanguage" {{#if busy}}disabled{{/if}}><option value="source" {{#unless chineseSelected}}selected{{/unless}}>保留来源语言</option><option value="zh-CN" {{#if chineseSelected}}selected{{/if}}>中文正文 · 中文标题保留英文对照</option></select></label>
   <label>读取 PDF、MD 或 TXT<input name="humanSourceFile" type="file" accept=".pdf,.md,.txt,application/pdf,text/plain,text/markdown" {{#if busy}}disabled{{/if}}></label>
@@ -46,7 +54,7 @@
   </div>
   <h2>角色、召唤物与配套宏</h2>
   <p>选择 Forge 生物导入文件 JSON 或 ZIP。角色会从包内来源重新生成；预览不调用 AI，也不执行宏。现有 AI Intake 的 Provider 和模型配置保持原样。</p>
-  <label>生物导入文件文件（最多32 MiB）<input name="encounterFile" type="file" accept=".json,.zip,application/json,application/zip" {{#if busy}}disabled{{/if}}></label>
+  <label>生物导入文件（最多 32 MiB）<input name="encounterFile" type="file" accept=".json,.zip,application/json,application/zip" {{#if busy}}disabled{{/if}}></label>
   <p data-encounter-file-name>{{fileName}}</p>
   <button type="button" data-action="encounter-preview" {{#if busy}}disabled{{/if}}>预览生物与召唤物</button>
   <p role="status" data-encounter-secondary-status aria-live="polite">{{status}}</p>

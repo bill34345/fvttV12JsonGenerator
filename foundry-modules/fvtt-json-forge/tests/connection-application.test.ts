@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { JSDOM } from 'jsdom';
 import { afterEach, describe, expect, test } from 'bun:test';
 import {
   createForgeConnectionApplicationClass,
@@ -13,6 +15,81 @@ import {
 describe('Forge Connection ApplicationV2', () => {
   afterEach(() => {
     Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: undefined });
+  });
+
+  test('loads the real model picker before testing, discards a prior provider response and supports manual input', async () => {
+    installStorage(makeStorage());
+    const source = readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-connection.hbs', 'utf8');
+    const dom = new JSDOM('<main>' + source + '</main>', { url: 'http://127.0.0.1:30001' });
+    const root = dom.window.document.querySelector('main')!;
+    const previousDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+    Object.defineProperty(globalThis, 'document', { configurable: true, value: dom.window.document });
+    const pending: Array<{ provider: string; key: string; signal?: AbortSignal; resolve: (ids: string[]) => void }> = [];
+    const Application = createForgeConnectionApplicationClass({
+      game: { version: '14.370', system: { id: 'dnd5e', version: '6.0.6' }, user: { isGM: true } },
+      foundry: { applications: { api: {
+        ApplicationV2: class { async close() {} },
+        HandlebarsApplicationMixin: (Base: any) => Base,
+      } } },
+      services: {
+        discoverForgeProviderModels: (connection, options) => new Promise(resolve => pending.push({
+          provider: connection.providerId, key: connection.apiKey, signal: options?.signal,
+          resolve: models => resolve({ status: 'connected', models, message: '已读取模型' }),
+        })),
+        testForgeProviderConnection: async () => { throw new Error('Opening the catalog must not test inference'); },
+      },
+    });
+    const app = new Application();
+    app.element = root;
+    const model = root.querySelector<HTMLInputElement>('[name="model"]')!;
+    const key = root.querySelector<HTMLInputElement>('[name="apiKey"]')!;
+    const provider = root.querySelector<HTMLSelectElement>('[name="provider"]')!;
+    const button = (action: string) => root.querySelector<HTMLButtonElement>('[data-action="' + action + '"]')!;
+    const input = () => new dom.window.Event('input', { bubbles: true });
+    const tick = () => new Promise<void>(resolve => setTimeout(resolve, 0));
+    try {
+      app._onRender({}, {});
+      expect(model.value).toBe('');
+      button('show-models').click();
+      await tick();
+      expect(root.querySelector('[data-model-status]')!.textContent).toContain('API Key');
+      expect(pending).toHaveLength(0);
+      key.value = 'first-key'; key.dispatchEvent(input());
+      button('show-models').click();
+      expect(pending[0]).toMatchObject({ provider: 'openai', key: 'first-key' });
+      provider.value = 'deepseek';
+      provider.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+      expect(key.value).toBe('');
+      expect(pending[0]!.signal?.aborted).toBe(true);
+      key.value = 'second-key'; key.dispatchEvent(input());
+      button('show-models').click();
+      pending[1]!.resolve(['live-text-model', 'live-other-model']);
+      pending[0]!.resolve(['stale-model']);
+      await tick();
+      expect(root.querySelector('[data-model-options]')!.textContent).toBe('live-text-modellive-other-model');
+      model.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      model.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(model.value).toBe('live-text-model');
+      expect(model.getAttribute('aria-expanded')).toBe('false');
+      model.value = 'other'; model.dispatchEvent(input());
+      button('show-models').click();
+      expect(root.querySelector('[data-model-options]')!.textContent).toBe('live-other-model');
+      model.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(model.value).toBe('other');
+      button('show-models').click();
+      expect(root.querySelector('[data-model-options]')!.textContent).toBe('live-other-model');
+      model.value = 'private/manual'; model.dispatchEvent(input());
+      expect(root.querySelector('[data-model-status]')!.textContent).toContain('没有匹配');
+      button('save').click();
+      expect(readForgeSessionSettings().model).toBe('private/manual');
+      button('clear-model').click();
+      expect(model.value).toBe('');
+    } finally {
+      await app.close();
+      dom.window.close();
+      if (previousDocument) Object.defineProperty(globalThis, 'document', previousDocument);
+      else Reflect.deleteProperty(globalThis, 'document');
+    }
   });
 
   test('tests a draft, then marks the exact saved configuration ready', async () => {

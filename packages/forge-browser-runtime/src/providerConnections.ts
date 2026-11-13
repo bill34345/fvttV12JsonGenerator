@@ -37,7 +37,6 @@ export interface ForgeProviderPreset {
   authSchemes: readonly ForgeProviderAuthScheme[];
   modelDiscoveryPath?: string;
   docsUrl?: string;
-  recommendedModels: readonly string[];
   regions?: readonly { id: string; label: string; baseUrl: string }[];
 }
 
@@ -85,42 +84,42 @@ export const FORGE_PROVIDER_PRESETS: readonly ForgeProviderPreset[] = [
   {
     id: 'openai', label: 'OpenAI', defaultBaseUrl: 'https://api.openai.com/v1', defaultProtocol: 'openai-responses',
     protocols: ['openai-responses', 'openai-chat'], authSchemes: ['bearer'], modelDiscoveryPath: 'models',
-    docsUrl: 'https://platform.openai.com/docs', recommendedModels: ['gpt-4.1-mini', 'gpt-4.1'],
+    docsUrl: 'https://platform.openai.com/docs',
   },
   {
     id: 'anthropic', label: 'Anthropic (Claude)', defaultBaseUrl: 'https://api.anthropic.com', defaultProtocol: 'anthropic-messages',
     protocols: ['anthropic-messages'], authSchemes: ['x-api-key'], modelDiscoveryPath: 'v1/models',
-    docsUrl: 'https://docs.anthropic.com/en/docs', recommendedModels: ['claude-3-7-sonnet-latest', 'claude-3-5-haiku-latest'],
+    docsUrl: 'https://docs.anthropic.com/en/docs',
   },
   {
     id: 'google-gemini', label: 'Google Gemini', defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', defaultProtocol: 'openai-chat',
     protocols: ['openai-chat'], authSchemes: ['bearer'], modelDiscoveryPath: 'models',
-    docsUrl: 'https://ai.google.dev/gemini-api/docs/openai', recommendedModels: ['gemini-2.5-flash', 'gemini-2.5-pro'],
+    docsUrl: 'https://ai.google.dev/gemini-api/docs/openai',
   },
   {
     id: 'deepseek', label: 'DeepSeek', defaultBaseUrl: 'https://api.deepseek.com', defaultProtocol: 'openai-responses',
     protocols: ['openai-responses', 'openai-chat'], authSchemes: ['bearer'], modelDiscoveryPath: 'models',
-    docsUrl: 'https://api-docs.deepseek.com', recommendedModels: ['deepseek-flash'],
+    docsUrl: 'https://api-docs.deepseek.com',
   },
   {
     id: 'xai', label: 'xAI (Grok)', defaultBaseUrl: 'https://api.x.ai/v1', defaultProtocol: 'openai-responses',
     protocols: ['openai-responses', 'openai-chat'], authSchemes: ['bearer'], modelDiscoveryPath: 'models',
-    docsUrl: 'https://docs.x.ai', recommendedModels: ['grok-4', 'grok-3-mini'],
+    docsUrl: 'https://docs.x.ai',
   },
   {
     id: 'mistral', label: 'Mistral', defaultBaseUrl: 'https://api.mistral.ai/v1', defaultProtocol: 'openai-chat',
     protocols: ['openai-chat'], authSchemes: ['bearer'], modelDiscoveryPath: 'models',
-    docsUrl: 'https://docs.mistral.ai', recommendedModels: ['mistral-small-latest', 'mistral-large-latest'],
+    docsUrl: 'https://docs.mistral.ai',
   },
   {
     id: 'openrouter', label: 'OpenRouter', defaultBaseUrl: 'https://openrouter.ai/api/v1', defaultProtocol: 'openai-chat',
     protocols: ['openai-chat', 'openai-responses'], authSchemes: ['bearer'], modelDiscoveryPath: 'models',
-    docsUrl: 'https://openrouter.ai/docs', recommendedModels: ['openai/gpt-4.1-mini', 'google/gemini-2.5-flash'],
+    docsUrl: 'https://openrouter.ai/docs',
   },
   {
     id: 'alibaba-qwen', label: 'Alibaba Qwen', defaultBaseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', defaultProtocol: 'openai-chat',
     protocols: ['openai-chat', 'openai-responses'], authSchemes: ['bearer'], modelDiscoveryPath: 'models',
-    docsUrl: 'https://www.alibabacloud.com/help/en/model-studio', recommendedModels: ['qwen-plus', 'qwen-turbo'],
+    docsUrl: 'https://www.alibabacloud.com/help/en/model-studio',
     regions: [
       { id: 'cn', label: 'China (Beijing)', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
       { id: 'intl', label: 'International (Singapore)', baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1' },
@@ -129,7 +128,7 @@ export const FORGE_PROVIDER_PRESETS: readonly ForgeProviderPreset[] = [
   {
     id: 'moonshot-kimi', label: 'Moonshot / Kimi', defaultBaseUrl: 'https://api.moonshot.ai/v1', defaultProtocol: 'openai-chat',
     protocols: ['openai-chat'], authSchemes: ['bearer'], modelDiscoveryPath: 'models',
-    docsUrl: 'https://platform.moonshot.ai/docs', recommendedModels: ['kimi-k2-0905-preview', 'moonshot-v1-8k'],
+    docsUrl: 'https://platform.moonshot.ai/docs',
     regions: [
       { id: 'global', label: 'Global', baseUrl: 'https://api.moonshot.ai/v1' },
       { id: 'cn', label: 'China', baseUrl: 'https://api.moonshot.cn/v1' },
@@ -138,12 +137,12 @@ export const FORGE_PROVIDER_PRESETS: readonly ForgeProviderPreset[] = [
   {
     id: 'zhipu-glm', label: 'Zhipu GLM', defaultBaseUrl: 'https://open.bigmodel.cn/api/paas/v4', defaultProtocol: 'openai-chat',
     protocols: ['openai-chat'], authSchemes: ['bearer'], modelDiscoveryPath: 'models',
-    docsUrl: 'https://open.bigmodel.cn/dev/api', recommendedModels: ['glm-4.5-flash', 'glm-4.5'],
+    docsUrl: 'https://open.bigmodel.cn/dev/api',
   },
   {
     id: 'custom', label: 'Custom Provider', defaultBaseUrl: '', defaultProtocol: 'openai-chat',
     protocols: ['openai-chat', 'openai-responses', 'anthropic-messages'], authSchemes: ['bearer', 'x-api-key', 'api-key', 'none'],
-    modelDiscoveryPath: 'models', recommendedModels: [],
+    modelDiscoveryPath: 'models',
   },
 ];
 
@@ -277,7 +276,7 @@ export function normalizeForgeProviderConnection(input: ForgeProviderConnectionI
   const region = input.region?.trim() || preset.regions?.[0]?.id || '';
   const regionEntry = preset.regions?.find((entry) => entry.id === region);
   const regionalBaseUrl = regionEntry && !input.baseUrl ? regionEntry.baseUrl : baseUrl;
-  const model = input.model?.trim() || preset.recommendedModels[0] || '';
+  const model = input.model?.trim() ?? '';
   const capabilities = resolveForgeProviderCapabilities(providerId, protocol, model);
   const reasoning = input.reasoning ?? 'auto';
   if (!capabilities.reasoning.includes(reasoning)) throw new Error('The selected reasoning option is not supported by this provider/model combination.');
@@ -323,11 +322,22 @@ export async function discoverForgeProviderModels(
   const path = getForgeProviderPreset(connection.providerId).modelDiscoveryPath;
   if (!path) return { status: 'model_list', models: [], message: '该 Provider 未声明模型发现接口；仍可手动输入精确 model ID。' };
   const endpointPath = connection.protocol === 'anthropic-messages' && !path.startsWith('v1/') ? `v1/${path}` : path;
+  const endpoint = new URL(buildEndpointUrl(connection.baseUrl, endpointPath));
+  if (connection.providerId === 'anthropic' && endpoint.hostname === 'api.anthropic.com') {
+    endpoint.searchParams.set('limit', '100');
+  }
+  if (connection.providerId === 'openrouter' && endpoint.hostname === 'openrouter.ai') {
+    endpoint.searchParams.set('sort', 'most-popular');
+    endpoint.searchParams.set('input_modalities', 'text');
+    endpoint.searchParams.set('output_modalities', 'text');
+  }
+  const headers = buildHeaders(connection.apiKey, connection.authScheme, connection.protocol);
+  delete headers['Content-Type'];
   let response: ForgeProviderFetchResponse;
   try {
-    response = await fetcher(buildEndpointUrl(connection.baseUrl, endpointPath), {
+    response = await fetcher(endpoint.toString(), {
       method: 'GET',
-      headers: buildHeaders(connection.apiKey, connection.authScheme, connection.protocol),
+      headers,
       signal: options.signal,
     });
   } catch (error) {
@@ -339,7 +349,12 @@ export async function discoverForgeProviderModels(
   if (!response.ok) return { status: 'model_list', models: [], message: `模型列表请求失败（HTTP ${response.status}）。` };
   let envelope: unknown;
   try { envelope = await response.json(); } catch { return { status: 'invalid_response', models: [], message: 'Provider 返回的模型列表不是有效 JSON。' }; }
-  const models = extractModelIds(envelope);
+  const entries = extractProviderModels(envelope);
+  if (connection.providerId !== 'openrouter' || endpoint.hostname !== 'openrouter.ai') {
+    entries.sort((left, right) => modelDirectoryPriority(left) - modelDirectoryPriority(right)
+      || right.created - left.created || left.id.localeCompare(right.id, undefined, { numeric: true }));
+  }
+  const models = [...new Set(entries.map(entry => entry.id))];
   if (models.length === 0) return { status: 'model_list', models: [], message: 'Provider 未返回可用模型列表；仍可手动输入精确 model ID。' };
   return { status: 'connected', models, message: `已加载 ${models.length} 个模型候选。` };
 }
@@ -357,9 +372,7 @@ export async function testForgeProviderConnection(
   const discovered = options.loadModels === false
     ? { status: 'connected' as const, models: [], message: '' }
     : await discoverForgeProviderModels(connection, options);
-  if (discovered.status !== 'connected' && discovered.status !== 'model_list') {
-    return { status: discovered.status, providerId: connection.providerId, protocol: connection.protocol, model: connection.model, models: [], capabilities: connection.capabilities, message: discovered.message };
-  }
+  if (options.signal?.aborted) return failedProbe(connection, 'timeout', '连接测试已取消。');
   try {
     const normalized = await requestIntakeProvider({
       ...providerConnectionTransportOptions(connection),
@@ -409,14 +422,27 @@ function stripProviderUrlSecretComponents(value: string): string {
   return url.toString().replace(/\/+$/u, '');
 }
 
-function extractModelIds(value: unknown): string[] {
+function extractProviderModels(value: unknown): Array<{ id: string; created: number; textConfirmed: boolean }> {
   const record = asRecord(value);
   const data = Array.isArray(record?.data) ? record.data : Array.isArray(record?.models) ? record.models : [];
-  return [...new Set(data.flatMap((entry) => {
-    if (typeof entry === 'string') return [entry];
+  return data.flatMap(entry => {
     const item = asRecord(entry);
-    return typeof item?.id === 'string' ? [item.id] : typeof item?.name === 'string' ? [item.name] : [];
-  }))].filter(Boolean).sort((left, right) => left.localeCompare(right));
+    const id = (typeof entry === 'string' ? entry : typeof item?.id === 'string' ? item.id
+      : typeof item?.name === 'string' ? item.name : '').trim();
+    if (!id) return [];
+    const architecture = asRecord(item?.architecture);
+    const input = item?.input_modalities ?? architecture?.input_modalities;
+    const output = item?.output_modalities ?? architecture?.output_modalities;
+    if ([input, output].some(modalities => Array.isArray(modalities) && modalities.length > 0 && !modalities.includes('text'))) return [];
+    const created = typeof item?.created === 'number' ? item.created * 1000
+      : typeof item?.created_at === 'string' ? Date.parse(item.created_at) : 0;
+    return [{ id, created: Number.isFinite(created) ? created : 0, textConfirmed: Array.isArray(output) && output.includes('text') }];
+  });
+}
+
+function modelDirectoryPriority(model: { id: string; textConfirmed: boolean }): number {
+  const dated = /(?:[-_.]20\d{2}-\d{2}-\d{2}|[-_.]20\d{6})(?:$|[:/])/u.test(model.id);
+  return Number(dated) * 2 + Number(!model.textConfirmed);
 }
 
 function isJsonObject(result: NormalizedIntakeProviderResult): boolean {
@@ -470,7 +496,7 @@ function failedProbe(input: ForgeProviderConnectionInput | ForgeProviderConnecti
   return { status, providerId, protocol, model, models: [], capabilities: resolveForgeProviderCapabilities(providerId, protocol, model), message };
 }
 
-const defaultProviderFetch: ForgeProviderFetch = (url, init) => fetch(url, init as RequestInit);
+const defaultProviderFetch: ForgeProviderFetch = (url, init) => fetch(url, { ...init, cache: 'no-store' });
 
 function asRecord(value: unknown): Record<string, any> | undefined {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, any> : undefined;
