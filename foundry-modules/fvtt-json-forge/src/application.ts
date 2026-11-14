@@ -10,6 +10,7 @@ import {
   type BrowserActorIntakeResult,
   type BrowserActorIntakeStageResult,
 } from '@fvtt-json-generator/forge-browser-runtime/ai';
+import { normalizeForgeProviderConnection } from '@fvtt-json-generator/forge-browser-runtime/provider-connections';
 import {
   decodeForgeActorResponse,
   type ForgeActorResponse,
@@ -627,7 +628,7 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
     private async generate(root: HTMLElement): Promise<void> {
       if (this.controller || this.creating || this.readingFile || environment.pane?.active() === false) return;
       const mode = valueOf(root, 'mode');
-      if (mode === 'ai') {
+      if (mode === 'ai' && environment.pane) {
         this.notify('error', '普通文本 AI 请从 Actor 工作台运行；候选生成不会自动请求付费审核。');
         return;
       }
@@ -665,19 +666,14 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
       try {
         setBusy(root, true);
         if (mode === 'ai') {
-          // AI generation belongs to the Intake workspace. Keep this branch
-          // only for callers that explicitly set the legacy mode; the
-          // standard import template has no editable connection fields.
-          const apiSettings = readForgeSessionSettings();
-          if (!apiSettings.apiKey || !apiSettings.endpoint || !apiSettings.model) {
-            throw new Error('普通文本 AI 请从 Actor 工作台运行，并先在 AI 连接设置中完成配置。');
+          assertGm(environment.game);
+          assertExactRuntime(environment.game);
+          const settings = readForgeSessionSettings();
+          if (!settings.model || (settings.authScheme !== 'none' && !settings.apiKey)) {
+            throw new Error('请先在 AI 连接设置中配置模型和所需凭据。');
           }
-          const provider = this.services.createBrowserAiProvider({
-            apiKey: apiSettings.apiKey,
-            baseUrl: apiSettings.endpoint,
-            model: apiSettings.model,
-            reviewModel: apiSettings.model,
-          }, controller.signal);
+          const connection = normalizeForgeProviderConnection({ ...settings, baseUrl: settings.endpoint });
+          const provider = this.services.createBrowserAiProvider(connection, controller.signal);
           const intake = await this.services.convertRawActorSourceWithAi({
             source,
             sourceName: displayName,
@@ -695,9 +691,20 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
           }, provider, controller.signal);
           if (controller.signal.aborted) return;
           if (!this.isCurrentGeneration(controller, revision)) return;
-          this.intake = intake;
-          this.response = intake.response;
-          this.sourceSnapshot = JSON.stringify({ mode, source, displayName });
+          const response = intake.response;
+          if (response && 'result' in response && response.result.artifact) {
+            this.intake = intake;
+            this.response = response;
+            this.sourceSnapshot = JSON.stringify({ mode, source, displayName });
+          } else if (priorResponse) {
+            this.intake = priorIntake;
+            this.response = priorResponse;
+            this.sourceSnapshot = priorSnapshot;
+            this.errorMessage = '本次未产生新的 Actor；此前完整产物保留。';
+          } else {
+            this.intake = intake;
+            this.response = response;
+          }
           this.statusMessage = '';
         } else {
           const request = buildForgeActorRequest({

@@ -150,9 +150,9 @@
     "note": "核对共享状态函数的批处理接口接线；没有推广版本准入或新增编辑器支持。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "2ff7e0eff5d27b7a056a1b77c1a8312207b6f91b13d36b7621396b0b24b9d2d0",
+    "fingerprint": "7a82550c555a6e315a99052efb07b918322141a37276b34704a104e292fbf4b5",
     "reviewedOn": "2026-11-14",
-    "note": "核对公开版 Forge 的 PDF 选图、裁切预设、调整和复核。角色图及地图 Token 的用途、验证入口和原生动态环一致。"
+    "note": "核对公开版重开连接窗口时恢复推理强度，以及独立普通文本模式读取共享连接设置。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "b888eae16a4a0dc1c058805448887553cb8617c6e81dc15bf345e9b0a6b353eb",

@@ -92,6 +92,45 @@ describe('Forge Connection ApplicationV2', () => {
     }
   });
 
+  test('saves a supported Reasoning level and restores it in a fresh connection window', async () => {
+    installStorage(makeStorage());
+    saveForgeSessionSettings({ providerId: 'openai', protocol: 'openai-responses', model: 'configured-model' });
+    const template = readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-connection.hbs', 'utf8');
+    const Application = createForgeConnectionApplicationClass({
+      game: { version: '14.370', system: { id: 'dnd5e', version: '6.0.6' }, user: { isGM: true } },
+      foundry: { applications: { api: {
+        ApplicationV2: class { async close() {} },
+        HandlebarsApplicationMixin: (Base: any) => Base,
+      } } },
+    });
+    const dom = new JSDOM('<main></main>', { url: 'http://127.0.0.1:30001' });
+    const previousDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+    Object.defineProperty(globalThis, 'document', { configurable: true, value: dom.window.document });
+    const root = dom.window.document.querySelector('main')!;
+    const app = new Application();
+    const reopened = new Application();
+    try {
+      root.innerHTML = template;
+      app.element = root;
+      app._onRender({}, {});
+      root.querySelector<HTMLSelectElement>('[name="reasoning"]')!.value = 'high';
+      root.querySelector<HTMLButtonElement>('[data-action="save"]')!.click();
+      expect(readForgeSessionSettings().reasoning).toBe('high');
+      await app.close();
+
+      root.innerHTML = template;
+      reopened.element = root;
+      expect(root.querySelector<HTMLSelectElement>('[name="reasoning"]')!.value).toBe('auto');
+      reopened._onRender({}, {});
+      expect(root.querySelector<HTMLSelectElement>('[name="reasoning"]')!.value).toBe('high');
+    } finally {
+      await reopened.close();
+      dom.window.close();
+      if (previousDocument) Object.defineProperty(globalThis, 'document', previousDocument);
+      else Reflect.deleteProperty(globalThis, 'document');
+    }
+  });
+
   test('tests a draft, then marks the exact saved configuration ready', async () => {
     installStorage(makeStorage());
     let calls = 0;

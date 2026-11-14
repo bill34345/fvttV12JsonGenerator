@@ -370,6 +370,8 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       setValue(root, 'protocol', settings.protocol);
       setValue(root, 'authScheme', settings.authScheme);
       setValue(root, 'region', settings.region);
+      const { reasoning } = resolveForgeProviderCapabilities(settings.providerId, settings.protocol, settings.model);
+      populateSelect(root, 'reasoning', reasoning.map(value => ({ value, label: value === 'auto' ? 'Auto' : value })), settings.reasoning, false);
       setValue(root, 'reasoning', settings.reasoning);
       setValue(root, 'structuredOutput', settings.structuredOutput);
     }

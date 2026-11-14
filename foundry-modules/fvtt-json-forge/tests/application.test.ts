@@ -4,6 +4,7 @@ import { buildForgeActorRequest, convertFinalActorSource } from '@fvtt-json-gene
 import type { ForgeActorResponse } from '@fvtt-json-generator/forge-gateway-protocol';
 import { createForgeActorApplicationClass, type ForgeApplicationServices } from '../src/application';
 import { ForgeTemporaryActorCleanupError, type ForgeActorCreateResult } from '../src/runtime';
+import type { ForgePaneBinding } from '../src/workspacePane';
 import { CLIENT_STORAGE_KEY, markForgeSessionConnectionTested, saveForgeSessionSettings } from '../src/settings';
 
 const NIGHTGAUNT_SOURCE = readFileSync('obsidian/dnd数据转fvttjson/input/nightgaunt__夜魇.md', 'utf8');
@@ -126,18 +127,63 @@ describe('Forge Actor Application lifecycle', () => {
     expect((application as any).response).toBeDefined();
   });
 
-  test('redirects legacy AI mode before any Provider request', async () => {
+  test('keeps AI generation in the Intake pane when using the unified workspace', async () => {
     await withForgeSessionSettings(async () => {
       let calls = 0;
       const services: Partial<ForgeApplicationServices> = {
-        createBrowserAiProvider: (() => { calls += 1; throw new Error('Legacy AI provider must not run.'); }) as any,
-        convertRawActorSourceWithAi: (async () => { calls += 1; throw new Error('Legacy AI intake must not run.'); }) as any,
+        createBrowserAiProvider: () => { calls += 1; throw new Error('The workspace formal pane must not start AI.'); },
       };
-      const { application, root } = makeApplication(services);
-      root.mode.value = 'ai';
-      await (application as any).generate(root);
-      expect(calls).toBe(0);
-      expect((application as any).response).toBeUndefined();
+      const { application, root } = makeApplication(services, { active: () => true, changed() {} });
+      try {
+        root.mode.value = 'ai';
+        root.source.value = 'One raw Actor source';
+        await application.generate(root);
+        expect(calls).toBe(0);
+      } finally {
+        await application.close();
+      }
+    });
+  });
+
+  test.each([
+    { providerId: 'openai', authScheme: 'bearer', reasoning: 'high', structuredOutput: 'json_object' },
+    { providerId: 'custom', authScheme: 'api-key', reasoning: 'auto', structuredOutput: 'prompt_fallback' },
+  ] as const)('standalone ordinary text sends the saved settings for $providerId', async settings => {
+    await withForgeSessionSettings(async () => {
+      saveForgeSessionSettings({
+        ...settings, endpoint: 'https://provider.example/v1', protocol: 'openai-responses',
+        model: 'configured-model', apiKey: 'ordinary-transport-key',
+      });
+      const initialFetch = globalThis.fetch;
+      const requests: Array<{ url: string; headers: Headers; body: Record<string, unknown> }> = [];
+      globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+        requests.push({ url: String(input), headers: new Headers(init?.headers), body: JSON.parse(String(init?.body)) });
+        return new Response('provider refused the test request', { status: 400 });
+      }) as typeof fetch;
+      const { application, root } = makeApplication();
+      try {
+        root.mode.value = 'ai';
+        root.source.value = 'One raw Actor source';
+        await application.generate(root);
+        expect(requests).toHaveLength(1);
+        const request = requests[0]!;
+        expect(request.url).toBe('https://provider.example/v1/responses');
+        expect(request.body.model).toBe('configured-model');
+        if (settings.providerId === 'openai') {
+          expect(request.headers.get('authorization')).toBe('Bearer ordinary-transport-key');
+          expect(request.body.reasoning).toEqual({ effort: 'high' });
+          expect(request.body.text).toEqual({ format: { type: 'json_object' } });
+        } else {
+          expect(request.headers.get('api-key')).toBe('ordinary-transport-key');
+          expect(request.headers.get('authorization')).toBeNull();
+          expect(request.body.reasoning).toBeUndefined();
+          expect(request.body.text).toBeUndefined();
+        }
+        expect(root.create.disabled).toBe(true);
+      } finally {
+        globalThis.fetch = initialFetch;
+        await application.close();
+      }
     });
   });
 
@@ -324,80 +370,26 @@ describe('Forge Actor Application lifecycle', () => {
     }
   });
 
-  test('blocks legacy AI mode before intake or world creation', async () => {
-    const accepted = await makeAcceptedResponse();
-    let createCalls = 0;
-    const services: Partial<ForgeApplicationServices> = {
-      createBrowserAiProvider: () => ({
-        providerName: 'unused-application-provider',
-        extractionModel: 'unused',
-        reviewModel: 'unused',
-        discover: async () => { throw new Error('Application test provider should not run discovery.'); },
-        extract: async () => { throw new Error('Application test provider should not run extraction.'); },
-        review: async () => { throw new Error('Application test provider should not run review.'); },
-        repair: async () => { throw new Error('Application test provider should not run repair.'); },
-      }),
-      convertRawActorSourceWithAi: async () => ({
-        status: 'needs_review',
-        response: accepted,
-        findings: [],
-        stages: [],
-      }),
-      createAcceptedForgeActor: async (): Promise<ForgeActorCreateResult> => {
-        createCalls += 1;
-        throw new Error('AI needs-review output reached world creation.');
-      },
-    };
+  test('rejects standalone ordinary text before using the Provider when GM access is unavailable', async () => {
     await withForgeSessionSettings(async () => {
-      const { application, root } = makeApplication(services);
-      root.mode.value = 'ai';
-      root.source.value = 'one raw Actor source';
-      await (application as any).generate(root);
-
-      expect((application as any).intake).toBeUndefined();
-      expect((application as any).response).toBeUndefined();
-      expect(root.create.disabled).toBe(true);
-      await (application as any).create();
-      expect(createCalls).toBe(0);
+      let calls = 0;
+      const { application, root, game, notifications } = makeApplication({
+        createBrowserAiProvider: () => { calls += 1; throw new Error('A non-GM must not start AI.'); },
+      });
+      try {
+        root.mode.value = 'ai';
+        root.source.value = 'One raw Actor source';
+        game.user.isGM = false;
+        await application.generate(root);
+        expect(calls).toBe(0);
+        expect(notifications.errors.join(' ')).toContain('GM');
+        expect(root.create.disabled).toBe(true);
+      } finally {
+        await application.close();
+      }
     });
   });
 
-  test('does not consume an injected legacy AI result with blocking findings', async () => {
-    const accepted = await makeAcceptedResponse();
-    let createCalls = 0;
-    const services: Partial<ForgeApplicationServices> = {
-      createBrowserAiProvider: () => ({}) as any,
-      convertRawActorSourceWithAi: async () => ({
-        status: 'accepted',
-        response: accepted,
-        findings: [{
-          id: 'stale-blocker',
-          code: 'SOURCE_HASH_MISMATCH',
-          path: '/source/sha256',
-          message: 'Injected blocking finding.',
-          blocking: true,
-          origin: 'evidence',
-        }],
-        stages: [],
-      }),
-      createAcceptedForgeActor: async (): Promise<ForgeActorCreateResult> => {
-        createCalls += 1;
-        throw new Error('Blocking AI finding reached world creation.');
-      },
-    };
-    await withForgeSessionSettings(async () => {
-      const { application, root } = makeApplication(services);
-      root.mode.value = 'ai';
-      root.source.value = 'one raw Actor source';
-
-      await (application as any).generate(root);
-
-      expect((application as any).intake).toBeUndefined();
-      expect(root.create.disabled).toBe(true);
-      await (application as any).create();
-      expect(createCalls).toBe(0);
-    });
-  });
 });
 
 async function makeAcceptedResponse(): Promise<ForgeActorResponse> {
@@ -414,7 +406,7 @@ async function makeAcceptedResponse(): Promise<ForgeActorResponse> {
   return response;
 }
 
-function makeApplication(services: Partial<ForgeApplicationServices> = {}): {
+function makeApplication(services: Partial<ForgeApplicationServices> = {}, pane?: ForgePaneBinding): {
   application: any;
   root: FakeRoot;
   notifications: { errors: string[]; infos: string[] };
@@ -451,13 +443,17 @@ function makeApplication(services: Partial<ForgeApplicationServices> = {}): {
       },
     },
     services,
+    pane,
   };
   const Application = createForgeActorApplicationClass(environment);
   const application: any = new Application();
   const root = new FakeRoot();
-  application.element = root;
   (globalThis as any).document = { activeElement: null };
-  application._onRender({}, {});
+  if (pane) application.mount(root);
+  else {
+    application.element = root;
+    application._onRender({}, {});
+  }
   return { application, root, notifications, game, hooks, browserWindow };
 }
 

@@ -41,3 +41,9 @@
 同步仅替换 Forge 0.6.0 的入口脚本、样式和三个模板。SFTP 暂存后核对文件前像和候选摘要，逐一覆盖，并从服务器磁盘、服务器 HTTP 和公网入口读回五个 SHA-256，均与 30001 验收产物一致。入口脚本 SHA-256 为 A636997B1D2F41071426ED397829F9D0C7FDD7516BB4F636BBEA6A36188A0F21。线上 cor-cotn 保持活动，Core 14.370／dnd5e 6.0.6+local.3，服务沿用 PID 980，登录页 HTTP 200，观察期间错误日志未增长，本次暂存目录已清理。Chrome 操作验收沿用本地两轮结果。
 
 Git 外收据在本次任务证据目录的 8080-sync 子目录，verified.json、external-http.json 和 cleanup.json 分别记录服务器读回、公网读回及暂存清理。
+
+## 2026-11-14 公开版连接设置补修
+
+使用实际连接设置模板保存 `high` 并重开窗口，确认 Reasoning 显示原档位。旧版独立生物窗口的普通文本模式读取共享连接设置，统一工作台的普通文本仍使用「AI 整理」。旧版入口在调用模型前检查 GM 和 Foundry 运行环境。
+
+本地在请求边界核对了两个用例。OpenAI Responses 使用已保存端点和模型、Bearer 认证、高推理档位和 JSON Object。自定义 Responses Provider 使用选定的 API Key 请求头和 Prompt JSON 模式。请求由本地测试拦截，未调用真实模型。原公开版的重开档位与旧入口请求均已复现失败，修复后通过。未重跑 Foundry Chrome，未部署 8080。
