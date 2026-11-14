@@ -11,6 +11,7 @@
     "typecheck": "tsc -p tsconfig.json --pretty false"
   },
   "dependencies": {
+    "@fvtt-json-generator/assets-icons": "workspace:*",
     "@fvtt-json-generator/contracts": "workspace:*",
     "@fvtt-json-generator/forge-browser-runtime": "workspace:*",
     "@fvtt-json-generator/forge-gateway-protocol": "workspace:*",

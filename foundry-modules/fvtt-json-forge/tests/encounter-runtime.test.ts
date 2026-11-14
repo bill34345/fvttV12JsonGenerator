@@ -20,6 +20,33 @@ function runtime() {
 }
 async function ready(){return prepareForgeEncounter(JSON.stringify(encounterFixture()));}
 describe('reviewed encounter import and explicit macro startup',()=>{
+  test('round trips independent PDF portrait and native ring assets without changing candidate mechanics',async()=>{
+    const env=runtime(), baseline=runtime(), original=encounterFixture();
+    const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1ioAAAAASUVORK5CYII=','base64');
+    const target=(fields:string[])=>[{actorKey:original.primaryActorKey,fields}];
+    const asset={fileName:'art.png',mime:'image/png',base64:png.toString('base64'),sha256:hashEncounterBytes(png)};
+    const bundle={...original,assets:[
+      {...asset,key:'pdf-portrait-test',targets:target(['img'])},
+      {...asset,key:'pdf-token-test',targets:target(['prototypeToken.texture.src','prototypeToken.ring.subject.texture']),
+        tokenFraming:{x:0.12,y:-0.03,scale:1.8}},
+    ]};
+    const prepared=await prepareForgeEncounter(JSON.stringify(bundle));
+    expect(prepared.bundle.assets[1]?.tokenFraming).toEqual({x:0.12,y:-0.03,scale:1.8});
+    const primary = prepared.actors.find(actor => actor.key === original.primaryActorKey)!;
+    expect((primary.artifact as any).prototypeToken.ring?.subject?.scale).toBe(2);
+    const uploads:string[]=[];
+    const result=await importForgeEncounter({...env,prepared,reviewed:true,assets:{async ensure(_asset,path){uploads.push(path);}}});
+    expect(result.failures).toEqual([]);
+    const row=result.documents.find(entry=>entry.key===original.primaryActorKey)!;
+    const saved=(env.game.actors.get(row.id) as any).toObject();
+    expect(saved.img).toBe(uploads[0]);
+    expect(saved.prototypeToken.texture.src).toBe(uploads[1]);
+    expect(saved.prototypeToken.ring).toMatchObject({enabled:true,subject:{scale:1,texture:uploads[1]}});
+    await importForgeEncounter({...env,game:baseline.game,prepared:await ready(),reviewed:true});
+    const unillustrated=(baseline.game.actors.get(row.id) as any).toObject();
+    expect(saved.system).toEqual(unillustrated.system);
+    expect(saved.items).toEqual(unillustrated.items);
+  });
   test('runtime admission binds a newly prepared native controller to the actual later runtime',async()=>{
     for(const [core,system] of [['14.369','6.0.6'],['14.370','6.1.0']] as const){
     const env=runtime(),original=encounterFixture(),sourceTarget=structuredClone(original.target);

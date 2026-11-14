@@ -40,9 +40,9 @@
     "note": "共享README更新血猎手模块；抓取入口、结果及权限未变。"
   },
   "artwork-icons": {
-    "fingerprint": "5e4db848c8cf7838d29929702cfb97c3f5240a2070881fbcb5351cf200a62272",
-    "reviewedOn": "2026-11-13",
-    "note": "共享README更新血猎手模块；生成器图标规则未变，血猎手图标另见本模块手册。"
+    "fingerprint": "7c5413bc838bdd7638867b2d6dfd9699047087b1228f58ffc219dbc677c4673c",
+    "reviewedOn": "2026-11-14",
+    "note": "核对公开版 Forge 的 PDF 选图、裁切预设、调整和复核。角色图及地图 Token 的用途、验证入口和原生动态环一致。"
   },
   "legacy-text": {
     "fingerprint": "cc5bd0a66280750aec4266154851fa049f115f4ec4f3664c16dae4c315da5f39",
@@ -60,14 +60,14 @@
     "note": "对照tools/foundry-ops/AGENTS.md，仅将Bun版本依据从已删除CI配置改为根README；本地检查包装、临时沙箱、只读依赖、生产权限、目标路径和失败关闭要求保持。"
   },
   "verification-development": {
-    "fingerprint": "bd639f07464a9e37ccb03b92e75b94b6bb6484c1c8d159c4fa620c40adfafa2d",
-    "reviewedOn": "2026-11-13",
-    "note": "保留 GitHub master 的开发检查说明，核对本次 Forge 改动涉及的手册与验收入口"
+    "fingerprint": "ac4f913626d0c3fc6f001149ec69078e0203e2f3129d5d03b8002cb477e1bbbc",
+    "reviewedOn": "2026-11-14",
+    "note": "核对公开版 Forge 的 PDF 选图、裁切预设、调整和复核。角色图及地图 Token 的用途、验证入口和原生动态环一致。"
   },
   "human-encounter-intake": {
-    "fingerprint": "010daa4ce7ce1108b3df470698ba099b62d14816e61ced13c66ca5e40041a821",
-    "reviewedOn": "2026-11-13",
-    "note": "核对召唤物入口的连接提示、实时目录和文字型 PDF 操作"
+    "fingerprint": "6871f58ed85beeecf6369adeb24cad61005fcc850e7e5aa0a26489ad9a9f6d43",
+    "reviewedOn": "2026-11-14",
+    "note": "核对公开版 Forge 的 PDF 选图、裁切预设、调整和复核。角色图及地图 Token 的用途、验证入口和原生动态环一致。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -150,9 +150,9 @@
     "note": "核对共享状态函数的批处理接口接线；没有推广版本准入或新增编辑器支持。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "66d24a80863f337a13a9fc8c4f5cc8a29289e7f643e8facccb897ac205f3e455",
+    "fingerprint": "2ff7e0eff5d27b7a056a1b77c1a8312207b6f91b13d36b7621396b0b24b9d2d0",
     "reviewedOn": "2026-11-14",
-    "note": "核对公开版候选页、差异跳转、角色卡、更多和确认导入。"
+    "note": "核对公开版 Forge 的 PDF 选图、裁切预设、调整和复核。角色图及地图 Token 的用途、验证入口和原生动态环一致。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "b888eae16a4a0dc1c058805448887553cb8617c6e81dc15bf345e9b0a6b353eb",

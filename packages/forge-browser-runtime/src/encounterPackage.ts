@@ -27,7 +27,7 @@ const MACRO_KEYS = ['key', 'name', 'command', 'commandHash', 'bindings', 'covers
 const COVER_KEYS = ['actorKey', 'mechanicId'] as const;
 const ASSET_KEYS = ['key', 'fileName', 'mime', 'base64', 'sha256', 'targets'] as const;
 const ASSET_TARGET_KEYS = ['actorKey', 'fields'] as const;
-const ASSET_FIELDS = new Set(['img', 'prototypeToken.texture.src']);
+const ASSET_FIELDS = new Set(['img', 'prototypeToken.texture.src', 'prototypeToken.ring.subject.texture']);
 const MIME_TYPES = new Set(['image/png', 'image/webp', 'image/jpeg']);
 const MAX_ACTORS = 20;
 const MAX_MACROS = 10;
@@ -80,10 +80,13 @@ export interface ForgeEncounterPackageMacro {
 
 export interface ForgeEncounterPackageAssetTarget {
   readonly actorKey: string;
-  readonly fields: readonly ('img' | 'prototypeToken.texture.src')[];
+  readonly fields: readonly ('img' | 'prototypeToken.texture.src' | 'prototypeToken.ring.subject.texture')[];
 }
 
+export interface TokenFraming { x: number; y: number; scale: number }
+
 export interface ForgeEncounterPackageAsset {
+  readonly tokenFraming?: TokenFraming;
   readonly key: string;
   readonly fileName: string;
   readonly mime: 'image/png' | 'image/webp' | 'image/jpeg';
@@ -158,7 +161,7 @@ export function hashEncounterBytes(bytes: Uint8Array): Sha256 {
  * only decodes bytes; it never resolves paths or applies the asset to Foundry.
  */
 export function decodeEncounterAssetBytes(asset: ForgeEncounterPackageAsset): Uint8Array {
-  const record = exactRecord(asset, '$asset', ASSET_KEYS);
+  const record = exactRecord(asset, '$asset', Object.hasOwn(asset, 'tokenFraming') ? [...ASSET_KEYS, 'tokenFraming'] : ASSET_KEYS);
   const mimeValue = mime(record.mime, '$asset.mime');
   const base64 = base64Text(record.base64, '$asset.base64');
   const bytes = decodeBase64(base64, '$asset.base64');
@@ -310,7 +313,8 @@ function decodeCover(value: unknown, path: string, actorKeys: ReadonlySet<string
 }
 
 function decodeAsset(value: unknown, path: string, actorKeys: ReadonlySet<string>): ForgeEncounterPackageAsset {
-  const record = exactRecord(value, path, ASSET_KEYS);
+  const asset = plainRecord(value, path);
+  const record = exactRecord(asset, path, Object.hasOwn(asset, 'tokenFraming') ? [...ASSET_KEYS, 'tokenFraming'] : ASSET_KEYS);
   const key = slug(record.key, `${path}.key`);
   const fileName = safeBasename(record.fileName, `${path}.fileName`);
   const assetMime = mime(record.mime, `${path}.mime`);
@@ -327,7 +331,15 @@ function decodeAsset(value: unknown, path: string, actorKeys: ReadonlySet<string
   const rawTargets = boundedArray(record.targets, `${path}.targets`, 1, MAX_ACTORS);
   const targets = rawTargets.map((entry, index) => decodeAssetTarget(entry, `${path}.targets[${index}]`, actorKeys));
   assertUnique(targets.map((target) => target.actorKey), `${path} target actor keys`);
-  return { key, fileName, mime: assetMime, base64, sha256: assetHash, targets };
+  const framing = record.tokenFraming;
+  if (framing === undefined) return { key, fileName, mime: assetMime, base64, sha256: assetHash, targets };
+  const checked = exactRecord(framing, path + '.tokenFraming', ['x', 'y', 'scale']);
+  const { x, y, scale } = checked;
+  if (typeof x !== 'number' || !Number.isFinite(x) || Math.abs(x) > 8 ||
+      typeof y !== 'number' || !Number.isFinite(y) || Math.abs(y) > 8 ||
+      typeof scale !== 'number' || !Number.isFinite(scale) || scale < 0.05 || scale > 8)
+    throw new TypeError(path + '.tokenFraming is outside the supported range.');
+  return { key, fileName, mime: assetMime, base64, sha256: assetHash, targets, tokenFraming: { x, y, scale } };
 }
 
 function decodeAssetTarget(value: unknown, path: string, actorKeys: ReadonlySet<string>): ForgeEncounterPackageAssetTarget {
@@ -337,7 +349,7 @@ function decodeAssetTarget(value: unknown, path: string, actorKeys: ReadonlySet<
   const rawFields = boundedArray(record.fields, `${path}.fields`, 1, ASSET_FIELDS.size);
   const fields = rawFields.map((field, index) => {
     if (typeof field !== 'string' || !ASSET_FIELDS.has(field)) throw new TypeError(`${path}.fields[${index}] is unsupported.`);
-    return field as 'img' | 'prototypeToken.texture.src';
+    return field as 'img' | 'prototypeToken.texture.src' | 'prototypeToken.ring.subject.texture';
   });
   assertUnique(fields, `${path} fields`);
   return { actorKey, fields };

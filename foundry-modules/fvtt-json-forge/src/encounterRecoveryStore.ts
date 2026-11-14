@@ -50,7 +50,8 @@ export interface EncounterRecoveryStore {
 
 const DATABASE = 'fvtt-json-forge-encounter-recovery';
 const STORE = 'checkpoints';
-const MAX_BYTES = 4 * 1024 * 1024;
+// Applied PDF portrait and token assets are included in the serialized package.
+const MAX_BYTES = 12 * 1024 * 1024;
 const pendingWrites = new Map<string, Promise<void>>();
 interface StoredCheckpoint { revision: number; snapshot: string | null }
 

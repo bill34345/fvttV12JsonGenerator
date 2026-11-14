@@ -1,6 +1,6 @@
 import { nativeProjectionForGame } from './nativeProjection';
 import { decodeForgeEncounterPackageZip, serializeForgeEncounterPackage, encodeForgeEncounterPackageZip } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
-import { prepareForgeEncounter, type PreparedForgeEncounter, type PreparedEncounterActor } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
+import { prepareForgeEncounter, reprepareForgeEncounter, type PreparedForgeEncounter, type PreparedEncounterActor } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
 import { actorLocalizationDisplayRows, encounterPackageLocalizationDisplayRows, approveForgeEncounterLocalization, assertForgeEncounterLocalizationDraft, draftForgeEncounterLocalization,
   reviewForgeEncounterLocalizationDraft, reviseForgeEncounterLocalizationBody, verifiedEncounterLocalizationProgress, LOCALIZATION_TERM_NOTES, LOCALIZATION_TERMS,
   type EncounterLocalizationProgress, type ForgeEncounterLocalizationDraft } from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
@@ -21,6 +21,8 @@ import { claimForgeAiJob, releaseForgeAiJob } from './aiJobGate';
 import { assertExactRuntime, assertGm } from './runtime';
 import { createEncounterAssetPort, importForgeEncounter, listForgeEncounterMacros, startForgeEncounterMacro, type EncounterImportResult } from './encounterRuntime';
 import { readForgePdfInput, type ForgePdfInputReceipt } from './pdfInput';
+import { loadNativeRingPreview, PdfArtEditor } from './pdfArtEditor';
+import type { ForgeEncounterPackageAsset } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 
 
 
@@ -63,6 +65,10 @@ export function createForgeEncounterApplicationClass(environment: {
     private pdfMonster='';
     private pdfPages='';
     private pdfReceipt?:ForgePdfInputReceipt;
+    private pdfArtFile?: File;
+    private readonly pdfArtEditor = new PdfArtEditor();
+    private pdfArtOpen = false;
+    private pdfArtPending = false;
     private pdfAttempt?:ForgePdfInputReceipt;
     private outputLanguage:'source'|'zh-CN'='source';
     private translationReport:EncounterLocalizationProgress[]=[];
@@ -144,7 +150,7 @@ export function createForgeEncounterApplicationClass(environment: {
         const report = activeReport?.actors.find(entry => entry.key === actor.key);
         const sheet = encounterNpcSheet({actor, preview:actorPreviews[index]!,
           nativeSystem:this.nativePreview(actor), source, report, issues:navigation.issues.filter(issue=>issue.actorKey===actor.key)});
-        return {...actorPreviews[index], ...sheet, open:this.openNpcSheets.has(actor.key), source:report?.source ?? source};
+        return {...actorPreviews[index], ...sheet, open:this.openNpcSheets.has(actor.key), source:report?.source ?? source, isPrimary:actor.key===this.prepared!.bundle.primaryActorKey};
       }) ?? [];
       const selectedActor=this.actorFilter && candidateActors.some(actor=>actor.key===this.actorFilter)?this.actorFilter:'';
       const issueItems=navigation.issues.map((issue,index)=>{
@@ -271,6 +277,10 @@ export function createForgeEncounterApplicationClass(environment: {
         humanSource:this.humanSource,humanLabel:this.humanLabel,aiRunning:this.aiRunning,
         pdfFileName:this.pdfFile?.name,pdfMonster:this.pdfMonster,pdfPages:this.pdfPages,
         pdfReceipt:pdfReading,pdfReceiptText:pdfReading?JSON.stringify(pdfReading,null,2):undefined,
+        canEditPdfArt: !!this.pdfReceipt && this.pdfReceipt.source === this.humanSource && !!this.prepared?.actors.length && !this.busy && !this.result,
+        pdfArtOpen: this.pdfArtOpen,
+        pdfArtPending: this.pdfArtPending,
+        priorPdfArtPending: this.pdfArtPending && this.prepared?.bundle.assets.some(asset => /^pdf-(portrait|token)-/u.test(asset.key)),
         pdfSource:pdfReading?.source,pdfDoubts:[...new Set([...(pdfReading?.doubts??[]),...(pdfReading?.failures??[])])],
         chineseSelected:this.outputLanguage==='zh-CN',localized:!!this.prepared?.bundle.localization,
         terminologyNotes:LOCALIZATION_TERM_NOTES,terminologyReferences:[...new Set(LOCALIZATION_TERMS.map(term=>term.reference).filter(reference=>reference.startsWith('https:')))],
@@ -333,9 +343,9 @@ export function createForgeEncounterApplicationClass(environment: {
           conditions:requirement.conditions.filter(condition=>!/^encounter-(?:staged|manual)(?::|-)/u.test(condition)),
         })),assetCount:this.prepared?.bundle.assets.length ?? 0,
         assets:this.prepared?.bundle.assets.map(a=>({fileName:a.fileName,sha256:a.sha256,
-          targetsText:a.targets.map(t=>`${t.actorKey}：${t.fields.map(f=>f==='img'?'角色头像':'Token图片').join('、')}`).join('；')})),
+          targetsText:a.targets.map(t=>`${t.actorKey}：${t.fields.map(f=>f==='img'?'角色图':f==='prototypeToken.texture.src'?'Token 图片':'动态环主体').join('、')}`).join('；')})),
         documents:this.result?.documents.map(d=>({...d,isActor:d.kind==='Actor'})),importFailures:this.result?.failures,installed,
-        canImport:!!this.prepared && this.prepared.actors.length>0 && this.reviewed && !this.busy && (!this.result||!!this.result.failures?.length),
+        canImport:this.canImport,
       };
     }
     _onRender() {
@@ -388,7 +398,7 @@ export function createForgeEncounterApplicationClass(environment: {
         const button=root.querySelector<HTMLButtonElement>('[data-action="encounter-import"]');if(button)button.disabled=true;
       };
       const source=root.querySelector<HTMLTextAreaElement>('[name="humanSource"]');
-      if(source)source.oninput=()=>{if(this.busy)return;this.humanSource=source.value;this.pdfFile=undefined;this.pdfReceipt=undefined;this.pdfAttempt=undefined;
+      if(source)source.oninput=()=>{if(this.busy)return;this.humanSource=source.value;this.resetPdfArt();root.querySelector('[data-pdf-art]')?.remove();this.pdfFile=undefined;this.pdfReceipt=undefined;this.pdfAttempt=undefined;
         root.querySelector('[data-pdf-reading]')?.remove();root.querySelector('[data-pdf-input]')?.remove();invalidate();};
       const label=root.querySelector<HTMLInputElement>('[name="humanLabel"]');
       if(label)label.oninput=()=>{if(this.busy)return;this.humanLabel=label.value;invalidate(true);};
@@ -396,9 +406,9 @@ export function createForgeEncounterApplicationClass(environment: {
       if(language)language.onchange=()=>{if(this.busy)return;this.outputLanguage=language.value==='zh-CN'?'zh-CN':'source';invalidate(true);void this.render();};
       const sourceFile=root.querySelector<HTMLInputElement>('[name="humanSourceFile"]');
       if(sourceFile)sourceFile.onchange=()=>{if(this.busy)return;const chosen=sourceFile.files?.[0];if(!chosen)return;
-        invalidate();const revision=++this.fileRevision;
+        invalidate();this.resetPdfArt();const revision=++this.fileRevision;
         if(/\.pdf$/iu.test(chosen.name)){
-          this.pdfFile=chosen;this.pdfMonster='';this.pdfPages='';this.pdfAttempt=undefined;
+          this.pdfFile=chosen;this.pdfReceipt=undefined;this.pdfMonster='';this.pdfPages='';this.pdfAttempt=undefined;
           this.status='已选择 PDF；填写生物名称后直接生成，读取完成后会自动继续。';void this.render();return;
         }
         this.pdfFile=undefined;this.pdfReceipt=undefined;this.pdfAttempt=undefined;
@@ -412,9 +422,14 @@ export function createForgeEncounterApplicationClass(environment: {
       const pdfPages=root.querySelector<HTMLInputElement>('[name="pdfPages"]');
       if(pdfPages)pdfPages.oninput=()=>{if(this.busy)return;this.pdfPages=pdfPages.value;invalidate(true);};
       const file=root.querySelector<HTMLInputElement>('[name="encounterFile"]');
-      if(file)file.onchange=()=>{if(this.busy)return;this.clearReportPresentation();this.file=file.files?.[0];this.fileRevision++;this.prepared=undefined;this.generationReviewBinding=undefined;this.result=undefined;this.aiReport=undefined;this.recoveryReport=undefined;this.recoveryPackage=undefined;this.recoveryUploadedHash=undefined;this.recoveryUploadedProgress=undefined;this.recoveryUploadedDraft=undefined;this.translationReport=[];this.localizationDraft=undefined;this.translationReviewed=false;this.reviewFilter='all';this.actorFilter='';this.reviewed=false;this.error='';this.queueRecoverySave();void this.render();};
+      if(file)file.onchange=()=>{if(this.busy)return;this.clearReportPresentation();this.resetPdfArt();this.file=file.files?.[0];this.fileRevision++;this.prepared=undefined;this.generationReviewBinding=undefined;this.result=undefined;this.aiReport=undefined;this.recoveryReport=undefined;this.recoveryPackage=undefined;this.recoveryUploadedHash=undefined;this.recoveryUploadedProgress=undefined;this.recoveryUploadedDraft=undefined;this.translationReport=[];this.localizationDraft=undefined;this.translationReviewed=false;this.reviewFilter='all';this.actorFilter='';this.reviewed=false;this.error='';this.queueRecoverySave();void this.render();};
+      this.mountPdfArt(root);
       const reviewed=root.querySelector<HTMLInputElement>('[name="encounterReviewed"]');
-      if(reviewed)reviewed.onchange=()=>{this.reviewed=reviewed.checked;const button=root.querySelector<HTMLButtonElement>('[data-action="encounter-import"]');if(button)button.disabled=!this.reviewed||this.busy||!!this.result&&!this.result.failures?.length;};
+      if(reviewed)reviewed.onchange=()=>{
+        this.reviewed=reviewed.checked;
+        const button=root.querySelector<HTMLButtonElement>('[data-action="encounter-import"]');
+        if(button)button.disabled=!this.canImport;
+      };
       const translationReviewed=root.querySelector<HTMLInputElement>('[name="encounterTranslationReviewed"]');
       if(translationReviewed)translationReviewed.onchange=()=>{this.translationReviewed=translationReviewed.checked;
         const button=root.querySelector<HTMLButtonElement>('[data-action="encounter-approve-localization"]');
@@ -534,6 +549,7 @@ export function createForgeEncounterApplicationClass(environment: {
           this.pdfAttempt=receipt;
           if(!receipt.source.trim()||!receipt.outputs.length)throw new Error([...receipt.failures,...receipt.doubts].join('\n')||'PDF 没有读到可生成的生物资料。');
           this.pdfReceipt=receipt;this.pdfAttempt=undefined;this.pdfFile=undefined;
+          this.pdfArtFile=pdfFile;
           source=this.humanSource=receipt.source;label=this.humanLabel=receipt.requestedMonster;
           this.checkpointEnabled=true;this.queueRecoverySave();
           if(controller.signal.aborted)throw new Error('PDF 读取已取消；已取得的原语言 MD 与来源记录保留，尚未继续生成。');
@@ -583,6 +599,9 @@ export function createForgeEncounterApplicationClass(environment: {
           return;
         }
         assertEncounterSecretsAbsent(serializeForgeEncounterPackage(output.prepared.bundle),this.forbiddenValues);
+        const artFile = this.pdfArtFile;
+        this.resetPdfArt();
+        this.pdfArtFile = artFile;
         this.prepared=output.prepared;
         this.translationReport=output.report.localization??[];
         this.localizationDraft=output.localizationDraft??output.report.localizationDraft;
@@ -867,7 +886,7 @@ export function createForgeEncounterApplicationClass(environment: {
       this.controller?.abort();this.fileRevision++;
       if(this.saveTimer){clearTimeout(this.saveTimer);this.saveTimer=undefined;}
       this.clearReportPresentation();this.humanSource='';this.humanLabel='多生物战斗资料';this.outputLanguage='source';
-      this.pdfFile=undefined;this.pdfReceipt=undefined;this.pdfAttempt=undefined;this.pdfMonster='';this.pdfPages='';
+      this.resetPdfArt();this.pdfFile=undefined;this.pdfReceipt=undefined;this.pdfAttempt=undefined;this.pdfMonster='';this.pdfPages='';
       this.prepared=undefined;this.generationReviewBinding=undefined;this.result=undefined;this.reviewed=false;this.aiReport=undefined;
       this.recoveryReport=undefined;this.recoveryPackage=undefined;this.recoveryUploadedHash=undefined;this.recoveryUploadedProgress=undefined;this.recoveryUploadedDraft=undefined;this.recoveredReview=false;this.translationReport=[];this.localizationDraft=undefined;this.translationReviewed=false;this.progressDetail='';
       try {if(this.recoveryStore){this.pendingSave=this.recoveryStore.clear();await this.pendingSave;}
@@ -993,6 +1012,89 @@ export function createForgeEncounterApplicationClass(environment: {
       }catch{this.textView=undefined;this.error='审核文件未通过来源或连接安全核对，或浏览器无法准备下载。';this.status='审核文件未能下载，请根据错误检查后重试。';}
       finally{if(!this.closed)void this.render();}
     }
+    private resetPdfArt(): void {
+      this.pdfArtEditor.close();
+      this.pdfArtFile = undefined;
+      this.pdfArtOpen = false;
+      this.pdfArtPending = false;
+    }
+
+    private mountPdfArt(root: HTMLElement): void {
+      const panel = root.querySelector<HTMLElement>('[data-pdf-art]');
+      const prepared = this.prepared;
+      const receipt = this.pdfReceipt;
+      if (!panel || !prepared || !receipt) return;
+      const actor = prepared.actors.find(entry => entry.key === prepared.bundle.primaryActorKey);
+      if (!actor) return;
+      panel.addEventListener('toggle', () => { this.pdfArtOpen = panel.hasAttribute('open'); });
+      const fileInput = panel.querySelector<HTMLElement>('[data-art-repick]');
+      if (fileInput && this.pdfArtFile) fileInput.hidden = true;
+      const ownedAssets = prepared.bundle.assets.filter(asset =>
+        /^pdf-(portrait|token)-/u.test(asset.key) && asset.targets.some(target => target.actorKey === actor.key));
+      const token = actor.artifact.prototypeToken as { width?: number; height?: number } | undefined;
+      const replaceAssets = async (assets: ForgeEncounterPackageAsset[]) => {
+        if (this.prepared !== prepared || this.busy || this.result || this.pdfReceipt !== receipt)
+          throw new Error('候选已变化，请重新打开配图。');
+        this.busy = true;
+        try {
+          const bundle = { ...prepared.bundle, assets: [...prepared.bundle.assets.filter(asset => !ownedAssets.includes(asset)), ...assets] };
+          const next = await reprepareForgeEncounter(prepared, bundle);
+          if (this.closed || this.prepared !== prepared) return;
+          let draft = this.localizationDraft;
+          if (draft) {
+            assertForgeEncounterLocalizationDraft(prepared, draft);
+            draft = { ...draft, sourcePackageHash: next.hash };
+            assertForgeEncounterLocalizationDraft(next, draft);
+          }
+          this.prepared = next;
+          this.pdfArtPending = false;
+          this.pdfArtOpen = true;
+          this.generationReviewBinding = undefined;
+          this.localizationDraft = draft;
+          this.translationReviewed = false;
+          this.reviewed = false;
+          this.recoveryPackage = serializeForgeEncounterPackage(next.bundle);
+          if (this.aiReport?.packageHash === prepared.hash) {
+            this.aiReport = { ...this.aiReport, packageHash: next.hash, localizationDraft: draft };
+            this.recoveryReport = this.aiReport;
+          }
+          this.status = assets.length === 2 ? '已采用此 Token。确认导入时保存角色图和 Token。'
+            : assets.length ? '已选择只用角色图。确认导入时保存角色图。' : '已跳过 PDF 配图。';
+          this.queueRecoverySave();
+        } finally { this.busy = false; }
+        if (!this.closed) {
+          await this.render();
+          (this.element as HTMLElement).querySelector<HTMLElement>('[data-art-decision]')?.focus();
+        }
+      };
+      this.pdfArtEditor.mount(panel, {
+        file: () => this.pdfArtFile,
+        replaceFile: file => { this.pdfArtFile = file; },
+        hash: receipt.sourceSha256,
+        pageCount: receipt.pageCount,
+        initialPage: receipt.outputs[0]?.pageNumbers[0] ?? receipt.sourcePages[0]?.pageNumber ?? 1,
+        actorKey: actor.key,
+        currentAssets: ownedAssets,
+        pending: this.pdfArtPending,
+        change: () => {
+          this.pdfArtPending = true;
+          this.reviewed = false;
+          this.status = 'PDF 配图待确认。请在预览中选择采用、只用角色图或跳过配图。';
+          for (const status of root.querySelectorAll('[data-encounter-status], [data-encounter-secondary-status]')) {
+            status.textContent = this.status;
+          }
+          if (ownedAssets.length) root.querySelector('[data-pdf-art-prior-note]')?.removeAttribute('hidden');
+          const review = root.querySelector<HTMLInputElement>('[name="encounterReviewed"]');
+          if (review) review.checked = false;
+          const importButton = root.querySelector<HTMLButtonElement>('[data-action="encounter-import"]');
+          if (importButton) importButton.disabled = true;
+          root.querySelector('[data-pdf-art-review-note]')?.removeAttribute('hidden');
+        },
+        ring: () => loadNativeRingPreview((globalThis as any).CONFIG.Token.ring, Math.min(token?.width ?? 1, token?.height ?? 1)),
+        apply: replaceAssets,
+      });
+    }
+
     private nativePreview(actor: PreparedEncounterActor): unknown {
       if (this.nativePreviews.has(actor)) return this.nativePreviews.get(actor);
       const Actor = game.actors?.documentClass;
@@ -1007,8 +1109,13 @@ export function createForgeEncounterApplicationClass(environment: {
       return system;
     }
 
+    private get canImport(): boolean {
+      return !!this.prepared?.actors.length && this.reviewed && !this.pdfArtPending && !this.busy &&
+        (!this.result || !!this.result.failures?.length);
+    }
+
     private async apply() {
-      if(this.busy||!this.prepared||!this.reviewed||this.result&&!this.result.failures?.length)return;
+      if(!this.prepared||!this.canImport)return;
       this.busy=true;this.importing=true;this.error='';this.status='正在导入并回读核对，请保持页面打开。';void this.render();
       try {
         const configurationWarnings:string[]=[];
@@ -1039,7 +1146,7 @@ export function createForgeEncounterApplicationClass(environment: {
       if(this.importing){ui?.notifications?.warn('正在导入并回读，请等待当前操作完成。');return this;}
       if(this.saveTimer){clearTimeout(this.saveTimer);this.saveTimer=undefined;await this.saveRecovery();}
       await this.pendingSave.catch(()=>undefined);
-      this.closed=true;this.generationReviewBinding=undefined;this.sessionUnsubscribe?.();this.sessionUnsubscribe=undefined;
+      this.closed=true;this.resetPdfArt();this.generationReviewBinding=undefined;this.sessionUnsubscribe?.();this.sessionUnsubscribe=undefined;
       this.clearReportPresentation();this.controller?.abort();const win=environment.window??(globalThis as any).window;win?.removeEventListener?.('beforeunload',this.pageGuard);
       return super.close(options);
     }

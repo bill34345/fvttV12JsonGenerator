@@ -124,7 +124,20 @@ function createDocumentPlans(prepared:PreparedForgeEncounter,game:EncounterGame,
     for (const asset of bundle.assets.filter(asset=>uploadedAssets.has(asset.key))) for (const target of asset.targets.filter(t => t.actorKey === actor.key)) {
       for (const path of target.fields) {
         if (path === 'img') data.img = encounterAssetPath(hash, asset);
-        else { data.prototypeToken ??= {}; data.prototypeToken.texture ??= {}; data.prototypeToken.texture.src = encounterAssetPath(hash, asset); }
+        else if (path === 'prototypeToken.texture.src') {
+          data.prototypeToken ??= {}; data.prototypeToken.texture ??= {};
+          data.prototypeToken.texture.src = encounterAssetPath(hash, asset);
+        } else {
+          data.prototypeToken ??= {};
+          const ring = data.prototypeToken.ring ??= {};
+          ring.enabled = true;
+          // The editor already applies the framing inside the exported square.
+          ring.subject = {
+            ...ring.subject,
+            ...(asset.tokenFraming ? { scale: 1 } : {}),
+            texture: encounterAssetPath(hash, asset),
+          };
+        }
       }
     }
     plans.push({key:actor.key,kind:'Actor',data,warnings});
@@ -171,7 +184,13 @@ function verifyDocument(document: EncounterDocument, plan: DocumentPlan,allowPen
       try{assertExpectedFields(read(actual),read(plan.data),path);}
       catch(error){warnings.push(`${plan.data.name}：${error instanceof Error?error.message:String(error)}。角色已保留，请核对。`);}
     }
-    if (actual.img !== plan.data.img || actual.prototypeToken?.texture?.src !== plan.data.prototypeToken?.texture?.src) warnings.push(`${plan.data.name}：图片保存值与生成结果不同，角色已保留，请核对。`);
+    const ring = plan.data.prototypeToken?.ring;
+    const actualRing = actual.prototypeToken?.ring;
+    if (actual.img !== plan.data.img || actual.prototypeToken?.texture?.src !== plan.data.prototypeToken?.texture?.src ||
+      (ring?.subject?.texture && (actualRing?.subject?.texture !== ring.subject.texture || actualRing.enabled !== ring.enabled ||
+        (ring.subject.scale !== undefined && actualRing.subject.scale !== ring.subject.scale)))) {
+      warnings.push(`${plan.data.name}：图片保存值与生成结果不同，角色已保留，请核对。`);
+    }
   } else if (actual.command !== plan.data.command || actual.type !== 'script' || actual.name !== plan.data.name) {
     throw new Error(`${plan.data.name}：宏代码回读不一致。`);
   }

@@ -27,7 +27,7 @@
             {{#if portrait}}<img src="{{portrait}}" alt="" width="40" height="40">{{/if}}
             <span class="forge-npc-identity"><strong>{{name}}</strong>{{#if subtype}}<span>{{subtype}}</span>{{/if}}</span>
             {{#if knownCount}}<span class="forge-npc-review-marker">{{knownCount}} 项差异</span>{{/if}}
-            <span class="forge-npc-meta">角色卡</span>
+            <span class="forge-npc-meta">角色卡{{#if isPrimary}}{{#if @root.canEditPdfArt}}与 Token{{/if}}{{/if}}</span>
           </summary>
           <div class="forge-npc-sheet-body">
           <dl class="forge-npc-vitals">
@@ -57,6 +57,51 @@
                 </details>{{/with}}</dd>{{/if}}
             </div>{{/each}}
           </dl>
+          {{#if isPrimary}}{{#with @root}}
+    {{#if canEditPdfArt}}
+    <details class="forge-pdf-art" data-pdf-art {{#if pdfArtOpen}}open{{/if}}>
+      <summary>角色图与 Token</summary>
+      <div class="forge-pdf-art-layout">
+        <section class="forge-pdf-art-source" aria-label="从 PDF 选图">
+          <label data-art-repick>重新选择原 PDF<input data-art-file type="file" accept=".pdf,application/pdf"></label>
+          <div class="forge-pdf-art-pager">
+            <label>PDF 页码<input data-art-number type="number" min="1" inputmode="numeric"></label>
+            <button type="button" data-art-load>查看此页</button>
+          </div>
+          <p data-art-status role="status">打开来源页后选择插图。</p>
+          <div class="forge-pdf-art-choices" data-art-choices aria-label="本页插图"></div>
+          <div class="forge-pdf-art-page" data-art-page></div>
+        </section>
+        <section class="forge-pdf-art-editor" data-art-editor aria-label="配图预览和构图" hidden>
+          <div class="forge-pdf-art-previews">
+            <figure><figcaption>角色图</figcaption><div><canvas data-art-portrait aria-label="完整插图"></canvas></div></figure>
+            <figure><figcaption>Token 预览</figcaption><div><canvas data-art-token width="512" height="512" tabindex="-1"
+              aria-label="Token 预览"></canvas></div></figure>
+          </div>
+          <p data-art-ring-status role="status"></p>
+          <p data-art-decision role="status" tabindex="-1"></p>
+          <div class="forge-pdf-art-actions">
+            <button type="button" data-art-apply data-primary="true" disabled>采用此 Token</button>
+            <button type="button" data-art-adjust aria-expanded="false" aria-controls="forge-pdf-art-framing">调整构图</button>
+            <button type="button" data-art-portrait-only>只用角色图</button>
+            <button type="button" data-art-clear>跳过配图</button>
+          </div>
+          <div class="forge-pdf-art-adjustment" id="forge-pdf-art-framing" data-art-controls hidden>
+            <div class="forge-pdf-art-framing">
+              <label>裁切预设<select data-art-preset>
+                <option value="full">完整插图</option><option value="upper">取上部</option><option value="middle">取中部</option>
+                <option value="center">取中央</option><option value="left">靠左</option><option value="right">靠右</option>
+              </select></label>
+              <button type="button" data-art-reset>重置构图</button>
+            </div>
+            <label>缩放<input data-art-zoom type="range" min="5" max="800" step="1"></label>
+            <p>拖动 Token 内的图调整位置，也可以用方向键移动。</p>
+          </div>
+        </section>
+      </div>
+    </details>
+    {{/if}}
+{{/with}}{{/if}}
           {{#each groups}}
             <section class="forge-npc-abilities"><h4>{{label}}</h4>
               {{#each abilities}}
@@ -87,8 +132,9 @@
         </label>
         <div class="forge-npc-import">
           {{#if worldTitle}}<span class="forge-npc-meta">{{worldTitle}} · 角色目录</span>{{/if}}
-          <button type="button" data-action="encounter-import" data-primary="true" {{#unless canImport}}disabled{{/unless}}>{{importLabel}}</button>
+          <button type="button" data-action="encounter-import" data-primary="true" aria-describedby="forge-encounter-import-hint" {{#unless canImport}}disabled{{/unless}}>{{importLabel}}</button>
         </div>
+        <p id="forge-encounter-import-hint" data-pdf-art-review-note role="status" {{#unless pdfArtPending}}hidden{{/unless}}>请先采用 Token、只用角色图，或跳过配图。</p>
       </footer>
     </section>
   {{/if}}
@@ -216,6 +262,7 @@
       <details><summary>中文术语依据与待核边界</summary><ul>{{#each terminologyNotes}}<li>{{this}}</li>{{/each}}</ul><ul>{{#each terminologyReferences}}<li><a href="{{this}}" target="_blank" rel="noopener noreferrer">5E不全书《玩家手册2024》术语参考</a></li>{{/each}}</ul></details>
     {{else}}<button type="button" data-action="encounter-localize" {{#if busy}}disabled{{/if}}>生成中文草稿并做本地校验</button><p>使用当前 AI 连接生成显示文本草稿；不会自动请求付费模型审核。中文草稿须经 GM 明确核对批准后才成为正式候选。</p>{{/if}}
     <p>配套图片：{{assetCount}} 个</p>
+    <p data-pdf-art-prior-note {{#unless priorPdfArtPending}}hidden{{/unless}}>这里仍列出上次确认的 PDF 配图。当前预览待确认。</p>
     <ul>{{#each assets}}<li>{{fileName}} → {{targetsText}}<details><summary>图片校验值</summary><code>{{sha256}}</code></details></li>{{/each}}</ul>
     {{#each macros}}
       <details class="forge-encounter-macro"><summary>宏：{{name}} — 查看代码与绑定</summary>

@@ -2,6 +2,7 @@ import { sha256 } from '@fvtt-json-generator/contracts/hash';
 import { FORGE_PDF_ENGINE_VERSION, type BrowserPdfSource, type PdfLayoutPage, type PdfRawTextItem, type PdfRawTextStyle, type PdfSourceLine } from './pdfTypes';
 
 export type PdfJsEngine = Pick<typeof import('pdfjs-dist'), 'getDocument' | 'GlobalWorkerOptions' | 'Util' | 'version'>;
+export type PdfJsArtEngine = PdfJsEngine & Pick<typeof import('pdfjs-dist'), 'OPS' | 'ImageKind'>;
 export interface ExtractBrowserPdfOptions {
   assetBaseUrl: string;
   pages?: number[];
