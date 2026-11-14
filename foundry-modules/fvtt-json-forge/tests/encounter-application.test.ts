@@ -14,10 +14,87 @@ import {draftForgeEncounterLocalization} from '@fvtt-json-generator/forge-browse
 
 test('uploaded candidates display retained findings without an AI report',()=>{
   const html=Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))({
-    hasReport:false,hasPackage:true,aiFindings:['Legendary Resistance: source recovery needs review (MANUAL_RESOURCE_SOURCE_CONFLICT)']});
+    hasReport:false,hasPackage:true,showMore:true,aiFindings:['Legendary Resistance: source recovery needs review (MANUAL_RESOURCE_SOURCE_CONFLICT)']});
   const document=new JSDOM(html).window.document;
+  expect(document.querySelector('[data-candidate-findings]')?.closest('details')?.open).toBe(false);
   expect(document.querySelector('[data-candidate-findings]')?.textContent).toContain('MANUAL_RESOURCE_SOURCE_CONFLICT');
   expect(document.querySelector('[data-candidate-findings]')?.textContent).toContain('Legendary Resistance');
+});
+
+test('NPC review compares source XP with the prepared Foundry value and keeps export under More', async () => {
+  const label = '矿坑守卫 Quarry Guard';
+  const cleanLabel = '矿坑斥候 Quarry Scout';
+  const sourceFor = (xp: number, name = label) => ['---','名称: '+name,'类型: npc','护甲等级: 14','生命值: 28',
+    '挑战等级: 2','经验值: '+xp,'---'].join('\n');
+  class Base {
+    element: any;
+    render() { return this; }
+  }
+  class NativeActor {
+    system: any;
+    constructor(input: any) {
+      this.system = structuredClone(input.system);
+      this.system.details.xp = {value: 450};
+    }
+  }
+  const game = {
+    version:'14.370', system:{id:'dnd5e',version:'6.0.6'}, world:{id:'lab',title:'开发测试'},
+    user:{id:'gm',isGM:true}, macros:{contents:[]}, actors:{documentClass:NativeActor},
+  };
+  const App = createForgeEncounterApplicationClass({game,foundry:{applications:{api:{
+    ApplicationV2:Base,HandlebarsApplicationMixin:(base: typeof Base)=>base,
+  }}}});
+  const render = Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'));
+  for (const sourceXp of [450, 600]) {
+    const source = sourceFor(sourceXp);
+    const cleanSource = sourceFor(450, cleanLabel);
+    const bundle = {...encounterFixture(), id:'forge-npc-review-regression', label, primaryActorKey:'guard',
+      target:{foundry:'14.370',system:'dnd5e',systemVersion:'6.0.6',effectProfile:'core'} as const,
+      actors:[{key:'scout',label:cleanLabel,source:cleanSource,sourceHash:hashSource(cleanSource)},
+        {key:'guard',label,source,sourceHash:hashSource(source)}],macros:[],assets:[]};
+    const app: any = new App();
+    app.prepared = await prepareForgeEncounter(serializeForgeEncounterPackage(bundle));
+    const dom = new JSDOM(render(await app._prepareContext()));
+    const doc = dom.window.document;
+    const cleanSheet = doc.querySelector<HTMLDetailsElement>('[data-npc-sheet="scout"]')!;
+    const guardSheet = doc.querySelector<HTMLDetailsElement>('[data-npc-sheet="guard"]')!;
+    expect(cleanSheet.open).toBe(false);
+    expect(guardSheet.open).toBe(false);
+    const score = [...guardSheet.querySelectorAll('.forge-npc-vital')].find(node => node.querySelector('dt')?.textContent?.includes('经验值'));
+    expect(score?.querySelector('.forge-npc-number')?.textContent).toBe('450');
+    const issue = score?.querySelector<HTMLDetailsElement>('.forge-npc-stat-issue');
+    const exporting = doc.querySelector('[data-export-actor]')?.closest('details');
+    expect(exporting?.hasAttribute('data-encounter-more')).toBe(true);
+    expect(exporting?.open).toBe(false);
+    app.element = doc.querySelector('.forge-encounter-panel');
+    app._onRender();
+    const findings = doc.querySelector('.forge-npc-findings');
+    if (sourceXp === 600) {
+      expect(findings?.textContent).not.toContain(cleanLabel);
+      expect(findings?.querySelector('h3')?.textContent).toBe(label);
+      const link = findings!.querySelector<HTMLAnchorElement>('[data-npc-jump]')!;
+      expect(link.textContent).toContain('原文 600 · 导入后 450');
+      expect(doc.getElementById(link.hash.slice(1))).toBe(issue!);
+      expect(issue?.open).toBe(false);
+      link.click();
+      expect(cleanSheet.open).toBe(false);
+      expect(guardSheet.open).toBe(true);
+      expect(issue?.open).toBe(true);
+      expect(doc.activeElement).toBe(issue!.querySelector('summary')!);
+      expect(issue?.querySelector('blockquote')?.textContent).toBe('经验值: 600');
+      expect(issue?.textContent).toContain('结算时手动分配');
+    } else {
+      expect(issue).toBeNull();
+      expect(findings).toBeNull();
+      expect(score?.textContent).toContain('按挑战等级计算');
+    }
+    const button = doc.querySelector<HTMLButtonElement>('[data-action="encounter-import"]')!;
+    const check = doc.querySelector<HTMLInputElement>('[name="encounterReviewed"]')!;
+    expect(button.disabled).toBe(true);
+    check.checked = true;
+    check.dispatchEvent(new dom.window.Event('change'));
+    expect(button.disabled).toBe(false);
+  }
 });
 
 describe('configured state directory in the actual Forge entry',()=>{

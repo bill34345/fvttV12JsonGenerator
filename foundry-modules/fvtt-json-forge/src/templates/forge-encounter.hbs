@@ -1,5 +1,100 @@
 <section class="fvtt-json-forge-form forge-encounter-panel">
-  <h2>从规则资料生成生物与召唤物</h2>
+  {{#if ready}}
+    <section class="forge-npc-review" aria-label="角色预览">
+      <header class="forge-npc-review-header">
+        <h2 tabindex="-1" data-npc-sheet-heading>{{#if reviewCount}}{{reviewCount}} 项差异待核对{{else}}{{#if hasOtherFindings}}有检查提示待核对{{else}}核对角色{{/if}}{{/if}}</h2>
+        {{#if hasOtherFindings}}<a href="#forge-encounter-other-findings" data-encounter-review-details>查看其他检查提示</a>{{/if}}
+      </header>
+      {{#if reviewCount}}
+        <div class="forge-npc-findings" aria-label="待核对的差异">
+          {{#each npcSheets}}{{#if issueRows}}
+            <section aria-label="{{name}}">
+              <h3>{{name}}</h3>
+              <ul>{{#each issueRows}}
+                <li><a href="#forge-npc-{{../key}}-{{target}}" data-npc-jump>
+                  <strong>{{label}}</strong><span>{{summary}}</span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                </a></li>
+              {{/each}}</ul>
+            </section>
+          {{/if}}{{/each}}
+        </div>
+      {{else}}{{#unless hasOtherFindings}}<p class="forge-npc-meta">没有发现需要核对的差异。</p>{{/unless}}{{/if}}
+      <div class="forge-npc-cards">
+      {{#each npcSheets}}
+        <details class="forge-npc-sheet" aria-label="{{name}}" data-npc-sheet="{{key}}" {{#if open}}open{{/if}}>
+          <summary class="forge-npc-header">
+            <i class="fa-solid fa-chevron-right forge-npc-disclosure" aria-hidden="true"></i>
+            {{#if portrait}}<img src="{{portrait}}" alt="" width="40" height="40">{{/if}}
+            <span class="forge-npc-identity"><strong>{{name}}</strong>{{#if subtype}}<span>{{subtype}}</span>{{/if}}</span>
+            {{#if knownCount}}<span class="forge-npc-review-marker">{{knownCount}} 项差异</span>{{/if}}
+            <span class="forge-npc-meta">角色卡</span>
+          </summary>
+          <div class="forge-npc-sheet-body">
+          <dl class="forge-npc-vitals">
+            {{#each sheetStats}}
+              <div class="forge-npc-vital{{#if issue}} has-issue{{/if}}">
+                <dt><i class="fa-solid fa-{{icon}}" aria-hidden="true"></i> {{label}}</dt>
+                <dd class="forge-npc-number">{{value}}</dd>
+                {{#if calculated}}{{#unless issue}}<dd class="forge-npc-meta">按挑战等级计算</dd>{{/unless}}{{/if}}
+                {{#if issue}}<dd>{{#with issue}}<details class="forge-npc-issue forge-npc-stat-issue" id="forge-npc-{{../../key}}-{{../target}}">
+                  <summary aria-label="{{label}}差异"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                    <span>原文 {{source}}</span><span>导入后 {{outcome}}</span>
+                  </summary>
+                  {{#if quote}}<blockquote>{{quote}}</blockquote>{{/if}}
+                  <p>{{next}}</p>
+                </details>{{/with}}</dd>{{/if}}
+              </div>
+            {{/each}}
+          </dl>
+          <dl class="forge-npc-scores" aria-label="六项属性">
+            {{#each abilityScores}}<div class="{{#if issue}}has-issue{{/if}}"><dt>{{label}}</dt><dd class="forge-npc-number">{{value}}</dd>
+              {{#if issue}}<dd>{{#with issue}}<details class="forge-npc-issue forge-npc-stat-issue" id="forge-npc-{{../../key}}-{{../target}}">
+                  <summary aria-label="{{label}}差异"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                    <span>原文 {{source}}</span><span>导入后 {{outcome}}</span>
+                  </summary>
+                  {{#if quote}}<blockquote>{{quote}}</blockquote>{{/if}}
+                  <p>{{next}}</p>
+                </details>{{/with}}</dd>{{/if}}
+            </div>{{/each}}
+          </dl>
+          {{#each groups}}
+            <section class="forge-npc-abilities"><h4>{{label}}</h4>
+              {{#each abilities}}
+                <details class="forge-npc-ability" id="forge-npc-{{../../key}}-{{target}}">
+                  <summary><strong>{{name}}</strong>{{#if manual}}<span>GM 手动处理</span>{{/if}}{{#each issues}}<span class="forge-npc-review-marker">{{label}}{{#if compact}} · {{compact}}{{/if}}</span>{{/each}}</summary>
+                  {{#each issues}}<aside class="forge-npc-issue">
+                    <strong><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> {{label}}待核对</strong>
+                    <dl><div><dt>原文</dt><dd>{{source}}</dd></div><div><dt>导入后</dt><dd>{{outcome}}</dd></div></dl>
+                    {{#if quote}}<details><summary>看原文片段</summary><blockquote>{{quote}}</blockquote></details>{{/if}}
+                    <p>{{next}}</p>
+                  </aside>{{/each}}
+                  {{#if description}}<p class="forge-localized-prose">{{description}}</p>{{/if}}
+                </details>
+              {{/each}}
+            </section>
+          {{/each}}
+          {{#if biography}}<details class="forge-npc-detail"><summary>角色介绍</summary><p class="forge-localized-prose">{{biography}}</p></details>{{/if}}
+          {{#if previewIssues}}<ul>{{#each previewIssues}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+          {{#if source}}<details class="forge-npc-detail"><summary>查看完整来源</summary><pre>{{source}}</pre></details>{{/if}}
+          </div>
+        </details>
+      {{/each}}
+      </div>
+      <footer class="forge-npc-footer">
+        <label class="forge-npc-confirm">
+          <input name="encounterReviewed" type="checkbox" {{#if reviewed}}checked{{/if}} {{#if busy}}disabled{{/if}}>
+          <span>我已核对角色和 GM 手动规则{{#if macros}}、宏代码及绑定{{/if}}{{#if aiConcerns}}和历史 AI 提示{{/if}}</span>
+        </label>
+        <div class="forge-npc-import">
+          {{#if worldTitle}}<span class="forge-npc-meta">{{worldTitle}} · 角色目录</span>{{/if}}
+          <button type="button" data-action="encounter-import" data-primary="true" {{#unless canImport}}disabled{{/unless}}>{{importLabel}}</button>
+        </div>
+      </footer>
+    </section>
+  {{/if}}
+  <details class="forge-npc-detail forge-encounter-inputs" {{#unless ready}}open{{/unless}}>
+  <summary>来源与生成设置</summary>
+  {{#unless ready}}<h2>从规则资料生成生物与召唤物</h2>{{/unless}}
   <p>提供完整生物资料。若能力涉及召唤其他生物或物件，可同时提供其资料和规则；这仍属于生物生成。AI提取生物与配套配置，工具使用已实现的能力生成控制入口。AI不编写宏代码；资料缺项会显示出来，确认导入前不创建角色或启动自动化。</p>
   <div class="forge-ai-setup" data-encounter-ai-notice hidden>
     <i class="fas fa-plug" aria-hidden="true"></i>
@@ -46,12 +141,6 @@
   <p role="status" data-encounter-status aria-live="polite">{{status}}</p>
   {{#if progressDetail}}<p data-encounter-progress>{{progressDetail}}</p>{{/if}}
   {{#if aiRunning}}<button type="button" data-action="encounter-ai-stop">停止AI生成</button>{{/if}}
-  <div data-encounter-report-controls class="forge-encounter-volatile">
-  {{#if hasReport}}<button type="button" data-action="encounter-report-view" {{#if busy}}disabled{{/if}}>查看／复制来源与校验记录</button><button type="button" data-action="encounter-report" {{#if busy}}disabled{{/if}}>下载来源与校验记录</button>{{/if}}
-  {{#if reportDownload}}<p><a data-report-download href="{{reportDownload.url}}" download="{{reportDownload.name}}">下载审核文件</a>（{{reportDownload.name}}，{{reportDownload.byteLength}} 字节）</p>{{/if}}
-  {{#if textView}}<section class="forge-encounter-report-view"><label>{{textView.name}} · 完整 JSON<textarea data-encounter-view-text readonly spellcheck="false" wrap="off" rows="18">{{textView.text}}</textarea></label><button type="button" data-action="encounter-text-copy" {{#if busy}}disabled{{/if}}>复制当前 JSON</button><p>若浏览器不支持自动复制，可在上方文本框中手动全选复制。</p></section>{{/if}}
-  {{#if hasPackage}}<button type="button" data-action="encounter-package-view" {{#if busy}}disabled{{/if}}>查看／复制生物导入文件 JSON</button><button type="button" data-action="encounter-export">下载生成的生物导入文件</button>{{/if}}
-  </div>
   <h2>角色、召唤物与配套宏</h2>
   <p>选择 Forge 生物导入文件 JSON 或 ZIP。角色会从包内来源重新生成；预览不调用 AI，也不执行宏。现有 AI Intake 的 Provider 和模型配置保持原样。</p>
   <label>生物导入文件（最多 32 MiB）<input name="encounterFile" type="file" accept=".json,.zip,application/json,application/zip" {{#if busy}}disabled{{/if}}></label>
@@ -59,50 +148,10 @@
   <button type="button" data-action="encounter-preview" {{#if busy}}disabled{{/if}}>预览生物与召唤物</button>
   <p role="status" data-encounter-secondary-status aria-live="polite">{{status}}</p>
   {{#if error}}<p class="forge-error" role="alert">{{error}}</p>{{/if}}
+  </details>
   <div data-encounter-current-result class="forge-encounter-volatile">
-  {{#if actorDeliveries}}<section data-actor-deliveries aria-label="逐个生物结果">
-    <h3>逐个生物结果</h3>
-    {{#if partialCandidates}}<p role="status">部分生物已有可用候选，可独立查看和下载。完整生物导入文件尚未完成；失败和未处理成员仍属于本任务，不能将部分结果作为完整包导入。</p>{{/if}}
-    {{#each actorDeliveries}}<article data-actor-delivery="{{key}}"><h4>{{label}} · {{status}}</h4>
-      {{#if reusedCandidate}}<p>已保留原候选；本次未重新请求、生成或纠错。</p>{{/if}}
-      {{#if available}}<p>严格检查状态：{{strictStatus}}。候选可获取不表示检查问题已通过。</p>
-        <button type="button" data-actor-candidate-view="{{key}}" {{#if ../busy}}disabled{{/if}}>查看此生物 JSON</button>
-        <button type="button" data-actor-candidate-download="{{key}}" {{#if ../busy}}disabled{{/if}}>下载此生物 JSON</button>
-        <details><summary>本生物完整原始来源</summary><pre>{{source}}</pre></details>
-      {{/if}}
-      {{#if findings}}<ul>{{#each findings}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
-    </article>{{/each}}
-  </section>{{/if}}
-  {{#if aiFindings}}<section data-candidate-findings role="alert"><h3>候选中仍需核对的问题</h3>
-    <p>以下检查结论随候选保留。请对照完整来源和能力正文，再决定导出或明确确认导入；获取候选不表示这些问题已通过。</p>
-    <ul>{{#each aiFindings}}<li>{{this}}</li>{{/each}}</ul>
-  </section>{{/if}}
-  {{#if showReviewNavigation}}<section class="forge-encounter-navigation" aria-label="审核导航">
-    <h3>审核导航</h3>
-    <div class="forge-encounter-metrics"><span>生物 <strong>{{reviewNavigation.actorCount}}</strong></span><span>固定规则 {{#if reviewNavigation.hasRuleCounts}}<strong>{{reviewNavigation.automatic}}</strong>{{else}}未提供统计{{/if}}</span><span>GM 裁定规则 <strong>{{reviewNavigation.manual}}</strong></span><span>GM 机制 <strong>{{reviewNavigation.gmMechanisms}}</strong></span><span>待处理阻塞 <strong>{{reviewNavigation.blocked}}</strong></span></div>
-    {{#if reviewNavigation.summary}}<p>{{reviewNavigation.summary}}</p>{{/if}}
-    <div class="forge-encounter-nav-controls" role="group" aria-label="审核筛选">
-      <button type="button" data-review-filter="all" aria-pressed="{{reviewNavigation.allSelected}}">全部</button>
-      <button type="button" data-review-filter="issues" aria-pressed="{{reviewNavigation.issuesSelected}}">待处理</button>
-      <button type="button" data-review-filter="gm" aria-pressed="{{reviewNavigation.gmSelected}}">GM 裁定</button>
-      <label>生物<select data-review-actor><option value="">全部生物</option>{{#each reviewNavigation.actors}}<option value="{{key}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
-    </div>
-    {{#if reviewNavigation.visibleIssues}}<div class="forge-encounter-issues"><h4>当前问题与处理</h4>
-      {{#each reviewNavigation.visibleIssues}}<article class="forge-encounter-issue">
-        <h5>{{actor}} · {{field}}</h5><p><strong>{{kind}}：</strong>{{message}}</p>
-        {{#if source}}<p><strong>原文／显示字段：</strong><span class="forge-localized-prose">{{source}}</span></p>{{else}}<p>未能确认对应原文；请核对完整来源与审核记录。</p>{{/if}}
-        {{#if draft}}<p><strong>待核译文：</strong><span class="forge-localized-prose">{{draft}}</span></p>{{/if}}
-        <div class="forge-encounter-issue-actions">
-          {{#if canLocate}}<button type="button" data-review-issue-locate="{{index}}">定位原文</button>{{else}}<span>原文位置未能唯一核实</span>{{/if}}
-          {{#if canContinue}}<button type="button" data-review-issue-action="{{index}}" {{#if ../busy}}disabled{{/if}}>{{continueLabel}}</button>{{/if}}
-          {{#if canInspect}}<button type="button" data-review-issue-action="{{index}}">查看审核记录</button>{{/if}}
-        </div>
-      </article>{{/each}}
-    </div>{{else}}{{#if reviewNavigation.hasIssues}}<p>当前筛选没有匹配问题；完整待处理数见上方。</p>{{/if}}{{/if}}
-    <p>仅失败字段会在继续翻译时重新请求；同一来源、同一字段且已通过的译文由底层校验后复用。筛选与跳转只改变显示。</p>
-  </section>{{/if}}
   {{#if ready}}
-    <h3>{{label}}</h3>
+  <details class="forge-npc-detail"><summary>中文草稿与跑团规则</summary>
     {{#if iconReviewText}}<details class="forge-encounter-macro"><summary>Icon 选图依据与近似程度</summary><pre>{{iconReviewText}}</pre></details>{{/if}}
     {{#if modelReviewState}}<p class="forge-encounter-review-state" role="status">{{modelReviewState}}</p>{{/if}}
     {{#if aiReviewFindings}}<section class="forge-encounter-review-concerns"><h4>历史 AI 审核提示，供 GM 核对</h4><ul>{{#each aiReviewFindings}}<li>{{this}}</li>{{/each}}</ul></section>{{/if}}
@@ -166,15 +215,6 @@
     {{#if localized}}<p>中文名称保留英文对照；描述和 GM 步骤显示已批准译文。{{localizationApprovalState}}请由 GM 最终确认。</p>
       <details><summary>中文术语依据与待核边界</summary><ul>{{#each terminologyNotes}}<li>{{this}}</li>{{/each}}</ul><ul>{{#each terminologyReferences}}<li><a href="{{this}}" target="_blank" rel="noopener noreferrer">5E不全书《玩家手册2024》术语参考</a></li>{{/each}}</ul></details>
     {{else}}<button type="button" data-action="encounter-localize" {{#if busy}}disabled{{/if}}>生成中文草稿并做本地校验</button><p>使用当前 AI 连接生成显示文本草稿；不会自动请求付费模型审核。中文草稿须经 GM 明确核对批准后才成为正式候选。</p>{{/if}}
-    {{#each actors}}<details class="forge-encounter-macro"><summary>{{#if isPrimary}}主角色{{else}}配套角色{{/if}}：<strong>{{name}}</strong>（{{key}}）— HP {{hp}} / AC {{ac}} / CR {{cr}}</summary>
-      {{#if assisted}}<p>有配套宏/GM辅助规则，详见下方逐项规则。</p>{{/if}}
-      {{#if previewIssues}}<p>此角色的部分保存字段无法预览；原始 Actor JSON 仍可查看和下载。</p><ul>{{#each previewIssues}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
-      <p class="forge-localized-prose">{{biography}}</p>
-      {{#each abilities}}<article><h4>{{name}}</h4><p class="forge-localized-prose">{{description}}</p></article>{{/each}}
-      <details><summary>保留的原始来源（用于核对）</summary><pre><code>{{source}}</code></pre></details>
-      <button type="button" data-export-actor="{{key}}">下载此 Actor JSON 候选</button>
-      <details><summary>生成 Actor JSON 候选（只读，检查结论见问题提示）</summary><pre><code>{{artifact}}</code></pre></details>
-    </details>{{/each}}
     <p>配套图片：{{assetCount}} 个</p>
     <ul>{{#each assets}}<li>{{fileName}} → {{targetsText}}<details><summary>图片校验值</summary><code>{{sha256}}</code></details></li>{{/each}}</ul>
     {{#each macros}}
@@ -197,23 +237,77 @@
         <details><summary>完整机制定义</summary><pre><code>{{detailJson}}</code></pre></details>
       </article>{{/each}}
     {{/if}}
-    {{#if macros}}<p>这是可执行宏代码。请确认包的来源和上述代码符合你的战斗规则；包内“已审核”的描述本身不构成执行证明。</p>
-    {{else}}<p>本包没有配套宏。请核对角色数据、来源和保留的 GM 操作规则。</p>{{/if}}
-    <label><input name="encounterReviewed" type="checkbox" {{#if reviewed}}checked{{/if}} {{#if busy}}disabled{{/if}}>我已核对角色{{#if macros}}、宏代码、绑定{{else}}数据{{/if}}和保留的 GM 操作规则{{#if aiConcerns}}，包括上方 AI 提示{{/if}}</label>
-    <button type="button" data-action="encounter-import" {{#unless canImport}}disabled{{/unless}}>{{importLabel}}</button>
-    <p>只创建或复用相同且未改变的文档，不覆盖已有内容。导入宏不会启动宏。多文档操作不是跨浏览器事务，页面意外关闭后请重新预览检查。</p>
-    <details><summary>包身份</summary><code>{{packageHash}}</code></details>
+    {{#if macros}}<p>核对上述宏代码与绑定。导入只保存宏，启动战斗控制需要另行操作。</p>{{/if}}
+  </details>
   {{/if}}
   {{#if documents}}<h3>导入结果</h3><ul>{{#each documents}}<li>{{name}} — {{status}} — {{uuid}} {{#if isActor}}<button type="button" data-open-actor="{{id}}">打开角色</button>{{/if}}
     {{#if readbackWarnings}}<section class="forge-findings"><strong>已创建，录入值需要核对</strong><ul>{{#each readbackWarnings}}<li>{{this}}</li>{{/each}}</ul></section>{{/if}}
   </li>{{/each}}</ul>{{/if}}
   {{#if importFailures}}<section class="forge-findings"><strong>未完成项，成功角色已保留</strong><ul>{{#each importFailures}}<li>{{key}} — {{message}}</li>{{/each}}</ul></section>{{/if}}
   </div>
-  <h3>已导入的战斗控制</h3>
+  {{#if partialCandidates}}<p role="status">已生成的个别生物可以在「更多」里保存。整份资料尚未完成。</p>{{/if}}
+  {{#if showMore}}
+  <details class="forge-npc-detail forge-encounter-more" data-encounter-more {{#if moreOpen}}open{{/if}}>
+    <summary>更多 <span>导出与检查记录</span></summary>
+  <div data-encounter-report-controls class="forge-encounter-volatile">
+  {{#if hasReport}}<button type="button" data-action="encounter-report-view" {{#if busy}}disabled{{/if}}>查看／复制来源与校验记录</button><button type="button" data-action="encounter-report" {{#if busy}}disabled{{/if}}>下载来源与校验记录</button>{{/if}}
+  {{#if reportDownload}}<p><a data-report-download href="{{reportDownload.url}}" download="{{reportDownload.name}}">下载审核文件</a>（{{reportDownload.name}}，{{reportDownload.byteLength}} 字节）</p>{{/if}}
+  {{#if textView}}<section class="forge-encounter-report-view"><label>{{textView.name}} · 完整 JSON<textarea data-encounter-view-text readonly spellcheck="false" wrap="off" rows="18">{{textView.text}}</textarea></label><button type="button" data-action="encounter-text-copy" {{#if busy}}disabled{{/if}}>复制当前 JSON</button><p>若浏览器不支持自动复制，可在上方文本框中手动全选复制。</p></section>{{/if}}
+  {{#if hasPackage}}<button type="button" data-action="encounter-package-view" {{#if busy}}disabled{{/if}}>查看／复制生物导入文件 JSON</button><button type="button" data-action="encounter-export">下载生成的生物导入文件</button>{{/if}}
+  </div>
+  {{#if actorDeliveries}}<section data-actor-deliveries aria-label="逐个生物结果">
+    <h3>逐个生物结果</h3>
+    {{#if partialCandidates}}<p role="status">部分生物已有可用候选，可独立查看和下载。完整生物导入文件尚未完成；失败和未处理成员仍属于本任务，不能将部分结果作为完整包导入。</p>{{/if}}
+    {{#each actorDeliveries}}<article data-actor-delivery="{{key}}"><h4>{{label}} · {{status}}</h4>
+      {{#if reusedCandidate}}<p>已保留原候选；本次未重新请求、生成或纠错。</p>{{/if}}
+      {{#if available}}<p>严格检查状态：{{strictStatus}}。候选可获取不表示检查问题已通过。</p>
+        <button type="button" data-actor-candidate-view="{{key}}" {{#if ../busy}}disabled{{/if}}>查看此生物 JSON</button>
+        <button type="button" data-actor-candidate-download="{{key}}" {{#if ../busy}}disabled{{/if}}>下载此生物 JSON</button>
+        <details><summary>本生物完整原始来源</summary><pre>{{source}}</pre></details>
+      {{/if}}
+      {{#if findings}}<ul>{{#each findings}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+    </article>{{/each}}
+  </section>{{/if}}
+  {{#if aiFindings}}<section id="forge-encounter-other-findings" tabindex="-1" data-candidate-findings><h3>候选中仍需核对的问题</h3>
+    <p>以下检查结论随候选保留。请对照完整来源和能力正文，再决定导出或明确确认导入；获取候选不表示这些问题已通过。</p>
+    <ul>{{#each aiFindings}}<li>{{this}}</li>{{/each}}</ul>
+  </section>{{/if}}
+  {{#if showReviewNavigation}}<section class="forge-encounter-navigation" aria-label="审核导航" tabindex="-1">
+    <h3>审核导航</h3>
+    <div class="forge-encounter-metrics"><span>生物 <strong>{{reviewNavigation.actorCount}}</strong></span><span>固定规则 {{#if reviewNavigation.hasRuleCounts}}<strong>{{reviewNavigation.automatic}}</strong>{{else}}未提供统计{{/if}}</span><span>GM 裁定规则 <strong>{{reviewNavigation.manual}}</strong></span><span>GM 机制 <strong>{{reviewNavigation.gmMechanisms}}</strong></span><span>待处理阻塞 <strong>{{reviewNavigation.blocked}}</strong></span></div>
+    {{#if reviewNavigation.summary}}<p>{{reviewNavigation.summary}}</p>{{/if}}
+    <div class="forge-encounter-nav-controls" role="group" aria-label="审核筛选">
+      <button type="button" data-review-filter="all" aria-pressed="{{reviewNavigation.allSelected}}">全部</button>
+      <button type="button" data-review-filter="issues" aria-pressed="{{reviewNavigation.issuesSelected}}">待处理</button>
+      <button type="button" data-review-filter="gm" aria-pressed="{{reviewNavigation.gmSelected}}">GM 裁定</button>
+      <label>生物<select data-review-actor><option value="">全部生物</option>{{#each reviewNavigation.actors}}<option value="{{key}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+    </div>
+    {{#if reviewNavigation.visibleIssues}}<div class="forge-encounter-issues"><h4>当前问题与处理</h4>
+      {{#each reviewNavigation.visibleIssues}}<article class="forge-encounter-issue">
+        <h5>{{actor}} · {{field}}</h5><p><strong>{{kind}}：</strong>{{message}}</p>
+        {{#if source}}<p><strong>原文／显示字段：</strong><span class="forge-localized-prose">{{source}}</span></p>{{else}}<p>未能确认对应原文；请核对完整来源与审核记录。</p>{{/if}}
+        {{#if draft}}<p><strong>待核译文：</strong><span class="forge-localized-prose">{{draft}}</span></p>{{/if}}
+        <div class="forge-encounter-issue-actions">
+          {{#if canLocate}}<button type="button" data-review-issue-locate="{{index}}">定位原文</button>{{else}}<span>原文位置未能唯一核实</span>{{/if}}
+          {{#if canContinue}}<button type="button" data-review-issue-action="{{index}}" {{#if ../busy}}disabled{{/if}}>{{continueLabel}}</button>{{/if}}
+          {{#if canInspect}}<button type="button" data-review-issue-action="{{index}}">查看审核记录</button>{{/if}}
+        </div>
+      </article>{{/each}}
+    </div>{{else}}{{#if reviewNavigation.hasIssues}}<p>当前筛选没有匹配问题；完整待处理数见上方。</p>{{/if}}{{/if}}
+    <p>仅失败字段会在继续翻译时重新请求；同一来源、同一字段且已通过的译文由底层校验后复用。筛选与跳转只改变显示。</p>
+  </section>{{/if}}
+  {{#if diagnostics}}<details><summary>完整检查明细</summary><ul>{{#each diagnostics}}<li>{{this}}</li>{{/each}}</ul></details>{{/if}}
+  {{#each npcSheets}}<button type="button" data-export-actor="{{key}}">下载 {{name}} 的 JSON</button>{{/each}}
+  {{#if packageHash}}<details><summary>生物导入文件标识</summary><code>{{packageHash}}</code></details>{{/if}}
+
+  </details>
+  {{/if}}
+  <details class="forge-npc-detail"><summary>已导入的战斗控制</summary>
   <p>固定自动化首次明确启动后，会在刷新世界时恢复；可在控制面板停用。旧式专用宏仍需手动重新启动。运行时只使用已导入角色的绑定。</p>
   <button type="button" data-action="encounter-refresh" {{#if busy}}disabled{{/if}}>刷新列表</button>
   <ul>{{#each installed}}<li><strong>{{name}}</strong>（{{packageId}}）
     <button type="button" data-open-macro="{{id}}" {{#if ../busy}}disabled{{/if}}>查看宏</button>
     <button type="button" data-start-macro="{{id}}" {{#if ../busy}}disabled{{/if}}>启动战斗控制</button>
   </li>{{else}}<li>当前世界尚未通过这个入口导入战斗宏。</li>{{/each}}</ul>
+  </details>
 </section>

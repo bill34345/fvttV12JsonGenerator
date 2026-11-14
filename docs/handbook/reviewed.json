@@ -150,9 +150,9 @@
     "note": "核对共享状态函数的批处理接口接线；没有推广版本准入或新增编辑器支持。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "e7002d3ed13c10365a080867f8f5c308d8ad89e1375cab0479d5946163c13c24",
-    "reviewedOn": "2026-11-13",
-    "note": "核对 Forge 的连接提示、实时模型目录和手填筛选，与已验收的界面和源码一致"
+    "fingerprint": "66d24a80863f337a13a9fc8c4f5cc8a29289e7f643e8facccb897ac205f3e455",
+    "reviewedOn": "2026-11-14",
+    "note": "核对公开版候选页、差异跳转、角色卡、更多和确认导入。"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "b888eae16a4a0dc1c058805448887553cb8617c6e81dc15bf345e9b0a6b353eb",

@@ -1,6 +1,6 @@
 import { nativeProjectionForGame } from './nativeProjection';
 import { decodeForgeEncounterPackageZip, serializeForgeEncounterPackage, encodeForgeEncounterPackageZip } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
-import { prepareForgeEncounter, type PreparedForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
+import { prepareForgeEncounter, type PreparedForgeEncounter, type PreparedEncounterActor } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
 import { actorLocalizationDisplayRows, encounterPackageLocalizationDisplayRows, approveForgeEncounterLocalization, assertForgeEncounterLocalizationDraft, draftForgeEncounterLocalization,
   reviewForgeEncounterLocalizationDraft, reviseForgeEncounterLocalizationBody, verifiedEncounterLocalizationProgress, LOCALIZATION_TERM_NOTES, LOCALIZATION_TERMS,
   type EncounterLocalizationProgress, type ForgeEncounterLocalizationDraft } from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
@@ -13,6 +13,7 @@ import {localizationMeaningFindings} from '@fvtt-json-generator/contracts/locali
 import { configuredConditionsApi, configuredConditionsCatalog, configuredConditionSummary } from './configuredConditions';
 import { encounterReviewCards, statusLifecycleSummary } from './encounterReviewCards';
 import { encounterReviewNavigation } from './encounterReviewNavigation';
+import { encounterNpcSheet, encounterAbilitySection } from './encounterNpcSheet';
 import { iconReviewPresentation } from './iconReviewPresentation';
 import { decodeEncounterRecovery, serializeEncounterRecovery, IndexedDbEncounterRecoveryStore, type EncounterRecoveryStore, type EncounterRecoverySnapshot } from './encounterRecoveryStore';
 import { forgeConnectionSetupMessage, isForgeSessionConnectionReady, readForgeSessionSettings, subscribeForgeSessionSettings } from './settings';
@@ -48,6 +49,10 @@ export function createForgeEncounterApplicationClass(environment: {
     private busy = false;
     private importing = false;
     private reviewed = false;
+    private moreOpen = false;
+    private openNpcSheets = new Set<string>();
+    private lastShownCandidate?: PreparedForgeEncounter;
+    private nativePreviews = new WeakMap<PreparedEncounterActor, unknown>();
     private status = '选择生物导入文件，预览角色、召唤物和配套宏。';
     private error = '';
     private controller?: AbortController;
@@ -133,6 +138,14 @@ export function createForgeEncounterApplicationClass(environment: {
       const candidateRules=macroConfigurations.flatMap(row=>row.config?.rules??[]);
       const actorPreviews=this.prepared?.actors.map(encounterActorPreview)??[];
       const manualSourceRules=actorPreviews.flatMap(actor=>actor.manualSourceRules);
+      const activeReport = this.currentActorReport();
+      const npcSheets = this.prepared?.actors.map((actor, index) => {
+        const source = this.prepared!.bundle.actors.find(entry => entry.key === actor.key)?.source ?? '';
+        const report = activeReport?.actors.find(entry => entry.key === actor.key);
+        const sheet = encounterNpcSheet({actor, preview:actorPreviews[index]!,
+          nativeSystem:this.nativePreview(actor), source, report, issues:navigation.issues.filter(issue=>issue.actorKey===actor.key)});
+        return {...actorPreviews[index], ...sheet, open:this.openNpcSheets.has(actor.key), source:report?.source ?? source};
+      }) ?? [];
       const selectedActor=this.actorFilter && candidateActors.some(actor=>actor.key===this.actorFilter)?this.actorFilter:'';
       const issueItems=navigation.issues.map((issue,index)=>{
         const canContinue=issue.action==='translate'?!!this.prepared&&!this.prepared.bundle.localization
@@ -228,7 +241,7 @@ export function createForgeEncounterApplicationClass(environment: {
       let configuredConditions:any[]=[];
       try { configuredConditions=configuredConditionsCatalog(game).map(definition=>({...definition,summary:configuredConditionSummary(definition)})); }
       catch(error){this.error=message(error);}
-      const deliveryReport=this.currentActorReport();
+      const deliveryReport=activeReport;
       const actorDeliveries=(deliveryReport?.members??deliveryReport?.actors.map(actor=>({key:actor.key,label:actor.analysis.candidate?.label??actor.key,
         status:actor.generation?.candidateAvailable?'available':actor.analysis.status==='failed'?'failed':'pending',findings:[]}))??[]).map(member=>{
         const stateLabels:Record<string,string>={pending:'未处理',running:'进行中',available:'候选可获取',failed:'未生成候选',cancelled:'已取消'};
@@ -242,8 +255,18 @@ export function createForgeEncounterApplicationClass(environment: {
           strictStatus:candidate?.strictStatus,findings:[...member.findings,...(invalid?[invalid]:[])],source:candidate?.source};
       });
       const pdfReading=this.pdfAttempt??this.pdfReceipt;
+      const savedFindings = [...(this.aiReport?.findings??[]), ...(this.prepared?.reviewFindings??[])];
+      const diagnostics = [...new Set(savedFindings)];
+      const remainingIssues = issueItems.filter(issue=>npcSheets.every(sheet=>sheet.suppressResolvedIssue(issue)));
+      const remainingFindings = diagnostics.filter(finding => npcSheets.every(sheet=>sheet.suppressResolvedFinding(finding))
+        && !remainingIssues.some(issue=>finding.includes(issue.kind)&&finding.includes(issue.message)));
+      const reviewCount = npcSheets.reduce((count,sheet)=>count+sheet.knownCount,0);
       return {busy:this.busy, importing:this.importing, reviewed:this.reviewed, ready:!!this.prepared,
-        actorDeliveries,partialCandidates:!this.prepared&&actorDeliveries.some(actor=>actor.available),
+        actorDeliveries, npcSheets, moreOpen:this.moreOpen, reviewCount,
+        showMore:!!this.prepared || actorDeliveries.length>0 || diagnostics.length>0 || !!this.aiReport || this.translationReport.length>0,
+        hasOtherFindings:remainingFindings.length>0 || remainingIssues.length>0,
+        worldTitle:game.world?.title,
+        partialCandidates:!this.prepared&&actorDeliveries.some(actor=>actor.available),
         configuredConditions,canConfigureConditions:typeof game.modules?.get?.('fvtt-custom-conditions')?.api?.configuredConditions?.openEditor==='function',
         humanSource:this.humanSource,humanLabel:this.humanLabel,aiRunning:this.aiRunning,
         pdfFileName:this.pdfFile?.name,pdfMonster:this.pdfMonster,pdfPages:this.pdfPages,
@@ -252,7 +275,7 @@ export function createForgeEncounterApplicationClass(environment: {
         chineseSelected:this.outputLanguage==='zh-CN',localized:!!this.prepared?.bundle.localization,
         terminologyNotes:LOCALIZATION_TERM_NOTES,terminologyReferences:[...new Set(LOCALIZATION_TERMS.map(term=>term.reference).filter(reference=>reference.startsWith('https:')))],
         localPage:['127.0.0.1','localhost','[::1]'].includes((globalThis as any).location?.hostname),
-        hasReport:!!this.aiReport||this.translationReport.length>0||!!this.prepared?.bundle.localization,hasPackage:!!this.prepared,aiFindings:[...(this.aiReport?.findings??[]),...(this.prepared?.reviewFindings??[])],
+        hasReport:!!this.aiReport||this.translationReport.length>0||!!this.prepared?.bundle.localization,hasPackage:!!this.prepared,aiFindings:remainingFindings,diagnostics,
         reportDownload:this.reportDownload,
         textView:this.textView,reportViewText:this.textView?.kind==='report'?this.textView.text:undefined,
         recoveryAvailable:!!this.recoveryReport?.actors.some(hasRetainedActorSource) && this.recoveryReport.source===this.humanSource && !this.pdfFile && !this.busy && !this.prepared,
@@ -282,24 +305,21 @@ export function createForgeEncounterApplicationClass(environment: {
           :!actorAuditsComplete?'AI 内容复核已暂时关闭；请由 GM 依据完整来源核对候选。'
           :!automationAuditComplete?'角色 AI 审核已完成；配套控制 AI 审核尚未完成。'
           :'当前记录没有 AI 审核结论；请由 GM 核对来源和规则。',
-        importLabel:this.result?.failures?.length?'重试未完成项':this.prepared?.reviewFindings?.length?'我已核对问题，导入待审候选':aiConcerns?'GM 确认导入（仍有 AI 提示）':currentDraft?'导入原语言包（中文草稿尚未确认）':this.prepared?.macros.length?'一起导入角色与宏':'导入完整角色',
+        importLabel:this.result?.failures?.length?'重试未完成项':currentDraft?'导入原语言角色':this.prepared?.macros.length?'确认导入角色与宏':'确认导入角色',
         showReviewNavigation:candidateActors.length>0||navigation.issues.length>0,
-        reviewNavigation:{...navigation,actorCount:candidateActors.length,hasRuleCounts:!!this.aiReport?.automation?.selection||candidateRules.length>0||manualSourceRules.length>0,
+        reviewNavigation:{...navigation,blocked:remainingIssues.length,actorCount:candidateActors.length,hasRuleCounts:!!this.aiReport?.automation?.selection||candidateRules.length>0||manualSourceRules.length>0,
           gmMechanisms:this.prepared?.requirements.length??0,
           automatic:navigation.automatic||candidateRules.filter(rule=>rule.kind!=='gm-manual').length,
           manual:(navigation.manual||candidateRules.filter(rule=>rule.kind==='gm-manual').length)+manualSourceRules.length,
           actors:candidateActors.map(actor=>({...actor,selected:actor.key===selectedActor})),
           allSelected:this.reviewFilter==='all',issuesSelected:this.reviewFilter==='issues',gmSelected:this.reviewFilter==='gm',
-          selectedActor,visibleIssues:this.reviewFilter==='gm'?[]:issueItems.filter(issue=>!selectedActor||issue.actorKey===selectedActor),
-          hasIssues:issueItems.length>0},
+          selectedActor,visibleIssues:this.reviewFilter==='gm'?[]:remainingIssues.filter(issue=>!selectedActor||issue.actorKey===selectedActor),
+          hasIssues:remainingIssues.length>0},
         reviewCards:reviewCards.filter(card=>(!selectedActor||card.actorKey===selectedActor)
           &&(this.reviewFilter==='all'||this.reviewFilter==='gm'&&card.gmManual)),
         reviewEvidenceUnavailable:!!this.prepared&&!this.aiReport?.automation?.selection,
         status:this.status,error:this.error,fileName:this.file?.name,
         label:this.prepared?.label,packageHash:this.prepared?.hash,
-        actors:actorPreviews.filter(actor=>(!selectedActor||actor.key===selectedActor)&&this.reviewFilter==='all').map(actor=>({...actor,
-          isPrimary:actor.key===this.prepared!.bundle.primaryActorKey,
-          source:this.prepared!.bundle.actors.find(source=>source.key===actor.key)!.source})),
         macros:macroConfigurations.map(({macro:m,config,issue})=>{
           const labels={'save-summon':'能力结算后召唤','turn-start-area':'自己的回合开始触发','staged-corruption':'腐化与力竭分支','threshold-ward':'伤害阈值守护','ward-break':'消耗次数并使守护破裂','save-failure-effect':'豁免失败状态与期限','status-lifecycle':'命中状态与再次豁免','gm-activity-lock':'GM能力可用性控制','gm-manual':'GM裁定（查看来源规则）'};
           return {...m,notes:[m.notes,issue?`配套宏未完成：${issue}；角色可继续导入。`:undefined].filter(Boolean).join('\n'),fixed:!!config,capabilities:config?.rules.map(r=>({name:labels[r.kind],actor:r.actorKey,item:r.itemName,
@@ -322,6 +342,40 @@ export function createForgeEncounterApplicationClass(environment: {
       this.observeConnectionSession();
       this.refreshConnectionNotice();
       const root=this.element as HTMLElement;
+      const more = root.querySelector<HTMLDetailsElement>('[data-encounter-more]');
+      if (more) more.ontoggle = () => { this.moreOpen = more.open; };
+      const reviewDetails = root.querySelector<HTMLAnchorElement>('[data-encounter-review-details]');
+      if (reviewDetails) reviewDetails.onclick = event => {
+        event.preventDefault();
+        if (more) more.open = true;
+        const findings = root.querySelector<HTMLElement>('[data-candidate-findings], [aria-label="审核导航"]');
+        findings?.focus();
+        findings?.scrollIntoView?.({block:'nearest'});
+      };
+      for (const sheet of root.querySelectorAll<HTMLDetailsElement>('[data-npc-sheet]')) sheet.ontoggle = () => {
+        const key = sheet.dataset.npcSheet!;
+        if (sheet.open) this.openNpcSheets.add(key);
+        else this.openNpcSheets.delete(key);
+      };
+      for (const link of root.querySelectorAll<HTMLAnchorElement>('[data-npc-jump]')) link.onclick = event => {
+        event.preventDefault();
+        const target = root.ownerDocument.getElementById(link.hash.slice(1));
+        const sheet = target?.closest<HTMLDetailsElement>('[data-npc-sheet]');
+        if (!target || !sheet || !root.contains(sheet)) return;
+        sheet.open = true;
+        this.openNpcSheets.add(sheet.dataset.npcSheet!);
+        if (target.tagName === 'DETAILS') (target as HTMLDetailsElement).open = true;
+        const focus = target.querySelector<HTMLElement>('summary') ?? target;
+        focus.focus({preventScroll:true});
+        focus.scrollIntoView?.({block:'center'});
+      };
+      if (this.prepared && !this.busy && !this.lastShownCandidate) {
+        const heading = root.querySelector<HTMLElement>('[data-npc-sheet-heading]');
+        heading?.focus?.({preventScroll:true});
+        heading?.scrollIntoView?.({block:'start'});
+      }
+      if (!this.prepared) this.openNpcSheets.clear();
+      if (!this.busy || !this.prepared) this.lastShownCandidate = this.prepared;
       const invalidate=(_keepDraft=false)=>{
         this.generationReviewBinding=undefined;this.reviewed=false;this.error='';this.progressDetail='';
         this.status=this.prepared||this.aiReport?'输入已改变；已有候选继续绑定原来源快照，可查看或下载。':'资料已改变，请生成或预览。';
@@ -407,6 +461,8 @@ export function createForgeEncounterApplicationClass(environment: {
         const input=root.querySelector<HTMLTextAreaElement>('[name="humanSource"]');
         if(!issue||!input||issue.locateStart===undefined||issue.locateEnd===undefined
           ||this.humanSource.slice(issue.locateStart,issue.locateEnd)!==issue.source){this.error='当前来源定位已失效，请重新核对原文。';void this.render();return;}
+        const inputSection = input.closest?.('details');
+        if (inputSection) inputSection.open = true;
         input.focus();input.setSelectionRange(issue.locateStart,issue.locateEnd);input.scrollIntoView?.({block:'center'});
       };
       for(const button of root.querySelectorAll<HTMLButtonElement>('[data-review-issue-action]'))button.onclick=()=>{
@@ -877,6 +933,7 @@ export function createForgeEncounterApplicationClass(environment: {
     }
     private viewActorCandidate(key:string):void{
       if(this.closed||this.busy)return;
+      this.moreOpen=true;
       try{this.textView={kind:'actor',actorKey:key,name:`forge-${key}-candidate.json`,text:this.currentActorText(key)};
         this.error='';this.status='当前生物的完整候选 JSON 已展开；其检查问题仍保留，这不是完整生物导入文件。';}
       catch(error){this.textView=undefined;this.error=message(error);}
@@ -891,12 +948,14 @@ export function createForgeEncounterApplicationClass(environment: {
     }
     private viewReport():void {
       if(this.closed||this.busy)return;
+      this.moreOpen=true;
       try {this.textView={kind:'report',name:'encounter-intake-review.json',text:this.currentReportText()};this.error='';this.status='审核记录已在下方展开，可全选复制；下载仍是独立操作。';}
       catch{this.textView=undefined;this.error='审核记录未通过来源或连接安全核对。';this.status='审核记录无法显示，请检查当前来源和连接设置。';}
       if(!this.closed)void this.render();
     }
     private viewPackage():void {
       if(this.closed||this.busy||!this.prepared)return;
+      this.moreOpen=true;
       try {this.textView={kind:'package',name:`${this.prepared.bundle.id}.forge-encounter.json`,text:this.currentPackageText()};this.error='';this.status='生物导入文件 JSON 已在下方展开，可全选复制。';}
       catch{this.textView=undefined;this.error='生物导入文件未通过连接安全核对。';this.status='生物导入文件 JSON 无法显示。';}
       if(!this.closed)void this.render();
@@ -934,6 +993,20 @@ export function createForgeEncounterApplicationClass(environment: {
       }catch{this.textView=undefined;this.error='审核文件未通过来源或连接安全核对，或浏览器无法准备下载。';this.status='审核文件未能下载，请根据错误检查后重试。';}
       finally{if(!this.closed)void this.render();}
     }
+    private nativePreview(actor: PreparedEncounterActor): unknown {
+      if (this.nativePreviews.has(actor)) return this.nativePreviews.get(actor);
+      const Actor = game.actors?.documentClass;
+      let system: unknown;
+      if (typeof Actor === 'function' && nativeProjectionForGame(game)) {
+        try {
+          const document = new Actor(JSON.parse(JSON.stringify(actor.artifact)), {strict:true});
+          system = document.system;
+        } catch { /* The retained candidate can still be reviewed and downloaded. */ }
+      }
+      this.nativePreviews.set(actor, system);
+      return system;
+    }
+
     private async apply() {
       if(this.busy||!this.prepared||!this.reviewed||this.result&&!this.result.failures?.length)return;
       this.busy=true;this.importing=true;this.error='';this.status='正在导入并回读核对，请保持页面打开。';void this.render();
@@ -988,7 +1061,7 @@ function encounterActorPreview(actor:PreparedForgeEncounter['actors'][number]){
   const armor=record(attributes.ac);
   const hp=scalar(record(attributes.hp).max,'生命值'),ac=scalar(armor.value??armor.override??armor.flat
     ??(Array.isArray(armor.formulas)?armor.formulas.map(entry=>record(entry).formula).filter(Boolean).join('；')||undefined:undefined),'护甲等级'),cr=scalar(details.cr,'挑战等级');
-  const abilities:Array<{name:string;description:string}>=[];
+  const abilities:Array<{name:string;description:string;section:string;manual:boolean}>=[];
   const manualSourceRules:Array<{actorKey:string;actorName:string;name:string;sourceText:string}>=[];
   if(!Array.isArray(artifact.items))previewIssues.push('能力列表无法预览。');
   for(const[index,value]of(Array.isArray(artifact.items)?artifact.items:[]).entries()){
@@ -997,14 +1070,15 @@ function encounterActorPreview(actor:PreparedForgeEncounter['actors'][number]){
     }
     const item=record(value),itemSystem=record(item.system),manual=record(record(record(item.flags).fvttJsonGenerator).manualRule);
     const name=typeof item.name==='string'&&item.name.trim()?item.name:`未命名能力 ${index+1}`;
-    abilities.push({name,description:displayText(typeof itemSystem.description==='string'?itemSystem.description:record(itemSystem.description).value)});
+    abilities.push({name, description:displayText(typeof itemSystem.description==='string'?itemSystem.description:record(itemSystem.description).value),
+      section:encounterAbilitySection(record(itemSystem.activation).type,itemSystem.activities), manual:manual.mode==='gm-manual'});
     if(manual.mode==='gm-manual'){
       if(typeof manual.sourceText!=='string')previewIssues.push(`${name}的手工规则原文无法预览。`);
       manualSourceRules.push({actorKey:actor.key,actorName:actor.name,name,sourceText:typeof manual.sourceText==='string'?manual.sourceText:''});
     }
   }
   return{key:actor.key,name:actor.name,assisted:actor.status==='needs_review',hp,ac,cr,
-    biography:displayText(record(details.biography).value),abilities,manualSourceRules,previewIssues,artifact:JSON.stringify(artifact,null,2)};
+    biography:displayText(record(details.biography).value),abilities,manualSourceRules,previewIssues};
 }
 
 function message(error:unknown):string{return error instanceof Error?error.message:String(error);}
