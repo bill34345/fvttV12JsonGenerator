@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { afterEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -47,11 +48,11 @@ describe('chat memory guard installation safeguards', () => {
     await mkdir(build, { recursive: true });
     await writeFile(resolve(build, 'module.json'), JSON.stringify({
       id: 'chat-memory-guard',
-      version: '1.0.0',
+      version: '1.1.1',
     }));
     const installed = await installChatMemoryGuardPackage(root, build, environment);
     expect(installed.destination).toBe(paths.destination);
-    expect(JSON.parse(await readFile(resolve(installed.destination, 'module.json'), 'utf8')).version).toBe('1.0.0');
+    expect(JSON.parse(await readFile(resolve(installed.destination, 'module.json'), 'utf8')).version).toBe('1.1.1');
   });
 
   test('rejects an external lab root routed through a junction before writing', async () => {
@@ -64,7 +65,7 @@ describe('chat memory guard installation safeguards', () => {
     await symlink(physicalRoot, labRoot, 'junction');
     await writeFile(resolve(build, 'module.json'), JSON.stringify({
       id: 'chat-memory-guard',
-      version: '1.0.0',
+      version: '1.1.1',
     }));
 
     await expect(installChatMemoryGuardPackage(root, build, {
@@ -82,35 +83,53 @@ describe('chat memory guard installation safeguards', () => {
     const destination = resolve(root, '.local/foundry-v14/data/server-mirror/Data/modules/chat-memory-guard');
     await mkdir(build, { recursive: true });
     await mkdir(destination, { recursive: true });
-    await writeFile(resolve(build, 'module.json'), JSON.stringify({ id: 'chat-memory-guard', version: '1.0.0' }));
+    await writeFile(resolve(build, 'module.json'), JSON.stringify({ id: 'chat-memory-guard', version: '1.1.1' }));
     await writeFile(resolve(destination, 'module.json'), JSON.stringify({ id: 'foreign-module' }));
     const before = await readFile(resolve(destination, 'module.json'), 'utf8');
     await expect(installChatMemoryGuardPackage(root, build)).rejects.toThrow(/foreign|unknown/i);
     expect(await readFile(resolve(destination, 'module.json'), 'utf8')).toBe(before);
   });
 
-  test('backs up a prior owned installation before replacing it', async () => {
+  test('replaces a prior owned installation after staging without creating backups', async () => {
     const root = await makeRoot();
     const build = resolve(root, 'dist/chat-memory-guard/module');
     const destination = resolve(root, '.local/foundry-v14/data/server-mirror/Data/modules/chat-memory-guard');
     await mkdir(build, { recursive: true });
     await mkdir(destination, { recursive: true });
-    await writeFile(resolve(build, 'module.json'), JSON.stringify({ id: 'chat-memory-guard', version: '1.0.0' }));
+    await writeFile(resolve(build, 'module.json'), JSON.stringify({ id: 'chat-memory-guard', version: '1.1.1' }));
     await writeFile(resolve(destination, 'module.json'), JSON.stringify({ id: 'chat-memory-guard', version: '0.9.0' }));
     const result = await installChatMemoryGuardPackage(root, build);
-    expect(result.backupPath).toBeTruthy();
-    expect(JSON.parse(await readFile(resolve(result.backupPath!, 'module.json'), 'utf8')).version).toBe('0.9.0');
-    expect(JSON.parse(await readFile(resolve(destination, 'module.json'), 'utf8')).version).toBe('1.0.0');
+    expect(result.backupPath).toBeUndefined();
+    expect(result.buildHash).toBe(result.installHash);
+    expect(result.previousHash).not.toBe(result.installHash);
+    expect(existsSync(resolve(root, '.local/foundry-v14/backups/chat-memory-guard'))).toBeFalse();
+    expect(JSON.parse(await readFile(resolve(destination, 'module.json'), 'utf8')).version).toBe('1.1.1');
   });
 
-  test('rejects the ServerNext candidate before writing to the legacy Mirror target', async () => {
+  test('rejects an outdated build before writing to the native6 development target', async () => {
     const root = await makeRoot();
     const build = resolve(root, 'dist/chat-memory-guard/module');
     const destination = resolve(root, '.local/foundry-v14/data/server-mirror/Data/modules/chat-memory-guard');
     await mkdir(build, { recursive: true });
     await writeFile(resolve(build, 'module.json'), JSON.stringify({ id: 'chat-memory-guard', version: '1.1.0' }));
 
-    await expect(installChatMemoryGuardPackage(root, build)).rejects.toThrow(/Legacy Server Mirror installer/);
+    await expect(installChatMemoryGuardPackage(root, build)).rejects.toThrow(/current native dnd5e 6 release/);
     expect(await Bun.file(resolve(destination, 'module.json')).exists()).toBeFalse();
+  });
+
+  test('preserves stale staging and an owned previous install before replacement', async () => {
+    const root = await makeRoot();
+    const build = resolve(root, 'build');
+    const destination = chatMemoryGuardWorkspaceInstallPaths(root).destination;
+    const staging = `${destination}.installing`;
+    await mkdir(build, { recursive: true });
+    await writeFile(resolve(build, 'module.json'), JSON.stringify({ id: 'chat-memory-guard', version: '1.1.1' }));
+    await mkdir(destination, { recursive: true });
+    await writeFile(resolve(destination, 'module.json'), JSON.stringify({ id: 'chat-memory-guard', version: '0.9.0' }));
+    await mkdir(staging, { recursive: true });
+    await writeFile(resolve(staging, 'keep.txt'), 'unknown staging');
+    await expect(installChatMemoryGuardPackage(root, build)).rejects.toThrow(/stale staging/i);
+    expect(await readFile(resolve(staging, 'keep.txt'), 'utf8')).toBe('unknown staging');
+    expect(JSON.parse(await readFile(resolve(destination, 'module.json'), 'utf8')).version).toBe('0.9.0');
   });
 });

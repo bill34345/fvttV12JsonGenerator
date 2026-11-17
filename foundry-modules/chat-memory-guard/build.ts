@@ -1,5 +1,6 @@
-import { cp, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { cp, lstat, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { lstatSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, parse, relative, resolve, sep } from 'node:path';
 
 const MODULE_ID = 'chat-memory-guard';
@@ -20,6 +21,9 @@ export interface ChatMemoryGuardBuildResult {
 export interface ChatMemoryGuardInstallResult {
   destination: string;
   backupPath?: string;
+  buildHash?: string;
+  installHash?: string;
+  previousHash?: string;
 }
 
 export interface ChatMemoryGuardInstallOptions {
@@ -116,7 +120,6 @@ export async function installChatMemoryGuardPackage(
   const paths = chatMemoryGuardWorkspaceInstallPaths(workspaceRoot, environment);
   const destination = assertChatMemoryGuardDestination(workspaceRoot, paths.destination, environment);
   assertNoReparsePath(destination, 'Chat Memory Guard installation destination');
-  assertNoReparsePath(paths.backupRoot, 'Chat Memory Guard backup root');
   return installChatMemoryGuardRelease({
     buildDirectory,
     destination,
@@ -127,37 +130,62 @@ export async function installChatMemoryGuardPackage(
 export async function installChatMemoryGuardRelease({
   buildDirectory,
   destination,
-  backupRoot,
 }: ChatMemoryGuardInstallOptions): Promise<ChatMemoryGuardInstallResult> {
   if (resolve(destination).split(/[\\/]/).at(-1) !== MODULE_ID) {
     throw new Error(`Chat Memory Guard installation destination must end in ${MODULE_ID}.`);
   }
   await assertOwnedModule(buildDirectory);
+  assertNoReparsePath(destination, 'Chat Memory Guard installation destination');
   const buildManifest = JSON.parse(await readFile(resolve(buildDirectory, 'module.json'), 'utf8')) as { version?: string };
-  if (buildManifest.version !== '1.0.0') {
-    throw new Error('Legacy Server Mirror installer only accepts the original 1.0.0 release; use the ServerNext migration procedure for the 1.1.0 candidate.');
+  const sourceManifest = JSON.parse(await readFile(resolve(import.meta.dir, 'src/module.json'), 'utf8')) as { version?: string };
+  if (buildManifest.version !== sourceManifest.version) {
+    throw new Error('Chat Memory Guard installer requires the current native dnd5e 6 release.');
   }
-
-  let backupPath: string | undefined;
+  const buildHash = await packageHash(buildDirectory);
+  let existingHash: string | undefined;
   if (await exists(destination)) {
     await assertOwnedModule(destination, true);
-    const manifest = JSON.parse(await readFile(resolve(destination, 'module.json'), 'utf8')) as { version?: string };
-    const suffix = String(manifest.version ?? 'unknown').replace(/[^a-zA-Z0-9._-]/g, '_');
-    backupPath = resolve(backupRoot, `${suffix}-${Date.now()}`);
-    await mkdir(dirname(backupPath), { recursive: true });
-    await rename(destination, backupPath);
+    existingHash = await packageHash(destination);
   }
-
+  if (existingHash === buildHash) return { destination, buildHash, installHash: buildHash, previousHash: existingHash };
+  const staging = `${destination}.installing`;
+  assertNoReparsePath(staging, 'Chat Memory Guard installation staging');
+  if (await exists(staging)) throw new Error(`Refusing to overwrite stale staging directory: ${staging}`);
+  await mkdir(dirname(destination), { recursive: true });
+  await cp(buildDirectory, staging, { recursive: true, errorOnExist: true, force: false });
   try {
-    await mkdir(dirname(destination), { recursive: true });
-    await cp(buildDirectory, destination, { recursive: true, errorOnExist: true, force: false });
+    await assertOwnedModule(staging);
+    if (await packageHash(staging) !== buildHash) throw new Error('Staged Chat Memory Guard differs from the validated build.');
+    assertNoReparsePath(destination, 'Chat Memory Guard installation destination');
+    if (existingHash) {
+      if (await packageHash(destination) !== existingHash) throw new Error('Existing Chat Memory Guard changed after validation.');
+      await rm(destination, { recursive: true });
+    } else if (await exists(destination)) throw new Error('Chat Memory Guard destination appeared after validation.');
+    await rename(staging, destination);
     await assertOwnedModule(destination);
+    if (await packageHash(destination) !== buildHash) throw new Error('Installed Chat Memory Guard differs from the validated build.');
   } catch (error) {
-    await rm(destination, { recursive: true, force: true });
-    if (backupPath) await rename(backupPath, destination);
-    throw error;
+    throw new Error(`Chat Memory Guard install failed; inspect ${destination} before retrying: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+  } finally {
+    if (await exists(staging) && await packageHash(staging) === buildHash) await rm(staging, { recursive: true });
   }
-  return { destination, backupPath };
+  return { destination, buildHash, installHash: buildHash, ...(existingHash ? { previousHash: existingHash } : {}) };
+}
+
+async function packageHash(root: string): Promise<string> {
+  assertNoReparsePath(root, 'Chat Memory Guard package');
+  const files: Array<{ path: string; sha256: string }> = [];
+  async function visit(directory: string): Promise<void> {
+    for (const entry of (await readdir(directory)).sort()) {
+      const path = resolve(directory, entry); const stats = await lstat(path);
+      if (stats.isSymbolicLink()) throw new Error(`Unsafe module symlink or junction: ${path}`);
+      if (stats.isDirectory()) await visit(path);
+      else if (stats.isFile()) files.push({ path: relative(root, path).replace(/\\/g, '/'), sha256: createHash('sha256').update(await readFile(path)).digest('hex') });
+      else throw new Error(`Unsafe module entry: ${path}`);
+    }
+  }
+  await visit(root);
+  return createHash('sha256').update(JSON.stringify(files)).digest('hex');
 }
 
 async function assertOwnedModule(directory: string, existing = false): Promise<void> {

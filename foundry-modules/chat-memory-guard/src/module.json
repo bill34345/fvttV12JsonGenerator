@@ -2,18 +2,36 @@
   "id": "chat-memory-guard",
   "title": "Chat Memory Guard / 聊天内存保护",
   "description": "Bounds rendered chat DOM and avatar media without deleting stored messages. 限制聊天栏 DOM 与头像媒体占用，不删除聊天记录。",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "compatibility": {
     "minimum": "14.368",
     "verified": "14.368",
-    "maximum": "14.368"
+    "maximum": "14.999"
   },
-  "esmodules": ["scripts/index.js"],
-  "styles": [{ "src": "styles/chat-memory-guard.css" }],
+  "esmodules": [
+    "scripts/index.js"
+  ],
+  "styles": [
+    {
+      "src": "styles/chat-memory-guard.css"
+    }
+  ],
   "languages": [
-    { "lang": "en", "name": "English", "path": "lang/en.json" },
-    { "lang": "cn", "name": "简体中文", "path": "lang/zh-CN.json" },
-    { "lang": "zh-CN", "name": "简体中文", "path": "lang/zh-CN.json" }
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    },
+    {
+      "lang": "cn",
+      "name": "简体中文",
+      "path": "lang/zh-CN.json"
+    },
+    {
+      "lang": "zh-CN",
+      "name": "简体中文",
+      "path": "lang/zh-CN.json"
+    }
   ],
   "relationships": {
     "systems": [
@@ -23,7 +41,7 @@
         "compatibility": {
           "minimum": "6.0.2",
           "verified": "6.0.2",
-          "maximum": "6.0.6"
+          "maximum": "6.999.999"
         }
       }
     ]

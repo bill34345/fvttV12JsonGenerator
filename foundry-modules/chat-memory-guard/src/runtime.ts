@@ -40,6 +40,7 @@ export interface DisposableChatAttachment {
   scrollElement: Pick<HTMLElement, 'removeEventListener'>;
   scrollHandler: EventListener;
   retryTimer?: ReturnType<typeof setTimeout>;
+  restoreHistoryLoader?: () => void;
 }
 
 interface AttachedChat extends DisposableChatAttachment {
@@ -53,6 +54,22 @@ export function disposeChatAttachment(attachment: DisposableChatAttachment): voi
   attachment.observer.disconnect();
   attachment.scrollElement.removeEventListener('scroll', attachment.scrollHandler);
   if (attachment.retryTimer !== undefined) clearTimeout(attachment.retryTimer);
+  attachment.restoreHistoryLoader?.();
+}
+
+function guardHiddenHistoryLoads(chat: any, scroll: HTMLElement, isActive: () => boolean): () => void {
+  if (typeof chat.renderBatch !== 'function') return () => {};
+  const descriptor = Object.getOwnPropertyDescriptor(chat, 'renderBatch');
+  const renderBatch = chat.renderBatch;
+  Object.defineProperty(chat, 'renderBatch', { configurable: true, writable: true, value: function(this: any, ...args: any[]) {
+    // Core treats a zero-height hidden log as its top and backfills after every DOM deletion.
+    if (isActive() && scroll.clientHeight === 0) return Promise.resolve();
+    return renderBatch.apply(this, args);
+  } });
+  return () => {
+    if (descriptor) Object.defineProperty(chat, 'renderBatch', descriptor);
+    else delete chat.renderBatch;
+  };
 }
 
 export class ChatMemoryGuardRuntime {
@@ -163,6 +180,8 @@ export class ChatMemoryGuardRuntime {
     attachment.observer.observe(log, { childList: true });
     scroll.addEventListener('scroll', attachment.scrollHandler, { passive: true });
     this.#attached.set(chat, attachment);
+    attachment.restoreHistoryLoader = guardHiddenHistoryLoads(chat, scroll,
+      () => this.#started && this.#settings.enabled && this.#attached.get(chat) === attachment);
     for (const card of Array.from(log.querySelectorAll<HTMLElement>('.message[data-message-id]'))) {
       const message = this.#game.messages?.get?.(card.dataset.messageId);
       if (message) void this.processAvatar(message, card);
