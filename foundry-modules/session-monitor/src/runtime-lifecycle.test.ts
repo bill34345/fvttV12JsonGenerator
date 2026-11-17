@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { SessionMonitorRuntime } from './runtime';
+import { AUTO_COLLAPSE_DELAY_MS, SessionMonitorRuntime, TEMPORARY_EXPAND_DELAY_MS } from './runtime';
 import { MemorySessionStore, type SessionRecord } from './storage';
 import { MAX_SAMPLES, MAX_SESSION_MS, type SessionMeta } from './schema';
 import { StallWindowAccumulator } from './metrics';
@@ -361,6 +361,94 @@ describe('runtime lifecycle with asynchronous storage', () => {
       expect((await runtime.startSession()).state).toBe('active');
       await runtime.stopSession({ download: false });
     } finally { dom.window.close(); }
+  });
+
+  test('automatic collapse and normal expansion immediately synchronize the toggle state', async () => {
+    const dom = new JSDOM('<!doctype html><body></body>');
+    const runtime = new SessionMonitorRuntime({ document: dom.window.document, window: dom.window as unknown as Window,
+      game: { user: { isGM: true }, world: { id: 'synthetic' }, modules: new Map() } }, new MemorySessionStore(), fakeStalls());
+    const timers = new Map<number, () => void>();
+    const originalTimeout = globalThis.setTimeout;
+    globalThis.setTimeout = ((callback: TimerHandler, delay?: number, ...args: unknown[]) => {
+      if (typeof callback === 'function' && (delay === AUTO_COLLAPSE_DELAY_MS || delay === TEMPORARY_EXPAND_DELAY_MS)) {
+        timers.set(delay, () => callback(...args));
+        return originalTimeout(() => {}, 0);
+      }
+      return originalTimeout(callback, delay, ...args);
+    }) as typeof setTimeout;
+    try {
+      await runtime.initialize();
+      await runtime.startSession();
+      const panel = dom.window.document.getElementById('fvtt-session-monitor-panel')!;
+      const toggle = panel.querySelector<HTMLButtonElement>('[data-action="collapse"]')!;
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(timers.has(AUTO_COLLAPSE_DELAY_MS)).toBeTrue();
+      timers.get(AUTO_COLLAPSE_DELAY_MS)!();
+      expect(panel.classList.contains('collapsed')).toBeTrue();
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(toggle.getAttribute('aria-label')).toBe('Expand controls');
+      expect(toggle.textContent).toBe('⌄');
+
+      panel.click();
+      expect(panel.classList.contains('collapsed')).toBeFalse();
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(toggle.getAttribute('aria-label')).toBe('Collapse controls');
+      expect(toggle.textContent).toBe('⌃');
+      expect(timers.has(TEMPORARY_EXPAND_DELAY_MS)).toBeTrue();
+      timers.get(TEMPORARY_EXPAND_DELAY_MS)!();
+      expect(panel.classList.contains('collapsed')).toBeTrue();
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(toggle.getAttribute('aria-label')).toBe('Expand controls');
+      expect(toggle.textContent).toBe('⌄');
+
+      toggle.click();
+      expect(panel.classList.contains('collapsed')).toBeFalse();
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(toggle.getAttribute('aria-label')).toBe('Collapse controls');
+      expect(toggle.textContent).toBe('⌃');
+    } finally {
+      globalThis.setTimeout = originalTimeout;
+      await runtime.stopSession({ download: false });
+      dom.window.close();
+    }
+  });
+
+  test('stopped public status and panel retain the recorded duration after the clock advances', async () => {
+    const dom = new JSDOM('<!doctype html><body></body>');
+    const runtime = new SessionMonitorRuntime({ document: dom.window.document, window: dom.window as unknown as Window,
+      game: { user: { isGM: true }, world: { id: 'synthetic' }, modules: new Map() } }, new MemorySessionStore(), fakeStalls());
+    const originalNow = Date.now;
+    try {
+      await runtime.initialize();
+      await runtime.api.startSession();
+      const startedAt = Date.parse(runtime.api.getStatus().startedAt!);
+      Date.now = () => startedAt + 5_000;
+      expect(runtime.api.getStatus().elapsedMs).toBe(5_000);
+      Date.now = originalNow;
+
+      const exported = (await runtime.api.stopSession({ download: false }))!;
+      const endedAt = Date.parse(exported.session.endedAt!);
+      const duration = endedAt - Date.parse(exported.session.startedAt);
+      const panel = dom.window.document.getElementById('fvtt-session-monitor-panel')!;
+      const elapsed = panel.querySelector<HTMLElement>('[data-role="elapsed"]')!;
+      const bodyElapsed = panel.querySelector<HTMLElement>('[data-role="body-elapsed"]')!;
+      const stoppedText = elapsed.textContent;
+      const stoppedDatetime = elapsed.getAttribute('datetime');
+      for (const advance of [60_000, 3_600_000]) {
+        Date.now = () => endedAt + advance;
+        const status = runtime.api.getStatus();
+        expect(status.state).toBe('stopped');
+        expect(status.elapsedMs).toBe(duration);
+        expect(runtime.api.setCompanionHeartbeat({ timestamp: exported.session.endedAt! }).elapsedMs).toBe(duration);
+        expect(elapsed.textContent).toBe(stoppedText);
+        expect(bodyElapsed.textContent).toBe(stoppedText);
+        expect(elapsed.getAttribute('datetime')).toBe(stoppedDatetime);
+      }
+    } finally {
+      Date.now = originalNow;
+      await runtime.stopSession({ download: false });
+      dom.window.close();
+    }
   });
 
   test.each(['sample cap', 'duration cap'])('%s records one limit event and closes without recursive stop', async (limit) => {

@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
@@ -31,10 +32,10 @@ describe('session monitor release contract', () => {
     expect(SCHEMA_VERSION).toBe(1);
     expect(packageManifest.dependencies?.['@fvtt-json-generator/contracts']).toBe('workspace:*');
     expect(moduleManifest.compatibility).toEqual({
-      minimum: '14.364', verified: '14.364', maximum: '14.368',
+      minimum: '14.364', verified: '14.364', maximum: '14.999',
     });
     expect(moduleManifest.relationships?.systems?.find((system) => system.id === 'dnd5e')?.compatibility).toEqual({
-      minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.6',
+      minimum: '5.3.3', verified: '5.3.3', maximum: '6.999.999',
     });
   });
 
@@ -97,7 +98,7 @@ describe('session monitor release contract', () => {
       await mkdir(buildDirectory, { recursive: true });
       await writeFile(resolve(buildDirectory, 'module.json'), JSON.stringify({
         id: 'fvtt-session-monitor',
-        version: '1.1.1',
+        version: '1.1.3',
       }));
 
       const installed = await installSessionMonitorPackage(
@@ -111,7 +112,7 @@ describe('session monitor release contract', () => {
       ));
       expect(JSON.parse(
         await readFile(resolve(installed.destination, 'module.json'), 'utf8'),
-      ).version).toBe('1.1.1');
+      ).version).toBe('1.1.3');
     } finally {
       await rm(workspaceRoot, { recursive: true, force: true });
     }
@@ -128,7 +129,7 @@ describe('session monitor release contract', () => {
       await symlink(physicalRoot, labRoot, 'junction');
       await writeFile(resolve(buildDirectory, 'module.json'), JSON.stringify({
         id: 'fvtt-session-monitor',
-        version: '1.1.1',
+        version: '1.1.3',
       }));
 
       await expect(installSessionMonitorPackage(
@@ -143,6 +144,37 @@ describe('session monitor release contract', () => {
     } finally {
       await rm(workspaceRoot, { recursive: true, force: true });
     }
+  });
+
+  test('replaces an owned install without backups and preserves foreign or stale paths', async () => {
+    const root = await mkdtemp(resolve(tmpdir(), 'session-monitor-install-'));
+    try {
+      const environment = { FVTT_OPS_LAB_ROOT: resolve(root, 'lab') };
+      const paths = sessionMonitorWorkspaceInstallPaths(root, environment);
+      const build = resolve(root, 'build');
+      await mkdir(build, { recursive: true });
+      await writeFile(resolve(build, 'module.json'), JSON.stringify({ id: MODULE_ID, version: PRODUCT_VERSION }));
+      await writeFile(resolve(build, 'current.txt'), 'current build');
+      await mkdir(paths.destination, { recursive: true });
+      await writeFile(resolve(paths.destination, 'module.json'), JSON.stringify({ id: 'foreign-module' }));
+      await expect(installSessionMonitorPackage(root, build, environment)).rejects.toThrow(/foreign|unknown/i);
+      await writeFile(resolve(paths.destination, 'module.json'), JSON.stringify({ id: MODULE_ID, version: '1.1.1' }));
+      await writeFile(resolve(paths.destination, 'old.txt'), 'old owned build');
+      const staging = `${paths.destination}.installing`;
+      await mkdir(staging, { recursive: true });
+      await writeFile(resolve(staging, 'keep.txt'), 'stale staging');
+      await expect(installSessionMonitorPackage(root, build, environment)).rejects.toThrow(/stale staging/i);
+      expect(await readFile(resolve(paths.destination, 'old.txt'), 'utf8')).toBe('old owned build');
+      expect(await readFile(resolve(staging, 'keep.txt'), 'utf8')).toBe('stale staging');
+      await rm(staging, { recursive: true });
+      const installed = await installSessionMonitorPackage(root, build, environment);
+      expect(installed.buildHash).toBe(installed.installHash);
+      expect(installed.previousHash).not.toBe(installed.installHash);
+      expect(installed.backupPath).toBeUndefined();
+      expect(existsSync(paths.backupRoot)).toBeFalse();
+      expect(existsSync(resolve(paths.destination, 'old.txt'))).toBeFalse();
+      expect(await readFile(resolve(paths.destination, 'current.txt'), 'utf8')).toBe('current build');
+    } finally { await rm(root, { recursive: true }); }
   });
 
   test('parses a wrapper-prefixed subcommand without treating option values as commands', () => {

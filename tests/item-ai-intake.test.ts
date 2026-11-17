@@ -181,7 +181,8 @@ describe('AI Item Intake V14 mechanics', () => {
       flags: { fvttJsonGenerator: { spellStorage: { capacity: 5, foundLevels: '1d6-1' } } } });
   });
 
-  test.each([[storedFireball, storedOrb], [storedOrb, storedIntOrb]])('preserves separate stored casts and their original slot levels', async (...spells) => {
+  test.each<[StoredItemSpell, StoredItemSpell]>([[storedFireball, storedOrb], [storedOrb, storedIntOrb]])('preserves separate stored casts and their original slot levels', async (first, second) => {
+    const spells = [first, second];
     const fixture = spellStorageFixture(...spells);
     expect(validateItemIntakeIR(fixture.source, fixture.ir, fixture.candidate).blocking).toEqual([]);
     const { item, markdown } = await generateItemFixture(fixture);

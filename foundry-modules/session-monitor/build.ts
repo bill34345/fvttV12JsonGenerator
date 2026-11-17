@@ -1,5 +1,6 @@
-import { cp, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { cp, lstat, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { lstatSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, parse, relative, resolve, sep } from 'node:path';
 import { collectArchiveEntries, createStoredZip } from './companion/archive';
 import {
@@ -46,6 +47,9 @@ export interface SessionMonitorBuildResult {
 export interface SessionMonitorInstallResult {
   destination: string;
   backupPath?: string;
+  buildHash?: string;
+  installHash?: string;
+  previousHash?: string;
 }
 
 export function sessionMonitorPaths(packageRoot = import.meta.dir) {
@@ -155,29 +159,55 @@ export async function installSessionMonitorPackage(
   const paths = sessionMonitorWorkspaceInstallPaths(workspaceRoot, environment);
   const destination = assertSessionMonitorDestination(workspaceRoot, paths.destination, environment);
   assertNoReparsePath(destination, 'Session Monitor installation destination');
-  assertNoReparsePath(paths.backupRoot, 'Session Monitor backup root');
   await assertOwnedModule(buildDirectory);
-
-  let backupPath: string | undefined;
+  const manifest = JSON.parse(await readFile(resolve(buildDirectory, 'module.json'), 'utf8')) as { version?: string };
+  const source = JSON.parse(await readFile(resolve(import.meta.dir, 'src/module.json'), 'utf8')) as { version?: string };
+  if (manifest.version !== source.version) throw new Error('Session Monitor installer requires the current native dnd5e 6 release.');
+  const buildHash = await packageHash(buildDirectory);
+  let existingHash: string | undefined;
   if (await exists(destination)) {
     await assertOwnedModule(destination, true);
-    const manifest = JSON.parse(await readFile(resolve(destination, 'module.json'), 'utf8')) as { version?: string };
-    const suffix = String(manifest.version ?? 'unknown').replace(/[^a-zA-Z0-9._-]/g, '_');
-    backupPath = resolve(paths.backupRoot, `${suffix}-${Date.now()}`);
-    await mkdir(dirname(backupPath), { recursive: true });
-    await rename(destination, backupPath);
+    existingHash = await packageHash(destination);
   }
-
+  if (existingHash === buildHash) return { destination, buildHash, installHash: buildHash, previousHash: existingHash };
+  const staging = `${destination}.installing`;
+  assertNoReparsePath(staging, 'Session Monitor staging');
+  if (await exists(staging)) throw new Error(`Refusing to overwrite stale staging directory: ${staging}`);
+  await mkdir(dirname(destination), { recursive: true });
+  await cp(buildDirectory, staging, { recursive: true, errorOnExist: true, force: false });
   try {
-    await mkdir(dirname(destination), { recursive: true });
-    await cp(buildDirectory, destination, { recursive: true, errorOnExist: true, force: false });
+    await assertOwnedModule(staging);
+    if (await packageHash(staging) !== buildHash) throw new Error('Staged Session Monitor differs from the validated build.');
+    assertNoReparsePath(destination, 'Session Monitor installation destination');
+    if (existingHash) {
+      if (await packageHash(destination) !== existingHash) throw new Error('Existing Session Monitor changed after validation.');
+      await rm(destination, { recursive: true });
+    } else if (await exists(destination)) throw new Error('Session Monitor destination appeared after validation.');
+    await rename(staging, destination);
     await assertOwnedModule(destination);
+    if (await packageHash(destination) !== buildHash) throw new Error('Installed Session Monitor differs from the validated build.');
   } catch (error) {
-    await rm(destination, { recursive: true, force: true });
-    if (backupPath) await rename(backupPath, destination);
-    throw error;
+    throw new Error(`Session Monitor install failed; inspect ${destination} before retrying: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+  } finally {
+    if (await exists(staging) && await packageHash(staging) === buildHash) await rm(staging, { recursive: true });
   }
-  return { destination, backupPath };
+  return { destination, buildHash, installHash: buildHash, ...(existingHash ? { previousHash: existingHash } : {}) };
+}
+
+async function packageHash(root: string): Promise<string> {
+  assertNoReparsePath(root, 'Session Monitor package');
+  const files: Array<{ path: string; sha256: string }> = [];
+  async function visit(directory: string): Promise<void> {
+    for (const entry of (await readdir(directory)).sort()) {
+      const path = resolve(directory, entry); const stats = await lstat(path);
+      if (stats.isSymbolicLink()) throw new Error(`Unsafe module symlink or junction: ${path}`);
+      if (stats.isDirectory()) await visit(path);
+      else if (stats.isFile()) files.push({ path: relative(root, path).replace(/\\/g, '/'), sha256: createHash('sha256').update(await readFile(path)).digest('hex') });
+      else throw new Error(`Unsafe module entry: ${path}`);
+    }
+  }
+  await visit(root);
+  return createHash('sha256').update(JSON.stringify(files)).digest('hex');
 }
 
 async function assertOwnedModule(directory: string, existing = false): Promise<void> {
@@ -231,7 +261,7 @@ async function main(): Promise<void> {
   if (process.argv.includes('--install')) {
     const installed = await installSessionMonitorPackage(workspaceRoot, result.outputDir, process.env);
     console.log(`Installed ${installed.destination}`);
-    if (installed.backupPath) console.log(`Backup ${installed.backupPath}`);
+    console.log(JSON.stringify({ buildHash: installed.buildHash, installHash: installed.installHash, previousHash: installed.previousHash }));
   }
 }
 

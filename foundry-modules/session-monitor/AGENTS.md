@@ -6,7 +6,7 @@
 
 ## 产品边界
 
-- module、companion、schema v1 和版本 1.1.2 是一个发布单元，不能拆成两个漂移产品。
+- module、companion、schema v1 和版本 1.1.3 是一个发布单元，不能拆成两个漂移产品。
 - 它只观察：不清缓存、不改游戏设置、不删除 Foundry 文档、不写世界 LevelDB。
 - companion 只管理自己创建的专用 Chrome profile，不接管用户日常 Chrome，不读取 Cookie、密码或浏览器凭据。
 - GM 必须通过正常界面登录；companion 不得猜测、提取或绕过密码。
@@ -22,14 +22,19 @@
 ## 验证
 
 - `bun run test:session-monitor`
+- `bun run test:session-monitor:runtime` 只检查浏览器模块源码，不启动真实 Chrome。
 - `bun run test:session-monitor:build`
 - `bun run build:session-monitor`
 - `bun run typecheck:foundry-modules`
 - 运行时变化可以执行目的明确的项目本地 smoke；完成后恢复本轮拥有的模块配置、世界配置、专用 Chrome 和临时对象，保留可复用服务及验收原件。
-- `test:session-monitor`中的companion/session-monitor.test.ts会启动真实临时Chrome。普通非浏览器worker只跑本次相关src/release契约；需要该Chrome场景时先走根Chrome执行协议，不把隐藏浏览器副作用当纯unit。当前606只改manifest上限，module/companion/schema版本仍1.1.2；真实会话门保持原范围。
+- `test:session-monitor`中的companion/session-monitor.test.ts会启动真实临时Chrome。普通非浏览器worker只跑本次相关src/release契约；需要该Chrome场景时先走根Chrome执行协议，不把隐藏浏览器副作用当纯unit。当前版本准入放开Core14和dnd5e6的后续版本，module/companion版本1.1.3、schema仍v1；真实会话门保持原范围。
 
 ## 完成标准
 
 - module/companion 使用同一 schema、session ID 和版本，浏览器/renderer generation、gap 和错误过滤按预期记录。
 - 构建产物、ZIP 和项目本地安装内容一致。
 - 本地短时、生产短时、四小时和非 GM 证据分别报告；未运行的真实场景保持 pending。
+
+## 2026-11-04版本准入
+
+版本准入现按主版本开放：Foundry 14、dnd5e 6 的后续版本可继续使用，保留清单原最低版本和 verified；已验行为仍绑定下面列出的精确环境，不把准入范围当作功能验收。 可选 Midi 与 Sequencer 分别保留最低 14.0.11、4.2.3，不再按已验版本封顶。

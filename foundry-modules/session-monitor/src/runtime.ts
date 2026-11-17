@@ -216,6 +216,7 @@ export class SessionMonitorRuntime {
   #temporaryExpandTimer: ReturnType<typeof setTimeout> | null = null;
   #layoutResizeObserver: ResizeObserver | null = null;
   #layoutMutationObserver: MutationObserver | null = null;
+  #layoutFrame: number | null = null;
   #timer: ReturnType<typeof setInterval> | null = null;
   #nextExpectedAt = 0;
   #samplingPromise: Promise<void> | null = null;
@@ -431,7 +432,8 @@ export class SessionMonitorRuntime {
   }
 
   getStatus(): SessionStatus {
-    const now = Date.now();
+    const now = this.#meta?.state === 'stopped' && this.#meta.endedAt
+      ? Date.parse(this.#meta.endedAt) : Date.now();
     return {
       enabled: this.#globals.game?.user?.isGM === true,
       state: this.#meta?.state ?? 'idle',
@@ -836,14 +838,13 @@ export class SessionMonitorRuntime {
     if (!this.#panel || this.getStatus().state !== 'active') return;
     if (this.#panel.classList.contains('collapsed')) this.#expandPanelTemporarily();
     else this.#collapsePanel();
-    this.#renderPanel();
   }
 
   #collapsePanel(): void {
     if (!this.#panel) return;
     this.#clearPanelCollapseTimers();
     this.#panel.classList.add('collapsed');
-    this.#layoutPanel();
+    this.#renderPanel();
   }
 
   #expandPanelTemporarily(): void {
@@ -854,7 +855,7 @@ export class SessionMonitorRuntime {
       this.#temporaryExpandTimer = null;
       if (this.getStatus().state === 'active') this.#collapsePanel();
     }, TEMPORARY_EXPAND_DELAY_MS);
-    this.#layoutPanel();
+    this.#renderPanel();
   }
 
   #scheduleAutoCollapse(): void {
@@ -1023,23 +1024,36 @@ export class SessionMonitorRuntime {
   #observePanelLayout(): void {
     const window = this.#globals.window;
     const document = this.#globals.document;
-    const onResize = () => this.#layoutPanel();
+    const onResize = () => this.#schedulePanelLayout();
+    const layoutSelector = '#sidebar, #sidebar-content, .combat-tracker, #combat-tracker';
+    const layoutElements = new Set(Array.from(document?.querySelectorAll?.(layoutSelector) ?? []));
     window?.addEventListener('resize', onResize, { passive: true });
     window?.addEventListener('orientationchange', onResize, { passive: true });
     const ResizeObserverCtor = (window as any)?.ResizeObserver ?? (globalThis as any).ResizeObserver;
     if (ResizeObserverCtor) {
-      this.#layoutResizeObserver = new ResizeObserverCtor(() => this.#layoutPanel());
-      for (const element of Array.from(document?.querySelectorAll?.('#sidebar, #sidebar-content, .combat-tracker, #combat-tracker') ?? [])) {
+      this.#layoutResizeObserver = new ResizeObserverCtor(onResize);
+      for (const element of layoutElements) {
         this.#layoutResizeObserver?.observe(element);
       }
     }
     const MutationObserverCtor = (window as any)?.MutationObserver ?? (globalThis as any).MutationObserver;
     const sidebar = document?.querySelector?.('#sidebar');
     if (MutationObserverCtor && sidebar) {
-      const observer = new MutationObserverCtor(() => this.#layoutPanel()) as MutationObserver;
+      const observer = new MutationObserverCtor((records: MutationRecord[]) => {
+        if (records.some(({ target }) => layoutElements.has(target as Element)
+          || (target as Element).matches(layoutSelector))) onResize();
+      }) as MutationObserver;
       observer.observe(sidebar, { attributes: true, subtree: true, attributeFilter: ['class', 'style', 'hidden'] });
       this.#layoutMutationObserver = observer;
     }
+  }
+
+  #schedulePanelLayout(): void {
+    if (this.#layoutFrame !== null || !this.#globals.window) return;
+    this.#layoutFrame = this.#globals.window.requestAnimationFrame(() => {
+      this.#layoutFrame = null;
+      this.#layoutPanel();
+    });
   }
 
   #renderPanel(): void {

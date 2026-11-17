@@ -281,6 +281,7 @@ describe('runtime lifecycle', () => {
     ['14.368', '6.0.2'],
     ['14.368', '6.0.5'],
     ['14.368', '6.0.6'],
+    ['14.370', '6.1.0'],
   ])('records a GM start, sample, marker, and stop on Foundry %s / dnd5e %s without gameplay writes', async (foundryVersion, systemVersion) => {
     const store = new MemorySessionStore();
     const hooks = fakeHooks();

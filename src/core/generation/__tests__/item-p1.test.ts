@@ -115,7 +115,7 @@ describe('Forge Item P1 native mechanics', () => {
     expect(item.system.properties).toContain('mgc');
     expect(item.system.damage.base).toMatchObject({ number: 1, denomination: die, bonus: '', types: [damage] });
     expect(item.effects).toEqual([]);
-    expect(activities.map((activity) => activity.range.value)).toEqual(ranges);
+    expect(activities.map((activity) => activity.range.value)).toEqual([...ranges]);
     for (const attack of activities) {
       expect(attack.attack).toMatchObject({ bonus: '', ability: '', flat: false, type: { classification: 'weapon' } });
       expect(attack.damage).toEqual({ includeBase: true, parts: [] });

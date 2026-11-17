@@ -4,9 +4,9 @@ module.exports = {
     {
       name: 'suite-console-is-browser-safe',
       severity: 'error',
-      comment: 'The read-only handbook host depends only on its browser-safe public reader.',
+      comment: 'The handbook host uses its browser-safe reader and the pure version admission contract.',
       from: { path: '^foundry-modules/fvtt-suite-console/src/' },
-      to: { path: '^(node:|bun:|src/|scripts/|apps/|tools/|packages/(?!suite-handbook/)|foundry-modules/(?!fvtt-suite-console/))' },
+      to: { path: '^(node:|bun:|src/|scripts/|apps/|tools/|packages/(?!suite-handbook/|contracts/src/version-admission[.]ts$)|foundry-modules/(?!fvtt-suite-console/))' },
     },
     {
       name: 'suite-handbook-is-browser-safe',

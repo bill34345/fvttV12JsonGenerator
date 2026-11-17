@@ -2,18 +2,36 @@
   "id": "fvtt-session-monitor",
   "title": "FVTT Session Monitor / 跑团会话监测器",
   "description": "GM-only lightweight monitoring for browser memory, stalls, Foundry lifecycle events, and privacy-filtered errors during real sessions.",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "compatibility": {
     "minimum": "14.364",
     "verified": "14.364",
-    "maximum": "14.368"
+    "maximum": "14.999"
   },
-  "esmodules": ["scripts/index.js"],
-  "styles": [{ "src": "styles/session-monitor.css" }],
+  "esmodules": [
+    "scripts/index.js"
+  ],
+  "styles": [
+    {
+      "src": "styles/session-monitor.css"
+    }
+  ],
   "languages": [
-    { "lang": "en", "name": "English", "path": "lang/en.json" },
-    { "lang": "cn", "name": "简体中文", "path": "lang/zh-CN.json" },
-    { "lang": "zh-CN", "name": "简体中文", "path": "lang/zh-CN.json" }
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    },
+    {
+      "lang": "cn",
+      "name": "简体中文",
+      "path": "lang/zh-CN.json"
+    },
+    {
+      "lang": "zh-CN",
+      "name": "简体中文",
+      "path": "lang/zh-CN.json"
+    }
   ],
   "relationships": {
     "systems": [
@@ -23,7 +41,7 @@
         "compatibility": {
           "minimum": "5.3.3",
           "verified": "5.3.3",
-          "maximum": "6.0.6"
+          "maximum": "6.999.999"
         }
       }
     ],
@@ -33,8 +51,7 @@
         "type": "module",
         "compatibility": {
           "minimum": "14.0.11",
-          "verified": "14.0.11",
-          "maximum": "14.0.11"
+          "verified": "14.0.11"
         }
       },
       {
@@ -42,8 +59,7 @@
         "type": "module",
         "compatibility": {
           "minimum": "4.2.3",
-          "verified": "4.2.3",
-          "maximum": "4.2.3"
+          "verified": "4.2.3"
         }
       }
     ]

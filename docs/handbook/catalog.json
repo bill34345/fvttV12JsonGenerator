@@ -281,12 +281,12 @@
       },
       {
         "title": "整理物品来源",
-        "text": "替换文件路径。AI 提取证据，确定性规则生成 item-mechanics Markdown 和 Item JSON。",
+        "text": "替换文件路径。AI 提取证据，确定性规则生成 item-mechanics Markdown 和 Item JSON。原生支持范围包括来源明确的充能施法、卷轴、储法、附魔和召唤，按物品规则说明核对条件。",
         "command": "bun run src/index.ts --intake-items \"items.txt\" --vault \"obsidian/dnd数据转fvttjson\" --fvtt-version 14 --effect-profile core"
       },
       {
         "title": "阅读机制与审查材料",
-        "text": "重点核对 AC、充能、恢复时机、Activity 消耗和法术身份。needs_review 时通过本次审查包的 decisions 恢复。",
+        "text": "重点核对类别、AC、充能、恢复时机、每条施法费用、固定 DC 和法术身份。needs_review 时通过本次审查包的 decisions 恢复。",
         "command": "bun run src/index.ts --resume-item-intake \".local/item-intake-runs/<run-id>\" --decisions \".local/item-intake-runs/<run-id>/decisions.json\" --vault \"obsidian/dnd数据转fvttjson\""
       }
     ],

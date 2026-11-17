@@ -740,10 +740,10 @@ describe('browser Forge Item runtime', () => {
       content, sourceId: content === JEWEL_SOURCE ? ITEM_SOURCE_ID : undefined, stageIndex: index,
       displayName: 'Jewel', requestId: 'jewel-stage', fvttVersion: '14.370', systemVersion: '6.0.6',
     });
-    const [dormant, awakened, exalted] = [0, 1, 2].map(index => request(index));
+    const [dormant, awakened, exalted] = [request(0), request(1), request(2)];
     expect(new Set([dormant, awakened, exalted].map(entry => entry.source.sourceId)).size).toBe(3);
-    expect(request(0, exalted!.source.content).source).toEqual(dormant!.source);
-    for (const [index, entry] of [dormant!, awakened!, exalted!].entries()) {
+    expect(request(0, exalted.source.content).source).toEqual(dormant.source);
+    for (const [index, entry] of [dormant, awakened, exalted].entries()) {
       const response = await runtime.convertFinalItemSource(entry);
       expect(decodeForgeItemResponse(response).ok).toBe(true);
       if (!('result' in response) || response.result.status !== 'accepted') throw Error(JSON.stringify(response));

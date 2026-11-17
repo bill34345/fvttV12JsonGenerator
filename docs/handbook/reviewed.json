@@ -1,28 +1,28 @@
 {
   "web-workbench": {
-    "fingerprint": "094d3ec3608bb34944b4a9ccd701eca48d76b725a6f5ccde22bdfc6ef821e5cb",
-    "reviewedOn": "2026-11-13",
-    "note": "核对Web上传默认目标、下载JSON和现有任务提示。"
+    "fingerprint": "c1aa4998ed0a82013ddcd1d52a8e867eca12389e3e25dad10d1cbe9fa32bf7f5",
+    "reviewedOn": "2026-11-17",
+    "note": "核对 Web Item 作业沿用现有入口和锁定生成目标，新增物品类型随共享 Item workflow。"
   },
   "markdown-convert": {
-    "fingerprint": "4c9cce31ce13733081d5c789c53b7f35ba81039268cd10c8aa61f4b6ffcde6f8",
+    "fingerprint": "e332170a2198c4034005aa48ca729978b472df0e99c5b808c6c243432c4b1c95",
     "reviewedOn": "2026-11-17",
-    "note": "已核对资料转换命令和本机资料边界。共享 worktree 说明恢复普通 GitHub 推送，转换仍走原路径。"
+    "note": "核对正式物品生成的原生活动与物品规则支持边界；普通 YAML/Markdown 转换入口、输出和版本选项继续按现有说明。"
   },
   "monster-intake": {
-    "fingerprint": "9cfc44123ea7c5542b43239c73b55754bb15571c6644d51a1c9c4fae77558960",
-    "reviewedOn": "2026-11-13",
-    "note": "共享README更新血猎手模块；生物Intake、结果交付与核对步骤未变。"
+    "fingerprint": "54bff27029ab0fbc9b69b85578d7da17cdf40f681ca98efa8e9c490c946293ea",
+    "reviewedOn": "2026-11-17",
+    "note": "核对共用的图像上传与读回检查；生物生成和 PDF 工作台沿用公开入口及原有版本说明。"
   },
   "item-intake": {
-    "fingerprint": "20742603328edcb1427a5f9184d308394db36528f53c7d22ac36c755f96efa03",
-    "reviewedOn": "2026-11-13",
-    "note": "核对原生6/core目标、法术索引和已审结果才可登记的约束。"
+    "fingerprint": "cd205f271b49e42612f485a206388ff8e3791dd2185e9ccb29aa6e08c2d6edd4",
+    "reviewedOn": "2026-11-17",
+    "note": "核对 CLI 和 Web 走来源证据、原生生成及独立 Needs Review 契约，更新预览和规则范围。"
   },
   "species-intake": {
-    "fingerprint": "ab12c7268146d4563fb403ca9a2000d306d73a0f8d8252df8bbe76106fbd66bc",
-    "reviewedOn": "2026-11-13",
-    "note": "核对默认606、显式602/4.3.9目标与接受账本隔离。"
+    "fingerprint": "b14d721404ca02908bc44f9cac5120c14655afbfbd7c1b23329c41a1d9a6260c",
+    "reviewedOn": "2026-11-17",
+    "note": "核对 Species 仍走自己的版本、IR 和生成入口，物品证据的扩展不改变它的操作。"
   },
   "document-extraction": {
     "fingerprint": "1fadc1f19a0a8346a15306bb247d90ae4b2bbaf709177747d8aded524ec25bcc",
@@ -30,9 +30,9 @@
     "note": "已对照文档规则：仅报告/元数据显示改变且原MD、顺序、候选及下游行为有未变证据时缩小验收；正文或消费变化/证据不足仍核完整来源链。"
   },
   "vault-sync": {
-    "fingerprint": "a2013dd8602ae39fa5d2740450a6e2d61d859e081839d6c0ed25058c3cdbe0bc",
-    "reviewedOn": "2026-11-13",
-    "note": "共享README更新血猎手模块；Vault同步入口与范围未变。"
+    "fingerprint": "54309a33a65bfe216495ada172ae6840f7f489f8037c56d9a4477ad5fa5c6830",
+    "reviewedOn": "2026-11-17",
+    "note": "核对共享包与导出路径，物品规则扩展不改变 Vault Sync 现有命令、预览和写入范围。"
   },
   "goddessfantasy-crawl": {
     "fingerprint": "40768b4901167c284fbcd9bc163b73e05ac32aece800dc7a844c04b56c6fa77d",
@@ -50,9 +50,9 @@
     "note": "共享README更新血猎手模块；旧纯文本入口及转换规则未变。"
   },
   "json-translation": {
-    "fingerprint": "2dd3648f82274020d9b9a507bf69d20e89460b53579259af0ae9b59cb8805659",
-    "reviewedOn": "2026-11-13",
-    "note": "共享README更新血猎手模块；JSON翻译入口与结果未变。"
+    "fingerprint": "096dfaa973ca4791de1be4d816d5c68ac992d62673d65f27c47d66b0f3325d43",
+    "reviewedOn": "2026-11-17",
+    "note": "核对物品结构和共享生成目标变化；独立翻译命令、来源绑定及读回步骤仍适用。"
   },
   "foundry-ops": {
     "fingerprint": "39458b6623db95f727c7db466c0216cf128e3a4d5b6e4c5a5ab9e13c8286be95",
@@ -60,14 +60,14 @@
     "note": "核对通用工具、实例身份与本机维护的分工。当前按 30001 开发、30004 ServerMirror 核对，实际安装和启停使用对应环境的已验工具。"
   },
   "verification-development": {
-    "fingerprint": "a20968bc24b2c3a7a2e9e1fce7c986226e3244d41ee885a9a64671ae6daacf2b",
+    "fingerprint": "ad06fa6f4acdb906826a1e9be9af5fa44426a395ef7b6374281bd2dc227252c6",
     "reviewedOn": "2026-11-17",
-    "note": "核对普通推送和定向发布两条 Git 路径。临时裸仓实测从本地 master 推送保留同一提交编号。"
+    "note": "核对普通推送与定向发布入口、推送前检查和公开模组的构建与验证步骤。"
   },
   "human-encounter-intake": {
-    "fingerprint": "6871f58ed85beeecf6369adeb24cad61005fcc850e7e5aa0a26489ad9a9f6d43",
-    "reviewedOn": "2026-11-14",
-    "note": "核对公开版 Forge 的 PDF 选图、裁切预设、调整和复核。角色图及地图 Token 的用途、验证入口和原生动态环一致。"
+    "fingerprint": "87a468e02ab71d8bd9b7ae1146487974b1ae3e7c68af62454bf1c3e1ec6ff762",
+    "reviewedOn": "2026-11-17",
+    "note": "核对生物 PDF、图片上传与候选流程，通用资产上传复用读回检查。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -80,9 +80,9 @@
     "note": "核对当前分支只保留历史入口说明及原提交，历史构建与安装命令在指定旧 checkout 运行。"
   },
   "version-selection": {
-    "fingerprint": "cefb7ad0abe2ef9f46716ddf854faae57bf2faf82ed2fc7934743603e5b76160",
-    "reviewedOn": "2026-11-13",
-    "note": "核对固定生成目标、运行准入和旧版本历史证据三者的区别。"
+    "fingerprint": "5e8da89e2fdd13e29875cf1eb7b63a2047dc453bc72ade13907502bb51e60a4a",
+    "reviewedOn": "2026-11-17",
+    "note": "核对 Core 14／dnd5e 6 的生成目标及自研模块版本准入，历史验收保留原版本。"
   },
   "legacy-next-test-inputs": {
     "fingerprint": "19e7fec91c2e3bd2ab1d4ab8f46e2086f24571ef99642195d4613335394001b8",
@@ -105,19 +105,19 @@
     "note": "对照两份MCP来源文档和现有命令，Bun1.3.14版本依据改为根README，原独立runtime示例路径保留；配置、实例选择、世界读回及共享服务边界不变，Bun1.4.0试验已撤销。"
   },
   "chat-memory-guard": {
-    "fingerprint": "778ebb668dd7af6a0a92cf198b10ccd4b0e8258a75cf2764535623938626a07d",
-    "reviewedOn": "2026-10-25",
-    "note": "已逐项对照owner正文/README、精确版本门和原总账：Guard25世界消息/20页面卡、启停重载/帮助；Babele25/5翻译行/原UUID/重复渲染；MonitorGM短会话/重载/单stop/历史保护限定接受。真实缩略图、滚动暂停、全表库、更多客户端和长时不推广；AGENTS过时待验文字已同步。 整合时仅清理新增文件末尾多余空行，共享视图/TE事件逻辑及用户步骤不变；已核差异，不扩大运行接受。"
+    "fingerprint": "4c4a36506107c7204f1f2bd9a78d4eb481467005a598456357aad0fdee72ac65",
+    "reviewedOn": "2026-11-17",
+    "note": "核对隐藏聊天栏历史加载修复与拥有文件的安装检查，原热键和作用范围适用。"
   },
   "fvtt-babele-rolltable-embed-translation": {
-    "fingerprint": "880955d454590d81d2865625a119a84e3fe371dc5cbbe84a493860237e0b139c",
-    "reviewedOn": "2026-10-25",
-    "note": "已逐项对照owner正文/README、精确版本门和原总账：Guard25世界消息/20页面卡、启停重载/帮助；Babele25/5翻译行/原UUID/重复渲染；MonitorGM短会话/重载/单stop/历史保护限定接受。真实缩略图、滚动暂停、全表库、更多客户端和长时不推广；AGENTS过时待验文字已同步。"
+    "fingerprint": "f7394c71e9d9266f005b6436b5379ea8bc1ddec4663623154ebf613211dacf4a",
+    "reviewedOn": "2026-11-17",
+    "note": "核对原有随机表翻译入口、主版本准入和已有实机范围。"
   },
   "fvtt-battlefield-painter": {
-    "fingerprint": "2f9284f1465032bfab9afb49c6b10986fa94121f8c1a09b77b68d138fcd5fdf8",
-    "reviewedOn": "2026-10-25",
-    "note": "已核6.0.6 FireI事务、Region成本/linked falling、重载、非GM入口和权限拒绝及原生清理代表链。绘制仍仅向GM开放；全目录、更多组合、长时和生产范围未扩大。 本次AGENTS同步同一限定接受，不改变操作权限。"
+    "fingerprint": "89b383cc2c072bd95f6f9586218cc8355da21e3dc7e67119712a148d8b68a8d9",
+    "reviewedOn": "2026-11-17",
+    "note": "核对原有地形效果入口与主版本准入，玩法证明按已验效果保存。"
   },
   "fvtt-blood-hunter-2024": {
     "fingerprint": "d380c35f3bed83ba37f023a562cb18cb07d31863905f94e991946f75f637e776",
@@ -130,34 +130,34 @@
     "note": "核对原生6构建及旧ledger拒绝、显式602与静态v12候选。"
   },
   "fvtt-house-rules": {
-    "fingerprint": "6c542a545338790149452aaa01967150a744457586e2ac92d1ee7f0cd4e83dcf",
-    "reviewedOn": "2026-10-25",
-    "note": "已核对当前注册Activity模型在首次写入前产生完整预期，缺模型零写、严格手改保护与schema2恢复保持；既有实机原件的快速/喂服2d4+2、谨慎8+2及bonus/action语义存在，真实Apply/Restore/普通重载已接受。旧User原像缺口按用户决定保留，不扩大可选Midi/DAE/DSN或其他村规；未重跑药水。 AGENTS同步已有接受；本次仅代码整合，未运行Apply或Restore。"
+    "fingerprint": "5c7e36ff125d0cb20be8daaf0c58da2a5a75db6bc9181bf1363baef10f6210b2",
+    "reviewedOn": "2026-11-17",
+    "note": "核对房规重击首骰采用公开骰子能力并保留其他房规的各自权限与版本边界。"
   },
   "fvtt-injury-fading-spirits": {
-    "fingerprint": "d7a9e7b0b957c33a53291a7592c28eb492fdc94e7cb90d2646e93d9351f670e3",
-    "reviewedOn": "2026-10-25",
-    "note": "已核6.0.6有CC与无CC的普通复活代表链、原生贡献/GM裁定/真实盲骰、旧卡不重结算、重载/下一死亡阶段、未来版本零写拒绝和清理。停用CC不使用残留接口；其他复活模式、更多玩家/多GM及长时未扩大。 额外完整run下载缺口保留，AGENTS同步受限原生证据。"
+    "fingerprint": "96ccd09b3564607dda0fe10440c0505d3f5591584e5672aaa4ba56d9a18b1d90",
+    "reviewedOn": "2026-11-17",
+    "note": "核对原生 6 准入和独立复活规则，明确原有实机接受范围。"
   },
   "fvtt-trigger-engine": {
-    "fingerprint": "34f623581167b283da88abc7647ddfaf6c05024a5120162d0eb80a9761a36b85",
-    "reviewedOn": "2026-10-29",
-    "note": "已对照主线活动GM重新验权、排队与CC订阅接口，以及topic配置状态消费者的独立边界；说明和既有606限定接受保持，本次无新runtime、玩家或多GM接受。"
+    "fingerprint": "7e79080fbce16d8a9d48c9883009328a62d8d57783d5fe7bd41477b37170fd21",
+    "reviewedOn": "2026-11-17",
+    "note": "核对原生 6 准入、活动 GM 和 API 边界，历史事件验收保持原目标。"
   },
   "fvtt-custom-conditions": {
-    "fingerprint": "96e9d35bd33b1bedc0aa3e8b42bea35601e33a1343a867793ecc5eb908d671b0",
-    "reviewedOn": "2026-11-13",
-    "note": "核对共享状态函数的批处理接口接线；没有推广版本准入或新增编辑器支持。"
+    "fingerprint": "51e57d140d5e980e4abfb65a589e870fbac29ba7e43f1a6e9c72eb9e30571fdc",
+    "reviewedOn": "2026-11-17",
+    "note": "核对自定义状态模块的主版本准入、运行条件和代表功能；验收范围保留原记录。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "7a82550c555a6e315a99052efb07b918322141a37276b34704a104e292fbf4b5",
-    "reviewedOn": "2026-11-14",
-    "note": "核对公开版重开连接窗口时恢复推理强度，以及独立普通文本模式读取共享连接设置。"
+    "fingerprint": "d753c34a4e2d5160924a4848a3b33da7b503052153ef9bc0e0fd6c59a0bcea1c",
+    "reviewedOn": "2026-11-17",
+    "note": "核对原生物品活动、物品 PDF、选图和保存读回步骤，沿用生物及共享连接说明。"
   },
   "fvtt-selected-token-sync": {
-    "fingerprint": "b888eae16a4a0dc1c058805448887553cb8617c6e81dc15bf345e9b0a6b353eb",
-    "reviewedOn": "2026-10-25",
-    "note": "已核6.0.6 GM原生HUD/等级边界/叠层/移动、同GM两客户端Poisoned、玩家帮助和无权限边界及原生终态。玩家同步写入与长时未接受；旧CalendarA按用户决定保留B，完整已采safeMLD恢复。实装后备帮助仍为旧文案，不作已部署新说明的证明。 本次AGENTS同步已有接受；未重新部署后备帮助。 整合时仅清理新增文件末尾多余空行，共享视图/TE事件逻辑及用户步骤不变；已核差异，不扩大运行接受。"
+    "fingerprint": "30f24e890224c0074b418ae61bd9336f5c281a4b6b2ee7695cb23646898990d9",
+    "reviewedOn": "2026-11-17",
+    "note": "核对原有 Token 同步范围和模组 manifest 中的支持版本。"
   },
   "monster-spell-resolver": {
     "fingerprint": "01b9d9310da90ebf3db8f0ed0da76842efabb617782868ef4288c47e1deaf13d",
@@ -165,14 +165,14 @@
     "note": "核对Core和dnd5e原生6主版本准入、旧配对及目标世界法术解析边界。"
   },
   "open-session-deck": {
-    "fingerprint": "1489cbc845e0376a18f82b0492dfe58212ec8e4f90c6b2d1f113ea7e15c09128",
-    "reviewedOn": "2026-10-28",
-    "note": "核对本轮无头像只读详情说明；窄窗修复只在列表高度不足320px时向上展开，保持内部滚动和底栏按钮，用户入口、读数范围和只读限制无新增变化。"
+    "fingerprint": "5564912eceff1b9e9e5b4caeef15bd407b6c67442c41ddb5c43863cfd417014d",
+    "reviewedOn": "2026-11-17",
+    "note": "核对现有 Deck GM 操作和原生 6 版本准入，保留历史玩法范围。"
   },
   "session-monitor": {
-    "fingerprint": "84f2b29042e6cedac47459937a6b9564f73c19e383b44cf514c7c06402ab9af1",
-    "reviewedOn": "2026-10-25",
-    "note": "已逐项对照owner正文/README、精确版本门和原总账：Guard25世界消息/20页面卡、启停重载/帮助；Babele25/5翻译行/原UUID/重复渲染；MonitorGM短会话/重载/单stop/历史保护限定接受。真实缩略图、滚动暂停、全表库、更多客户端和长时不推广；AGENTS过时待验文字已同步。 整合时仅清理新增文件末尾多余空行，共享视图/TE事件逻辑及用户步骤不变；已核差异，不扩大运行接受。"
+    "fingerprint": "2dff8edb4f754e5b819b8fd064e2bc30166693a3834a10d9c9e55358f8f513f4",
+    "reviewedOn": "2026-11-17",
+    "note": "核对 1.1.3 停止后计时与折叠布局修复，长时和 companion 接受按原记录。"
   },
   "fvtt-weapon-mastery-properties": {
     "fingerprint": "fe128a328c2afe0ac5cb3668169337f8fd8f425ab3545d51ec2cb79461068b43",
@@ -190,8 +190,8 @@
     "note": "核对战斗补丁和历史 DAE 的独立入口，以及主项目保留的 Classpack 与联调夹具。"
   },
   "fvtt-suite-console": {
-    "fingerprint": "37c38bc9045eaaf55d8942d23c00d2ecb8b44fe5ec6519c6db3d9b14072a2b9c",
-    "reviewedOn": "2026-11-13",
-    "note": "交付策略仅把新增战斗补丁放入完整离线手册，Foundry 内的条目清单、功能和入口保持。"
+    "fingerprint": "3581d1f47820deacf8eca1b813dc25b7a7ac285fd4fd1893b5cc703ad715ca24",
+    "reviewedOn": "2026-11-17",
+    "note": "核对手册窗口的 Core 14 主版本准入、GM 权限及离线内容入口。"
   }
 }

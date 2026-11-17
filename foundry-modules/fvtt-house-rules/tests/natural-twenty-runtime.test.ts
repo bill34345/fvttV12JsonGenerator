@@ -235,7 +235,7 @@ describe("critical configured damage integration", () => {
   });
 
   test("missing interfaces and an unwritable modifier registry preserve the native roll", () => {
-    class FrozenDie extends MockDie { static MODIFIERS = Object.freeze({}); }
+    class FrozenDie extends MockDie { static override MODIFIERS = Object.freeze({}); }
     const roll = damageRoll([new FrozenDie({ number: 2, faces: 8 })]);
     const original = roll.terms[0];
     globals.foundry.dice.terms.Die = FrozenDie;

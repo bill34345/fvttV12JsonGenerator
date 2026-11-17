@@ -1,7 +1,9 @@
 # FVTT 跑团会话监测器
 
+版本准入现按主版本开放：Foundry 14、dnd5e 6 的后续版本可继续使用，保留清单原最低版本和 verified；已验行为仍绑定下面列出的精确环境，不把准入范围当作功能验收。 可选 Midi 与 Sequencer 分别保留最低 14.0.11、4.2.3，不再按已验版本封顶。
+
 这是一个面向 Foundry VTT 14.364 / dnd5e 5.3.3 的轻量排障工具，manifest 也允许
-Foundry VTT 14.368 / dnd5e 6.0.2–6.0.6（manifest `verified` 为 6.0.2、`maximum` 为 6.0.6）作为 ServerNext 范围。2026-10-25 已在 14.368 / 6.0.6 完成一个真实 GM 短会话的开始、卡顿标记、普通重载、同会话恢复与停止，原有历史保持；Companion 与长时范围仍需单独接受。它把
+Foundry VTT 14.368 起的 Core 14 / dnd5e 6.0.2 起的主版本 6 作为 ServerNext 准入范围；Core `verified` 保持 14.364、系统 `verified` 保持 5.3.3。2026-10-25 已在 14.368 / 6.0.6 完成一个真实 GM 短会话的开始、卡顿标记、普通重载、同会话恢复与停止，原有历史保持；Companion 与长时范围仍需单独接受。它把
 浏览器内的会话指标和浏览器外的 Chrome/Windows 进程指标分开记录，再在
 结束时合并成一条时间线。
 
@@ -15,7 +17,7 @@ v1 只在 GM 客户端运行。
 - `build.ts`：确定性 module 构建及项目本地 mirror 安装保护；
 - `package.json`：产品版本、独立 typecheck/build/test/monitor 入口。
 
-module 与 companion 共同维护 schema v1 和产品版本 1.1.2。它们可以共享本产品的 schema，
+module 与 companion 共同维护 schema v1 和产品版本 1.1.3。它们可以共享本产品的 schema，
 但不得分别成为两个漂移的发布物。上游运行时依赖为共享的只读手册正文渲染，以及
 `@fvtt-json-generator/contracts/hash` 提供的 browser-safe SHA-256；Foundry runtime 不导入
 companion，companion 也不导入 generator、workflow、Web 或运维实现。
@@ -200,3 +202,10 @@ Foundry／Chrome 工作不设固定总时长上限，单操作仍保留超时。
 若面板提示操作未完成，采集会暂停。短暂存储故障解除后可点击“开始”续接同一会话；已在停止收尾阶段则重试“停止并导出”。重新载入会核对已保存记录的编号，不会补造遗漏样本；达到时长或采样上限的会话继续完成停止。GM失去权限后不再接纳新采集。
 
 单次最多12小时、4,320条采样；这两项上限会结束会话。事件10,000条、错误1,000条上限只停止追加对应类型并标记truncated，其他类型继续按各自上限工作。新保存/恢复与帮助路径已通过纯内存、模拟事务和DOM检查；6.0.6 的真实短会话另有6条采样/6条事件、一次重载恢复与一次停止的限定接受。测试归档清理后经公开list/export确认缺席，原两份历史完整hash保持。该短例不承诺长时性能或真实存储故障完全无损，精确构建与范围见[执行总账](../../docs/plans/2026-10-11-fvtt-suite-refactor/EXECUTION_LEDGER.md)。
+
+
+### 1.1.3 本地短会话后继
+
+1.1.3 让自动收起按钮即时同步，并按实际结束时间固定停止后的时长。侧栏布局刷新合并到下一帧。
+
+入口、导出格式和 schema v1 沿用既有契约。
