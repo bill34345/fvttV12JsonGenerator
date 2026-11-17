@@ -1,5 +1,7 @@
 # FVTT Trigger Engine
 
+2026-11-04版本准入：保留既有14.364／5.3.3、14.368／5.3.3和14.368／6.0.5分支；原生6路径允许Core14主版本中14.368及以后版本、dnd5e6主版本中6.0.6及以后版本。清单和构建范围同步，verified保持原实测值。后续14.x／6.x不因未逐一登记而拒绝启动，active GM、权限、事件身份与API能力约束不变；未来功能仍未因此获得实机接受。
+
 `fvtt-trigger-engine` 在 Foundry VTT 14.364 / dnd5e 5.3.3 与 Mirror 14.368 / 5.3.3 运行，新增 Foundry 14.368 / dnd5e 6.0.5 精确候选。它监听 Actor 文档更新、Combat 回合开始和回合结束，按世界设置中的定义调用宏，并向其他模块公开事件订阅接口；6.0.5 已通过四模块迁移所需的限定事件、回合、防重复和真实 HP 联动验收。
 
 自有 Next 的 14.368 / 6.0.6 已接受本模块正常首次保存、管理器显示、单 GM 的禁用／不匹配零动作与匹配一次、在途退订、普通客户端重载及精确清理。初始无持久 Setting 行是正常默认值，首次保存才创建；这不承诺跨客户端原子保存。另已接受 Custom Conditions 的 HP／伤势消费代表链；WMP 外部攻击事件、多 GM 和完整 Combat 分支仍待各自验收。该版 Token 移动会新增 `flags.dnd5e.lastMovedToken` Actor 更新；只监视 HP 的触发器不会因此执行。
@@ -50,7 +52,7 @@ await api.create({
 
 回合结算等待 Foundry 原生 `combatTurnChange`，即核心回合与效果生命周期完成之后；不使用定时器猜测完成时间。快速切换回合时，同一次转换的结束、开始事件会一起按序入队。新建或导入 Actor 会建立更新前快照，便于消费者识别第一次 HP 变化。
 
-历史 5.3.3 运行证据来自 `server-mirror` 的模块矩阵世界：管理器创建/编辑/启停、真实 Actor/Combat 事件，以及两个临时 GM 和 active GM 切换后的单次执行。该实例目前由 Forge 工作占用，本轮不访问或启停。当前重构只使用自有 `F:\FoundryLab\foundry-v14\data\server-next` / `127.0.0.1:30002`，精确 14.368/6.0.6；T1/T2 源码、构建、实装和业务接受分开记录。未对历史 serverNext/dnd5e 6.0.2 声明兼容。
+历史 5.3.3 验收涵盖管理器创建、编辑及启停、真实 Actor 和 Combat 事件，以及活动 GM 切换后的单次执行。原生 6 的构建和业务接受分别记录，以对应环境为准。
 
 当前候选使用说明与验收边界见仓库 `docs/runbooks/custom-conditions-and-trigger-engine-usage.md` 和 `docs/reviews/2026-09-21-custom-conditions-release-readiness.md`。
 

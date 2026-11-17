@@ -26,9 +26,9 @@ export const validateManifest = (manifest: Record<string, any>): void => {
   if (
     core.minimum !== "14.364" ||
     core.verified !== "14.364" ||
-    core.maximum !== "14.368"
+    core.maximum !== "14.999"
   ) {
-    throw new Error("Foundry compatibility range must be 14.364–14.368 with 14.364 verified");
+    throw new Error("Foundry compatibility range must be 14.364–14.999 with 14.364 verified");
   }
 
   const dnd5e = (manifest.relationships?.systems ?? []).find(
@@ -38,9 +38,9 @@ export const validateManifest = (manifest: Record<string, any>): void => {
   if (
     compatibility.minimum !== "5.3.3" ||
     compatibility.verified !== "5.3.3" ||
-    compatibility.maximum !== "6.0.6"
+    compatibility.maximum !== "6.999.999"
   ) {
-    throw new Error("dnd5e compatibility range must be 5.3.3–6.0.6 with 5.3.3 verified");
+    throw new Error("dnd5e compatibility range must be 5.3.3–6.999.999 with 5.3.3 verified");
   }
 
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(["scripts/main.js"])) {

@@ -15,8 +15,8 @@
 
 ## 当前范围
 
-- 技术模块 ID：`fvtt-suite-console`，版本 `0.3.0`。
-- 窗口代码只接纳精确 Foundry `14.368`；运行结果以本批执行总账为准。它不调用 dnd5e 数据接口，不把阅读条目视为对应工具已兼容。
+- 技术模块 ID：`fvtt-suite-console`，版本 `0.3.1`。本版随Core14／dnd5e6入口统一更新同源手册正文。
+- 窗口代码接纳Foundry `14.368`起的Core14主版本；`verified`仍保留14.368，后续版本准入不等于窗口已在该版本实机验收，运行结果仍以各目标执行总账为准。它不调用 dnd5e 数据接口，不把阅读条目视为对应工具已兼容。
 - 入口与公开 API 都要求 GM。手册正文是随包快照，阅读无需 AI、CDN 或在线搜索。
 - H3增加只读安装/启用状态与首个Deck可选帮助消费者；后续本地候选已接通框选Token同步、法术解析器和聊天内存保护的可选帮助，实际接受范围仍按各条目说明。工具启动按钮、收费与公开发行继续按后续计划。
 - Deck面板/副屏工具栏的“帮助”会定位本手册的Deck条目；合集停用或接口不可用时，Deck使用自己的随包说明，继续独立使用。
@@ -36,13 +36,13 @@ bun run verify-release:suite-console
 
 构建先检查手册人工 review 是否有效，再导出 Foundry 投影，把正文编入浏览器脚本。模块产物位于 `foundry-modules/fvtt-suite-console/dist/module`；`build-identity.json`记录投影、正文、脚本、样式和离线 HTML 身份。在仓库根目录运行 `bun run release:suite-console` 会生成确定性模块 ZIP、独立 manifest、独立完整 HTML、校验和与本地交付候选清单；它不安装模块、不访问世界。
 
-当前本地验收只使用已核对的 ServerNext。Forge占用的5.3.3 Server Mirror不能被安装器、浏览器或服务操作触碰。首次安装复用根 `foundry:ops lab install-server-next-owned-module` 的预览/拒绝覆盖门禁，已有目标不会自动替换。没有备份、自动推送或生产安装。
+当前主要开发环境为原Mirror30001的Core14.370／dnd5e6环境；30004保持原状，生产不动。本轮按维护任务核对过的候选清单、目标ownership与逐文件摘要更新30001既有手册包，不创建备份。构建和发布候选本身不安装模块。
 
-完成构建、目标与运行者核对后，首次安装预览为：
+下列命令仍是显式ServerNext的首次安装入口，用于保留的旧6.x实例，不指向30001；已有目标会拒绝覆盖。先核对本次选定实例、进程和实际版本，再按对应维护流程安装：
 
 ```powershell
 $env:FVTT_OPS_LAB_ROOT = "F:/FoundryLab/foundry-v14"
-bun run foundry:ops lab install-server-next-owned-module --module-id=fvtt-suite-console --version=0.3.0
+bun run foundry:ops lab install-server-next-owned-module --module-id=fvtt-suite-console --version=0.3.1
 ```
 
 在本次本地测试安装授权范围内加入`--apply`才写入新的模块目录；预览、安装文件与菜单启用/运行接受分开记录。已有目标拒绝覆盖，候选更新须先核对本任务已安装完整树及维护范围。

@@ -1,4 +1,5 @@
 import { MODULE_ID } from "./constants";
+import { isVersionInMajor } from "@fvtt-json-generator/contracts/version-admission";
 import {
   DEVELOPMENT_PHASE_CONTROLS_MUTABLE,
   type DevelopmentPhase,
@@ -104,12 +105,17 @@ export const evaluateRuntimeCompatibility = ({
   foundry,
   dnd5e,
 }: RuntimeVersions): RuntimeCompatibility => {
+  const native6Core = isVersionInMajor(foundry, "14.368");
+  if (native6Core && isVersionInMajor(dnd5e, "6.0.6")) {
+    return { supported: true, diagnostics: [] };
+  }
   const supportedPairs = [
     { foundry: "14.364", dnd5e: "5.3.3" },
     { foundry: "14.368", dnd5e: "5.3.3" },
     { foundry: "14.368", dnd5e: "6.0.2" },
     { foundry: "14.368", dnd5e: "6.0.5" },
     { foundry: "14.368", dnd5e: "6.0.6" },
+    { foundry: "14.369", dnd5e: "6.0.6" },
   ] as const;
   const diagnostics: CompatibilityDiagnostic[] = [];
   if (!foundry || !dnd5e) {
@@ -120,17 +126,17 @@ export const evaluateRuntimeCompatibility = ({
     });
   } else {
     const foundryPairs = supportedPairs.filter((pair) => pair.foundry === foundry);
-    if (foundryPairs.length === 0) {
+    if (foundryPairs.length === 0 && !native6Core) {
       diagnostics.push({
         code: "UNSUPPORTED_FOUNDRY_VERSION",
         blocking: true,
-        message: `Battlefield Painter alpha requires Foundry 14.364 or 14.368; received ${foundry}`,
+        message: `Battlefield Painter requires a retained legacy pair or Foundry 14.368+ within major 14; received ${foundry}`,
       });
     } else if (!foundryPairs.some((pair) => pair.dnd5e === dnd5e)) {
       diagnostics.push({
         code: "UNSUPPORTED_DND5E_VERSION",
         blocking: true,
-        message: `Battlefield Painter alpha requires Foundry 14.364/dnd5e 5.3.3 or Foundry 14.368/dnd5e 5.3.3, 6.0.2, 6.0.5 or 6.0.6; received ${foundry}/dnd5e ${dnd5e}`,
+        message: `Battlefield Painter requires a retained legacy pair or Foundry 14.368+/dnd5e 6.0.6+ within majors 14/6; received ${foundry}/dnd5e ${dnd5e}`,
       });
     }
   }

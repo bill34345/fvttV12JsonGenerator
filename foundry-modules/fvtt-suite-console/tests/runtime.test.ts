@@ -154,7 +154,7 @@ test('init bootstrap registers only the menu and exposes a read-only API', async
     expect(f.menus[0]).toMatchObject({ id: MODULE_ID, key: 'handbook', config: { restricted: true } });
     expect(module.api?.moduleId).toBe(MODULE_ID);
     expect(module.api?.apiVersion).toBe(1);
-    expect(module.api?.version).toBe('0.3.0');
+    expect(module.api?.version).toBe('0.3.1');
     await module.api!.openHelp({ entryId: 'example' });
     expect(f.document.querySelector('h1')?.textContent).toBe('示例工具');
     expect(f.document.querySelector('.module-state-detail')?.textContent).toContain('已安装 · 已启用');
@@ -186,7 +186,7 @@ test('registers one restricted menu; registering never constructs or opens an ap
   expect(Object.isFrozen(f.suite.api)).toBe(true);
 });
 
-test('API and direct menu render reject non-GM and wrong Core before frame creation', async () => {
+test('Core369 compatibility: API and direct menu render reject non-GM and wrong Core before frame creation', async () => {
   const f = fixture();
   f.suite.register();
   for (const denied of [{ isGM: false, coreVersion: SUPPORTED_CORE }, { isGM: true, coreVersion: '14.367' }]) {
@@ -200,6 +200,18 @@ test('API and direct menu render reject non-GM and wrong Core before frame creat
   }
   expect(f.warnings).toHaveLength(2);
   expect(f.lifecycle).not.toContain('frame');
+});
+
+test('Core 14 admission opens later releases and rejects the next major', async () => {
+  const f = fixture();
+  for (const version of ['14.369', '14.370', '14.999']) {
+    f.state.coreVersion = version;
+    await f.suite.api.openHelp();
+    expect(f.application().rendered).toBe(true);
+    await f.suite.api.closeHelp();
+  }
+  f.state.coreVersion = '15.0';
+  await expect(f.suite.api.openHelp()).rejects.toThrow();
 });
 
 test('one application is reused, focuses on reopen, and releases old reader on rerender and close', async () => {

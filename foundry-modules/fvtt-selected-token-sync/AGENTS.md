@@ -2,7 +2,7 @@
 
 ## 范围
 
-本目录是`fvtt-selected-token-sync`的唯一owner。当前0.2.0的Next目标为Foundry14.368，manifest系统范围6.0.5–6.0.6，verified保留6.0.5；606已有GM状态/分级/叠层/移动、同GM两客户端Poisoned及玩家帮助/权限拒绝限定接受，玩家写入和长时仍待验。它同步HUD核心状态及v14 movementAction，旧0.1.0安装不因候选自动改变。
+本目录是`fvtt-selected-token-sync`的唯一owner。当前0.2.0的Next准入为Core14.368起的主版本14，manifest系统范围为6.0.5起的主版本6，verified保留6.0.5；606已有GM状态/分级/叠层/移动、同GM两客户端Poisoned及玩家帮助/权限拒绝限定接受，玩家写入和长时仍待验。它同步HUD核心状态及v14 movementAction，旧0.1.0安装不因候选自动改变。
 
 ## 硬边界
 
@@ -22,3 +22,7 @@
 - 6.0.6按状态/分级/overlay/movementAction/权限与多客户端做实际语义回放；原acceptance-macro.js锁6.0.5的证据保持，不改历史脚本来制造新版接受。
 
 机械测试通过不能代替真实 HUD/Document 语义验收；最终报告必须分别列出两类证据和尚未覆盖的生产/长时层级。
+
+## 2026-11-04版本准入
+
+版本准入现按主版本开放：Foundry 14、dnd5e 6 的后续版本可继续使用，保留清单原最低版本和 verified；已验行为仍绑定下面列出的精确环境，不把准入范围当作功能验收。

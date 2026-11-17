@@ -52,13 +52,13 @@ export async function buildModule(): Promise<{ moduleRoot: string; zipPath: stri
 export function validateManifest(manifest: Record<string, any>): void {
   if (manifest.id !== MODULE_ID || manifest.version !== MODULE_VERSION) throw new Error('Manifest identity/version mismatch.');
   const core = manifest.compatibility ?? {};
-  if (core.minimum !== '14.364' || core.verified !== '14.364' || core.maximum !== '14.368') {
-    throw new Error('Foundry compatibility bounds must be 14.364–14.368, verified at 14.364.');
+  if (core.minimum !== '14.364' || core.verified !== '14.364' || core.maximum !== '14.999') {
+    throw new Error('Foundry compatibility bounds must retain verified 14.364 and admit Core 14 through 14.999.');
   }
   const dnd5e = (manifest.relationships?.systems ?? []).find((entry: any) => entry.id === 'dnd5e');
   const system = dnd5e?.compatibility ?? {};
-  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '6.0.6') {
-    throw new Error('dnd5e compatibility bounds must be 5.3.3–6.0.6, verified at 5.3.3.');
+  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '6.999.999') {
+    throw new Error('dnd5e compatibility bounds must retain verified 5.3.3 and admit major 6 through 6.999.999.');
   }
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(['scripts/index.js'])) throw new Error('Browser entry contract drifted.');
   if (manifest.socket !== false) throw new Error('Open Session Deck must explicitly declare socket: false.');

@@ -9,7 +9,7 @@ test('browser capability check rejects executable loading and evaluation, allowi
   }
 });
 
-test('manifest has only the exact Core and read-only independent browser resources', async () => {
+test('manifest has bounded Core 14 admission and read-only independent browser resources', async () => {
   const manifest = JSON.parse(await readFile(new URL('../src/module.json', import.meta.url), 'utf8'));
   expect(() => validateManifest(manifest)).not.toThrow();
   for (const changed of [

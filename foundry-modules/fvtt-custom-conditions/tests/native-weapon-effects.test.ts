@@ -105,14 +105,17 @@ describe('reviewed native6 weapon writer', () => {
     expect(target.system.attributes.movement.speeds).toEqual({ walk: '30', fly: '60' });
   });
 
-  test('advertises native capability only on the exact pair and rejects crossed or unreviewed writes', async () => {
+  test('advertises native capability on admitted native6 versions and rejects crossed major writes', async () => {
     for (const [core, system, id, supported, native] of [
       ['14.364', '5.3.3', 'dnd5e', true, false],
       ['14.368', '6.0.5', 'dnd5e', true, true],
       ['14.368', '6.0.6', 'dnd5e', true, true],
       ['14.364', '6.0.5', 'dnd5e', false, false],
       ['14.368', '5.3.3', 'dnd5e', true, false],
-      ['14.368', '6.0.7', 'dnd5e', false, false],
+      ['14.368', '6.0.7', 'dnd5e', true, true],
+      ['14.370', '6.1.0', 'dnd5e', true, true],
+      ['15.0', '6.0.6', 'dnd5e', false, false],
+      ['14.370', '7.0.0', 'dnd5e', false, false],
       ['14.368', '6.0.5', 'pf2e', false, false],
     ] as const) {
       const { globals, runtime, target, input } = fixture();
@@ -120,7 +123,7 @@ describe('reviewed native6 weapon writer', () => {
       globals.game.system = { id, version: system };
       expect(runtime.isSupported()).toBe(supported);
       expect(createWeaponEffectsApi(runtime).capabilities.native6Effects).toBe(native ? 1 : undefined);
-      if (!supported) await expect(runtime.apply(target, input(10))).rejects.toThrow('exact reviewed');
+      if (!supported) await expect(runtime.apply(target, input(10))).rejects.toThrow('supported Foundry/dnd5e pair');
       expect(target.effects).toEqual([]);
     }
   });

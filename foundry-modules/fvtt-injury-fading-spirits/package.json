@@ -10,6 +10,9 @@
     "install:local": "bun run labCli.ts install --apply",
     "verify-install": "bun run labCli.ts verify-install"
   },
+  "dependencies": {
+    "@fvtt-json-generator/contracts": "workspace:*"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "^5.9.3"

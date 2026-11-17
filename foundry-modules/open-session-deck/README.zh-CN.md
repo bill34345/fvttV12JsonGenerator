@@ -1,8 +1,10 @@
 # Open Session Deck / 开放式跑团副屏
 
+版本准入现为 Foundry 14.368 起的 Core 14 与 dnd5e 6.0.6 起的主版本 6；原 14.364/5.3.3、14.368/5.3.3 及 14.368/6.0.2、6.0.5 分支保留。新版沿用 native6 路径；下面的真实验收仍只证明所列精确环境与行为。
+
 Open Session Deck 是一个仅供 GM 使用的 Foundry VTT 队伍与遭遇操作台。它可以保留在 Foundry 主窗口内，也可以弹到第二块显示器。副屏由 GM 已登录的浏览器会话直接渲染，不加载第二个 Foundry 客户端、Canvas、登录页或模块 socket。
 
-## 精确支持范围
+## 历史已验范围
 
 - Foundry VTT `14.364` / dnd5e `5.3.3`（已完成运行时验收）
 - Foundry VTT `14.368` / dnd5e `5.3.3`（既有Mirror兼容候选，实际接受见专项记录）

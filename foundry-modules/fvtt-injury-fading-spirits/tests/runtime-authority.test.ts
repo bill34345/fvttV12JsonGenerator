@@ -40,11 +40,19 @@ beforeEach(() => {
 afterEach(() => { for (const [key, value] of original) (globalThis as any)[key] = value; original.clear(); });
 
 describe('Fading Spirits owns resurrection without injury automation', () => {
-  test('admits the exact 14.368/6.0.6 candidate and rejects future or crossed pairs', async () => {
+  test('admits same-major native6 releases and retains legacy pair boundaries', async () => {
     for (const [core, system, supported] of [
       ['14.368', '6.0.6', true],
+      ['14.369', '6.0.6', true],
+      ['14.369', '5.3.3', false],
+      ['14.369', '6.0.5', false],
+      ['14.369', '6.0.7', true],
+      ['14.370', '6.0.6', true],
+      ['14.370', '6.1.0', true],
       ['14.364', '6.0.6', false],
-      ['14.368', '6.0.7', false],
+      ['14.368', '6.0.7', true],
+      ['15.0', '6.0.6', false],
+      ['14.369', '7.0.0', false],
     ] as const) {
       (globalThis as any).game.version = core;
       (globalThis as any).game.system.version = system;

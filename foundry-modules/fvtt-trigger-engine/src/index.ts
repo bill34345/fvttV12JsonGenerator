@@ -1,3 +1,4 @@
+import { isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
 import { createTriggerApi, type TriggerEngineApi } from './api.ts';
 import { MODULE_ID, TRIGGER_MANAGER_CONTROL_NAME, TRIGGER_MANAGER_MENU_KEY } from './constants.ts';
 import { createTriggerManagerApplicationClass, openTriggerManager } from './manager.ts';
@@ -61,7 +62,8 @@ export function isSupportedTriggerRuntime(globals: any = globalThis): boolean {
   return game?.system?.id === 'dnd5e' && (
     (game.version === '14.364' && game.system.version === '5.3.3')
     || (game.version === '14.368' && game.system.version === '5.3.3')
-    || (game.version === '14.368' && (game.system.version === '6.0.5' || game.system.version === '6.0.6'))
+    || (game.version === '14.368' && game.system.version === '6.0.5')
+    || (isVersionInMajor(game.version, '14.368') && isVersionInMajor(game.system.version, '6.0.6'))
   );
 }
 
@@ -98,7 +100,7 @@ export function initializeTriggerEngine(globals: any = globalThis): TriggerEngin
   }
   hooks.once('ready', async () => {
     if (!isSupportedTriggerRuntime(globals)) {
-      if (isActiveGM(globals)) globals.ui?.notifications?.error?.('Trigger Engine supports only Foundry 14.364 / dnd5e 5.3.3 or Foundry 14.368 / dnd5e 5.3.3, 6.0.5 or 6.0.6.');
+      if (isActiveGM(globals)) globals.ui?.notifications?.error?.('Trigger Engine requires legacy Foundry 14.364 or 14.368 / dnd5e 5.3.3, 14.368 / 6.0.5, or Core 14 from 14.368 with dnd5e 6 from 6.0.6.');
       return;
     }
     runtime = new TriggerEngineRuntime({ globals, storage: new FoundryTriggerStorage(globals.game) });

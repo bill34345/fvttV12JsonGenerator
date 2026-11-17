@@ -1,10 +1,14 @@
 # Battlefield Painter · 0.3.0-alpha.2
 
+## 2026-11-04版本准入调整
+
+保留已有旧版配对；原生6路径允许Foundry Core `14.368+` 与dnd5e `6.0.6+`，分别限制在14和6主版本内。清单、构建校验与运行时判断保持一致，后续小版本无需逐项登记。此处调整版本准入；已记录的实际行为验收仍绑定原版本、角色和范围，不将未来版本标为功能通过。本轮只补版本判断及其适配分支的局部检查，不重放旧玩法验收。
+
 这是GM使用的战场地形画笔。当前目录包含42个选项：36个地形配置和6个月蚀矿图案，支持阶段、部分颜色与光照、可选环境音，以及按网格绘制、擦除和历史恢复。当前进度与实际接受范围见[接续入口](docs/CONTINUATION.md)。
 
 ## 版本与接受范围
 
-运行代码精确放行Foundry14.364/dnd5e5.3.3、Mirror14.368/5.3.3，以及Next14.368/6.0.2、6.0.5、6.0.6；其它配对失败关闭。6.0.6在本地Next已接受一格FireI事务、Region距离/成本、linked Token falling、普通重载、精确清理及非GM权限边界：玩家公开能力为`canMutate=false`，Painter工具栏缺席，observer Token无HUD且外来Token不可更新；绘制仅向GM开放，玩家入口拒绝已验；完整地形目录、所有网格/效果组合、长时和生产仍未接受。角色验收环境的额外消息已准确删除并确认原生缺席，作者和唯一whisper均为本轮TempPlayer，别名Dice So Nice!，Atlas归因假设已否证并符合已实装DSN6.3.1欢迎源；native terminal 的 Task 宏、原92宏行 hash、原7 User `_id` 读回、safeMLD/尺寸/viewport/UI、Core 与 Inspector 限定恢复均已闭合，但不等于旧A或完整User/所有Setting恢复。manifest范围声明不代表所有组合和地形已接受。14.364的代表样本有真实三格型证据；既有Next接受只覆盖其报告里的Square Fire切片。Mirror14.368/5.3.3已取得本轮三格型代表交互、GM/SY实际移动、HexCols26basic/36阶段与音源技术生命周期证据，具体范围见[本轮技术验收](docs/completion-2026-10-05.md)。
+运行时保留 Foundry 14.364／dnd5e 5.3.3 以及 14.368／5.3.3、6.0.2、6.0.5 的历史配对。原生 6 分支支持上述主版本内的后续版本。实机接受保持原目标范围。6.0.6在本地Next已接受一格FireI事务、Region距离/成本、linked Token falling、普通重载、精确清理及非GM权限边界：玩家公开能力为`canMutate=false`，Painter工具栏缺席，observer Token无HUD且外来Token不可更新；绘制仅向GM开放，玩家入口拒绝已验；完整地形目录、所有网格/效果组合、长时和生产仍未接受。角色验收环境的额外消息已准确删除并确认原生缺席，作者和唯一whisper均为本轮TempPlayer，别名Dice So Nice!，Atlas归因假设已否证并符合已实装DSN6.3.1欢迎源；native terminal 的 Task 宏、原92宏行 hash、原7 User `_id` 读回、safeMLD/尺寸/viewport/UI、Core 与 Inspector 限定恢复均已闭合，但不等于旧A或完整User/所有Setting恢复。manifest范围声明不代表所有组合和地形已接受。14.364的代表样本有真实三格型证据；既有Next接受只覆盖其报告里的Square Fire切片。Mirror14.368/5.3.3已取得本轮三格型代表交互、GM/SY实际移动、HexCols26basic/36阶段与音源技术生命周期证据，具体范围见[本轮技术验收](docs/completion-2026-10-05.md)。
 
 6.0.6 的16个源码变更文件未触及本画笔使用的 Region 接口；`TokenDocument5e` 的 falling 更新按 Actor `lastMovedToken` 标记和指定用户工作。本地代表链已核对真实距离10/成本15、A升空后B地走清除 falling、三次原生移动、普通重载和完整来源恢复；该结果只覆盖本例和模块拥有的对象。
 

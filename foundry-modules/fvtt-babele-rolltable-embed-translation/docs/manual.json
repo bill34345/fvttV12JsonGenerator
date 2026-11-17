@@ -5,9 +5,10 @@
   "summary": "在 Babele 翻译已经存在时，修复 Foundry v14 的 @Embed 随机表结果仍显示英文的渲染缺口。",
   "when": "Journal、聊天或其他文本中的 Compendium RollTable 使用 @Embed 后，表名已翻译但结果行仍为英文时使用。",
   "requires": [
+    "版本准入现按主版本开放：Foundry 14、dnd5e 6 的后续版本可继续使用，保留清单原最低版本和 verified；已验行为仍绑定下面列出的精确环境，不把准入范围当作功能验收。 Babele 与 libWrapper 分别要求至少 2.9.1、1.13.5.1，保持启用及必要 API 检查，不设置依赖版本上限。",
     "历史目标 Foundry 14.364 / dnd5e 5.3.3；ServerNext 14.368 / dnd5e 6.0.5 的代表切片已验，具体范围见限制",
-    "Babele 2.9.1",
-    "libWrapper 1.13.5.1",
+    "Babele 至少 2.9.1",
+    "libWrapper 至少 1.13.5.1",
     "可读取的 Babele 随机表翻译文件",
     "精确Foundry14.368/dnd5e6.0.6已完成两表限定接受；具体范围见限制，不自动升级其他环境。"
   ],

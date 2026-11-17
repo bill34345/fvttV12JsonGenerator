@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import ts from 'typescript';
 import { assertNoReparsePathComponents } from '../../tools/foundry-ops/src/config';
 import { run } from '../../docs/handbook/build.mjs';
-import { MODULE_ID, MODULE_VERSION, SUPPORTED_CORE } from './src/runtime';
+import { MODULE_ID, MODULE_VERSION, SUPPORTED_CORE, SUPPORTED_CORE_MAXIMUM } from './src/runtime';
 
 const repo = resolve(import.meta.dir, '../..');
 const owner = resolve(repo, 'foundry-modules/fvtt-suite-console');
@@ -29,7 +29,7 @@ export function assertBrowserBundle(text: string): void {
 export function validateManifest(manifest: Record<string, any>): void {
   if (manifest.id !== MODULE_ID || manifest.version !== MODULE_VERSION) throw new Error('Handbook manifest identity/version mismatch.');
   const core = manifest.compatibility;
-  if (core?.minimum !== SUPPORTED_CORE || core?.verified !== SUPPORTED_CORE || core?.maximum !== SUPPORTED_CORE) throw new Error('Handbook Core compatibility is not the exact accepted target.');
+  if (core?.minimum !== SUPPORTED_CORE || core?.verified !== SUPPORTED_CORE || core?.maximum !== SUPPORTED_CORE_MAXIMUM) throw new Error('Handbook Core compatibility must retain the verified baseline and admit the rest of Core 14.');
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(['scripts/index.js'])
     || JSON.stringify(manifest.styles) !== JSON.stringify(['styles/suite-handbook.css'])
     || manifest.socket !== false || manifest.relationships || manifest.packs) throw new Error('Handbook must be an independent read-only browser module.');

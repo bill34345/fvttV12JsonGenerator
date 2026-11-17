@@ -50,13 +50,13 @@ export async function buildModule(): Promise<{ moduleRoot: string; zipPath: stri
 export function validateManifest(manifest: Record<string, any>): void {
   if (manifest.id !== MODULE_ID || manifest.version !== MODULE_VERSION) throw new Error('Manifest identity/version mismatch.');
   const core = manifest.compatibility ?? {};
-  if (core.minimum !== '14.364' || core.verified !== '14.364' || core.maximum !== '14.368') {
-    throw new Error('Foundry compatibility must span 14.364 to 14.368 with verification at 14.364.');
+  if (core.minimum !== '14.364' || core.verified !== '14.364' || core.maximum !== '14.999') {
+    throw new Error('Foundry compatibility must admit Core 14 while retaining its reviewed minimum and verified version.');
   }
   const dnd5e = (manifest.relationships?.systems ?? []).find((entry: any) => entry.id === 'dnd5e');
   const system = dnd5e?.compatibility ?? {};
-  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '6.0.6') {
-    throw new Error('dnd5e compatibility must span 5.3.3 to 6.0.6 with verification at 5.3.3.');
+  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '6.999.999') {
+    throw new Error('dnd5e compatibility must admit major 6 while retaining its reviewed minimum and verified version.');
   }
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(['scripts/index.js'])) throw new Error('Browser entry contract drifted.');
   if (JSON.stringify(manifest.styles) !== JSON.stringify([{ src: 'styles/trigger-engine.css' }])) throw new Error('Style asset contract drifted.');

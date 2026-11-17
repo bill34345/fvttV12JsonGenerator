@@ -6,13 +6,27 @@
   "compatibility": {
     "minimum": "14.368",
     "verified": "14.368",
-    "maximum": "14.368"
+    "maximum": "14.999"
   },
-  "esmodules": ["scripts/index.js"],
+  "esmodules": [
+    "scripts/index.js"
+  ],
   "languages": [
-    {"lang": "en", "name": "English", "path": "lang/en.json"},
-    {"lang": "cn", "name": "简体中文（Foundry 中文包）", "path": "lang/zh-CN.json"},
-    {"lang": "zh-CN", "name": "简体中文", "path": "lang/zh-CN.json"}
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    },
+    {
+      "lang": "cn",
+      "name": "简体中文（Foundry 中文包）",
+      "path": "lang/zh-CN.json"
+    },
+    {
+      "lang": "zh-CN",
+      "name": "简体中文",
+      "path": "lang/zh-CN.json"
+    }
   ],
   "relationships": {
     "systems": [
@@ -22,7 +36,7 @@
         "compatibility": {
           "minimum": "6.0.5",
           "verified": "6.0.5",
-          "maximum": "6.0.6"
+          "maximum": "6.999.999"
         }
       }
     ]

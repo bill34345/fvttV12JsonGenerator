@@ -1,5 +1,9 @@
 # Battlefield Painter Module Notes
 
+## 2026-11-04版本准入调整
+
+保留已有旧版配对；原生6路径允许Foundry Core `14.368+` 与dnd5e `6.0.6+`，分别限制在14和6主版本内。清单、构建校验与运行时判断保持一致，后续小版本无需逐项登记。此处调整版本准入；已记录的实际行为验收仍绑定原版本、角色和范围，不将未来版本标为功能通过。本轮只补版本判断及其适配分支的局部检查，不重放旧玩法验收。
+
 ## Scope
 
 - This directory owns the standalone `fvtt-battlefield-painter` Foundry VTT module.

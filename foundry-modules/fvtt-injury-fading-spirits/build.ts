@@ -40,10 +40,10 @@ export async function buildModule(): Promise<{ moduleRoot: string; zipPath: stri
 export function validateManifest(manifest: Record<string, any>): void {
   if (manifest.id !== MODULE_ID || manifest.version !== MODULE_VERSION) throw new Error('Manifest identity/version mismatch.');
   const core = manifest.compatibility ?? {};
-  if (core.minimum !== '14.364' || core.verified !== '14.364' || core.maximum !== '14.368') throw new Error('Foundry compatibility must span 14.364 through 14.368 while verification remains at 14.364.');
+  if (core.minimum !== '14.364' || core.verified !== '14.364' || core.maximum !== '14.999') throw new Error('Foundry compatibility must span the supported Core 14 major while verification remains at 14.364.');
   const dnd5e = (manifest.relationships?.systems ?? []).find((entry: any) => entry.id === 'dnd5e');
   const system = dnd5e?.compatibility ?? {};
-  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '6.0.6') throw new Error('dnd5e compatibility must span 5.3.3 through 6.0.6 while verification remains at 5.3.3.');
+  if (system.minimum !== '5.3.3' || system.verified !== '5.3.3' || system.maximum !== '6.999.999') throw new Error('dnd5e compatibility must retain legacy 5.3.3 and admit the dnd5e 6 major while verification remains at 5.3.3.');
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(['scripts/index.js']) || manifest.socket !== true) throw new Error('Manifest browser/socket contract drifted.');
   if (manifest.relationships?.requires) throw new Error('This module must not have hard module dependencies.');
 }

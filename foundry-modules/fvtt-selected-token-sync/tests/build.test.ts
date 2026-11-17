@@ -5,11 +5,11 @@ import { MODULE_VERSION as RUNTIME_VERSION } from '../src/constants.ts';
 import manual from '../docs/manual.json';
 
 describe('release contract', () => {
-  test('manifest pins Foundry and dnd5e versions and has no hard dependency', async () => {
+  test('manifest keeps verified baselines, admits Core 14/dnd5e 6 and has no hard dependency', async () => {
     const manifest = JSON.parse(await readFile(new URL('../src/module.json', import.meta.url), 'utf8'));
     const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
     expect(() => validateManifest(manifest)).not.toThrow();
-    expect(manifest.relationships.systems[0].compatibility).toEqual({ minimum: '6.0.5', verified: '6.0.5', maximum: '6.0.6' });
+    expect(manifest.relationships.systems[0].compatibility).toEqual({ minimum: '6.0.5', verified: '6.0.5', maximum: '6.999.999' });
     expect([manifest.version, packageJson.version, RUNTIME_VERSION, BUILD_VERSION]).toEqual(['0.2.0', '0.2.0', '0.2.0', '0.2.0']);
     expect(manifest.socket).toBeUndefined();
     expect(manifest.relationships.requires).toBeUndefined();

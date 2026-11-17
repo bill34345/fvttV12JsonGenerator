@@ -24,12 +24,12 @@ describe("module manifest", () => {
     expect(manifest.compatibility).toEqual({
       minimum: "14.364",
       verified: "14.364",
-      maximum: "14.368",
+      maximum: "14.999",
     });
     expect(manifest.relationships.systems[0].compatibility).toEqual({
       minimum: "5.3.3",
       verified: "5.3.3",
-      maximum: "6.0.6",
+      maximum: "6.999.999",
     });
     expect(manifest.description).toContain("clustered lights");
     expect(manifest.description).not.toContain("ambience");

@@ -119,20 +119,18 @@ describe('Dnd5eAdapter snapshots', () => {
     expect(new Dnd5eAdapter(source).buildSnapshot().party[0]!.statuses).toEqual([{ id: 'bloodied', label: 'Bloodied', icon: 'systems/dnd5e/icons/svg/statuses/bloodied.svg' }]);
   });
 
-  test('requires exact Foundry and dnd5e versions', () => {
-    expect(supportError(runtime())).toBeUndefined();
-    expect(supportError(runtime({ foundryVersion: '14.368', systemVersion: '6.0.2' }))).toBeUndefined();
-    expect(supportError(runtime({ foundryVersion: '14.368', systemVersion: '6.0.5' }))).toBeUndefined();
-    expect(supportError(runtime({ foundryVersion: '14.368', systemVersion: '6.0.6' }))).toBeUndefined();
-    expect(supportError(runtime({ foundryVersion: '14.365' }))).toContain('14.364');
-    expect(supportError(runtime({ systemVersion: '5.4.0' }))).toContain('5.3.3');
-    expect(supportError(runtime({ foundryVersion: '14.368' }))).toBeUndefined();
-    expect(supportError(runtime({ systemVersion: '6.0.2' }))).toContain('6.0.2');
-    expect(supportError(runtime({ foundryVersion: '14.369', systemVersion: '6.0.2' }))).toContain('14.368');
-    expect(supportError(runtime({ foundryVersion: '14.368', systemVersion: '6.0.4' }))).toContain('6.0.5');
-    expect(supportError(runtime({ foundryVersion: '14.364', systemVersion: '6.0.5' }))).toContain('6.0.2 or 6.0.5');
-    expect(supportError(runtime({ foundryVersion: '14.364', systemVersion: '6.0.6' }))).toContain('unsupported');
-    expect(supportError(runtime({ foundryVersion: '14.368', systemVersion: '6.0.7' }))).toContain('6.0.6');
+  test('Core 14 admission preserves legacy pairs and admits later native6 versions without crossing majors', () => {
+    for (const [foundryVersion, systemVersion] of [
+      ['14.364', '5.3.3'], ['14.368', '5.3.3'], ['14.368', '6.0.2'], ['14.368', '6.0.5'],
+      ['14.368', '6.0.6'], ['14.369', '6.0.6'], ['14.370', '6.0.7'], ['14.500', '6.1.0'],
+    ]) expect(supportError(runtime({ foundryVersion, systemVersion }))).toBeUndefined();
+    for (const [foundryVersion, systemVersion] of [
+      ['14.369', '5.3.3'], ['14.369', '6.0.5'], ['14.365', '5.3.3'], ['14.364', '6.0.2'],
+      ['14.364', '6.0.5'], ['14.364', '6.0.6'], ['14.368', '6.0.4'], ['14.367', '6.0.6'],
+      ['15.0', '6.1.0'], ['14.370', '7.0.0'],
+    ]) {
+      expect(supportError(runtime({ foundryVersion, systemVersion }))).toContain('unsupported');
+    }
     expect(supportError(runtime({ systemId: 'daggerheart' }))).toContain('dnd5e');
   });
 
@@ -168,9 +166,13 @@ describe('Dnd5eAdapter snapshots', () => {
     expect(value.coreVersion).toBe('14.368');
     expect(value.system).toEqual({ id: 'dnd5e', version: '6.0.5' });
     expect(value.supported).toBeTrue();
-    const rejected = new Dnd5eAdapter(runtime({ foundryVersion: '14.368', systemVersion: '6.0.7' })).buildSnapshot();
+    const admitted = new Dnd5eAdapter(runtime({ foundryVersion: '14.370', systemVersion: '6.0.7' })).buildSnapshot();
+    expect(admitted.coreVersion).toBe('14.370');
+    expect(admitted.system.version).toBe('6.0.7');
+    expect(admitted.supported).toBeTrue();
+    const rejected = new Dnd5eAdapter(runtime({ foundryVersion: '14.368', systemVersion: '7.0.0' })).buildSnapshot();
     expect(rejected.coreVersion).toBe('14.368');
-    expect(rejected.system.version).toBe('6.0.7');
+    expect(rejected.system.version).toBe('7.0.0');
     expect(rejected.supported).toBeFalse();
   });
 
@@ -416,7 +418,7 @@ describe('Dnd5eAdapter commands', () => {
     ]);
   });
 
-  test('6.0.6 reads the fixed native effect and changes levels only through toggleStatusEffect', async () => {
+  test.each(['6.0.6', '6.0.7', '6.1.0'])('%s uses the native effect and changes levels only through toggleStatusEffect', async (systemVersion) => {
     const calls: unknown[] = [];
     const effectIds: string[] = [];
     // 6.0.6 ActiveEffect5e.ID.EXHAUSTION = staticID("dnd5eexhaustion"); ConditionData._applyDelta uses that same ID.
@@ -426,7 +428,7 @@ describe('Dnd5eAdapter commands', () => {
       calls, effects, legacyExhaustion: 5, conditions: { exhaustion: 4 },
       onToggleStatusEffect: (_statusId: string, options: { levels: number }) => { exhaustionEffect.system.level += options.levels; },
     });
-    const adapter = new Dnd5eAdapter(runtime({ actors: [hero], foundryVersion: '14.368', systemVersion: '6.0.6' }));
+    const adapter = new Dnd5eAdapter(runtime({ actors: [hero], foundryVersion: '14.370', systemVersion }));
     expect(adapter.buildSnapshot().party[0]!.exhaustion).toBe(2);
     await adapter.execute({ id: 'actor.adjust-exhaustion', targetUuid: hero.uuid, delta: 1 });
     expect(adapter.buildSnapshot().party[0]!.exhaustion).toBe(3);
@@ -444,7 +446,7 @@ describe('Dnd5eAdapter commands', () => {
     expect(calls).toHaveLength(2);
 
     const wrongCore = new Dnd5eAdapter(runtime({ actors: [hero], foundryVersion: '14.364', systemVersion: '6.0.6' }));
-    const futureSystem = new Dnd5eAdapter(runtime({ actors: [hero], foundryVersion: '14.368', systemVersion: '6.0.7' }));
+    const futureSystem = new Dnd5eAdapter(runtime({ actors: [hero], foundryVersion: '14.370', systemVersion: '7.0.0' }));
     await expect(wrongCore.execute({ id: 'actor.adjust-exhaustion', targetUuid: hero.uuid, delta: 1 })).rejects.toThrow('unsupported');
     await expect(futureSystem.execute({ id: 'actor.adjust-exhaustion', targetUuid: hero.uuid, delta: 1 })).rejects.toThrow('unsupported');
     expect(calls).toHaveLength(2);

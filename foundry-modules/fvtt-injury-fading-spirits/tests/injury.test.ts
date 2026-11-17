@@ -130,8 +130,8 @@ describe('death-save retained face', () => {
     }
   });
 
-  test('dnd5e 6.0.5 and 6.0.6 keep the exact 6.x death-save outcome contract', () => {
-    for (const system of ['6.0.5', '6.0.6']) {
+  test('retained and later dnd5e 6 versions keep the death-save outcome contract', () => {
+    for (const system of ['6.0.5', '6.0.6', '6.0.7', '6.1.0']) {
       const details: Record<string, unknown> = {};
       expect(applyNineteenCritical(details, 19, system)).toBe(true);
       expect(details).toMatchObject({ outcome: 'revive', chatString: 'DND5E.DeathSaveCriticalSuccess' });

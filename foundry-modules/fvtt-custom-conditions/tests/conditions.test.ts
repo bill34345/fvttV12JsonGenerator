@@ -65,7 +65,7 @@ describe('custom condition contract', () => {
   });
 
   test.each([['14.364', '6.0.5', 'dnd5e'], ['14.368', '5.3.2', 'dnd5e'],
-    ['14.368', '6.0.7', 'dnd5e'], ['14.368', '6.0.5', 'other-system'],
+    ['15.0', '6.0.6', 'dnd5e'], ['14.370', '7.0.0', 'dnd5e'], ['14.368', '6.0.5', 'other-system'],
     ['14.364', '5.3.3', 'other-system']])('rejects unreviewed or crossed nineteen-condition runtime %s/%s/%s', async (core, system, id) => {
     const { runtime, target } = runtimeFixture(actor(), { game: { version: core, system: { id, version: system } } });
     expect(runtime.definitions()).toEqual([]);

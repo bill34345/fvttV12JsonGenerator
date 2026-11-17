@@ -1,4 +1,5 @@
 import { MODULE_ID, SETTINGS } from './constants.ts';
+import { isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
 import { isActiveGmWriter, readActorState, writeActorState } from './persistence.ts';
 import { activateChatCard, openActorDashboard, openResurrectionWizard } from './ui.ts';
 
@@ -31,10 +32,12 @@ export class InjuryFadingRuntime {
 
   async onReady(): Promise<void> {
     this.supported = game.system?.id === 'dnd5e' && (
-      (game.version === '14.364' && game.system.version === '5.3.3')
+      (isVersionInMajor(game.version, '14.368') && isVersionInMajor(game.system.version, '6.0.6'))
+      || (game.version === '14.364' && game.system.version === '5.3.3')
       || (game.version === '14.368' && game.system.version === '5.3.3')
       || (game.version === '14.368' && game.system.version === '6.0.2')
       || (game.version === '14.368' && (game.system.version === '6.0.5' || game.system.version === '6.0.6'))
+      || (game.version === '14.369' && game.system.version === '6.0.6')
     );
     if (!this.supported && game.user?.isGM) ui.notifications.error(game.i18n.localize('IFS.Errors.UnsupportedRuntime'));
     if (this.supported) this.captureHpSnapshots();

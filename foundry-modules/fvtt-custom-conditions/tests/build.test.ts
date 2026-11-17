@@ -66,12 +66,12 @@ describe('custom conditions release artifact', () => {
     expect(() => validateManifest({
       id: 'fvtt-custom-conditions',
       version: '0.2.0',
-      compatibility: { minimum: '14.364', verified: '14.364', maximum: '14.368' },
+      compatibility: { minimum: '14.364', verified: '14.364', maximum: '14.999' },
       esmodules: ['scripts/index.js'],
       socket: true,
       relationships: {
         requires: [{ id: 'fvtt-trigger-engine' }],
-        systems: [{ id: 'dnd5e', compatibility: { minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.6' } }],
+        systems: [{ id: 'dnd5e', compatibility: { minimum: '5.3.3', verified: '5.3.3', maximum: '6.999.999' } }],
       },
     })).not.toThrow();
   });

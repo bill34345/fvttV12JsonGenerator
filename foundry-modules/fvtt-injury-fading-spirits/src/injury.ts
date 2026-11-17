@@ -1,3 +1,4 @@
+import { isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
 import { cloneState, normalizeInjuryStacks, rememberTransaction, type FadingSpiritsState, type InjuryState } from './state.ts';
 
 export interface HpTransitionEvent {
@@ -113,6 +114,6 @@ export function applyNineteenCritical(details: Record<string, unknown>, face: nu
     'system.attributes.hp.value': 1,
   };
   details.chatString = 'DND5E.DeathSaveCriticalSuccess';
-  if (systemVersion === '6.0.2' || systemVersion === '6.0.5' || systemVersion === '6.0.6') details.outcome = 'revive';
+  if (systemVersion === '6.0.2' || systemVersion === '6.0.5' || isVersionInMajor(systemVersion, '6.0.6')) details.outcome = 'revive';
   return true;
 }

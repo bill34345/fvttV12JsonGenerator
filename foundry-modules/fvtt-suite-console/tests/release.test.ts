@@ -94,7 +94,7 @@ test('local delivery archive matches the exact build whitelist and is determinis
   expect([...entries.keys()]).toEqual(receipt.archiveFiles.map((file: { path: string }) => file.path));
   expect(Buffer.from(standaloneManifest).equals(Buffer.from(entries.get('module.json')!))).toBe(true);
   const manifest = JSON.parse(new TextDecoder().decode(standaloneManifest));
-  expect(manifest.version).toBe('0.3.0');
+  expect(manifest.version).toBe('0.3.1');
   expect(manifest.manifest).toBeUndefined();
   expect(manifest.download).toBeUndefined();
   expect(receipt.status).toBe('local-delivery-candidate');

@@ -9,7 +9,7 @@ test('Mirror generic and injury gates admit the reviewed Core patch with pinned 
     expect(genericConditionsSupported(game)).toBeTrue();
     expect(injurySupported({ game })).toBeTrue();
   }
-  for (const [version, systemVersion] of [['14.365', '5.3.3'], ['14.367', '5.3.3'], ['14.369', '5.3.3'], ['14.368', '5.3.2'], ['14.368', '6.0.2']]) {
+  for (const [version, systemVersion] of [['14.365', '5.3.3'], ['14.367', '5.3.3'], ['14.369', '5.3.3'], ['14.368', '5.3.2'], ['14.368', '6.0.2'], ['14.367', '6.0.6'], ['15.0', '6.0.6'], ['14.370', '7.0.0']]) {
     const game = { version, system: { id: 'dnd5e', version: systemVersion } };
     expect(genericConditionsSupported(game)).toBeFalse();
     expect(injurySupported({ game })).toBeFalse();
@@ -20,7 +20,7 @@ test('Mirror generic and injury gates admit the reviewed Core patch with pinned 
   const current = { version: '14.368', system: { id: 'dnd5e', version: '6.0.6' } };
   expect(genericConditionsSupported(current)).toBeTrue();
   expect(injurySupported({ game: current })).toBeTrue();
-  expect(genericConditionsSupported({ version: '14.368', system: { id: 'dnd5e', version: '6.0.7' } })).toBeFalse();
+  expect(genericConditionsSupported({ version: '14.368', system: { id: 'dnd5e', version: '6.0.7' } })).toBeTrue();
   expect(genericConditionsSupported({ version: '14.368', system: { id: 'other-system', version: '5.3.3' } })).toBeFalse();
 });
 
@@ -31,7 +31,11 @@ test.each([
   ['14.368', '6.0.6', true, true],
   ['14.364', '6.0.5', false, false],
   ['14.364', '6.0.6', false, false],
-  ['14.368', '6.0.7', false, false],
+  ['14.368', '6.0.7', true, true],
+  ['14.369', '6.0.6', true, true],
+  ['14.370', '6.1.0', true, true],
+  ['15.0', '6.0.6', false, false],
+  ['14.370', '7.0.0', false, false],
 ])('init mappings and ready public APIs agree on %s/%s', (core, system, supported, native6) => {
   const once = new Map<string, () => void>();
   const module: any = { id: 'fvtt-custom-conditions', active: true };

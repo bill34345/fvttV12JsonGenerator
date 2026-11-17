@@ -28,14 +28,18 @@ afterEach(() => {
   previousGlobals.clear();
 });
 
-describe("runtime compatibility", () => {
+describe("Core 14 and dnd5e 6 version admission", () => {
   test.each([
     { foundry: "14.364", dnd5e: "5.3.3" },
     { foundry: "14.368", dnd5e: "6.0.2" },
     { foundry: "14.368", dnd5e: "5.3.3" },
     { foundry: "14.368", dnd5e: "6.0.5" },
     { foundry: "14.368", dnd5e: "6.0.6" },
-  ])("accepts exact runtime pair %j", (versions) => {
+    { foundry: "14.369", dnd5e: "6.0.6" },
+    { foundry: "14.368", dnd5e: "6.0.7" },
+    { foundry: "14.370", dnd5e: "6.0.6" },
+    { foundry: "14.370", dnd5e: "6.1.0" },
+  ])("accepts retained or same-major runtime pair %j", (versions) => {
     expect(
       evaluateRuntimeCompatibility(versions),
     ).toEqual({ supported: true, diagnostics: [] });
@@ -78,10 +82,15 @@ describe("runtime compatibility", () => {
     [{ foundry: "14.364", dnd5e: "6.0.2" }, "UNSUPPORTED_DND5E_VERSION"],
     [{ foundry: "14.368", dnd5e: "5.3.2" }, "UNSUPPORTED_DND5E_VERSION"],
     [{ foundry: "14.367", dnd5e: "6.0.2" }, "UNSUPPORTED_FOUNDRY_VERSION"],
-    [{ foundry: "14.369", dnd5e: "6.0.2" }, "UNSUPPORTED_FOUNDRY_VERSION"],
+    [{ foundry: "14.369", dnd5e: "6.0.2" }, "UNSUPPORTED_DND5E_VERSION"],
     [{ foundry: "14.368", dnd5e: "6.0.1" }, "UNSUPPORTED_DND5E_VERSION"],
     [{ foundry: "14.368", dnd5e: "6.0.4" }, "UNSUPPORTED_DND5E_VERSION"],
-    [{ foundry: "14.368", dnd5e: "6.0.7" }, "UNSUPPORTED_DND5E_VERSION"],
+    [{ foundry: "14.369", dnd5e: "5.3.3" }, "UNSUPPORTED_DND5E_VERSION"],
+    [{ foundry: "14.369", dnd5e: "6.0.5" }, "UNSUPPORTED_DND5E_VERSION"],
+    [{ foundry: "15.0", dnd5e: "6.0.6" }, "UNSUPPORTED_FOUNDRY_VERSION"],
+    [{ foundry: "14.369", dnd5e: "7.0.0" }, "UNSUPPORTED_DND5E_VERSION"],
+    [{ foundry: "14.370", dnd5e: "6.0.4" }, "UNSUPPORTED_DND5E_VERSION"],
+    [{ foundry: "14.370", dnd5e: "7.0.0" }, "UNSUPPORTED_DND5E_VERSION"],
     [{ foundry: "14.364", dnd5e: "6.0.6" }, "UNSUPPORTED_DND5E_VERSION"],
     [{ foundry: "", dnd5e: "5.3.3" }, "MISSING_RUNTIME_VERSION"],
   ] as const)("fails closed for runtime %j", (versions, code) => {

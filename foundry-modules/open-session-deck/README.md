@@ -1,5 +1,7 @@
 # Open Session Deck
 
+Runtime admission retains the legacy pairs and allows Core 14 from 14.368 with dnd5e 6 from 6.0.6. Later admitted versions keep the native6 adapter; the exact targets below describe historical acceptance, not a whitelist of allowed releases.
+
 Open Session Deck is a GM-only Foundry VTT dashboard for a second display. It renders from the GM's existing authenticated browser session, so the popout does not load another Foundry client, Canvas, login, or module socket.
 
 The popout first loads the module's static HTML shell, then the existing GM session renders its shared snapshot. Relative images and styles keep the GM page's base URL. The shell contains no scripts or world connection; if it cannot finish loading, the module reports a visible error.

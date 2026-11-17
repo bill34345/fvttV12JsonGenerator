@@ -1,10 +1,13 @@
 import { createHandbookModel, mountHandbook, type HandbookContent, type HandbookHandle, type HandbookModuleState, type HandbookTheme } from '@fvtt-json-generator/suite-handbook';
+import { isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
 
 export const MODULE_ID = 'fvtt-suite-console';
-export const MODULE_VERSION = '0.3.0';
+export const MODULE_VERSION = '0.3.1';
 export const HELP_API_VERSION = 1;
 export const WINDOW_ID = 'fvtt-suite-handbook';
 export const SUPPORTED_CORE = '14.368';
+export const CANDIDATE_CORE = '14.369';
+export const SUPPORTED_CORE_MAXIMUM = '14.999';
 
 export interface HelpRequest { readonly entryId?: string; readonly section?: string }
 export interface ApplicationInstance {
@@ -48,7 +51,7 @@ export function createSuiteHandbook(environment: SuiteEnvironment, input: Handbo
   function assertCanOpen(): void {
     const state = environment.state();
     if (!state.isGM) throw new Error('统一操作手册仅限 GM 打开。');
-    if (state.coreVersion !== SUPPORTED_CORE) throw new Error('当前手册窗口仅适配 Foundry ' + SUPPORTED_CORE + '。');
+    if (!isVersionInMajor(state.coreVersion, SUPPORTED_CORE)) throw new Error('当前手册窗口要求 Foundry 14，最低版本为 ' + SUPPORTED_CORE + '。');
   }
 
   class SuiteHandbookApplication extends Base {

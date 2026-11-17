@@ -1,4 +1,5 @@
 import { projectInspectorReadouts } from './inspector-readouts.ts';
+import { isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
 import {
   MODULE_ID,
   SERVER_NEXT_FOUNDRY_VERSION,
@@ -58,8 +59,8 @@ export function supportError(runtime: Dnd5eRuntime): string | undefined {
   const systemVersion = String(runtime.game.system?.version ?? '');
   if (systemId !== SUPPORTED_SYSTEM_ID) return `System ${systemId || 'unknown'} is unsupported; required ${SUPPORTED_SYSTEM_ID}.`;
   if (isLegacyRuntime(runtime) || isServerNextRuntime(runtime)) return undefined;
-  if (foundryVersion !== SUPPORTED_FOUNDRY_VERSION && foundryVersion !== SERVER_NEXT_FOUNDRY_VERSION) return `Foundry ${foundryVersion || 'unknown'} is unsupported; required ${SUPPORTED_FOUNDRY_VERSION} or ${SERVER_NEXT_FOUNDRY_VERSION}.`;
-  return `dnd5e ${systemVersion || 'unknown'} is unsupported with Foundry ${foundryVersion}; required ${SUPPORTED_FOUNDRY_VERSION}/${SUPPORTED_SYSTEM_VERSION} or ${SERVER_NEXT_FOUNDRY_VERSION}/${SUPPORTED_SYSTEM_VERSION}, ${SERVER_NEXT_SYSTEM_VERSIONS.join(' or ')}.`;
+  if (!isVersionInMajor(foundryVersion, SERVER_NEXT_FOUNDRY_VERSION)) return `Foundry ${foundryVersion || 'unknown'} is unsupported; required legacy ${SUPPORTED_FOUNDRY_VERSION}/${SUPPORTED_SYSTEM_VERSION}, ${SERVER_NEXT_FOUNDRY_VERSION}/${SUPPORTED_SYSTEM_VERSION}, or Core 14 from ${SERVER_NEXT_FOUNDRY_VERSION} with dnd5e 6.0.6 or later in major 6.`;
+  return `dnd5e ${systemVersion || 'unknown'} is unsupported with Foundry ${foundryVersion}; required legacy ${SUPPORTED_SYSTEM_VERSION}, ${SERVER_NEXT_SYSTEM_VERSIONS.join(' or ')} on ${SERVER_NEXT_FOUNDRY_VERSION}, or dnd5e 6.0.6 or later in major 6.`;
 }
 
 function isLegacyRuntime(runtime: Dnd5eRuntime): boolean {
@@ -69,12 +70,14 @@ function isLegacyRuntime(runtime: Dnd5eRuntime): boolean {
 }
 
 function isServerNextRuntime(runtime: Dnd5eRuntime): boolean {
-  return String(runtime.game.version ?? runtime.game.release?.version ?? '') === SERVER_NEXT_FOUNDRY_VERSION
-    && SERVER_NEXT_SYSTEM_VERSIONS.some((version) => version === String(runtime.game.system?.version ?? ''));
+  const foundryVersion = String(runtime.game.version ?? runtime.game.release?.version ?? '');
+  const systemVersion = String(runtime.game.system?.version ?? '');
+  return (foundryVersion === SERVER_NEXT_FOUNDRY_VERSION && SERVER_NEXT_SYSTEM_VERSIONS.some(version => version === systemVersion))
+    || (isVersionInMajor(foundryVersion, SERVER_NEXT_FOUNDRY_VERSION) && isVersionInMajor(systemVersion, '6.0.6'));
 }
 
 function serverNextExhaustion(actor: any, dnd5eVersion: string): number | undefined {
-  if (dnd5eVersion === '6.0.5' || dnd5eVersion === '6.0.6') {
+  if (dnd5eVersion === '6.0.5' || isVersionInMajor(dnd5eVersion, '6.0.6')) {
     const effects = actor.effects;
     if (!effects || typeof effects.get !== 'function') return undefined;
     const effect = effects.get(SERVER_NEXT_EXHAUSTION_EFFECT_ID);

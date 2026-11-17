@@ -6,9 +6,11 @@
   "compatibility": {
     "minimum": "14.368",
     "verified": "14.368",
-    "maximum": "14.368"
+    "maximum": "14.999"
   },
-  "esmodules": ["scripts/index.js"],
+  "esmodules": [
+    "scripts/index.js"
+  ],
   "relationships": {
     "systems": [
       {
@@ -17,7 +19,7 @@
         "compatibility": {
           "minimum": "6.0.2",
           "verified": "6.0.2",
-          "maximum": "6.0.6"
+          "maximum": "6.999.999"
         }
       }
     ],
@@ -27,8 +29,7 @@
         "type": "module",
         "compatibility": {
           "minimum": "2.9.1",
-          "verified": "2.9.1",
-          "maximum": "2.9.1"
+          "verified": "2.9.1"
         }
       },
       {
@@ -36,8 +37,7 @@
         "type": "module",
         "compatibility": {
           "minimum": "1.13.5.1",
-          "verified": "1.13.5.1",
-          "maximum": "1.13.5.1"
+          "verified": "1.13.5.1"
         }
       }
     ]

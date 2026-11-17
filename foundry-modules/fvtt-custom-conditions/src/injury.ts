@@ -1,5 +1,5 @@
 import { MODULE_ID, TRIGGER_ENGINE_MODULE_ID } from './constants.ts';
-import { isNative6SystemVersion } from './runtime-compatibility.ts';
+import { isNative6SystemVersion, native6ConditionsSupported } from './runtime-compatibility.ts';
 import { buildConditionTooltip } from './hud.ts';
 
 const LEGACY_ID = 'fvtt-injury-fading-spirits';
@@ -34,7 +34,7 @@ export function injurySupported(globals: any): boolean {
   return globals.game?.system?.id === 'dnd5e' && (
     (globals.game?.version === '14.364' && globals.game?.system?.version === '5.3.3')
     || (globals.game?.version === '14.368' && globals.game?.system?.version === '5.3.3')
-    || (globals.game?.version === '14.368' && isNative6SystemVersion(globals.game?.system?.version))
+    || native6ConditionsSupported(globals.game)
   );
 }
 

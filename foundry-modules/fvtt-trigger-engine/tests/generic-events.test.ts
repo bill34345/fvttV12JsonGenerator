@@ -5,14 +5,20 @@ import { TriggerEngineRuntime, type ExternalEventLedgerStorage } from '../src/ru
 import { MemoryTriggerStorage } from '../src/storage.ts';
 import type { ExternalEvent } from '../src/types.ts';
 
-test('Actor event runtime is limited to the exact 5.3.3, 6.0.5 and 6.0.6 pairs', () => {
+test('Actor event runtime preserves legacy pairs and admits later supported-major versions', () => {
   const globals: any = { game: { version: '14.364', system: { id: 'dnd5e', version: '5.3.3' } } };
   expect(isSupportedTriggerRuntime(globals)).toBeTrue();
   globals.game.version = '14.368'; globals.game.system.version = '6.0.5';
   expect(isSupportedTriggerRuntime(globals)).toBeTrue();
   globals.game.system.version = '6.0.6';
   expect(isSupportedTriggerRuntime(globals)).toBeTrue();
-  for (const [core, system] of [['14.368', '6.0.2'], ['14.364', '6.0.5'], ['14.368', '6.0.4'], ['14.364', '6.0.6'], ['14.368', '6.0.7']]) {
+  globals.game.version = '14.369';
+  expect(isSupportedTriggerRuntime(globals)).toBeTrue();
+  for (const [core, system] of [['14.369', '6.0.7'], ['14.370', '6.0.6'], ['14.370', '6.1.0']]) {
+    globals.game.version = core; globals.game.system.version = system;
+    expect(isSupportedTriggerRuntime(globals)).toBeTrue();
+  }
+  for (const [core, system] of [['14.369', '5.3.3'], ['14.369', '6.0.5'], ['15.0', '6.0.6'], ['14.370', '7.0.0'], ['14.368', '6.0.2'], ['14.364', '6.0.5'], ['14.368', '6.0.4'], ['14.364', '6.0.6']]) {
     globals.game.version = core; globals.game.system.version = system;
     expect(isSupportedTriggerRuntime(globals)).toBeFalse();
   }

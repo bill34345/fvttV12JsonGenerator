@@ -1,4 +1,4 @@
-import { genericConditionsSupported, isNative6SystemVersion } from './runtime-compatibility.ts';
+import { genericConditionsSupported, isNative6SystemVersion, native6ConditionsSupported } from './runtime-compatibility.ts';
 import {
   CONDITION_DEFINITIONS,
   buildConditionFlag,
@@ -599,7 +599,7 @@ export class ConditionRuntime {
     // compose with AC5e's own advantage sources in the 5.3.3 fast-forward path.
     const game = this.globals.game;
     const optional = game?.modules?.get?.('automated-conditions-5e');
-    const next = game?.version === '14.368' && isNative6SystemVersion(game?.system?.version) && optional?.version === '14.603.2';
+    const next = native6ConditionsSupported(game) && optional?.version === '14.603.2';
     const mirror = game?.version === '14.368' && game?.system?.version === '5.3.3' && optional?.version === '14.533.8';
     if ((!next && !mirror) || optional?.active !== true) return;
     const table = this.globals.ac5e?.statusEffectsTables;

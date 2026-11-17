@@ -1,6 +1,8 @@
 # 框选 Token 同步 / Selected Token Sync
 
-`0.2.0` 保留 ServerNext Foundry VTT `14.368` / dnd5e `6.0.5` 的既有候选范围，并接受精确配对 `14.368/6.0.6` 的限定 GM HUD/帮助与角色权限边界切片。6.0.6 实际核对了普通/分级状态、linked 去重、overlay、fly、default-null movementAction、GM帮助路由、同GM第二客户端 Poisoned 状态读回，以及玩家回退帮助可见和外来Token不可更新/无HUD边界；玩家同步写入和长时会话仍未接受。37c/37d回退窗口沿用的旧 bundle 文本仍写“606实际语义待验”，这里只把它作为可见/可读证据，不能当作已同步部署证据。Calendaria 位置的原A坐标缺失，用户已选择本轮保留已核当前B并记录缺口继续，原raw12 REVIEW保留，不能说已恢复。该选择只涉及侧栏/窗口尺寸/日历位置等纯界面偏好，不涉及角色数据、功能设置、权限或Hotbar。其它 Core/系统配对未获支持。角色验收环境的额外消息已准确删除并确认原生缺席，作者和唯一whisper均为本轮TempPlayer，别名Dice So Nice!，Atlas归因假设已否证并符合已实装DSN6.3.1欢迎源；native terminal 的 Task 宏、原92宏行 hash、原7 User `_id` 读回、safeMLD/尺寸/viewport/UI、Core 与 Inspector 限定恢复均已闭合，但不等于旧A或完整User/所有Setting恢复。
+版本准入现按主版本开放：Foundry 14、dnd5e 6 的后续版本可继续使用，保留清单原最低版本和 verified；已验行为仍绑定下面列出的精确环境，不把准入范围当作功能验收。
+
+`0.2.0` 保留 ServerNext Foundry VTT `14.368` / dnd5e `6.0.5` 的既有候选范围，并接受精确配对 `14.368/6.0.6` 的限定 GM HUD/帮助与角色权限边界切片。6.0.6 实际核对了普通/分级状态、linked 去重、overlay、fly、default-null movementAction、GM帮助路由、同GM第二客户端 Poisoned 状态读回，以及玩家回退帮助可见和外来Token不可更新/无HUD边界；玩家同步写入和长时会话仍未接受。37c/37d回退窗口沿用的旧 bundle 文本仍写“606实际语义待验”，这里只把它作为可见/可读证据，不能当作已同步部署证据。Calendaria 位置的原A坐标缺失，用户已选择本轮保留已核当前B并记录缺口继续，原raw12 REVIEW保留，不能说已恢复。该选择只涉及侧栏/窗口尺寸/日历位置等纯界面偏好，不涉及角色数据、功能设置、权限或Hotbar。所列精确配对是既有验收范围；后续同主版本准入不自动成为新的功能接受。角色验收环境的额外消息已准确删除并确认原生缺席，作者和唯一whisper均为本轮TempPlayer，别名Dice So Nice!，Atlas归因假设已否证并符合已实装DSN6.3.1欢迎源；native terminal 的 Task 宏、原92宏行 hash、原7 User `_id` 读回、safeMLD/尺寸/viewport/UI、Core 与 Inspector 限定恢复均已闭合，但不等于旧A或完整User/所有Setting恢复。
 
 开启 Token 控制栏里的“框选 Token 同步”后，在一个 Token 的 HUD 中执行下列操作，会同步到当前框选的其他 Token：
 

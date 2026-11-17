@@ -6,7 +6,7 @@
 
 ## 目标与边界
 
-- 当前`0.2.1`候选manifest范围为Foundry14.368、dnd5e6.0.2–6.0.6（`verified`保持6.0.2）、Babele2.9.1和libWrapper1.13.5.1。6.0.6已接受狂野魔法25行/困惑术5行、原UUID及重复渲染；全表库和实际掷表未接受；旧目标UI证据保留各自范围。原0.1.0 Server Mirror接受只作历史对照。
+- 当前`0.2.1`候选manifest准入为Core14.368起的主版本14、dnd5e6.0.2起的主版本6（`verified`保持6.0.2）、Babele至少2.9.1和libWrapper至少1.13.5.1。6.0.6已接受狂野魔法25行/困惑术5行、原UUID及重复渲染；全表库和实际掷表未接受；旧目标UI证据保留各自范围。原0.1.0 Server Mirror接受只作历史对照。
 - 只包装 `RollTable.prototype._buildEmbedHTML`；翻译失败时保留原生输出。
 - TableResult 按 `_id` 优先、`range` 回退匹配；文档型结果必须保留 `documentUuid` 和 content-link 语义。
 - 渲染只使用临时数据和 DOM，不调用 `update`、`updateSource`、`updateEmbeddedDocuments` 或 `game.settings.set`。
@@ -20,3 +20,7 @@
 - Next 安装完成后逐文件对照 `dist/module` 与精确目标，使用正常客户端核版本、开关、重载及启动错误；不运行旧 Mirror 的 `install:local` / `verify-install`。
 
 机械检查通过后，仍需在 ServerNext 的实际 Foundry UI 中验收 Wild Magic Surge 的 25 行、Confusion Behavior 的 5 个结果、文档型结果的中文 anchor 和原 UUID，以及重复渲染不写源资料。
+
+## 2026-11-04版本准入
+
+版本准入现按主版本开放：Foundry 14、dnd5e 6 的后续版本可继续使用，保留清单原最低版本和 verified；已验行为仍绑定下面列出的精确环境，不把准入范围当作功能验收。 Babele 与 libWrapper 分别要求至少 2.9.1、1.13.5.1，保持启用及必要 API 检查，不设置依赖版本上限。

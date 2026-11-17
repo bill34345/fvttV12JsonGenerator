@@ -1,6 +1,14 @@
-/** Exact reviewed pairs; Core 14.368 alone does not select native dnd5e 6 effects. */
+import { isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
+
 export function isNative6SystemVersion(version: unknown): boolean {
-  return version === '6.0.5' || version === '6.0.6';
+  return version === '6.0.5' || isVersionInMajor(version, '6.0.6');
+}
+
+export function native6ConditionsSupported(game: any): boolean {
+  return game?.system?.id === 'dnd5e' && (
+    (game.version === '14.368' && game.system.version === '6.0.5')
+    || (isVersionInMajor(game.version, '14.368') && isVersionInMajor(game.system.version, '6.0.6'))
+  );
 }
 
 export function genericConditionsSupported(game: any): boolean {
@@ -9,7 +17,7 @@ export function genericConditionsSupported(game: any): boolean {
     game.system?.id === 'dnd5e'
     && (
       ((game.version === '14.364' || game.version === '14.368') && game.system.version === '5.3.3')
-      || (game.version === '14.368' && isNative6SystemVersion(game.system.version))
+      || native6ConditionsSupported(game)
     )
   );
 }

@@ -14,5 +14,8 @@
     "@types/bun": "latest",
     "handlebars": "^4.7.8",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@fvtt-json-generator/contracts": "workspace:*"
   }
 }

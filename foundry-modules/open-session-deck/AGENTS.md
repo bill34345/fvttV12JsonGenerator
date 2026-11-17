@@ -7,7 +7,7 @@ This directory owns the GM-only Open Session Deck browser module. It presents dn
 ## Runtime boundary
 
 - The shipped browser bundle may use Foundry and dnd5e browser APIs only. It must not import Node, Bun, generator packages, server tools, or another module at runtime.
-- Runtime gates retain the exact pairs in `src/constants.ts`, including scoped 14.368/6.0.6 GM HP/exhaustion, same-session popout, TempHP busy/disabled, stale target removal and player-entry denial acceptance; other GM commands and the full matrix remain unaccepted. The 2026-10-01 native exhaustion panel acceptance remains bound to 6.0.5; D1/D2 UI evidence has its own target and scope in the suite ledger. Crossed and future pairs fail closed.
+- Runtime admission preserves the legacy pairs and admits Core 14 from 14.368 with dnd5e major 6 from 6.0.6. Native6 exhaustion selection follows that admitted range; Core 15 and dnd5e 7 remain outside it. Scoped 14.368/6.0.6 GM HP/exhaustion, same-session popout, TempHP busy/disabled, stale target removal and player-entry denial acceptance retains its original behavior boundary; later version admission is not runtime acceptance. The 2026-10-01 native exhaustion panel acceptance remains bound to 6.0.5; D1/D2 UI evidence keeps its own target and scope.
 - The popout is a presentation surface controlled by the already authenticated GM window. It must not load a Foundry world URL, Canvas, or a second socket client.
 - All UI entrypoints and commands re-check `game.user.isGM`. Do not rely on hidden buttons as a permission boundary.
 - dnd5e damage/healing uses `Actor5e.applyDamage`, temporary HP uses the system method, statuses use `toggleStatusEffect`, and combat progression uses native Combat methods.

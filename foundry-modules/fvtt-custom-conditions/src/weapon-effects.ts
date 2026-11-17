@@ -1,4 +1,4 @@
-import { genericConditionsSupported, isNative6SystemVersion } from './runtime-compatibility.ts';
+import { genericConditionsSupported, isNative6SystemVersion, native6ConditionsSupported } from './runtime-compatibility.ts';
 import {
   buildWeaponEffectFlag,
   createWeaponEffectInstance,
@@ -73,8 +73,7 @@ export class WeaponEffectRuntime {
   }
 
   isNative6Supported(): boolean {
-    return this.globals.game?.version === '14.368' && this.globals.game.system?.id === 'dnd5e'
-      && isNative6SystemVersion(this.globals.game.system.version);
+    return native6ConditionsSupported(this.globals.game);
   }
 
   definitions(): Array<{ kind: WeaponEffectKind; label: string }> {
@@ -424,7 +423,7 @@ export class WeaponEffectRuntime {
 
   private requireGM(actor: any): void {
     if (!this.isSupported()) {
-      throw new Error('Weapon Mastery effects require an exact reviewed Foundry/dnd5e pair: 14.364/5.3.3, 14.368/5.3.3, 14.368/6.0.5 or 14.368/6.0.6.');
+      throw new Error('Weapon Mastery effects require a supported Foundry/dnd5e pair: legacy 14.364 or 14.368 / 5.3.3, 14.368 / 6.0.5, or Core 14 from 14.368 with dnd5e 6 from 6.0.6.');
     }
     if (!this.isActiveGM()) throw new Error('仅当前 active GM 可以操作武器临时效果。');
     if (!actor || actor.documentName !== 'Actor') throw new Error('请选择一个 Actor。');

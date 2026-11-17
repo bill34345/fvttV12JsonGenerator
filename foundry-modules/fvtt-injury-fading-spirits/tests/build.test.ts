@@ -4,14 +4,14 @@ import { buildModule, createStoredZip, MODULE_VERSION, validateManifest } from '
 import { assertApprovedLab } from '../lab.ts';
 
 describe('release contract', () => {
-  test('manifest admits the ServerNext candidate while retaining the old verified target', async () => {
+  test('Core369 compatibility: manifest admits the ServerNext candidate while retaining the old verified target', async () => {
     const manifest = JSON.parse(await readFile(new URL('../src/module.json', import.meta.url), 'utf8'));
     const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
     expect(() => validateManifest(manifest)).not.toThrow();
     expect(manifest.version).toBe(MODULE_VERSION);
     expect(packageJson.version).toBe(MODULE_VERSION);
-    expect(manifest.compatibility).toEqual({ minimum: '14.364', verified: '14.364', maximum: '14.368' });
-    expect(manifest.relationships.systems[0].compatibility).toEqual({ minimum: '5.3.3', verified: '5.3.3', maximum: '6.0.6' });
+    expect(manifest.compatibility).toEqual({ minimum: '14.364', verified: '14.364', maximum: '14.999' });
+    expect(manifest.relationships.systems[0].compatibility).toEqual({ minimum: '5.3.3', verified: '5.3.3', maximum: '6.999.999' });
     expect(() => validateManifest({ ...manifest, compatibility: { ...manifest.compatibility, verified: '14.368' } })).toThrow();
     expect(manifest.languages).toEqual(expect.arrayContaining([
       expect.objectContaining({ lang: 'en', path: 'lang/en.json' }),

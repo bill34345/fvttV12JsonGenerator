@@ -1,9 +1,9 @@
 {
   "id": "fvtt-custom-conditions",
   "title": "自定义状态 / Custom Conditions",
-  "description": "5.3.3 提供 19 种自定义状态和伤势；6.0.5 有限定本地接受，6.0.6 为待实机候选。 / Nineteen conditions and Injury; scoped 6.0.5 local acceptance, 6.0.6 candidate.",
+  "description": "19种自定义状态及伤势；Core14与dnd5e6按最低版本准入，历史功能接受按具体版本范围记录。 / Custom conditions and Injury with major-bounded runtime admission.",
   "version": "0.2.0",
-  "compatibility": { "minimum": "14.364", "verified": "14.364", "maximum": "14.368" },
+  "compatibility": { "minimum": "14.364", "verified": "14.364", "maximum": "14.999" },
   "esmodules": ["scripts/index.js"],
   "styles": [{ "src": "styles/custom-conditions.css" }],
   "languages": [
@@ -12,8 +12,8 @@
     { "lang": "zh-CN", "name": "简体中文", "path": "lang/zh-CN.json" }
   ],
   "relationships": {
-    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "5.3.3", "verified": "5.3.3", "maximum": "6.0.6" } }],
-    "requires": [{ "id": "fvtt-trigger-engine", "type": "module", "compatibility": { "minimum": "0.2.0", "verified": "0.2.0", "maximum": "0.2.x" } }]
+    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "5.3.3", "verified": "5.3.3", "maximum": "6.999.999" } }],
+    "requires": [{ "id": "fvtt-trigger-engine", "type": "module", "compatibility": { "minimum": "0.2.0", "verified": "0.2.0" } }]
   },
   "socket": true
 }
