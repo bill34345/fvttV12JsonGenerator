@@ -739,8 +739,8 @@
         "command": "bun run foundry:ops acceptance inspect-preservation --input=\"<保留请求绝对路径>\""
       },
       {
-        "title": "选择Mirror Core程序",
-        "text": "此轮Mirror目标14.368/dnd5e5.3.3。需要启动已核对的Mirror时，显式设置FVTT_OPS_MIRROR_FOUNDRY_VERSION=14.368，再运行bun run foundry:lab launch server-mirror；Core Test仍使用14.364。仅接受明确的364/368，不影响Next或生产。维护先核真实PID和共享占用，旧PID记录不能代替进程身份。"
+        "title": "选择已核对的本地实例",
+        "text": "开发环境是 30001，ServerMirror 是 30004。按操作者配置和维护记录核对实例、PID、实际路径与占用，包安装和启停使用该实例已验证的维护入口。"
       }
     ],
     "outputs": [
@@ -751,14 +751,14 @@
     "limits": [
       "本机与线上均不创建备份；旧文档里会创建快照、备份或迁移副本的路径不作为本手册的推荐操作。",
       "本地launcher使用精确小写--nobackups，旧--noBackups仅在传参时规范化，显式禁用或冲突参数会拒绝；修正只对新启动生效。已有服务须在其owner批准的维护范围核对实际备份控件，不能仅凭命令中出现字符串声称生效。",
-      "server-mirror 按用户要求常驻至关机，E2E 只复用并清理自己的测试对象，不自行启停 Foundry；核对实际 dataPath、端口和活动世界，启动参数使用连续的 --key=value。",
+      "E2E 复用操作者的常驻开发服务并清理本轮测试对象。核对实际 dataPath、端口和活动世界，启动参数使用连续的 --key=value。",
       "不得编辑运行中世界 LevelDB；本地检查不证明线上环境正常。",
       "手册不执行运维命令，安装、重启、迁移和清理都需要按各自范围处理。",
       "共用验收第一版只做已授权的本地文件检查：保存成功与行为通过分开；空输出、仅有 PASS 标签和无 adapter 的语义保持 INCOMPLETE。已领取操作不能自动重放，父审保持待完成。",
       "文件侧工具不提供 Foundry 玩法、Chrome、跨线程回调或对象清理验收，合同中的命令也不会获得额外权限。",
       "run 只接受普通文件侧合同；外部批次和 runtime 使用原专用入口。新模块可使用已有测试命令或小型专用检查，缺少公共 adapter 不要求先扩建平台；manual 结果仍需人工语义判断，不能当作业务 PASS。",
       "Vision5e + Item Macro 离线收据导入仅作参考，不恢复暂停状态；单独运行合同必须有明确恢复授权与实际权限/服务证据。collect-runtime 只收集观察，仍保持父审待完成；数据判断不替代 UI、加载哈希、角色/重载和完整清理。",
-      "新版peer检查识别两个允许的Mirror程序目录；未知活PID拒绝继续并保留记录。正常E2E仍不停止常驻服务，授权维护后恢复30001。",
+      "旧版本的 Mirror 和目录名用于追溯。按当前实例配置检查身份、进程和目录后再启动或安装。",
       "原迁移树的首次安装入口保留；本轮已装模块不能用首次安装命令更新。新版本更新须另核候选、当前安装与授权；旧固定版本示例不代表当前6.0.5已装版本。"
     ],
     "keywords": [
@@ -777,7 +777,8 @@
     "sources": [
       "tools/foundry-ops/README.zh-CN.md",
       "docs/runbooks/development-feedback-loop.md",
-      "docs/runbooks/worktree-development.md"
+      "docs/runbooks/worktree-development.md",
+      "docs/runbooks/foundry-environment-maintenance.md"
     ],
     "watch": [
       "tools/foundry-ops/"

@@ -1,5 +1,9 @@
 # 项目约定
 
+## 请求用户配合
+
+- 请求用户做任何操作前，先用一两句大白话说明当前要解决什么问题、为什么需要这一步，再说具体怎么做。说明应让不了解前因后果、几个小时没看聊天的人也能独立看懂，不假定用户一直跟着代理的思路。例：“我现在要分清是网页本身卡，还是放在后台后浏览器减少了刷新。为了做这次对照，请把本地测试页切到前面。”
+
 ## 正式生成
 
 本项目把中文 YAML/Markdown、英文 bestiary 和正式 Intake 接受的文本转换为 Foundry dnd5e Actor/Item JSON。工具默认来源与输出在 `obsidian/dnd数据转fvttjson/input`、`obsidian/dnd数据转fvttjson/output`。
@@ -8,6 +12,7 @@
 - 最终 JSON 必须走来源 → CLI/Web → `@fvtt-json-generator/workflows` → parser/generation → verifier，不手写或修补最终 JSON。生物生成与检查结论分开：只有AI没正常返回才能阻止整只Actor生成，其他问题不挡住产物获取或删掉已有能力；候选照常交付且不伪称accepted。正式登记和目标覆盖保持各自写入边界；Item/Species契约独立。用户原话与46项范围见`docs/acceptance/2026-10-27-forge-generation-delivery-remediation.md`。
 - 生物名称，以及生物身上显示为独立栏位的所有特性（feature、action、reaction、bonus action等）和物品，必须使用 `中文 English`：中文后接一个空格和英文，中英文之间不加括号。保留来源英文名称用于检索及名称匹配。
 - 正式资料生成默认采用 Core 14／dnd5e 6，固定投影为 Foundry `14.370` / dnd5e `6.0.6`。CLI、workflow 和 Web 默认 v14；显式兼容目标仍按支持范围使用。常规生成使用 `--fvtt-version 14 --effect-profile core --icon-mode off`。
+- Foundry Mod 的实现与开发默认采用 Core 14／dnd5e 6；版本准入和已验范围按[自研 Mod 的版本准入](docs/runbooks/foundry-environment-maintenance.md#自研-mod-的版本准入)核对。
 - 系统版本相关开发按 `docs/runbooks/dnd5e-version-following.md`，对照精确版本源码和已验范围。保留旧版本证据的原身份；版本声明不代替实机验收。
 - 每次正式生成都按 `docs/generated-actor-verification.md` 对照来源；schema、测试和 verifier 通过不能代替语义验收。
 
@@ -18,7 +23,7 @@
 - commit、合并和 push 需要明确发布授权。发布前确认主索引为空、改动与既有 dirty/untracked 路径不重叠且用户基线可保持；不从其他 worktree 背后移动 master。仅当本任务 worktree clean、已按授权集成并推送且无人使用时清理。
 - 已有 tracked 文件的删除需明确授权；未知既有 untracked 文件保留。本任务临时产物核对绝对路径和归属后可清理，遵守全局禁止强制删除规则。
 - 本机和线上不创建备份，不以副本、隐藏目录或回滚目录绕过。已授权生产操作不以在线人数为零作门槛；记录目标、前后清单、SHA-256、进程、端口与日志。失败时停止并报告，等待新的修复授权。
-- 本地 v14 Lab 使用 `F:\FoundryLab\foundry-v14\data\server-mirror`；核对 PID、端口、路径和运行者后可自主测试。被他人占用则协调等待，不停止其进程，不复制另一套 Lab。世界选择与恢复见 `tools/foundry-ops/AGENTS.md`。
+- 本地 v14 Lab 按[环境身份](docs/runbooks/foundry-environment-maintenance.md#环境身份)选择；核对 PID、端口、路径和运行者后可自主测试。被他人占用则协调等待，不停止其进程，不复制另一套 Lab。世界选择与恢复见 `tools/foundry-ops/AGENTS.md`。
 - 生产只允许已授权的远程 `8080`，`51020` 只读。生产 inventory/acquire 无需逐次询问，但须核对目标并使用 `--apply`、`--allow-production-read` 和外部 `FVTT_OPS_PRODUCTION_*` 配置。生产写入需当次明确授权；不得直接编辑运行中世界 LevelDB、升级 Foundry/dnd5e 或触碰未授权实例。
 - Foundry、Chrome 工作不设固定总时长上限；单操作仍有超时，无新证据不重复尝试。四小时或其他长时测试仅在用户明确要求相应长时验收时运行。破坏性 fixture 的可写 app/data/world/backup/evidence 仅在本次随机临时根，不能使用持久 Lab 或 reference cache。
 - 凭据、Cookie、浏览器 profile、私钥、真实生产目标和未脱敏日志不进入仓库、fixture 或报告。
@@ -32,9 +37,10 @@
 | 解析、生成、workflow、Intake、采集、图片 | `packages/AGENTS.md` 与对应 package 的 AGENTS |
 | CLI / Web | `apps/AGENTS.md`、`apps/cli/AGENTS.md`、`apps/web/AGENTS.md` |
 | Foundry 模块 | `foundry-modules/AGENTS.md` 与模块自己的 AGENTS |
+| Foundry／dnd5e／Mod 升级、补丁归属、环境维护 | `docs/runbooks/foundry-environment-maintenance.md`，按源码归属选择工作区并核对本机维护记录 |
 | 中文 Babele 补丁维护、更新上游汉化、合并自有译文 | `docs/runbooks/babele-zh-maintenance.md`，实际维护项目为 `I:\OpenCode\fvtt-babele-zh-maintenance`；先读取该项目 AGENTS 与架构后在对应目录执行，继续使用当前 Codex 项目交流 |
 | Lab、资产和运维 | `tools/AGENTS.md`、`tools/foundry-ops/AGENTS.md` |
-| 需要通过本地 Mirror / Next MCP 开发或验收 | `docs/runbooks/foundry-mcp-readiness.md`：准备所选实例与任务专用 GM 页，实际读回世界后判定连接就绪 |
+| 通过开发环境、ServerMirror 或 Next MCP 开发或验收 | `docs/runbooks/foundry-mcp-readiness.md`：准备所选实例与任务专用 GM 页，实际读回世界后判定连接就绪 |
 | 新外部接口、跨模块/版本/客户端、迁移、重复失败 | `docs/runbooks/development-feedback-loop.md` |
 
 - 影响产品含义、验收出口、功能归属或写入授权的歧义先向用户澄清，之后才执行依赖该选择的工作；可查的技术事实先调查，可逆实现细节自行决定。已有明确授权不重复索取。

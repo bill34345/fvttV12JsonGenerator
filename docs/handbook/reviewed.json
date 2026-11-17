@@ -55,9 +55,9 @@
     "note": "共享README更新血猎手模块；JSON翻译入口与结果未变。"
   },
   "foundry-ops": {
-    "fingerprint": "4dba8c0644c838715b450f30448d5114eb82e0288aa0b92bf6443ceb1beefc95",
+    "fingerprint": "39458b6623db95f727c7db466c0216cf128e3a4d5b6e4c5a5ab9e13c8286be95",
     "reviewedOn": "2026-11-17",
-    "note": "已核对部署权限说明。共享 worktree 说明恢复合入 master 后普通推送，Foundry 环境操作沿适用授权。"
+    "note": "核对通用工具、实例身份与本机维护的分工。当前按 30001 开发、30004 ServerMirror 核对，实际安装和启停使用对应环境的已验工具。"
   },
   "verification-development": {
     "fingerprint": "a20968bc24b2c3a7a2e9e1fce7c986226e3244d41ee885a9a64671ae6daacf2b",

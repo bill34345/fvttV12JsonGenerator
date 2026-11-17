@@ -14,9 +14,8 @@
 ## 路径与数据安全
 
 - 配置入口是 `tools/foundry-ops/src/config.ts`；使用 `FVTT_OPS_LAB_ROOT`、`FVTT_OPS_EVIDENCE_ROOT`、`FVTT_OPS_BACKUP_ROOT`，不得重新写死仓库旧 `.local/foundry-v14`。
-- 当前持久本地测试 Lab 是 `F:\FoundryLab\foundry-v14`；原 I 盘副本已退役并删除，不得尝试回退、重建旧路径或制作 junction 伪装旧布局。
-- F 盘 Lab 用于真实 Foundry 14.364/dnd5e 5.3.3 集成、短时启动和明确的一次性测试世界。它不是生产，但也是跨测试保留的共享基线；普通自动测试不得删除、损坏或替换其 app/data/world 目录。
-- `F:\\FoundryLab\\foundry-v14\\data\\server-mirror` 是默认可复用、已授权的 Foundry v14 测试数据目录，不为每个功能复制一套新的 Foundry。需要真实角色、场景、物品和合集的手动验收/玩法语义 E2E 默认进入持久世界 `cor-cotn`；干净隔离、模块组合、迁移/恢复、故障注入和污染性测试默认进入 `fvtt-v14-module-matrix` 或随机临时沙箱。修改 `cor-cotn` 的既有文档前要记录原值，结束后恢复；临时对象必须命名可追踪并清理。若 `server-mirror` 被其他参与者使用，先等待或协调释放；只有用户明确授权新的隔离入口时才创建额外数据目录。
+- 持久开发环境与 ServerMirror 按[环境身份](../../docs/runbooks/foundry-environment-maintenance.md#环境身份)及操作者的实际配置核对。包安装和实例维护走目标已验证的本机入口；历史版本和路径用于追溯。普通自动测试使用随机临时根，保留持久 Lab 的 app/data/world 目录。
+- 使用真实角色、场景、物品和合集时，从本机维护记录确认开发世界。干净隔离、模块组合、迁移／恢复、故障注入和污染性测试使用登记的矩阵世界或随机临时沙箱。修改持久世界中的既有文档前记录原值，结束后恢复；临时对象须可追踪并清理。已有参与者占用时协调使用。
 - 破坏性 fixture 的可变 app、data、world、backup 和 evidence 必须全部位于该测试创建的随机临时根。测试可以通过 `resolveConfiguredClassicLevelEntry()` 只读加载 F 盘 Foundry 的 `classic-level`，但数据库位置必须留在临时根；不得复制整套 Foundry 充当 fixture。
 - 拒绝磁盘根、仓库根、链接/junction/reparse point、路径逃逸和身份不明的非空目标。
 - inventory、scope 和 migration-plan 报告不构成复制、移动、切换或删除授权；理论重复体积也不是删除建议。
@@ -36,7 +35,7 @@
 
 ## 长时间与生产边界
 
-- 用户于 2026-09-21 明确要求现有 `server-mirror` 常驻到关机，供多轮 E2E 复用。该服务由父任务/用户管理；E2E 只验证目标身份并复用，不自行启动另一实例，不在测试收尾时停止或重启常驻 Foundry。临时测试对象和本轮独立 receiver 仍需清理。若需安装模块而必须停服，先与服务 owner 协调；常驻服务的保留约定不扩大本轮验收范围。不要创建开机自启任务来扩大“到关机”为重启后自动恢复。
+- 由操作者维护的常驻开发服务供多轮 E2E 复用。E2E 核对身份，使用该服务并清理本轮测试对象；需要停服安装时与运行者协调。常驻到关机的范围以现有操作者授权为准。
 - 真实会话或长时验收沿用根说明的明确授权边界，记录实际时长与会话证据；离线收据、工具回归和短时结果不能关闭长时接受门禁。
 - “生产”只指远程服务器 8080 Foundry；F 盘 Lab 验收属于本地集成测试，不能替代远程 8080 的生产接受，也不得因此自动连接远端。
 - 生产只读返回与基线不同（当前已知 234 vs 249）必须视为独立漂移调查；不得为了让检查变绿直接改 expected count。
