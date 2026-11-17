@@ -1,5 +1,5 @@
 import { extractBrowserPdfSource } from '@fvtt-json-generator/forge-browser-runtime/pdf-source';
-import { readBrowserPdfMonster, renderPdfReadingMarkdown } from '@fvtt-json-generator/forge-browser-runtime/pdf-reader';
+import { readBrowserPdfItem, readBrowserPdfMonster, renderPdfReadingMarkdown } from '@fvtt-json-generator/forge-browser-runtime/pdf-reader';
 import type { BrowserPdfReading, PdfLayoutPage, PdfReaderModel, PdfReaderOutput } from '@fvtt-json-generator/forge-browser-runtime/pdf-types';
 import type { BrowserAiProviderOptions } from '@fvtt-json-generator/forge-browser-runtime/ai';
 import { requestIntakeProvider } from '@fvtt-json-generator/intake-ai/transport';
@@ -30,18 +30,50 @@ export interface ForgePdfInputRequest {
   assetBaseUrl?: string;
 }
 
+export interface ForgeItemPdfInputReceipt {
+  sourceName: string;
+  sourceSha256: string;
+  pageCount: number;
+  source: string;
+  artPages: PdfLayoutPage[];
+  sourceLineIds: string[];
+  notices: string[];
+}
+
 export async function readForgePdfInput(request: ForgePdfInputRequest, options: BrowserAiProviderOptions,
   signal?: AbortSignal, onProgress?: (message: string) => void): Promise<ForgePdfInputReceipt> {
-  const data = new Uint8Array(await request.file.arrayBuffer());
-  signal?.throwIfAborted();
-  const source = await extractBrowserPdfSource({ name: request.file.name, data }, {
-    assetBaseUrl: request.assetBaseUrl ?? new URL('modules/fvtt-json-forge/vendor/pdfjs/', document.baseURI).href,
-    signal, onProgress,
-  });
+  const source = await extractForgePdf(request, signal, onProgress);
   const pages = parsePdfPageSelection(request.pages ?? '', source.pageCount);
   const reading = await readBrowserPdfMonster({ source, monster: request.monster, pages, signal, onProgress },
     { model: createForgePdfReaderModel(options, source.sourceSha256, signal) });
   return createForgePdfInputReceipt(reading, [options.apiKey, options.baseUrl]);
+}
+
+export async function readForgeItemPdfInput(request: Omit<ForgePdfInputRequest, 'monster'> & { item: string },
+  options: BrowserAiProviderOptions, signal?: AbortSignal, onProgress?: (message: string) => void): Promise<ForgeItemPdfInputReceipt> {
+  const source = await extractForgePdf(request, signal, onProgress);
+  const pages = parsePdfPageSelection(request.pages ?? '', source.pageCount);
+  const reading = await readBrowserPdfItem({ source, item: request.item, pages, signal, onProgress },
+    { model: createForgePdfReaderModel(options, source.sourceSha256, signal, 'item') });
+  signal?.throwIfAborted();
+  const notices = [...new Set([...reading.failures, ...reading.doubts])];
+  const [output] = reading.outputs;
+  if (!output) throw new Error(notices.join('；') || 'PDF 中没有找到所选物品。');
+  return {
+    sourceName: source.sourceName, sourceSha256: source.sourceSha256, pageCount: source.pageCount,
+    source: output.markdown, artPages: source.pages.filter(page => output.pageNumbers.includes(page.pageNumber)),
+    sourceLineIds: output.sourceLineIds, notices,
+  };
+}
+
+async function extractForgePdf(request: Omit<ForgePdfInputRequest, 'monster'>,
+  signal?: AbortSignal, onProgress?: (message: string) => void) {
+  const data = new Uint8Array(await request.file.arrayBuffer());
+  signal?.throwIfAborted();
+  return extractBrowserPdfSource({ name: request.file.name, data }, {
+    assetBaseUrl: request.assetBaseUrl ?? new URL('modules/fvtt-json-forge/vendor/pdfjs/', document.baseURI).href,
+    signal, onProgress,
+  });
 }
 
 export function createForgePdfInputReceipt(reading: BrowserPdfReading, forbidden: readonly string[]): ForgePdfInputReceipt {
@@ -71,7 +103,7 @@ export function parsePdfPageSelection(value: string, pageCount: number): number[
   return [...selected].sort((a, b) => a - b);
 }
 
-export function createForgePdfReaderModel(options: BrowserAiProviderOptions, sourceHash: string, signal?: AbortSignal): PdfReaderModel {
+export function createForgePdfReaderModel(options: BrowserAiProviderOptions, sourceHash: string, signal?: AbortSignal, kind: 'monster' | 'item' = 'monster'): PdfReaderModel {
   let pass = 0;
   return { complete: async request => {
     pass++;
@@ -84,7 +116,7 @@ export function createForgePdfReaderModel(options: BrowserAiProviderOptions, sou
       baseUrl: options.baseUrl, apiKey: options.apiKey, model: options.model,
       systemPrompt, userContent: request.input, signal: requestSignal,
       protocol: options.protocol, authScheme: options.authScheme, reasoning: options.reasoning,
-      structuredOutput: { mode: options.structuredOutput ?? 'json_object', name: 'forge_pdf_monster_reading', schema: request.schema },
+      structuredOutput: { mode: options.structuredOutput ?? 'json_object', name: `forge_pdf_${kind}_reading`, schema: request.schema },
       stream: options.protocol === 'openai-responses', deferContentParsing: true,
       waitPolicy: options.waitPolicy, onActivity: options.onActivity,
       onFailureEvidence: failureEvidenceRecorder(options.responseEvidence,

@@ -46,6 +46,10 @@ In Forge, an Item with explicit Dormant, Awakened, or Exalted progression headin
 
 ## Provider configuration and review
 
+In Forge Item's AI workspace, choose a text-layer PDF, enter the Item name as it appears in the file, and optionally give its physical page numbers. Analyze reads that entry in its original language and sends the resulting Markdown through ordinary Item Intake. For a screenshot or an image-only scan, provide a text source or a PDF with a text layer.
+
+Before creation, review the Item icon. Forge can preselect a single associated PDF illustration, and you can choose a detected image or crop a region on the page. With no matching illustration, the preview starts with the default icon. Both Item entry points can select an existing Foundry image or accept a local PNG, JPEG, or WebP. Changing the icon does not run the model again. Forge uploads local image content at creation and checks the icon path it reads back.
+
 Item Intake reuses the existing `MONSTER_INTAKE_*` configuration and `--intake-doctor`; this is shared provider plumbing only. It does not run the Monster IR or compatibility normalizer.
 
 ```powershell

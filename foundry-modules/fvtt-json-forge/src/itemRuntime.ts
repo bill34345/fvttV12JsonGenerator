@@ -1,4 +1,6 @@
 import { buildItemSpellVariant, hashItemSpellVariantConfig, isNativeForgeRuntimeTargetSupported, type NativeDocumentProjection } from '@fvtt-json-generator/forge-browser-runtime';
+import { sha256 } from '@fvtt-json-generator/contracts/hash';
+import { ensureForgeAsset } from './forgeAsset';
 import {
   decodeForgeItemResponse,
   hashArtifact,
@@ -47,6 +49,8 @@ export interface ForgeItemGameLike extends ForgeGameLike {
 export interface ForgeAcceptedItemCreateInput {
   game: ForgeItemGameLike;
   response: ForgeItemResponse;
+  icon?: { path: string; png?: Uint8Array };
+  foundry?: unknown;
   nativeProjection?: NativeDocumentProjection;
 }
 
@@ -117,15 +121,19 @@ export async function createAcceptedForgeItem(
   const collection = input.game.items;
   if (!collection) throw new Error('Foundry world Item collection is unavailable.');
   const documentId = forgeItemDocumentId(result.sourceIdentity.sourceId);
+  const icon = input.icon;
+  if (icon?.png && icon.path !== `fvtt-json-forge/items/${sha256(icon.png)}.png`) throw new Error('物品图标与预览不一致。');
+  const artifact = icon ? { ...result.artifact, img: icon.path } : result.artifact;
+  const artifactHash = icon ? hashArtifact(artifact) : result.artifactHash;
   const identity: ForgeItemWorldIdentity = {
     protocolVersion: 1,
     requestId: input.response.requestId,
     sourceId: result.sourceIdentity.sourceId,
     sourceHash: result.sourceIdentity.sourceHash,
-    artifactHash: result.artifactHash,
+    artifactHash,
     target: { ...result.target },
   };
-  const importArtifact = prepareFoundryItemArtifact(result.artifact, identity, documentId);
+  const importArtifact = prepareFoundryItemArtifact(artifact, identity, documentId);
   const variants = await prepareForgeItemVariants(input, result.spellVariants ?? [], importArtifact, collection);
   const spellUuids = variants.map(({ plan }) => `Item.${plan.id}`);
 
@@ -140,7 +148,7 @@ export async function createAcceptedForgeItem(
       );
     }
     const existingIdentity = readForgeItemIdentity(claimed[0]);
-    if (existingIdentity?.artifactHash !== result.artifactHash) {
+    if (existingIdentity?.artifactHash !== artifactHash) {
       throw new Error('The same Forge Item source ID already exists with a different artifact hash. Existing Item was not changed.');
     }
     if (variants.some(variant => !variant.existing)) throw new Error('已有物品引用的专用法术缺失，请先检查世界物品。');
@@ -149,7 +157,7 @@ export async function createAcceptedForgeItem(
       importArtifact,
       result.sourceIdentity.sourceId,
       result.sourceIdentity.sourceHash,
-      result.artifactHash,
+      artifactHash,
       result.target,
     ), ...(spellUuids.length ? { spellUuids } : {}) };
   }
@@ -161,6 +169,10 @@ export async function createAcceptedForgeItem(
 
   const createDocument = collection.documentClass?.create;
   if (typeof createDocument !== 'function') throw new Error('Foundry Item documentClass.create() is unavailable.');
+  if (icon?.png) await ensureForgeAsset(input.foundry, icon.path, icon.png, 'image/png', () => {
+    assertGm(input.game);
+    assertExactRuntime(input.game);
+  });
   let created: ForgeItemLike | undefined;
   const createdSpells: ForgeItemLike[] = [];
   let cleanupRequired = true;
@@ -180,14 +192,14 @@ export async function createAcceptedForgeItem(
       if (
         concurrent
         && concurrentIdentity?.sourceId === result.sourceIdentity.sourceId
-        && concurrentIdentity.artifactHash === result.artifactHash
+        && concurrentIdentity.artifactHash === artifactHash
       ) {
         const existing = verifyReusableItem(
           concurrent,
           importArtifact,
           result.sourceIdentity.sourceId,
           result.sourceIdentity.sourceHash,
-          result.artifactHash,
+          artifactHash,
           result.target,
         );
         cleanupRequired = false;
@@ -214,7 +226,7 @@ export async function createAcceptedForgeItem(
       item: created,
       uuid: requireItemUuid(created),
       sourceId: result.sourceIdentity.sourceId,
-      artifactHash: result.artifactHash,
+      artifactHash,
       ...(spellUuids.length ? { spellUuids } : {}),
     };
   } finally {

@@ -196,6 +196,21 @@ describe('Forge world Item adapter', () => {
     expect(world.game.actors.contents).toHaveLength(actorCount);
   });
 
+  test('records the selected Item icon in the saved artifact while preserving the accepted rules', async () => {
+    const world = makeWorld();
+    const icon = { path: 'icons/svg/item-bag.svg' };
+    const result = await createAcceptedForgeItem({ game: world.game, response: acceptedResponse, icon });
+    if (!('result' in acceptedResponse) || acceptedResponse.result.status !== 'accepted') throw new Error('Missing accepted fixture');
+    const expected = { ...acceptedResponse.result.artifact, img: icon.path };
+    const saved = result.item.toObject() as JsonObject;
+    const ordinary = await createAcceptedForgeItem({ game: makeWorld().game, response: acceptedResponse });
+    expect(saved.img).toBe(icon.path);
+    expect(projectForgeItemDocument(saved)).toEqual(projectForgeItemDocument(ordinary.item.toObject()));
+    expect(result.artifactHash).toBe(hashArtifact(expected));
+    expect(await createAcceptedForgeItem({ game: world.game, response: acceptedResponse, icon })).toMatchObject({ status: 'existing', uuid: result.uuid });
+    expect(world.createCalls).toBe(1);
+  });
+
   test('accepts Foundry V14 readback after dnd5e moves Item effect changes into system.changes', async () => {
     const world = makeWorld();
     world.mutateCreated = (data) => {

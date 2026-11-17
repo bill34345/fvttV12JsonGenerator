@@ -1,5 +1,6 @@
 import { nativeProjectionForGame } from './nativeProjection';
 import { renderForgeItemPreview } from './itemPreview';
+import { ItemIconEditor } from './itemIcon';
 import { renderItemStagePicker, selectedItemStage } from './itemStagePicker';
 import { isForgeRuntimeTargetSupported } from './mirror-core-compatibility';
 import { createForgePaneBase, type ForgePaneBinding, type ForgePaneState } from './workspacePane';
@@ -75,6 +76,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
     };
 
     private response?: ForgeItemResponse;
+    private readonly itemIcon = new ItemIconEditor();
     private previewSnapshot?: ItemPreviewSnapshot;
     private controller?: AbortController;
     private generationRevision = 0;
@@ -100,6 +102,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
 
     invalidateWorkspaceCandidate(): boolean {
       if (this.creating) return false;
+      this.itemIcon.reset();
       this.cancel();
       this.response = undefined;
       this.previewSnapshot = undefined;
@@ -116,6 +119,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       if (!root) return;
       const invalidatePreview = () => {
         if (this.creating) return;
+        this.itemIcon.reset();
         this.generationRevision += 1;
         this.controller?.abort();
         this.response = undefined;
@@ -152,6 +156,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
         return this;
       }
       this.cancel();
+      this.itemIcon.reset();
       this.unregisterAvailabilityHooks();
       this.unregisterPageGuard();
       return super.close(options);
@@ -161,6 +166,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       if (this.creating) return;
       const file = input.files?.[0];
       if (!file) return;
+      this.itemIcon.reset();
       this.generationRevision += 1;
       const revision = this.generationRevision;
       this.controller?.abort();
@@ -276,6 +282,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
     private clear(root: HTMLElement): void {
       if (this.creating) return;
       this.cancel();
+      this.itemIcon.reset();
       const source = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
       const displayName = root.querySelector('[name="displayName"]') as HTMLInputElement | null;
       if (source) source.value = '';
@@ -291,7 +298,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
     }
 
     private async create(): Promise<void> {
-      if (!this.response || this.creating || environment.pane?.active() === false) return;
+      if (!this.response || this.creating || this.itemIcon.busy || environment.pane?.active() === false) return;
       const root = this.element as HTMLElement | undefined;
       if (!root || !this.previewSnapshot || !sameSnapshot(this.previewSnapshot, readSnapshot(root))) {
         this.notify('error', 'Item preview 已过期；请按当前来源重新生成。');
@@ -312,6 +319,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
         const result: ForgeItemCreateResult = await this.services.createAcceptedForgeItem({
           game: environment.game,
           response: this.response,
+          ...((root.querySelector('[data-item-icon]')) ? { icon: this.itemIcon.selection, foundry: environment.foundry ?? (globalThis as any).foundry } : {}),
         });
         this.created = result;
         this.errorMessage = '';
@@ -380,9 +388,11 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       if (diagnostics) diagnostics.hidden = messages.length === 0;
       if (diagnosticList) diagnosticList.innerHTML = messages.map((message) => `<li>${escapeHtml(message)}</li>`).join('');
       const artifact = result && 'artifact' in result ? result.artifact : undefined;
+      const iconPanel = root.querySelector<HTMLElement>('[data-item-icon]');
+      this.itemIcon.mount(iconPanel, this.response, this.creating || Boolean(this.created), environment.foundry ?? (globalThis as any).foundry, () => this.renderResult(root));
       if (preview) preview.hidden = !artifact;
       if (previewText) previewText.innerHTML = result && artifact ? renderForgeItemPreview(result.itemDocument, result.spellVariants) : '';
-      if (json) json.textContent = artifact ? JSON.stringify(artifact, null, 2) : '';
+      if (json) json.textContent = artifact ? JSON.stringify(iconPanel && !iconPanel.hidden ? { ...artifact, img: this.itemIcon.selection.path } : artifact, null, 2) : '';
       if (finalSource) finalSource.textContent = this.response && 'result' in this.response
         ? JSON.stringify(this.response.result.sourceIdentity, null, 2)
         : '';
@@ -392,6 +402,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       if (displayName) displayName.disabled = this.creating;
       if (mode) mode.disabled = this.creating;
       if (create) create.disabled = this.creating
+        || this.itemIcon.busy
         || !snapshotCurrent
         || !isItemApplyable(this.response)
         || !isCurrentItemGmRuntime(environment.game);

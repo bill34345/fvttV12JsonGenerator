@@ -657,6 +657,37 @@ describe('Forge Intake Application review workspace', () => {
     expect(actorCreates).toBe(0);
   });
 
+  test('Item PDF selection passes the read Markdown into ordinary Item analysis', async () => {
+    const source = '# Ring\nRing, rare.\nOnce per long rest you can cast Darkness from it.';
+    const pdf = new File(['%PDF-1.4'], 'Items.pdf', { type: 'application/pdf' });
+    let reads = 0;
+    let analyses = 0;
+    const { application, root } = makeApplication({
+      readForgeItemPdfInput: async request => {
+        reads++;
+        expect(request).toEqual({ file: pdf, item: 'Ring', pages: '2' });
+        return { source, sourceName: pdf.name, sourceSha256: '1'.repeat(64), pageCount: 2, artPages: [], sourceLineIds: [], notices: [] };
+      },
+      createBrowserItemAiProvider: (() => ({})) as any,
+      analyzeBrowserItemSourceWithAi: (async input => {
+        analyses++;
+        expect(input.source).toBe(source);
+        expect(input.sourceName).toBe('Items.pdf');
+        return readyItemAnalysis(source);
+      }) as ForgeIntakeApplicationServices['analyzeBrowserItemSourceWithAi'],
+    }, undefined, undefined, undefined, undefined, { directoryKind: 'Item', initialMode: 'ai-item' });
+    setAiForm(application, root, 'ai-item', '');
+    await (application as any).readSourceFile(root, { files: [pdf], value: 'selected' });
+    expect(reads).toBe(0);
+    root.itemPdfName.value = 'Ring';
+    root.itemPdfPages.value = '2';
+    await (application as any).analyze(root);
+    expect(root.source.value).toBe(source);
+    expect((application as any).snapshotCurrent(root)).toBe(true);
+    expect(root.generate.disabled).toBe(false);
+    expect({ reads, analyses }).toEqual({ reads: 1, analyses: 1 });
+  });
+
   test('disabled Item review leaves a local candidate available for GM approval and export [review disabled]', async () => {
     const source = 'current AI Item source';
     const analysis = readyItemAnalysis(source);
@@ -3249,7 +3280,7 @@ class FakeRoot {
   constructor(private readonly includeConnectionFields = true) {}
   dataset: Record<string, string> = {};
   mode = control('plaintext-actor', 'select'); source = control('', 'textarea'); displayName = control('');
-  sourceFile = control('', 'file');
+  sourceFile = control('', 'file'); itemPdfName = control(''); itemPdfPages = control('');
   provider = control('openai', 'select'); endpoint = control(''); protocol = control('openai-responses', 'select'); authScheme = control('bearer', 'select'); region = control('', 'select'); reasoning = control('auto', 'select'); structuredOutput = control('json_schema', 'select');
   model = control(''); reviewModel = control(''); apiKey = control('', 'password'); persistApiKey = control('', 'checkbox'); useSeparateReviewModel = control('', 'checkbox'); aiSettings = control('');
   reviewBundleFile = control('', 'file'); import = control(''); startNewAttempt = control('');
@@ -3268,6 +3299,7 @@ class FakeRoot {
   querySelector(selector: string): any {
     const fields = ({
       '[name="mode"]': this.mode, '[name="source"]': this.source, '[name="displayName"]': this.displayName, '[name="provider"]': this.provider, '[name="endpoint"]': this.endpoint,
+      '[name="itemPdfName"]': this.itemPdfName, '[name="itemPdfPages"]': this.itemPdfPages,
       '[name="protocol"]': this.protocol, '[name="authScheme"]': this.authScheme, '[name="region"]': this.region, '[name="reasoning"]': this.reasoning, '[name="structuredOutput"]': this.structuredOutput,
       '[name="model"]': this.model, '[name="reviewModel"]': this.reviewModel, '[name="apiKey"]': this.apiKey, '[name="persistApiKey"]': this.persistApiKey, '[name="useSeparateReviewModel"]': this.useSeparateReviewModel,
       '[name="reviewBundleFile"]': this.reviewBundleFile,

@@ -239,7 +239,7 @@ describe('PDF in the actual Forge creature entry',()=>{
     expect(session.optionReads).toBe(0);expect(session.readerCalls).toBe(0);await app.close();
   });
 
-  test('Actor source-file routing opens the existing creature window and preserves the parent candidate; Item retains its text-only contract',async()=>{
+  test('Actor PDF keeps its creature window; Item PDF stays on the Item workbench',async()=>{
     const session=harness(),notices:string[]=[];
     const Intake=createForgeIntakeApplicationClass({game:session.game,foundry:session.foundry,directoryKind:'Actor',
       ui:{notifications:{error:(text:string)=>notices.push(text)}}});
@@ -251,13 +251,17 @@ describe('PDF in the actual Forge creature entry',()=>{
     expect(parent.reviewSource).toBe('Parent source');expect(notices).toEqual([]);
     expect(session.optionReads).toBe(0);expect(session.readerCalls).toBe(0);
     const actorDom=new JSDOM(intakeTemplate({isActorDirectory:true})).window.document;
-    const itemDom=new JSDOM(intakeTemplate({isActorDirectory:false})).window.document;
+    const itemDom=new JSDOM(intakeTemplate({isActorDirectory:false,isItemDirectory:true})).window.document;
     expect(actorDom.querySelector('[name="sourceFile"]')?.getAttribute('accept')).toContain('.pdf');
-    expect(itemDom.querySelector('[name="sourceFile"]')?.getAttribute('accept')).not.toContain('.pdf');
+    expect(itemDom.querySelector('[name="sourceFile"]')?.getAttribute('accept')).toContain('.pdf');
     const Item=createForgeIntakeApplicationClass({game:session.game,foundry:session.foundry,directoryKind:'Item',
       ui:{notifications:{error:(text:string)=>notices.push(text)}}});
-    const item:any=new Item();await item.readSourceFile(root,{files:[pdfFile],value:'selected'});
-    expect(notices.at(-1)).toContain('只支持 Markdown');expect(session.foundryInstances.at(-1)).toBe(item);
+    const item:any=new Item();item.element=itemDom.body;
+    itemDom.querySelector('[name="itemStage"]')?.parentElement?.remove();
+    await item.readSourceFile(item.element,{files:[pdfFile],value:'selected'});
+    expect(notices).toEqual([]);expect(session.foundryInstances.at(-1)).toBe(item);
+    expect(item.itemPdfFile).toBe(pdfFile);
+    expect(itemDom.querySelector<HTMLElement>('[data-item-pdf-fields]')?.hidden).toBe(false);
     await child.close();await parent.close();await item.close();await session.app.close();
   });
 });

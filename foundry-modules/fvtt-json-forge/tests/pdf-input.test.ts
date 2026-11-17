@@ -1,9 +1,57 @@
 import { afterEach, expect, test } from 'bun:test';
+import { JSDOM } from 'jsdom';
+import { buildForgeItemRequest, convertFinalItemSource } from '@fvtt-json-generator/forge-browser-runtime';
 import { createForgePdfInputReceipt, createForgePdfReaderModel, parsePdfPageSelection } from '../src/pdfInput';
+import { DEFAULT_ITEM_ICON, findItemPdfIllustration, ItemIconEditor } from '../src/itemIcon';
+import type { PdfLayoutPage, PdfSourceLine } from '@fvtt-json-generator/forge-browser-runtime/pdf-types';
 import { FORGE_PDF_ENGINE_VERSION, type BrowserPdfReading } from '@fvtt-json-generator/forge-browser-runtime/pdf-types';
 
 const nativeFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = nativeFetch; });
+
+test('Item preview shows a default and lets the GM use the FilePicker or restore the default', async () => {
+  const response = await convertFinalItemSource(buildForgeItemRequest({
+    content: '---\nlayout: item\nname: Inkstone\ntype: Wondrous Item\n---\nAn engraved stone.',
+    requestId: 'preview-item-icon', displayName: 'Inkstone', fvttVersion: '14.370', systemVersion: '6.0.6',
+  }));
+  const doc = new JSDOM('<section></section>').window.document;
+  const panel = doc.querySelector('section')!;
+  let replacements = 0;
+  class Picker {
+    constructor(private readonly choice: { type: string; current: string; callback: (path: string) => void }) {}
+    async browse() {
+      expect(this.choice.type).toBe('image');
+      expect(this.choice.current).toBe(DEFAULT_ITEM_ICON);
+      this.choice.callback('icons/commodities/stone/stone-pile-grey.webp');
+    }
+  }
+  const editor = new ItemIconEditor();
+  editor.mount(panel, response, false, { applications: { apps: { FilePicker: { implementation: Picker } } } }, () => { replacements++; });
+  expect(panel.hidden).toBe(false);
+  expect(panel.querySelector('img')?.getAttribute('src')).toBe(DEFAULT_ITEM_ICON);
+  panel.querySelector<HTMLButtonElement>('[data-icon-library]')!.click();
+  expect(editor.selection.path).toBe('icons/commodities/stone/stone-pile-grey.webp');
+  expect(panel.querySelector('img')?.getAttribute('src')).toBe(editor.selection.path);
+  panel.querySelector<HTMLButtonElement>('[data-icon-default]')!.click();
+  expect(editor.selection.path).toBe(DEFAULT_ITEM_ICON);
+  expect(replacements).toBe(2);
+});
+
+test('auto-selects a unique image near matching text, leaving sibling art and ambiguity for manual choice', () => {
+  const row = (id: string, x: number, y: number): PdfSourceLine => ({
+    id, text: id, bbox: { x, y, width: 175, height: 10 }, fontSize: 10, bold: null, itemIndexes: [],
+    method: 'native-pdf-text', language: 'en', confidence: null,
+  });
+  const page: PdfLayoutPage = { pageNumber: 1, width: 600, height: 800, rotation: 0,
+    lines: [row('target-title', 320, 100), row('neighbor', 50, 200), row('target-end', 320, 300)],
+    warnings: [], rawItems: [], rawStyles: {} };
+  const own = {rect: { x: .6, y: .18, width: .12, height: .09 }};
+  const other = {rect: { ...own.rect, x: .13 }};
+  const background = {rect: { x: .03, y: .04, width: .9, height: .91 }};
+  expect(findItemPdfIllustration(page, ['target-title', 'target-end'], [other, own, background])).toBe(1);
+  expect(findItemPdfIllustration(page, ['target-title', 'target-end'], [other, background])).toBeUndefined();
+  expect(findItemPdfIllustration(page, ['target-title', 'target-end'], [own, {rect: { ...own.rect, y: .27 }}])).toBeUndefined();
+});
 
 test('PDF page selection uses real document bounds before expanding a range', () => {
   expect(parsePdfPageSelection('', 364)).toBeUndefined();

@@ -101,6 +101,8 @@ import { claimForgeAiJob, releaseForgeAiJob } from './aiJobGate';
 import { createForgeEncounterApplicationClass } from './encounterApplication';
 import { createAcceptedForgeItem } from './itemRuntime';
 import { renderForgeItemPreview } from './itemPreview';
+import { ItemIconEditor } from './itemIcon';
+import { readForgeItemPdfInput } from './pdfInput';
 import {
   assertExactRuntime,
   assertGm,
@@ -202,6 +204,7 @@ export interface ForgeIntakeApplicationServices {
   reviewBrowserItemIntakeCandidate: typeof reviewBrowserItemIntakeCandidate;
   approveBrowserItemIntakeCandidateForGm: typeof approveBrowserItemIntakeCandidateForGm;
   createBrowserItemAiProvider: typeof createBrowserItemAiProvider;
+  readForgeItemPdfInput: typeof readForgeItemPdfInput;
   testForgeProviderConnection: typeof testForgeProviderConnection;
   convertFinalActorSource: typeof convertFinalActorSource;
   convertFinalItemSource: typeof convertFinalItemSource;
@@ -232,6 +235,7 @@ const DEFAULT_SERVICES: ForgeIntakeApplicationServices = {
   reviewBrowserItemIntakeCandidate,
   approveBrowserItemIntakeCandidateForGm,
   createBrowserItemAiProvider,
+  readForgeItemPdfInput,
   testForgeProviderConnection,
   convertFinalActorSource,
   convertFinalItemSource,
@@ -315,6 +319,9 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     private sessionChangePending = false;
     private activeRequestForm?: ReturnType<typeof readForm>;
     private sourceFileRevision = 0;
+    private itemPdfFile?: File;
+    private itemPdfNotices: string[] = [];
+    private readonly itemIcon = new ItemIconEditor();
     private modeInitialized = false;
     private createdDocument?: { objectKind: 'actor' | 'item'; uuid: string; document: any; status: 'created' | 'existing'; readbackWarnings?:string[] };
     private connectionProbe?: Awaited<ReturnType<typeof testForgeProviderConnection>>;
@@ -349,6 +356,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     invalidateWorkspaceCandidate(): boolean {
       if (this.workspaceState().locked) return false;
       this.cancel();
+      this.resetItemPdf();
       this.createdDocument = undefined;
       const root = this.element as HTMLElement | undefined;
       if (root) this.invalidateReview(root);
@@ -482,7 +490,23 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         if (name === 'apiKey') input.oninput = () => this.onCredentialChanged(root);
         else if (name === 'endpoint') input.oninput = () => { input.dataset.forgeEndpointOverride = 'true'; invalidateConnection(); };
         else if (connectionFields.has(name)) input.onchange = invalidateConnection;
+        else if (name === 'source' && this.directoryKind === 'Item') input.oninput = () => {
+          this.resetItemPdf();
+          const file = root.querySelector<HTMLInputElement>('[name="sourceFile"]');
+          if (file) file.value = '';
+          invalidate();
+        };
         else input.oninput = invalidate;
+      }
+      for (const name of ['itemPdfName', 'itemPdfPages']) {
+        const field = root.querySelector<HTMLInputElement>(`[name="${name}"]`);
+        if (field) field.oninput = () => {
+          this.itemIcon.reset();
+          this.itemPdfNotices = [];
+          const source = root.querySelector<HTMLTextAreaElement>('[name="source"]');
+          if (source) setSourceValue(source, '');
+          invalidate();
+        };
       }
       this.fillSettings(root);
       this.refreshAiVisibility(root);
@@ -604,6 +628,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       this.batchStopRequested = true;
       this.sourceFileRevision += 1;
       this.cancel();
+      this.resetItemPdf();
       if (this.activeBatchJobId) {
         try { this.batchState = await this.batchQueue.interruptJob(this.activeBatchJobId, undefined, () => this.assertLibraryAuthority()); }
         catch { /* hard reload recovery will convert any remaining running record */ }
@@ -634,8 +659,12 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
 
     private async runAnalysis(root: HTMLElement, regenerated: boolean, fromBatch = false): Promise<void> {
       if (this.importedReview) return;
-      const form = readForm(root);
-      if (!form.source.trim()) return void this.notify('error', '来源文本不能为空。');
+      let form = readForm(root);
+      const pdfFile = form.mode === 'ai-item' && !fromBatch ? this.itemPdfFile : undefined;
+      const pdfName = root.querySelector<HTMLInputElement>('[name="itemPdfName"]')?.value.trim() ?? '';
+      const pdfPages = root.querySelector<HTMLInputElement>('[name="itemPdfPages"]')?.value ?? '';
+      if (!form.source.trim() && !pdfFile) return void this.notify('error', '来源文本不能为空。');
+      if (pdfFile && !pdfName) return void this.notify('error', '请输入 PDF 中的物品名称。');
       if (this.recoveredFrom && !form.displayName) return void this.notify('error', '恢复草稿必须由 GM 确认非空显示名称后才能 Analyze。');
       try { assertGm(environment.game); assertExactRuntime(environment.game); } catch (error) { return void this.notify('error', messageOf(error)); }
       if (!this.isDirectoryMode(form.mode)) {
@@ -683,6 +712,22 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
             this.attemptId,
           );
         } else {
+          if (pdfFile && !form.source.trim()) {
+            const receipt = await this.services.readForgeItemPdfInput({ file: pdfFile, item: pdfName, pages: pdfPages },
+              this.aiProviderOptions(form, controller), controller.signal, message => text(root, 'status', message));
+            if (!this.isCurrent(controller, revision)) return;
+            const source = root.querySelector<HTMLTextAreaElement>('[name="source"]');
+            if (!source) throw new Error('物品来源编辑器不可用。');
+            setSourceValue(source, receipt.source);
+            form = { ...form, source: receipt.source, sourceName: receipt.sourceName };
+            this.reviewSource = form.source;
+            this.snapshot = makeSnapshot(form, environment.game);
+            this.itemPdfNotices = receipt.notices;
+            this.activeRequestForm = form;
+            (root as any).__forgeIntakeRequestForm = form;
+            await this.itemIcon.preparePdf(pdfFile, receipt, controller.signal);
+            if (!this.isCurrent(controller, revision)) return;
+          }
           const provider = this.services.createBrowserItemAiProvider(this.aiProviderOptions(form, controller), controller.signal);
           nextAnalysis = await this.services.analyzeBrowserItemSourceWithAi(
             itemInput(form, this.requestId, environment.game, (stage) => this.updateStage(root, controller, revision, stage)),
@@ -1020,6 +1065,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         return;
       }
       this.cancel();
+      this.resetItemPdf();
       this.status = this.status === 'committing_and_reading_back' ? this.status : transitionForgeIntakeReviewStatus(this.status, 'clear');
       void this.forgetCandidate('single');
       this.analysis = undefined;
@@ -1478,6 +1524,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
     }
 
     private resetWorkspaceState(): void {
+      this.resetItemPdf();
       this.sourceFileRevision += 1;
       this.cancel();
       this.status = 'empty';
@@ -1501,7 +1548,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
 
     private async create(root: HTMLElement): Promise<void> {
       if (environment.pane?.active() === false) return;
-      if (this.busy() || this.batchRunning || this.batchApplying || this.createdDocument || !this.isApplyable(root) || !this.snapshot) return;
+      if (this.busy() || this.itemIcon.busy || this.batchRunning || this.batchApplying || this.createdDocument || !this.isApplyable(root) || !this.snapshot) return;
       const mode = this.actorArtifactContext?.snapshot.mode??(this.snapshot.objectKind==='actor'?this.snapshot.mode:readForm(root).mode);
       const priorStatus=this.status;
       this.creating = true;
@@ -1524,7 +1571,8 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         if (!this.response) throw new Error('缺少生成产物。');
         this.status = mode==='ai-item'?transitionForgeIntakeReviewStatus(this.status, 'commit'):'committing_and_reading_back';
         if (mode === 'ai-item') {
-          const result = await this.services.createAcceptedForgeItem({ game: environment.game, response: this.response as ForgeItemResponse });
+          const result = await this.services.createAcceptedForgeItem({ game: environment.game, response: this.response as ForgeItemResponse,
+            ...(root.querySelector('[data-item-icon]') ? { icon: this.itemIcon.selection, foundry: environment.foundry ?? (globalThis as any).foundry } : {}) });
           this.createdDocument = { objectKind: 'item', uuid: result.uuid, document: result.item, status: result.status };
           this.notify('info', result.status === 'existing' ? `已复用 Item：${result.uuid}`
             : `Item 创建并回读成功：${result.uuid}${result.spellUuids?.length ? `，已绑定 ${result.spellUuids.length} 条专用法术` : ''}`);
@@ -1616,9 +1664,18 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       if (this.busy() || this.creating) return;
       const file = input.files?.[0];
       if (!file) return;
+      this.resetItemPdf();
       if (this.directoryKind === 'Actor' && /\.pdf$/iu.test(file.name)) {
         this.openEncounter(file);
         input.value = '';
+        return;
+      }
+      if (this.directoryKind === 'Item' && /\.pdf$/iu.test(file.name)) {
+        this.itemPdfFile = file;
+        const source = root.querySelector<HTMLTextAreaElement>('[name="source"]');
+        if (source) setSourceValue(source, '');
+        this.invalidateReview(root);
+        root.querySelector<HTMLInputElement>('[name="itemPdfName"]')?.focus();
         return;
       }
       // Selecting a file is itself a source change. Invalidate the old
@@ -1776,6 +1833,12 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       this.renderResult(root);
     }
 
+    private resetItemPdf(): void {
+      this.itemPdfFile = undefined;
+      this.itemPdfNotices = [];
+      this.itemIcon.reset();
+    }
+
     private snapshotCurrent(root: HTMLElement): boolean {
       if (!this.snapshot) return false;
       try { return sameForgeIntakeSnapshot(this.snapshot, makeSnapshot(readForm(root), environment.game)); } catch { return false; }
@@ -1857,6 +1920,10 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         ? '状态：正在提交并重新读取核对（不可取消）。'
         : this.providerActivity?.phase === 'stopped' ? `请求已停止 · ${reviewStatusLabel(this.status)}` : reviewStatusLabel(this.status));
       text(root, 'human-summary', humanSummary(this.status, displayedAnalysis, this.generation, previewResponse, this.isApplyable(root)));
+      const itemPdfFields = root.querySelector<HTMLElement>('[data-item-pdf-fields]');
+      if (itemPdfFields) itemPdfFields.hidden = !this.itemPdfFile;
+      text(root, 'item-pdf-file', this.itemPdfFile?.name ?? '');
+      text(root, 'item-pdf-notices', this.itemPdfNotices.join('；'));
       text(root, 'icon-review', responseResult ? iconReviewPresentation([responseResult.iconReview]) : '');
       html(root, 'stages', stageList(this.analysis, this.generation, this.stageProgress).map((entry: any) => `<li>${escapeHtml(entry.stage)}：${escapeHtml(entry.status)}${entry.message ? ` — ${escapeHtml(entry.message)}` : ''}</li>`).join(''));
       const diagnostics = root.querySelector('[data-diagnostics]') as HTMLElement | null;
@@ -1899,7 +1966,11 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         ? { item: responseResult.itemDocument, verification: responseResult.itemVerification }
         : { actor: responseResult.actorVerification?.actor, items: responseResult.actorVerification?.items }, null, 2) : '');
       html(root, 'human-preview', responseResult ? humanPreview(form, responseResult) : analysisPreview(this.analysis));
-      text(root, 'json', responseResult && 'artifact' in responseResult ? JSON.stringify(responseResult.artifact, null, 2) : '');
+      const iconPanel = root.querySelector<HTMLElement>('[data-item-icon]');
+      if(form.mode === 'ai-item') this.itemIcon.mount(iconPanel, previewResponse as ForgeItemResponse | undefined,
+        this.creating || Boolean(this.createdDocument), environment.foundry ?? (globalThis as any).foundry, () => this.renderResult(root));
+      text(root, 'json', responseResult && 'artifact' in responseResult ? JSON.stringify(
+        iconPanel && !iconPanel.hidden && responseResult.artifact ? { ...responseResult.artifact, img: this.itemIcon.selection.path } : responseResult.artifact, null, 2) : '');
       const previewSection = root.querySelector('[data-preview-section]') as HTMLElement | null;
       if (previewSection) previewSection.hidden = !this.analysis && !this.generation && !this.response;
       const activityCard = root.querySelector('[data-activity-card]') as HTMLElement | null;
@@ -1919,13 +1990,14 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         (this.generation as BrowserItemGenerationResult | undefined)?.finalSource);
       if (itemStagePicker) itemStagePicker.disabled = this.busy() || Boolean(this.generation || this.response);
       const needsItemStage = itemStagePicker?.parentElement?.hidden === false && !itemStagePicker.value;
+      const hasItemPdfSource = Boolean(this.itemPdfFile && root.querySelector<HTMLInputElement>('[name="itemPdfName"]')?.value.trim());
       setDisabled(root, 'analyze', batchWorkspaceLocked || this.busy() || this.status !== 'empty'
-        || !form.source.trim() || !this.connectionReady(form));
+        || (!form.source.trim() && !hasItemPdfSource) || !this.connectionReady(form));
       setDisabled(root, 'repair', form.mode==='ai-monster'&&!(this.analysis as BrowserActorIntakeAnalysis|undefined)?.ir
         ||!this.canRepairGeneratedCandidate(root)&&(batchWorkspaceLocked || this.busy() || this.status !== 'needs_review' || form.mode === 'plaintext-actor' || !this.analysis || !this.connectionReady(form) || !this.snapshotCurrent(root) || ((this.analysis as any)?.repairCount ?? 0) >= 1));
       setDisabled(root, 'generate', needsItemStage || batchWorkspaceLocked || this.busy() || !this.canGenerate(form) || form.mode==='ai-item'&&(!this.connectionReady(form)||!this.snapshotCurrent(root)));
       setDisabled(root, 'model-review', true);
-      setDisabled(root, 'regenerate', batchWorkspaceLocked || this.busy() || !form.source.trim() || !this.connectionReady(form) || !['needs_review', 'failed', 'rejected'].includes(this.status)&&!this.actorArtifactContext);
+      setDisabled(root, 'regenerate', batchWorkspaceLocked || this.busy() || (!form.source.trim() && !hasItemPdfSource) || !this.connectionReady(form) || !['needs_review', 'failed', 'rejected'].includes(this.status)&&!this.actorArtifactContext);
       setDisabled(root, 'reject', batchWorkspaceLocked || this.busy() || !['needs_review', 'failed'].includes(this.status));
       setDisabled(root, 'cancel', this.creating || !this.controller);
       setDisabled(root, 'export', batchWorkspaceLocked || !this.analysis || !this.snapshot);
@@ -1933,8 +2005,8 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       setDisabled(root, 'import', batchWorkspaceLocked || this.busy() || !selectedImportFile(root));
       setDisabled(root, 'start-new-attempt', true);
       for (const action of ['test-connection', 'clear-key', 'clear-all-keys', 'toggle-key', 'toggle-endpoint']) setDisabled(root, action, this.creating);
-      setDisabled(root, 'create', batchWorkspaceLocked || !this.isApplyable(root));
-      for (const name of ['source', 'sourceFile', 'displayName', 'mode', 'provider', 'endpoint', 'protocol', 'region', 'model', 'reviewModel', 'reasoning', 'structuredOutput', 'authScheme', 'apiKey', 'persistApiKey', 'useSeparateReviewModel']) {
+      setDisabled(root, 'create', batchWorkspaceLocked || this.itemIcon.busy || !this.isApplyable(root));
+      for (const name of ['source', 'sourceFile', 'itemPdfName', 'itemPdfPages', 'displayName', 'mode', 'provider', 'endpoint', 'protocol', 'region', 'model', 'reviewModel', 'reasoning', 'structuredOutput', 'authScheme', 'apiKey', 'persistApiKey', 'useSeparateReviewModel']) {
         const input = root.querySelector(`[name="${name}"]`) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
         if (input) input.disabled = this.creating;
       }
@@ -2045,7 +2117,7 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       setDisabled(root, 'edit-source', locked || imported || Boolean(this.createdDocument));
       setDisabled(root, 'resume-review', locked || imported || this.status === 'empty');
       setDisabled(root, 'open-created', locked || !this.createdDocument);
-      setDisabled(root, 'clear', locked || (!imported && step === 'input' && this.status === 'empty' && !form.source && !form.displayName));
+      setDisabled(root, 'clear', locked || (!imported && step === 'input' && this.status === 'empty' && !form.source && !form.displayName && !this.itemPdfFile));
       for (const action of ['connection-open', 'structured-open', 'encounter-open']) setDisabled(root, action, locked || imported);
       const clear = root.querySelector('[data-action="clear"]') as HTMLButtonElement | null;
       if (clear) clear.textContent = imported ? '返回当前工作台' : step === 'created' ? '继续导入' : '清空资料';

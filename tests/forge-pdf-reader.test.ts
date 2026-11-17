@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { readBrowserPdfMonster, renderPdfReadingMarkdown } from '@fvtt-json-generator/forge-browser-runtime/pdf-reader';
+import { readBrowserPdfItem, readBrowserPdfMonster, renderPdfReadingMarkdown } from '@fvtt-json-generator/forge-browser-runtime/pdf-reader';
 import { FORGE_PDF_ENGINE_VERSION, type BrowserPdfSource, type PdfLayoutPage, type PdfReaderModel, type PdfSourceLine } from '@fvtt-json-generator/forge-browser-runtime/pdf-types';
 
 function line(id: string, text: string, x = 40, y = 40): PdfSourceLine {
@@ -14,6 +14,25 @@ const source: BrowserPdfSource = { schemaVersion: 1, engine: 'pdfjs', engineVers
   pages: [page(1, [line('p1-l1', 'Tide Stalker'), line('p1-l2', 'AC 14 HP 27'), line('p1-l3', 'Bite. Hit: 7 (2d6) Piercing damage.')]),
     page(4, [line('p4-l1', 'Definition. The condition ends after 1 minute.')])] };
 const prose = '# Tide Stalker\nAC 14 HP 27\nBite. Hit: 7 (2d6) Piercing damage.';
+
+test('PDF Item uses the real column ordering and keeps only the named item', async () => {
+  const heading = 'Twin Moon Ring';
+  const content = [line('p1-l1', 'Ruidium Amulet', 40, 40), line('p1-l2', heading, 320, 45),
+    line('p1-l3', 'This amulet grants a different bonus.', 40, 55), line('p1-l4', 'Ring, rare (requires attunement).', 320, 58),
+    line('p1-l5', 'Once per dawn, use this amulet.', 40, 70), line('p1-l6', 'The ring has 6 charges and regains 1d4+2 at dusk.', 320, 75)];
+  const markdown = '## Twin Moon Ring\nRing, rare (requires attunement).\nThe ring has 6 charges and regains 1d4+2 at dusk.';
+  const result = await readBrowserPdfItem({ source: { ...source, pages: [page(1, content)] }, item: heading }, { model: { async complete(request) {
+    expect(request.schema.required).toContain('items');
+    const ids = JSON.parse(request.input).sourcePages[0].lines.map((line: PdfSourceLine) => line.id);
+    expect(ids).toEqual(['p1-l1', 'p1-l3', 'p1-l5', 'p1-l2', 'p1-l4', 'p1-l6']);
+    return { content: JSON.stringify({ notFound: false, additionalPages: [], items: [
+      { name: 'Ruidium Amulet', markdown: 'Adjacent item', sourceLineIds: ['p1-l1'], doubts: [] },
+      { name: heading, markdown, sourceLineIds: ['p1-l2', 'p1-l4', 'p1-l6'], doubts: [] },
+    ] }) };
+  } } });
+  expect(result.status).toBe('completed');
+  expect(result.outputs).toEqual([{ name: heading, markdown, sourceLineIds: ['p1-l2', 'p1-l4', 'p1-l6'], doubts: [], pageNumbers: [1] }]);
+});
 function answer(markdown = prose, additionalPages: number[] = []) {
   return JSON.stringify({ notFound: false, additionalPages, monsters: [{ name: 'Tide Stalker', markdown,
     sourceLineIds: ['p1-l1', 'p1-l2', 'p1-l3'], doubts: [] }] });

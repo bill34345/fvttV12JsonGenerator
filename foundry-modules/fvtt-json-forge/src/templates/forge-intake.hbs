@@ -34,10 +34,17 @@
             <textarea name="source" rows="14" placeholder="在这里粘贴生物或物品的完整规则描述……" spellcheck="false" required></textarea>
           </label>
           <div class="forge-source-file-panel">
-            <label class="forge-source-file">读取 Markdown / TXT{{#if isActorDirectory}} / PDF{{/if}}
-              <input name="sourceFile" type="file" accept=".md,.txt,text/plain,text/markdown{{#if isActorDirectory}},.pdf,application/pdf{{/if}}">
+            <label class="forge-source-file">读取 Markdown / TXT / PDF
+              <input name="sourceFile" type="file" accept=".md,.txt,.pdf,text/plain,text/markdown,application/pdf">
             </label>
-            <small>读取后仍可编辑来源文本。{{#if isActorDirectory}}PDF 会打开同一 Forge 的生物生成流程，填写生物名后直接读取并生成。{{/if}}</small>
+            <small>读取后仍可编辑来源文本。{{#if isActorDirectory}}PDF 会打开同一 Forge 的生物生成流程，填写生物名后直接读取并生成。{{else}}选文字型 PDF 后，填写要读取的物品名。{{/if}}</small>
+            {{#if isItemDirectory}}
+            <div data-item-pdf-fields hidden>
+              <p data-item-pdf-file></p>
+              <label>PDF 物品名称 <input name="itemPdfName" type="text" autocomplete="off"></label>
+              <label>物理页码（可选） <input name="itemPdfPages" type="text" placeholder="例如 12 或 12-13"></label>
+            </div>
+            {{/if}}
           </div>
         </div>
 
@@ -102,6 +109,10 @@
           <p>以下问题供你核对，不阻止 AI 角色生成或创建。审核提示仅保留在 Forge 中，不写入角色或角色 JSON。</p>
           <ul data-diagnostic-list></ul>
         </section>
+        {{#if isItemDirectory}}
+        <p data-item-pdf-notices role="status"></p>
+        <section data-item-icon hidden></section>
+        {{/if}}
         <div data-human-preview class="forge-human-preview"></div>
         <details><summary>Icon 选图依据与近似程度</summary><pre data-icon-review></pre></details>
 

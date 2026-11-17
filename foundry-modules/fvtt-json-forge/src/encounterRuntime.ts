@@ -1,5 +1,6 @@
 import { hashArtifact } from '@fvtt-json-generator/forge-gateway-protocol';
 import { decodeEncounterAssetBytes, hashEncounterBytes } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
+import { ensureForgeAsset } from './forgeAsset';
 import { assertPreparedForgeEncounter, type PreparedForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
 import { actorReadbackWarnings, assertExactRuntime, assertGm, MODULE_ID, prepareFoundryImportArtifact, markForgeSpellImportPending, completeForgeSpellImport,type ForgeGameLike } from './runtime';
 import {fixedEncounterCommand,decodeEncounterRuntimeConfiguration,readFixedEncounterConfiguration} from '@fvtt-json-generator/forge-browser-runtime/encounter-intake';
@@ -259,31 +260,6 @@ export function validateFixedEncounterEntry(game:EncounterGame,context:any,confi
 }
 
 export function createEncounterAssetPort(foundryGlobal: any, game: EncounterGame): EncounterAssetPort {
-  return { async ensure(asset, path) {
-    const expected = decodeEncounterAssetBytes(asset);
-    const existing = await fetch(path, { cache: 'no-store', credentials: 'same-origin' });
-    if (existing.ok) {
-      if (hashEncounterBytes(new Uint8Array(await existing.arrayBuffer())) !== asset.sha256) throw new Error('现存图片内容与生物导入文件不符，拒绝覆盖。');
-      return;
-    }
-    if (existing.status !== 404) throw new Error(`无法检查图片目标（HTTP ${existing.status}）。`);
-    const Picker = foundryGlobal?.applications?.apps?.FilePicker?.implementation;
-    if (!Picker) throw new Error('Foundry 文件上传接口不可用。');
-    const segments = path.split('/'); const name = segments.pop()!;
-    let directory = '';
-    for (const segment of segments) {
-      const parent = directory;
-      directory = parent ? `${parent}/${segment}` : segment;
-      const listing = await Picker.browse('data', parent, { notify: false });
-      if (!listing.dirs.includes(directory)) {
-        assertEncounterEnvironment(game);
-        try { await Picker.createDirectory('data', directory, { notify: false }); }
-        catch (error) { const concurrent = await Picker.browse('data', parent, { notify: false }); if (!concurrent.dirs.includes(directory)) throw error; }
-      }
-    }
-    assertEncounterEnvironment(game);
-    await Picker.upload('data', directory, new File([expected as any], name, { type: asset.mime }), {}, { notify: false });
-    const readback = await fetch(path, { cache: 'no-store', credentials: 'same-origin' });
-    if (!readback.ok || hashEncounterBytes(new Uint8Array(await readback.arrayBuffer())) !== asset.sha256) throw new Error('图片上传回读校验失败。');
-  } };
+  return { ensure: (asset, path) => ensureForgeAsset(foundryGlobal, path, decodeEncounterAssetBytes(asset), asset.mime,
+    () => assertEncounterEnvironment(game)) };
 }
