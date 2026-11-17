@@ -1653,7 +1653,7 @@ export class ActorGenerator {
         targetVersion: this.fvttVersion,
       });
     }
-    if(this.isV14()&&!isWeapon&&action.attack){
+    if(this.isV14()&&!isWeapon&&action.attack?.toHit!==undefined){
       const range=this.buildItemRange(action);
       if(typeof range.value==='number'&&typeof range.long==='number')for(const activity of Object.values(item.system.activities) as any[]){
         if(activity.type==='attack')activity.range=sourceAttackActivityRange({type:action.attack.type,toHit:action.attack.toHit,range:range.value,longRange:range.long});

@@ -39,13 +39,92 @@ describe('Forge Item ApplicationV2', () => {
     );
     expect(root.status.textContent).toBe('状态：accepted');
     expect(root.preview.hidden).toBe(false);
-    expect(root.previewText.textContent).toContain('Shield of the Cavalier');
+    expect(root.previewText.innerHTML).toContain('Shield of the Cavalier');
     expect(root.json.textContent).toContain('Protective Field');
     expect(root.create.disabled).toBe(false);
 
     await (application as any).create();
     expect(createCalls).toBe(1);
     expect(notifications.infos[0]).toMatch(/创建并重新读取核对成功/u);
+  });
+
+  test('shows separate Cast costs, recovery, fixed DC and the upcast limit before creation', async () => {
+    const source = `---
+layout: item
+名称: 行星魔杖
+英文名: Planetary Wand
+类型: 魔杖
+稀有度: 珍稀
+require-attunement: true
+item-mechanics:
+  schemaVersion: 1
+  uses:
+    max: 7
+    recovery: [{period: dawn, type: formula, formula: '1d6 + 1'}]
+  abilities:
+    - id: fireball
+      kind: spell
+      activation: action
+      consumption: 1
+      spell: {identifier: fireball, name: Fireball}
+      level: 3
+      saveDc: 15
+      maxCharges: 3
+    - id: invisibility
+      kind: spell
+      activation: action
+      consumption: 1
+      spell: {identifier: invisibility, name: Invisibility}
+      activityUses:
+        max: 1
+        recovery: [{period: lr, type: recoverAll}]
+    - id: mage-hand
+      kind: spell
+      activation: action
+      consumption: 0
+      spell: {identifier: mage-hand, name: Mage Hand}
+---
+## 原始资料（Intake 保留）
+
+*魔杖，珍稀，需要施法者同调*
+
+持握这支魔杖时可施法。
+`;
+    const { application, root } = makeApplication({ convertFinalItemSource: request => convertFinalItemSource(request) });
+    root.source.value = source;
+    await (application as any).generate(root);
+    expect(root.status.textContent).toBe('状态：accepted');
+    expect(root.create.disabled).toBe(false);
+    expect(root.previewText.innerHTML).toContain('魔杖 · 珍稀 · 需要同调');
+    expect(root.previewText.innerHTML).toContain('需要施法者同调');
+    expect(root.previewText.innerHTML).toContain('持握这支魔杖');
+    expect(root.previewText.innerHTML).toContain('剩余 7 / 7 次，黎明时恢复 1d6 + 1 次');
+    expect(root.previewText.innerHTML).toMatch(/Fireball.*固定豁免 DC 15.*消耗物品共用次数 1 次.*最高 5 环/u);
+    expect(root.previewText.innerHTML).toMatch(/Invisibility.*消耗本活动次数 1 次.*长休后全部恢复/u);
+    expect(root.previewText.innerHTML).toMatch(/Mage Hand.*戏法.*无需次数或法术位/u);
+    expect(root.previewText.innerHTML).toContain('Compendium.dnd5e.spells24.Item.');
+  });
+
+  test('rejects a raw draft pasted into standard Item even with a display name', async () => {
+    let createCalls = 0;
+    const { application, root } = makeApplication({
+      convertFinalItemSource: request => convertFinalItemSource(request),
+      createAcceptedForgeItem: async () => {
+        createCalls += 1;
+        return itemCreateResult('created');
+      },
+    });
+    root.displayName.value = '火球魔杖 Wand of Fireballs';
+    root.source.value = '***火球魔杖（Wand of Fireballs）***\n*魔杖（Wand），珍稀（Rare）*\n\n持握时可以施放火球术。';
+    await (application as any).generate(root);
+    expect(root.status.textContent).toBe('状态：failed');
+    expect(root.diagnosticList.innerHTML).toContain('原始描述请用「AI 整理」');
+    expect(root.preview.hidden).toBe(true);
+    expect(root.previewText.innerHTML).toBe('');
+    expect(root.json.textContent).toBe('');
+    expect(root.create.disabled).toBe(true);
+    await (application as any).create();
+    expect(createCalls).toBe(0);
   });
 
   test('loads Markdown or TXT into the source and invalidates an existing preview', async () => {

@@ -1,4 +1,5 @@
 export * from './nativeTarget';
+export { buildItemSpellVariant, hashItemSpellVariantConfig, summarizeItemSpellSource } from './itemSpellVariant';
 import { projectionForRuntime, runtimeIdentityAfterProjection, type NativeDocumentProjection } from './nativeTarget';
 import {withActorSourceReviews} from './actorSourceReviewContext';
 import {
@@ -35,6 +36,7 @@ import { withActorRulePresentation } from './actorRulePresentationContext';
 export {
   buildForgeItemRequest,
   convertFinalItemSource,
+  forgeItemStageOptions,
   prepareForgeFinalItemSource,
   type BuildForgeItemRequestOptions,
   type ForgeFinalItemSource,

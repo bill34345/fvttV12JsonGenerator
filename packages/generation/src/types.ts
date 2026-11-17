@@ -41,7 +41,17 @@ export type GenerationMechanicKind =
   | 'behavior-choice-pool'
   | 'behavior-area'
   | 'behavior-external-rule'
-  | 'weapon-properties';
+  | 'weapon-properties'
+  | 'item-weapon-bonus'
+  | 'item-container'
+  | 'item-spell-scroll'
+  | 'item-spell-storage'
+  | 'item-timed-speed'
+  | 'item-summon'
+  | 'item-random-summon'
+  | 'item-last-charge-check'
+  | 'item-enchantment'
+  | 'item-action';
 export type MechanicProjectionState = 'projected' | 'literal-only' | 'unsupported';
 
 export interface CanonicalGenerationSource {

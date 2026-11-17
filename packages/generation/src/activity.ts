@@ -92,8 +92,8 @@ export class ActivityGenerator {
         type: 'attack',
         attack: {
           ability: nativeRoll?.ability ?? explicitAbility ?? '',
-          bonus: nativeRoll || explicitAbility ? '' : `${action.attack.toHit}`,
-          flat: !(nativeRoll || explicitAbility),
+          bonus: nativeRoll || explicitAbility || action.attack.toHit === undefined ? '' : String(action.attack.toHit),
+          flat: action.attack.toHit !== undefined && !nativeRoll && !explicitAbility,
           type: {
             value: this.isV14()
               ? action.attack.type.startsWith('r') ? 'ranged' : 'melee'
@@ -103,7 +103,7 @@ export class ActivityGenerator {
         },
         damage: {
           parts: (nativeRoll ? action.attack.damage.slice(1) : action.attack.damage).map(d => this.formatDamage(d)),
-          includeBase: !literalWeaponBase,
+          includeBase: action.attack.includeBase ?? !literalWeaponBase,
           ...(criticalBonus ? { critical: { bonus: criticalBonus } } : {}),
           ...(action.attack.versatile ? { versatile: this.formatDamage({ formula: action.attack.versatile.formula, type: action.attack.damage[0]?.type || '' }) } : {})
         },
@@ -233,7 +233,8 @@ export class ActivityGenerator {
         // schema-derived: RangeField defaults to self. Missing recipients need
         // an explicit GM boundary instead; prompt controls templates, not a
         // recipient dialog or automatic source-rule adjudication.
-        ...(recipient?.type!=='self'?{range:{units:'spec',special:recipientSpecial,override:false}}:{}),
+        ...(recipient?.type !== 'self' ? { range: { units: 'spec', special: recipientSpecial, override: false } }
+          : action.useAction ? { range: { units: 'self', special: '', override: false } } : {}),
         target: {
           override: false,
           prompt: recipient?.type!=='self',
@@ -254,19 +255,38 @@ export class ActivityGenerator {
         const candidates = [...displayNameIdentityCandidates(action.spellName), ...(action.englishName ? [action.englishName] : [])]
           .filter(name => /^[A-Za-z]/u.test(name)).map(name => resolveLockedDnd5eV14SpellByName(name)).filter(spell => spell !== undefined);
         const unique = [...new Map(candidates.map(spell => [spell.uuid, spell])).values()];
-        const locked = action.spellIdentifier
+        const bound = action.itemSpell?.binding;
+        const locked = bound ?? (action.spellIdentifier
           ? resolveLockedDnd5eV14Spell(action.spellIdentifier, action.englishName ?? action.spellName)
-          : unique.length === 1 ? unique[0] : undefined;
-        const activation = action.useAction?.activation ?? locked?.activation;
+          : unique.length === 1 ? unique[0] : undefined);
+        const nativeActivation = locked && 'activation' in locked ? locked.activation : bound?.castingTime.type;
+        const activation = action.useAction?.activation ?? nativeActivation;
+        if (action.itemSpell?.uuid && bound?.uuid !== action.itemSpell.uuid) {
+          throw new Error('No verified Item spell binding for the requested UUID.');
+        }
         if (action.spellIdentifier && (locked?.level === undefined || !activation)) {
           throw new Error(`Unable to uniquely resolve dnd5e spell "${action.spellIdentifier}" for Item Activity.`);
         }
         if (locked?.level !== undefined && activation) {
           const consumption = action.useAction?.consumption ?? 0;
-          activities[id] = { _id: id, type: 'cast', spell: { uuid: locked.uuid, level: locked.level },
-            activation: { type: activation, value: action.useAction?.activation ? 1 : locked.castingTime?.value ?? null, override: false },
-            consumption: { targets: consumption > 0 ? [{ type: 'itemUses', target: '', value: String(consumption), scaling: { mode: '', formula: '' } }] : [],
-              spellSlot: false, scaling: { allowed: false, max: '' } } };
+          const { activityUses, level = locked.level, saveDc, maxCharges, activationOverride } = action.itemSpell ?? {};
+          if (level < locked.level || (locked.level === 0 && level !== 0)) {
+            throw new Error(`The source spell level cannot be applied to "${locked.identifier}".`);
+          }
+          const resource = activityUses ? 'activityUses' : 'itemUses';
+          activities[id] = {
+            _id: id,
+            type: 'cast',
+            spell: { uuid: locked.uuid, level, ...(saveDc === undefined ? {} : { challenge: { override: true, save: String(saveDc) } }) },
+            activation: { type: activation, value: action.useAction?.activation ? 1 : locked.castingTime?.value ?? null, override: activationOverride === true },
+            ...(activityUses ? { uses: activityUses } : {}),
+            consumption: {
+              targets: consumption > 0 ? [{ type: resource, target: '', value: String(consumption),
+                scaling: { mode: maxCharges ? 'amount' : '', formula: '' } }] : [],
+              spellSlot: false,
+              scaling: { allowed: maxCharges !== undefined, max: maxCharges ? itemCastScalingMax(resource, maxCharges, consumption) : '' },
+            },
+          };
         }
         return activities;
       }
@@ -391,6 +411,7 @@ export class ActivityGenerator {
           type: action.useAction.activation,
           value: action.useAction.activation === 'free' ? 0 : 1,
           override: false,
+          ...(action.useAction.condition ? { condition: action.useAction.condition } : {}),
         },
         consumption: {
           targets: consumptionTargets,
@@ -487,6 +508,15 @@ export class ActivityGenerator {
     }
 
     const generatedActivity = activities[id];
+    if (generatedActivity && (action.attack || action.healing) && action.useAction) {
+      const { activation, consumption } = action.useAction;
+      generatedActivity.activation = { type: activation, value: activation === 'free' ? 0 : 1, override: false };
+      generatedActivity.consumption = {
+        targets: consumption > 0 ? [{ type: 'itemUses', target: '', value: String(consumption), scaling: { mode: '', formula: '' } }] : [],
+        spellSlot: false,
+        scaling: { allowed: false, max: '' },
+      };
+    }
     if (generatedActivity && action.desc) {
       generatedActivity.description = { chatFlavor: action.desc };
     }
@@ -515,6 +545,7 @@ export class ActivityGenerator {
           size: action.activity.target.template.size,
           units: action.activity.target.template.units,
         },
+        ...(action.activity.target.affects ? { affects: { ...generatedActivity.target?.affects, ...action.activity.target.affects } } : {}),
       };
     }
 
@@ -619,7 +650,7 @@ export class ActivityGenerator {
     action: ActionData,
     context: ActivityGenerationContext,
   ): { ability: AttackAbility } | null {
-    if (!context.preferNativeWeaponRolls || !action.attack || action.attack.damage.length === 0) {
+    if (!context.preferNativeWeaponRolls || !action.attack || action.attack.toHit === undefined || action.attack.damage.length === 0) {
       return null;
     }
     if (action.attack.type !== 'mwak' && action.attack.type !== 'rwak') {
@@ -755,7 +786,8 @@ export class ActivityGenerator {
       return undefined;
     }
 
-    if (action.passiveEffect.type === 'acBonus') {
+    const nativeChange = nativeItemPassiveChange(action.passiveEffect);
+    if (nativeChange && (this.isV14() || action.passiveEffect.type === 'acBonus')) {
       const id = this.generateId({
         type: 'passive',
         name: action.name,
@@ -763,10 +795,7 @@ export class ActivityGenerator {
       });
       const change = this.isV14()
         ? {
-            key: 'system.attributes.ac.bonus',
-            type: 'add',
-            value: action.passiveEffect.value,
-            phase: 'initial',
+            ...nativeChange,
             priority: null,
           }
         : {
@@ -780,7 +809,7 @@ export class ActivityGenerator {
         name: action.name || `AC +${action.passiveEffect.value} 加值`,
         type: this.isV14() ? 'base' : 'passive',
         origin: '',
-        ...(this.isV14() ? { system: { changes: [change] } } : { changes: [change] }),
+        ...(this.isV14() ? { system: { magical: true, changes: [change] } } : { changes: [change] }),
         disabled: false,
         duration: {
           startTime: null,
@@ -898,4 +927,24 @@ export class ActivityGenerator {
   private isV14(): boolean {
     return this.fvttVersion === '14';
   }
+}
+
+/** dnd5e 6 counts choices including the starting level; the pool may offer fewer. */
+export function itemCastScalingMax(resource: 'activityUses' | 'itemUses', maxCharges: number, baseCost = 1): string {
+  const remaining = `@${resource === 'activityUses' ? 'activity' : 'item'}.uses.value`;
+  const offset = baseCost - 1;
+  return offset ? `min(${remaining}-${offset},${maxCharges - offset})` : `min(${remaining},${maxCharges})`;
+}
+
+export function nativeItemPassiveChange(effect: NonNullable<ActionData['passiveEffect']>) {
+  const keys = {
+    acBonus: 'system.attributes.ac.bonus',
+    saveBonus: 'system.bonuses.abilities.save',
+    resistance: 'system.traits.dr.value',
+    movementBonus: `system.attributes.movement.${effect.movement}`,
+  };
+  if (effect.type === 'acBonus' || effect.type === 'saveBonus' || effect.type === 'resistance' || effect.type === 'movementBonus') {
+    return { key: keys[effect.type], type: 'add', phase: 'initial', value: effect.value };
+  }
+  return undefined;
 }

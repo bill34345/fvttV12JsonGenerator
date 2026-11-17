@@ -1,6 +1,7 @@
 import { nativeProjectionForGame } from './nativeProjection';
 import { isForgeRuntimeTargetSupported } from './mirror-core-compatibility';
 import { iconReviewPresentation } from './iconReviewPresentation';
+import { renderItemStagePicker, selectedItemStage } from './itemStagePicker';
 import { captureIntakeCandidate, revalidateIntakeCandidate, IndexedDbIntakeCandidateStore,
   type IntakeCandidateRecord, type IntakeCandidateStore, type IntakeCandidateRepairOrigin } from './intakeCandidateRecovery';
 import { createForgePaneBase, type ForgePaneBinding, type ForgePaneState } from './workspacePane';
@@ -99,6 +100,7 @@ import { buildForgeItemRequest, convertFinalItemSource } from '@fvtt-json-genera
 import { claimForgeAiJob, releaseForgeAiJob } from './aiJobGate';
 import { createForgeEncounterApplicationClass } from './encounterApplication';
 import { createAcceptedForgeItem } from './itemRuntime';
+import { renderForgeItemPreview } from './itemPreview';
 import {
   assertExactRuntime,
   assertGm,
@@ -136,6 +138,7 @@ type ForgeIntakeForm = {
   mode: ForgeIntakeMode;
   source: string;
   sourceName: string;
+  stageIndex?: number;
   displayName: string;
   endpoint: string;
   model: string;
@@ -507,6 +510,8 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
       if (region) region.onchange = () => { invalidateConnection(); this.refreshProviderUi(root); };
       const model = root.querySelector('[name="model"]') as HTMLInputElement | null;
       if (model) model.oninput = () => { invalidateConnection(); this.refreshProviderUi(root); };
+      const itemStage = root.querySelector<HTMLSelectElement>('select[name="itemStage"]');
+      if (itemStage) itemStage.onchange = () => this.renderResult(root);
       this.bind(root, 'analyze', () => void this.analyze(root));
       this.bind(root, 'connection-open', () => this.openConnectionSettings());
       this.bind(root, 'structured-open', () => this.openStructuredImport());
@@ -1521,7 +1526,8 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         if (mode === 'ai-item') {
           const result = await this.services.createAcceptedForgeItem({ game: environment.game, response: this.response as ForgeItemResponse });
           this.createdDocument = { objectKind: 'item', uuid: result.uuid, document: result.item, status: result.status };
-          this.notify('info', result.status === 'existing' ? `已复用 Item：${result.uuid}` : `Item 创建并回读成功：${result.uuid}`);
+          this.notify('info', result.status === 'existing' ? `已复用 Item：${result.uuid}`
+            : `Item 创建并回读成功：${result.uuid}${result.spellUuids?.length ? `，已绑定 ${result.spellUuids.length} 条专用法术` : ''}`);
         } else {
           const result=await this.services.createAcceptedForgeActor({game:environment.game,response:this.response as ForgeActorResponse,
             rawSourceHash:this.actorArtifactContext?.snapshot.rawSourceHash??this.snapshot.rawSourceHash});
@@ -1908,11 +1914,16 @@ export function createForgeIntakeApplicationClass(environment: ForgeIntakeApplic
         text(root, 'activity-detail', '');
       }
       const batchWorkspaceLocked = this.batchRunning || this.batchApplying;
+      const itemStagePicker = renderItemStagePicker(root,
+        form.mode === 'ai-item' ? (this.analysis as BrowserItemIntakeAnalysis | undefined)?.candidate?.quote ?? '' : '',
+        (this.generation as BrowserItemGenerationResult | undefined)?.finalSource);
+      if (itemStagePicker) itemStagePicker.disabled = this.busy() || Boolean(this.generation || this.response);
+      const needsItemStage = itemStagePicker?.parentElement?.hidden === false && !itemStagePicker.value;
       setDisabled(root, 'analyze', batchWorkspaceLocked || this.busy() || this.status !== 'empty'
         || !form.source.trim() || !this.connectionReady(form));
       setDisabled(root, 'repair', form.mode==='ai-monster'&&!(this.analysis as BrowserActorIntakeAnalysis|undefined)?.ir
         ||!this.canRepairGeneratedCandidate(root)&&(batchWorkspaceLocked || this.busy() || this.status !== 'needs_review' || form.mode === 'plaintext-actor' || !this.analysis || !this.connectionReady(form) || !this.snapshotCurrent(root) || ((this.analysis as any)?.repairCount ?? 0) >= 1));
-      setDisabled(root, 'generate', batchWorkspaceLocked || this.busy() || !this.canGenerate(form) || form.mode==='ai-item'&&(!this.connectionReady(form)||!this.snapshotCurrent(root)));
+      setDisabled(root, 'generate', needsItemStage || batchWorkspaceLocked || this.busy() || !this.canGenerate(form) || form.mode==='ai-item'&&(!this.connectionReady(form)||!this.snapshotCurrent(root)));
       setDisabled(root, 'model-review', true);
       setDisabled(root, 'regenerate', batchWorkspaceLocked || this.busy() || !form.source.trim() || !this.connectionReady(form) || !['needs_review', 'failed', 'rejected'].includes(this.status)&&!this.actorArtifactContext);
       setDisabled(root, 'reject', batchWorkspaceLocked || this.busy() || !['needs_review', 'failed'].includes(this.status));
@@ -3147,7 +3158,7 @@ function analysisPreview(analysis: IntakeAnalysis | undefined): string {
 
 function humanPreview(form: ReturnType<typeof readForm>, responseResult: any): string {
   if (!responseResult) return `<p>${form.mode === 'ai-item' ? '输入物品资料后，点击“分析资料”。' : '输入生物资料后，点击“分析资料”。'}</p>`;
-  if (form.mode === 'ai-item') return humanItemPreview(responseResult);
+  if (form.mode === 'ai-item') return renderForgeItemPreview(responseResult.itemDocument, responseResult.spellVariants);
   return humanActorPreview(responseResult);
 }
 
@@ -3171,32 +3182,6 @@ function humanActorPreview(result: any): string {
   const vulnerabilityNote=typeof vulnerability?.custom==='string'&&vulnerability.custom?`<dt>伤害易伤备注</dt><dd>${escapeHtml(vulnerability.custom)}</dd>`:'';
   const itemNames = items.map((item: any) => item?.name).filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, 8);
   return `<dl><dt>生物</dt><dd>${escapeHtml(String(name))}</dd><dt>HP</dt><dd>${escapeHtml(String(hpText))}</dd><dt>AC</dt><dd>${escapeHtml(String(acText))}</dd><dt>CR</dt><dd>${escapeHtml(String(crText))}</dd>${vulnerabilityNote}<dt>能力</dt><dd>${itemNames.length > 0 ? escapeHtml(itemNames.join('、')) : '已生成，展开来源依据查看详情'}</dd></dl>`;
-}
-
-function humanItemPreview(result: any): string {
-  try {
-    const item = result?.itemDocument ?? result?.item ?? {};
-    const system = item && typeof item === 'object' ? item.system ?? {} : {};
-    const rawDescription = system && typeof system === 'object' && system.description !== undefined
-      ? system.description
-      : item && typeof item === 'object' ? item.description : '';
-    const description = richTextToPlainText(rawDescription);
-    const type = item && typeof item === 'object' ? item.type ?? system?.type ?? '未提供' : '未提供';
-    const name = item && typeof item === 'object' ? item.name : undefined;
-    return `<dl><dt>物品</dt><dd>${escapeHtml(String(name || '未命名物品'))}</dd><dt>类型</dt><dd>${escapeHtml(String(type))}</dd><dt>描述</dt><dd>${escapeHtml(description || '未提供')}</dd></dl>`;
-  } catch {
-    return '<p>物品结果已生成，请展开技术详情查看。</p>';
-  }
-}
-
-function richTextToPlainText(value: unknown): string {
-  if (value && typeof value === 'object') {
-    const record = value as Record<string, unknown>;
-    if ('value' in record) return richTextToPlainText(record.value);
-    if ('text' in record) return richTextToPlainText(record.text);
-  }
-  if (typeof value !== 'string') return value == null ? '' : String(value);
-  return value.replace(/<[^>]*>/gu, ' ').replace(/\s+/gu, ' ').trim().slice(0, 600);
 }
 
 const loadedSourceValues=new WeakMap<object,{raw:string;display:string}>();
@@ -3239,6 +3224,7 @@ function readForm(root: HTMLElement, sessionSettings?: Partial<ForgeClientSettin
     mode,
     source: readSourceValue(input('source')),
     sourceName: value('displayName').trim() || 'Forge Intake source',
+    stageIndex: selectedItemStage(root),
     displayName: value('displayName').trim(),
     endpoint,
     model: value('model', 'model').trim(),
@@ -3411,7 +3397,7 @@ function actorInput(form: ReturnType<typeof readForm>, requestId: string, game: 
   return { source: form.source, sourceName: form.sourceName, displayName: form.displayName, requestId, nativeProjection:nativeProjectionForGame(game), fvttVersion: game.version, systemVersion: game.system.version, autoCorrect:form.autoCorrect, onStage };
 }
 function itemInput(form: ReturnType<typeof readForm>, requestId: string, game: any, onStage?: (stage: any) => void) {
-  return { source: form.source, sourceName: form.sourceName, displayName: form.displayName, requestId, nativeProjection:nativeProjectionForGame(game), fvttVersion: game.version, systemVersion: game.system.version, onStage };
+  return { source: form.source, sourceName: form.sourceName, displayName: form.displayName, stageIndex: form.stageIndex, requestId, nativeProjection:nativeProjectionForGame(game), fvttVersion: game.version, systemVersion: game.system.version, onStage };
 }
 function isActorGeneration(value: IntakeGeneration): value is BrowserActorGenerationResult { return 'evidence' in value && 'analysis' in value; }
 function isItemGeneration(value: IntakeGeneration): value is BrowserItemGenerationResult { return 'formalStatus' in value && 'analysis' in value && !('evidence' in value); }

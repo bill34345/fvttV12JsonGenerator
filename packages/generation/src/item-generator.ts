@@ -16,6 +16,11 @@ import { createStableDocumentId } from './stableId';
 import type { GenerationIconResolver } from './ports';
 import { renderFoundryItemDescriptionHtml } from './item-description';
 import { projectWeaponProperties } from './weapon-properties';
+import { resolveStandardSpellScroll } from './item-spell-scroll';
+import { projectItemEnchantment } from './item-enchantment';
+import { projectItemSpellStorage } from './item-spell-storage';
+import { projectTimedSpeed } from './item-timed-speed';
+import { projectItemRandomSummon, projectItemSummon } from './item-summon';
 import type { WeaponConfiguration } from '@fvtt-json-generator/contracts/weapon-properties';
 import { applyEffectTargetFields, applyItemActivityTargetFields } from './actor-target-metadata';
 
@@ -93,6 +98,48 @@ export class ItemGenerator {
 
     // 4. Patch basic fields (name, description, rarity, attunement, price, weight)
     this.patchBasicFields(item, parsed);
+    if (parsed.enchantment && this.isV14()) projectItemEnchantment(item, parsed.enchantment);
+    if (parsed.spellStorage && this.isV14()) projectItemSpellStorage(item, parsed.spellStorage);
+    if (parsed.timedSpeed && this.isV14()) projectTimedSpeed(item, parsed.timedSpeed);
+    if (parsed.summon && this.isV14()) projectItemSummon(item, parsed.summon);
+    if (parsed.randomSummon && this.isV14()) projectItemRandomSummon(item, parsed.randomSummon);
+    if (parsed.lastChargeCheck) {
+      item.flags ??= {};
+      (item.flags.fvttJsonGenerator ??= {}).lastChargeCheck = parsed.lastChargeCheck;
+      if (this.isV14() && item.system.attunement === 'none') item.system.attunement = '';
+      const roll = `[[/r ${parsed.lastChargeCheck.formula}]]`;
+      if (!item.system.description.value.includes(roll)) {
+        item.system.description.value += `<p><strong>用掉最后一发后</strong> ${roll}</p>`;
+      }
+    }
+    if (parsed.spellScroll && this.isV14()) {
+      const scroll = resolveStandardSpellScroll(parsed.spellScroll);
+      const spellLevel = { base: scroll.level, value: scroll.level };
+      item.flags ??= {};
+      item.flags.dnd5e = { ...item.flags.dnd5e, spellLevel };
+      item.system.rarity = parsed.rarity ?? scroll.rarity;
+      item.system.attunement = '';
+      item.system.uses = { max: '1', spent: 0, recovery: [], autoDestroy: true };
+      if (scroll.spell) {
+        const id = createStableDocumentId({ item: item.name, kind: 'spell-scroll', spell: scroll.spell.uuid });
+        const time = scroll.spell.castingTime;
+        item.system.activities[id] = {
+          _id: id, name: scroll.spell.name, type: 'cast',
+          activation: { type: time?.type ?? '', value: time?.value ?? null, override: false },
+          spell: {
+            uuid: scroll.spell.uuid, level: scroll.level,
+            challenge: { override: true, attack: String(scroll.attack), save: String(scroll.dc) },
+            properties: ['vocal', 'somatic', 'material'],
+          },
+          consumption: {
+            spellSlot: false,
+            targets: [{ type: 'itemUses', target: '', value: '1', scaling: { mode: '', formula: '' } }],
+            scaling: { allowed: false, max: '' },
+          },
+        };
+        item.system.description.value += '<p>GM 核对法术列表资格、越阶施法检定、施法中断与抄录。详见 @UUID[Compendium.dnd5e.equipment24.Item.dmgSpellScroll00]{法术卷轴 Spell Scroll}。</p>';
+      }
+    }
 
     // 5. Generate activities from parsed.activities or parsed.structuredActions
     if (parsed.activities) {
@@ -111,6 +158,15 @@ export class ItemGenerator {
     // 6. Return the item document
     this.effectProfileApplier.apply({ items: [item] }, this.effectProfile);
     this.finalizeTargetFields(item);
+    if (this.isV14() && parsed.container) {
+      const { count, weight, volume, weightlessContents } = parsed.container;
+      if (item.system.attunement === 'none') item.system.attunement = '';
+      item.system.capacity = { ...(count ? { count } : {}), ...(weight ? { weight } : {}), ...(volume ? { volume } : {}) };
+      if (weightlessContents) item.system.properties.push('weightlessContents');
+      // Native 6 ContainerData has neither the Activities nor the limited-use template.
+      delete item.system.activities;
+      delete item.system.uses;
+    }
     this.options.iconResolver?.resolveStandaloneItem(item);
     return item;
   }
@@ -305,6 +361,9 @@ export class ItemGenerator {
     if (parsed.damage) {
       item.system.damage = parsed.damage;
     }
+    if (this.isV14() && parsed.weaponBonus !== undefined) {
+      item.system.magicalBonus = String(parsed.weaponBonus);
+    }
 
     // Preserve a source-derived standard weapon subtype such as spear.
     if (parsed.weapon) {
@@ -337,6 +396,17 @@ export class ItemGenerator {
       ];
     }
 
+    if (this.fvttVersion === '14' && parsed.equipmentSubtype) {
+      item.system.type = { value: parsed.equipmentSubtype, baseItem: '' };
+    }
+
+    if (this.isV14() && parsed.consumableSubtype) {
+      item.system.type = { value: parsed.consumableSubtype, subtype: '' };
+    }
+    if (this.isV14() && parsed.type === 'staff' && !parsed.weapon) {
+      item.system.type = { value: 'simpleM', baseItem: 'quarterstaff' };
+    }
+
     // Armor class (for armor/equipment)
     if (parsed.armor) {
       item.system.armor = {
@@ -356,6 +426,7 @@ export class ItemGenerator {
         max: parsed.uses.max,
         spent: parsed.uses.spent || 0,
         recovery: parsed.uses.recovery || [],
+        ...(this.isV14() && parsed.consumesPotion ? { autoDestroy: true } : {}),
       };
     }
   }
@@ -456,13 +527,8 @@ export class ItemGenerator {
               sourceLogicalPath: action.logicalPath,
             };
           }
-          const conditionEffects = generateEnhancedConditionEffects(
-            action.desc ?? '',
-            activities,
-            action.name,
-            action.logicalPath,
-            this.isV14(),
-          );
+          const conditionEffects = action.useAction?.condition || action.attack?.includeBase !== undefined ? []
+            : generateEnhancedConditionEffects(action.desc ?? '', activities, action.name, action.logicalPath, this.isV14());
           for (const conditionEffect of conditionEffects) {
             conditionEffect.origin = `Item.${item._id}`;
             item.effects.push(conditionEffect);

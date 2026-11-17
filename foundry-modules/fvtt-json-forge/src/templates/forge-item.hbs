@@ -20,6 +20,7 @@
   <label>来源文本
     <textarea name="source" rows="16" spellcheck="false" placeholder="粘贴完整的规范 Item Markdown / YAML 来源……"></textarea>
   </label>
+  <label hidden>装备阶段 <select name="itemStage"></select></label>
 
   <div class="forge-actions">
     <button type="button" data-action="generate"><i class="fas fa-eye" aria-hidden="true"></i> 生成预览</button>
@@ -37,7 +38,7 @@
 
   <section data-preview hidden>
     <h3>物品安全预览</h3>
-    <pre data-preview-text></pre>
+    <div data-preview-text></div>
     <details>
       <summary>候选 Item JSON</summary>
       <pre data-json></pre>

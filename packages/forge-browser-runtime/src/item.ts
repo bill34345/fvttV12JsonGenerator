@@ -1,8 +1,12 @@
 import { projectionForRuntime, runtimeIdentityAfterProjection, type NativeDocumentProjection } from './nativeTarget';
+import type { ItemSpellBinding } from '@fvtt-json-generator/models/action';
+import { ITEM_SPELL_RULES_NOTICE, itemSpellRulesNotice, matchesBoundItemSpell, readPreferredItemSpellBindings, readVerifiedItemSpell } from './itemSpellBindings';
+import { buildItemSpellVariant } from './itemSpellVariant';
 import {
   attachForgeItemSourceId,
   decodeForgeItemRequest,
   hashArtifact,
+  hashSource,
   mapForgeInputIssueToErrorCode,
   projectForgeDiagnostics,
   projectForgeItemDocument,
@@ -15,6 +19,7 @@ import {
   type ForgeItemDocumentSummary,
   type ForgeItemRequest,
   type ForgeItemResponse,
+  type ForgeItemSpellVariant,
   type ForgeItemSourceId,
   type ForgeItemVerificationSummary,
   type ForgeVerificationSummary,
@@ -23,6 +28,7 @@ import {
 import { verifyGeneratedDocument } from '@fvtt-json-generator/generation/verification';
 import type { GenerationDiagnostic } from '@fvtt-json-generator/generation/types';
 import { parseForgeItemSource } from '@fvtt-json-generator/parser/forge-item-source';
+import { parseItemStages } from '@fvtt-json-generator/parser/item-parser';
 import { createBundledIconResolutionSession } from '@fvtt-json-generator/assets-icons/icon-browser';
 import { generateItemArtifacts } from '@fvtt-json-generator/workflows/item-generation';
 import { normalizeForgeItemArtifact,prepareForgeItemForNativeProjection } from './artifact';
@@ -35,6 +41,7 @@ export interface BuildForgeItemRequestOptions {
   fvttVersion: string;
   systemVersion: string;
   sourceId?: ForgeItemSourceId;
+  stageIndex?: number;
 }
 
 export interface ForgeFinalItemSource {
@@ -51,11 +58,17 @@ export function prepareForgeFinalItemSource(
   return attachForgeItemSourceId(content, sourceId);
 }
 
+export function forgeItemStageOptions(source: string): string[] {
+  const stages = parseItemStages(source);
+  return stages.length > 1 ? stages.map(stage => [stage.name, stage.englishName].filter(Boolean).join(' ')) : [];
+}
+
 export function buildForgeItemRequest(options: BuildForgeItemRequestOptions): ForgeItemRequest {
   if (typeof options.content !== 'string' || options.content.trim().length === 0) {
     throw new TypeError('Item source content must not be empty or whitespace-only.');
   }
-  const finalSource = prepareForgeFinalItemSource(options.content, options.sourceId);
+  const initialSource = prepareForgeFinalItemSource(options.content, options.sourceId);
+  const finalSource = options.stageIndex === undefined ? initialSource : selectForgeItemStage(initialSource, options.stageIndex);
   const target = resolveForgeTarget(options.fvttVersion);
   return {
     protocolVersion: 1,
@@ -80,7 +93,26 @@ export function buildForgeItemRequest(options: BuildForgeItemRequestOptions): Fo
   };
 }
 
-export async function convertFinalItemSource(request: ForgeItemRequest, options: { nativeProjection?: NativeDocumentProjection } = {}): Promise<ForgeItemResponse> {
+function selectForgeItemStage(source: ForgeFinalItemSource, stageIndex: number): ForgeFinalItemSource {
+  const frontmatter = /^(?:\uFEFF)?---[ \t]*\r?\n([\s\S]*?)^---[ \t]*(?:\r?\n|$)/mu.exec(source.content);
+  if (!frontmatter || !Number.isInteger(stageIndex) || stageIndex < 0) throw new TypeError('物品阶段选择无效。');
+  const header = frontmatter[0];
+  const family = /^forge-item-family-id: (item:v1:[a-f0-9-]{36})\r?$/mu.exec(header)?.[1] ?? source.sourceId;
+  const hash = hashSource(JSON.stringify({ family, stageIndex }));
+  const sourceId = `item:v1:${hash.slice(0, 8)}-${hash.slice(8, 12)}-4${hash.slice(13, 16)}-8${hash.slice(17, 20)}-${hash.slice(20, 32)}` as ForgeItemSourceId;
+  const content = header
+    .replace(/^forge-item-(?:family-id|stage):[^\r\n]*(?:\r\n|\n)/gmu, '')
+    .replace(/^forge-source-id:[^\r\n]*(\r?\n)/mu, (_, eol: string) =>
+      `forge-source-id: ${sourceId}${eol}forge-item-family-id: ${family}${eol}forge-item-stage: ${stageIndex + 1}${eol}`)
+    + source.content.slice(header.length);
+  return { content, sourceId, sourceHash: hashSource(content), changed: content !== source.content };
+}
+
+export async function convertFinalItemSource(request: ForgeItemRequest, options: {
+  nativeProjection?: NativeDocumentProjection;
+  expectedSpellBindings?: readonly ItemSpellBinding[];
+  spellVariants?: readonly ForgeItemSpellVariant[];
+} = {}): Promise<ForgeItemResponse> {
   const decoded = decodeForgeItemRequest(request);
   if (!decoded.ok) return itemErrorResponse(requestIdOf(request), decoded.issues);
   const value = decoded.value;
@@ -91,9 +123,44 @@ export async function convertFinalItemSource(request: ForgeItemRequest, options:
     if (parsed.sourceId !== value.source.sourceId) {
       throw new TypeError('Parsed Forge Item source identity does not match the request.');
     }
+    const nativeProjection = projectionForRuntime(value.foundryRuntime.fvttVersion, value.foundryRuntime.systemVersion, options.nativeProjection);
+    const spells = parsed.item.structuredActions?.spells ?? [];
+    const plannedBindings = new Map<string, ItemSpellBinding>();
+    for (const plan of options.spellVariants ?? []) {
+      const draft = nativeProjection && await buildItemSpellVariant(nativeProjection, plan);
+      if (!draft || hashArtifact({ ...draft.plan }) !== hashArtifact({ ...plan })
+        || !spells.some(action => action.itemSpell?.uuid === draft.binding.uuid)) {
+        throw new TypeError('用于预览的专用法术资料已变化，请重新分析物品。');
+      }
+      plannedBindings.set(draft.binding.uuid, draft.binding);
+    }
+    const preferred = targetVersion === '14' ? await readPreferredItemSpellBindings(spells.flatMap(action =>
+      action.spellIdentifier && !action.itemSpell?.uuid ? [action.englishName ?? action.spellName ?? ''] : []), nativeProjection) : [];
+    const spellNotices: GenerationDiagnostic[] = [];
+    for (const action of spells) {
+      const uuid = action.itemSpell?.uuid;
+      const matches = (binding: ItemSpellBinding) => matchesBoundItemSpell(binding, action.spellIdentifier ?? '', action.englishName ?? action.spellName ?? '');
+      const binding = uuid
+        ? targetVersion === '14' ? plannedBindings.get(uuid) ?? await readVerifiedItemSpell(uuid, nativeProjection) : undefined
+        : preferred.find(matches);
+      if (uuid && (!binding || !matches(binding))) {
+        throw new TypeError('无法读回与物品施法配置一致的法术文档。');
+      }
+      if (!binding) continue;
+      const expected = options.expectedSpellBindings?.find(spell => spell.uuid === uuid);
+      if (expected && hashSource(JSON.stringify(expected)) !== hashSource(JSON.stringify(binding))) {
+        throw new TypeError('用于预览的绑定法术资料已变化，请重新分析物品。');
+      }
+      (action.itemSpell ??= {}).binding = binding;
+      const message = itemSpellRulesNotice(binding);
+      if (message) spellNotices.push({
+        code: ITEM_SPELL_RULES_NOTICE, severity: 'info', stage: 'semantic', path: 'item', message,
+      });
+    }
     const artifacts = await generateItemArtifacts(parsed.item, {
+      stageIndex: parsed.stageIndex,
       fvttVersion: targetVersion,
-      nativeProjection: projectionForRuntime(value.foundryRuntime.fvttVersion, value.foundryRuntime.systemVersion, options.nativeProjection),
+      nativeProjection,
       nativeSourceNormalizer:prepareForgeItemForNativeProjection,
       effectProfile: 'core',
       iconWorkflow: { createResolutionSession: createBundledIconResolutionSession },
@@ -117,6 +184,7 @@ export async function convertFinalItemSource(request: ForgeItemRequest, options:
     const diagnostics = deduplicateDiagnostics([
       ...formalVerification.diagnostics,
       ...generated.diagnostics,
+      ...spellNotices,
     ]);
     let status = resolveStatus(formalVerification.status, diagnostics);
     ensureStatusDiagnostic(status, diagnostics);
@@ -153,7 +221,8 @@ export async function convertFinalItemSource(request: ForgeItemRequest, options:
       projectForgeDiagnostics(diagnostics.map(diagnostic=>diagnostic.code.startsWith('NATIVE_')
         ?{...diagnostic,message:safeErrorMessage(diagnostic.message)}:diagnostic)),
       runtime.fvttVersion,
-    ), ...(generated.iconReview ? { iconReview: generated.iconReview } : {}) };
+    ), ...(generated.iconReview ? { iconReview: generated.iconReview } : {}),
+      ...(options.spellVariants?.length ? { spellVariants: [...options.spellVariants] } : {}) };
     if (status === 'accepted') {
       if (!acceptedVerification) throw new TypeError('Accepted Forge Item verification was not proven by the closed projection.');
       return {
@@ -187,7 +256,7 @@ function multiArtifactReviewResponse(request: ForgeItemRequest, artifactCount: n
     severity: 'warning',
     stage: 'semantic',
     path: 'item',
-    message: `Forge Item create-only supports exactly one final artifact; generation produced ${artifactCount}.`,
+    message: `来源有 ${artifactCount} 个装备阶段。请选择要预览和创建的阶段。`,
   };
   const verification: ForgeVerificationSummary = { status: 'needs_review', mechanicsCoverage: [] };
   const base = makeItemResultBase(

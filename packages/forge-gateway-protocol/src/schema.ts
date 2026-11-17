@@ -63,6 +63,7 @@ import {
   type ForgeItemResponse,
   type ForgeItemResult,
   type ForgeItemResultBase,
+  type ForgeItemSpellVariant,
   type ForgeItemSourceCreateRequest,
   type ForgeItemSourceCreateResult,
   type ForgeItemSourceCreateResponse,
@@ -108,6 +109,7 @@ const ITEM_RESULT_KEYS = new Set([
   'verification',
   'itemVerification',
   'itemDocument',
+  'spellVariants',
   'iconReview',
   'status',
   'artifact',
@@ -469,6 +471,10 @@ export function decodeForgeItemResult(value: unknown): ForgeDecodeResult<ForgeIt
   if (status === 'accepted') {
     const artifact = readJsonObject(record, 'artifact', '$', issues);
     const artifactHash = readHash(record, 'artifactHash', '$', issues);
+    if (base.spellVariants?.some(spell => !base.itemDocument.activities.some(activity =>
+      activity.type === 'cast' && activity.spell?.uuid === `Item.${spell.id}`))) {
+      issue(issues, '$/spellVariants', 'UNBOUND_SPELL_VARIANT', 'Each companion Spell must be referenced by an Item Cast.');
+    }
     if (artifact && artifactHash) {
       try {
         if (hashArtifact(artifact) !== artifactHash) {
@@ -864,6 +870,7 @@ function readItemResultBase(
     issues,
   );
   const iconReview = readIconReview(record, generatorProfile, iconMode, issues);
+  const spellVariants = Object.hasOwn(record, 'spellVariants') ? readItemSpellVariants(record.spellVariants, issues) : undefined;
 
   if (fvttRuntimeVersion && generatorProfile) {
     try {
@@ -890,8 +897,38 @@ function readItemResultBase(
     verification,
     itemVerification,
     itemDocument,
+    ...(spellVariants ? { spellVariants } : {}),
     ...(iconReview ? { iconReview } : {}),
   };
+}
+
+function readItemSpellVariants(value: unknown, issues: ForgeDecodeIssue[]): ForgeItemSpellVariant[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    issue(issues, '$/spellVariants', 'INVALID_SPELL_VARIANTS', 'Expected a nonempty list of companion Spell plans.');
+    return [];
+  }
+  const seen = new Set<string>();
+  return value.flatMap((entry, index): ForgeItemSpellVariant[] => {
+    const path = `$/spellVariants/${index}`;
+    const fields = readRecord(entry, path, new Set(['id', 'baseUuid', 'name', 'rules', 'level', 'damageType', 'configHash']), issues);
+    if (!fields) return [];
+    const id = readNonEmptyString(fields, 'id', path, issues);
+    const baseUuid = readNonEmptyString(fields, 'baseUuid', path, issues);
+    const name = readNonEmptyString(fields, 'name', path, issues);
+    const rules = readString(fields, 'rules', path, issues);
+    const level = readInteger(fields, 'level', path, issues);
+    const damageType = readEnum(fields, 'damageType', path, ['acid', 'bludgeoning', 'cold', 'fire', 'force',
+      'lightning', 'necrotic', 'piercing', 'poison', 'psychic', 'radiant', 'slashing', 'thunder'] as const, issues);
+    const configHash = readHash(fields, 'configHash', path, issues);
+    if (!id || !/^[0-9a-f]{16}$/u.test(id) || seen.has(id) || !baseUuid
+      || !/^Compendium\.[\w-]+\.[\w-]+\.Item\.[A-Za-z0-9]{16}$/u.test(baseUuid)
+      || !name || rules === undefined || level === undefined || level < 0 || level > 9 || !damageType || !configHash) {
+      issue(issues, path, 'INVALID_SPELL_VARIANT', 'Invalid companion Spell identity or configuration.');
+      return [];
+    }
+    seen.add(id);
+    return [{ id, baseUuid, name, rules, level, damageType, configHash }];
+  });
 }
 
 function readIconReview(record: Record<string, unknown>, profile: string | undefined, mode: string | undefined, issues: ForgeDecodeIssue[]) {

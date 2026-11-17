@@ -61,6 +61,10 @@ export interface BrowserItemIntakeStageResult {
 }
 
 import type { NativeDocumentProjection } from './nativeTarget';
+import type { ItemSpellBinding } from '@fvtt-json-generator/models/action';
+import type { ForgeItemSpellVariant } from '@fvtt-json-generator/forge-gateway-protocol';
+import { ITEM_SPELL_RULES_NOTICE, appendItemSpellFindings, itemIntakeSpellUuids, itemSpellCatalogHints, readUnlistedItemSpellBindings,
+  readSourceItemSpellBindings, reconcileItemSpellVariantFindings, withItemSpellBindings } from './itemSpellBindings';
 
 export interface BrowserItemIntakeInput {
   nativeProjection?: NativeDocumentProjection;
@@ -71,6 +75,7 @@ export interface BrowserItemIntakeInput {
   fvttVersion: string;
   systemVersion: string;
   sourceId?: ForgeItemSourceId;
+  stageIndex?: number;
   onStage?: (stage: BrowserItemIntakeStageResult) => void;
 }
 
@@ -98,6 +103,8 @@ export interface BrowserItemIntakeAnalysis {
   candidates: ItemDiscoveryCandidate[];
   candidate?: ItemDiscoveryCandidate;
   ir?: ItemIntakeIR;
+  spellBindings?: readonly ItemSpellBinding[];
+  spellVariants?: readonly ForgeItemSpellVariant[];
   validation?: ItemIntakeValidationResult;
   findings: ItemIntakeFinding[];
   stages: BrowserItemIntakeStageResult[];
@@ -137,6 +144,8 @@ export interface BrowserItemGenerationResult {
 
 function itemCandidateHash(analysis: BrowserItemIntakeAnalysis, finalSource: string, response: ForgeItemResponse): Sha256 {
   return hashSource(JSON.stringify({ rawSourceHash: analysis.rawSourceHash, ir: analysis.ir,
+    ...(analysis.spellBindings?.length ? { spellBindings: analysis.spellBindings } : {}),
+    ...(analysis.spellVariants?.length ? { spellVariants: analysis.spellVariants } : {}),
     finalSourceHash: hashSource(finalSource), response }));
 }
 
@@ -154,9 +163,12 @@ function assertCurrentItemCandidate(input: BrowserItemIntakeInput, candidate: Br
     || response.result.target.systemVersionObserved !== input.systemVersion) {
     throw new TypeError('Item 来源、候选或目标已变化，必须重新生成。');
   }
-  const local = validateItemIntakeIRWithResolver(input.source, candidate.analysis.ir, candidate.analysis.candidate, BROWSER_ITEM_RESOLVER);
-  if (local.blocking.length || (candidate.analysis.ir.item?.stages?.length ?? 0) > 1
-    || multiStageSourceFinding(candidate.analysis.candidate)) throw new TypeError('Item 来源本地校验仍有阻断问题。');
+  const frame = itemExtractionFrame(input.source, candidate.analysis.candidate);
+  const local = validateItemIntakeIRWithResolver(frame.source, candidate.analysis.ir, frame.candidate,
+    withItemSpellBindings(BROWSER_ITEM_RESOLVER, candidate.analysis.spellBindings));
+  if (local.blocking.length || (candidate.analysis.ir.item?.stages?.length ?? 0) > 1) {
+    throw new TypeError('Item 来源本地校验仍有阻断问题。');
+  }
   return response;
 }
 
@@ -313,26 +325,33 @@ export async function analyzeBrowserItemSourceWithAi(
       return reviewAnalysis('ambiguous_boundary', input, provider, attemptId, rawSourceHash, candidates, calls, stages, [finding(boundary.code, '/candidate', boundary.message)]);
     }
     const candidate = candidates[0]!;
-    const sourceStageFinding = multiStageSourceFinding(candidate);
-    if (sourceStageFinding) {
-      return reviewAnalysis('multi_stage', input, provider, attemptId, rawSourceHash, candidates, calls, stages, [sourceStageFinding], candidate);
-    }
+    const frame = itemExtractionFrame(input.source, candidate);
     report('extract', 'running');
+    const binding = await readSourceItemSpellBindings(frame.candidate, input.nativeProjection);
+    throwIfAborted(signal);
     calls.extraction += 1;
-    const extracted = await withAbort(provider.extract({ source: input.source, sourceSha256: rawSourceHash, candidate }), signal);
+    const extracted = await withAbort(provider.extract({
+      ...frame, ...itemSpellCatalogHints(binding.bindings, binding.verifiedVariants), sourceSha256: hashSource(frame.source),
+    }), signal);
     report('extract', 'completed');
-    const ir = normalizeItemIntakeIR(input.source, candidate, extracted, BROWSER_ITEM_RESOLVER);
+    binding.bindings.push(...await readUnlistedItemSpellBindings(frame.candidate, extracted, input.nativeProjection));
+    const resolver = withItemSpellBindings(BROWSER_ITEM_RESOLVER, binding.bindings);
+    const ir = normalizeItemIntakeIR(frame.source, frame.candidate, extracted, resolver);
+    reconcileItemSpellVariantFindings(frame.candidate, ir, binding.verifiedVariants);
     if ((ir.item?.stages?.length ?? 0) > 1) {
       return reviewAnalysis('multi_stage', input, provider, attemptId, rawSourceHash, candidates, calls, stages, [
         finding('MULTI_STAGE_ITEM_UNSUPPORTED', '/item/stages', 'Forge Intake accepts one static Item artifact; multi-stage Item source requires review.'),
       ], candidate, ir);
     }
     report('validate', 'running');
-    const validation = validateItemIntakeIRWithResolver(input.source, ir, candidate, BROWSER_ITEM_RESOLVER);
+    const validation = validateItemIntakeIRWithResolver(frame.source, ir, frame.candidate, resolver);
+    appendItemSpellFindings(validation, binding.bindings, binding.findings);
     report('validate', validation.blocking.length === 0 ? 'completed' : 'failed');
     return {
       status: validation.blocking.length === 0 ? 'ready_to_generate' : 'needs_review',
       attemptId, rawSourceHash, candidates, candidate, ir, validation, findings: validation.findings,
+      ...(binding.bindings.length ? { spellBindings: binding.bindings } : {}),
+      ...(binding.variants.length ? { spellVariants: binding.variants } : {}),
       stages, provider: identity(provider), calls, repairCount: 0,
     };
   } catch (error) {
@@ -363,31 +382,36 @@ export async function repairBrowserItemIntake(
   if (!prior.ir || !prior.candidate || !prior.rawSourceHash || hashSource(input.source) !== prior.rawSourceHash) {
     return blockedAnalysis(prior, stages, calls, current.findings, 'STALE_SOURCE', 'Source identity changed; start a new analysis attempt.');
   }
-  const sourceStageFinding = multiStageSourceFinding(prior.candidate);
-  if (sourceStageFinding) {
-    return { ...structuredClone(prior), status: 'needs_review', stages, calls, findings: dedupe([...current.findings, sourceStageFinding]) };
-  }
+  const frame = itemExtractionFrame(input.source, prior.candidate);
   try {
     report('repair', 'running');
+    const binding = await readSourceItemSpellBindings(frame.candidate, input.nativeProjection);
+    throwIfAborted(signal);
     calls.repair += 1;
     const repaired = await withAbort(provider.repair({
-      source: input.source,
-      candidate: prior.candidate,
+      ...frame,
+      ...itemSpellCatalogHints(binding.bindings, binding.verifiedVariants),
       ir: prior.ir,
       deterministicFindings: prior.validation?.findings ?? prior.findings,
       ...(isGeneration(current) && current.review ? { review: current.review } : {}),
     }), signal);
     report('repair', 'completed');
-    const ir = normalizeItemIntakeIR(input.source, prior.candidate, repaired, BROWSER_ITEM_RESOLVER);
+    binding.bindings.push(...await readUnlistedItemSpellBindings(frame.candidate, repaired, input.nativeProjection));
+    const resolver = withItemSpellBindings(BROWSER_ITEM_RESOLVER, binding.bindings);
+    const ir = normalizeItemIntakeIR(frame.source, frame.candidate, repaired, resolver);
+    reconcileItemSpellVariantFindings(frame.candidate, ir, binding.verifiedVariants);
     if ((ir.item?.stages?.length ?? 0) > 1) {
       return { ...structuredClone(prior), status: 'needs_review', ir, stages, calls, repairCount: 1, findings: [finding('MULTI_STAGE_ITEM_UNSUPPORTED', '/item/stages', 'Repair still describes multiple Item stages.')] };
     }
     report('validate', 'running');
-    const validation = validateItemIntakeIRWithResolver(input.source, ir, prior.candidate, BROWSER_ITEM_RESOLVER);
+    const validation = validateItemIntakeIRWithResolver(frame.source, ir, frame.candidate, resolver);
+    appendItemSpellFindings(validation, binding.bindings, binding.findings);
     report('validate', validation.blocking.length === 0 ? 'completed' : 'failed');
     return {
       ...structuredClone(prior), status: validation.blocking.length === 0 ? 'ready_to_generate' : 'needs_review',
       ir, validation, findings: validation.findings, stages, calls, repairCount: 1, provider: identity(provider),
+      spellBindings: binding.bindings.length ? binding.bindings : undefined,
+      spellVariants: binding.variants.length ? binding.variants : undefined,
     };
   } catch (error) {
     const code = isAbort(error, signal) ? 'cancelled' : 'provider_failure';
@@ -437,16 +461,21 @@ async function generateBrowserItemIntake(
     return closed(dedupe([...analysis.findings, finding('ANALYSIS_NOT_READY', '/intake', 'Analysis is not ready for one Item artifact.')]));
   }
   if (hashSource(input.source) !== analysis.rawSourceHash) return closed(dedupe([...analysis.findings, finding('STALE_SOURCE', '/source', 'Source identity changed after analysis.')]));
-  const sourceStageFinding = multiStageSourceFinding(analysis.candidate);
-  if (sourceStageFinding) return closed(dedupe([...analysis.findings, sourceStageFinding]));
+  const stageCount = parseItemStages(analysis.candidate.quote).length;
+  if (stageCount > 1 && (input.stageIndex === undefined || !Number.isInteger(input.stageIndex) || input.stageIndex < 0 || input.stageIndex >= stageCount)) {
+    return closed([...analysis.findings, finding('ITEM_STAGE_SELECTION_REQUIRED', '/item/stages', '请选择要生成的装备阶段。')]);
+  }
   if ((analysis.ir.item?.stages?.length ?? 0) > 1) {
     return closed(dedupe([...analysis.findings, finding('MULTI_STAGE_ITEM_UNSUPPORTED', '/item/stages', 'Forge Intake accepts one static Item artifact; multi-stage Item IR requires review.') ]));
   }
-  const validation = validateItemIntakeIRWithResolver(input.source, analysis.ir, analysis.candidate, BROWSER_ITEM_RESOLVER);
+  const frame = itemExtractionFrame(input.source, analysis.candidate);
+  const validation = validateItemIntakeIRWithResolver(frame.source, analysis.ir, frame.candidate,
+    withItemSpellBindings(BROWSER_ITEM_RESOLVER, analysis.spellBindings));
   if (validation.blocking.length > 0) return closed(validation.findings);
   try {
     report('generate', 'running');
-    const markdown = renderItemIntakeMarkdown(input.source, analysis.candidate, analysis.ir);
+    const markdown = renderItemIntakeMarkdown(input.source, analysis.candidate, analysis.ir,
+      itemIntakeSpellUuids(analysis.ir, analysis.spellBindings));
     const request = buildForgeItemRequest({
       content: markdown,
       displayName: input.displayName?.trim() ? input.displayName : input.sourceName,
@@ -454,9 +483,12 @@ async function generateBrowserItemIntake(
       fvttVersion: input.fvttVersion,
       systemVersion: input.systemVersion,
       sourceId: input.sourceId,
+      stageIndex: stageCount > 1 ? input.stageIndex : undefined,
     });
     const canonicalMarkdown = request.source.content;
-    const response = await convertFinalItemSource(request,{nativeProjection:input.nativeProjection});
+    const response = await convertFinalItemSource(request, {
+      nativeProjection: input.nativeProjection, expectedSpellBindings: analysis.spellBindings, spellVariants: analysis.spellVariants,
+    });
     throwIfAborted(signal);
     report('generate', 'completed');
     const formalStatus = itemResponseStatus(response);
@@ -589,13 +621,11 @@ function reporter(stages: BrowserItemIntakeStageResult[], callback: BrowserItemI
 function finding(code: string, path: string, message: string): ItemIntakeFinding {
   return { id: `forge-browser:${code}:${path}`, code, path, message, blocking: true, origin: 'semantic' };
 }
-function multiStageSourceFinding(candidate: ItemDiscoveryCandidate): ItemIntakeFinding | undefined {
-  if (parseItemStages(candidate.quote).length <= 1) return undefined;
-  return finding(
-    'MULTI_STAGE_ITEM_UNSUPPORTED',
-    '/candidate',
-    'Forge Intake accepts one static Item artifact; the exact source candidate contains multiple lifecycle stages.',
-  );
+function itemExtractionFrame(source: string, candidate: ItemDiscoveryCandidate) {
+  const firstUpgrade = parseItemStages(candidate.quote)[1];
+  if (!firstUpgrade) return { source, candidate };
+  const end = candidate.start + firstUpgrade.sourceStart!;
+  return { source: source.slice(0, end), candidate: { ...candidate, end, quote: source.slice(candidate.start, end) } };
 }
 function dedupe(findings: ItemIntakeFinding[]): ItemIntakeFinding[] {
   return [...new Map(findings.map((entry) => [`${entry.id}\u0000${entry.code}\u0000${entry.path}`, entry])).values()];
@@ -612,10 +642,10 @@ function itemFromResponse(response: ForgeItemResponse): unknown {
 function projectFormalFindings(response: ForgeItemResponse): ItemIntakeFinding[] {
   if (!('result' in response)) return [finding(response.error.code, '/', response.error.message)];
   return response.result.diagnostics
-    .filter((entry) => entry.severity === 'warning' || entry.severity === 'error')
+    .filter((entry) => entry.severity === 'warning' || entry.severity === 'error' || entry.code === ITEM_SPELL_RULES_NOTICE)
     .map((entry, index) => ({
       id: `formal:${entry.code}:${index}`, code: entry.code, path: entry.path, message: entry.message,
-      blocking: true, origin: 'semantic' as const,
+      blocking: entry.severity !== 'info', origin: 'semantic' as const,
     }));
 }
 function assertInput(source: string): void {

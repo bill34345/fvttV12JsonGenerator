@@ -2,6 +2,7 @@ import { sha256 } from '@fvtt-json-generator/contracts/hash';
 import { DND5E_V14_SYSTEM_VERSION } from '@fvtt-json-generator/contracts/target';
 import { isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
 import type { FoundryTarget } from '@fvtt-json-generator/generation/target';
+import type { ItemSpellBinding } from '@fvtt-json-generator/models/action';
 
 /** A caller-owned native constructor; source projection and receiver identity remain separate. */
 export interface NativeDocumentProjection {
@@ -9,6 +10,9 @@ export interface NativeDocumentProjection {
   /** Observed receiver identity, separate from the locked source projection. */
   runtime?: { coreVersion: string; systemId: 'dnd5e'; systemVersion: string };
   project(kind: 'Actor' | 'Item', source: any): any | Promise<any>;
+  readItemSpell?(uuid: string): Promise<ItemSpellBinding | undefined>;
+  readItemSpellSource?(uuid: string): Promise<unknown>;
+  findItemSpellUuids?(matchesName: (name: string) => boolean): Promise<string[]>;
 }
 
 export async function projectNativeDocument(port: NativeDocumentProjection, kind: 'Actor' | 'Item', source: any): Promise<any> {

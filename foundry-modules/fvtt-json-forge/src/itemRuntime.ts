@@ -1,4 +1,4 @@
-import { isNativeForgeRuntimeTargetSupported } from '@fvtt-json-generator/forge-browser-runtime';
+import { buildItemSpellVariant, hashItemSpellVariantConfig, isNativeForgeRuntimeTargetSupported, type NativeDocumentProjection } from '@fvtt-json-generator/forge-browser-runtime';
 import {
   decodeForgeItemResponse,
   hashArtifact,
@@ -6,6 +6,7 @@ import {
   type ForgeAcceptedVerificationSummary,
   type ForgeItemResponse,
   type ForgeItemSourceId,
+  type ForgeItemSpellVariant,
   type JsonObject,
   type JsonValue,
   type Sha256,
@@ -17,6 +18,7 @@ import {
   MODULE_ID,
   type ForgeGameLike,
 } from './runtime';
+import { nativeProjectionForGame } from './nativeProjection';
 
 export interface ForgeItemLike {
   id?: string;
@@ -45,6 +47,7 @@ export interface ForgeItemGameLike extends ForgeGameLike {
 export interface ForgeAcceptedItemCreateInput {
   game: ForgeItemGameLike;
   response: ForgeItemResponse;
+  nativeProjection?: NativeDocumentProjection;
 }
 
 export interface ForgeItemCreateResult {
@@ -53,6 +56,7 @@ export interface ForgeItemCreateResult {
   uuid: string;
   sourceId: ForgeItemSourceId;
   artifactHash: Sha256;
+  spellUuids?: string[];
 }
 
 interface ForgeItemWorldIdentity {
@@ -122,6 +126,8 @@ export async function createAcceptedForgeItem(
     target: { ...result.target },
   };
   const importArtifact = prepareFoundryItemArtifact(result.artifact, identity, documentId);
+  const variants = await prepareForgeItemVariants(input, result.spellVariants ?? [], importArtifact, collection);
+  const spellUuids = variants.map(({ plan }) => `Item.${plan.id}`);
 
   const claimed = findItemsBySourceId(collection, result.sourceIdentity.sourceId);
   if (claimed.length > 1) {
@@ -137,14 +143,15 @@ export async function createAcceptedForgeItem(
     if (existingIdentity?.artifactHash !== result.artifactHash) {
       throw new Error('The same Forge Item source ID already exists with a different artifact hash. Existing Item was not changed.');
     }
-    return verifyReusableItem(
+    if (variants.some(variant => !variant.existing)) throw new Error('已有物品引用的专用法术缺失，请先检查世界物品。');
+    return { ...verifyReusableItem(
       claimed[0],
       importArtifact,
       result.sourceIdentity.sourceId,
       result.sourceIdentity.sourceHash,
       result.artifactHash,
       result.target,
-    );
+    ), ...(spellUuids.length ? { spellUuids } : {}) };
   }
 
   const occupied = findItemById(collection, documentId);
@@ -155,8 +162,16 @@ export async function createAcceptedForgeItem(
   const createDocument = collection.documentClass?.create;
   if (typeof createDocument !== 'function') throw new Error('Foundry Item documentClass.create() is unavailable.');
   let created: ForgeItemLike | undefined;
+  const createdSpells: ForgeItemLike[] = [];
   let cleanupRequired = true;
   try {
+    for (const variant of variants) {
+      if (variant.existing) continue;
+      const spell = await createDocument.call(collection.documentClass, structuredClone(variant.artifact), { renderSheet: false, keepId: true });
+      if (!spell) throw new Error('Foundry 未返回新建的专用法术。');
+      createdSpells.push(spell);
+      assertSpellVariantReadback(spell, variant.plan, variant.artifact);
+    }
     try {
       created = await createDocument.call(collection.documentClass, importArtifact, { renderSheet: false, keepId: true });
     } catch (error) {
@@ -167,7 +182,7 @@ export async function createAcceptedForgeItem(
         && concurrentIdentity?.sourceId === result.sourceIdentity.sourceId
         && concurrentIdentity.artifactHash === result.artifactHash
       ) {
-        return verifyReusableItem(
+        const existing = verifyReusableItem(
           concurrent,
           importArtifact,
           result.sourceIdentity.sourceId,
@@ -175,6 +190,8 @@ export async function createAcceptedForgeItem(
           result.artifactHash,
           result.target,
         );
+        cleanupRequired = false;
+        return { ...existing, ...(spellUuids.length ? { spellUuids } : {}) };
       }
       if (concurrentIdentity?.sourceId === result.sourceIdentity.sourceId) {
         throw new Error('A concurrent Forge Item operation claimed the same source ID with a different artifact hash. Existing Item was not changed.', { cause: error });
@@ -198,6 +215,7 @@ export async function createAcceptedForgeItem(
       uuid: requireItemUuid(created),
       sourceId: result.sourceIdentity.sourceId,
       artifactHash: result.artifactHash,
+      ...(spellUuids.length ? { spellUuids } : {}),
     };
   } finally {
     if (cleanupRequired && created) {
@@ -207,6 +225,59 @@ export async function createAcceptedForgeItem(
         throw new ForgeTemporaryItemCleanupError(created.uuid ?? created.id ?? '[unknown Item]', error);
       }
     }
+    if (cleanupRequired) {
+      for (const spell of createdSpells.reverse()) {
+        try {
+          await spell.delete();
+        } catch (error) {
+          throw new ForgeTemporaryItemCleanupError(spell.uuid ?? spell.id ?? '[unknown Spell]', error);
+        }
+      }
+    }
+  }
+}
+
+async function prepareForgeItemVariants(
+  input: ForgeAcceptedItemCreateInput, plans: readonly ForgeItemSpellVariant[], item: JsonObject, collection: ForgeItemCollectionLike,
+) {
+  if (!plans.length) return [];
+  const projection = input.nativeProjection ?? nativeProjectionForGame(input.game);
+  if (!projection) throw new Error('当前环境无法预检专用法术。');
+  const casts = Object.values(asRecord(asRecord(item.system).activities));
+  return Promise.all(plans.map(async plan => {
+    if (!casts.some(activity => activity.type === 'cast' && activity.spell?.uuid === `Item.${plan.id}`)) {
+      throw new Error('物品施法没有引用预览中的专用法术。');
+    }
+    const draft = await buildItemSpellVariant(projection, plan);
+    if (!draft || hashArtifact({ ...draft.plan }) !== hashArtifact({ ...plan })) {
+      throw new Error(`${plan.name} 的法术模板已变化，请重新分析物品。`);
+    }
+    const existing = findItemById(collection, plan.id);
+    if (existing) assertSpellVariantReadback(existing, plan, draft.artifact);
+    return { ...draft, existing };
+  }));
+}
+
+function assertSpellVariantReadback(spell: ForgeItemLike, plan: ForgeItemSpellVariant, preview: JsonObject): void {
+  const saved = asRecord(spell.toObject());
+  const worldUuid = `Item.${plan.id}`;
+  const comparable = { ...saved };
+  if (Array.isArray(saved.effects) && Array.isArray(preview.effects)) {
+    const previewEffects = preview.effects;
+    comparable.effects = saved.effects.map((entry, index) => {
+      const effect = asRecord(entry);
+      const original = asRecord(previewEffects[index]);
+      // Foundry can rebase an embedded effect's self-origin when importing its parent Item.
+      if (typeof effect._id === 'string' && effect._id === original._id
+        && original.origin === plan.baseUuid && effect.origin === worldUuid) {
+        return { ...effect, origin: original.origin };
+      }
+      return entry;
+    });
+  }
+  if (spell.id !== plan.id || spell.uuid !== worldUuid || saved._stats?.compendiumSource !== plan.baseUuid
+    || hashItemSpellVariantConfig(comparable) !== plan.configHash) {
+    throw new Error(`${plan.name} 的专用法术与预览不一致。`);
   }
 }
 

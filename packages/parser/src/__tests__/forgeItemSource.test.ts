@@ -41,4 +41,15 @@ describe('Forge Item parser boundary', () => {
       `forge-source-id: ${ITEM_SOURCE_ID}\nforge-source-id: ${ITEM_SOURCE_ID}`,
     ))).toThrow(/valid YAML/u);
   });
+
+  test.each(['\n', '\r\n'])('requires a real name from the source using %j line endings', (eol) => {
+    const prefix = ['---', `forge-source-id: ${ITEM_SOURCE_ID}`, 'layout: item'];
+    const raw = [...prefix, '---', '***火球魔杖（Wand of Fireballs）***', '*魔杖，珍稀*', '持握时可以施放火球术。'].join(eol);
+    expect(() => parseForgeItemSource(raw)).toThrow(/缺少可识别的名称.*AI 整理/u);
+    expect(() => parseForgeItemSource(raw.replace('***火球魔杖（Wand of Fireballs）***', '##    '))).toThrow(/缺少可识别的名称/u);
+    const fromHeading = raw.replace('***火球魔杖（Wand of Fireballs）***', '## 火球魔杖（Wand of Fireballs）');
+    expect(parseForgeItemSource(fromHeading).item.name).toBe('火球魔杖');
+    const fromYaml = [...prefix, 'name: Wand of Fireballs', 'type: Wand', '---', 'While holding it, you can cast Fireball.'].join(eol);
+    expect(parseForgeItemSource(fromYaml).item.name).toBe('Wand of Fireballs');
+  });
 });

@@ -72,9 +72,21 @@ export function projectForgeVerificationSummary(value: unknown): ForgeVerificati
 export function projectForgeItemDocument(value: unknown): ForgeItemDocumentSummary {
   const item = requireRecord(value, 'itemDocument');
   const system = requireRecord(item.system, 'itemDocument.system');
-  const armor = projectDeclaredObject(system.armor, 'itemDocument.armor', ARMOR_POLICY);
+  const isContainer = item.type === 'container';
+  const dnd5eFlags = isRecord(item.flags) && isRecord(item.flags.dnd5e) ? item.flags.dnd5e : undefined;
+  const scrollFlags = dnd5eFlags?.spellLevel;
+  const generatorFlags = isRecord(item.flags) && isRecord(item.flags.fvttJsonGenerator) ? item.flags.fvttJsonGenerator : undefined;
+  const storageFlags = generatorFlags?.spellStorage;
+  const timedSpeed = generatorFlags?.timedSpeed;
+  const riderEffectIds = isRecord(dnd5eFlags?.riders) ? dnd5eFlags.riders.effect : undefined;
+  const armor = projectDeclaredObject(system.armor ?? {}, 'itemDocument.armor', ARMOR_POLICY);
   if (armor.magicalBonus === null) delete armor.magicalBonus;
-  const activitiesRecord = requireRecord(system.activities, 'itemDocument.system.activities');
+  const uses = projectDeclaredObject(isContainer ? system.uses ?? {} : system.uses, 'itemDocument.uses', USES_POLICY);
+  if (uses.autoDestroy === false) delete uses.autoDestroy;
+  const magicalBonus = typeof system.magicalBonus === 'string' && system.magicalBonus
+    ? system.magicalBonus : undefined;
+  const activitiesRecord = requireRecord(isContainer ? system.activities ?? {} : system.activities, 'itemDocument.system.activities');
+  const capacity = isContainer && system.capacity !== undefined ? projectContainerCapacity(system.capacity) : undefined;
   const activities: ForgeItemActivityDocumentSummary[] = Object.entries(activitiesRecord)
     .sort(([left], [right]) => left.localeCompare(right, 'en'))
     .map(([activityId, activityValue], index) => projectItemActivityDocument(activityId, activityValue, index));
@@ -87,10 +99,20 @@ export function projectForgeItemDocument(value: unknown): ForgeItemDocumentSumma
     rarity: requireSummaryScalarValue(system.rarity ?? (Array.isArray(system.rarities) ? system.rarities.join(', ') : undefined), 'itemDocument.rarity'),
     attunement: requireSummaryScalarValue(system.attunement, 'itemDocument.attunement'),
     armor,
-    itemType: projectDeclaredObject(system.type, 'itemDocument.itemType', ITEM_TYPE_POLICY),
+    ...(generatorFlags?.stage === undefined ? {} : { stage: projectDeclaredObject(generatorFlags.stage, 'itemDocument.stage', ITEM_STAGE_POLICY) }),
+    ...(capacity && Object.keys(capacity).length ? { capacity } : {}),
+    ...(scrollFlags === undefined ? {} : { spellLevel: projectDeclaredObject(scrollFlags, 'itemDocument.spellLevel', SPELL_LEVEL_POLICY) }),
+    ...(storageFlags === undefined ? {} : { spellStorage: projectDeclaredObject(storageFlags, 'itemDocument.spellStorage', SPELL_STORAGE_POLICY) }),
+    ...(timedSpeed === undefined ? {} : { timedSpeed: projectDeclaredObject(timedSpeed, 'itemDocument.timedSpeed', TIMED_SPEED_POLICY) }),
+    ...(generatorFlags?.summonCooldown === undefined ? {} : { summonCooldown: projectDeclaredObject(generatorFlags.summonCooldown, 'itemDocument.summonCooldown', SUMMON_COOLDOWN_POLICY) }),
+    ...(generatorFlags?.randomSummon === undefined ? {} : { randomSummon: projectDeclaredObject(generatorFlags.randomSummon, 'itemDocument.randomSummon', RANDOM_SUMMON_POLICY) }),
+    ...(generatorFlags?.lastChargeCheck === undefined ? {} : { lastChargeCheck: projectDeclaredObject(generatorFlags.lastChargeCheck, 'itemDocument.lastChargeCheck', LAST_CHARGE_CHECK_POLICY) }),
+    ...(riderEffectIds === undefined ? {} : { riderEffectIds: requireStringArray(riderEffectIds, 'itemDocument.riderEffectIds') }),
+    ...(magicalBonus ? { magicalBonus } : {}),
+    itemType: projectDeclaredObject(isContainer ? system.type ?? {} : system.type, 'itemDocument.itemType', ITEM_TYPE_POLICY),
     properties: requireStringArray(system.properties, 'itemDocument.properties'),
     weight: projectDeclaredObject(system.weight, 'itemDocument.weight', WEIGHT_POLICY),
-    uses: projectDeclaredObject(system.uses, 'itemDocument.uses', USES_POLICY),
+    uses,
     activities,
     effects,
   };
@@ -106,6 +128,16 @@ export function projectForgeItemDocumentSummary(value: unknown): ForgeItemDocume
     rarity: requireSummaryScalarValue(item.rarity, 'itemDocument.rarity'),
     attunement: requireSummaryScalarValue(item.attunement, 'itemDocument.attunement'),
     armor: projectDeclaredObject(item.armor, 'itemDocument.armor', ARMOR_POLICY),
+    ...(item.stage === undefined ? {} : { stage: projectDeclaredObject(item.stage, 'itemDocument.stage', ITEM_STAGE_POLICY) }),
+    ...(item.capacity === undefined ? {} : { capacity: projectContainerCapacity(item.capacity) }),
+    ...(item.spellLevel === undefined ? {} : { spellLevel: projectDeclaredObject(item.spellLevel, 'itemDocument.spellLevel', SPELL_LEVEL_POLICY) }),
+    ...(item.spellStorage === undefined ? {} : { spellStorage: projectDeclaredObject(item.spellStorage, 'itemDocument.spellStorage', SPELL_STORAGE_POLICY) }),
+    ...(item.timedSpeed === undefined ? {} : { timedSpeed: projectDeclaredObject(item.timedSpeed, 'itemDocument.timedSpeed', TIMED_SPEED_POLICY) }),
+    ...(item.summonCooldown === undefined ? {} : { summonCooldown: projectDeclaredObject(item.summonCooldown, 'itemDocument.summonCooldown', SUMMON_COOLDOWN_POLICY) }),
+    ...(item.randomSummon === undefined ? {} : { randomSummon: projectDeclaredObject(item.randomSummon, 'itemDocument.randomSummon', RANDOM_SUMMON_POLICY) }),
+    ...(item.lastChargeCheck === undefined ? {} : { lastChargeCheck: projectDeclaredObject(item.lastChargeCheck, 'itemDocument.lastChargeCheck', LAST_CHARGE_CHECK_POLICY) }),
+    ...(item.riderEffectIds === undefined ? {} : { riderEffectIds: requireStringArray(item.riderEffectIds, 'itemDocument.riderEffectIds') }),
+    ...(item.magicalBonus === undefined ? {} : { magicalBonus: requireNonEmptyString(item.magicalBonus, 'itemDocument.magicalBonus') }),
     itemType: projectDeclaredObject(item.itemType, 'itemDocument.itemType', ITEM_TYPE_POLICY),
     properties: requireStringArray(item.properties, 'itemDocument.properties'),
     weight: projectDeclaredObject(item.weight, 'itemDocument.weight', WEIGHT_POLICY),
@@ -115,6 +147,18 @@ export function projectForgeItemDocumentSummary(value: unknown): ForgeItemDocume
     effects: requireArray(item.effects, 'itemDocument.effects')
       .map((effect, index) => projectItemEffectDocumentSummary(effect, index)),
   };
+}
+
+function projectContainerCapacity(value: unknown): JsonObject {
+  const capacity = projectDeclaredObject(value, 'itemDocument.capacity', {
+    count: true, weight: { value: true, units: true }, volume: { value: true, units: true },
+  });
+  if (capacity.count == null) delete capacity.count;
+  for (const key of ['weight', 'volume'] as const) {
+    const measure = capacity[key];
+    if (isRecord(measure) && measure.value == null) delete capacity[key];
+  }
+  return capacity;
 }
 
 /** Convert workflow diagnostics to the closed, path-safe Forge wire shape. */
@@ -170,6 +214,16 @@ export function requireForgeAcceptedVerification(
 export function mapForgeSourceField(sourcePath: string): ForgeSourceField {
   const normalized = sourcePath.replaceAll('\\', '/').toLowerCase();
   if (/^item[/.:]armor([/.:]|$)/u.test(normalized)) return 'item.armor';
+  if (/^item[/.:]weapon(?:bonus|-properties)([/.:]|$)/u.test(normalized)) return 'item.weapon';
+  if (/^item[/.:]capacity([/.:]|$)/u.test(normalized)) return 'item.capacity';
+  if (/^item[/.:]spellscroll([/.:]|$)/u.test(normalized)) return 'item.spellScroll';
+  if (/^item[/.:]spellstorage([/.:]|$)/u.test(normalized)) return 'item.spellStorage';
+  if (/^item[/.:]timedspeed([/.:]|$)/u.test(normalized)) return 'item.timedSpeed';
+  if (/^item[/.:]summon([/.:]|$)/u.test(normalized)) return 'item.summon';
+  if (/^item[/.:]lastchargecheck([/.:]|$)/u.test(normalized)) return 'item.lastChargeCheck';
+  if (/^item[/.:]enchantment([/.:]|$)/u.test(normalized)) return 'item.enchantment';
+  if (/^item[/.:]uses([/.:]|$)/u.test(normalized)) return 'item.uses';
+  if (/^item[/.:]structuredactions([/.:]|$)/u.test(normalized)) return 'item.activities';
   if (/(^|[/.:])name([/.:]|$)/u.test(normalized)) return 'actor.name';
   if (/(attributes|ability|hp|ac|armor|hit[-_ ]?points|challenge|cr)([/.:]|$)/u.test(normalized)) return 'actor.attributes';
   if (/(traits?|senses?|languages?|resistances?|immunit|condition)([/.:]|$)/u.test(normalized)) return 'actor.traits';
@@ -405,12 +459,22 @@ const RANGE_POLICY = { override: true, value: true, long: true, reach: true, uni
 const USES_POLICY = {
   spent: true,
   max: true,
+  autoDestroy: true,
   recovery: { $array: { period: true, type: true, formula: true } },
 } as const;
 const ARMOR_POLICY = { value: true, dex: true, magicalBonus: true } as const;
+const SPELL_LEVEL_POLICY = { base: true, value: true } as const;
 const ITEM_TYPE_POLICY = { value: true, baseItem: true } as const;
 const WEIGHT_POLICY = { value: true, units: true } as const;
 const ITEM_DESCRIPTION_POLICY = { value: true, chat: true } as const;
+const ROLL_PART_POLICY = {
+  number: true,
+  denomination: true,
+  bonus: true,
+  types: { $array: true },
+  custom: { enabled: true, formula: true },
+  scaling: SCALING_POLICY,
+} as const;
 const ACTIVITY_POLICIES = {
   description: { chatFlavor: true },
   activation: { type: true, value: true, condition: true, override: true },
@@ -425,19 +489,11 @@ const ACTIVITY_POLICIES = {
     dc: { calculation: true, formula: true },
   },
   damage: {
-    parts: {
-      $array: {
-        number: true,
-        denomination: true,
-        bonus: true,
-        types: { $array: true },
-        custom: { enabled: true, formula: true },
-        scaling: SCALING_POLICY,
-      },
-    },
+    parts: { $array: ROLL_PART_POLICY },
     includeBase: true,
     onSave: true,
   },
+  healing: ROLL_PART_POLICY,
   range: RANGE_POLICY,
   consumption: {
     targets: {
@@ -451,6 +507,7 @@ const ACTIVITY_POLICIES = {
     scaling: { allowed: true, max: true },
     spellSlot: true,
   },
+  spell: { uuid: true, level: true, ability: true, challenge: { override: true, save: true, attack: true }, properties: { $array: true } },
   uses: USES_POLICY,
   target: {
     override: true,
@@ -466,8 +523,25 @@ const ACTIVITY_POLICIES = {
     },
     affects: { count: true, type: true, choice: true, special: true },
   },
-  duration: { value: true, units: true, concentration: true, override: true },
+  duration: { value: true, units: true, concentration: true, override: true, special: true },
+  enchant: { self: true },
+  summon: { mode: true, prompt: true },
+  visibility: { requireMagic: true, requireAttunement: true },
+  restrictions: { type: true, allowMagical: true, categories: { $array: true }, properties: { $array: true } },
 } as const;
+const ENCHANTMENT_PROFILE_POLICY = {
+  _id: true, uuid: true, level: { min: true, max: true },
+  riders: { effect: { $array: true }, activity: { $array: true }, item: { $array: true } },
+} as const;
+const SPELL_STORAGE_POLICY = { capacity: true, foundLevels: true } as const;
+const TIMED_SPEED_POLICY = { units: true } as const;
+const SUMMON_COOLDOWN_POLICY = { days: true } as const;
+const RANDOM_SUMMON_POLICY = { tableUuid: true, formula: true } as const;
+const SUMMON_MATCH_POLICY = { disposition: true } as const;
+const LAST_CHARGE_CHECK_POLICY = { formula: true, destroyOn: true } as const;
+const SUMMON_PROFILE_POLICY = { _id: true, name: true, uuid: true, count: true, level: { min: true, max: true } } as const;
+const ITEM_STAGE_POLICY = { index: true, name: true, sourceDerived: true } as const;
+const ITEM_EFFECT_DURATION_POLICY = { value: true, units: true, expiry: true } as const;
 
 function projectItemActivityDocument(
   activityId: string,
@@ -486,15 +560,42 @@ function projectItemActivityDocument(
       return requireNonEmptyString(effect._id, `${label}.effects[${effectIndex}].id`);
     }),
   };
+  if (activity.type === 'enchant') {
+    result.enchantmentProfiles = requireArray(activity.effects, `${label}.effects`).map((profile, i) =>
+      projectDeclaredObject(profile, `${label}.effects[${i}]`, ENCHANTMENT_PROFILE_POLICY));
+  }
+  if (activity.type === 'summon') {
+    result.summonProfiles = requireArray(activity.profiles, `${label}.profiles`).map((profile, i) =>
+      projectDeclaredObject(profile, `${label}.profiles[${i}]`, SUMMON_PROFILE_POLICY));
+    if (activity.match !== undefined) result.summonMatch = projectDeclaredObject(activity.match, `${label}.match`, SUMMON_MATCH_POLICY);
+  }
   for (const key of Object.keys(ACTIVITY_POLICIES) as Array<keyof typeof ACTIVITY_POLICIES>) {
     if (hasValue(activity, key)) {
       const projected = projectDeclaredObject(activity[key], `${label}.${key}`, ACTIVITY_POLICIES[key]);
-      if (key === 'range' && projected.override === false) {
+      if (key === 'uses' && projected.autoDestroy === false) delete projected.autoDestroy;
+      if (key === 'visibility') {
+        if (projected.requireMagic === false) delete projected.requireMagic;
+        if (projected.requireAttunement === false) delete projected.requireAttunement;
+      }
+      if (key === 'range' && projected.override === false && (activity.type === 'cast'
+        || ((!projected.units || projected.units === 'self') && !projected.value && !projected.long && !projected.reach && !projected.special))) {
         result[key] = { override: false };
         continue;
       }
-      if (key === 'target' && projected.override === false && isRecord(projected.template)) {
+      if (key === 'target' && projected.override === false && isRecord(projected.template)
+        && (activity.type === 'cast' || !projected.template.type)) {
         delete projected.template.units;
+      }
+      if (key === 'spell') {
+        if (projected.level === null) delete projected.level;
+        if (projected.ability === '' || projected.ability === null) delete projected.ability;
+        if (isRecord(projected.challenge)) {
+          if (!projected.challenge.attack) delete projected.challenge.attack;
+          if (!projected.challenge.save) delete projected.challenge.save;
+          if (!projected.challenge.override && !projected.challenge.attack && !projected.challenge.save) {
+            delete projected.challenge;
+          }
+        }
       }
       if (Object.keys(projected).length > 0) result[key] = projected;
     }
@@ -505,23 +606,29 @@ function projectItemActivityDocument(
 function projectItemEffectDocument(value: unknown, index: number): ForgeItemEffectDocumentSummary {
   const label = `itemDocument.effects[${index}]`;
   const effect = requireRecord(value, label);
-  const origin = hasValue(effect, 'origin') ? requireString(effect.origin, `${label}.origin`) : undefined;
+  const system = effect.system === undefined ? undefined : requireRecord(effect.system, `${label}.system`);
+  const origin = effect.origin == null ? undefined : requireString(effect.origin, `${label}.origin`);
+  const duration = isRecord(effect.duration) && typeof effect.duration.value === 'number'
+    ? projectDeclaredObject(effect.duration, `${label}.duration`, ITEM_EFFECT_DURATION_POLICY) : undefined;
   return {
     id: requireNonEmptyString(effect._id, `${label}.id`),
     name: requireNonEmptyString(effect.name, `${label}.name`),
     ...(origin !== undefined ? { origin } : {}),
+    ...(effect.transfer === true ? { transfer: true } : {}),
+    ...(system?.magical === true ? { magical: true } : {}),
+    ...(effect.type === 'enchantment' ? { enchantment: true } : {}),
+    ...(effect.type === 'enchantment' && effect.disabled === true ? { disabled: true } : {}),
+    ...(duration ? { duration } : {}),
     statuses: requireStringArray(effect.statuses ?? [], `${label}.statuses`),
-    changes: projectItemEffectChanges(effect, label),
+    changes: projectItemEffectChanges(effect, system, label),
   };
 }
 
 function projectItemEffectChanges(
   effect: Record<string, unknown>,
+  system: Record<string, unknown> | undefined,
   label: string,
 ): ForgeItemEffectDocumentSummary['changes'] {
-  const system = effect.system === undefined
-    ? undefined
-    : requireRecord(effect.system, `${label}.system`);
   const legacy = effect.changes === undefined
     ? undefined
     : projectItemEffectChangeArray(effect.changes, `${label}.changes`);
@@ -594,6 +701,15 @@ function projectItemActivityDocumentSummary(value: unknown, index: number): Forg
     type: requireNonEmptyString(activity.type, `${label}.type`),
     effectIds: requireStringArray(activity.effectIds, `${label}.effectIds`),
   };
+  if (activity.enchantmentProfiles !== undefined) {
+    result.enchantmentProfiles = requireArray(activity.enchantmentProfiles, `${label}.enchantmentProfiles`).map((profile, i) =>
+      projectDeclaredObject(profile, `${label}.enchantmentProfiles[${i}]`, ENCHANTMENT_PROFILE_POLICY));
+  }
+  if (activity.summonProfiles !== undefined) {
+    result.summonProfiles = requireArray(activity.summonProfiles, `${label}.summonProfiles`).map((profile, i) =>
+      projectDeclaredObject(profile, `${label}.summonProfiles[${i}]`, SUMMON_PROFILE_POLICY));
+  }
+  if (activity.summonMatch !== undefined) result.summonMatch = projectDeclaredObject(activity.summonMatch, `${label}.summonMatch`, SUMMON_MATCH_POLICY);
   for (const [key, policy] of Object.entries(ACTIVITY_POLICIES)) {
     if (activity[key] !== undefined) {
       result[key as keyof typeof ACTIVITY_POLICIES] = projectDeclaredObject(
@@ -617,6 +733,11 @@ function projectItemEffectDocumentSummary(value: unknown, index: number): ForgeI
       .map((change, changeIndex) => projectEffectChange(change, `${label}.changes[${changeIndex}]`)),
   };
   if (effect.origin !== undefined) result.origin = requireString(effect.origin, `${label}.origin`);
+  if (effect.transfer === true) result.transfer = true;
+  if (effect.magical === true) result.magical = true;
+  if (effect.enchantment === true) result.enchantment = true;
+  if (effect.disabled === true) result.disabled = true;
+  if (effect.duration !== undefined) result.duration = projectDeclaredObject(effect.duration, `${label}.duration`, ITEM_EFFECT_DURATION_POLICY);
   return result;
 }
 

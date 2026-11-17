@@ -8,10 +8,11 @@ const ACTIVITY_KEY = '(?:0|[1-9]\\d*|[A-Za-z0-9]{16})';
 const OUTPUT_PATH_PATTERNS = [
   // Native resistance is owned by the Actor, outside its embedded documents.
   /^actor\/system\/resources\/legres$/u,
-  new RegExp(`^documents/${DOCUMENT_INDEX}/system/(?:armor|type|uses|damage/base)$`, 'u'),
+  new RegExp(`^documents/${DOCUMENT_INDEX}/system/(?:armor|type|uses|mastery|magicalBonus|capacity|properties|weight|description/value|damage(?:/base)?)$`, 'u'),
   new RegExp(`^documents/${DOCUMENT_INDEX}/system/activities/${ACTIVITY_KEY}(?:/consumption/targets|/flags/fvttJsonGenerator/(?:resourceConsumption|resourceTransition))?$`, 'u'),
   new RegExp(`^documents/${DOCUMENT_INDEX}/effects(?:/${DOCUMENT_INDEX}(?:/flags/fvttJsonGenerator/resourceTier)?)?$`, 'u'),
-  new RegExp(`^documents/${DOCUMENT_INDEX}/flags/fvttJsonGenerator/(?:stage|resource|behaviorMechanics/${DOCUMENT_INDEX})$`, 'u'),
+  new RegExp(`^documents/${DOCUMENT_INDEX}/flags/fvttJsonGenerator/(?:stage|resource|spellStorage|timedSpeed|summonCooldown|randomSummon|lastChargeCheck|behaviorMechanics/${DOCUMENT_INDEX})$`, 'u'),
+  new RegExp(`^documents/${DOCUMENT_INDEX}/flags/dnd5e/(?:spellLevel|riders/effect)$`, 'u'),
 ];
 const WINDOWS_ABSOLUTE_PATH = /(?:^|[\s"'(])[A-Za-z]:[\\/]/u;
 const UNC_OR_FILE_URL = /(?:\\\\|file:\/\/)/iu;

@@ -1,4 +1,8 @@
 import { DND5E_V14_SYSTEM_VERSION } from '@fvtt-json-generator/contracts/target';
+import { itemRandomSummonAppendixLength, resolveFormalItemCategory } from '@fvtt-json-generator/models/item';
+import { exactChargedSpellOption, sourceChargedSpellOptions, spellCastingTiming, spellUsesCasterSaveDc } from './item-charged-spell-evidence';
+import { sourcePassiveResistanceEvidence } from './item-p1-evidence';
+import { ITEM_ACTIVATION_TYPES } from './item-types';
 import type {
   ItemIntakeAbility,
   ItemIntakeCoverage,
@@ -6,8 +10,10 @@ import type {
   ItemIntakeIR,
 } from './item-types';
 
+export { chargedSpellNameKey, sourceChargedSpellOptions } from './item-charged-spell-evidence';
+
 export interface ItemCoreSpellResolver {
-  resolveSpell(identifier: string, name: string): { identifier: string; name: string } | undefined;
+  resolveSpell(identifier: string, name: string): { identifier: string; name: string; level?: number; castingTime?: { type: string; value: number | null } } | undefined;
   resolveActivation(identifier: string, name: string): string | undefined;
 }
 
@@ -25,7 +31,13 @@ export function normalizeItemCandidates(source: string, candidates: unknown[]): 
     value.start = firstStart;
     value.end = firstStart + value.quote.length;
     return [value];
-  }).sort((left, right) => left.start - right.start || left.end - right.end);
+  }).sort((left, right) => left.start - right.start || left.end - right.end).map((candidate, index, sorted) => {
+    const trailing = source.slice(candidate.end, sorted[index + 1]?.start ?? source.length);
+    const length = itemRandomSummonAppendixLength(candidate.quote, trailing);
+    if (!length) return candidate;
+    const end = candidate.end + length;
+    return { ...candidate, end, quote: source.slice(candidate.start, end) };
+  });
 }
 
 export function itemCandidateBoundaryIssue(
@@ -61,22 +73,70 @@ export function normalizeItemIntakeIR(
     }));
   }
   if (Array.isArray(next.item?.abilities)) {
+    const chargedOptions = sourceChargedSpellOptions(candidate);
     next.item.abilities = next.item.abilities.map((ability) => {
       if (!ability || typeof ability !== 'object' || Array.isArray(ability)) return ability;
       const normalized = {
         ...ability,
         evidence: normalizeEvidenceRefs(source, candidate, (ability as any).evidence),
       } as ItemIntakeAbility;
+      if (normalized.kind === 'container') {
+        for (const key of ['count', 'weight', 'volume', 'itemWeight'] as const) {
+          if (normalized[key] === null) delete normalized[key];
+        }
+      }
+      if (normalized.kind === 'spell-scroll') {
+        if (normalized.level === null) delete normalized.level;
+        if (normalized.spell === null) delete normalized.spell;
+      }
       if (normalized.kind === 'light' && Array.isArray(normalized.evidence)) {
         const radii = deriveLightRadii(normalized.evidence.map((ref) => ref.quote).join('\n'));
         if (radii) Object.assign(normalized, radii);
       }
+      if (normalized.kind === 'passive-resistance') {
+        const cited = sourcePassiveResistanceEvidence(candidate, normalized.damageType);
+        if (cited) normalized.evidence = [cited];
+      }
       if (normalized.kind === 'spell') {
-        const spell = (normalized as any).spell;
+        for (const key of ['activityUses', 'level', 'saveDc', 'maxCharges', 'activationOverride'] as const) {
+          if (normalized[key] === null) delete normalized[key];
+        }
+        if (Object.is(normalized.activationOverride, false)) delete normalized.activationOverride;
+        const spell = normalized.spell;
         if (spell && typeof spell === 'object' && !Array.isArray(spell)
           && typeof spell.identifier === 'string' && typeof spell.name === 'string') {
           const resolved = resolver.resolveSpell(spell.identifier, spell.name);
-          if (resolved) normalized.spell = resolved;
+          if (resolved) {
+            normalized.spell = { identifier: resolved.identifier, name: resolved.name };
+            const option = exactChargedSpellOption(chargedOptions, normalized);
+            if (option && spellUsesCasterSaveDc(option, candidate.quote)) delete normalized.saveDc;
+            if (option?.fixedChargeCost) delete normalized.maxCharges;
+            if (normalized.activationOverride === undefined && option) {
+              const text = Array.isArray(normalized.evidence) ? normalized.evidence.map(ref => ref?.quote ?? '').join('\n') : '';
+              const timing = spellCastingTiming(text, option);
+              const canonical = resolver.resolveActivation(resolved.identifier, resolved.name);
+              const activation = ITEM_ACTIVATION_TYPES.find(type => type === canonical);
+              if (activation && !timing.unsupported && timing.activations.size === 0) normalized.activation = activation;
+            }
+            if (option?.scaling?.extraCharge === 1 && option.cost !== undefined && resolved.level !== undefined) {
+              const baseLevel = normalized.level ?? resolved.level;
+              normalized.level ??= baseLevel;
+              normalized.maxCharges ??= option.cost + option.scaling.maxLevel - baseLevel;
+            }
+          }
+        }
+      }
+      if (normalized.kind === 'attack' || normalized.kind === 'save' || normalized.kind === 'utility' || normalized.kind === 'heal') {
+        for (const key of ['name', 'englishName', 'range', 'target', 'ability', 'toHit', 'scaleMax', 'duration', 'trigger'] as const) {
+          const fields = normalized as unknown as Record<string, unknown>;
+          if (fields[key] === null) delete fields[key];
+        }
+        if (normalized.kind !== 'heal' && normalized.target) {
+          if (normalized.target.special === null) delete normalized.target.special;
+          if (normalized.kind === 'utility' && normalized.target.template === null) delete normalized.target.template;
+        }
+        if ((normalized.kind === 'attack' || normalized.kind === 'save') && Array.isArray(normalized.damage)) {
+          for (const part of normalized.damage) if (part?.scaling === null) delete part.scaling;
         }
       }
       return normalized;
@@ -87,6 +147,7 @@ export function normalizeItemIntakeIR(
       ...claim,
       evidence: normalizeEvidenceRefs(source, candidate, claim.evidence),
     }));
+    restoreItemCategoryCitation(source, candidate, next);
   }
   if (Array.isArray(next.uncertainties)) {
     next.uncertainties = next.uncertainties.map((uncertainty) => ({
@@ -124,6 +185,31 @@ export function normalizeItemIntakeIR(
   }
   if (Array.isArray(next.coverage)) next.coverage = normalizeCoverage(source, candidate, next.coverage);
   return next;
+}
+
+export function itemCategoryOnLine(line: string) {
+  const label = (line.match(/^(?:[^,，(（]|\([^)]*\)|（[^）]*）)+/u)?.[0] ?? '').replace(/^\s*[*_#]+|[*_]+\s*$/gu, '').trim();
+  return resolveFormalItemCategory(label);
+}
+
+function restoreItemCategoryCitation(source: string, candidate: ItemDiscoveryCandidate, ir: ItemIntakeIR): void {
+  const claim = ir.claims.find(entry => entry.path === '/item/type');
+  if (!claim || !Array.isArray(claim.evidence)) return;
+  const category = typeof ir.item?.type === 'string' ? resolveFormalItemCategory(ir.item.type) : undefined;
+  const [, metadata] = [...candidate.quote.matchAll(/^[^\r\n]*\S[^\r\n]*$/gmu)];
+  if (!category || !metadata) return;
+  const quote = metadata[0];
+  const cited = itemCategoryOnLine(quote);
+  if (cited?.type !== category.type || cited.subtype !== category.subtype) return;
+  claim.evidence = claim.evidence.map(ref => {
+    if (!isEvidenceRef(ref) || (ref.start >= candidate.start && ref.end <= candidate.end
+      && source.slice(ref.start, ref.end) === ref.quote)) return ref;
+    const repeatedLabel = itemCategoryOnLine(ref.quote);
+    if (repeatedLabel?.type !== category.type || repeatedLabel.subtype !== category.subtype
+      || !quote.includes(ref.quote.trim())) return ref;
+    const start = candidate.start + metadata.index;
+    return { start, end: start + quote.length, quote };
+  });
 }
 
 export function deriveItemLightRadii(text: string): { bright: number; dim: number } | undefined {
@@ -175,7 +261,7 @@ function normalizeCoverage(
 ): ItemIntakeCoverage[] {
   const normalized: ItemIntakeCoverage[] = [];
   let cursor = candidate.start;
-  for (const entry of coverage) {
+  for (const [index, entry] of coverage.entries()) {
     if (!isEvidenceRef(entry) || typeof entry.classification !== 'string') {
       normalized.push(entry);
       continue;
@@ -189,7 +275,8 @@ function normalizeCoverage(
       }
       continue;
     }
-    const match = findEvidenceMatch(source, candidate, entry, cursor);
+    const match = findEvidenceMatch(source, candidate, entry, cursor, true)
+      ?? narrativeCoverageRange(source, entry, coverage[index + 1], cursor);
     if (!match) {
       normalized.push(entry);
       continue;
@@ -199,12 +286,37 @@ function normalizeCoverage(
     normalized.push({ ...entry, start, end, quote: source.slice(start, end) });
     cursor = end;
   }
-  if (normalized.length > 0 && cursor < candidate.end && source.slice(cursor, candidate.end).trim() === '') {
-    const last = normalized[normalized.length - 1]!;
-    last.end = candidate.end;
-    last.quote = source.slice(last.start, candidate.end);
+  const last = normalized.at(-1);
+  if (last?.end === cursor && cursor < candidate.end) {
+    const tail = source.slice(cursor, candidate.end).trim();
+    // Extend coverage over a closing table delimiter only after matching the row contents verbatim.
+    const tableClosure = tail === '|' && coverage.at(-1)?.end === candidate.end
+      && /(?:^|\n)[ \t]*\|(?:[ \t]*:?-{3,}:?[ \t]*\|)+[ \t]*\r?\n(?:[ \t]*\|[^\r\n]*\r?\n)*[ \t]*\|[^\r\n]*(?<!\\)\|$/u
+        .test(source.slice(candidate.start, candidate.end).trimEnd());
+    if (!tail || tableClosure) {
+      last.end = candidate.end;
+      last.quote = source.slice(last.start, candidate.end);
+    } else {
+      const trailing = source.slice(cursor, candidate.end);
+      const appendixLength = itemRandomSummonAppendixLength(source.slice(candidate.start, cursor), trailing);
+      if (appendixLength && !trailing.slice(appendixLength).trim()) {
+        normalized.push({
+          start: cursor, end: candidate.end, quote: trailing, classification: 'mechanical',
+          claimPaths: [], reason: 'Numbered NPC and RollTable bindings verified directly from the source.',
+        });
+      }
+    }
   }
   return normalized;
+}
+
+// Coverage describes source slices. Only independent, anchored narrative slices can use their original bytes.
+function narrativeCoverageRange(source: string, entry: ItemIntakeCoverage, next: ItemIntakeCoverage | undefined, cursor: number) {
+  if (!['narrative', 'ignored-with-reason'].includes(entry.classification)
+    || !Array.isArray(entry.claimPaths) || entry.claimPaths.some(path => path !== '/item/stages')
+    || entry.start !== cursor || entry.end <= cursor || entry.quote.length !== entry.end - cursor
+    || !next || next.start !== entry.end || source.slice(next.start, next.end) !== next.quote) return undefined;
+  return { start: cursor, end: entry.end };
 }
 
 function findEvidenceMatch(
@@ -212,6 +324,7 @@ function findEvidenceMatch(
   candidate: ItemDiscoveryCandidate,
   ref: { start: number; end: number; quote: string },
   minimumStart: number,
+  coverage = false,
 ): { start: number; end: number } | undefined {
   const rangeStart = Math.max(candidate.start, Number.isInteger(minimumStart) ? minimumStart : candidate.start);
   const rangeEnd = candidate.end;
@@ -221,7 +334,7 @@ function findEvidenceMatch(
   if (!trimmed) return undefined;
   const trimmedMatch = chooseEvidenceMatch(findStringMatches(source, trimmed, rangeStart, rangeEnd), ref);
   if (trimmedMatch) return trimmedMatch;
-  const pattern = whitespaceTolerantPattern(trimmed);
+  const pattern = whitespaceTolerantPattern(trimmed, coverage);
   if (!pattern) return undefined;
   const bounded = source.slice(rangeStart, rangeEnd);
   const matches: Array<{ start: number; end: number }> = [];
@@ -264,8 +377,14 @@ function consumeWhitespace(source: string, start: number, end: number): number {
   return cursor;
 }
 
-function whitespaceTolerantPattern(value: string): string {
-  return value.split(/(\s+)/u).filter(Boolean).map((part) => /\s/u.test(part) ? '\\s+' : escapeRegExp(part)).join('');
+function whitespaceTolerantPattern(value: string, coverage: boolean): string {
+  const parts = value.split(/(\s+)/u);
+  return parts.map((part, index) => {
+    if (index % 2 === 0) return escapeRegExp(part);
+    // The coverage reply may insert a line break between adjacent Chinese sentences.
+    if (coverage && /[\r\n]/u.test(part) && /[。！？；]$/u.test(parts[index - 1]!)) return '\\s*';
+    return '\\s+';
+  }).join('');
 }
 
 function escapeRegExp(value: string): string {

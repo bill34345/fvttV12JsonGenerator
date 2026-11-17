@@ -1,4 +1,6 @@
 import { nativeProjectionForGame } from './nativeProjection';
+import { renderForgeItemPreview } from './itemPreview';
+import { renderItemStagePicker, selectedItemStage } from './itemStagePicker';
 import { isForgeRuntimeTargetSupported } from './mirror-core-compatibility';
 import { createForgePaneBase, type ForgePaneBinding, type ForgePaneState } from './workspacePane';
 import {
@@ -40,6 +42,7 @@ interface ItemPreviewSnapshot {
   source: string;
   displayName: string;
   mode: string;
+  stageIndex?: number;
 }
 
 const MAX_SOURCE_FILE_BYTES = 200_000;
@@ -129,6 +132,8 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       if (source) source.oninput = invalidatePreview;
       if (displayName) displayName.oninput = invalidatePreview;
       if (mode) mode.onchange = invalidatePreview;
+      const stage = root.querySelector<HTMLSelectElement>('select[name="itemStage"]');
+      if (stage) stage.onchange = invalidatePreview;
       const sourceFile = root.querySelector('[name="sourceFile"]') as HTMLInputElement | null;
       if (sourceFile) sourceFile.onchange = () => this.readSourceFile(root, sourceFile);
       this.registerAvailabilityHooks();
@@ -230,6 +235,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
           requestId: randomRequestId(),
           fvttVersion: environment.game.version,
           systemVersion: environment.game.system.version,
+          stageIndex: snapshot.stageIndex,
         });
         const finalSnapshot = { ...snapshot, source: request.source.content };
         const sourceInput = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
@@ -340,6 +346,8 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
 
     private renderResult(root: HTMLElement): void {
       root = (this.element as HTMLElement | undefined) ?? root;
+      const picker = renderItemStagePicker(root, inputValue(root, 'source'));
+      if (picker) picker.disabled = this.creating || Boolean(this.controller) || this.readingFile;
       environment.pane?.changed();
       const result = this.response && 'result' in this.response ? this.response.result : undefined;
       const snapshotCurrent = Boolean(this.previewSnapshot && sameSnapshot(this.previewSnapshot, readSnapshot(root)));
@@ -371,11 +379,10 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       const messages = (result?.diagnostics ?? []).map((entry) => `[${entry.severity}] ${entry.code}: ${entry.message}`);
       if (diagnostics) diagnostics.hidden = messages.length === 0;
       if (diagnosticList) diagnosticList.innerHTML = messages.map((message) => `<li>${escapeHtml(message)}</li>`).join('');
-      if (preview) preview.hidden = !result;
-      if (previewText) previewText.textContent = result
-        ? JSON.stringify({ item: result.itemDocument, verification: result.itemVerification }, null, 2)
-        : '';
-      if (json) json.textContent = result && 'artifact' in result ? JSON.stringify(result.artifact, null, 2) : '';
+      const artifact = result && 'artifact' in result ? result.artifact : undefined;
+      if (preview) preview.hidden = !artifact;
+      if (previewText) previewText.innerHTML = result && artifact ? renderForgeItemPreview(result.itemDocument, result.spellVariants) : '';
+      if (json) json.textContent = artifact ? JSON.stringify(artifact, null, 2) : '';
       if (finalSource) finalSource.textContent = this.response && 'result' in this.response
         ? JSON.stringify(this.response.result.sourceIdentity, null, 2)
         : '';
@@ -489,11 +496,12 @@ function readSnapshot(root: HTMLElement): ItemPreviewSnapshot {
     source: inputValue(root, 'source'),
     displayName: inputValue(root, 'displayName').trim(),
     mode: inputValue(root, 'mode').trim(),
+    stageIndex: selectedItemStage(root),
   };
 }
 
 function sameSnapshot(left: ItemPreviewSnapshot, right: ItemPreviewSnapshot): boolean {
-  return left.source === right.source && left.displayName === right.displayName && left.mode === right.mode;
+  return left.source === right.source && left.displayName === right.displayName && left.mode === right.mode && left.stageIndex === right.stageIndex;
 }
 
 function inputValue(root: HTMLElement, name: string): string {

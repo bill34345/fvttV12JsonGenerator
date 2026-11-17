@@ -21,6 +21,7 @@ import {
 import { projectNativeDocument, type NativeDocumentProjection } from './nativeProjection';
 
 export interface ItemGenerationWorkflowOptions {
+  stageIndex?: number;
   nativeProjection?: NativeDocumentProjection;
   nativeSourceNormalizer?: (item: ItemDocument) => ItemDocument;
   sourceText?: string;
@@ -45,7 +46,7 @@ export async function generateItemArtifacts(
   parsed: ParsedItem,
   options: ItemGenerationWorkflowOptions,
 ): Promise<ItemGenerationArtifact[]> {
-  const expanded = expandParsedItemStages(parsed);
+  const expanded = expandParsedItemStages(parsed).filter(entry => options.stageIndex === undefined || entry.stageIndex === options.stageIndex);
   const projector = getGenerationProjector(options.fvttVersion);
   const iconSession = options.iconWorkflow
     ? options.iconWorkflow.createResolutionSession(options.fvttVersion, options.iconOptions)
@@ -161,6 +162,10 @@ export function expandParsedItemStages(parsed: ParsedItem): ExpandedStage[] {
     }];
   }
 
+  if (parsed.stagePreamble !== undefined) {
+    return expandSourceItemStages(parsed, parsed.stages);
+  }
+
   return parsed.stages.map((stage, stageIndex) => {
     const cumulativeRequirements = parsed.stages!
       .slice(0, stageIndex + 1)
@@ -196,6 +201,61 @@ export function expandParsedItemStages(parsed: ParsedItem): ExpandedStage[] {
         cumulativeRequirements,
         uses: stageUses,
         structuredActions,
+      },
+    };
+  });
+}
+
+function expandSourceItemStages(parsed: ParsedItem, stages: ItemStage[]): ExpandedStage[] {
+  let uses = parsed.uses;
+  let acBonus: number | undefined;
+  const descriptions = [parsed.stagePreamble];
+  const baseActions = parsed.structuredActions;
+  const baseEffects = baseActions?.effects?.filter(action => action.passiveEffect?.type !== 'acBonus') ?? [];
+  const activities = [...(baseActions?.uses ?? [])];
+  return stages.map((stage, stageIndex) => {
+    if (stage.maxUses !== undefined) {
+      uses = { max: String(stage.maxUses), spent: 0, recovery: uses?.recovery ?? [] };
+    }
+    acBonus = stage.acBonus ?? acBonus;
+    activities.push(...(stage.actions?.uses ?? []));
+    descriptions.push(stage.description);
+    const effects = [...baseEffects];
+    const stageShield = parsed.armor?.baseItem === 'shield' && acBonus !== undefined
+      ? { ...parsed.armor, magicalBonus: acBonus }
+      : undefined;
+    if (acBonus !== undefined && !stageShield) {
+      effects.push({
+        name: `护甲等级加值 Armor Class Bonus +${acBonus}`,
+        type: 'effect',
+        passiveEffect: { type: 'acBonus', value: acBonus },
+      });
+    } else if (!stageShield) {
+      effects.push(...(baseActions?.effects?.filter(action => action.passiveEffect?.type === 'acBonus') ?? []));
+    }
+    const rawEnglish = parsed.englishName;
+    const baseName = rawEnglish && parsed.name.endsWith(rawEnglish) ? parsed.name.slice(0, -rawEnglish.length).trim() : parsed.name;
+    const englishName = rawEnglish && stage.englishName ? `${rawEnglish} — ${stage.englishName}` : rawEnglish;
+    const currentValues = [
+      uses ? `充能上限 ${uses.max}` : '',
+      acBonus === undefined ? '' : `护甲等级 +${acBonus}`,
+    ].filter(Boolean);
+    const heading = `当前阶段：${stage.name}${currentValues.length ? `。 ${currentValues.join('，')}。` : '。'}`;
+    return {
+      stage,
+      stageIndex,
+      sourceMechanicsPresent: true,
+      diagnostics: [],
+      parsed: {
+        ...parsed,
+        name: `${baseName}·${stage.name}`,
+        englishName,
+        description: [heading, ...descriptions].filter(Boolean).join('\n\n'),
+        cumulativeRequirements: undefined,
+        stages: [stage],
+        uses,
+        ...(stageShield ? { armor: stageShield, unresolvedMechanics: undefined } : {}),
+        structuredActions: { ...baseActions, effects, uses: [...activities] },
       },
     };
   });

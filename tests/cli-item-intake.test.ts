@@ -19,13 +19,16 @@ describe('AI Item Intake CLI', () => {
       hostname: '127.0.0.1',
       port: 0,
       async fetch(request) {
-        const body = await request.json() as any;
-        const prompt = String(body.messages?.[0]?.content ?? '');
-        const content = prompt.includes('Find every distinct Item boundary')
-          ? { schemaVersion: 1, candidates: [jewelCandidate()] }
-          : prompt.includes('Extract one candidate')
+        const body = await request.json() as { messages: { role: string; content: string }[] };
+        const serialized = body.messages.find(message => message.role === 'user')?.content;
+        if (!serialized) throw new Error('Missing Item Intake payload');
+        const payload = JSON.parse(serialized) as { source: string; candidate?: unknown; ir?: unknown };
+        expect(payload.source).toBe(JEWEL_OF_THREE_PRAYERS_SOURCE);
+        const content = payload.ir
+          ? { schemaVersion: 1, verdict: 'accepted', findings: [] }
+          : payload.candidate
             ? buildJewelOfThreePrayersIr()
-            : { schemaVersion: 1, verdict: 'accepted', findings: [] };
+            : { schemaVersion: 1, candidates: [jewelCandidate()] };
         return Response.json({ choices: [{ message: { content: JSON.stringify(content) } }] });
       },
     });

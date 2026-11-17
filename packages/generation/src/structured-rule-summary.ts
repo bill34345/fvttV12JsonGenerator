@@ -83,7 +83,8 @@ export function summarizeStructuredRule(input: {
   if (action.attack) {
     const kind = { mwak: '近战武器', rwak: '远程武器', msak: '近战法术', rsak: '远程法术' }[action.attack.type];
     const range = simpleRange(action.attack.reach ?? action.attack.range);
-    add('attack', kind + '攻击，命中加值' + (action.attack.toHit >= 0 ? '+' : '') + action.attack.toHit
+    const toHit = action.attack.toHit;
+    add('attack', kind + '攻击' + (toHit === undefined ? '' : '，命中加值' + (toHit >= 0 ? '+' : '') + toHit)
       + (range ? '，' + (action.attack.type === 'mwak' || action.attack.type === 'msak' ? '触及' : '射程') + range + '尺' : ''));
     if (!range && (action.attack.reach || action.attack.range)) unknown('attack/range', action.attack.reach ?? action.attack.range);
     if (action.attack.versatile) {

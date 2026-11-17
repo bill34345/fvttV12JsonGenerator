@@ -1,7 +1,9 @@
+import { itemRandomSummonRules, itemSummonBinding, itemSummonRules, readItemEnchantment, readItemRandomSummon, readItemSpellStorage, readItemSummon, readItemTimedSpeed, resolveFormalItemCategory } from '@fvtt-json-generator/models/item';
 import * as yaml from 'js-yaml';
 import { detectItemRoute } from './itemRouter';
+import { parseItemLastChargeCheck } from './item-last-charge';
 import type { ItemParserStrategy } from './itemStrategy';
-import type { ParsedItem, ItemRarity, AttunementType, ItemType, UsesData, ItemStage } from '@fvtt-json-generator/models/item';
+import type { ParsedItem, ItemRarity, AttunementType, ItemType, UsesData, ItemStage, ItemContainerData, ItemSpellScrollData, ItemSpellStorageData, ItemSummonData, ItemTimedSpeedData, ItemEnchantmentData } from '@fvtt-json-generator/models/item';
 import type { ActionData, Damage } from '@fvtt-json-generator/models/action';
 import { i18n } from './i18n';
 import {
@@ -9,6 +11,29 @@ import {
   parseWeaponConfiguration,
   type WeaponConfiguration,
 } from '@fvtt-json-generator/contracts/weapon-properties';
+
+const RING_ITEM_TYPE = /^(?:戒指|ring|饰物|饰品|accessory)(?:\s*[（(]\s*(?:戒指|ring)\s*[）)])?$|^(?:戒指|ring)\s+(?:戒指|ring)$/iu;
+
+function isRingItemType(type: string): boolean {
+  return /(?:戒指|\bring\b)/iu.test(type) && RING_ITEM_TYPE.test(type.trim());
+}
+
+function isIntegerWithin(value: unknown, minimum: number, maximum = Number.MAX_SAFE_INTEGER): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= minimum && value <= maximum;
+}
+
+function readCapacityMeasure<T extends string>(
+  field: unknown, allowedUnits: readonly T[], path: string, minimum?: number,
+): { value: number; units: T } | undefined {
+  if (field === undefined) return undefined;
+  const measure = field as { value?: number; units?: T } | null;
+  if (typeof measure?.value !== 'number' || !Number.isFinite(measure.value)
+    || (minimum === undefined ? measure.value <= 0 : measure.value < minimum)
+    || !measure.units || !allowedUnits.includes(measure.units)) {
+    throw new Error(`${path} requires a supported unit and a valid numeric value.`);
+  }
+  return { value: measure.value, units: measure.units };
+}
 
 // source-derived: explicit AC gains must not disappear merely because "additional" is absent.
 function unresolvedArmorClauses(body: string): string[] {
@@ -46,25 +71,96 @@ export class ItemParser implements ItemParserStrategy {
     const rarity = this.parseRarity(rawData);
     const attunement = this.parseAttunement(rawData);
 
-    const headerInfo = this.parseHeaderLine(body);
+    const itemMechanics = this.parseItemMechanics(rawData['item-mechanics']);
+    const preservedSource = itemMechanics && /^\s*## 原始资料（Intake 保留）[ \t]*\r?\n/u.exec(body);
+    const sourceBody = preservedSource ? body.slice(preservedSource[0].length).trim() : body;
+    const headerInfo = this.parseHeaderLine(sourceBody);
 
     const finalName = (name && name !== 'Unknown Item') ? name : (headerInfo.name ?? 'Unknown Item');
     const finalEnglishName = englishName ?? headerInfo.englishName;
     const finalRarity = rarity ?? headerInfo.rarity;
     const finalAttunement = attunement ?? headerInfo.attunement;
-    const finalType = this.classifyItemType(type || headerInfo.type || 'loot');
+    const sourceType = type || headerInfo.type || 'loot';
+    const category = resolveFormalItemCategory(sourceType);
+    const container = itemMechanics?.container;
+    if (container && ((category?.type !== 'container' && category?.subtype !== 'wondrous')
+      || itemMechanics?.uses || itemMechanics?.structuredActions)) {
+      throw new Error('An item-mechanics container requires a Container or Wondrous Item source without Activities or use pools.');
+    }
+    const finalType = container ? 'container' : category?.type ?? this.classifyItemType(sourceType);
+    const equipmentSubtype = finalType === 'container' ? undefined : category?.subtype === 'wondrous' ? 'wondrous'
+      : isRingItemType(sourceType) || category?.subtype === 'ring' ? 'ring'
+      : finalType === 'wand' || finalType === 'rod' ? finalType : undefined;
+    const consumableSubtype = category?.subtype === 'potion' || category?.subtype === 'scroll' ? category.subtype : undefined;
 
-    const description = this.extractDescription(body);
-    const itemMechanics = this.parseItemMechanics(rawData['item-mechanics']);
-    const uses = itemMechanics?.uses ?? this.parseUses(body);
-    const armor = this.parseArmor(body, type, headerInfo.type);
-    const weapon = this.parseWeapon(type, headerInfo.type);
+    // The source header can qualify who may attune, beyond the native attunement flag.
+    const description = preservedSource ? sourceBody : this.extractDescription(body);
+    if (itemMechanics && finalType === 'loot' && category?.type !== 'loot') {
+      throw new Error(`Unsupported item-mechanics source type "${sourceType}"; use an explicit known Item category.`);
+    }
+    const consumesPotion = itemMechanics?.consumesPotion;
+    if (consumesPotion && consumableSubtype !== 'potion') {
+      throw new Error('An item-mechanics Heal consuming one bottle requires an explicitly typed Potion.');
+    }
+    const spellScroll = itemMechanics?.spellScroll;
+    if (spellScroll && (consumableSubtype !== 'scroll' || itemMechanics?.uses || itemMechanics?.structuredActions)) {
+      throw new Error('A standard spell-scroll requires an explicit Scroll source category and no separate Activities or use pool.');
+    }
+    const enchantment = itemMechanics?.enchantment;
+    if (itemMechanics && enchantment && (category?.subtype || itemMechanics.uses || itemMechanics.structuredActions
+      || itemMechanics.weaponBonus || container || spellScroll
+      || nativeMastery || weaponConfiguration
+      || (enchantment.kind === 'enchant-weapon-bonus' ? finalType !== 'weapon' || (finalAttunement && finalAttunement !== 'none')
+        : finalType !== 'armor' || finalRarity !== 'rare' || finalAttunement !== 'required'))) {
+      throw new Error('An enchantment template requires the supported generic Weapon or attuned rare Armor category, with no separate item mechanics.');
+    }
+    const spellStorage = itemMechanics?.spellStorage;
+    if (itemMechanics && spellStorage && (equipmentSubtype !== 'ring' || finalAttunement !== 'required' || finalRarity !== 'rare'
+      || itemMechanics.structuredActions || itemMechanics.uses || container || spellScroll || enchantment)) {
+      throw new Error('Spell storage needs a rare, attuned Ring without another activity or shared use pool.');
+    }
+    const timedSpeed = itemMechanics?.timedSpeed;
+    if (itemMechanics && timedSpeed && (equipmentSubtype !== 'wondrous' || finalAttunement !== 'required'
+      || itemMechanics.structuredActions || itemMechanics.uses || container || spellScroll || enchantment || spellStorage)) {
+      throw new Error('Timed speed requires one attuned Wondrous Item without a separate use pool or activity.');
+    }
+    const summon = itemMechanics?.summon;
+    if (summon) {
+      const binding = itemSummonBinding(body);
+      const rules = itemSummonRules(body);
+      if (equipmentSubtype !== 'wondrous' || itemMechanics.structuredActions || itemMechanics.uses
+        || container || enchantment || spellScroll || spellStorage || timedSpeed
+        || binding?.actorName !== summon.actorName || binding.actorUuid !== summon.actorUuid
+        || rules?.rangeFeet !== summon.rangeFeet || rules.durationHours !== summon.durationHours || rules.cooldownDays !== summon.cooldownDays) {
+        throw new Error('A figurine Summon requires one source-bound Compendium Actor, the stated range, duration and cooldown, and no separate activity or uses.');
+      }
+    }
+    const stageSource = description ?? body;
+    const sourceStages = parseItemStages(stageSource);
+    const stagedBody = sourceStages.length > 1 ? stageSource.slice(0, sourceStages[1]!.sourceStart) : undefined;
+    if (stagedBody) {
+      for (const stage of sourceStages.slice(1)) stage.actions = this.stageManualActivities(stage);
+    }
+    const uses = itemMechanics ? itemMechanics.uses : this.parseUses(stagedBody ?? body);
+    const lastChargeCheck = uses && !consumesPotion && !spellScroll && finalType !== 'consumable'
+      ? parseItemLastChargeCheck(stagedBody ?? description ?? body) : undefined;
+    const armor = this.parseArmor(stagedBody ?? body, category?.subtype === 'shield' ? 'shield' : type, headerInfo.type);
+    const weaponBonus = itemMechanics?.weaponBonus;
+    if (weaponBonus && ((finalType !== 'weapon' && finalType !== 'staff')
+      || (category?.subtype && category.subtype !== weaponBonus.baseItem))) {
+      throw new Error('An item-mechanics weapon bonus requires an explicit, matching Weapon or Staff.');
+    }
+    const weapon = enchantment ? undefined : this.parseWeapon(type, headerInfo.type, weaponBonus?.baseItem);
+    if (itemMechanics?.structuredActions?.effects?.some(({ passiveEffect }) => passiveEffect?.type !== 'acBonus')
+      && !['equipment', 'armor', 'weapon', 'staff', 'rod', 'wand'].includes(finalType)) {
+      throw new Error('Item passive saves, resistance, and speed require a native equippable Item.');
+    }
     const properties = armor?.magicalBonus ? ['mgc'] : weapon?.properties;
     const weight = armor?.baseItem === 'shield'
       // schema-derived: the locked dnd5e 4.3.9 and 5.3.3 shield records
       // both define the base shield as 6 lb.
       ? { value: 6, units: 'lb' as const }
-      : weapon?.weight;
+      : weapon?.weight ?? container?.itemWeight;
     const parsedWeapon = weapon?.weapon
       ? { ...weapon.weapon, ...(nativeMastery ? { mastery: nativeMastery } : {}) }
       : undefined;
@@ -73,16 +169,40 @@ export class ItemParser implements ItemParserStrategy {
     let structuredActions: ParsedItem['structuredActions'];
 
     if (itemMechanics) {
-      stages = this.parseStages(body);
+      stages = sourceStages;
       structuredActions = itemMechanics.structuredActions;
+      if (finalType === 'armor' && armor?.baseItem === 'shield' && armor.magicalBonus !== null && structuredActions?.effects) {
+        // The same source bonus already belongs on the native shield armor field.
+        const duplicate = structuredActions.effects.findIndex(({ passiveEffect }) =>
+          passiveEffect?.type === 'acBonus' && passiveEffect.value === armor.magicalBonus);
+        if (duplicate >= 0) structuredActions.effects.splice(duplicate, 1);
+      }
+      if (weaponBonus && weapon) {
+        structuredActions ??= {};
+        const ordinary = (attackType: 'mwak' | 'rwak', range: string, name: string): ActionData => ({
+          name,
+          type: 'attack',
+          attack: { type: attackType, range, includeBase: true, damage: [] },
+          useAction: { activation: 'action', consumption: 0 },
+          activity: { target: { template: { type: '', size: '', units: 'ft' }, affects: { type: 'creatureOrObject', count: 1 } } },
+        });
+        const attackModes = [ordinary('mwak', '5', '近战攻击 Melee Attack')];
+        if (weapon.range.value && weapon.range.long) {
+          attackModes.push(ordinary('rwak', `${weapon.range.value}/${weapon.range.long}`, '投掷攻击 Thrown Attack'));
+        }
+        structuredActions.attacks = [...attackModes, ...(structuredActions.attacks ?? [])];
+      }
     } else if (normalizedBody) {
       // Parse YAML when normalizedBody is provided
       const yamlData = yaml.load(normalizedBody) as Record<string, unknown>;
       stages = this.parseYamlStages(yamlData);
       structuredActions = this.parseYamlActions(yamlData);
+    } else if (stagedBody) {
+      stages = sourceStages;
+      structuredActions = this.parseStagedBaseActions(stagedBody);
     } else {
       // Fall back to regex-based parsing
-      stages = this.parseStages(body);
+      stages = sourceStages;
       const attacks = this.parseAttackTraits(body);
       const saves = this.parseSaveTraits(body);
       const utilities = this.parseUtilityTraits(body);
@@ -99,6 +219,13 @@ export class ItemParser implements ItemParserStrategy {
       structuredActions = Object.keys(allActions).length > 0 ? allActions as any : undefined;
     }
 
+    const randomSummonSource = description ?? body;
+    const randomSummonRules = equipmentSubtype === 'wondrous' ? itemRandomSummonRules(randomSummonSource) : undefined;
+    const randomSummon = randomSummonRules && readItemRandomSummon(randomSummonSource, randomSummonRules);
+    if (randomSummonRules && (!randomSummon || summon || uses || structuredActions || stagedBody || enchantment || spellStorage || timedSpeed)) {
+      throw new Error('A table-based Summon requires one rollable Compendium RollTable and one numbered Compendium NPC link per die result, without a separate activity or use pool.');
+    }
+
     return {
       name: finalName,
       englishName: finalEnglishName,
@@ -106,6 +233,18 @@ export class ItemParser implements ItemParserStrategy {
       img,
       rarity: finalRarity,
       attunement: finalAttunement,
+      ...(equipmentSubtype ? { equipmentSubtype } : {}),
+      ...(consumableSubtype ? { consumableSubtype } : {}),
+      ...(consumesPotion ? { consumesPotion } : {}),
+      ...(container ? { container } : {}),
+      ...(spellScroll ? { spellScroll } : {}),
+      ...(spellStorage ? { spellStorage } : {}),
+      ...(timedSpeed ? { timedSpeed } : {}),
+      ...(summon ? { summon } : {}),
+      ...(randomSummon ? { randomSummon } : {}),
+      ...(lastChargeCheck ? { lastChargeCheck } : {}),
+      ...(enchantment ? { enchantment } : {}),
+      ...(weaponBonus ? { weaponBonus: weaponBonus.value } : {}),
       description,
       source: typeof rawData.source === 'string' ? rawData.source
         : typeof rawData['来源'] === 'string' ? rawData['来源'] : undefined,
@@ -121,6 +260,7 @@ export class ItemParser implements ItemParserStrategy {
       weight,
       uses,
       stages,
+      ...(stagedBody ? { stagePreamble: stageSource.slice(0, sourceStages[0]!.sourceStart).trim() } : {}),
       structuredActions,
     };
   }
@@ -133,6 +273,14 @@ export class ItemParser implements ItemParserStrategy {
    */
   private parseItemMechanics(value: unknown): {
     uses?: UsesData;
+    consumesPotion?: true;
+    container?: ItemContainerData;
+    spellScroll?: ItemSpellScrollData;
+    spellStorage?: ItemSpellStorageData;
+    timedSpeed?: ItemTimedSpeedData;
+    summon?: ItemSummonData;
+    enchantment?: ItemEnchantmentData;
+    weaponBonus?: { baseItem: string; value: number };
     structuredActions?: ParsedItem['structuredActions'];
   } | undefined {
     if (value === undefined) return undefined;
@@ -144,37 +292,15 @@ export class ItemParser implements ItemParserStrategy {
       throw new Error('item-mechanics.schemaVersion must be 1.');
     }
 
-    let uses: UsesData | undefined;
-    if (contract.uses !== undefined) {
-      if (typeof contract.uses !== 'object' || contract.uses === null || Array.isArray(contract.uses)) {
-        throw new Error('item-mechanics.uses must be a mapping.');
-      }
-      const rawUses = contract.uses as Record<string, unknown>;
-      const max = rawUses.max;
-      if ((typeof max !== 'number' && typeof max !== 'string') || !/^\d+$/.test(String(max)) || !Number.isSafeInteger(Number(max)) || Number(max) < 1) {
-        throw new Error('item-mechanics.uses.max must be a positive integer.');
-      }
-      if (rawUses.recovery !== undefined && !Array.isArray(rawUses.recovery)) throw new Error('item-mechanics.uses.recovery must be an array.');
-      const recovery = Array.isArray(rawUses.recovery) ? rawUses.recovery.map((entry, index) => {
-        if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
-          throw new Error(`item-mechanics.uses.recovery[${index}] must be a mapping.`);
-        }
-        const record = entry as Record<string, unknown>;
-        // schema-derived: dnd5e 5.3.3 limitedUsePeriods and ItemSheet recoveryTypes.
-        if (typeof record.period !== 'string' || !['lr', 'sr', 'day', 'dawn', 'dusk', 'initiative', 'turnStart', 'turnEnd', 'turn', 'recharge'].includes(record.period)
-          || typeof record.type !== 'string' || !['recoverAll', 'loseAll', 'formula'].includes(record.type)) {
-          throw new Error(`item-mechanics.uses.recovery[${index}] requires supported period and type.`);
-        }
-        if (record.type === 'formula' && (typeof record.formula !== 'string' || !/^\s*\d+(?:d[1-9]\d*)?(?:\s*[+-]\s*\d+)?\s*$/.test(record.formula))) throw new Error(`item-mechanics.uses.recovery[${index}] requires a supported numeric or dice formula.`);
-        if (record.period === 'recharge' && (record.type !== 'recoverAll' || (record.formula !== undefined && !/^[2-6]$/.test(String(record.formula))))) throw new Error(`item-mechanics.uses.recovery[${index}] recharge requires recoverAll and a 2-6 threshold.`);
-        return {
-          period: record.period,
-          type: record.type as UsesData['recovery'][number]['type'],
-          ...(typeof record.formula === 'string' ? { formula: record.formula } : {}),
-        };
-      }) : [];
-      uses = { max: String(max), spent: 0, recovery };
-    }
+    let uses = this.parseMechanicUses(contract.uses, 'item-mechanics.uses');
+    let consumesPotion: true | undefined;
+    let container: ItemContainerData | undefined;
+    let spellScroll: ItemSpellScrollData | undefined;
+    let spellStorage: ItemSpellStorageData | undefined;
+    let timedSpeed: ItemTimedSpeedData | undefined;
+    let summon: ItemSummonData | undefined;
+    let enchantment: ItemEnchantmentData | undefined;
+    let weaponBonus: { baseItem: string; value: number } | undefined;
 
     if (!Array.isArray(contract.abilities)) {
       throw new Error('item-mechanics.abilities must be an array.');
@@ -193,6 +319,109 @@ export class ItemParser implements ItemParserStrategy {
         ? ability.id.trim()
         : `ability-${index + 1}`;
       const kind = ability.kind;
+      const path = `item-mechanics.abilities[${index}]`;
+      if (kind === 'summon-creature') {
+        const definition = readItemSummon(ability);
+        if (summon || !definition) throw new Error(path + ' requires one exact Compendium Actor and positive range, duration and cooldown.');
+        summon = definition;
+        continue;
+      }
+      if (kind === 'timed-speed') {
+        const definition = readItemTimedSpeed(ability);
+        if (timedSpeed || !definition) throw new Error(`${path} requires one positive cumulative duration in seconds.`);
+        timedSpeed = definition;
+        continue;
+      }
+      if (kind === 'spell-storage') {
+        const definition = readItemSpellStorage(ability);
+        if (spellStorage || !definition)
+          throw new Error(`${path} needs one five-level store and an explicit source spell list within that capacity.`);
+        spellStorage = definition;
+        continue;
+      }
+      if (kind === 'enchant-weapon-bonus' || kind === 'enchant-armor-resistance') {
+        const definition = readItemEnchantment(ability);
+        if (!definition || enchantment) throw new Error(`${path} requires one enchantment template with distinct supported variants.`);
+        enchantment = definition;
+        continue;
+      }
+      if (kind === 'spell-scroll') {
+        const { level, spell } = ability;
+        if (spellScroll || (level === undefined && spell === undefined) || (level !== undefined && !isIntegerWithin(level, 0, 9))) {
+          throw new Error(`${path} requires one bound spell or a template with a known level from 0 to 9.`);
+        }
+        if (spell !== undefined) {
+          const identity = spell as Partial<NonNullable<ItemSpellScrollData['spell']>> | null;
+          if (typeof identity?.identifier !== 'string' || !identity.identifier.trim()
+            || typeof identity.name !== 'string' || !identity.name.trim()) {
+            throw new Error(`${path} requires a spell identifier and canonical English name.`);
+          }
+          spellScroll = { level: level as number | undefined, spell: { identifier: identity.identifier, name: identity.name } };
+        } else {
+          spellScroll = { level: level as number };
+        }
+        continue;
+      }
+      if (kind === 'container') {
+        if (container) throw new Error('Use one container definition for the Item.');
+        const { count, weightlessContents } = ability;
+        if ((count !== undefined && !isIntegerWithin(count, 1)) || typeof weightlessContents !== 'boolean') {
+          throw new Error(`${path} requires a positive integer count when supplied and an explicit weightlessContents boolean.`);
+        }
+        const weight = readCapacityMeasure(ability.weight, ['lb', 'kg'] as const, `${path}.weight`);
+        const volume = readCapacityMeasure(ability.volume, ['cubicFoot', 'liter'] as const, `${path}.volume`);
+        const itemWeight = readCapacityMeasure(ability.itemWeight, ['lb', 'kg'] as const, `${path}.itemWeight`, 0);
+        if (!count && !weight && !volume && !weightlessContents) {
+          throw new Error(`${path} requires a stated capacity limit or weightless contents.`);
+        }
+        container = { ...(count ? { count: Number(count) } : {}), weight, volume, itemWeight, weightlessContents };
+        continue;
+      }
+      if (kind === 'heal' || kind === 'utility') {
+        const name = typeof ability.name === 'string' && ability.name.trim() ? ability.name.trim() : id;
+        const englishName = typeof ability.englishName === 'string' ? ability.englishName.trim() : undefined;
+        const { activation, consumption } = ability;
+        if (kind === 'heal') {
+          const { target, range, formula } = ability;
+          if ((activation !== 'action' && activation !== 'bonus') || consumption !== 1
+            || typeof formula !== 'string' || !/^(?:[1-9]\d*d[1-9]\d*(?:\s*\+\s*\d+)?|[1-9]\d*)$/iu.test(formula)
+            || (target !== 'self' && target !== 'creature')
+            || (target === 'creature' ? !isIntegerWithin(range, 1) : range !== undefined)) {
+            throw new Error(`${path} Heal requires a one-bottle cost, explicit healing formula, action or bonus action, and self or a creature at a positive range.`);
+          }
+          if (uses && (uses.max !== '1' || uses.recovery.length !== 0)) {
+            throw new Error(`${path} Heal potions require a one-use Item pool without recovery.`);
+          }
+          uses ??= { max: '1', spent: 0, recovery: [] };
+          consumesPotion = true;
+          usesActions.push({
+            name, englishName, logicalPath: `item-mechanics/${id}`, type: 'heal',
+            healing: { formula: formula.toLowerCase(), type: 'healing', target: { type: target, count: 1 } },
+            useAction: { activation, consumption },
+            ...(target === 'creature' ? { activity: { range: { value: String(range), units: 'ft' } } } : {}),
+          });
+        } else {
+          const { trigger } = ability;
+          if (activation !== 'reaction' || typeof trigger !== 'string' || !trigger.trim()
+            || !isIntegerWithin(consumption, 0, uses ? Number(uses.max) : 0)) {
+            throw new Error(`${path} Utility requires a reaction trigger and an explicit, valid Item-use cost.`);
+          }
+          usesActions.push({
+            name, englishName, logicalPath: `item-mechanics/${id}`, type: 'use',
+            useAction: { activation, consumption, condition: trigger.trim() },
+            activity: this.parseItemMechanicsActivity(ability, index),
+            ...(typeof ability.description === 'string' ? { desc: ability.description } : {}),
+          });
+        }
+        continue;
+      }
+      if (kind === 'weapon-bonus') {
+        if (weaponBonus || typeof ability.baseItem !== 'string' || !isIntegerWithin(ability.value, 1, 3)) {
+          throw new Error(`${path} requires one standard base weapon and a bonus from +1 to +3.`);
+        }
+        weaponBonus = { baseItem: ability.baseItem, value: ability.value };
+        continue;
+      }
       if (kind === 'attack') {
         const attackType = ability.attackType ?? ability['攻击类型'];
         const toHit = ability.toHit ?? ability['命中'];
@@ -200,13 +429,22 @@ export class ItemParser implements ItemParserStrategy {
         if (typeof attackType !== 'string' || !['mwak', 'rwak', 'msak', 'rsak'].includes(attackType.trim().toLowerCase())) {
           throw new Error(`item-mechanics.abilities[${index}].attackType must be a supported attack type.`);
         }
-        if (typeof toHit !== 'number' || !Number.isFinite(toHit)) {
-          throw new Error(`item-mechanics.abilities[${index}].toHit must be numeric.`);
+        if (toHit !== undefined && (typeof toHit !== 'number' || !Number.isSafeInteger(toHit))) {
+          throw new Error(`${path}.toHit must be an integer when the source supplies a fixed modifier.`);
+        }
+        const rawActivation = ability.activation;
+        const structured = rawActivation !== undefined || toHit === undefined || ability.target !== undefined;
+        const consumption = ability.consumption ?? 0;
+        if (structured && ((!['action', 'bonus', 'reaction', 'free'].includes(String(rawActivation ?? 'action')))
+          || !isIntegerWithin(consumption, 0, uses ? Number(uses.max) : 0)
+          || (ability.ability !== undefined && (toHit !== undefined || !['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(String(ability.ability)))))) {
+          throw new Error(`${path} Attack requires a supported action and cost. A fixed modifier cannot also name an attack ability.`);
         }
         if (typeof range !== 'string' || !range.trim()) {
           throw new Error(`item-mechanics.abilities[${index}].range must be explicit.`);
         }
-        const damage = this.parseItemMechanicsDamage(ability.damage, index);
+        const explicitAttackAbility = structured && toHit === undefined && typeof ability.ability === 'string';
+        const damage = this.parseItemMechanicsDamage(ability.damage, index, explicitAttackAbility);
         if (damage.length === 0) {
           throw new Error(`item-mechanics.abilities[${index}].damage must contain at least one damage part.`);
         }
@@ -222,10 +460,15 @@ export class ItemParser implements ItemParserStrategy {
           ...(englishName ? { englishName } : {}),
           logicalPath: `item-mechanics/${id}`,
           type: 'attack',
+          ...(structured ? {
+            useAction: { consumption: consumption as number, activation: this.mapActivation(String(rawActivation ?? 'action')) },
+            activity: this.parseItemMechanicsActivity({ target: ability.target }, index),
+          } : {}),
           attack: {
             type: normalizedAttackType,
             ...(typeof ability.ability === 'string' ? { ability: ability.ability.trim() as NonNullable<ActionData['attack']>['ability'] } : {}),
-            toHit,
+            ...(toHit === undefined ? {} : { toHit }),
+            ...(structured ? { includeBase: false } : {}),
             range: range.trim(),
             damage,
           },
@@ -233,15 +476,26 @@ export class ItemParser implements ItemParserStrategy {
         });
         continue;
       }
-      if (kind === 'passive-ac') {
-        if (typeof ability.value !== 'number' || !Number.isFinite(ability.value)) {
-          throw new Error(`item-mechanics.abilities[${index}].value must be a numeric AC bonus.`);
+      if (kind === 'passive-ac' || kind === 'passive-save' || kind === 'passive-resistance' || kind === 'passive-movement') {
+        const { value, movement, damageType } = ability;
+        if (kind === 'passive-resistance'
+          ? !['acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning', 'necrotic', 'piercing', 'poison', 'psychic', 'radiant', 'slashing', 'thunder'].includes(String(damageType))
+          : typeof value !== 'number' || !Number.isSafeInteger(value) || value === 0
+            || (kind === 'passive-movement' && !['walk', 'fly', 'swim', 'climb', 'burrow'].includes(String(movement)))) {
+          throw new Error(`${path} requires an explicit bonus, speed mode, or damage type for its passive effect.`);
         }
+        const passiveEffect: ActionData['passiveEffect'] = kind === 'passive-ac' ? { type: 'acBonus', value: value as number }
+          : kind === 'passive-save' ? { type: 'saveBonus', value: value as number }
+          : kind === 'passive-resistance' ? { type: 'resistance', value: damageType as string }
+          : { type: 'movementBonus', value: value as number, movement: movement as NonNullable<ActionData['passiveEffect']>['movement'] };
         effects.push({
-          name: `AC +${ability.value} 加值`,
+          name: kind === 'passive-ac' ? `AC +${value} 加值`
+            : kind === 'passive-save' ? `豁免加值 Saving Throw Bonus ${value}`
+            : kind === 'passive-resistance' ? `伤害抗性 Damage Resistance — ${damageType}`
+            : `速度加值 Speed Bonus — ${movement} ${value}`,
           logicalPath: `item-mechanics/${id}`,
           type: 'effect',
-          passiveEffect: { type: 'acBonus', value: ability.value },
+          passiveEffect,
         });
         continue;
       }
@@ -345,9 +599,27 @@ export class ItemParser implements ItemParserStrategy {
         if (typeof spellData.identifier !== 'string' || typeof spellData.name !== 'string') {
           throw new Error(`item-mechanics.abilities[${index}].spell requires identifier and name.`);
         }
-        if (typeof ability.consumption !== 'number' || ability.consumption < 0) {
-          throw new Error(`item-mechanics.abilities[${index}].consumption must be a non-negative number.`);
+        const path = `item-mechanics.abilities[${index}]`;
+        const uuid = spellData.uuid;
+        if (uuid !== undefined && (typeof uuid !== 'string'
+          || !/^(?:Compendium\.[\w-]+\.[\w-]+\.)?Item\.[a-zA-Z0-9]{16}$/u.test(uuid))) {
+          throw new Error(`${path}.spell.uuid must identify a world or compendium Item.`);
         }
+        const activityUses = this.parseMechanicUses(ability.activityUses, `${path}.activityUses`);
+        const pool = activityUses ?? uses;
+        const { consumption, level, saveDc, maxCharges, activationOverride } = ability;
+        if (!isIntegerWithin(consumption, 0)
+          || (consumption === 0 && activityUses)
+          || (consumption > 0 && (!pool || consumption > Number(pool.max)))) {
+          throw new Error(`${path}.consumption must match a single uses pool with sufficient capacity.`);
+        }
+        if (level !== undefined && !isIntegerWithin(level, 0, 9)) throw new Error(`${path}.level must be between 0 and 9.`);
+        if (saveDc !== undefined && !isIntegerWithin(saveDc, 1)) throw new Error(`${path}.saveDc must be a positive integer.`);
+        if (maxCharges !== undefined && (consumption < 1 || !pool || !isIntegerWithin(maxCharges, consumption + 1, Number(pool.max))
+          || !isIntegerWithin(level, 1, 9 - (maxCharges - consumption)))) {
+          throw new Error(`${path}.maxCharges must fit the uses pool and raise the explicit level by one per additional charge, up to level 9.`);
+        }
+        if (activationOverride !== undefined && activationOverride !== true) throw new Error(`${path}.activationOverride must be true when provided.`);
         spells.push({
           name: `施展 ${spellData.name}`,
           logicalPath: `item-mechanics/${id}`,
@@ -355,8 +627,10 @@ export class ItemParser implements ItemParserStrategy {
           spellName: spellData.name,
           englishName: spellData.name,
           spellIdentifier: spellData.identifier,
+          ...(activityUses || level !== undefined || saveDc !== undefined || maxCharges !== undefined || activationOverride || uuid
+            ? { itemSpell: { activityUses, level, saveDc, maxCharges, activationOverride, ...(typeof uuid === 'string' ? { uuid } : {}) } } : {}),
           useAction: {
-            consumption: ability.consumption,
+            consumption,
             activation: this.mapActivation(String(ability.activation ?? 'action')),
           },
         });
@@ -373,12 +647,44 @@ export class ItemParser implements ItemParserStrategy {
       ...(spells.length > 0 ? { spells } : {}),
     };
     return {
-      uses,
+      uses, consumesPotion, container, spellScroll, spellStorage, timedSpeed, summon, enchantment, weaponBonus,
       structuredActions: Object.keys(structuredActions).length > 0 ? structuredActions : undefined,
     };
   }
 
-  private parseItemMechanicsDamage(value: unknown, abilityIndex: number): Damage[] {
+  private parseMechanicUses(value: unknown, path: string): UsesData | undefined {
+    if (value === undefined) return undefined;
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new Error(`${path} must be a mapping.`);
+    }
+    const rawUses = value as Record<string, unknown>;
+    const max = rawUses.max;
+    if ((typeof max !== 'number' && typeof max !== 'string') || !/^\d+$/.test(String(max)) || !Number.isSafeInteger(Number(max)) || Number(max) < 1) {
+      throw new Error(`${path}.max must be a positive integer.`);
+    }
+    if (rawUses.recovery !== undefined && !Array.isArray(rawUses.recovery)) throw new Error(`${path}.recovery must be an array.`);
+    const recovery = Array.isArray(rawUses.recovery) ? rawUses.recovery.map((entry, index) => {
+      if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+        throw new Error(`${path}.recovery[${index}] must be a mapping.`);
+      }
+      const record = entry as Record<string, unknown>;
+      // schema-derived: dnd5e 5.3.3 limitedUsePeriods and ItemSheet recoveryTypes.
+      if (typeof record.period !== 'string' || !['lr', 'sr', 'day', 'dawn', 'dusk', 'initiative', 'turnStart', 'turnEnd', 'turn', 'recharge'].includes(record.period)
+        || typeof record.type !== 'string' || !['recoverAll', 'loseAll', 'formula'].includes(record.type)) {
+        throw new Error(`${path}.recovery[${index}] requires supported period and type.`);
+      }
+      if (record.type === 'formula' && (typeof record.formula !== 'string' || !/^\s*\d+(?:d[1-9]\d*)?(?:\s*[+-]\s*\d+)?\s*$/.test(record.formula))) throw new Error(`${path}.recovery[${index}] requires a supported numeric or dice formula.`);
+      if (record.period === 'recharge' && (record.type !== 'recoverAll' || (record.formula !== undefined && !/^[2-6]$/.test(String(record.formula))))) throw new Error(`${path}.recovery[${index}] recharge requires recoverAll and a 2-6 threshold.`);
+      return {
+        period: record.period,
+        type: record.type as UsesData['recovery'][number]['type'],
+        ...(typeof record.formula === 'string' ? { formula: record.formula } : {}),
+      };
+    }) : [];
+    return { spent: 0, max: String(max), recovery };
+  }
+
+  private parseItemMechanicsDamage(value: unknown, abilityIndex: number, allowAttackModifier = false): Damage[] {
     if (value === undefined) return [];
     const entries = Array.isArray(value) ? value : [value];
     return entries.map((entry, damageIndex) => {
@@ -388,7 +694,8 @@ export class ItemParser implements ItemParserStrategy {
       const damage = entry as Record<string, unknown>;
       const formula = typeof damage.formula === 'string' ? damage.formula.replace(/\s+/g, '') : '';
       const type = typeof damage.type === 'string' ? damage.type.trim() : '';
-      if (!/^[1-9]\d*d[1-9]\d*(?:[+-]\d+)?$/i.test(formula) || !type) {
+      const diceFormula = allowAttackModifier ? formula.replace(/\+@mod$/u, '') : formula;
+      if (!/^[1-9]\d*d[1-9]\d*(?:[+-]\d+)?$/i.test(diceFormula) || !type) {
         throw new Error(`item-mechanics.abilities[${abilityIndex}].damage[${damageIndex}] requires formula and type.`);
       }
 
@@ -469,8 +776,16 @@ export class ItemParser implements ItemParserStrategy {
       if (typeof type !== 'string' || !type.trim() || (typeof count !== 'number' && typeof count !== 'string')) {
         throw new Error(`item-mechanics.abilities[${abilityIndex}].target requires type and count.`);
       }
+      let template = { type: '', size: '', units: 'ft' };
+      if (target.template !== undefined) {
+        const area = target.template as Record<string, unknown> | null;
+        if (!area || !['radius', 'sphere'].includes(String(area.type)) || !isIntegerWithin(area.size, 1) || area.units !== 'ft') {
+          throw new Error(`item-mechanics.abilities[${abilityIndex}].target.template requires a radius or sphere sized in feet.`);
+        }
+        template = { type: String(area.type), size: String(area.size), units: 'ft' };
+      }
       activity.target = {
-        template: { type: '', size: '', units: 'ft' },
+        template,
         affects: {
           count,
           type: type.trim(),
@@ -793,6 +1108,8 @@ export class ItemParser implements ItemParserStrategy {
 
     const lower = rawType.toLowerCase().trim();
 
+    if (isRingItemType(lower)) return 'equipment';
+
     // source-derived: item metadata uses these accessory labels as the whole
     // type token, optionally followed by a parenthesized subtype.
     if (
@@ -967,7 +1284,7 @@ export class ItemParser implements ItemParserStrategy {
         result.attunement = 'required';
       }
 
-      if (typeKeywords.some(kw => lowerPart.includes(kw.toLowerCase())) && !result.type) {
+      if (!result.type && (isRingItemType(part) || typeKeywords.some(kw => lowerPart.includes(kw.toLowerCase())))) {
         result.type = part;
       } else {
         const rarity = this.normalizeRarity(part);
@@ -1000,11 +1317,14 @@ export class ItemParser implements ItemParserStrategy {
       'very rare': 'veryRare',
       veryrare: 'veryRare',
       '传说': 'legendary',
+      '传奇': 'legendary',
       legendary: 'legendary',
       '神器': 'artifact',
       artifact: 'artifact',
     };
-    return rarityMap[normalized];
+    const [first, second] = normalized.split(/(?<=[\p{Script=Han}])\s+(?=[a-z])/u);
+    const rarity = rarityMap[first ?? ''];
+    return second === undefined || rarityMap[second] === rarity ? rarity : undefined;
   }
 
   private extractDescription(body: string): string | undefined {
@@ -1064,17 +1384,17 @@ export class ItemParser implements ItemParserStrategy {
 
   private parseUses(body: string): UsesData | undefined {
     const normalized = body.replace(/\*\*|__/g, '');
-    const chargeMatch = normalized.match(/(?:具有|拥有)\s*(\d+)\s*发?充能/);
-    const increaseMatch = normalized.match(/充能数?增加到?\s*(\d+)/);
+    const chargeMatch = normalized.match(/(?:具有|拥有)\s*(\d+)\s*(?:发|点)?\s*充能|\b(?:has|holds)\s+(\d+)\s+charges\b/iu);
+    const increaseMatch = normalized.match(/充能数?增加到?\s*(\d+)|\bcharges\s+increases?\s+to\s+(\d+)\b/iu);
 
     if (!chargeMatch && !increaseMatch) {
       return undefined;
     }
 
-    const max = chargeMatch?.[1] ?? increaseMatch?.[1] ?? '3';
+    const max = chargeMatch?.[1] ?? chargeMatch?.[2] ?? increaseMatch?.[1] ?? increaseMatch?.[2]!;
     const recovery: UsesData['recovery'] = [];
 
-    if (/每天黎明恢复所有被消耗的充能/.test(normalized)) {
+    if (/每天黎明恢复所有被消耗的充能|\bregains? all (?:its )?(?:expended )?charges (?:daily )?at dawn\b/iu.test(normalized)) {
       recovery.push({ period: 'dawn', type: 'recoverAll' });
     } else {
       const formulaMatch = normalized.match(/每天黎明恢复(\d+)/);
@@ -1097,8 +1417,47 @@ export class ItemParser implements ItemParserStrategy {
     };
   }
 
-  private parseStages(body: string): ItemStage[] {
-    return parseItemStages(body);
+  private parseStagedBaseActions(body: string): ParsedItem['structuredActions'] {
+    const { spells } = this.parseBulletAbilities(body);
+    const uses: ActionData[] = [];
+    for (const line of body.split(/\r?\n/u)) {
+      const light = /(?:用|以)一个动作[^。\n]*?发出\s*(\d+)\s*尺(?:半径的)?明亮光照[^。\n]*?(?:在此之外|额外)\s*(\d+)\s*尺(?:的)?微光光照/u.exec(line)
+        ?? /\bas an action\b[^.\n]*?\bbright light in a (\d+)[- ]foot radius[^.\n]*?\bdim light for an additional (\d+) feet/iu.exec(line);
+      if (!light || !/无需动作|no action required/iu.test(line)) continue;
+      const bright = Number(light[1]);
+      uses.push({
+        name: '点亮 Emit Light',
+        type: 'use',
+        useAction: { activation: 'action', consumption: 0, description: line },
+        light: { bright, dim: bright + Number(light[2]), activation: 'action', consumption: 0, extinguish: 'disable-effect' },
+      });
+    }
+    return { ...(spells?.length ? { spells } : {}), ...(uses.length ? { uses } : {}) };
+  }
+
+  private stageManualActivities(stage: ItemStage): NonNullable<ItemStage['actions']> {
+    const uses: ActionData[] = [];
+    for (const text of stage.requirements ?? []) {
+      const cost = /(?:消耗|花费)\s*(\d+)\s*(?:发|点)\s*(?:[^。；，,]*?的)?充能/u.exec(text);
+      if (!cost) continue;
+      const endsCondition = /无需动作[^。]*结束[^。]*状态/u.test(text);
+      const rerolls = /作为一个反应[^。]*重新进行豁免/u.test(text);
+      const teleports = /附赠动作[^\r\n]*传送/u.test(text);
+      if (!(endsCondition || rerolls || teleports)) continue;
+      const lightOrCast = /明亮光照|施展/u.test(text);
+      if (lightOrCast) continue;
+      const name = endsCondition ? '结束状态 End a Condition' : rerolls ? '重掷豁免 Reroll a Save' : '传送 Teleport';
+      const activation = endsCondition ? 'free' : rerolls ? 'reaction' : 'bonus';
+      const range = /(\d+)\s*尺内/u.exec(text)?.[1];
+      uses.push({
+        name,
+        type: 'use',
+        useAction: { consumption: Number(cost[1]), activation, condition: text, description: text },
+        activity: { target: { template: { type: '', size: '', units: 'ft' }, affects: { type: endsCondition ? 'self' : 'creature', count: 1 } },
+          ...(range && !endsCondition ? { range: { value: range, units: 'ft' } } : {}) },
+      });
+    }
+    return uses.length ? { uses } : {};
   }
 
   /**
@@ -1778,6 +2137,7 @@ export class ItemParser implements ItemParserStrategy {
   private parseWeapon(
     frontmatterType: string | undefined,
     headerType: string | undefined,
+    explicitBase?: string,
   ): {
     weapon: NonNullable<ParsedItem['weapon']>;
     damage: NonNullable<ParsedItem['damage']>;
@@ -1785,35 +2145,32 @@ export class ItemParser implements ItemParserStrategy {
     properties: string[];
     weight: NonNullable<ParsedItem['weight']>;
   } | undefined {
-    const typeText = `${frontmatterType ?? ''} ${headerType ?? ''}`;
-    if (!/(?:武器|\bweapon\b)/i.test(typeText) || !/(?:长矛|\bspear\b)/i.test(typeText)) {
-      return undefined;
-    }
-
-    // schema-derived from the locked dnd5e 5.3.3 standard Spear record.
-    const base = {
+    const source = `${frontmatterType ?? ''} ${headerType ?? ''}`;
+    const key = explicitBase ?? (/(?:武器|\bweapon\b)/i.test(source) && /(?:长矛|\bspear\b)/i.test(source) ? 'spear' : undefined);
+    if (!key) return undefined;
+    // schema-derived: standard dnd5e 6.0.6 equipment24 base-weapon records.
+    const bases = {
+      spear: { category: 'simpleM', die: 6, versatile: 8, damage: 'piercing', properties: ['thr', 'ver'], range: 20, long: 60, weight: 3 },
+      longsword: { category: 'martialM', die: 8, versatile: 10, damage: 'slashing', properties: ['ver'], range: null, long: null, weight: 3 },
+      quarterstaff: { category: 'simpleM', die: 6, versatile: 8, damage: 'bludgeoning', properties: ['ver'], range: null, long: null, weight: 4 },
+      dagger: { category: 'simpleM', die: 4, versatile: null, damage: 'piercing', properties: ['fin', 'lgt', 'thr'], range: 20, long: 60, weight: 1 },
+    };
+    if (!Object.hasOwn(bases, key)) throw new Error(`Unsupported item-mechanics base weapon "${key}".`);
+    const base = bases[key as keyof typeof bases];
+    const part = (die: number) => ({
       number: 1,
-      denomination: 6,
+      denomination: die,
       bonus: '',
-      types: ['piercing'],
+      types: [base.damage],
       custom: { enabled: false, formula: '' },
       scaling: { mode: 'whole', number: 1, formula: '' },
-    };
-    const versatile = {
-      number: 1,
-      denomination: 8,
-      bonus: '',
-      types: ['piercing'],
-      custom: { enabled: false, formula: '' },
-      scaling: { mode: 'whole', number: 1, formula: '' },
-    };
-
+    });
     return {
-      weapon: { value: 'simpleM', baseItem: 'spear' },
-      damage: { base, versatile },
-      range: { value: 20, long: 60, reach: null, units: 'ft' },
-      properties: ['thr', 'ver'],
-      weight: { value: 3, units: 'lb' },
+      weapon: { value: base.category, baseItem: key },
+      damage: { base: part(base.die), ...(base.versatile ? { versatile: part(base.versatile) } : {}) },
+      range: { value: base.range, long: base.long, reach: null, units: 'ft' },
+      properties: base.properties,
+      weight: { value: base.weight, units: 'lb' },
     };
   }
 
@@ -1977,67 +2334,28 @@ export class ItemParser implements ItemParserStrategy {
  * a multi-stage source boundary from its IR.
  */
 export function parseItemStages(body: string): ItemStage[] {
-  const stages: ItemStage[] = [];
-  const stageKeywords = [
-    { zh: '休眠态', en: 'Dormant State' },
-    { zh: '觉醒态', en: 'Awakened State' },
-    { zh: '升华态', en: 'Exalted State' },
+  const labels = [
+    { name: '休眠态', englishName: 'Dormant', pattern: /^(?:休眠(?:态|状态)|Dormant)(?:[ \t（(]+Dormant)?(?:\s+State)?[）)]?$/iu },
+    { name: '觉醒态', englishName: 'Awakened', pattern: /^(?:觉醒(?:态|状态)|Awakened)(?:[ \t（(]+Awakened)?(?:\s+State)?[）)]?$/iu },
+    { name: '升华态', englishName: 'Exalted', pattern: /^(?:升华(?:态|状态)|Exalted)(?:[ \t（(]+Exalted)?(?:\s+State)?[）)]?$/iu },
   ];
-
-  const lines = body.split(/\r?\n/);
-  let currentStage: ItemStage | null = null;
-  let inBulletSection = false;
-  let currentAbilities: string[] = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    let detectedStage = false;
-    for (const keyword of stageKeywords) {
-      const escapedZh = keyword.zh.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const escapedEn = keyword.en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const stagePattern = new RegExp(`^\\*\\*${escapedZh}（${escapedEn}）\\.`);
-      if (stagePattern.test(trimmed)) {
-        if (currentStage) {
-          currentStage.requirements = [...currentAbilities];
-          stages.push(currentStage);
-        }
-        const descMatch = trimmed.match(/^\*\*[^*]+（[^）]+）\*\*\.\s*(.*)$/);
-        currentStage = {
-          name: keyword.zh,
-          description: descMatch ? descMatch[1] : '',
-          requirements: [],
-        };
-        currentAbilities = [];
-        inBulletSection = false;
-        detectedStage = true;
-        break;
-      }
-    }
-
-    if (detectedStage) continue;
-
-    if (currentStage) {
-      if (currentStage.description && !inBulletSection) {
-        const introPattern = /在[^，,]+状态下/;
-        if (introPattern.test(trimmed)) {
-          inBulletSection = true;
-          continue;
-        }
-      }
-
-      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-        inBulletSection = true;
-        const ability = trimmed.replace(/^[-*]\s*/, '');
-        currentAbilities.push(ability);
-      }
-    }
-  }
-
-  if (currentStage) {
-    currentStage.requirements = [...currentAbilities];
-    stages.push(currentStage);
-  }
-
-  return stages;
+  const headings = [...body.matchAll(/^[ \t]*(?:#{1,6}[ \t]+([^\r\n]+)|\*{2}([^*\r\n]+)\*{2}|_{2}([^_\r\n]+)_{2})/gmu)]
+    .flatMap(match => {
+      const label = (match[1] ?? match[2] ?? match[3] ?? '').trim().replace(/[.。:：]$/u, '');
+      const stage = labels.find(candidate => candidate.pattern.test(label));
+      return stage ? [{ name: stage.name, englishName: stage.englishName, sourceStart: match.index }] : [];
+    });
+  return headings.map((stage, index) => {
+    const description = body.slice(stage.sourceStart, headings[index + 1]?.sourceStart).trim();
+    const prose = description.replace(/\*\*|__/g, '');
+    const maxUses = /(?:具有|拥有)\s*(\d+)\s*(?:发|点)?\s*充能|充能(?:数|上限)?\s*(?:增加|提高|变更|变为)(?:到|至|为)?\s*(\d+)|\b(?:has|holds)\s+(\d+)\s+charges\b|\bcharges\s+(?:increases?\s+to|becomes?|is increased to)\s+(\d+)\b/iu.exec(prose);
+    const acBonus = /(?:当佩戴[^。；\n]*?|佩戴者的)\s*(?:\bAC\b|护甲等级)\s*(?:获得)?\s*\+\s*(\d+)|(?:\bAC\b|护甲等级)\s*加值\s*(?:增加|提高)(?:到|至|为)\s*\+\s*(\d+)|\+\s*(\d+)\s+bonus to AC while wearing\b|\bwhile wearing[^.;\n]*?\+\s*(\d+)\s+bonus to AC\b|\bbonus to AC increases to\s*\+\s*(\d+)/iu.exec(prose);
+    return {
+      ...stage,
+      description,
+      requirements: [...description.matchAll(/^[ \t]*[-*][ \t]+(.+)$/gmu)].map(match => match[1]!),
+      ...(maxUses ? { maxUses: Number(maxUses.slice(1).find(Boolean)) } : {}),
+      ...(acBonus ? { acBonus: Number(acBonus.slice(1).find(Boolean)) } : {}),
+    };
+  });
 }

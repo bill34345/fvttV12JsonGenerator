@@ -1,6 +1,7 @@
 import type { EffectProfile } from '@fvtt-json-generator/generation/effect-profile';
 import type { FvttTargetVersion } from '@fvtt-json-generator/generation/target';
 import type { EvidenceRef } from '@fvtt-json-generator/contracts/evidence';
+import type { ItemContainerData, ItemEnchantmentData, ItemSpellScrollData, ItemSpellStorageData, ItemSummonData, ItemTimedSpeedData } from '@fvtt-json-generator/models/item';
 import type { IconWorkflowOptions } from '@fvtt-json-generator/workflows/icon-port';
 
 export type ItemIntakeStatus = 'accepted' | 'needs_review' | 'failed';
@@ -29,12 +30,17 @@ export interface ItemIntakeUncertainty {
   candidates?: unknown[];
 }
 
+export const ITEM_INTAKE_RECOVERY_PERIODS = ['lr', 'sr', 'dawn', 'dusk', 'day'] as const;
+
+export type ItemIntakeRecoveryPeriod = typeof ITEM_INTAKE_RECOVERY_PERIODS[number];
+
+export type ItemIntakeRecovery =
+  | { period: ItemIntakeRecoveryPeriod; type: 'recoverAll' }
+  | { period: ItemIntakeRecoveryPeriod; type: 'formula'; formula: string };
+
 export interface ItemIntakeUses {
   max: number;
-  recovery: Array<{
-    period: 'dawn';
-    type: 'recoverAll';
-  }>;
+  recovery: ItemIntakeRecovery[];
 }
 
 export interface ItemIntakePassiveAcAbility {
@@ -61,6 +67,12 @@ export interface ItemIntakeSpellAbility {
   kind: 'spell';
   activation: 'action' | 'bonus' | 'reaction' | 'free';
   consumption: number;
+  activityUses?: ItemIntakeUses;
+  level?: number;
+  saveDc?: number;
+  /** Total source charge cap when one added charge raises the spell by one level. */
+  maxCharges?: number;
+  activationOverride?: true;
   spell: {
     identifier: string;
     name: string;
@@ -68,10 +80,110 @@ export interface ItemIntakeSpellAbility {
   evidence: EvidenceRef[];
 }
 
+export const ITEM_DAMAGE_TYPES = ['acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning', 'necrotic', 'piercing', 'poison', 'psychic', 'radiant', 'slashing', 'thunder'] as const;
+export const ITEM_MOVEMENT_TYPES = ['walk', 'fly', 'swim', 'climb', 'burrow'] as const;
+export const ITEM_ROLL_ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
+export const ITEM_ACTIVATION_TYPES = ['action', 'bonus', 'reaction', 'free'] as const;
+
+type ItemDamageType = typeof ITEM_DAMAGE_TYPES[number];
+type ItemRollAbility = typeof ITEM_ROLL_ABILITIES[number];
+type ItemActivationType = typeof ITEM_ACTIVATION_TYPES[number];
+
+interface ItemIntakeNamedAbility {
+  id: string;
+  name?: string;
+  englishName?: string;
+  evidence: EvidenceRef[];
+}
+
+export interface ItemIntakeHealAbility extends ItemIntakeNamedAbility {
+  kind: 'heal';
+  activation: 'action' | 'bonus';
+  formula: string;
+  target: 'self' | 'creature';
+  range?: number;
+  consumption: 1;
+}
+
+export interface ItemIntakeDamage {
+  formula: string;
+  type: ItemDamageType;
+  scaling?: { mode: 'whole' | 'half'; number: number };
+}
+
+export interface ItemIntakeTarget {
+  type: 'creature' | 'self';
+  count: number;
+  special?: string;
+}
+
+export interface ItemIntakeAttackAbility extends ItemIntakeNamedAbility {
+  kind: 'attack';
+  activation: ItemActivationType;
+  attackType: 'mwak' | 'rwak' | 'msak' | 'rsak';
+  ability?: ItemRollAbility;
+  toHit?: number;
+  range: string;
+  target?: ItemIntakeTarget;
+  damage: ItemIntakeDamage[];
+}
+
+export interface ItemIntakeRange {
+  value: number;
+  units: 'ft' | 'self';
+}
+
+export interface ItemIntakeDuration {
+  value: number;
+  units: 'round' | 'minute' | 'hour';
+  concentration: boolean;
+}
+
+export interface ItemIntakeSaveAbility extends ItemIntakeNamedAbility {
+  kind: 'save';
+  activation: ItemActivationType;
+  ability: ItemRollAbility;
+  dc: number;
+  outcome: 'none' | 'half' | 'full';
+  consumption: number;
+  scaleMax?: number;
+  damage: ItemIntakeDamage[];
+  range?: ItemIntakeRange;
+  target?: ItemIntakeTarget;
+  duration?: ItemIntakeDuration;
+}
+
+export interface ItemIntakeUtilityAbility extends ItemIntakeNamedAbility {
+  kind: 'utility';
+  activation: ItemActivationType;
+  consumption: number;
+  trigger?: string;
+  range?: ItemIntakeRange;
+  duration?: ItemIntakeDuration;
+  target?: ItemIntakeTarget & { template?: { type: 'radius' | 'sphere'; size: number; units: 'ft' } };
+}
+
+export type ItemIntakePassiveAbility =
+  | { id: string; kind: 'passive-save'; value: number; evidence: EvidenceRef[] }
+  | { id: string; kind: 'passive-resistance'; damageType: ItemDamageType; evidence: EvidenceRef[] }
+  | { id: string; kind: 'passive-movement'; movement: typeof ITEM_MOVEMENT_TYPES[number]; value: number; evidence: EvidenceRef[] }
+  | { id: string; kind: 'weapon-bonus'; baseItem: string; value: number; evidence: EvidenceRef[] };
+
 export type ItemIntakeAbility =
   | ItemIntakePassiveAcAbility
+  | ItemIntakePassiveAbility
   | ItemIntakeLightAbility
-  | ItemIntakeSpellAbility;
+  | ItemIntakeSpellAbility
+  | ItemIntakeHealAbility
+  | ItemIntakeAttackAbility
+  | ItemIntakeSaveAbility
+  | ItemIntakeUtilityAbility
+  | (ItemSpellScrollData & { id: string; kind: 'spell-scroll'; evidence: EvidenceRef[] })
+  | (ItemContainerData & { id: string; kind: 'container'; evidence: EvidenceRef[] })
+  | (ItemEnchantmentData & { id: string; evidence: EvidenceRef[] })
+  | (ItemSpellStorageData & { kind: 'spell-storage'; id: string; evidence: EvidenceRef[] })
+  | (ItemTimedSpeedData & { kind: 'timed-speed'; id: string; evidence: EvidenceRef[] })
+  | (ItemSummonData & { kind: 'summon-creature'; id: string; evidence: EvidenceRef[] });
 
 export interface ItemIntakeIR {
   schemaVersion: 1;
@@ -107,10 +219,19 @@ export interface ItemDiscoveryResult {
   candidates: ItemDiscoveryCandidate[];
 }
 
+export interface ItemSpellCatalogHint {
+  name: string;
+  identifier: string;
+  level: number;
+  activation: string;
+  verifiedDamageVariant?: string;
+}
+
 export interface ItemExtractionRequest {
   source: string;
   sourceSha256: string;
   candidate: ItemDiscoveryCandidate;
+  spellCatalog?: ItemSpellCatalogHint[];
 }
 
 export interface ItemIntakeFinding {
@@ -150,6 +271,7 @@ export interface ItemRepairRequest {
   candidate: ItemDiscoveryCandidate;
   ir: ItemIntakeIR;
   deterministicFindings: ItemIntakeFinding[];
+  spellCatalog?: ItemSpellCatalogHint[];
   review?: ItemAiReviewResult;
 }
 

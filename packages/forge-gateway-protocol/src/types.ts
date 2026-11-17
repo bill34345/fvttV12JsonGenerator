@@ -85,6 +85,17 @@ export const FORGE_MECHANIC_KINDS = [
   'behavior-choice-pool',
   'behavior-area',
   'behavior-external-rule',
+  'weapon-properties',
+  'item-weapon-bonus',
+  'item-container',
+  'item-spell-scroll',
+  'item-spell-storage',
+  'item-timed-speed',
+  'item-summon',
+  'item-random-summon',
+  'item-last-charge-check',
+  'item-enchantment',
+  'item-action',
 ] as const;
 export type ForgeMechanicKind = typeof FORGE_MECHANIC_KINDS[number];
 
@@ -115,6 +126,16 @@ export const FORGE_SOURCE_FIELDS = [
   'item.attack',
   'item.damage',
   'item.save',
+  'item.weapon',
+  'item.capacity',
+  'item.spellScroll',
+  'item.spellStorage',
+  'item.timedSpeed',
+  'item.summon',
+  'item.lastChargeCheck',
+  'item.enchantment',
+  'item.uses',
+  'item.activities',
   'item.effects',
   'source.other',
 ] as const;
@@ -411,29 +432,53 @@ export interface ForgeItemActivityDocumentSummary {
   attack?: JsonObject;
   save?: JsonObject;
   damage?: JsonObject;
+  healing?: JsonObject;
   range?: JsonObject;
   consumption?: JsonObject;
+  spell?: JsonObject;
   uses?: JsonObject;
   target?: JsonObject;
   duration?: JsonObject;
   effectIds: string[];
+  enchant?: JsonObject;
+  visibility?: JsonObject;
+  restrictions?: JsonObject;
+  enchantmentProfiles?: JsonObject[];
+  summonProfiles?: JsonObject[];
+  summonMatch?: JsonObject;
+  summon?: JsonObject;
 }
 
 export interface ForgeItemEffectDocumentSummary {
   id: string;
   name: string;
   origin?: string;
+  transfer?: true;
+  magical?: true;
+  enchantment?: true;
+  disabled?: true;
+  duration?: JsonObject;
   statuses: string[];
   changes: ForgeEffectChangeSummary[];
 }
 
 export interface ForgeItemDocumentSummary {
+  stage?: JsonObject;
   name: string;
   type: string;
   description: JsonObject;
   rarity: ForgeSummaryScalar;
   attunement: ForgeSummaryScalar;
   armor: JsonObject;
+  magicalBonus?: string;
+  capacity?: JsonObject;
+  spellLevel?: JsonObject;
+  spellStorage?: JsonObject;
+  timedSpeed?: JsonObject;
+  summonCooldown?: JsonObject;
+  randomSummon?: JsonObject;
+  lastChargeCheck?: JsonObject;
+  riderEffectIds?: string[];
   itemType: JsonObject;
   properties: string[];
   weight: JsonObject;
@@ -482,6 +527,16 @@ export type ForgeActorResult =
       artifact?: JsonObject;
     });
 
+export interface ForgeItemSpellVariant {
+  id: string;
+  baseUuid: string;
+  name: string;
+  rules: string;
+  level: number;
+  damageType: string;
+  configHash: Sha256;
+}
+
 export interface ForgeItemResultBase {
   sourceIdentity: {
     sourceId: ForgeItemSourceId;
@@ -492,6 +547,7 @@ export interface ForgeItemResultBase {
   verification: ForgeVerificationSummary;
   itemVerification: ForgeItemVerificationSummary;
   itemDocument: ForgeItemDocumentSummary;
+  spellVariants?: ForgeItemSpellVariant[];
   iconReview?: IconReviewReport;
 }
 

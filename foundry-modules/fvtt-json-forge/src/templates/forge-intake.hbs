@@ -96,6 +96,7 @@
         </header>
 
         <p class="forge-status" data-status tabindex="-1" role="status" aria-live="polite">等待输入资料</p>
+        {{#if isItemDirectory}}<label hidden>装备阶段 <select name="itemStage"></select></label>{{/if}}
         <section class="forge-findings forge-diagnostics" data-diagnostics hidden tabindex="-1">
           <h4>内容疑点与未匹配项</h4>
           <p>以下问题供你核对，不阻止 AI 角色生成或创建。审核提示仅保留在 Forge 中，不写入角色或角色 JSON。</p>

@@ -36,6 +36,16 @@ export interface HealingPart {
 
 export type SaveOutcome = 'none' | 'half' | 'full' | 'literal';
 
+export interface ItemSpellBinding {
+  uuid: string;
+  name: string;
+  identifier: string;
+  level: number;
+  rules: string;
+  castingTime: { type: 'action' | 'bonus' | 'reaction' | 'free'; value: number | null };
+  damageTypes: readonly string[];
+}
+
 export interface ActionData {
   name: string;
   logicalPath?: string;
@@ -51,7 +61,9 @@ export interface ActionData {
   attack?: {
     type: "mwak" | "rwak" | "msak" | "rsak";
     ability?: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
-    toHit: number;
+    toHit?: number;
+    /** For a native Item attack, roll the parent weapon's base damage once. */
+    includeBase?: boolean;
     range: string;
     reach?: string;
     damage: Damage[];
@@ -133,6 +145,15 @@ export interface ActionData {
   spellName?: string;
   /** Stable dnd5e spell identifier supplied by the Item mechanics contract. */
   spellIdentifier?: string;
+  itemSpell?: {
+    uuid?: string;
+    binding?: ItemSpellBinding;
+    activityUses?: import('./item-uses').UsesData;
+    level?: number;
+    saveDc?: number;
+    maxCharges?: number;
+    activationOverride?: true;
+  };
   usesPerDay?: number;
 
   /**
@@ -152,13 +173,15 @@ export interface ActionData {
 
   // Effect activity fields (for passive abilities like AC bonus, water breathing)
   passiveEffect?: {
-    type: 'acBonus' | 'speed' | 'senses' | 'ability' | 'other';
+    type: 'acBonus' | 'saveBonus' | 'resistance' | 'movementBonus' | 'speed' | 'senses' | 'ability' | 'other';
+    movement?: 'walk' | 'fly' | 'swim' | 'climb' | 'burrow';
     value?: string | number;
     description?: string;
   };
 
   // Use activity fields (for charge-consuming abilities without DC)
   useAction?: {
+    condition?: string;
     consumption: number;
     activation: 'action' | 'bonus' | 'reaction' | 'free';
     description?: string;

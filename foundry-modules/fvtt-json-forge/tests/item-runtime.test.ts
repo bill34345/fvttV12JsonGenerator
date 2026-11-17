@@ -1,7 +1,9 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { buildForgeItemRequest, convertFinalItemSource, FORGE_NATIVE_606_TARGET } from '@fvtt-json-generator/forge-browser-runtime';
+import { buildForgeItemRequest, convertFinalItemSource, FORGE_NATIVE_606_TARGET, summarizeItemSpellSource, type NativeDocumentProjection } from '@fvtt-json-generator/forge-browser-runtime';
+import { analyzeBrowserItemSourceWithAi, generateBrowserItemIntakeCandidate } from '@fvtt-json-generator/forge-browser-runtime/item-intake';
+import { itemFixture } from '../../../src/core/intake/__tests__/fixtures/item-p0-cast';
 import {
   hashArtifact,
   projectForgeItemDocument,
@@ -14,6 +16,7 @@ import {
   forgeItemDocumentId,
   ForgeTemporaryItemCleanupError,
 } from '../src/itemRuntime';
+import { renderForgeItemPreview } from '../src/itemPreview';
 
 const SHIELD_SOURCE = readFileSync(resolve('obsidian/dnd数据转fvttjson/input/items/骑士之盾.md'), 'utf8');
 let acceptedResponse: ForgeItemResponse;
@@ -33,6 +36,115 @@ beforeAll(async () => {
 });
 
 describe('Forge world Item adapter', () => {
+  test('previews and creates spell damage variants from an unlinked source in one Item confirmation', async () => {
+    const scripts = [
+      { name: 'Elemental Burst', slug: 'elemental-burst', sourceRules: '2024', types: ['fire'], level: 1, id: 'burst12345678901', base: 1 },
+      { name: 'Thunder Step', slug: 'thunder-step', sourceRules: '2014', types: ['thunder'], level: 3, id: 'thunder123456789', base: 3 },
+      { name: 'Elemental Burst', slug: 'elemental-burst', sourceRules: '2014', types: ['cold'], level: 1, id: 'older12345678901', base: 1 },
+    ];
+    const burst = scripts[0]!;
+    const baseUuid = `Compendium.example.spells.Item.${burst.id}`;
+    const otherOrigin = 'Item.externalorigin01';
+    const localEffectId = 'burstEffect00001';
+    const docs = new Map(scripts.map(spell => [`Compendium.example.spells.Item.${spell.id}`, {
+      type: 'spell', name: spell.name, _id: spell.id, img: 'icons/svg/item-bag.svg',
+      effects: spell === burst ? [
+        { _id: localEffectId, origin: baseUuid, name: 'Burst effect' },
+        { _id: 'otherEffect00001', origin: otherOrigin, name: 'External effect' },
+      ] : [],
+      system: { identifier: spell.slug, level: spell.level, source: { rules: spell.sourceRules },
+        description: { value: `<p>Deal ${spell.types[0]} damage. Teleport if permitted.</p>` },
+        activities: { dnd5eactivity000: { type: 'save', activation: { type: 'action', value: null },
+          damage: { parts: [{ number: 3, denomination: 6, types: spell.types }], onSave: 'half' },
+          save: { ability: ['con'], dc: { calculation: 'spellcasting' } },
+          effects: spell === burst ? [{ _id: localEffectId }] : [] } } },
+      flags: { 'midi-qol': { onUseMacroName: 'Test Macro' } },
+    }]));
+    const nativeProjection: NativeDocumentProjection = {
+      target: FORGE_NATIVE_606_TARGET,
+      project: (_kind, value) => value,
+      async findItemSpellUuids(matches) { return [...docs].filter(([, spell]) => matches(spell.name)).map(([uuid]) => uuid); },
+      async readItemSpellSource(uuid) { return docs.get(uuid); },
+      async readItemSpell(uuid) { return summarizeItemSpellSource(uuid, docs.get(uuid)); },
+    };
+    const cell = '|   |\n| - |\n\n';
+    const rows = scripts.slice(0, 2).map(({ name, base }) => `${cell}${name} (psychic damage version)\n\n${cell}${base}`);
+    const pool = 'The staff has 7 charges and regains 1d4 expended charges at dawn.';
+    const { source, candidate, ir } = itemFixture('Variant Staff', 'Staff', [
+      pool, [cell + 'Spell', cell + 'Charge Cost', ...rows].join('\n\n'),
+    ], {
+      pool: { max: 7, recovery: [{ period: 'dawn', type: 'formula', formula: '1d4' }], quote: pool },
+      abilities: scripts.slice(0, 2).map(({ name, slug, base }, index) => ({
+        id: slug, kind: 'spell', activation: 'action', consumption: base,
+        spell: { name, identifier: slug }, quote: rows[index]!,
+      })),
+    });
+    const input = { source, sourceName: 'Variant Staff', requestId: 'variant-staff', fvttVersion: '14.370', systemVersion: '6.0.6', nativeProjection };
+    const provider = { providerName: 'fixture', extractionModel: 'fixture', reviewModel: 'fixture',
+      discover: async () => ({ schemaVersion: 1 as const, candidates: [candidate] }),
+      extract: async () => ir, repair: async () => ir, review: async () => { throw new Error('Review must stay disabled'); } };
+    const analysis = await analyzeBrowserItemSourceWithAi(input, provider);
+    if (analysis.status !== 'ready_to_generate') throw new Error(JSON.stringify(analysis.findings));
+    expect(analysis.spellVariants?.map(spell => spell.rules)).toEqual(['2024', '2014']);
+    const generation = await generateBrowserItemIntakeCandidate(input, analysis, provider);
+    const response = generation.candidateResponse;
+    if (!response || !('result' in response) || response.result.status !== 'accepted') throw new Error(JSON.stringify(generation.findings));
+    const preview = renderForgeItemPreview(response.result.itemDocument, response.result.spellVariants);
+    expect(preview).toContain('随物品创建的专用法术');
+    expect(preview).toContain('Thunder Step · 心灵伤害 · 3 环 · 2014 旧版母本');
+    expect(response.result.spellVariants?.map(spell => spell.baseUuid)).toEqual([...docs.keys()].slice(0, 2));
+    const world = makeWorld();
+    const request = { game: world.game, response, nativeProjection };
+    world.onCreate = async (document) => {
+      if (document.type !== 'spell') throw new Error('staff write failed');
+      return world.addExisting(document);
+    };
+    await expect(createAcceptedForgeItem(request)).rejects.toThrow('staff write failed');
+    expect(world.items).toHaveLength(0);
+    world.onCreate = undefined;
+    world.mutateCreated = data => {
+      if (data.name === burst.name) {
+        (data.effects as Array<{ origin: string }>)[0]!.origin = `Item.${data._id}`;
+      }
+      return data;
+    };
+    const result = await createAcceptedForgeItem(request);
+    expect(world.items.map(item => (item.toObject() as any).type)).toEqual(['spell', 'spell', 'weapon']);
+    const staff = result.item.toObject() as any;
+    const casts = Object.values<any>(staff.system.activities);
+    expect(casts.map(act => act.spell.uuid)).toEqual(result.spellUuids ?? []);
+    for (const item of world.items.slice(0, 2)) {
+      const saved = item.toObject() as any;
+      expect(saved.flags['midi-qol']).toBeUndefined();
+      expect(saved.system.activities.dnd5eactivity000.damage.parts[0].types).toEqual(['psychic']);
+      expect(saved.system.description.value).toContain('psychic damage. Teleport');
+    }
+    const savedBurst = world.items[0]!.toObject() as any;
+    expect(savedBurst.effects.map((effect: any) => effect.origin)).toEqual([result.spellUuids?.[0], otherOrigin]);
+    expect(savedBurst.system.activities.dnd5eactivity000.effects).toEqual([{ _id: localEffectId }]);
+    expect((await createAcceptedForgeItem(request)).status).toBe('existing');
+    expect(world.items).toHaveLength(3);
+
+    const rejectedChanges: Array<(spell: any) => void> = [
+      spell => { spell.effects[0].origin = otherOrigin; },
+      spell => { spell.effects[1].origin = `Item.${spell._id}`; },
+      spell => { spell.effects[0]._id = 'differentEffect1'; },
+      spell => { spell.effects[0].name = 'Changed effect'; },
+      spell => { spell.system.activities.dnd5eactivity000.damage.parts[0].types = ['fire']; },
+      spell => { spell._stats.compendiumSource = otherOrigin; },
+    ];
+    for (const change of rejectedChanges) {
+      const drifted = makeWorld();
+      drifted.mutateCreated = data => {
+        world.mutateCreated!(data);
+        if (data.name === burst.name) change(data);
+        return data;
+      };
+      await expect(createAcceptedForgeItem({ ...request, game: drifted.game })).rejects.toThrow('Elemental Burst 的专用法术与预览不一致');
+      expect(drifted.items).toHaveLength(0);
+    }
+  });
+
   test('runtime admission creates a formally projected Item on a later native6 runtime', async () => {
     for (const requestRuntime of [{fvttVersion:'14.370',systemVersion:'6.1.0'},{fvttVersion:'14.369',systemVersion:'6.0.6'}]) {
     const world = makeWorld();

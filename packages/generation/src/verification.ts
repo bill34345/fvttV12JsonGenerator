@@ -1,7 +1,15 @@
+import { itemCastScalingMax, nativeItemPassiveChange } from './activity';
+import type { ActionData } from '@fvtt-json-generator/models/action';
+import { ENCHANTED_WEAPON_RARITY, type ItemEnchantmentData, type ItemSpellStorageData, type ParsedItem } from '@fvtt-json-generator/models/item';
 import type { EffectProfile } from './effectProfileApplier';
 import { DND5E_V14_SYSTEM_VERSION } from '@fvtt-json-generator/contracts/target';
 import { isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
 import { resolveLockedDnd5eV14Spell, resolveLockedDnd5eV14SpellByName } from './v14SpellCatalog';
+import { resolveStandardSpellScroll } from './item-spell-scroll';
+import { enchantmentTargets } from './item-enchantment';
+import { resolveStoredItemSpells } from './item-spell-storage';
+import { TIMED_SPEED_MOVEMENTS } from './item-timed-speed';
+import { RANDOM_SUMMON_EXPIRY } from './item-summon';
 import { getFoundryTarget, type FvttTargetVersion, type FoundryTarget } from './target';
 import { isFoundryHtmlDescription } from './item-description';
 import { sourceConditionLifecycle, extractExplicitlyInflictedStatuses, simpleConditionDuration, officialCondition,inferredAppliedConditions,operationConditionSource,officialConditionStatuses } from './actor-effects';
@@ -88,6 +96,22 @@ export function verifyGeneratedDocument(
     verifyIdsAndLinks(document, documentIndex, diagnostics);
     // schema-derived: dnd5e 6.0.6 UsesField leaves its FormulaField max optional.
     verifyDnd5eDocumentSchema(document, documentIndex, diagnostics, options.target, options.target === '14');
+    if (options.target === '14' && options.canonical.kind === 'item') {
+      const { equipmentSubtype, consumableSubtype, armor, type, weapon, attunement, structuredActions } = options.canonical.compatibilitySource;
+      if (structuredActions?.effects?.some((action) => action.passiveEffect && nativeItemPassiveChange(action.passiveEffect))
+        && (document?.system?.equipped !== false || (attunement && document?.system?.attunement !== attunement))) {
+        diagnostics.push(error('GEN_ITEM_PASSIVE_GATING_MISMATCH', 'semantic', `documents/${documentIndex}/system`,
+          'Passive Item Effects require the native equipped and source attunement state.'));
+      }
+      const expectedSubtype = equipmentSubtype ?? consumableSubtype ?? armor?.type
+        ?? (type === 'staff' && !weapon ? 'simpleM' : undefined);
+      const expectedBase = armor?.baseItem ?? (type === 'staff' ? weapon?.baseItem ?? 'quarterstaff' : undefined);
+      if ((expectedSubtype && document.system?.type?.value !== expectedSubtype)
+        || (expectedBase && document.system?.type?.baseItem !== expectedBase)) {
+        diagnostics.push(error('GEN_ITEM_SUBTYPE_MISMATCH', 'semantic', `documents/${documentIndex}/system/type`,
+          `Source Item subtype "${expectedSubtype ?? expectedBase}" was not preserved.`));
+      }
+    }
   }
   if (options.canonical.kind === 'actor') {
     if (options.target === '14') verifyDnd6ActorSchema(options.output, diagnostics);
@@ -712,6 +736,149 @@ function verifyItemSpecificMechanic(
   target: FvttTargetVersion,
   effectProfile: EffectProfile,
 ): string[] | undefined {
+  if (mechanic.kind === 'item-last-charge-check') {
+    const expected = mechanic.value as NonNullable<ParsedItem['lastChargeCheck']>;
+    const actual = document?.flags?.fvttJsonGenerator?.lastChargeCheck;
+    const system = document?.system;
+    if (actual?.formula === expected.formula && actual?.destroyOn === expected.destroyOn
+      && Number(system?.uses?.max) > 0 && !system?.uses?.autoDestroy
+      && system?.description?.value?.includes(`[[/r ${expected.formula}]]`)) {
+      return ['documents/0/flags/fvttJsonGenerator/lastChargeCheck', 'documents/0/system/description/value', 'documents/0/system/uses'];
+    }
+    diagnostics.push(error('GEN_ITEM_LAST_CHARGE_CHECK_MISMATCH', 'semantic', mechanic.path,
+      'The final-charge rule requires its source die and destruction result, a clickable roll, and no unconditional destruction.'));
+    return [];
+  }
+  if (mechanic.kind === 'item-random-summon') {
+    const summon = mechanic.value as NonNullable<ParsedItem['randomSummon']>;
+    const system = document?.system;
+    const entries = Object.entries<any>(system?.activities ?? {});
+    const [id, activity] = entries[0] ?? [];
+    const flags = document?.flags?.fvttJsonGenerator?.randomSummon;
+    const consume = activity?.consumption;
+    const recovery = system?.uses?.recovery;
+    if (target === '14' && entries.length === 1 && activity?.type === 'summon'
+      && activity.profiles?.length === summon.profiles.length && summon.profiles.every((profile, index) => {
+        const actual = activity.profiles[index];
+        return actual?.uuid === profile.actorUuid && actual.name === `${index + 1}. ${profile.actorName}` && String(actual.count) === '1';
+      })
+      && activity.summon?.mode === '' && activity.summon?.prompt === true && activity.match?.disposition === summon.friendly
+      && activity.activation?.type === 'action' && activity.activation?.value === 1 && activity.activation?.condition === '魔法动作 Magic Action'
+      && String(activity.range?.value) === String(summon.rangeFeet) && activity.range?.units === 'ft'
+      && activity.target?.affects?.type === 'space' && activity.target?.affects?.count === '1'
+      && activity.duration?.units === 'spec' && activity.duration?.special === RANDOM_SUMMON_EXPIRY && activity.duration?.concentration === false
+      && consume?.spellSlot === false && consume.scaling?.allowed === false && consume.targets?.length === 1
+      && consume.targets[0].type === 'itemUses' && String(consume.targets[0].value) === '1'
+      && String(system.uses?.max) === String(summon.usesPerDawn) && system.uses?.spent === 0 && !system.uses?.autoDestroy
+      && recovery?.length === 1 && recovery[0].period === 'dawn' && recovery[0].type === 'recoverAll'
+      && flags?.tableUuid === summon.tableUuid && flags?.formula === summon.formula
+      && system.description?.value?.replace(/[ \t]+rollable\]/giu, ' rollable]').includes(`@Embed[${summon.tableUuid} rollable]`)) {
+      return [`documents/0/system/activities/${id}`, 'documents/0/system/uses', 'documents/0/flags/fvttJsonGenerator/randomSummon', 'documents/0/system/description/value'];
+    }
+    diagnostics.push(error('GEN_ITEM_RANDOM_SUMMON_MISMATCH', 'semantic', mechanic.path,
+      'Table-based Summon must preserve each numbered Actor link, the rollable table, range, expiry and dawn recovery.'));
+    return [];
+  }
+  if (mechanic.kind === 'item-summon') {
+    const summon = mechanic.value as NonNullable<ParsedItem['summon']>;
+    const system = document?.system;
+    const entries = Object.entries<any>(system?.activities ?? {});
+    const [id, activity] = entries[0] ?? [];
+    const profile = activity?.profiles?.[0];
+    const consume = activity?.consumption;
+    if (target === '14' && entries.length === 1 && activity?.type === 'summon'
+      && activity.profiles?.length === 1 && profile?.uuid === summon.actorUuid && profile.name === summon.actorName && String(profile.count) === '1'
+      && activity.summon?.mode === '' && activity.summon?.prompt === true
+      && activity.activation?.type === 'action' && activity.activation?.value === 1 && activity.activation.condition === '魔法动作 Magic Action'
+      && String(activity.range?.value) === String(summon.rangeFeet) && activity.range?.units === 'ft'
+      && activity.target?.affects?.type === 'space' && activity.target.affects.special === 'unoccupied space'
+      && String(activity.duration?.value) === String(summon.durationHours) && activity.duration?.units === 'hour' && activity.duration.concentration === false
+      && consume?.spellSlot === false && consume.targets?.length === 1 && consume.targets[0].type === 'itemUses' && String(consume.targets[0].value) === '1'
+      && String(system.uses?.max) === '1' && system.uses.spent === 0 && system.uses.recovery?.length === 0
+      && document.flags?.fvttJsonGenerator?.summonCooldown?.days === summon.cooldownDays) {
+      return [`documents/0/system/activities/${id}`, 'documents/0/system/uses', 'documents/0/flags/fvttJsonGenerator/summonCooldown'];
+    }
+    diagnostics.push(error('GEN_ITEM_SUMMON_MISMATCH', 'semantic', mechanic.path,
+      'Summon must retain the exact fixed Actor, placement, duration and single use with reversion-based cooldown.'));
+    return [];
+  }
+  if (mechanic.kind === 'item-timed-speed') {
+    const seconds = (mechanic.value as { seconds: number }).seconds;
+    const activityId = target === '14' ? verifiedTimedSpeedActivity(document, seconds) : undefined;
+    if (activityId) return ['documents/0/system/uses', `documents/0/system/activities/${activityId}`,
+      'documents/0/effects', 'documents/0/flags/dnd5e/riders/effect', 'documents/0/flags/fvttJsonGenerator/timedSpeed'];
+    diagnostics.push(error('GEN_ITEM_TIMED_SPEED_MISMATCH', 'semantic', mechanic.path,
+      'Timed speed requires a bonus-action self toggle, linked speed effect, separate cumulative seconds and long-rest recovery.'));
+    return [];
+  }
+  if (mechanic.kind === 'item-spell-storage') {
+    const storage = mechanic.value as ItemSpellStorageData;
+    const entries = target === '14' ? verifyStoredItemSpells(document, storage) : undefined;
+    if (entries) return [
+      'documents/0/flags/fvttJsonGenerator/spellStorage',
+      ...entries.map(id => `documents/0/system/activities/${id}`),
+    ];
+    diagnostics.push(error('GEN_ITEM_SPELL_STORAGE_MISMATCH', 'semantic', mechanic.path,
+      'Spell storage must preserve the five-level capacity, source inventory, original caster statistics and separate single uses.'));
+    return [];
+  }
+  if (mechanic.kind === 'item-enchantment') {
+    const expected = mechanic.value as ItemEnchantmentData;
+    const result = target === '14' ? verifyItemEnchantment(document, expected) : { issue: 'Native Enchant requires V14.' };
+    if ('activityId' in result) return [
+      `documents/0/system/activities/${result.activityId}`, 'documents/0/effects',
+      ...(expected.kind === 'enchant-armor-resistance' ? ['documents/0/flags/dnd5e/riders/effect'] : []),
+    ];
+    diagnostics.push(error('GEN_ITEM_ENCHANTMENT_MISMATCH', 'semantic', mechanic.path, result.issue));
+    return [];
+  }
+  if (mechanic.kind === 'item-spell-scroll') {
+    const expected = resolveStandardSpellScroll(mechanic.value as NonNullable<ParsedItem['spellScroll']>);
+    const system = document?.system;
+    const levels = document?.flags?.dnd5e?.spellLevel;
+    const entries = Object.entries<any>(system?.activities ?? {});
+    const [id, activity] = entries[0] ?? [];
+    const targets = activity?.consumption?.targets ?? [];
+    const uses = system?.uses;
+    const validCast = expected.spell ? entries.length === 1 && activity?.type === 'cast'
+      && activity.spell?.uuid === expected.spell.uuid && activity.spell.level === expected.level
+      && activity.spell.challenge?.override === true && String(activity.spell.challenge.attack) === String(expected.attack)
+      && String(activity.spell.challenge.save) === String(expected.dc)
+      && ['vocal', 'somatic', 'material'].every(property => activity.spell.properties?.includes(property))
+      && activity.activation?.override === false && activity.consumption?.spellSlot === false
+      && activity.consumption?.scaling?.allowed !== true && targets.length === 1
+      && targets[0].type === 'itemUses' && String(targets[0].value) === '1'
+      : entries.length === 0;
+    if (target === '14' && document?.type === 'consumable' && system?.type?.value === 'scroll'
+      && system.properties?.includes('mgc') && !system.attunement && uses?.autoDestroy === true
+      && String(uses.max) === '1' && uses.spent === 0 && uses.recovery?.length === 0 && validCast
+      && levels?.base === expected.level && levels.value === expected.level) {
+      return ['documents/0/system/uses', 'documents/0/flags/dnd5e/spellLevel', ...(id ? [`documents/0/system/activities/${id}`] : [])];
+    }
+    diagnostics.push(error('GEN_ITEM_SPELL_SCROLL_MISMATCH', 'semantic', mechanic.path,
+      'A standard scroll must keep its level, bound spell, fixed challenge and one-use lifecycle.'));
+    return [];
+  }
+  if (mechanic.kind === 'item-container') {
+    const expected = mechanic.value as NonNullable<ParsedItem['container']>;
+    const system = document?.system;
+    const sameMeasure = (left: unknown, right: NonNullable<ParsedItem['container']>['weight'] | NonNullable<ParsedItem['container']>['volume']) => {
+      const field = left as { value?: unknown; units?: unknown } | undefined;
+      return right ? field?.value === right.value && field.units === right.units : field?.value == null;
+    };
+    if (target === '14' && document?.type === 'container' && system?.capacity
+      && (system.capacity.count ?? null) === (expected.count ?? null)
+      && sameMeasure(system.capacity.weight, expected.weight)
+      && sameMeasure(system.capacity.volume, expected.volume)
+      && (!expected.itemWeight || sameMeasure(system.weight, expected.itemWeight))
+      && Boolean(system.properties?.includes('weightlessContents')) === expected.weightlessContents
+      && !Object.keys(system.activities ?? {}).length && !system.uses?.max) {
+      return ['documents/0/system/capacity', 'documents/0/system/properties', ...(expected.itemWeight ? ['documents/0/system/weight'] : [])];
+    }
+    diagnostics.push(error('GEN_ITEM_CONTAINER_MISMATCH', 'semantic', mechanic.path,
+      'Container limits, own weight, and weightless contents must match the source.'));
+    return [];
+  }
   if (mechanic.kind === 'weapon-properties') {
     return verifyWeaponPropertiesDocument(
       mechanic,
@@ -721,6 +888,31 @@ function verifyItemSpecificMechanic(
       target,
       'documents/0',
     );
+  }
+  if (mechanic.kind === 'item-weapon-bonus') {
+    const expected = mechanic.value as {
+      bonus: number;
+      weapon: NonNullable<ParsedItem['weapon']>;
+      damage: NonNullable<ParsedItem['damage']>;
+      properties: string[];
+    };
+    const system = document?.system;
+    const valid = document?.type === 'weapon' && system?.type?.value === expected.weapon.value
+      && system.type.baseItem === expected.weapon.baseItem && system.magicalBonus === String(expected.bonus)
+      && system.properties?.includes('mgc') && expected.properties.every((property) => system.properties?.includes(property))
+      && ['base', 'versatile'].every((key) => {
+        const source = key === 'base' ? expected.damage.base : expected.damage.versatile;
+        const actual = system.damage?.[key];
+        return source === undefined ? !actual?.number
+          : actual?.number === source.number && Number(actual?.denomination) === Number(source.denomination)
+            && String(actual.bonus ?? '') === String(source.bonus ?? '')
+            && JSON.stringify(actual.types) === JSON.stringify(source.types)
+            && !actual?.custom?.enabled;
+      });
+    if (valid) return ['documents/0/system/magicalBonus', 'documents/0/system/type', 'documents/0/system/damage'];
+    diagnostics.push(error('GEN_ITEM_WEAPON_BONUS_MISMATCH', 'semantic', mechanic.path,
+      'The standard weapon identity, native base damage, and magical bonus must be preserved.'));
+    return [];
   }
   if (mechanic.kind === 'armor') {
     const expected = mechanic.value as { value: number; dex?: number | null; magicalBonus?: number | null; type?: string; baseItem?: string };
@@ -744,54 +936,103 @@ function verifyItemSpecificMechanic(
     : activities.filter(([, activity]) => scopedActivities.includes(activity));
 
   if (mechanic.kind === 'uses' && mechanic.path === 'item/uses') {
-    const expected = mechanic.value as { max?: string | number; spent?: number; recovery?: any[] };
+    const expected = mechanic.value as { max?: string | number; spent?: number; recovery?: any[]; autoDestroy?: true };
     const actual = document?.system?.uses;
     if (!actual) return [];
     if (
       String(actual.max) !== String(expected.max)
       || actual.spent !== expected.spent
+      || Boolean(actual.autoDestroy) !== Boolean(expected.autoDestroy)
       || JSON.stringify(actual.recovery ?? []) !== JSON.stringify(expected.recovery ?? [])
     ) {
       diagnostics.push(error(
         'GEN_ITEM_USES_MISMATCH',
         'semantic',
         mechanic.path,
-        'Item uses max, spent, or recovery does not match the source mechanics contract.',
+        'Item uses max, spent, recovery, or single-copy consumption differs from the source.',
       ));
     }
     return ['documents/0/system/uses'];
   }
 
   if (mechanic.kind === 'effect') {
-    const expected = mechanic.value as { passiveEffect?: { type?: string; value?: unknown } };
-    if (expected.passiveEffect?.type !== 'acBonus') return undefined;
-    const expectedValue = Number(expected.passiveEffect.value);
+    const expected = (mechanic.value as ActionData).passiveEffect;
+    if (!expected) return undefined;
+    const change = nativeItemPassiveChange(expected);
+    if (!change || (target !== '14' && expected.type !== 'acBonus')) return undefined;
     const effectIndex = (document?.effects ?? []).findIndex((effect: any) =>
-      effect?.transfer === true
-      && (target === '14' ? effect?.type === 'base'
-      && effect?.changes === undefined
-      && Array.isArray(effect?.system?.changes)
-      && effect.system.changes.some((change: any) =>
-        change?.key === 'system.attributes.ac.bonus'
-        && change?.type === 'add'
-        && change?.phase === 'initial'
-        && Number(change?.value) === expectedValue)
-      : effect?.type === 'passive' && effect.disabled === false
-      && Array.isArray(effect?.changes)
-      && effect.changes.some((change: any) =>
-        change?.key === 'system.attributes.ac.bonus'
-        && change?.mode === 2
-        && Number(change?.value) === expectedValue)));
+      effect?.transfer === true && effect.disabled === false
+      && (target === '14' ? effect.type === 'base'
+        && effect.changes === undefined
+        && effect.system?.magical === true
+        && effect.duration?.value === null
+        && effect.system.changes?.some((entry: any) =>
+          entry.key === change.key && entry.type === change.type && entry.phase === change.phase
+          && String(entry.value) === String(change.value))
+        : effect.type === 'passive' && effect.changes?.some((entry: any) =>
+          entry.key === change.key && entry.mode === 2 && Number(entry.value) === Number(change.value))));
     if (effectIndex < 0) {
       diagnostics.push(error(
-        'GEN_ITEM_AC_EFFECT_MISMATCH',
-        'semantic',
-        mechanic.path,
-        `Expected a transfer V${target} Active Effect adding ${expectedValue} to system.attributes.ac.bonus.`,
+        expected.type === 'acBonus' ? 'GEN_ITEM_AC_EFFECT_MISMATCH' : 'GEN_ITEM_PASSIVE_EFFECT_MISMATCH',
+        'semantic', mechanic.path,
+        `Expected an enabled, permanent, transferred Effect adding "${change.value}" to ${change.key}.`,
       ));
       return [];
     }
     return [`documents/0/effects/${effectIndex}`];
+  }
+
+  if (target === '14' && mechanic.kind === 'item-action') {
+    const expected = mechanic.value as ActionData;
+    const healing = expected.healing;
+    for (const [activityId, activity] of scopedEntries) {
+      if (!expected.useAction || !matchesItemActionCost(expected.useAction, activity)
+        || !matchesItemActivityMetadata(expected.activity, activity)) continue;
+      if (healing) {
+        const part = activity?.healing;
+        const dice = /d/u.test(healing.formula);
+        const formulaMatches = dice ? part?.custom?.enabled === false && matchesExpectedDamagePart(healing, part)
+          : part?.custom?.enabled === true && String(part?.custom?.formula) === healing.formula
+            && JSON.stringify(part?.types) === '["healing"]';
+        const self = healing.target?.type === 'self';
+        if (activity?.type !== 'heal' || !formulaMatches || activity.target?.affects?.type !== healing.target?.type
+          || String(activity.target?.affects?.count) !== '1' || activity.target?.prompt !== !self
+          || activity.range?.units !== (self ? 'self' : 'ft')) continue;
+      } else if (activity?.type !== 'utility' || (activity.effects?.length ?? 0) > 0) continue;
+      return [`documents/0/system/activities/${activityId}`];
+    }
+    diagnostics.push(error(healing ? 'GEN_ITEM_HEAL_ACTIVITY_MISMATCH' : 'GEN_ITEM_UTILITY_ACTIVITY_MISMATCH',
+      'semantic', mechanic.path, 'Activity must preserve the source action, exact cost, healing or trigger, and its target metadata.'));
+    return [];
+  }
+
+  if (target === '14' && mechanic.kind === 'attack') {
+    const expected = mechanic.value as NonNullable<ActionData['attack']> & Pick<ActionData, 'useAction' | 'activity'>;
+    if (!expected.useAction) return undefined;
+    for (const [activityId, activity] of scopedEntries) {
+      const attack = activity?.attack;
+      const ranged = expected.type.startsWith('r');
+      const useAttackModifier = expected.ability !== undefined && expected.includeBase === false && expected.toHit === undefined;
+      const [range] = expected.range.match(/\d+/g) ?? [];
+      const long = expected.range.match(/\d+\s*\/\s*(\d+)/u)?.[1];
+      if (activity?.type === 'attack' && matchesItemActionCost(expected.useAction, activity)
+        && matchesItemActivityMetadata(expected.activity, activity)
+        && attack?.type?.value === (ranged ? 'ranged' : 'melee')
+        && attack?.type?.classification === (expected.type.endsWith('sak') ? 'spell' : 'weapon')
+        && attack?.ability === (expected.ability ?? '')
+        && Boolean(attack?.flat) === (expected.toHit !== undefined)
+        && attack?.bonus === String(expected.toHit ?? '')
+        && activity.range?.units === 'ft' && String(activity.range?.value) === range
+        && (!long || String(activity.range?.special ?? '').includes(long))
+        && activity.damage?.includeBase === expected.includeBase
+        && activity.damage?.parts?.length === expected.damage.length
+        && expected.damage.every((part, index) => matchesExpectedDamagePart(part, activity.damage.parts[index], useAttackModifier))) {
+        return [`documents/0/system/activities/${activityId}`];
+      }
+    }
+    diagnostics.push(error('GEN_ITEM_ATTACK_ACTIVITY_MISMATCH', 'semantic', mechanic.path,
+      'Attack must preserve the original roll mode, cost, range, targets, and exact damage without duplicate base damage.'));
+    return [];
   }
 
   if (mechanic.kind === 'light') {
@@ -924,7 +1165,9 @@ function verifyItemSpecificMechanic(
   }
 
   if (mechanic.kind === 'spell') {
-    const expected = mechanic.value as { identifier?: string; name?: string; consumption?: number; activation?: string };
+    const expected = mechanic.value as NonNullable<ActionData['itemSpell']> & {
+      identifier?: string; name?: string; consumption?: number; activation?: string;
+    };
     const hasFormalIdentifier = typeof expected.identifier === 'string' && expected.identifier.trim().length > 0;
     // Legacy targets retain cast/utility compatibility; V14 always proves a
     // unique 2024 spell reference, including strict Markdown without an identifier.
@@ -948,10 +1191,10 @@ function verifyItemSpecificMechanic(
       return [];
     }
     if (target !== '14') return undefined;
-    const resolved = expected.identifier
+    const resolved = expected.binding ?? (expected.identifier
       ? resolveLockedDnd5eV14Spell(String(expected.identifier), String(expected.name ?? ''))
-      : resolveLockedDnd5eV14SpellByName(String(expected.name ?? ''));
-    if (!resolved) {
+      : resolveLockedDnd5eV14SpellByName(String(expected.name ?? '')));
+    if (!resolved || (expected.uuid && expected.binding?.uuid !== expected.uuid)) {
       diagnostics.push(error(
         'GEN_ITEM_SPELL_UNRESOLVED',
         'semantic',
@@ -960,18 +1203,40 @@ function verifyItemSpecificMechanic(
       ));
       return [];
     }
-    const expectedUuid = resolved.uuid;
+    const resourceType = expected.activityUses ? 'activityUses' : 'itemUses';
     for (const [activityId, activity] of scopedEntries) {
-      const target = (activity?.consumption?.targets ?? []).find((entry: any) => entry?.type === 'itemUses');
-      const consumptionMatches = Number(expected.consumption) > 0
-        ? String(target?.value) === String(expected.consumption)
-        : (activity?.consumption?.targets ?? []).length === 0;
+      const targets = activity?.consumption?.targets ?? [];
+      const [cost] = targets;
+      const scaling = expected.maxCharges !== undefined;
+      const expectedMax = scaling ? itemCastScalingMax(resourceType, expected.maxCharges!, expected.consumption ?? 1) : '';
+      const uses = expected.activityUses ? activity?.uses : document?.system?.uses;
+      const consumptionMatches = (expected.consumption ?? 0) > 0
+        ? targets.length === 1 && cost?.type === resourceType && cost?.target === ''
+          && String(cost?.value) === String(expected.consumption)
+          && cost?.scaling?.mode === (scaling ? 'amount' : '') && (cost?.scaling?.formula ?? '') === ''
+          && ((!hasFormalIdentifier && !expected.activityUses && !uses?.max)
+            || Number(uses?.max) >= (expected.maxCharges ?? expected.consumption!))
+        : targets.length === 0;
+      const usesMatch = expected.activityUses
+        ? String(activity?.uses?.max) === String(expected.activityUses.max)
+          && activity?.uses?.spent === expected.activityUses.spent
+          && sameUsesRecovery(activity?.uses?.recovery, expected.activityUses.recovery)
+        : !activity?.uses?.max;
+      const challenge = activity?.spell?.challenge;
+      const dcMatches = expected.saveDc === undefined
+        ? challenge?.override !== true
+        : challenge?.override === true && String(challenge?.save) === String(expected.saveDc) && !challenge?.attack;
       if (
         activity?.type === 'cast'
-        && activity?.spell?.uuid === expectedUuid
+        && activity?.spell?.uuid === resolved.uuid
+        && activity.spell.level === (expected.level ?? resolved.level)
         && activity?.activation?.type === expected.activation
+        && (!hasFormalIdentifier || activity?.activation?.value === 1)
+        && Boolean(activity?.activation?.override) === (expected.activationOverride === true)
         && activity?.consumption?.spellSlot === false
-        && consumptionMatches
+        && activity?.consumption?.scaling?.allowed === scaling
+        && activity?.consumption?.scaling?.max === expectedMax
+        && consumptionMatches && usesMatch && dcMatches
       ) {
         return [`documents/0/system/activities/${activityId}`];
       }
@@ -980,7 +1245,7 @@ function verifyItemSpecificMechanic(
       'GEN_ITEM_SPELL_ACTIVITY_MISMATCH',
       'semantic',
       mechanic.path,
-      'Spell Activity must be cast, use the locked UUID, consume the required Item uses, and not consume spell slots.',
+      'Cast must preserve the locked spell, level, fixed DC, activation, exact source pool and cost, and scaling cap without using spell slots.',
     ));
     return [];
   }
@@ -992,7 +1257,7 @@ function verifyItemSpecificMechanic(
       if (expected.consumption === 0 && targets.length === 0) {
         return [`documents/0/system/activities/${activityId}/consumption/targets`];
       }
-      if (targets.some((target: any) => target?.type === 'itemUses' && String(target?.value) === String(expected.consumption))) {
+      if (targets.some((target: any) => target?.type === (expected.resource ?? 'itemUses') && String(target?.value) === String(expected.consumption))) {
         return [`documents/0/system/activities/${activityId}/consumption/targets`];
       }
     }
@@ -1006,6 +1271,171 @@ function verifyItemSpecificMechanic(
   }
 
   return undefined;
+}
+
+function matchesItemActionCost(expected: NonNullable<ActionData['useAction']>, activity: any): boolean {
+  const action = activity?.activation;
+  const consumption = activity?.consumption;
+  const targets = consumption?.targets ?? [];
+  const [target] = targets;
+  return action?.type === expected.activation && action.value === (expected.activation === 'free' ? 0 : 1)
+    && (action.condition ?? '') === (expected.condition ?? '') && action.override === false
+    && consumption?.spellSlot === false && consumption.scaling?.allowed === false
+    && targets.length === (expected.consumption > 0 ? 1 : 0)
+    && (expected.consumption === 0 || (target?.type === 'itemUses' && target.target === ''
+      && target.value === String(expected.consumption) && !target.scaling?.mode && !target.scaling?.formula));
+}
+
+function verifiedTimedSpeedActivity(document: any, seconds: number): string | undefined {
+  const system = document?.system;
+  const entries = Object.entries<any>(system?.activities ?? {});
+  const [id, activity] = entries[0] ?? [];
+  const uses = system?.uses;
+  if (document?.type !== 'equipment' || system?.type?.value !== 'wondrous' || system.attunement !== 'required'
+    || system.equipped !== false || !system.properties?.includes('mgc')
+    || document.flags?.fvttJsonGenerator?.timedSpeed?.units !== 'seconds'
+    || String(uses?.max) !== String(seconds) || uses.spent !== 0 || uses.autoDestroy
+    || uses.recovery?.length !== 1 || uses.recovery[0].period !== 'lr' || uses.recovery[0].type !== 'recoverAll'
+    || !id || entries.length !== 1 || activity.type !== 'enchant' || activity.enchant?.self !== true
+    || activity.activation?.type !== 'bonus' || activity.activation.value !== 1 || activity.uses?.max
+    || activity.range?.units !== 'self' || activity.range.override !== true
+    || activity.target?.affects?.type !== 'object' || activity.target.affects.count !== '1'
+    || activity.target.prompt !== false || activity.consumption?.scaling?.allowed !== false
+    || activity.visibility?.requireAttunement !== true || activity.visibility.requireMagic !== true
+    || activity.consumption?.targets?.length !== 0 || activity.consumption.spellSlot !== false
+    || activity.effects?.length !== 1 || document.effects?.length !== 2) return undefined;
+  const [link] = activity.effects;
+  const riderIds = document.flags?.dnd5e?.riders?.effect;
+  if (riderIds?.length !== 1 || link.riders?.effect?.length !== 1 || link.riders.effect[0] !== riderIds[0]
+    || link.riders?.activity?.length !== 0 || link.riders?.item?.length !== 0) return undefined;
+  const profile = document.effects.find((effect: any) => effect._id === link._id);
+  const rider = document.effects.find((effect: any) => effect._id === riderIds[0]);
+  if (profile?.type !== 'enchantment' || profile.disabled !== true || profile.transfer !== false
+    || profile.duration?.value !== seconds || profile.duration.units !== 'seconds' || profile.duration.expiry !== 'turnStart'
+    || profile.system?.changes?.length !== 0 || rider?.type !== 'base' || rider.transfer !== true
+    || rider.disabled !== false || rider.system?.magical !== true) return undefined;
+  const changes = rider.system.changes;
+  if (changes?.length !== TIMED_SPEED_MOVEMENTS.length || !TIMED_SPEED_MOVEMENTS.every(movement =>
+    changes.some((change: any) => change.key === `system.attributes.movement.speeds.${movement}`
+      && change.type === 'multiply' && String(change.value) === '2' && change.phase === 'initial'))) return undefined;
+  return id;
+}
+
+function verifyStoredItemSpells(document: any, storage: ItemSpellStorageData): string[] | undefined {
+  const stored = resolveStoredItemSpells(storage);
+  const system = document?.system;
+  const metadata = document?.flags?.fvttJsonGenerator?.spellStorage;
+  if (document?.type !== 'equipment' || system?.type?.value !== 'ring' || system.attunement !== 'required'
+    || system.equipped !== false || system.rarities?.length !== 1 || system.rarities[0] !== 'rare'
+    || !system.properties?.includes('mgc') || system.uses?.max || system.uses?.autoDestroy
+    || metadata?.capacity !== storage.capacity || metadata.foundLevels !== storage.foundLevels) return undefined;
+  const activities = Object.entries<any>(system.activities ?? {});
+  if (activities.length !== stored.length) return undefined;
+  for (const entry of stored) {
+    const index = activities.findIndex(([, activity]) => {
+      const targets = activity.consumption?.targets;
+      const { spell, activation, uses } = activity;
+      return activity.type === 'cast' && spell?.uuid === entry.spell.uuid && spell.level === entry.level && spell.ability === entry.ability
+        && spell.challenge?.override === true && String(spell.challenge.attack) === String(entry.attackBonus)
+        && String(spell.challenge.save) === String(entry.saveDc)
+        && ['vocal', 'somatic', 'material'].every(property => spell.properties?.includes(property))
+        && activation?.override === false && String(uses?.max) === '1' && uses.spent === 0 && uses.recovery?.length === 0 && !uses.autoDestroy
+        && activity.consumption?.spellSlot === false && activity.consumption?.scaling?.allowed === false
+        && targets?.length === 1 && targets[0].type === 'activityUses' && !targets[0].target && String(targets[0].value) === '1';
+    });
+    if (index < 0) return undefined;
+    activities.splice(index, 1);
+  }
+  return Object.keys(system.activities ?? {});
+}
+
+function verifyItemEnchantment(document: any, expected: ItemEnchantmentData): { activityId: string } | { issue: string } {
+  const system = document?.system;
+  const entries = Object.entries<any>(system?.activities ?? {});
+  const [id, activity] = entries[0] ?? [];
+  const effects: any[] = Array.isArray(document?.effects) ? document.effects : [];
+  const target = enchantmentTargets(expected);
+  const categories = activity?.restrictions?.categories;
+  if (!id || entries.length !== 1 || activity.type !== 'enchant' || document.type !== target.type)
+    return { issue: 'An enchantment template requires one native Enchant activity on the source item category.' };
+  if (activity.restrictions?.type !== target.type || activity.restrictions.allowMagical !== false
+    || !Array.isArray(categories) || categories.length !== target.categories.length
+    || !target.categories.every(category => categories.includes(category)) || activity.restrictions.properties?.length !== 0)
+    return { issue: 'Enchant restrictions must match the eligible nonmagical base item categories.' };
+  if (activity.enchant?.self !== false || activity.activation?.type !== ''
+    || activity.duration?.units !== 'inst' || activity.duration.concentration !== false
+    || activity.consumption?.spellSlot !== false || activity.consumption.targets?.length !== 0
+    || activity.consumption.scaling?.allowed !== false || activity.uses?.max || system.uses?.max)
+    return { issue: 'Enchant must target a base item, with no activation cost, ongoing duration, item use, or spell slot.' };
+  if (system.type?.baseItem !== '' || system.type?.value !== '' || system.equipped !== false || !system.properties?.includes('mgc'))
+    return { issue: 'Enchant must start as a magical template without a preset base item or equipped state.' };
+
+  const weapon = expected.kind === 'enchant-weapon-bonus';
+  const options = weapon ? expected.bonuses : expected.damageTypes;
+  const profiles: any[] = Array.isArray(activity.effects) ? activity.effects : [];
+  const riderIds: string[] = document.flags?.dnd5e?.riders?.effect ?? [];
+  if (!Array.isArray(riderIds) || riderIds.length !== (weapon ? 0 : options.length)
+    || profiles.length !== options.length || effects.length !== options.length * (weapon ? 1 : 2)
+    || new Set(profiles.map(profile => profile._id)).size !== options.length
+    || new Set(riderIds).size !== riderIds.length)
+    return { issue: 'Enchant profile counts and the linked effects and riders must match the source options.' };
+  if (weapon ? system.attunement !== '' || system.rarities?.length !== 0 || Boolean(system.magicalBonus)
+    : system.attunement !== 'required' || system.rarities?.length !== 1 || system.rarities[0] !== 'rare')
+    return { issue: 'Enchant template rarity, attunement, and initial weapon bonus must match the source.' };
+
+  const hasChange = (effect: any, key: string, type: string, value: string) =>
+    effect.system?.changes?.some((change: any) => change.key === key && change.type === type
+      && (typeof change.value === 'string' || typeof change.value === 'number') && String(change.value) === value
+      && change.phase === 'initial');
+  for (const [index, option] of options.entries()) {
+    const profile = profiles[index];
+    const linked = effects.find(effect => effect._id === profile._id);
+    if (linked?.type !== 'enchantment' || linked.disabled !== true || linked.transfer !== false
+      || linked.system?.magical !== true || linked.duration?.value != null || linked.system?.changes?.length !== 4
+      || !hasChange(linked, 'system.properties', 'add', 'mgc')
+      || profile.level?.min !== null || profile.level?.max !== null
+      || profile.riders?.activity?.length !== 0 || profile.riders?.item?.length !== 0)
+      return { issue: `Enchant option ${index + 1} must reference its inactive native effect and contain no extra activity or item riders.` };
+    if (weapon) {
+      if (profile.riders.effect?.length !== 0 || !hasChange(linked, 'name', 'override', `{} +${option}`)
+        || !hasChange(linked, 'system.magicalBonus', 'upgrade', String(option))
+        || !hasChange(linked, 'system.rarities', 'override', ENCHANTED_WEAPON_RARITY[option as keyof typeof ENCHANTED_WEAPON_RARITY]))
+        return { issue: `Weapon Enchant option +${option} must set its exact native magical bonus and matching rarity.` };
+    } else {
+      const rider = effects.find(effect => effect._id === riderIds[index]);
+      if (profile.riders.effect?.length !== 1 || profile.riders.effect[0] !== riderIds[index]
+        || rider?.type !== 'base' || rider.disabled !== false || rider.transfer !== true
+        || rider.system?.magical !== true || rider.duration?.value != null || rider.system?.changes?.length !== 1
+        || !hasChange(rider, 'system.traits.dr.value', 'add', String(option))
+        || !hasChange(linked, 'name', 'override', `{} · ${linked.name}`)
+        || !hasChange(linked, 'system.rarities', 'override', 'rare') || !hasChange(linked, 'system.attunement', 'override', 'required'))
+        return { issue: `Armor Enchant option ${option} must grant its own resistance rider and require attunement.` };
+    }
+  }
+  return { activityId: id };
+}
+
+function matchesItemActivityMetadata(expected: ActionData['activity'], activity: any): boolean {
+  if (expected?.range && (String(activity?.range?.value) !== String(expected.range.value)
+    || activity.range.units !== expected.range.units)) return false;
+  if (expected?.duration && (String(activity?.duration?.value) !== expected.duration.value
+    || activity.duration.units !== expected.duration.units
+    || activity.duration.concentration !== expected.duration.concentration)) return false;
+  const target = expected?.target;
+  if (!target) return true;
+  const actual = activity?.target;
+  return actual?.template?.type === target.template.type
+    && String(actual.template.size) === target.template.size
+    && actual.template.units === target.template.units
+    && (!target.affects || (actual.affects?.type === target.affects.type
+      && String(actual.affects.count) === String(target.affects.count)
+      && (actual.affects.special ?? '') === (target.affects.special ?? '')));
+}
+
+function sameUsesRecovery(actual: unknown, expected: Array<{ period: string; type: string; formula?: string }>): boolean {
+  return Array.isArray(actual) && actual.length === expected.length && expected.every((entry, index) =>
+    actual[index]?.period === entry.period && actual[index]?.type === entry.type
+    && (actual[index]?.formula ?? '') === (entry.formula ?? ''));
 }
 
 interface WeaponMechanicValue {
@@ -1373,9 +1803,11 @@ function matchesExpectedDamagePart(expected: {
   type: string;
   types?: string[];
   scaling?: { mode: string; number: number; formula?: string };
-}, actual: any): boolean {
+}, actual: any, allowAttackModifier = false): boolean {
   const formula = String(expected.formula).replace(/\s+/g, '');
-  const match = formula.match(/^(\d+)d(\d+)(?:([+-]\d+))?$/i);
+  const hasAttackModifier = allowAttackModifier && formula.endsWith('+@mod');
+  const diceFormula = hasAttackModifier ? formula.slice(0, -5) : formula;
+  const match = diceFormula.match(/^(\d+)d(\d+)(?:([+-]\d+))?$/i);
   if (!match) return false;
   const expectedTypes = (expected.types?.length ? expected.types : [expected.type])
     .map((type) => normalizeVerificationDamageType(type));
@@ -1390,7 +1822,7 @@ function matchesExpectedDamagePart(expected: {
     );
   const formulaMatches = actual?.custom?.enabled === true
     ? String(actual.custom.formula ?? '').replace(/\s+/g, '') === formula
-    : Number(actual?.number) === Number(match[1])
+    : !hasAttackModifier && Number(actual?.number) === Number(match[1])
       && Number(actual?.denomination) === Number(match[2])
       && String(actual?.bonus ?? '') === String(match[3] ?? '').replace(/^\+/, '');
   return formulaMatches && typeMatches && scalingMatches;

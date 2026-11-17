@@ -10,6 +10,7 @@ import {
   hashSource,
   isForgeItemSourceId,
   isForgeSourceId,
+  projectForgeItemDocument,
   readForgeItemSourceId,
   readForgeSourceId,
   type ForgeItemSourceId,
@@ -85,6 +86,35 @@ function itemResultBase() {
 }
 
 describe('Forge Item v1 protocol', () => {
+  test('keeps spell link, level and DC in the closed Item preview and readback', () => {
+    const spell = {
+      uuid: 'Compendium.dnd5e.spells24.Item.phbsplFireball00', level: 3,
+      challenge: { override: true, save: '15' },
+    };
+    const item = {
+      name: SAFE_ITEM_DOCUMENT.name,
+      type: SAFE_ITEM_DOCUMENT.type,
+      system: {
+        ...SAFE_ITEM_DOCUMENT,
+        type: SAFE_ITEM_DOCUMENT.itemType,
+        activities: { cast: { _id: 'cast', type: 'cast', name: 'Fireball', spell } },
+      },
+      effects: [],
+    };
+    const expected = projectForgeItemDocument(item);
+    expect(expected.activities[0]?.spell).toEqual(spell);
+    const outcome = { ...itemResultBase(), status: 'accepted', artifact: item, artifactHash: hashArtifact(item) };
+    const response = (itemDocument: unknown) => ({ protocolVersion: 1, requestId: 'item-request-1', result: { ...outcome, itemDocument } });
+    expect(decodeForgeItemResponse(response(expected)).ok).toBe(true);
+    expect(decodeForgeItemResponse(response({ ...expected, activities: [{ ...expected.activities[0], spell: { ...spell, privatePath: 'hidden' } }] })).ok).toBe(false);
+
+    const readback = structuredClone(item);
+    Object.assign(readback.system.activities.cast.spell.challenge, { attack: '' });
+    expect(projectForgeItemDocument(readback)).toEqual(expected);
+    readback.system.activities.cast.spell.challenge.save = '14';
+    expect(projectForgeItemDocument(readback)).not.toEqual(expected);
+  });
+
   test('keeps Actor and Item source identities type-separated', () => {
     expect(isForgeItemSourceId(ITEM_SOURCE_ID)).toBe(true);
     expect(isForgeSourceId(ITEM_SOURCE_ID)).toBe(false);
@@ -92,6 +122,45 @@ describe('Forge Item v1 protocol', () => {
     expect(isForgeSourceId(ACTOR_SOURCE_ID)).toBe(true);
     expect(readForgeItemSourceId(FINAL_SOURCE)).toEqual({ status: 'valid', sourceId: ITEM_SOURCE_ID });
     expect(readForgeSourceId(FINAL_SOURCE).status).toBe('invalid');
+  });
+
+  test('projects healing for native consumables without requiring equipment armor fields', () => {
+    const heal = {
+      _id: 'heal', type: 'heal', name: 'Drink',
+      range: { override: false, units: 'ft', value: '5' },
+      healing: { number: 2, denomination: 4, bonus: '2', types: ['healing'], custom: { enabled: false, formula: '' } },
+    };
+    const { armor: _armor, ...system } = SAFE_ITEM_DOCUMENT;
+    const item = {
+      name: 'Potion', type: 'consumable', effects: [],
+      system: { ...system, type: { value: 'potion' }, uses: { max: '1', spent: 0, autoDestroy: true }, activities: { heal } },
+    };
+    const projected = projectForgeItemDocument(item);
+    expect(projected.armor).toEqual({});
+    expect(projected.uses.autoDestroy).toBe(true);
+    expect(projected.activities[0]?.healing).toEqual(heal.healing);
+    expect(projected.activities[0]?.range).toEqual(heal.range);
+    const outcome = { ...itemResultBase(), status: 'accepted', artifact: item, artifactHash: hashArtifact(item), itemDocument: projected };
+    expect(decodeForgeItemResponse({ protocolVersion: 1, requestId: 'item-request-1', result: outcome }).ok).toBe(true);
+    expect(projectForgeItemDocument({ ...item, system: { ...item.system, uses: { ...item.system.uses, autoDestroy: false } } }))
+      .not.toEqual(projected);
+  });
+
+  test('keeps native container limits and treats empty capacity defaults as unset', () => {
+    const item = {
+      type: 'container', name: 'Bag', effects: [],
+      system: {
+        description: { value: '<p>Bag</p>', chat: '' }, rarity: 'uncommon', attunement: '',
+        properties: ['mgc', 'weightlessContents'], weight: { value: 5, units: 'lb' },
+        capacity: { weight: { value: 500, units: 'lb' }, volume: { value: 64, units: 'cubicFoot' } },
+      },
+    };
+    const native = structuredClone(item);
+    Object.assign(native.system.capacity, { count: null });
+    expect(projectForgeItemDocument(native)).toEqual(projectForgeItemDocument(item));
+    expect(projectForgeItemDocument(item).capacity).toEqual(item.system.capacity);
+    native.system.capacity.volume.value = 65;
+    expect(projectForgeItemDocument(native)).not.toEqual(projectForgeItemDocument(item));
   });
 
   test('attaches one Item identity while rejecting invalid, duplicate, Actor-prefixed, and replacement IDs', () => {

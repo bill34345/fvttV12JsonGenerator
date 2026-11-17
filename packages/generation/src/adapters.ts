@@ -77,7 +77,11 @@ function collectActionMechanics(
       configuration || raw.nativeMastery !== undefined ? 'projected' : 'unsupported',
     ));
   }
-  if (attack) result.push(mechanic('attack', `${path}/attack`, attack));
+  if (attack) result.push(mechanic('attack', `${path}/attack`, path.startsWith('item/') && raw.useAction
+    ? { ...attack, useAction: raw.useAction, activity: raw.activity } : attack));
+  if (path.startsWith('item/') && ((raw.type === 'heal' && raw.useAction) || (raw.type === 'use' && raw.useAction?.condition))) {
+    result.push(mechanic('item-action', `${path}/${raw.type}`, raw));
+  }
   const sourceDamage = normalizedSourceDamageParts(raw);
   if (sourceDamage) {
     // Source-derived: native settlement and conditional/manual consequences
@@ -126,10 +130,11 @@ function collectActionMechanics(
       name: raw.englishName ?? raw.spellName,
       consumption: raw.useAction?.consumption ?? 0,
       activation: raw.useAction?.activation ?? 'action',
+      ...raw.itemSpell,
     }));
     result.push(mechanic('resource-consumption', `${path}/spell/consumption`, {
       consumption: raw.useAction?.consumption ?? 0,
-      resource: 'itemUses',
+      resource: raw.itemSpell?.activityUses ? 'activityUses' : 'itemUses',
     }));
   }
   if (raw.useAction?.limitedUses || raw.uses || raw.perLongRest || raw.recharge) {
@@ -221,6 +226,14 @@ export function adaptParsedItemToCanonical(
   options: AdapterSource = {},
 ): CanonicalItemDocument {
   const mechanics: CanonicalGenerationMechanic[] = [];
+  if (parsed.container) mechanics.push(mechanic('item-container', 'item/capacity', parsed.container));
+  if (parsed.spellScroll) mechanics.push(mechanic('item-spell-scroll', 'item/spellScroll', parsed.spellScroll));
+  if (parsed.spellStorage) mechanics.push(mechanic('item-spell-storage', 'item/spellStorage', parsed.spellStorage));
+  if (parsed.timedSpeed) mechanics.push(mechanic('item-timed-speed', 'item/timedSpeed', parsed.timedSpeed));
+  if (parsed.summon) mechanics.push(mechanic('item-summon', 'item/summon', parsed.summon));
+  if (parsed.randomSummon) mechanics.push(mechanic('item-random-summon', 'item/randomSummon', parsed.randomSummon));
+  if (parsed.lastChargeCheck) mechanics.push(mechanic('item-last-charge-check', 'item/lastChargeCheck', parsed.lastChargeCheck));
+  if (parsed.enchantment) mechanics.push(mechanic('item-enchantment', 'item/enchantment', parsed.enchantment));
   if (parsed.weaponConfiguration !== undefined) {
     const configuration = parseWeaponConfiguration(parsed.weaponConfiguration);
     const itemName = displayName(parsed.name, parsed.englishName);
@@ -252,11 +265,17 @@ export function adaptParsedItemToCanonical(
     ));
   }
   if (parsed.armor) mechanics.push(mechanic('armor', 'item/armor', parsed.armor));
+  if (parsed.weaponBonus !== undefined && parsed.weapon) {
+    mechanics.push(mechanic('item-weapon-bonus', 'item/weaponBonus', {
+      bonus: parsed.weaponBonus, weapon: parsed.weapon, damage: parsed.damage, properties: parsed.properties,
+    }));
+  }
   for (const [index, text] of (parsed.unresolvedMechanics ?? []).entries()) {
     mechanics.push(mechanic('armor', `item/armor/unresolved/${index}`, { text }, 'literal-only'));
   }
   if (parsed.uses) {
-    mechanics.push(mechanic('uses', 'item/uses', parsed.uses));
+    mechanics.push(mechanic('uses', 'item/uses', parsed.consumesPotion
+      ? { ...parsed.uses, autoDestroy: true } : parsed.uses));
   }
   for (const [group, actions] of Object.entries(parsed.structuredActions ?? {})) {
     if (!Array.isArray(actions)) continue;

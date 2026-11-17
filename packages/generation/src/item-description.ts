@@ -67,18 +67,16 @@ export function isFoundryHtmlDescription(value: string): boolean {
 }
 
 function renderInlineMarkdown(value: string): string {
-  return escapeHtml(value)
+  return escapeHtmlText(value)
     .replace(/`([^`]+)`/gu, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/gu, '<strong>$1</strong>')
     .replace(/__([^_]+)__/gu, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/gu, '<em>$1</em>');
 }
 
-function escapeHtml(value: string): string {
+function escapeHtmlText(value: string): string {
   return value
     .replace(/&/gu, '&amp;')
     .replace(/</gu, '&lt;')
-    .replace(/>/gu, '&gt;')
-    .replace(/"/gu, '&quot;')
-    .replace(/'/gu, '&#39;');
+    .replace(/>/gu, '&gt;');
 }
