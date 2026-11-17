@@ -40,6 +40,7 @@ export type GitCommandResult = GitCommandSuccess | GitCommandFailure;
 export interface GitCommandOptions {
   cwd?: string;
   executor?: GitCommandExecutor;
+  preserveStdout?: boolean;
 }
 
 export class GitCommandError extends Error {
@@ -63,7 +64,7 @@ export function runGitCommand(args: readonly string[], options: GitCommandOption
     command: renderCommand(args),
     args: [...args],
     status: raw.status,
-    stdout: sanitizeDiagnostic(raw.stdout),
+    stdout: options.preserveStdout ? raw.stdout ?? '' : sanitizeDiagnostic(raw.stdout),
     stderr: sanitizeDiagnostic(raw.stderr),
   };
 

@@ -71,9 +71,9 @@ git worktree add -b $branch $worktreePath master
 - 记录相关 focused checks、完整门禁和人工语义样本。机械绿色不能替代真实验收。
 - 用户尚未授权发布时，不 commit、merge 或 push。
 
-## 4. 一次发布授权后的顺序
+## 4. 按实际授权提交、合并和推送
 
-获得一次明确的 commit/merge/push 授权后：
+先确认本次授权覆盖哪些操作，再执行对应步骤。环境升级的必要本地提交和合并按[用户确认的维护口径](foundry-environment-maintenance.md)执行；其他任务沿当次授权。仅获本地提交合并范围时执行下列1–6，push由明确包含该操作的授权覆盖：
 
 1. 在 topic worktree 按意图 commit。
 2. 获取最新 `master` 状态；若 topic 已落后，在 topic worktree 吸收 `master`、解决冲突并重跑相关验证。
@@ -89,7 +89,38 @@ git worktree add -b $branch $worktreePath master
 4. 主索引非空、topic 改动与既有 tracked/untracked 路径重叠，或无法证明 merge 后原基线不变时，停止并报告；不得 stash、自动提交用户改动或在另一 worktree 背后移动 `master` ref。
 5. 安全时在主工作区执行 fast-forward：`git merge --ff-only <topic-branch>`。若不能 fast-forward，回到 topic worktree 完成受控整合和重验，不在脏主树即兴 merge。
 6. 重新采集主工作区 status/diff/untracked，证明发布前用户基线逐字节保持不变。
-7. `git push origin master` 后比较 `master`、`origin/master` 与预期 commit。
+7. 本次明确获准推送整个待发范围时，从本地 `master` 执行 `git push origin master`，然后核对两边提交编号。仅本地收口时，报告已合入的提交和推送状态。
+
+### 共享主线与定向发布
+
+本地 `master` 与 `origin/master` 共用产品代码和可复用工具。新功能从本地 `master` 开分支，验证后合回本地。机器配置、私有资料和具体环境记录保存在操作者的私用目录或私用维护分支中。需要发布时合入已核对的共享改动；私用分支的历史留在本地。
+
+在主工作区安装一次推送前检查。关联 worktree 共用该检查，已有其他 Git 钩子保留。普通推送用原提交编号快进；工作分支若直接推公开 `master`，需要核对其来源已合入本地。定向发布需要支持 `merge-tree --merge-base` 的 Git。
+
+```powershell
+bun run publish:github -- install --apply
+```
+
+仅获准发布部分已合入提交时，用定向发布入口。按依赖顺序填写获准公开的普通提交编号。第一行预览文件范围，第二行才推送到 GitHub。定向发布会在公开基线上生成新编号，整批使用普通推送可维持双方历史一致。
+
+```powershell
+bun run publish:github -- <提交编号>...
+bun run publish:github -- <提交编号>... --apply
+```
+
+命令检查每笔来源已合入本地 `master`，只在最新 `origin/master` 上重放选中的改动。推送前检查会重新验证提交来源、文件内容和远端快进关系。推送成功会读回远端提交编号。
+
+有冲突时，命令列出冲突文件。可以在从公开基线建立的临时 worktree 中拣取该提交、解决冲突并提交，然后核对这笔提交相对公开基线的 diff。按下面的格式把解决结果与本地来源一起交给发布命令。工具比对解决结果使用的公开基线，并要求每个非冲突文件的内容都与自动移植一致。冲突文件里的具体取舍由解决冲突的人核对。多笔同发时，解决结果应基于该笔之前已选改动合成的文件版本。
+
+```powershell
+bun run publish:github -- <本地提交编号>=<解决后提交编号>
+```
+
+回归测试使用本机临时仓库和临时裸远端，核对普通推送保留提交编号、未合入提交拒绝、定向发布不夹带文件，以及解决冲突后的实际推送。
+
+```powershell
+bun run test -- src/tools/__tests__/publishGithub.test.ts --max-concurrency 1
+```
 
 变更用户可执行入口、输入或输出、支持版本、操作步骤或安全限制时，topic 必须包含同步更新的中文工具条目、人工核对记录与生成的根 `工具手册.html`。内部实现、测试或重构先核对这些用户信息并记录结论；既有 watch 在本次必需的手册检查或 CI 中报 stale 时，仍须人工核对受影响条目、更新 review 和页面，不要求改写正确的说明，也不缩小目录覆盖。合并前通过 `bun run handbook:check`；合并后在 master 再次运行同一检查，打开受影响条目核对本次功能。若合并引入新的实现组合，回到 topic 核对并重新生成，不在主工作区即兴修补手册。完整维护步骤见 [手册维护流程](handbook-maintenance.md)。
 

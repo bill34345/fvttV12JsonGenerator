@@ -5,9 +5,9 @@
     "note": "核对Web上传默认目标、下载JSON和现有任务提示。"
   },
   "markdown-convert": {
-    "fingerprint": "a79f69372f5db5ddc77585c7d61f69457e0cccda17400b90c10e787067e48405",
-    "reviewedOn": "2026-11-13",
-    "note": "共享README更新血猎手独立构建说明；普通生物与物品转换未变。"
+    "fingerprint": "4c9cce31ce13733081d5c789c53b7f35ba81039268cd10c8aa61f4b6ffcde6f8",
+    "reviewedOn": "2026-11-17",
+    "note": "已核对资料转换命令和本机资料边界。共享 worktree 说明恢复普通 GitHub 推送，转换仍走原路径。"
   },
   "monster-intake": {
     "fingerprint": "9cfc44123ea7c5542b43239c73b55754bb15571c6644d51a1c9c4fae77558960",
@@ -55,14 +55,14 @@
     "note": "共享README更新血猎手模块；JSON翻译入口与结果未变。"
   },
   "foundry-ops": {
-    "fingerprint": "43a40b33c09c5c4b1dd131f7e786d533dd052910f0a878514a5ab9f2c6d461f9",
-    "reviewedOn": "2026-10-30",
-    "note": "对照tools/foundry-ops/AGENTS.md，仅将Bun版本依据从已删除CI配置改为根README；本地检查包装、临时沙箱、只读依赖、生产权限、目标路径和失败关闭要求保持。"
+    "fingerprint": "4dba8c0644c838715b450f30448d5114eb82e0288aa0b92bf6443ceb1beefc95",
+    "reviewedOn": "2026-11-17",
+    "note": "已核对部署权限说明。共享 worktree 说明恢复合入 master 后普通推送，Foundry 环境操作沿适用授权。"
   },
   "verification-development": {
-    "fingerprint": "ac4f913626d0c3fc6f001149ec69078e0203e2f3129d5d03b8002cb477e1bbbc",
-    "reviewedOn": "2026-11-14",
-    "note": "核对公开版 Forge 的 PDF 选图、裁切预设、调整和复核。角色图及地图 Token 的用途、验证入口和原生动态环一致。"
+    "fingerprint": "a20968bc24b2c3a7a2e9e1fce7c986226e3244d41ee885a9a64671ae6daacf2b",
+    "reviewedOn": "2026-11-17",
+    "note": "核对普通推送和定向发布两条 Git 路径。临时裸仓实测从本地 master 推送保留同一提交编号。"
   },
   "human-encounter-intake": {
     "fingerprint": "6871f58ed85beeecf6369adeb24cad61005fcc850e7e5aa0a26489ad9a9f6d43",

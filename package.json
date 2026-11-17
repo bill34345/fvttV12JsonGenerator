@@ -160,6 +160,7 @@
     "architecture:verify": "bun run architecture:deps && bun run architecture:cycles",
     "agents:generate": "ruler apply --agents agentsmd --local-only --no-nested --no-skills --no-subagents --no-mcp --no-gitignore --no-backup",
     "agents:check": "bun run src/tools/agentsInstructionsCheck.ts",
+    "publish:github": "bun run src/tools/publishGithub.ts",
     "test-isolation:check": "bun run src/tools/foundryTestIsolationCheck.ts",
     "test-env:check": "bun run src/tools/ciEnvironmentCheck.ts",
     "coverage:verify": "bun run src/tools/coverageGate.ts coverage/lcov.info",

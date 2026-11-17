@@ -795,6 +795,11 @@
     ],
     "steps": [
       {
+        "title": "从共享 master 发布",
+        "text": "在主工作区安装本仓库的推送前检查。功能在工作分支验证后合回本地 master，整批获准发布时直接用 git push origin master，提交编号原样保留。只有部分已合入提交获准发布时，使用 publish:github 按编号预览和定向推送。个人环境和自用资料保存在本地。",
+        "command": "bun run publish:github -- install --apply"
+      },
+      {
         "title": "核对怪物来源入口",
         "text": "用保存的首次失败资料验证原文识别、完整能力保留、叙述标题按位置归属、空白排版容错及本地错误保留代码/位置；不调用模型服务。它只证明离线入口行为，不能代替新资料首次生成、完整中文或Foundry导入验收。",
         "command": "bun run test:forge-discovery"
