@@ -1,7 +1,7 @@
 {
   "FVTT_HOUSE_RULES": {
     "FirstRun": "House Rules is installed. All modifying features are OFF. A GM can enable only the desired rules in Configure Settings.",
-    "UnsupportedRuntime": "House Rules is fail-closed: only Foundry 14.364 / dnd5e 5.3.3 or Foundry 14.368 / dnd5e 5.3.3, 6.0.2, 6.0.5 or 6.0.6 is supported.",
+    "UnsupportedRuntime": "Other house rules are unavailable on this Foundry / dnd5e pair; critical first-die support is checked independently against the dice interfaces.",
     "LowAbility": "Selected character has one or more ability scores at or below the configured reminder threshold.",
     "Dismiss": "Dismiss",
     "Nat1": {
@@ -33,15 +33,11 @@
       "Feed": "Administer Potion (Action)"
     },
     "Ammo": { "RecoveryReady": "Ammunition recovery is available for GM confirmation; no ammunition was restored automatically." },
-    "Midi": {
-      "ExactVersionActive": "The locally validated MIDI-QOL 14.0.11 / DAE 14.0.12 / Dice So Nice 6.2.9 integration is active; other versions fail closed.",
-      "Unsupported": "The critical first-die override is disabled because MIDI-QOL, DAE, or Dice So Nice is outside the validated version range."
-    },
     "CriticalMax": {
       "Effective": "Critical effective value: {value}",
       "Original": "Original die result: {value}",
       "Combined": "Original die result: {original}; critical damage counts this die as {effective}",
-      "Unavailable": "Critical first-die maximum handling could not be installed; this roll keeps native behavior."
+      "Unavailable": "Required critical first-die dice interfaces are unavailable. Native resolution is preserved."
     },
     "Stealth": { "SpeedWarning": "Stealth movement exceeded the configured limit; movement was not rolled back." },
     "Settings": {

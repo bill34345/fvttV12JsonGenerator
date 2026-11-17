@@ -2,11 +2,11 @@
   "id": "fvtt-house-rules",
   "title": "本团村规 / House Rules",
   "description": "使用显式标签、由 GM 主导的本团村规辅助功能。 / Explicit-tag, GM-authoritative house-rule helpers.",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "compatibility": {
     "minimum": "14.364",
     "verified": "14.364",
-    "maximum": "14.368"
+    "maximum": "14.999"
   },
   "esmodules": ["scripts/module.js"],
   "styles": ["styles/house-rules.css"],
@@ -35,28 +35,18 @@
         "compatibility": {
           "minimum": "5.3.3",
           "verified": "5.3.3",
-          "maximum": "6.0.6"
+          "maximum": "6.999.999"
         }
       }
     ],
     "recommends": [
       {
         "id": "midi-qol",
-        "type": "module",
-        "compatibility": {
-          "minimum": "14.0.11",
-          "verified": "14.0.11",
-          "maximum": "14.6.0-beta.4338eeab.local.9"
-        }
+        "type": "module"
       },
       {
         "id": "dae",
-        "type": "module",
-        "compatibility": {
-          "minimum": "14.0.12",
-          "verified": "14.0.12",
-          "maximum": "14.0.14"
-        }
+        "type": "module"
       }
     ]
   },

@@ -1,7 +1,7 @@
 {
   "FVTT_HOUSE_RULES": {
     "FirstRun": "本团村规已安装。所有会修改数据的功能均为关闭；GM 可在配置设置中逐项启用。",
-    "UnsupportedRuntime": "本团村规已失败关闭：仅支持 Foundry 14.364 / dnd5e 5.3.3 或 Foundry 14.368 / dnd5e 5.3.3 / 6.0.2 / 6.0.5 / 6.0.6。",
+    "UnsupportedRuntime": "其他村规未在当前 Foundry / dnd5e 配对启用；重击首骰功能按伤害骰接口独立判断。",
     "LowAbility": "当前选中的角色有属性值不高于提醒阈值；本提示不会修改角色。",
     "Dismiss": "忽略",
     "Nat1": {
@@ -33,15 +33,11 @@
       "Feed": "喂服药水（动作）"
     },
     "Ammo": { "RecoveryReady": "弹药可由 GM 确认找回；模块没有自动恢复任何弹药。" },
-    "Midi": {
-      "ExactVersionActive": "已启用经过本地验证的 MIDI-QOL 14.0.11 / DAE 14.0.12 / Die So Nice 6.2.9 适配；其他版本会失败关闭。",
-      "Unsupported": "本次重击首骰覆盖已失败关闭：MIDI-QOL、DAE 或 Die So Nice 版本不在已验证范围内。"
-    },
     "CriticalMax": {
       "Effective": "重击结算值：{value}",
       "Original": "实际掷出：{value}",
       "Combined": "实际投出：{original}；重击按 {effective} 结算",
-      "Unavailable": "重击首骰最大值功能未安装成功，本次保持原生结算。"
+      "Unavailable": "当前缺少重击首骰所需的伤害骰接口，本次保持原生结算。"
     },
     "Stealth": { "SpeedWarning": "隐匿移动超过限制；模块只警告，不会回滚移动。" },
     "Settings": {

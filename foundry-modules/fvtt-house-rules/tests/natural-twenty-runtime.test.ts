@@ -73,12 +73,15 @@ function damageConfig(actionType: string, rolls: AnyRecord[], itemType = "spell"
 const globals = globalThis as AnyRecord;
 let previousGame: unknown;
 let previousFoundry: unknown;
+let previousHooks: unknown;
 
 beforeEach(() => {
   previousGame = globals.game;
   previousFoundry = globals.foundry;
+  previousHooks = globals.Hooks;
   MockDie.MODIFIERS = {};
   globals.foundry = { dice: { terms: { Die: MockDie, OperatorTerm: MockOperatorTerm } } };
+  globals.Hooks = { on() {} };
   globals.game = {
     version: "14.364",
     system: { id: "dnd5e", version: "5.3.3" },
@@ -91,9 +94,19 @@ beforeEach(() => {
 afterEach(() => {
   globals.game = previousGame;
   globals.foundry = previousFoundry;
+  globals.Hooks = previousHooks;
 });
 
 describe("critical configured damage integration", () => {
+  test("uses compatible interfaces on unknown release labels with arbitrary optional module versions", () => {
+    globals.game.version = "future-core";
+    globals.game.system.version = "future-system";
+    globals.game.modules = new Map(["midi-qol", "dae", "dice-so-nice"].map(id => [id, { active: true, version: "unlisted" }]));
+    const roll = damageRoll([new MockDie({ number: 2, faces: 8 })]);
+    expect(applyCriticalConfiguredRolls([roll], damageConfig("mwak", [{ base: true }], "weapon"))).toBeTrue();
+    expect(roll.terms[0]).toMatchObject({ number: 2, faces: 8, modifiers: ["critmax8"] });
+  });
+
   test("keeps every weapon critical die and maximizes only the first die of the unique base roll", () => {
     const untouchedRoll = damageRoll([new MockDie({ number: 2, faces: 4 })]);
     const rider = new MockDie({ number: 2, faces: 6, options: { flavor: "fire" } });
@@ -187,6 +200,52 @@ describe("critical configured damage integration", () => {
       damageConfig("rsak", [{}])
     )).toBeFalse();
     expect(roll.terms).toEqual([original]);
+  });
+
+  test("declines ambiguous base maps and unknown evaluation/result layouts without mutating dice", () => {
+    const cases = [
+      { base: [{ base: false }], change: (_roll: AnyRecord) => {} },
+      { base: [{ base: true }, { base: true }], change: (_roll: AnyRecord) => {} },
+      { base: [{ base: true }], change: (roll: AnyRecord) => { delete roll._evaluated; } },
+      { base: [{ base: true }], change: (roll: AnyRecord) => { delete roll.terms[0].results; } },
+      { base: [{ base: true }], change: (roll: AnyRecord) => { roll.terms[0].results = [{ result: 3 }]; } },
+    ];
+    for (const entry of cases) {
+      const roll = damageRoll([new MockDie({ number: 2, faces: 8 })]);
+      entry.change(roll);
+      const terms = [...roll.terms];
+      expect(applyCriticalConfiguredRolls([roll], damageConfig("mwak", entry.base, "weapon"))).toBeFalse();
+      expect(roll.terms).toEqual(terms);
+      expect(roll.resetCount).toBe(0);
+    }
+  });
+
+  test("does not apply twice or change a disabled feature", () => {
+    const roll = damageRoll([new MockDie({ number: 2, faces: 8 })]);
+    const config = damageConfig("mwak", [{ base: true }], "weapon");
+    expect(applyCriticalConfiguredRolls([roll], config)).toBeTrue();
+    const configured = roll.terms[0];
+    expect(applyCriticalConfiguredRolls([roll], config)).toBeFalse();
+    expect(roll.terms[0]).toBe(configured);
+    expect(roll.resetCount).toBe(1);
+    globals.game.settings.get = () => false;
+    const ordinary = damageRoll([new MockDie({ number: 2, faces: 8 })]);
+    expect(applyCriticalConfiguredRolls([ordinary], config)).toBeFalse();
+    expect(ordinary.resetCount).toBe(0);
+  });
+
+  test("missing interfaces and an unwritable modifier registry preserve the native roll", () => {
+    class FrozenDie extends MockDie { static MODIFIERS = Object.freeze({}); }
+    const roll = damageRoll([new FrozenDie({ number: 2, faces: 8 })]);
+    const original = roll.terms[0];
+    globals.foundry.dice.terms.Die = FrozenDie;
+    expect(() => installCriticalMaxModifier(FrozenDie as any)).not.toThrow();
+    expect(applyCriticalConfiguredRolls([roll], damageConfig("mwak", [{ base: true }], "weapon"))).toBeFalse();
+    expect(roll.terms[0]).toBe(original);
+    expect(roll.resetCount).toBe(0);
+    globals.foundry.dice.terms.Die = undefined;
+    expect(applyCriticalConfiguredRolls([roll], damageConfig("mwak", [{ base: true }], "weapon"))).toBeFalse();
+    expect(roll.terms[0]).toBe(original);
   });
 
   test("the modifier changes only results[0] and leaves later raw results native", () => {

@@ -1,4 +1,5 @@
 import { FLAG, MAX_LEDGER_ENTRIES, MODULE_ID, SETTING, SUPPORTED_RUNTIMES } from "./constants";
+import { isVersionInMajor } from "@fvtt-json-generator/contracts/version-admission";
 import { isAuthority, type ActiveUser } from "./core/authority";
 import { createAmmoShot, confirmAmmoRecovery, extractAmmoSnapshotFromChatFlags, parseAmmoTier, recordAmmoShot, type AmmoLedger, type AmmoSnapshot } from "./core/ammo";
 import { installCriticalMaxDieIntegration, installCriticalMaxModifier } from "./core/critical-die";
@@ -17,7 +18,7 @@ import {
 import type { NaturalOneConsequence } from "./core/natural-roll";
 import { buildPotionActivities, type HealingDice } from "./core/potion";
 import { advanceStealthMovement, endStealthForDash, nonCombatStealthSuggestion, type StealthState } from "./core/stealth";
-import { inspectMidiAdapter } from "./midi-adapter";
+import { inspectCriticalAdapter } from "./midi-adapter";
 import { isV1AmmoLedger, isV1TransactionLedger } from "./migrations";
 import { transactPotion } from "./potion-transaction";
 import { normalizePotionActivities } from "./potion-activity-normalization";
@@ -106,14 +107,14 @@ function currentIsAuthority(): boolean {
 function lockedRuntime(): boolean {
   const current = game();
   const foundryVersion = current?.version ?? current?.release?.version;
-  return current?.system?.id === "dnd5e" && SUPPORTED_RUNTIMES.some(pair =>
-    pair.foundry === foundryVersion && pair.dnd5e === current?.system?.version);
+  return current?.system?.id === "dnd5e" && (
+    (isVersionInMajor(foundryVersion, "14.368") && isVersionInMajor(current.system.version, "6.0.6"))
+    || SUPPORTED_RUNTIMES.some(pair => pair.foundry === foundryVersion && pair.dnd5e === current.system.version));
 }
 
 function dnd5eSix(): boolean {
   const current = game();
-  return lockedRuntime()
-    && (current?.system?.version === "6.0.2" || current?.system?.version === "6.0.5" || current?.system?.version === "6.0.6");
+  return lockedRuntime() && isVersionInMajor(current?.system?.version, "6.0.2");
 }
 
 function nativeAmmunitionId(message: AnyRecord): string | null {
@@ -145,10 +146,6 @@ function notification(key: string, level: "warn" | "error" | "info" = "warn"): v
 function criticalMaxLocalize(key: string, fallback: string): string {
   const value = game()?.i18n?.localize?.(key);
   return typeof value === "string" ? value : fallback;
-}
-
-function criticalMaxDependenciesSupported(): boolean {
-  return inspectMidiAdapter(game()?.modules, game()?.version ?? game()?.release?.version, game()?.system?.version).supported;
 }
 
 function explicitFlag(document: AnyRecord, key: string): AnyRecord | null {
@@ -548,11 +545,12 @@ export function applyCriticalConfiguredRolls(
   config: AnyRecord,
   message: AnyRecord = {}
 ): boolean {
-  if (!enabled(SETTING.naturalTwenty) || !criticalMaxDependenciesSupported() || !Array.isArray(rolls) || !config?.subject) return false;
+  if (setting<boolean>(SETTING.naturalTwenty) !== true || !inspectCriticalAdapter(runtime()).supported
+    || !Array.isArray(rolls) || !config?.subject) return false;
   const targetIndex = criticalTargetRollIndex(config, rolls);
   if (targetIndex === null) return false;
   const roll = rolls[targetIndex];
-  if (!roll || roll._evaluated === true || roll.isCritical !== true || !Array.isArray(roll.terms)
+  if (!roll || roll._evaluated !== false || roll.isCritical !== true || !Array.isArray(roll.terms)
     || typeof roll.resetFormula !== "function") return false;
 
   const terms = runtime().foundry?.dice?.terms;
@@ -562,7 +560,7 @@ export function applyCriticalConfiguredRolls(
   const firstDieIndex = roll.terms.findIndex((term: AnyRecord) => term instanceof DieClass);
   if (firstDieIndex < 0) return false;
   const original = roll.terms[firstDieIndex];
-  if (!original || original._evaluated === true || original.results?.length) return false;
+  if (!original || original._evaluated !== false || !Array.isArray(original.results) || original.results.length) return false;
   const split = splitConfiguredCriticalFirstDiceTerm(original);
   if (!split) return false;
 
@@ -1075,9 +1073,6 @@ function installCoreHooks(): void {
     if (currentIsAuthority()) void commitAmmoPacket(commit);
     else game()?.socket?.emit?.(`module.${MODULE_ID}`, commit);
   });
-  hooks.on("dnd5e.postDamageRollConfiguration", (rolls: AnyRecord[], config: AnyRecord, _dialog: AnyRecord, message: AnyRecord) => {
-    applyCriticalConfiguredRolls(rolls, config, message);
-  });
   hooks.on("createChatMessage", (message: AnyRecord) => {
     captureNativeAmmoMessage(message);
     void processDeletedAmmoFallback(message);
@@ -1109,20 +1104,26 @@ function installSocket(): void {
 }
 
 export function installHouseRulesRuntime(): void {
+  installCriticalHook();
   if (!lockedRuntime()) {
     notification("UnsupportedRuntime", "error");
     return;
   }
   installSocket();
-  const terms = runtime().foundry?.dice?.terms;
-  const criticalMaxReady = typeof terms?.Die === "function"
-    && installCriticalMaxDieIntegration(terms.Die, criticalMaxLocalize);
-  const midi = inspectMidiAdapter(game()?.modules, game()?.version ?? game()?.release?.version, game()?.system?.version);
-  if (!criticalMaxReady) notification("CriticalMax.Unavailable", "error");
-  else if (!midi.supported) notification("Midi.Unsupported", "warn");
-  else if (midi.enabled) notification("Midi.ExactVersionActive", "info");
   installCoreHooks();
   installNaturalCardListeners();
+}
+
+function installCriticalHook(): void {
+  const supported = inspectCriticalAdapter(runtime()).supported;
+  const ready = supported && installCriticalMaxDieIntegration(runtime().foundry.dice.terms.Die, criticalMaxLocalize);
+  if (!ready) {
+    if (game()?.system?.id === "dnd5e" && setting<boolean>(SETTING.naturalTwenty) === true) notification("CriticalMax.Unavailable", "warn");
+    return;
+  }
+  runtime().Hooks.on("dnd5e.postDamageRollConfiguration", (rolls: AnyRecord[], config: AnyRecord, _dialog: AnyRecord, message: AnyRecord) => {
+    applyCriticalConfiguredRolls(rolls, config, message);
+  });
 }
 
 export function installHouseRulesApi(): void {

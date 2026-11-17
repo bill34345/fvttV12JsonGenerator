@@ -20,7 +20,7 @@ import {
 } from "../src/core/natural-roll";
 import { buildPotionActivities, maximumHealingFormula } from "../src/core/potion";
 import { advanceStealthMovement, endStealthForDash, stealthSpeedLimit } from "../src/core/stealth";
-import { inspectMidiAdapter } from "../src/midi-adapter";
+import { inspectCriticalAdapter, type CriticalAdapterStatus } from "../src/midi-adapter";
 import { __testing } from "../src/runtime";
 import { explicitTierThreeAmmo, healingPotionDice, retainedAdvantageTwenty } from "./fixtures";
 
@@ -266,40 +266,39 @@ describe("HR-04 retained natural rolls", () => {
   });
 });
 
-test("MIDI adapter is isolated to exactly 14.0.11 and tolerates matching DAE only", () => {
-  expect(inspectMidiAdapter(new Map())).toEqual({ enabled: false, supported: true, reason: "absent" });
-  expect(inspectMidiAdapter(new Map([["midi-qol", { active: true, version: "14.0.12" }]]))).toEqual({
-    enabled: false,
-    supported: false,
-    reason: "unsupported-midi-version"
+describe("critical adapter capabilities", () => {
+  class CompatibleDie {
+    static MODIFIERS = {};
+    getTooltipData() { return { rolls: [] }; }
+  }
+  const compatible = () => ({
+    game: { version: "future-core", system: { id: "dnd5e", version: "future-system" },
+      modules: new Map([["midi-qol", { active: true, version: "unknown" }], ["dae", { active: true, version: "unknown" }], ["dice-so-nice", { active: true, version: "unknown" }]]) },
+    Hooks: { on() {} }, foundry: { dice: { terms: { Die: CompatibleDie } } }
   });
-  expect(inspectMidiAdapter(new Map([
-    ["midi-qol", { active: true, version: "14.0.11" }],
-    ["dae", { active: true, version: "14.0.12" }]
-  ]))).toEqual({ enabled: true, supported: true, reason: "ready-for-runtime-validation" });
-  expect(inspectMidiAdapter(new Map([
-    ["dice-so-nice", { active: true, version: "6.2.8" }]
-  ]))).toEqual({ enabled: false, supported: false, reason: "unsupported-dice-so-nice-version" });
-  const next = new Map([
-    ["midi-qol", { active: true, version: "14.6.0-beta.4338eeab.local.9" }],
-    ["dae", { active: true, version: "14.0.14" }],
-    ["dice-so-nice", { active: true, version: "6.3.1" }],
-  ]);
-  expect(inspectMidiAdapter(next, "14.368", "6.0.2")).toEqual({
-    enabled: true, supported: true, reason: "ready-for-runtime-validation"
+
+  test("accepts shared dice interfaces independently of release labels or optional modules", () => {
+    const globals = compatible();
+    expect(inspectCriticalAdapter(globals)).toEqual({ supported: true, reason: "ready-for-runtime-validation" });
+    globals.game.modules.clear();
+    expect(inspectCriticalAdapter(globals).supported).toBeTrue();
   });
-  expect(inspectMidiAdapter(new Map(), "14.368", "6.0.5")).toEqual({
-    enabled: false, supported: true, reason: "absent"
+
+  test("reports a missing interface without changing the registry", () => {
+    const cases: Array<[CriticalAdapterStatus["reason"], (globals: any) => void]> = [
+      ["unsupported-system", globals => { globals.game.system.id = "other"; }],
+      ["missing-hook-api", globals => { globals.Hooks.on = undefined; }],
+      ["missing-die-class", globals => { globals.foundry.dice.terms.Die = undefined; }],
+      ["missing-modifier-registry", globals => { globals.foundry.dice.terms.Die = class { getTooltipData() {} }; }],
+      ["missing-tooltip-api", globals => { globals.foundry.dice.terms.Die = class { static MODIFIERS = {}; }; }],
+    ];
+    for (const [reason, change] of cases) {
+      const globals = compatible();
+      change(globals);
+      expect(inspectCriticalAdapter(globals)).toEqual({ supported: false, reason });
+      expect(CompatibleDie.MODIFIERS).toEqual({});
+    }
   });
-  expect(inspectMidiAdapter(new Map([["midi-qol", { active: true, version: "14.6.0-beta.4338eeab.local.9" }]]), "14.368", "6.0.5").reason)
-    .toBe("unsupported-midi-version");
-  expect(inspectMidiAdapter(new Map(), "14.368", "6.0.6")).toEqual({ enabled: false, supported: true, reason: "absent" });
-  expect(inspectMidiAdapter(new Map([["midi-qol", { active: true, version: "14.6.0-beta.4338eeab.local.9" }]]), "14.368", "6.0.6").reason)
-    .toBe("unsupported-midi-version");
-  next.set("midi-qol", { active: true, version: "14.6.0-beta.4338eeab.local.8" });
-  expect(inspectMidiAdapter(next, "14.368", "6.0.2").reason).toBe("unsupported-midi-version");
-  expect(inspectMidiAdapter(next, "14.364", "5.3.3").supported).toBeFalse();
-  expect(inspectMidiAdapter(new Map(), "14.368", "5.3.3").reason).toBe("absent");
 });
 
 describe("critical first-die display contract", () => {
@@ -520,7 +519,7 @@ describe("runtime ammunition trust and fallback", () => {
     }
   });
 
-  test.each(["6.0.2", "6.0.5", "6.0.6"])("dnd5e %s records a consumed shot from the typed attack card and rejects mismatched sources", async (dnd6Version) => {
+  test.each(["6.0.2", "6.0.5", "6.0.6", "6.0.7", "6.1.0"])("dnd5e %s records a consumed shot from the typed attack card and rejects mismatched sources", async (dnd6Version) => {
     const fixture = ammoRuntimeFixture({ dnd6: true, dnd6Version });
     try {
       expect(await __testing.stageAmmoPacket(fixture.packet, "player")).toBe(true);
@@ -544,7 +543,7 @@ describe("runtime ammunition trust and fallback", () => {
     } finally { fixture.restore(); }
   });
 
-  test.each(["6.0.2", "6.0.5", "6.0.6"])("dnd5e %s deleted ammunition requires the exact matching system delta", async (dnd6Version) => {
+  test.each(["6.0.2", "6.0.5", "6.0.6", "6.0.7", "6.1.0"])("dnd5e %s deleted ammunition requires the exact matching system delta", async (dnd6Version) => {
     const fixture = ammoRuntimeFixture({ dnd6: true, dnd6Version, destroy: true });
     try {
       expect(await __testing.stageAmmoPacket(fixture.packet, "player")).toBe(true);

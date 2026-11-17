@@ -1,6 +1,6 @@
 {
   "name": "@fvtt-json-generator/fvtt-house-rules",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,6 +10,9 @@
     "verify:artifact": "bun run scripts/verify-artifact.ts",
     "install:local-lab": "bun run scripts/install-local-lab.ts",
     "verify:local-lab": "bun run scripts/verify-local-lab.ts"
+  },
+  "dependencies": {
+    "@fvtt-json-generator/contracts": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

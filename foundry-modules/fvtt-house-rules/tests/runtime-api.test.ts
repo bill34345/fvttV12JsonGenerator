@@ -588,29 +588,54 @@ describe("house-rules runtime and settings integration", () => {
     expect(await setStealth(actor, { enabled: false })).toBeNull();
   });
 
-  test("accepts only exact paired Foundry and dnd5e versions", () => {
+  test("installs critical handling outside the other house-rule version gate", () => {
+    class NativeDie {
+      static MODIFIERS = {};
+      number = 2;
+      faces = 8;
+      modifiers: string[] = [];
+      options = {};
+      results: unknown[] = [];
+      _evaluated = false;
+      constructor(data: AnyRecord) { Object.assign(this, data); }
+      getTooltipData() { return { rolls: [] }; }
+    }
+    globals.game.version = "future-core";
+    globals.game.system.version = "future-system";
+    globals.game.modules = new Map([["midi-qol", { active: true, version: "future-midi" }]]);
+    globals.foundry.dice = { terms: { Die: NativeDie } };
+    installHouseRulesRuntime();
     installHouseRulesApi();
-    expect(globals.game.fvttHouseRules.runtime.locked()).toBeTrue();
-    globals.game.version = "14.368";
-    expect(globals.game.fvttHouseRules.runtime.locked()).toBeTrue();
-    globals.game.version = "14.369";
     expect(globals.game.fvttHouseRules.runtime.locked()).toBeFalse();
-    globals.game.version = "14.368";
-    globals.game.system.version = "6.0.2";
-    expect(globals.game.fvttHouseRules.runtime.locked()).toBeTrue();
-    globals.game.system.version = "6.0.5";
-    expect(globals.game.fvttHouseRules.runtime.locked()).toBeTrue();
-    globals.game.system.version = "6.0.6";
-    expect(globals.game.fvttHouseRules.runtime.locked()).toBeTrue();
-    globals.game.system.version = "6.0.7";
-    expect(globals.game.fvttHouseRules.runtime.locked()).toBeFalse();
-    globals.game.system.version = "6.0.4";
-    expect(globals.game.fvttHouseRules.runtime.locked()).toBeFalse();
-    globals.game.version = "14.364";
-    expect(globals.game.fvttHouseRules.runtime.locked()).toBeFalse();
-    globals.game.system.version = "6.0.6";
-    expect(globals.game.fvttHouseRules.runtime.locked()).toBeFalse();
-    globals.game.version = "14.369";
+    expect(hooks.has("dnd5e.postDamageRollConfiguration")).toBeTrue();
+    expect(hooks.has("dnd5e.rollAttackV2")).toBeFalse();
+    const roll = { terms: [new NativeDie({})], isCritical: true, _evaluated: false, resetFormula() {} };
+    const config = { subject: { type: "attack", actionType: "mwak", item: { type: "weapon" } }, rolls: [{ base: true }] };
+    const message: AnyRecord = {};
+    hooks.get("dnd5e.postDamageRollConfiguration")?.([roll], config, {}, message);
+    expect(roll.terms[0]?.modifiers).toEqual(["critmax8"]);
+    expect(roll.terms[0]?.number).toBe(2);
+    expect(message.data.flags[MODULE_ID].criticalFirstDieApplied).toBeTrue();
+    expect(settingWrites).toEqual([]);
+  });
+
+  test("admits later native6 releases while retaining legacy and authority boundaries", () => {
+    installHouseRulesApi();
+    for (const [core, system, expected] of [
+      ["14.364", "5.3.3", true], ["14.368", "5.3.3", true],
+      ["14.368", "6.0.2", true], ["14.368", "6.0.5", true],
+      ["14.368", "6.0.6", true], ["14.369", "6.0.6", true],
+      ["14.368", "6.0.7", true], ["14.370", "6.1.0", true],
+      ["14.369", "5.3.3", false], ["14.369", "6.0.5", false],
+      ["14.368", "6.0.4", false], ["14.364", "6.0.6", false],
+      ["15.0", "6.0.6", false], ["14.369", "7.0.0", false],
+    ] as const) {
+      globals.game.version = core;
+      globals.game.system.version = system;
+      expect(globals.game.fvttHouseRules.runtime.locked()).toBe(expected);
+    }
+    globals.game.version = "14.370";
+    globals.game.system = { id: "other", version: "6.1.0" };
     expect(globals.game.fvttHouseRules.runtime.locked()).toBeFalse();
   });
 

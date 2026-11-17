@@ -60,11 +60,16 @@ function criticalMaxModifierHandler(this: AnyRecord, modifier: string): boolean 
 /** Register only the namespaced behavior used by this module. */
 export function installCriticalMaxModifier(DieClass: AnyRecord): boolean {
   const modifiers = DieClass?.MODIFIERS as ModifierMap | undefined;
-  if (!modifiers || Array.isArray(modifiers)) return false;
+  if (!modifiers || typeof modifiers !== "object" || Array.isArray(modifiers)) return false;
   const existing = modifiers[CRITICAL_MAX_MODIFIER];
+  if (existing === criticalMaxModifierHandler) return true;
   if (existing !== undefined && existing !== criticalMaxModifierHandler) return false;
-  modifiers[CRITICAL_MAX_MODIFIER] = criticalMaxModifierHandler;
-  return modifiers[CRITICAL_MAX_MODIFIER] === criticalMaxModifierHandler;
+  try {
+    modifiers[CRITICAL_MAX_MODIFIER] = criticalMaxModifierHandler;
+    return modifiers[CRITICAL_MAX_MODIFIER] === criticalMaxModifierHandler;
+  } catch {
+    return false;
+  }
 }
 
 function escapeHtml(value: unknown): string {
