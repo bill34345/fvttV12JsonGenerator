@@ -7,6 +7,7 @@ import {fixedEncounterCommand,decodeEncounterRuntimeConfiguration,readFixedEncou
 import {isForgeSpellImportPending} from '@fvtt-json-generator/contracts/forge-import-lifecycle';
 import {isForgeAutomationTargetCompatible} from './mirror-core-compatibility';
 import { isNativeForgeRuntimeTargetSupported } from '@fvtt-json-generator/forge-browser-runtime';
+import { resolveForgeWorldFolder, type ForgeArchiveGame } from './worldFolder';
 
 export interface EncounterDocument {
   id: string; uuid: string; name: string;
@@ -20,7 +21,7 @@ interface Collection {
   contents?: EncounterDocument[];
   documentClass: { create(data: any, options?: any): Promise<EncounterDocument | undefined> };
 }
-export interface EncounterGame {
+export interface EncounterGame extends ForgeArchiveGame {
   version: string; system: { id: string; version: string }; user: { id: string; isGM: boolean };
   actors: Collection; macros: Collection;
   modules?:ForgeGameLike['modules'];
@@ -72,8 +73,11 @@ export async function importForgeEncounter(input: {
         const documents=collection(game,plan.kind);
         document=documents.get(plan.data._id);
         if(!document){
+          const data=JSON.parse(JSON.stringify(plan.data));
+          if(plan.kind==='Actor')data.folder=await resolveForgeWorldFolder(game,'Actor',data.folder);
+          input.signal?.throwIfAborted();
           try{
-            document=await documents.documentClass.create(JSON.parse(JSON.stringify(plan.data)),{keepId:true,renderSheet:false});
+            document=await documents.documentClass.create(data,{keepId:true,renderSheet:false});
             if(!document)throw new Error(`${plan.data.name}：创建被Foundry或模块取消。`);
             created=true;
           }catch(error){document=documents.get(plan.data._id);if(!document)throw error;}

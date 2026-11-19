@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { fakeWorldFolders } from './helpers/forge-world-folders';
 import { hashArtifact, hashSource,attachForgeSourceId,type ForgeSourceId } from '@fvtt-json-generator/forge-gateway-protocol';
 import { prepareForgeEncounter, assertPreparedForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
 import {draftForgeEncounterLocalization,approveForgeEncounterLocalization} from '@fvtt-json-generator/forge-browser-runtime/encounter-localization';
@@ -40,13 +41,13 @@ describe('encounter formal source preparation',()=>{
     expect(current.reviewFindings?.join(' ')).toContain('native contract rejection');
     const contents:any[]=[];
     const collection={contents,get:(id:string)=>contents.find(doc=>doc.id===id),documentClass:{async create(data:any){const doc={id:data._id,uuid:`Actor.${data._id}`,name:data.name,flags:data.flags,toObject:()=>data,async update(changes:any){data.flags['fvtt-json-forge'].spellImportPhase='verified';},async delete(){}};contents.push(doc);return doc;}}};
-    const result=await importForgeEncounter({game:{version:'14.369',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},actors:collection,macros:collection},prepared:current,reviewed:true,assets:{async ensure(){}}});
+    const result=await importForgeEncounter({game:{version:'14.369',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},actors:collection,macros:collection,folders:fakeWorldFolders()},prepared:current,reviewed:true,assets:{async ensure(){}}});
     expect(result.failures).toEqual([]);
     expect(result.documents.some(document=>document.key==='summon')).toBe(true);
     expect(contents).toHaveLength(2);
     const existing=contents[0].toObject();delete existing.flags['fvtt-json-forge'].encounter.target;
     const preserved=structuredClone(existing);
-    const retry=await importForgeEncounter({game:{version:'14.369',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},actors:collection,macros:collection},prepared:current,reviewed:true,assets:{async ensure(){}}});
+    const retry=await importForgeEncounter({game:{version:'14.369',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},actors:collection,macros:collection,folders:fakeWorldFolders()},prepared:current,reviewed:true,assets:{async ensure(){}}});
     expect(retry.documents).toHaveLength(1);expect(retry.failures.some(failure=>failure.key==='main'&&failure.message.includes('身份冲突'))).toBe(true);
     expect(contents).toHaveLength(2);expect(contents[0].toObject()).toEqual(preserved);
   });
@@ -64,7 +65,7 @@ describe('encounter formal source preparation',()=>{
     expect(readOnly.actors[0]!.artifact).toEqual(oldArtifact);
     expect(readOnly.reviewFindings?.join(' ')).toContain('仅供查看和下载');
     const collection={contents:[],get:()=>undefined,documentClass:{async create(){throw Error('must not write');}}};
-    const result=await importForgeEncounter({game:{version:'14.370',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},actors:collection,macros:collection},prepared:readOnly,reviewed:true,assets:{async ensure(){}}});
+    const result=await importForgeEncounter({game:{version:'14.370',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},actors:collection,macros:collection,folders:fakeWorldFolders()},prepared:readOnly,reviewed:true,assets:{async ensure(){}}});
     expect(result.documents).toEqual([]);expect(result.failures[0]?.message).toContain('native schema');
   });
   test('preserves literal assisted review and the complete candidate when companion coverage is missing',async()=>{

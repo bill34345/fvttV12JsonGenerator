@@ -1,6 +1,8 @@
+import { closeDocumentSourceEditor, renderDocumentSource } from './intakeReviewReader';
 import { nativeProjectionForGame } from './nativeProjection';
 import { renderForgeItemPreview } from './itemPreview';
 import { ItemIconEditor } from './itemIcon';
+import { describeForgeWorldFolder } from './worldFolder';
 import { renderItemStagePicker, selectedItemStage } from './itemStagePicker';
 import { isForgeRuntimeTargetSupported } from './mirror-core-compatibility';
 import { createForgePaneBase, type ForgePaneBinding, type ForgePaneState } from './workspacePane';
@@ -85,6 +87,8 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
     private statusMessage = '';
     private errorMessage = '';
     private created?: ForgeItemCreateResult;
+    private sourceFileName = '';
+    private lastPreview = '';
     private readonly availabilityHooks: Array<{ event: string; id: unknown }> = [];
     private pageGuardRegistered = false;
     private readonly services: ForgeItemApplicationServices = { ...DEFAULT_SERVICES, ...(environment.services ?? {}) };
@@ -107,6 +111,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       this.response = undefined;
       this.previewSnapshot = undefined;
       this.created = undefined;
+      this.lastPreview = '';
       this.statusMessage = '';
       this.errorMessage = '';
       const root = this.element as HTMLElement | undefined;
@@ -166,6 +171,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       if (this.creating) return;
       const file = input.files?.[0];
       if (!file) return;
+      this.lastPreview = '';
       this.itemIcon.reset();
       this.generationRevision += 1;
       const revision = this.generationRevision;
@@ -189,6 +195,8 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
         const source = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
         const displayName = root.querySelector('[name="displayName"]') as HTMLInputElement | null;
         if (source) source.value = sourceText;
+        closeDocumentSourceEditor(root);
+        this.sourceFileName = file.name;
         if (displayName && !displayName.value.trim()) displayName.value = sourceFileBaseName(file.name, '未命名物品');
         this.errorMessage = '';
         this.statusMessage = `已读取 ${file.name || '来源文件'}，请检查内容后生成预览。`;
@@ -251,6 +259,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
         if (!this.isCurrentGeneration(controller, revision) || !sameSnapshot(finalSnapshot, readSnapshot(root))) return;
         this.response = response;
         this.previewSnapshot = finalSnapshot;
+        if ('result' in response && 'artifact' in response.result) closeDocumentSourceEditor(root);
         this.statusMessage = '';
         this.renderResult(root);
       } catch (error) {
@@ -281,6 +290,8 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
 
     private clear(root: HTMLElement): void {
       if (this.creating) return;
+      this.lastPreview = '';
+      this.sourceFileName = '';
       this.cancel();
       this.itemIcon.reset();
       const source = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
@@ -301,11 +312,11 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       if (!this.response || this.creating || this.itemIcon.busy || environment.pane?.active() === false) return;
       const root = this.element as HTMLElement | undefined;
       if (!root || !this.previewSnapshot || !sameSnapshot(this.previewSnapshot, readSnapshot(root))) {
-        this.notify('error', 'Item preview 已过期；请按当前来源重新生成。');
+        this.notify('error', '资料有改动。请重新预览物品。');
         return;
       }
       if (!isItemApplyable(this.response) || !isCurrentItemGmRuntime(environment.game)) {
-        this.notify('error', '只有当前 GM 在精确支持版本下生成的 accepted Item 才能创建。');
+        this.notify('error', '当前预览无法创建。请先核对问题并确认 GM 权限。');
         return;
       }
       this.creating = true;
@@ -314,7 +325,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
         assertGm(environment.game);
         assertExactRuntime(environment.game);
         if (!sameSnapshot(this.previewSnapshot, readSnapshot(root)) || !isItemApplyable(this.response)) {
-          throw new Error('Item preview 在提交前已失效。');
+          throw new Error('资料有改动。请重新预览物品。');
         }
         const result: ForgeItemCreateResult = await this.services.createAcceptedForgeItem({
           game: environment.game,
@@ -323,12 +334,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
         });
         this.created = result;
         this.errorMessage = '';
-        this.statusMessage = result.status === 'existing'
-          ? '已找到相同来源和 artifact，可打开已有物品卡。'
-          : 'Item 已创建并完成回读核对，可打开物品卡。';
-        this.notify('info', result.status === 'existing'
-          ? `已找到相同来源和 artifact 的 Item：${result.uuid}`
-          : `Item 创建并重新读取核对成功：${result.uuid}`);
+        this.statusMessage = '';
       } catch (error) {
         this.errorMessage = itemMessageOf(error);
         this.statusMessage = '创建未完成，请根据错误检查后重试。';
@@ -364,8 +370,7 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       const diagnosticList = root.querySelector('[data-diagnostic-list]') as HTMLElement | null;
       const preview = root.querySelector('[data-preview]') as HTMLElement | null;
       const previewText = root.querySelector('[data-preview-text]') as HTMLElement | null;
-      const json = root.querySelector('[data-json]') as HTMLElement | null;
-      const finalSource = root.querySelector('[data-final-source]') as HTMLElement | null;
+      const empty = root.querySelector('[data-item-empty]') as HTMLElement | null;
       const generate = root.querySelector('[data-action="generate"]') as HTMLButtonElement | null;
       const cancel = root.querySelector('[data-action="cancel"]') as HTMLButtonElement | null;
       const create = root.querySelector('[data-action="create"]') as HTMLButtonElement | null;
@@ -376,42 +381,51 @@ export function createForgeItemApplicationClass(environment: ForgeItemApplicatio
       const source = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
       const displayName = root.querySelector('[name="displayName"]') as HTMLInputElement | null;
       const mode = root.querySelector('[name="mode"]') as HTMLSelectElement | null;
-      if (status) status.textContent = this.creating
-        ? '状态：正在提交并重新读取核对（不可取消）。'
-        : this.statusMessage ? `状态：${this.statusMessage}`
-          : result ? `状态：${result.status}` : '尚未生成。';
+      if (status) status.textContent = this.creating ? '正在创建物品…' : this.statusMessage;
       if (error) {
         error.hidden = !this.errorMessage;
         error.textContent = this.errorMessage;
       }
-      const messages = (result?.diagnostics ?? []).map((entry) => `[${entry.severity}] ${entry.code}: ${entry.message}`);
+      const messages = (result?.diagnostics ?? []).filter(entry => entry.severity !== 'info').map(entry => entry.message);
       if (diagnostics) diagnostics.hidden = messages.length === 0;
       if (diagnosticList) diagnosticList.innerHTML = messages.map((message) => `<li>${escapeHtml(message)}</li>`).join('');
       const artifact = result && 'artifact' in result ? result.artifact : undefined;
       const iconPanel = root.querySelector<HTMLElement>('[data-item-icon]');
       this.itemIcon.mount(iconPanel, this.response, this.creating || Boolean(this.created), environment.foundry ?? (globalThis as any).foundry, () => this.renderResult(root));
-      if (preview) preview.hidden = !artifact;
-      if (previewText) previewText.innerHTML = result && artifact ? renderForgeItemPreview(result.itemDocument, result.spellVariants) : '';
-      if (json) json.textContent = artifact ? JSON.stringify(iconPanel && !iconPanel.hidden ? { ...artifact, img: this.itemIcon.selection.path } : artifact, null, 2) : '';
-      if (finalSource) finalSource.textContent = this.response && 'result' in this.response
-        ? JSON.stringify(this.response.result.sourceIdentity, null, 2)
-        : '';
-      if (generate) generate.disabled = Boolean(this.controller || this.creating || this.readingFile);
-      if (cancel) cancel.disabled = this.creating || !this.controller;
+      if (result && artifact) this.lastPreview = renderForgeItemPreview(result.itemDocument, result.spellVariants);
+      if (preview) preview.hidden = !this.lastPreview;
+      if (empty) empty.hidden = Boolean(this.lastPreview || messages.length || this.errorMessage || this.controller);
+      if (previewText && previewText.innerHTML !== this.lastPreview) previewText.innerHTML = this.lastPreview;
+      const fileName = root.querySelector<HTMLElement>('[data-item-file-name]');
+      if (fileName) fileName.textContent = source?.value.trim() ? this.sourceFileName : '';
+      renderDocumentSource(root, source?.value ?? '');
+      const previewState = root.querySelector<HTMLElement>('[data-item-preview-state]');
+      if (previewState) previewState.textContent = this.created ? '已创建'
+        : artifact && snapshotCurrent ? '尚未创建' : this.lastPreview ? '资料已改 · 预览待更新' : '';
+      const destination = root.querySelector<HTMLElement>('[data-forge-destination="Item"]');
+      if (destination) destination.textContent = artifact
+        ? describeForgeWorldFolder(environment.game, result?.itemDocument.type === 'spell' ? 'Spell' : 'Item', artifact?.folder) : '';
+      if (generate) generate.disabled = Boolean(this.controller || this.creating || this.readingFile) || !source?.value.trim();
+      if (cancel) cancel.hidden = cancel.disabled = this.creating || !this.controller;
+      const clear = root.querySelector<HTMLButtonElement>('[data-action="clear"]');
+      if (clear) clear.hidden = !source?.value.trim() || this.creating;
       if (source) source.disabled = this.creating || this.readingFile;
       if (displayName) displayName.disabled = this.creating;
       if (mode) mode.disabled = this.creating;
-      if (create) create.disabled = this.creating
+      if (create) {
+        create.hidden = Boolean(this.created);
+        create.disabled = Boolean(this.created) || this.creating
         || this.itemIcon.busy
         || !snapshotCurrent
         || !isItemApplyable(this.response)
         || !isCurrentItemGmRuntime(environment.game);
+      }
       if (createdDocument) {
         createdDocument.hidden = !this.created;
       }
       if (createdSummary && this.created) createdSummary.textContent = this.created.status === 'existing'
-        ? '已找到相同来源的现有 Item，可以打开物品卡继续检查。'
-        : '已通过回读核对，可以打开物品卡继续检查。';
+        ? '这张物品卡已存在。'
+        : '物品已创建。';
       if (openCreated) openCreated.disabled = !this.created || this.creating || !isCurrentItemGmRuntime(environment.game);
       const sourceFile = root.querySelector('[name="sourceFile"]') as HTMLInputElement | null;
       if (sourceFile) sourceFile.disabled = this.creating || this.readingFile;

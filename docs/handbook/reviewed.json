@@ -5,14 +5,14 @@
     "note": "核对 Web Item 作业沿用现有入口和锁定生成目标，新增物品类型随共享 Item workflow。"
   },
   "markdown-convert": {
-    "fingerprint": "e332170a2198c4034005aa48ca729978b472df0e99c5b808c6c243432c4b1c95",
-    "reviewedOn": "2026-11-17",
-    "note": "核对正式物品生成的原生活动与物品规则支持边界；普通 YAML/Markdown 转换入口、输出和版本选项继续按现有说明。"
+    "fingerprint": "655c31afa546c3d8cb9d54ca6620200666215090be1efdf6f26d87a474e0b836",
+    "reviewedOn": "2026-11-18",
+    "note": "核对原文阅读、普通 Markdown 生物预览、已结构化输入和通用字段默认值。"
   },
   "monster-intake": {
-    "fingerprint": "54bff27029ab0fbc9b69b85578d7da17cdf40f681ca98efa8e9c490c946293ea",
+    "fingerprint": "40537b02e5cc00fb346650d6fdf092c23b492465693a101ab89c17476d3deff0",
     "reviewedOn": "2026-11-17",
-    "note": "核对共用的图像上传与读回检查；生物生成和 PDF 工作台沿用公开入口及原有版本说明。"
+    "note": "支持矩阵增加法术直接创建实机证据，已核对 AI 生物的 Actor 入口和说明范围。"
   },
   "item-intake": {
     "fingerprint": "cd205f271b49e42612f485a206388ff8e3791dd2185e9ccb29aa6e08c2d6edd4",
@@ -30,9 +30,9 @@
     "note": "已对照文档规则：仅报告/元数据显示改变且原MD、顺序、候选及下游行为有未变证据时缩小验收；正文或消费变化/证据不足仍核完整来源链。"
   },
   "vault-sync": {
-    "fingerprint": "54309a33a65bfe216495ada172ae6840f7f489f8037c56d9a4477ad5fa5c6830",
+    "fingerprint": "d417c334e30c4ad920f25d1e7c67c9ed10dddf264d0643ce61a686f812041c76",
     "reviewedOn": "2026-11-17",
-    "note": "核对共享包与导出路径，物品规则扩展不改变 Vault Sync 现有命令、预览和写入范围。"
+    "note": "法术图标在 Forge 浏览器入口提供，已核对 Vault Sync 的同步和输出说明。"
   },
   "goddessfantasy-crawl": {
     "fingerprint": "40768b4901167c284fbcd9bc163b73e05ac32aece800dc7a844c04b56c6fa77d",
@@ -40,9 +40,9 @@
     "note": "共享README更新血猎手模块；抓取入口、结果及权限未变。"
   },
   "artwork-icons": {
-    "fingerprint": "7c5413bc838bdd7638867b2d6dfd9699047087b1228f58ffc219dbc677c4673c",
-    "reviewedOn": "2026-11-14",
-    "note": "核对公开版 Forge 的 PDF 选图、裁切预设、调整和复核。角色图及地图 Token 的用途、验证入口和原生动态环一致。"
+    "fingerprint": "9df8ee7841f7fb791181c7ef93765fc63b9f68f9fb2a5aa3075b5b1033a6c641",
+    "reviewedOn": "2026-11-17",
+    "note": "已核对同名系统法术匹配只优先影响独立 Spell，既有生物/装备的视觉顺序、目录和命令仍适用。"
   },
   "legacy-text": {
     "fingerprint": "cc5bd0a66280750aec4266154851fa049f115f4ec4f3664c16dae4c315da5f39",
@@ -50,9 +50,9 @@
     "note": "共享README更新血猎手模块；旧纯文本入口及转换规则未变。"
   },
   "json-translation": {
-    "fingerprint": "096dfaa973ca4791de1be4d816d5c68ac992d62673d65f27c47d66b0f3325d43",
+    "fingerprint": "f05a7aa73e5243bb20fb7d3d3bd9435abb2ff03ae6fcdcba59c63f70244a9b30",
     "reviewedOn": "2026-11-17",
-    "note": "核对物品结构和共享生成目标变化；独立翻译命令、来源绑定及读回步骤仍适用。"
+    "note": "法术图标选择与世界保存从 Forge 进入，原 JSON 翻译队列说明仍适用。"
   },
   "foundry-ops": {
     "fingerprint": "39458b6623db95f727c7db466c0216cf128e3a4d5b6e4c5a5ab9e13c8286be95",
@@ -60,14 +60,14 @@
     "note": "核对通用工具、实例身份与本机维护的分工。当前按 30001 开发、30004 ServerMirror 核对，实际安装和启停使用对应环境的已验工具。"
   },
   "verification-development": {
-    "fingerprint": "ad06fa6f4acdb906826a1e9be9af5fa44426a395ef7b6374281bd2dc227252c6",
+    "fingerprint": "46b040830c75ed5a964e8f202d782c3194f80ff66528003b82499eb2a24af5dc",
     "reviewedOn": "2026-11-17",
-    "note": "核对普通推送与定向发布入口、推送前检查和公开模组的构建与验证步骤。"
+    "note": "核对法术图标复用锁定目录与本地覆盖设置，以及原场景、工具和验证边界。"
   },
   "human-encounter-intake": {
-    "fingerprint": "87a468e02ab71d8bd9b7ae1146487974b1ae3e7c68af62454bf1c3e1ec6ff762",
+    "fingerprint": "fd982d87eb2626cffd58df8ed757b60dc557c595be683e9dc6d3d9293eb8f04e",
     "reviewedOn": "2026-11-17",
-    "note": "核对生物 PDF、图片上传与候选流程，通用资产上传复用读回检查。"
+    "note": "已对照当前工作台、30001实测与四章同源图解：同步资料库三视图、历史预览、替换草稿确认、逐生物结果行、任务恢复和清理入口；中文预览字段、图解图片/PDF及示例范围已人工核对。生成规则、生产及玩法接受边界保持原记录。"
   },
   "crystalbleed-v12": {
     "fingerprint": "cc7b13207a017aa33184c1b48b4893646744a0a18460d91810b94ff1ce6ee17b",
@@ -80,9 +80,9 @@
     "note": "核对当前分支只保留历史入口说明及原提交，历史构建与安装命令在指定旧 checkout 运行。"
   },
   "version-selection": {
-    "fingerprint": "5e8da89e2fdd13e29875cf1eb7b63a2047dc453bc72ade13907502bb51e60a4a",
+    "fingerprint": "19fb2634111fd0842e27085812c79699c284612737d2d1464de3a01078a811f2",
     "reviewedOn": "2026-11-17",
-    "note": "核对 Core 14／dnd5e 6 的生成目标及自研模块版本准入，历史验收保留原版本。"
+    "note": "核对法术生成的固定投影身份和 30001 实机接收的实际版本，支持矩阵保留两者。"
   },
   "legacy-next-test-inputs": {
     "fingerprint": "19e7fec91c2e3bd2ab1d4ab8f46e2086f24571ef99642195d4613335394001b8",
@@ -150,9 +150,9 @@
     "note": "核对自定义状态模块的主版本准入、运行条件和代表功能；验收范围保留原记录。"
   },
   "fvtt-json-forge": {
-    "fingerprint": "d753c34a4e2d5160924a4848a3b33da7b503052153ef9bc0e0fd6c59a0bcea1c",
-    "reviewedOn": "2026-11-17",
-    "note": "核对原生物品活动、物品 PDF、选图和保存读回步骤，沿用生物及共享连接说明。"
+    "fingerprint": "5a2960056498adf5f695458343636cda0cb1230a6a6cf360e1ff350516459da3",
+    "reviewedOn": "2026-11-19",
+    "note": "核对工作台阅读布局、标准资料批量卡片的精确恢复及召唤物逐项结果去重；核对旧记录恢复与只读回退的使用范围"
   },
   "fvtt-selected-token-sync": {
     "fingerprint": "30f24e890224c0074b418ae61bd9336f5c281a4b6b2ee7695cb23646898990d9",

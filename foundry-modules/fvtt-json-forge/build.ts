@@ -39,12 +39,16 @@ export async function buildModule(): Promise<{ moduleRoot: string; files: string
   await cp(resolve(sourceRoot, 'third-party-licenses.txt'), resolve(moduleRoot, 'third-party-licenses.txt'));
   await cp(resolve(sourceRoot, 'templates/forge-actor.hbs'), resolve(moduleRoot, 'templates/forge-actor.hbs'));
   await cp(resolve(sourceRoot, 'templates/forge-item.hbs'), resolve(moduleRoot, 'templates/forge-item.hbs'));
+  await cp(resolve(sourceRoot, 'templates/forge-spell.hbs'), resolve(moduleRoot, 'templates/forge-spell.hbs'));
   await cp(resolve(sourceRoot, 'templates/forge-intake.hbs'), resolve(moduleRoot, 'templates/forge-intake.hbs'));
   await cp(resolve(sourceRoot, 'templates/forge-encounter.hbs'), resolve(moduleRoot, 'templates/forge-encounter.hbs'));
   await cp(resolve(sourceRoot, 'templates/forge-connection.hbs'), resolve(moduleRoot, 'templates/forge-connection.hbs'));
   await cp(resolve(sourceRoot, 'templates/forge-workspace.hbs'), resolve(moduleRoot, 'templates/forge-workspace.hbs'));
   await cp(resolve(sourceRoot, 'templates/forge-guide.hbs'), resolve(moduleRoot, 'templates/forge-guide.hbs'));
-  await cp(resolve(sourceRoot, 'guide'), resolve(moduleRoot, 'guide'), { recursive: true });
+  await cp(resolve(sourceRoot, 'guide'), resolve(moduleRoot, 'guide'), {
+    recursive: true,
+    filter: path => !path.endsWith('guide-source.json'),
+  });
   await cp(resolve(sourceRoot, 'styles/fvtt-json-forge.css'), resolve(moduleRoot, 'styles/fvtt-json-forge.css'));
   await copyPdfReaderAssets(resolve(moduleRoot, 'vendor/pdfjs'));
 

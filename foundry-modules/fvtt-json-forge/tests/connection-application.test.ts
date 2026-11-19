@@ -49,6 +49,7 @@ describe('Forge Connection ApplicationV2', () => {
     const tick = () => new Promise<void>(resolve => setTimeout(resolve, 0));
     try {
       app._onRender({}, {});
+      expect(provider.querySelector('option[value="custom"]')?.textContent).toBe('自定义服务');
       expect(model.value).toBe('');
       button('show-models').click();
       await tick();

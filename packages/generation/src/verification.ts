@@ -1,5 +1,7 @@
 import { itemCastScalingMax, nativeItemPassiveChange } from './activity';
 import type { ActionData } from '@fvtt-json-generator/models/action';
+import type { ParsedSpell } from '@fvtt-json-generator/models/spell';
+import { generateSpellDocument } from './spell';
 import { ENCHANTED_WEAPON_RARITY, type ItemEnchantmentData, type ItemSpellStorageData, type ParsedItem } from '@fvtt-json-generator/models/item';
 import type { EffectProfile } from './effectProfileApplier';
 import { DND5E_V14_SYSTEM_VERSION } from '@fvtt-json-generator/contracts/target';
@@ -149,6 +151,46 @@ export function verifyGeneratedDocument(
   };
 }
 
+export function verifyGeneratedSpell(spell: ParsedSpell, output: any, { saved = false } = {}): GenerationVerification {
+  const diagnostics: GenerationDiagnostic[] = [];
+  verifyIdsAndLinks(output, 0, diagnostics);
+  verifyDnd5eDocumentSchema(output, 0, diagnostics, '14', true);
+  // The receiving world stamps its own runtime version on saved Documents.
+  const { _stats, ...spellFields } = generateSpellDocument(spell);
+  compareSpellFields(saved ? spellFields : { ...spellFields, _stats }, output, 'spell', diagnostics);
+
+  if (Object.keys(output?.system?.activities ?? {}).length !== 1) diagnostics.push(error(
+    'GEN_SPELL_ACTIVITY_COUNT', 'schema', 'system/activities', '需要保留唯一的来源施法活动。',
+  ));
+  for (const path of findModuleAutomationPaths(output)) diagnostics.push(error(
+    'GEN_CORE_PROFILE_MODULE_LEAK', 'semantic', path, '法术包含 Core 以外的模块自动化。',
+  ));
+  if (spell.gm) diagnostics.push({
+    code: 'GEN_SPELL_GM_REVIEW', severity: 'warning', stage: 'semantic', path: 'spell/gm', message: spell.gm,
+  });
+  return {
+    status: diagnostics.some(entry => entry.severity === 'error') ? 'failed' : spell.gm ? 'needs_review' : 'accepted',
+    diagnostics,
+    target: getFoundryTarget('14'),
+    mechanicsCoverage: [],
+  };
+}
+
+function compareSpellFields(expected: unknown, actual: any, path: string, diagnostics: GenerationDiagnostic[]): void {
+  if (Array.isArray(expected) && Array.isArray(actual) && expected.length === actual.length) {
+    if (/\/(?:properties|types|ability)$/u.test(path) && expected.every(entry => actual.includes(entry))) return;
+    expected.forEach((entry, index) => compareSpellFields(entry, actual[index], path + '/' + index, diagnostics));
+    return;
+  }
+  if (expected && typeof expected === 'object' && !Array.isArray(expected) && actual && typeof actual === 'object') {
+    for (const [key, value] of Object.entries(expected)) compareSpellFields(value, actual[key], path + '/' + key, diagnostics);
+    return;
+  }
+  if (expected !== actual) diagnostics.push(error(
+    'GEN_SPELL_FIELD_MISMATCH', 'semantic', path, '法术输出与来源投影不一致。',
+  ));
+}
+
 function verifyDnd6ActorSchema(actor: any, diagnostics: GenerationDiagnostic[]): void {
   const attributes = actor?.system?.attributes ?? {};
   const legacy: Array<[string, boolean]> = [
@@ -181,7 +223,7 @@ function verifyDnd5eDocumentSchema(
   target: FvttTargetVersion,
   allowOmittedUsesMax: boolean,
 ): void {
-  if (document?.system?.activation !== undefined) {
+  if (document?.type !== 'spell' && document?.system?.activation !== undefined) {
     diagnostics.push(error(
       'GEN_LEGACY_ITEM_ACTIVATION_PRESENT',
       'schema',

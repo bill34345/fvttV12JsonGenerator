@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { fakeWorldFolders } from '../../../tests/helpers/forge-world-folders';
 import { readFileSync } from 'node:fs';
 import { hashEncounterBytes } from '@fvtt-json-generator/forge-browser-runtime/encounter-package';
 import { prepareForgeEncounter } from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
@@ -15,7 +16,7 @@ function runtime() {
       documentClass:{async create(data:any){api.createCount++;if(api.fail)throw Error('fixture create failure');if(api.cancel)return undefined;data={...data,_id:api.overrideId??data._id};if(docs.has(data._id))throw Error('duplicate');
         const doc:any={id:data._id,uuid:`${kind}.${data._id}`,name:data.name,data:structuredClone(data),toObject(){return structuredClone(this.data);},async update(changes:any){if(api.failUpdate)throw Error('fixture phase update failure');for(const [path,value]of Object.entries(changes)){const keys=path.split('.');let owner=this.data;for(const key of keys.slice(0,-1))owner=owner[key]??={};owner[keys.at(-1)!]=value;}return this;},async delete(){api.deleteAttempts++;if(api.cancelDelete)return undefined;docs.delete(this.id);return this;},async execute(){executions++;}};docs.set(doc.id,doc);return doc;}}};return api;
   }
-  const game:any={version:'14.370',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro')};
+  const game:any={version:'14.370',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro'),folders:fakeWorldFolders()};
   return {game:game as EncounterGame,get executions(){return executions;},assets:{async ensure(){throw Error('Unexpected asset upload');}}};
 }
 async function ready(){return prepareForgeEncounter(JSON.stringify(encounterFixture()));}
@@ -39,6 +40,8 @@ describe('reviewed encounter import and explicit macro startup',()=>{
     expect(result.failures).toEqual([]);
     const row=result.documents.find(entry=>entry.key===original.primaryActorKey)!;
     const saved=(env.game.actors.get(row.id) as any).toObject();
+    expect(env.game.folders?.contents).toEqual([{ id: expect.any(String), name: 'Forge', type: 'Actor' }]);
+    expect(saved.folder).toBe(env.game.folders?.contents[0]?.id);
     expect(saved.img).toBe(uploads[0]);
     expect(saved.prototypeToken.texture.src).toBe(uploads[1]);
     expect(saved.prototypeToken.ring).toMatchObject({enabled:true,subject:{scale:1,texture:uploads[1]}});

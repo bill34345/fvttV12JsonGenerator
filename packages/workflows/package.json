@@ -13,6 +13,7 @@
     "./generation-pipeline": "./src/generationPipeline.ts",
     "./icon-port": "./src/iconPort.ts",
     "./item-generation": "./src/itemGenerationWorkflow.ts",
+    "./spell-generation": "./src/spellWorkflow.ts",
     "./item-text": "./src/itemTextWorkflow.ts",
     "./json-translation-sync": "./src/jsonTranslationSync.ts",
     "./obsidian-sync": "./src/obsidianSync.ts",

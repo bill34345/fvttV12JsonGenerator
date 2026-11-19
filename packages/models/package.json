@@ -9,6 +9,7 @@
     "./behavior": "./src/behavior.ts",
     "./canonical-monster": "./src/canonicalMonster.ts",
     "./item": "./src/item.ts",
+    "./spell": "./src/spell.ts",
     "./resource": "./src/resource.ts"
     ,"./source-rule-facts": "./src/sourceRuleFacts.ts"
     ,"./source-text-presentation": "./src/sourceTextPresentation.ts"

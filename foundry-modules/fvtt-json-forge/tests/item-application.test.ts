@@ -37,15 +37,18 @@ describe('Forge Item ApplicationV2', () => {
     expect((application as any).response?.result?.sourceIdentity.sourceId).toBe(
       root.source.value.match(/forge-source-id:\s*(item:v1:[0-9a-f-]{36})/u)?.[1],
     );
-    expect(root.status.textContent).toBe('状态：accepted');
+    expect(root.status.textContent).toBe('');
     expect(root.preview.hidden).toBe(false);
     expect(root.previewText.innerHTML).toContain('Shield of the Cavalier');
-    expect(root.json.textContent).toContain('Protective Field');
+    expect(root.previewText.innerHTML).toContain('Protective Field');
+    expect(root.previewText.innerHTML).toContain('相关属性调整值');
+    expect(root.previewText.innerHTML).not.toContain('@mod');
     expect(root.create.disabled).toBe(false);
 
     await (application as any).create();
     expect(createCalls).toBe(1);
-    expect(notifications.infos[0]).toMatch(/创建并重新读取核对成功/u);
+    expect(root.createdDocument.hidden).toBe(false);
+    expect(root.openCreated.disabled).toBe(false);
   });
 
   test('shows separate Cast costs, recovery, fixed DC and the upcast limit before creation', async () => {
@@ -93,7 +96,7 @@ item-mechanics:
     const { application, root } = makeApplication({ convertFinalItemSource: request => convertFinalItemSource(request) });
     root.source.value = source;
     await (application as any).generate(root);
-    expect(root.status.textContent).toBe('状态：accepted');
+    expect(root.status.textContent).toBe('');
     expect(root.create.disabled).toBe(false);
     expect(root.previewText.innerHTML).toContain('魔杖 · 珍稀 · 需要同调');
     expect(root.previewText.innerHTML).toContain('需要施法者同调');
@@ -102,7 +105,7 @@ item-mechanics:
     expect(root.previewText.innerHTML).toMatch(/Fireball.*固定豁免 DC 15.*消耗物品共用次数 1 次.*最高 5 环/u);
     expect(root.previewText.innerHTML).toMatch(/Invisibility.*消耗本活动次数 1 次.*长休后全部恢复/u);
     expect(root.previewText.innerHTML).toMatch(/Mage Hand.*戏法.*无需次数或法术位/u);
-    expect(root.previewText.innerHTML).toContain('Compendium.dnd5e.spells24.Item.');
+    expect(root.previewText.innerHTML).not.toContain('Compendium.dnd5e.spells24.Item.');
   });
 
   test('rejects a raw draft pasted into standard Item even with a display name', async () => {
@@ -117,7 +120,7 @@ item-mechanics:
     root.displayName.value = '火球魔杖 Wand of Fireballs';
     root.source.value = '***火球魔杖（Wand of Fireballs）***\n*魔杖（Wand），珍稀（Rare）*\n\n持握时可以施放火球术。';
     await (application as any).generate(root);
-    expect(root.status.textContent).toBe('状态：failed');
+    expect(root.status.textContent).toBe('');
     expect(root.diagnosticList.innerHTML).toContain('原始描述请用「AI 整理」');
     expect(root.preview.hidden).toBe(true);
     expect(root.previewText.innerHTML).toBe('');
@@ -256,7 +259,7 @@ item-mechanics:
     await (application as any).generate(root);
     const pending = (application as any).create();
     await started.promise;
-    expect(root.status.textContent).toBe('状态：正在提交并重新读取核对（不可取消）。');
+    expect(root.status.textContent).toBe('正在创建物品…');
     expect(root.preview.hidden).toBe(false);
     expect(root.source.disabled).toBe(true);
     expect(root.displayName.disabled).toBe(true);
@@ -273,8 +276,8 @@ item-mechanics:
 
     release.resolve();
     await pending;
-    expect(root.status.textContent).toBe('状态：Item 已创建并完成回读核对，可打开物品卡。');
-    expect(root.create.disabled).toBe(false);
+    expect(root.createdDocument.hidden).toBe(false);
+    expect(root.create.hidden).toBe(true);
   });
 
   test('keeps needs_review, failed, and decoder-invalid responses at zero world writes', async () => {

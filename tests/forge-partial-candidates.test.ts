@@ -223,12 +223,11 @@ describe('partial candidates through the normal encounter UI and recovery',()=>{
     const mount=async(app:any)=>{const context=await app._prepareContext(),dom=new JSDOM(template(context));app.element=dom.window.document.querySelector('.forge-encounter-panel');app._onRender();return{context,dom};};
     const app=appFactory();app.humanSource=env.source;app.humanLabel='Partial UI fixture';await app.generateFromHuman();
     const {context,dom}=await mount(app);
-    expect(context.hasPackage).toBe(true);expect(context.hasPackage).toBe(true);expect(context.canImport).toBe(false);
-    expect([...dom.window.document.querySelectorAll('[data-actor-delivery]')].map(node=>node.textContent)).toEqual([
-      expect.stringContaining('候选可获取'),expect.stringContaining('未生成候选')]);
+    expect(context.hasPackage).toBe(true);expect(context.canImport).toBe(false);
+    const deliveries=[...dom.window.document.querySelectorAll('[data-actor-delivery]')];
+    expect(deliveries.map(node=>node.querySelector('.forge-delivery-status')?.textContent?.trim())).toEqual(['已生成','未完成']);
+    expect(deliveries[0]?.querySelector('.forge-delivery-source pre')?.textContent).toBe(encounterActorCandidate(app.aiReport,'actor-1').source);
     expect(dom.window.document.querySelectorAll('[data-actor-candidate-download]')).toHaveLength(1);
-    (app.element.querySelector('[data-actor-candidate-view]') as HTMLButtonElement).click();
-    expect(JSON.parse(app.textView.text)).toEqual(responseArtifact(app.aiReport));expect(app.textView.kind).toBe('actor');
     const originalDocument=globalThis.document,createUrl=URL.createObjectURL,revokeUrl=URL.revokeObjectURL;
     const downloaded:Blob[]=[];let clicks=0;
     try{

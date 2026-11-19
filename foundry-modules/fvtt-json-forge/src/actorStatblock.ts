@@ -1,4 +1,5 @@
 import type { BlueprintDraft } from './creatureBlueprintEditor';
+import { humanFormula } from './itemPreview';
 
 const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 
@@ -24,6 +25,23 @@ const SIZE_LABELS: Record<string, string> = {
   gargantuan: '超巨型',
 };
 
+const CREATURE_LABELS: Record<string, string> = {
+  aberration: '异怪', beast: '野兽', celestial: '天界生物', construct: '构装生物',
+  dragon: '龙', elemental: '元素生物', fey: '妖精', fiend: '邪魔', giant: '巨人',
+  humanoid: '类人生物', monstrosity: '怪兽', ooze: '泥怪', plant: '植物', undead: '亡灵',
+};
+const ALIGNMENT_LABELS: Record<string, string> = {
+  'lawful good': '守序善良', 'neutral good': '中立善良', 'chaotic good': '混乱善良',
+  'lawful neutral': '守序中立', neutral: '绝对中立', 'chaotic neutral': '混乱中立',
+  'lawful evil': '守序邪恶', 'neutral evil': '中立邪恶', 'chaotic evil': '混乱邪恶',
+  unaligned: '无阵营', 'any alignment': '任意阵营',
+};
+const DAMAGE_LABELS: Record<string, string> = {
+  acid: '强酸', bludgeoning: '钝击', cold: '冷冻', fire: '火焰', force: '力场',
+  lightning: '闪电', necrotic: '暗蚀', piercing: '穿刺', poison: '毒素', psychic: '心灵',
+  radiant: '光耀', slashing: '挥砍', thunder: '雷鸣',
+};
+const DISTANCE_LABELS: Record<string, string> = { ft: '尺', mi: '英里', m: '米', km: '千米' };
 const ACTIVITY_LABELS: Record<string, string> = {
   attack: '攻击',
   cast: '施法',
@@ -45,12 +63,12 @@ const ACTIVATION_LABELS: Record<string, string> = {
 };
 
 const ATTACK_TYPE_LABELS: Record<string, string> = {
-  melee: 'Melee Attack Roll 近战攻击检定',
-  ranged: 'Ranged Attack Roll 远程攻击检定',
-  mwak: 'Melee Attack Roll 近战攻击检定',
-  rwak: 'Ranged Attack Roll 远程攻击检定',
-  msak: 'Melee Spell Attack Roll 近战法术攻击检定',
-  rsak: 'Ranged Spell Attack Roll 远程法术攻击检定',
+  melee: '近战攻击检定',
+  ranged: '远程攻击检定',
+  mwak: '近战攻击检定',
+  rwak: '远程攻击检定',
+  msak: '近战法术攻击检定',
+  rsak: '远程法术攻击检定',
 };
 
 const RECOVERY_PERIOD_LABELS: Record<string, string> = {
@@ -87,8 +105,8 @@ const XP_BY_CR: Record<string, number> = {
 type StatblockSection = 'traits' | 'actions' | 'bonus' | 'reactions' | 'legendary' | 'other';
 const SECTION_ORDER: readonly StatblockSection[] = ['traits', 'actions', 'bonus', 'reactions', 'legendary', 'other'];
 const SECTION_LABELS: Record<StatblockSection, string> = {
-  traits: '特质 Traits', actions: '动作 Actions', bonus: '附赠动作 Bonus Actions',
-  reactions: '反应 Reactions', legendary: '传奇动作 Legendary Actions', other: '其他项目',
+  traits: '特质', actions: '动作', bonus: '附赠动作',
+  reactions: '反应', legendary: '传奇动作', other: '其他项目',
 };
 
 /**
@@ -110,31 +128,26 @@ export function renderActorStatblock(artifact: unknown): string {
 
   const alignment = scalarText(details.alignment);
   const init = asRecord(attributes.init);
-  // In locked dnd5e 6.0.6, init.mod is only the ability contribution. init.total/score
-  // are prepared totals and are absent from an unprepared generated artifact.
-  const initiativeTotal = explicitSignedTotal(init.total);
+  const initiativeTotal = explicitSignedTotal(init.total) ?? authoredInitiativeTotal(init, system.abilities);
   const initiativeScore = formatScalar(init.score);
   const initiative = initiativeTotal
     ? `${initiativeTotal}${initiativeScore ? ` (${initiativeScore})` : ''}`
     : undefined;
   const summary = [
-    `<div class="forge-statblock-highlight-row">${statEntry('AC 护甲等级', formatArmorClass(attributes.ac))}${statEntry('Initiative 先攻', initiative ?? UNKNOWN)}</div>`,
-    statEntry('HP 生命值', formatHitPoints(attributes.hp)),
-    statEntry('Speed 速度', formatMovement(attributes.movement)),
+    `<div class="forge-statblock-highlight-row">${statEntry('护甲等级', formatArmorClass(attributes.ac))}${statEntry('先攻', initiative ?? UNKNOWN)}</div>`,
+    statEntry('生命值', formatHitPoints(attributes.hp)),
+    statEntry('速度', formatMovement(attributes.movement)),
   ].join('');
 
   const actorEffects = effectCount(actor.effects);
   const items = Array.isArray(actor.items) ? actor.items : [];
-  const sections = collectSections(items.slice(0, MAX_ITEMS));
-  const omittedItems = items.length > MAX_ITEMS
-    ? `<p class="forge-statblock-limit" role="note">已省略 ${escapeHtml(String(items.length - MAX_ITEMS))} 个项目。</p>`
-    : '';
+  const sections = collectSections(items);
 
   return [
     `<article class="forge-statblock" aria-label="${escapeHtml(name)}">`,
     '<header class="forge-statblock-header">',
     `<h3 class="forge-statblock-name">${escapeHtml(name)}</h3>`,
-    `<p class="forge-statblock-type">${escapeHtml([size, creatureType ?? scalarText(actor.type) ?? UNKNOWN, alignment].filter(Boolean).join(' · '))}</p>`,
+    `<p class="forge-statblock-type">${escapeHtml([size, CREATURE_LABELS[creatureType ?? ''] ?? creatureType ?? UNKNOWN, ALIGNMENT_LABELS[alignment?.toLowerCase() ?? ''] ?? alignment].filter(Boolean).join(' · '))}</p>`,
     '</header>',
     '<dl class="forge-statblock-highlights" aria-label="战斗数据">',
     summary,
@@ -142,13 +155,12 @@ export function renderActorStatblock(artifact: unknown): string {
     renderAbilities(system.abilities),
     renderActorMeta(system),
     actorEffects > 0
-      ? `<p class="forge-statblock-effects" role="note">效果提示：Actor 包含 ${escapeHtml(String(actorEffects))} 个 Active Effect；预览保留其存在，但不展开运行时结算。</p>`
+      ? `<p class="forge-statblock-effects" role="note">已配置 ${escapeHtml(String(actorEffects))} 项效果，可在创建后的卡片中查看。</p>`
       : '',
     '<div class="forge-statblock-sections">',
     SECTION_ORDER.map((section) => sections[section].length > 0
       ? `<section class="forge-statblock-section" data-section="${section}"><h4>${SECTION_LABELS[section]}</h4>${sections[section].join('')}</section>`
-      : '').join('') || `<p class="forge-statblock-unknown">${escapeHtml(UNKNOWN)}：Actor 没有项目。</p>`,
-    omittedItems,
+      : '').join('') || '<p class="forge-statblock-unknown">尚未添加能力。</p>',
     '</div>',
     '</article>',
   ].filter(Boolean).join('\n');
@@ -157,14 +169,14 @@ export function renderActorStatblock(artifact: unknown): string {
 /** A form-state preview. It deliberately does not imply that generation or Foundry has verified it. */
 export function renderBlueprintDraftStatblock(draft: BlueprintDraft): string {
   const name = plainText(draft.name) || '未命名生物';
-  const details = [formatSize(draft.size), plainText(draft.type) || UNKNOWN, plainText(draft.alignment)].filter(Boolean).join(' · ');
+  const details = [formatSize(draft.size), (CREATURE_LABELS[draft.type] ?? plainText(draft.type)) || UNKNOWN, ALIGNMENT_LABELS[draft.alignment] ?? plainText(draft.alignment)].filter(Boolean).join(' · ');
   const components = draft.components.slice(0, MAX_ACTIVITIES).map((component) => {
     const title = plainText(component.name) || (component.kind === 'attack' ? '未命名攻击' : '未命名豁免');
     const range = plainText(component.range);
-    const damage = [plainText(component.damageFormula), plainText(component.damageType)].filter(Boolean).join(' ');
+    const damage = [plainText(component.damageFormula), DAMAGE_LABELS[component.damageType] ?? plainText(component.damageType)].filter(Boolean).join(' ');
     const detail = component.kind === 'attack'
-      ? `${component.mode === 'ranged' ? '远程' : '近战'}攻击检定：${plainText(component.attackBonus) ? `输入命中加值 ${plainText(component.attackBonus)}` : '命中加值未知'}；${range ? `${component.mode === 'ranged' ? '射程' : '触及'} ${range} 尺；` : ''}命中：${damage || UNKNOWN}`
-      : `${ABILITY_LABELS[component.ability] ?? (plainText(component.ability) || UNKNOWN)}豁免：${plainText(component.dc) ? `输入 DC ${plainText(component.dc)}` : 'DC 未知'}；${range ? `范围 ${range} 尺；` : ''}失败：${damage || UNKNOWN}；成功：${component.onSave === 'half' ? '伤害减半（草稿配置）' : '无额外效果（草稿配置）'}`;
+      ? `${component.mode === 'ranged' ? '远程' : '近战'}攻击检定 ${plainText(component.attackBonus) || UNKNOWN}，${range ? `${component.mode === 'ranged' ? '射程' : '触及'} ${range} 尺，` : ''}命中造成 ${damage || UNKNOWN}`
+      : `${ABILITY_LABELS[component.ability] ?? (plainText(component.ability) || UNKNOWN)}豁免 DC ${plainText(component.dc) || UNKNOWN}，${range ? `范围 ${range} 尺，` : ''}失败造成 ${damage || UNKNOWN}，成功${component.onSave === 'half' ? '伤害减半' : '无额外效果'}`;
     return `<article class="forge-statblock-entry"><h5>${escapeHtml(title)}</h5><p>${escapeHtml(detail)}</p></article>`;
   });
   const omitted = draft.components.length > MAX_ACTIVITIES
@@ -172,15 +184,15 @@ export function renderBlueprintDraftStatblock(draft: BlueprintDraft): string {
   return [
     `<article class="forge-statblock forge-statblock--draft" aria-label="${escapeHtml(name)} 草稿预览">`,
     `<header class="forge-statblock-header"><h3 class="forge-statblock-name">${escapeHtml(name)}</h3><p class="forge-statblock-type">${escapeHtml(details)}</p></header>`,
-    '<p class="forge-statblock-draft-note" role="note">草稿预览 · 尚未生成或验证 Actor；先攻、豁免总值、XP 与 PB 未知。</p>',
+    '<p class="forge-statblock-draft-note" role="note">编辑中的草稿。准备好后点击「预览生物」。</p>',
     '<dl class="forge-statblock-highlights" aria-label="草稿战斗数据">',
-    `<div class="forge-statblock-highlight-row">${statEntry('AC 护甲等级', plainText(draft.armorClass) || UNKNOWN)}${statEntry('Initiative 先攻', UNKNOWN)}</div>`,
-    statEntry('HP 生命值', plainText(draft.hitPoints) || UNKNOWN),
-    statEntry('Speed 速度', plainText(draft.speed) ? `${plainText(draft.speed)} 尺` : UNKNOWN),
+    statEntry('护甲等级', plainText(draft.armorClass) || UNKNOWN),
+    statEntry('生命值', plainText(draft.hitPoints) || UNKNOWN),
+    statEntry('速度', plainText(draft.speed) ? `${plainText(draft.speed)} 尺` : UNKNOWN),
     '</dl>',
     renderAbilities(draft.abilities, true),
-    `<div class="forge-statblock-meta">${statEntry('CR 挑战等级', plainText(draft.challengeRating) || UNKNOWN)}</div>`,
-    components.length ? `<section class="forge-statblock-section" data-section="actions"><h4>动作 Actions</h4>${components.join('')}${omitted}</section>` : '',
+    `<div class="forge-statblock-meta">${statEntry('挑战等级', plainText(draft.challengeRating) || UNKNOWN)}</div>`,
+    components.length ? `<section class="forge-statblock-section" data-section="actions"><h4>动作</h4>${components.join('')}${omitted}</section>` : '',
     '</article>',
   ].join('\n');
 }
@@ -191,19 +203,22 @@ function collectSections(items: unknown[]): Record<StatblockSection, string[]> {
     const item = asRecord(value);
     const system = asRecord(item.system);
     const activities = Object.values(asRecord(system.activities));
-    if (activities.length === 0) {
-      const section = scalarText(item.type) === 'feat' && !scalarText(asRecord(system.activation).type) ? 'traits' : sectionForActivation(asRecord(system.activation).type);
-      sections[section].push(renderItem(value));
-      continue;
+    const itemActivation = asRecord(system.activation).type;
+    const activitySection = (activity: unknown) => sectionForActivation(asRecord(asRecord(activity).activation).type ?? itemActivation);
+    const primarySection = sectionForActivation(itemActivation);
+    const fallback = primarySection !== 'other' ? primarySection
+      : activities.map(activitySection).find(section => section !== 'other')
+        ?? (item.type === 'feat' ? 'traits' : 'other');
+    const groups = new Map<StatblockSection, unknown[]>();
+    for (const activity of activities) {
+      const declared = activitySection(activity);
+      const section = declared === 'other' ? fallback : declared;
+      const group = groups.get(section) ?? [];
+      group.push(activity);
+      groups.set(section, group);
     }
-    for (const activity of activities.slice(0, MAX_ACTIVITIES)) {
-      const activation = asRecord(asRecord(activity).activation);
-      const section = sectionForActivation(activation.type ?? asRecord(system.activation).type);
-      sections[section].push(renderItem(value, activity));
-    }
-    if (activities.length > MAX_ACTIVITIES) {
-      sections.other.push(`<p class="forge-statblock-limit" role="note">${escapeHtml(scalarText(item.name) ?? UNKNOWN)}：已省略 ${activities.length - MAX_ACTIVITIES} 个活动。</p>`);
-    }
+    if (!groups.size) groups.set(fallback, []);
+    for (const [section, group] of groups) sections[section].push(renderItem(value, group));
   }
   return sections;
 }
@@ -218,30 +233,31 @@ function sectionForActivation(value: unknown): StatblockSection {
   return 'other';
 }
 
-function renderItem(value: unknown, activityValue?: unknown): string {
+function renderItem(value: unknown, activities: unknown[]): string {
   const item = asRecord(value);
   const system = asRecord(item.system);
   const itemName = scalarText(item.name) ?? UNKNOWN;
   const itemDescription = descriptionText(system.description);
   const effects = effectCount(item.effects);
-  const activityMarkup = activityValue ? renderActivity(activityValue, item) : '';
+  const activityMarkup = activities.map(activity => renderActivity(activity, item, activities.length > 1)).join('');
 
   return [
     `<article class="forge-statblock-entry forge-statblock-item" aria-label="${escapeHtml(itemName)}">`,
     `<h5>${escapeHtml(itemName)}</h5>`,
     itemDescription ? `<p class="forge-statblock-description">${escapeHtml(itemDescription)}</p>` : '',
     effects > 0
-      ? `<p class="forge-statblock-effects" role="note">效果提示：此项目包含 ${escapeHtml(String(effects))} 个 Active Effect；预览不展开其运行时结算。</p>`
+      ? `<p class="forge-statblock-effects" role="note">已配置 ${escapeHtml(String(effects))} 项效果。</p>`
       : '',
     activityMarkup,
     '</article>',
   ].filter(Boolean).join('\n');
 }
 
-function renderActivity(value: unknown, item: Record<string, unknown>): string {
+function renderActivity(value: unknown, item: Record<string, unknown>, showName: boolean): string {
   const activity = asRecord(value);
   const activityType = scalarText(activity.type);
   const activityLabel = activityType ? (ACTIVITY_LABELS[activityType] ?? activityType) : UNKNOWN;
+  const name = scalarText(activity.name);
   const activityDescription = descriptionText(activity.description);
   const activityActivation = asRecord(activity.activation);
   const itemSystem = asRecord(item.system);
@@ -251,20 +267,22 @@ function renderActivity(value: unknown, item: Record<string, unknown>): string {
   const range = formatRange(activity.range) ?? formatRange(asRecord(item.system).range) ?? UNKNOWN;
   const uses = formatUses(activity.uses) ?? formatUses(itemSystem.uses);
   const effects = effectCount(activity.effects);
+  const damage = formatDamage(activity.damage, itemSystem.damage);
   const activityFields = [
-    activityType === 'attack' ? `${formatAttackConfig(activity.attack)}；${range === UNKNOWN ? '' : `${range}；`}Hit 命中：${formatDamage(activity.damage, itemSystem.damage)}` : '',
-    activityType === 'save' ? `Saving Throw 豁免：${formatSaveConfig(activity.save)}；${range === UNKNOWN ? '' : `${range}；`}失败：${formatDamage(activity.damage, itemSystem.damage)}` : '',
-    activityType === 'damage' ? `伤害：${formatDamage(activity.damage, itemSystem.damage)}` : '',
+    activityType === 'attack' ? `${formatAttackConfig(activity.attack)}；${range === UNKNOWN ? '' : `${range}；`}命中造成 ${damage}` : '',
+    activityType === 'save' ? [`豁免：${formatSaveConfig(activity.save)}`, range === UNKNOWN ? '' : range, damage === UNKNOWN ? '' : `失败造成 ${damage}`].filter(Boolean).join('；') : '',
+    activityType === 'damage' ? `伤害：${damage}` : '',
     activityDescription && activityDescription !== descriptionText(itemSystem.description) ? `描述：${activityDescription}` : '',
     activation !== UNKNOWN ? `激活：${activation}` : '',
     uses ? `次数与恢复：${uses}` : '',
   ].filter(Boolean).map((entry) => `<p>${escapeHtml(entry)}</p>`).join('');
 
   return [
-    `<div class="forge-statblock-activity" aria-label="${escapeHtml(`${activityLabel} 活动`)}">`,
+    `<div class="forge-statblock-activity" aria-label="${escapeHtml(`${name ?? activityLabel} 活动`)}">`,
+    showName ? `<h6>${escapeHtml(name ?? activityLabel)}</h6>` : '',
     activityFields || `<p class="forge-statblock-unknown">${escapeHtml(UNKNOWN)}：活动没有可读配置。</p>`,
     effects > 0
-      ? `<p class="forge-statblock-effects" role="note">效果提示：此活动包含 ${escapeHtml(String(effects))} 个 Active Effect；预览不展开其运行时结算。</p>`
+      ? `<p class="forge-statblock-effects" role="note">已配置 ${escapeHtml(String(effects))} 项效果。</p>`
       : '',
     '</div>',
   ].join('\n');
@@ -272,7 +290,7 @@ function renderActivity(value: unknown, item: Record<string, unknown>): string {
 
 function renderAbilities(value: unknown, draft = false): string {
   const abilities = asRecord(value);
-  const cells = ABILITY_KEYS.map((key) => {
+  const rows = ABILITY_KEYS.map((key) => {
     const ability = asRecord(abilities[key]);
     const score = draft ? strictAbilityScore(abilities[key]) : strictAbilityScore(ability.value);
     // MOD is the base ability modifier (score - 10) / 2 in locked dnd5e 6.0.6.
@@ -281,20 +299,27 @@ function renderAbilities(value: unknown, draft = false): string {
     // dnd5e 6.0.6 stores roll options under ability.save; only its prepared
     // .value is the total saving throw modifier. bonuses.save is additive.
     const save = draft ? undefined : explicitSignedTotal(asRecord(ability.save).value);
-    return [
-      '<div class="forge-statblock-ability">',
-      `<h5>${escapeHtml(ABILITY_LABELS[key] ?? key)}</h5>`,
-      `<div><span>Score</span><strong>${escapeHtml(score === undefined ? UNKNOWN : String(score))}</strong></div>`,
-      `<div><span>Mod</span><strong>${escapeHtml(modifier ?? UNKNOWN)}</strong></div>`,
-      `<div><span>Save</span><strong>${escapeHtml(save ?? UNKNOWN)}</strong></div>`,
-      '</div>',
-    ].join('');
-  }).join('');
+    const name = (ABILITY_LABELS[key] ?? key).split(' (')[0];
+    const saveStatus = draft ? '草稿未计算豁免' : '创建后计算';
+    const saveCell = save === undefined
+      ? `<td class="forge-statblock-unavailable" aria-label="${saveStatus}" title="${saveStatus}">—</td>`
+      : `<td>${escapeHtml(save)}</td>`;
+    return `<tr><th scope="row">${name} <small>${key.toUpperCase()}</small></th>
+      <td>${score ?? '—'}</td><td>${escapeHtml(modifier ?? '—')}</td>${saveCell}</tr>`;
+  });
+  const table = (body: string[], label: string) =>
+    `<table class="forge-statblock-ability-table" aria-label="${label}">
+      <thead><tr><th scope="col">属性</th><th scope="col">数值</th><th scope="col">调整</th><th scope="col">豁免</th></tr></thead>
+      <tbody>${body.join('')}</tbody>
+    </table>`;
 
   return [
     '<section class="forge-statblock-abilities" aria-label="能力值">',
     '<h4>能力值</h4>',
-    `<div class="forge-statblock-ability-grid">${cells}</div>`,
+    '<div class="forge-statblock-ability-tables">',
+    table(rows.slice(0, 3), '力量、敏捷、体质'),
+    table(rows.slice(3), '智力、感知、魅力'),
+    '</div>',
     '</section>',
   ].join('\n');
 }
@@ -312,8 +337,8 @@ function renderActorMeta(system: Record<string, unknown>): string {
       const total = explicitSignedTotal(skill.total);
       return total ? `${key.toUpperCase()} ${total}` : undefined;
     }).filter((value): value is string => Boolean(value));
-  if (explicitSkills.length) entries.push(statEntry('Skills 技能', explicitSkills.join('、')));
-  for (const [key, label] of [['dr', 'Resistances 抗性'], ['di', 'Damage Immunities 伤害免疫'], ['ci', 'Condition Immunities 状态免疫'], ['dv', 'Vulnerabilities 易伤']] as const) {
+  if (explicitSkills.length) entries.push(statEntry('技能', explicitSkills.join('、')));
+  for (const [key, label] of [['dr', '伤害抗性'], ['di', '伤害免疫'], ['ci', '状态免疫'], ['dv', '易伤']] as const) {
     const trait = asRecord(traits[key]);
     const values = Array.isArray(trait.value) ? trait.value.slice(0, MAX_ITEMS).map(scalarText).filter((value): value is string => Boolean(value)) : [];
     const custom = plainText(trait.custom);
@@ -328,12 +353,12 @@ function renderActorMeta(system: Record<string, unknown>): string {
     }).filter((value): value is string => Boolean(value));
   const senseSpecial = plainText(senses.special);
   if (senseSpecial) senseParts.push(senseSpecial);
-  if (senseParts.length) entries.push(statEntry('Senses 感官', senseParts.join('；')));
+  if (senseParts.length) entries.push(statEntry('感官', senseParts.join('；')));
   const languages = asRecord(traits.languages);
   const languageValues = Array.isArray(languages.value) ? languages.value.slice(0, MAX_ITEMS).map(scalarText).filter((value): value is string => Boolean(value)) : [];
   const languageCustom = plainText(languages.custom);
   const languageText = [...languageValues, ...(languageCustom ? [languageCustom] : [])].join('、');
-  if (languageText) entries.push(statEntry('Languages 语言', languageText));
+  if (languageText) entries.push(statEntry('语言', languageText));
   const cr = normalizedCr(details.cr);
   const artifactXp = formatScalar(asRecord(details.xp).value);
   const xp = artifactXp && Number(artifactXp) > 0 ? Number(artifactXp) : cr ? XP_BY_CR[cr] : undefined;
@@ -342,8 +367,8 @@ function renderActorMeta(system: Record<string, unknown>): string {
   const pb = hasRuleCr
     ? `+${2 + Math.max(0, Math.floor((crNumber - 1) / 4))}`
     : explicitSignedTotal(attributes.prof);
-  const extra = [xp !== undefined ? `XP ${xp.toLocaleString('en-US')}` : '', pb ? `PB ${pb}` : ''].filter(Boolean).join('；');
-  entries.push(statEntry('CR 挑战等级', `${cr ?? UNKNOWN}${extra ? `（${extra}）` : ''}`));
+  const extra = [xp !== undefined ? `经验值 ${xp.toLocaleString('en-US')}` : '', pb ? `熟练加值 ${pb}` : ''].filter(Boolean).join('；');
+  entries.push(statEntry('挑战等级', `${cr ?? UNKNOWN}${extra ? `（${extra}）` : ''}`));
   return `<dl class="forge-statblock-meta" aria-label="其他资料">${entries.join('')}</dl>`;
 }
 
@@ -371,6 +396,16 @@ function explicitSignedTotal(value: unknown): string | undefined {
   return formatSignedBonus(value.trim());
 }
 
+function authoredInitiativeTotal(init: Record<string, unknown>, abilities: unknown): string | undefined {
+  // Forge stores a source initiative as a literal offset from the Dexterity modifier in v14.
+  // An empty bonus or a roll formula cannot identify that authored total.
+  if (init.ability && init.ability !== 'dex') return undefined;
+  const bonus = explicitSignedTotal(asRecord(init.roll).bonus);
+  const dexterity = strictAbilityScore(asRecord(asRecord(abilities).dex).value);
+  if (bonus === undefined || dexterity === undefined) return undefined;
+  return explicitSignedTotal(Math.floor((dexterity - 10) / 2) + Number(bonus));
+}
+
 function statEntry(label: string, value: string): string {
   return `<div class="forge-statblock-stat"><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`;
 }
@@ -390,22 +425,23 @@ function formatArmorClass(value: unknown): string {
   const flat = formatScalar(ac.override ?? ac.flat);
   const formula = scalarText(ac.formula) ?? (Array.isArray(ac.formulas)
     ? ac.formulas.map((entry: unknown) => scalarText(asRecord(entry).formula)).filter(Boolean).join('；') || undefined
-    : undefined) ?? scalarText(ac.calc);
+    : undefined);
   if (!flat && !formula) return UNKNOWN;
-  if (flat && formula) return formula === 'flat' ? flat : `${flat}（${formula}）`;
-  return flat ?? formula ?? UNKNOWN;
+  if (flat && formula) return `${flat}（${humanFormula(formula)}）`;
+  return flat ?? (formula ? humanFormula(formula) : UNKNOWN);
 }
 
 function formatMovement(value: unknown): string {
   const movement = asRecord(value);
   const speeds = movement.speeds ? asRecord(movement.speeds) : movement;
-  const units = scalarText(movement.units);
+  const unitKey = scalarText(movement.units);
+  const units = DISTANCE_LABELS[unitKey ?? ''] ?? unitKey;
   const entries = (['walk', 'fly', 'swim', 'climb', 'burrow'] as const)
     .map((key) => {
       const distance = formatScalar(speeds[key]);
       if (!distance) return undefined;
       const label = key === 'walk' ? '步行' : key === 'fly' ? '飞行' : key === 'swim' ? '游泳' : key === 'climb' ? '攀爬' : '掘穴';
-      return `${label} ${distance}${units ? ` ${units}` : ''}`;
+      return `${label} ${humanFormula(distance)}${units ? ` ${units}` : ''}`;
     })
     .filter((entry): entry is string => Boolean(entry));
   return entries.length > 0 ? entries.join('；') : UNKNOWN;
@@ -425,7 +461,7 @@ function formatActivation(value: unknown): string {
   if (!type && !valueText && !condition) return UNKNOWN;
   const label = type ? (ACTIVATION_LABELS[type] ?? type) : UNKNOWN;
   const parts = [label];
-  if (valueText) parts.push(`次数配置 ${valueText}`);
+  if (valueText && valueText !== '1') parts.push(`消耗 ${valueText}`);
   if (condition) parts.push(`条件：${condition}`);
   return parts.join('；');
 }
@@ -433,7 +469,8 @@ function formatActivation(value: unknown): string {
 function formatRange(value: unknown): string | undefined {
   const range = asRecord(value);
   const parts: string[] = [];
-  const units = scalarText(range.units);
+  const unitKey = scalarText(range.units);
+  const units = DISTANCE_LABELS[unitKey ?? ''] ?? unitKey;
   const reach = formatScalar(range.reach);
   const valueText = formatScalar(range.value);
   const long = formatScalar(range.long);
@@ -457,15 +494,14 @@ function formatAttackConfig(value: unknown): string {
   const bonus = scalarText(attack.bonus);
   const flat = attack.flat;
   const parts = [
-    labelType ? (ATTACK_TYPE_LABELS[labelType] ?? `Attack Roll 攻击检定（${labelType}）`) : 'Attack Roll 攻击检定',
+    labelType ? (ATTACK_TYPE_LABELS[labelType] ?? '攻击检定') : '攻击检定',
     `能力：${ability ? (ABILITY_LABELS[ability] ?? ability) : UNKNOWN}`,
   ];
   if (flat === true) {
-    parts.push(bonus ? `固定加值：${formatSignedBonus(bonus)}（候选配置值）` : `固定加值：${UNKNOWN}`);
-    parts.push('最终命中：仅在运行时上下文确认；未在此预览推导');
+    parts.push(bonus ? `固定命中加值 ${formatSignedBonus(bonus)}` : `命中加值 ${UNKNOWN}`);
   } else {
     parts.push(`附加加值/公式：${bonus ?? UNKNOWN}`);
-    parts.push('最终命中：未知（由 Foundry 运行时计算；预览不计算属性与熟练加值）');
+    parts.push('完整命中加值由角色卡计算。');
   }
   return parts.join('；');
 }
@@ -481,13 +517,13 @@ function formatSaveConfig(value: unknown): string {
   const calculation = scalarText(dc.calculation);
   const parts = [`能力：${abilityValue ? abilityValue.split('、').map((entry) => ABILITY_LABELS[entry] ?? entry).join('、') : UNKNOWN}`];
   if (fixedDc) {
-    parts.push(`固定 DC：${fixedDc}（候选配置值）`);
+    parts.push(`固定 DC ${fixedDc}`);
   } else if (formula) {
     parts.push(`DC 公式：${formula}`);
-    parts.push('最终 DC：未知（由 Foundry 运行时计算）');
+    parts.push('完整 DC 由角色卡计算。');
   } else if (calculation) {
-    parts.push(`DC 计算配置：${ABILITY_LABELS[calculation] ?? calculation}`);
-    parts.push('最终 DC：未知（由 Foundry 运行时计算）');
+    parts.push(`DC 使用${ABILITY_LABELS[calculation] ?? calculation}`);
+    parts.push('完整 DC 由角色卡计算。');
   } else {
     parts.push(`DC：${UNKNOWN}`);
   }
@@ -507,16 +543,14 @@ function formatDamage(activityDamageValue: unknown, itemDamageValue: unknown): s
   if (includeBase === true && base) displayed.push(formatDamagePart(base) ?? UNKNOWN);
   displayed.push(...damageParts);
 
-  const rule = includeBase === true
-    ? base ? '基础伤害规则：包含基础伤害' : '基础伤害规则：标记包含，但未提供基础伤害'
-    : includeBase === false
-      ? '基础伤害规则：不包含基础伤害'
-      : base
-        ? '基础伤害规则：未说明是否包含基础伤害；未计算总伤害'
-        : undefined;
+  const rule = includeBase === true && !base
+    ? '基础伤害未提供，请核对原文。'
+    : base && includeBase !== true && includeBase !== false
+      ? '尚未说明是否合并基础伤害，请核对原文。'
+      : undefined;
   if (displayed.length === 0 && !rule) return UNKNOWN;
   const damageLine = displayed.length > 0 ? displayed.join(' + ') : UNKNOWN;
-  return `${rule ? `${rule}；` : ''}伤害公式：${damageLine}；总伤害未计算`;
+  return `${damageLine}${rule ? `（${rule}）` : ''}`;
 }
 
 function formatDamagePart(value: unknown): string | undefined {
@@ -524,7 +558,7 @@ function formatDamagePart(value: unknown): string | undefined {
     const formula = scalarText(value[0]);
     const type = scalarText(value[1]);
     if (!formula && !type) return undefined;
-    return [formula, type].filter(Boolean).join(' ');
+    return [formula, DAMAGE_LABELS[type ?? ''] ?? type].filter(Boolean).join(' ');
   }
   const part = asRecord(value);
   const custom = asRecord(part.custom);
@@ -534,8 +568,8 @@ function formatDamagePart(value: unknown): string | undefined {
   const bonus = scalarText(part.bonus);
   const formula = customFormula ?? (number && denomination ? `${number}d${denomination}${bonus ? formatSignedBonus(bonus) : ''}` : undefined);
   const types = Array.isArray(part.types)
-    ? part.types.map((entry) => scalarText(entry)).filter((entry): entry is string => Boolean(entry)).join('/')
-    : scalarText(part.type);
+    ? part.types.map((entry) => scalarText(entry)).filter((entry): entry is string => Boolean(entry)).map(entry => DAMAGE_LABELS[entry] ?? entry).join('/')
+    : DAMAGE_LABELS[scalarText(part.type) ?? ''] ?? scalarText(part.type);
   if (!formula && !types) return undefined;
   return [formula, types].filter(Boolean).join(' ');
 }
@@ -547,6 +581,7 @@ function formatUses(activityValue: unknown): string | undefined {
   const max = formatScalar(uses.max);
   const spent = formatScalar(uses.spent);
   const recovery = formatRecovery(uses.recovery);
+  if (!max && (!spent || spent === '0') && !recovery) return undefined;
   const parts = [
     `最大次数：${max ?? UNKNOWN}`,
     ...(spent ? [`已用：${spent}`] : []),
@@ -574,7 +609,7 @@ function formatRecovery(value: unknown): string | undefined {
 function descriptionText(value: unknown): string | undefined {
   if (typeof value === 'string') return plainText(value) || undefined;
   const description = asRecord(value);
-  for (const candidate of [description.chatFlavor, description.value, description.text]) {
+  for (const candidate of [description.value, description.text, description.chatFlavor]) {
     const text = plainText(candidate);
     if (text) return text;
   }
@@ -582,13 +617,12 @@ function descriptionText(value: unknown): string | undefined {
 }
 
 function plainText(value: unknown): string {
-  const raw = scalarText(value);
+  const raw = formatScalar(value);
   if (!raw) return '';
   const withoutUnsafeBlocks = raw.replace(/<\s*(script|style|iframe|object|embed|template)\b[^>]*>[\s\S]*?(?:<\s*\/\s*\1\s*>|$)/giu, ' ');
   const withoutTags = withoutUnsafeBlocks.replace(/<[^>]*>/gu, ' ');
   const decoded = decodeBasicEntities(withoutTags);
-  const normalized = decoded.replace(/[\t\r\n ]+/gu, ' ').trim();
-  return normalized.length > MAX_TEXT_LENGTH ? `${normalized.slice(0, MAX_TEXT_LENGTH)}…` : normalized;
+  return decoded.replace(/[\t\r\n ]+/gu, ' ').trim();
 }
 
 function decodeBasicEntities(value: string): string {

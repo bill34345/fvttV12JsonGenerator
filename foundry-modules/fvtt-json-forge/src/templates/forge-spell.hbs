@@ -1,0 +1,42 @@
+<section data-forge-pane="spell" class="fvtt-json-forge-form forge-item-panel forge-card-editor" aria-label="创建法术" hidden>
+  <div class="forge-card-columns">
+    <section class="forge-card-input" aria-labelledby="forge-spell-heading">
+      <h2 id="forge-spell-heading">来源</h2>
+      <p data-spell-file-name class="forge-card-source-name"></p>
+      <label class="forge-icon-upload forge-choose-source">选择资料文件
+        <input type="file" data-spell-file accept=".md,text/markdown">
+      </label>
+      <details class="forge-source-editor" data-document-source-editor>
+        <summary>粘贴或编辑资料</summary>
+        <label>法术资料 <textarea data-spell-source rows="12" spellcheck="false" placeholder="粘贴结构化法术资料"></textarea></label>
+      </details>
+      <article class="forge-source-reading" data-document-source aria-label="原文" hidden></article>
+    </section>
+
+    <section class="forge-card-review" aria-label="法术预览">
+      <div class="forge-card-review-title"><strong>法术预览</strong><span data-spell-preview-state></span></div>
+      <p class="forge-card-empty" data-spell-empty>选择文件、粘贴资料，或载入示例。</p>
+      <section data-spell-preview hidden>
+        <div class="forge-paper-card">
+          <div data-spell-sheet></div>
+          <section class="forge-card-art" data-spell-icon hidden></section>
+        </div>
+      </section>
+    </section>
+  </div>
+  <footer class="forge-action-bar forge-document-actions">
+    <div class="forge-action-bar-row">
+      <div class="forge-action-bar-start">
+        <button type="button" data-spell-example>载入疗伤术示例</button>
+      </div>
+      <div class="forge-action-bar-end">
+        <p class="forge-card-destination" data-forge-destination="Spell"></p>
+        <button type="button" data-spell-generate>预览法术</button>
+        <button type="button" data-spell-create disabled>创建法术</button>
+        <button type="button" data-spell-open hidden>打开法术卡</button>
+      </div>
+    </div>
+    <p data-spell-status class="forge-card-status" role="status" aria-live="polite"></p>
+    <p data-spell-error class="forge-card-status forge-error" role="alert" hidden></p>
+  </footer>
+</section>

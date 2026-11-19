@@ -137,7 +137,7 @@ export function renderBlueprintComponents(
   if (!container) return;
   if (rebuild) {
     container.innerHTML = components.length === 0
-      ? '<p class="forge-blueprint-help">尚未添加能力组件。攻击和豁免组件将在正式来源中成为原生活动。</p>'
+      ? '<p class="forge-blueprint-help">还没有能力。可添加攻击或豁免能力。</p>'
       : components.map((component, index) => componentMarkup(component, index)).join('');
   }
   if (typeof container.addEventListener !== 'function' || container.dataset.forgeBlueprintBound === 'true') return;
@@ -188,8 +188,7 @@ export function componentMarkup(component: BlueprintComponentDraft, index: numbe
 
 export function describeBlueprintDiff(draft: BlueprintDraft): string {
   if (!draft.parent) return '';
-  const lines = [`父来源：${draft.parent.name || draft.parent.sourceId}`, `父 sourceId：${draft.parent.sourceId}`];
-  if (draft.parent.sourceHash) lines.push(`父来源 hash：${draft.parent.sourceHash}`);
+  const lines = [`原蓝图：${draft.parent.name || "未命名蓝图"}`];
   if (draft.diff) lines.push('', draft.diff);
   return lines.join('\n');
 }

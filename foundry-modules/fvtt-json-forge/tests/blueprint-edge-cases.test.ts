@@ -32,7 +32,7 @@ describe('Forge blueprint edge cases', () => {
       const controls = root.querySelector('[data-blueprint-variant]') as HTMLElement;
       expect(panel.hidden).toBe(false);
       expect(empty.hidden).toBe(false);
-      expect(empty.textContent).toContain('未能初始化');
+      expect(empty.textContent).toContain('请先填写基础资料');
       expect(controls.hidden).toBe(true);
 
       (root.querySelector('[data-action="clear"]') as HTMLButtonElement).click();
@@ -57,7 +57,8 @@ describe('Forge blueprint edge cases', () => {
       expect(root.querySelector('[data-blueprint-library-cards]')?.getAttribute('role')).toBe('group');
       expect(previewPane.parentElement).toBe(workspace);
       expect(previewPane.contains(root.querySelector<HTMLElement>('[data-blueprint-tabs]'))).toBe(false);
-      expect(previewPane.contains(root.querySelector<HTMLElement>('[data-action="create"]'))).toBe(false);
+      const actions = workspace.nextElementSibling;
+      expect(actions?.querySelector('.forge-action-bar-end [data-action="create"]')).not.toBeNull();
 
       setValue(context, '[name="mode"]', 'blueprint', 'change');
       expect(previewPane.hidden).toBe(false);
@@ -73,7 +74,7 @@ describe('Forge blueprint edge cases', () => {
 
       await (application as any).generate(root);
       expect(statblock.querySelector('.forge-statblock--draft')).toBeNull();
-      expect((root.querySelector('[data-preview-badge]') as HTMLElement).textContent).toBe('验证通过');
+      expect((root.querySelector('[data-preview-badge]') as HTMLElement).hidden).toBe(true);
       expect((root.querySelector('[data-action="create"]') as HTMLButtonElement).disabled).toBe(false);
       const response = (application as any).response;
       const generatedPreview = statblock.innerHTML;
@@ -82,7 +83,7 @@ describe('Forge blueprint edge cases', () => {
       expect((application as any).response).toBe(response);
       expect(statblock.querySelector('.forge-statblock--draft')).toBeNull();
       expect(statblock.innerHTML).toBe(generatedPreview);
-      expect((root.querySelector('[data-preview-badge]') as HTMLElement).textContent).toBe('验证通过');
+      expect((root.querySelector('[data-preview-badge]') as HTMLElement).hidden).toBe(true);
       expect((root.querySelector('[data-action="create"]') as HTMLButtonElement).disabled).toBe(false);
     } finally {
       context.cleanup();
@@ -183,7 +184,7 @@ describe('Forge blueprint edge cases', () => {
     try {
       setValue(context, '[name="mode"]', 'blueprint', 'change');
       setValue(context, '[name="displayName"]', '重绘蓝图', 'input');
-      (context.root.querySelector('[data-blueprint-tab="review"]') as HTMLButtonElement).click();
+      (context.root.querySelector('[data-blueprint-tab="abilities"]') as HTMLButtonElement).click();
       const replacement = context.dom.window.document.createElement('div');
       replacement.innerHTML = TEMPLATE;
       const nextRoot = replacement.querySelector('form') as HTMLFormElement;
@@ -192,7 +193,7 @@ describe('Forge blueprint edge cases', () => {
       context.application._onRender({}, {});
       expect((nextRoot.querySelector('[name="mode"]') as HTMLSelectElement).value).toBe('blueprint');
       expect((nextRoot.querySelector('[name="displayName"]') as HTMLInputElement).value).toBe('重绘蓝图');
-      expect((nextRoot.querySelector('[data-blueprint-tab="review"]') as HTMLElement).getAttribute('aria-selected')).toBe('true');
+      expect((nextRoot.querySelector('[data-blueprint-tab="abilities"]') as HTMLElement).getAttribute('aria-selected')).toBe('true');
       expect(nextRoot.querySelector('[data-preview-pane]')?.parentElement).toBe(nextRoot.querySelector('.forge-workbench-grid') as HTMLElement);
 
       setValue({ ...context, root: nextRoot }, '[name="mode"]', 'structured', 'change');
@@ -252,7 +253,6 @@ describe('Forge blueprint edge cases', () => {
       setValue(context, '[name="blueprintType"]', 'invalid-type', 'input');
 
       expect((context.application as any).blueprintSource).toBe('');
-      expect((context.root.querySelector('[data-blueprint-source]') as HTMLTextAreaElement).value).toBe('');
     } finally {
       context.cleanup();
     }
@@ -313,9 +313,13 @@ describe('Forge blueprint edge cases', () => {
         reconstructionError = error instanceof Error ? error.message : String(error);
       }
       expect(reconstructionError).toBe('');
-      const reopened = parseCreatureBlueprintSource((root.querySelector('[data-blueprint-source]') as HTMLTextAreaElement).value);
+      const reopened = parseCreatureBlueprintSource((application as any).blueprintSource);
       expect(reopened.lineage?.parentSourceId).toBe(parentSourceId);
       expect(reopened.lineage?.changes.some((change) => change.path === '/hp')).toBe(true);
+      (application as any).renderBlueprintEditor(root);
+      const changes = root.querySelector('[data-blueprint-diff]')?.textContent ?? '';
+      expect(changes).toContain('生命值');
+      expect(changes).not.toMatch(/\/hp|sourceId|sourceHash/u);
       expect(reopened.components[0]).toEqual(expect.objectContaining({ type: 'save', name: '寒霜爆发' }));
     } finally {
       context.cleanup();

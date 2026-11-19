@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
+import { fakeWorldFolders } from '../../../tests/helpers/forge-world-folders';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { buildForgeItemRequest, convertFinalItemSource, FORGE_NATIVE_606_TARGET, summarizeItemSpellSource, type NativeDocumentProjection } from '@fvtt-json-generator/forge-browser-runtime';
@@ -110,6 +111,12 @@ describe('Forge world Item adapter', () => {
     };
     const result = await createAcceptedForgeItem(request);
     expect(world.items.map(item => (item.toObject() as any).type)).toEqual(['spell', 'spell', 'weapon']);
+    const [root, itemFolder, spellFolder] = world.game.folders.contents;
+    expect(world.game.folders.contents).toHaveLength(3);
+    expect(root).toMatchObject({ name: 'Forge', type: 'Item' });
+    expect(itemFolder).toMatchObject({ name: 'Item', type: 'Item', folder: { id: root.id } });
+    expect(spellFolder).toMatchObject({ name: 'Spell', type: 'Item', folder: { id: root.id } });
+    expect(world.items.map(item => (item.toObject() as any).folder)).toEqual([spellFolder.id, spellFolder.id, itemFolder.id]);
     const staff = result.item.toObject() as any;
     const casts = Object.values<any>(staff.system.activities);
     expect(casts.map(act => act.spell.uuid)).toEqual(result.spellUuids ?? []);
@@ -532,6 +539,7 @@ function makeWorld() {
     system: { id: 'dnd5e', version: '6.0.6' },
     user: { isGM: true },
     items: collection,
+    folders: fakeWorldFolders(),
     actors: { contents: [{ id: 'control-actor' }] },
   };
   return state as {

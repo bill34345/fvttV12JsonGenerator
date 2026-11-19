@@ -1,3 +1,4 @@
+import { parse, serialize, serializeOuter, type DefaultTreeAdapterTypes } from 'parse5';
 import { assertExactRuntime, assertGm } from './runtime';
 
 export const FORGE_GUIDE_URL = 'modules/fvtt-json-forge/guide/index.html';
@@ -22,16 +23,45 @@ export function createForgeGuideApplicationClass(environment: { game: any; found
       const directory=FORGE_GUIDE_URL.slice(0,FORGE_GUIDE_URL.lastIndexOf('/')+1);
       const downloads={guidePdfUrl:`${directory}guide.pdf`,guideSourceUrl:`${directory}source-example.md`,guidePackageUrl:`${directory}grandmother-sea-hag.forge-encounter.zip`};
       try{
-        // Foundry serves module HTML as text/plain. Render our bundled document in
-        // srcdoc, retaining the script-disabled sandbox and its local download base.
         const response=await (environment.fetch??globalThis.fetch.bind(globalThis))(FORGE_GUIDE_URL,{cache:'no-cache'});
         if(!response.ok)throw new Error('Guide read failed.');
-        const source=await response.text();
-        if(!/<head(?:\s|>)/iu.test(source))throw new Error('Guide document is incomplete.');
-        return {...downloads,guideHtml:source.replace(/<head(?:\s[^>]*)?>/iu,head=>`${head}<base href="${directory}">`)};
+        return {...downloads,...readGuideDocument(await response.text(),directory)};
       }catch{
         return {...downloads,guideError:'无法读取内置手册。请检查模块文件；也可以先下载 PDF 查看。'};
       }
     }
+
+    _onRender() {
+      const root=this.element as HTMLElement|undefined;
+      if(!root)return;
+      for(const link of root.querySelectorAll<HTMLAnchorElement>('.forge-guide-document nav a[href^="#"]')) {
+        link.onclick=event=>{
+          event.preventDefault();
+          event.stopPropagation();
+          root.querySelector<HTMLElement>(link.getAttribute('href')!)?.scrollIntoView({block:'start'});
+        };
+      }
+      // Core 14 promotes document-level links to new tabs, including downloads.
+      for(const link of root.querySelectorAll<HTMLAnchorElement>('a[download]'))link.onclick=event=>event.stopPropagation();
+    }
   };
+}
+
+function readGuideDocument(source:string,directory:string):{guideStyles:string;guideContent:string} {
+  const elements=guideElements(parse(source));
+  const styles=elements.find(element=>element.tagName==='style'&&element.attrs.some(attribute=>attribute.name==='id'&&attribute.value==='forge-guide-styles'));
+  const content=elements.find(element=>element.attrs.some(attribute=>attribute.name==='id'&&attribute.value==='forge-guide-content'));
+  if(!styles||!content)throw new Error('Guide document is incomplete.');
+  for(const element of guideElements(content)) {
+    for(const attribute of element.attrs) {
+      if((attribute.name==='href'||attribute.name==='src')&&!attribute.value.startsWith('#'))attribute.value=`${directory}${attribute.value}`;
+    }
+  }
+  return {guideStyles:serialize(styles),guideContent:serializeOuter(content)};
+}
+
+function guideElements(node:DefaultTreeAdapterTypes.Node):DefaultTreeAdapterTypes.Element[] {
+  const elements:DefaultTreeAdapterTypes.Element[]='tagName' in node?[node]:[];
+  if('childNodes' in node)for(const child of node.childNodes)elements.push(...guideElements(child));
+  return elements;
 }

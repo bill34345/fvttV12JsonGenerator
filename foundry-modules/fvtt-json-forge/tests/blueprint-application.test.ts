@@ -67,7 +67,7 @@ describe('Forge Actor blueprint authoring', () => {
 
     expect(root.displayName.value).toBe('来源库守卫');
     expect(root.blueprintAlignment.value).toBe('unaligned');
-    expect(root.blueprintSource.value).toBe(saved.sources[0]!.rawSource);
+    expect((application.application as any).blueprintSource).toBe(saved.sources[0]!.rawSource);
     expect((application.application as any).response).toBeUndefined();
     expect(root.create.disabled).toBe(true);
   });
@@ -86,7 +86,7 @@ describe('Forge Actor blueprint authoring', () => {
 
     root.blueprintHp.value = '55';
     root.blueprintHp.oninput?.();
-    const current = parseCreatureBlueprintSource(root.blueprintSource.value);
+    const current = parseCreatureBlueprintSource((application.application as any).blueprintSource);
     expect(current.lineage?.changes.some((change: { path: string }) => change.path === '/hp')).toBe(true);
   });
 
@@ -161,14 +161,13 @@ describe('Forge Actor blueprint authoring', () => {
     (application.application as any).invalidateCurrentPreview(root);
     await (application.application as any).saveBlueprintToLibrary(root);
     const saved = await sourceLibrary.load();
-    root.blueprintSource.value = '';
     await (application.application as any).clear(root);
     root.librarySelect.value = saved.sources[0]!.id;
     await (application.application as any).loadBlueprintFromLibrary(root);
     root.blueprintHp.value = '77';
     root.blueprintHp.oninput?.();
 
-    const reopened = parseCreatureBlueprintSource(root.blueprintSource.value);
+    const reopened = parseCreatureBlueprintSource((application.application as any).blueprintSource);
     const paths = reopened.lineage?.changes.map((change) => change.path) ?? [];
     expect(paths).toContain('/hp');
     expect(paths).toContain('/components');
@@ -187,7 +186,8 @@ describe('Forge Actor blueprint authoring', () => {
 
     root.blueprintHp.value = '66';
     root.blueprintHp.oninput?.();
-    expect(root.diff.textContent).toContain('/hp');
+    expect(root.diff.textContent).toContain('生命值');
+    expect(root.diff.textContent).not.toContain('/hp');
   });
 
   test('clear keeps a fresh blueprint source identity and structured mode can re-enter blueprint mode', async () => {
@@ -271,7 +271,7 @@ function makeApplication(
   const Application = createForgeActorApplicationClass(environment);
   const application: any = new Application();
   application.element = root;
-  Object.defineProperty(globalThis, 'document', { configurable: true, value: { activeElement: null } });
+  Object.defineProperty(globalThis, 'document', { configurable: true, writable: true, value: { activeElement: null } });
   application._onRender({}, {});
   return { application, root, game, notifications };
 }
@@ -302,7 +302,6 @@ class BlueprintRoot {
   readonly variantName = control('');
   readonly librarySearch = control('');
   readonly librarySelect = control('', 'select');
-  readonly blueprintSource = control('', 'textarea');
   readonly libraryStatus = control('');
   readonly generate = control('');
   readonly cancel = control('');
@@ -358,7 +357,6 @@ class BlueprintRoot {
       '[data-blueprint-variant]': this.variant,
       '[data-blueprint-parent]': this.parent,
       '[data-blueprint-diff]': this.diff,
-      '[data-blueprint-source]': this.blueprintSource,
       '[data-blueprint-library-status]': this.libraryStatus,
       '[data-action="generate"]': this.generate,
       '[data-action="cancel"]': this.cancel,

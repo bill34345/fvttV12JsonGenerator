@@ -1,4 +1,8 @@
+import { displayName } from '@fvtt-json-generator/models/display-name';
+import { analyzePlaintextActorSource } from '@fvtt-json-generator/forge-browser-runtime/plaintext';
 import { nativeProjectionForGame } from './nativeProjection';
+import { downloadTextFile } from './downloadTextFile';
+import { describeForgeWorldFolder } from './worldFolder';
 import {
   BROWSER_MAX_CONCURRENT_ACTOR_JOBS,
   buildForgeActorRequest,
@@ -134,7 +138,6 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
     private blueprintParentCore?: CreatureBlueprintV1;
     private blueprintInitialized = false;
     private blueprintSource = '';
-    private blueprintSourceRevision = -1;
     private blueprintGenerationSnapshot?: string;
     private blueprintDirty = false;
     private blueprintLibraryState?: Readonly<ForgeSourceLibraryV1>;
@@ -146,7 +149,7 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
     private sourceLibrary?: ManagedForgeSourceLibrary;
     private boundSourceLibraryScope?: string;
     private blueprintOperationRevision = 0;
-    private blueprintTab: 'basic' | 'abilities' | 'variant' | 'review' = 'basic';
+    private blueprintTab: 'basic' | 'abilities' | 'variant' = 'basic';
     private activeMode?: ForgeActorMode;
     private readonly modeDrafts: Record<'structured' | 'ai', { source: string; displayName: string }> = {
       structured: { source: '', displayName: '' },
@@ -293,7 +296,7 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
       if (parent) {
         parent.hidden = !this.blueprintDraft.parent;
         parent.textContent = this.blueprintDraft.parent
-          ? `父来源：${this.blueprintDraft.parent.name || this.blueprintDraft.parent.sourceId}`
+          ? `原蓝图：${this.blueprintDraft.parent.name || "未命名蓝图"}`
           : '';
       }
       const diff = root.querySelector('[data-blueprint-diff]') as HTMLElement | null;
@@ -301,8 +304,6 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
         diff.hidden = !this.blueprintDraft.parent;
         diff.textContent = describeBlueprintDiff(this.blueprintDraft);
       }
-      const source = root.querySelector('[data-blueprint-source]') as HTMLTextAreaElement | null;
-      if (source) source.value = this.blueprintSource;
       this.renderBlueprintLibrary(root);
       this.renderResult(root);
     }
@@ -326,7 +327,6 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
       this.generationRevision += 1;
       this.blueprintGenerationSnapshot = undefined;
       this.controller?.abort();
-      this.blueprintSourceRevision = -1;
       this.renderResult(root);
       this.updateBlueprintSource(root);
     }
@@ -362,20 +362,10 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
 
     private updateBlueprintSource(root: HTMLElement): void {
       if (valueOf(root, 'mode') !== 'blueprint') return;
-      const source = root.querySelector('[data-blueprint-source]') as HTMLTextAreaElement | null;
-      if (!source) return;
       try {
-        this.blueprintDraft = readBlueprintDraft(root, this.blueprintDraft);
-        const core = this.toCoreBlueprint(root);
-        this.blueprintCore = core;
-        this.blueprintSource = this.services.renderCreatureBlueprintSource(core);
-        this.blueprintSourceRevision = this.generationRevision;
-        source.value = this.blueprintSource;
+        this.prepareBlueprintSource(root);
       } catch {
-        this.blueprintSource = '';
-        this.blueprintSourceRevision = -1;
-        this.blueprintGenerationSnapshot = undefined;
-        source.value = '';
+        // Incomplete drafts can still be edited; explicit actions report validation errors.
       }
     }
 
@@ -431,20 +421,15 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
     }
 
     private prepareBlueprintSource(root: HTMLElement): string {
-      const textarea = root.querySelector('[data-blueprint-source]') as HTMLTextAreaElement | null;
       try {
         const core = this.toCoreBlueprint(root);
         const source = this.services.renderCreatureBlueprintSource(core);
         this.blueprintCore = core;
         this.blueprintSource = source;
-        this.blueprintSourceRevision = this.generationRevision;
-        if (textarea) textarea.value = source;
         return source;
       } catch (error) {
         this.blueprintSource = '';
-        this.blueprintSourceRevision = -1;
         this.blueprintGenerationSnapshot = undefined;
-        if (textarea) textarea.value = '';
         throw error;
       }
     }
@@ -544,7 +529,7 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
         this.clear(root);
         this.selectBlueprintTab(root, 'basic', true);
       });
-      const tabOrder = ['basic', 'abilities', 'variant', 'review'] as const;
+      const tabOrder = ['basic', 'abilities', 'variant'] as const;
       for (const tab of tabOrder) {
         const button = root.querySelector(`[data-blueprint-tab="${tab}"]`) as HTMLButtonElement | null;
         if (!button) continue;
@@ -708,7 +693,7 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
           this.statusMessage = '';
         } else {
           const request = buildForgeActorRequest({
-            content: source,
+            content: mode === 'structured' ? standardActorSource(source) : source,
             displayName,
             requestId: randomRequestId(),
             fvttVersion: environment.game.version,
@@ -777,7 +762,6 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
       this.blueprintDraft = createEmptyBlueprintDraft();
       this.blueprintParentCore = undefined;
       this.blueprintSource = '';
-      this.blueprintSourceRevision = -1;
       this.blueprintGenerationSnapshot = undefined;
       this.blueprintDirty = false;
       if (valueOf(root, 'mode') === 'blueprint') {
@@ -883,7 +867,7 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
       const select = root.querySelector('[name="blueprintLibrarySelect"]') as HTMLSelectElement | null;
       if (!status || !select) return;
       if (this.blueprintLibraryLoading) status.textContent = '蓝图来源库加载中…';
-      else if (!this.blueprintLibraryState) status.textContent = '尚未加载；只读取当前 world/GM scope 的 blueprint 来源。';
+      else if (!this.blueprintLibraryState) status.textContent = '点击刷新，读取已保存的蓝图。';
       else status.textContent = `已加载 ${this.blueprintLibraryEntries().length} 个可用蓝图来源。`;
       const entries = this.blueprintLibraryEntries();
       const selected = select.value;
@@ -920,7 +904,7 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
       if (newButton) newButton.disabled = this.creating || !isCurrentGmRuntime(environment.game);
       for (const action of ['blueprint-library-refresh', 'blueprint-library-load', 'blueprint-library-save', 'blueprint-download']) {
         const button = root.querySelector(`[data-action="${action}"]`) as HTMLButtonElement | null;
-        if (button) button.disabled = disabled || (action === 'blueprint-library-load' && !select.value) || (action === 'blueprint-download' && !this.blueprintSource);
+        if (button) button.disabled = disabled || (action === 'blueprint-library-load' && !select.value);
       }
     }
 
@@ -961,7 +945,6 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
         this.blueprintInitialized = true;
         this.blueprintDirty = false;
         this.blueprintSource = entry.source.rawSource;
-        this.blueprintSourceRevision = this.generationRevision;
         writeBlueprintDraft(root, this.blueprintDraft, false);
         this.renderBlueprintEditor(root, true);
         this.renderResult(root);
@@ -994,7 +977,7 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
         if (operation === this.blueprintOperationRevision) {
           this.blueprintLibraryState = state;
           this.blueprintDirty = false;
-          this.notify('info', '当前蓝图来源已保存。历史 accepted 结果不会保存。');
+          this.notify('info', '蓝图已保存。重新打开后可编辑并预览。');
         }
       } catch (error) {
         this.notify('error', messageOf(error));
@@ -1011,7 +994,6 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
         downloadTextFile(`${safeDownloadName(this.blueprintDraft.name || 'creature-blueprint')}.md`, source, 'text/markdown;charset=utf-8');
       } catch (error) {
         this.blueprintSource = '';
-        this.blueprintSourceRevision = -1;
         this.notify('error', messageOf(error));
       }
     }
@@ -1021,7 +1003,7 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
       assertExactRuntime(environment.game);
       const scope = sourceLibraryScope(environment.game);
       if (this.boundSourceLibraryScope && this.boundSourceLibraryScope !== scope) {
-        throw new Error('蓝图来源库 scope 已变化；请重新打开 Forge Actor 窗口。');
+        throw new Error('当前世界或登录用户已变化，请重新打开生物工作台。');
       }
       this.boundSourceLibraryScope ??= scope;
     }
@@ -1057,7 +1039,6 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
       root = (this.element as HTMLElement | undefined) ?? root;
       environment.pane?.changed();
       const status = root.querySelector('[data-status]') as HTMLElement | null;
-      const stages = root.querySelector('[data-stages]') as HTMLElement | null;
       const diagnostics = root.querySelector('[data-diagnostics]') as HTMLElement | null;
       const diagnosticList = root.querySelector('[data-diagnostic-list]') as HTMLElement | null;
       const preview = root.querySelector('[data-preview]') as HTMLElement | null;
@@ -1072,33 +1053,27 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
       const createdSummary = root.querySelector('[data-created-summary]') as HTMLElement | null;
       const error = root.querySelector('[data-error]') as HTMLElement | null;
       const result = this.response && 'result' in this.response ? this.response.result : undefined;
-      const responseStatus = this.intake?.status ?? result?.status;
       const generate = root.querySelector('[data-action="generate"]') as HTMLButtonElement | null;
       const cancel = root.querySelector('[data-action="cancel"]') as HTMLButtonElement | null;
       const source = root.querySelector('[name="source"]') as HTMLTextAreaElement | null;
       const displayName = root.querySelector('[name="displayName"]') as HTMLInputElement | null;
       const mode = root.querySelector('[name="mode"]') as HTMLSelectElement | null;
-      if (status) {
-        status.textContent = this.creating
-          ? '状态：正在提交并重新读取核对（不可取消）。'
-          : this.statusMessage ? `状态：${this.statusMessage}`
-            : responseStatus ? `状态：${responseStatus}` : '尚未生成。';
-      }
+      if (status) status.textContent = this.creating ? '正在创建生物…' : this.statusMessage;
       if (error) {
         error.hidden = !this.errorMessage;
         error.textContent = this.errorMessage;
       }
-      if (stages) {
-        stages.innerHTML = (this.intake?.stages ?? this.stageProgress).map((stage) => `<li>${escapeHtml(stage.stage)}：${escapeHtml(stage.status)}${stage.message ? ` — ${escapeHtml(stage.message)}` : ''}</li>`).join('');
-      }
       const messages = [
         ...(this.created?.readbackWarnings??[]),
-        ...(result?.diagnostics ?? []).map((entry) => `[${entry.severity}] ${entry.code}: ${entry.message}`),
-        ...(this.intake?.findings ?? []).map((entry) => `[${entry.origin}] ${entry.code}: ${entry.message}`),
+        ...(result?.diagnostics ?? []).filter(entry => entry.severity !== 'info').map(entry => entry.message),
+        ...(this.intake?.findings ?? []).map(entry => entry.message),
       ];
       if (diagnostics) diagnostics.hidden = messages.length === 0;
       if (diagnosticList) diagnosticList.innerHTML = messages.map((message) => `<li>${escapeHtml(message)}</li>`).join('');
       const formalArtifact = Boolean(result && 'artifact' in result && result.artifact);
+      const destination = root.querySelector<HTMLElement>('[data-forge-destination="Actor"]');
+      if (destination) destination.textContent = result && 'artifact' in result && result.artifact
+        ? describeForgeWorldFolder(environment.game, 'Actor', result.artifact.folder) : '';
       if (preview) preview.hidden = !formalArtifact;
       if (statblock) {
         if (formalArtifact && result && 'artifact' in result) statblock.innerHTML = renderActorStatblock(result.artifact);
@@ -1106,16 +1081,12 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
         else statblock.innerHTML = '<p class="forge-preview-empty">填写来源并生成预览后，角色数据会显示在这里。</p>';
       }
       const previewHeading = root.querySelector('#forge-preview-heading') as HTMLElement | null;
-      const previewDescription = root.querySelector('.forge-preview-header p') as HTMLElement | null;
       const previewBadge = root.querySelector('[data-preview-badge]') as HTMLElement | null;
-      if (previewHeading) previewHeading.textContent = formalArtifact ? '2024 格式 · 正式候选' : mode?.value === 'blueprint' ? '2024 格式 · 草稿视图' : 'Actor 预览';
-      if (previewDescription) previewDescription.textContent = formalArtifact
-        ? '展示生成的原始 Actor；需 dnd5e 计算的最终数值以原生角色卡为准。'
-        : mode?.value === 'blueprint' ? '随当前编辑内容更新。草稿尚未经过正式生成验证。'
-          : '填写来源并生成后，在这里审阅候选 Actor。';
-      if (previewBadge) previewBadge.textContent = formalArtifact
-        ? responseStatus === 'accepted' ? '验证通过' : `候选：${responseStatus ?? '待审阅'}`
-        : mode?.value === 'blueprint' ? '尚未验证' : '等待生成';
+      if (previewHeading) previewHeading.textContent = '生物预览';
+      if (previewBadge) {
+        previewBadge.textContent = formalArtifact ? messages.length ? '需核对' : '' : mode?.value === 'blueprint' ? '草稿' : '';
+        previewBadge.hidden = !previewBadge.textContent;
+      }
       if (previewText && result && 'actorVerification' in result) previewText.textContent = JSON.stringify(buildSafePreview(result), null, 2);
       if (json && result && 'artifact' in result) json.textContent = JSON.stringify(result.artifact, null, 2);
       if (intakeEvidence) intakeEvidence.textContent = this.intake?.evidence
@@ -1147,8 +1118,8 @@ export function createForgeActorApplicationClass(environment: ForgeApplicationEn
       if (createdDocument) createdDocument.hidden = !this.created;
       if (createdSummary && this.created) createdSummary.textContent = this.created.readbackWarnings?.length
         ? `角色已保留，以下录入值需要核对：${this.created.readbackWarnings.join('；')}`:this.created.status === 'existing'
-        ? '已找到相同来源的现有生物，可以打开角色卡继续检查。'
-        : '已通过回读核对，可以打开角色卡继续检查。';
+        ? '这张生物卡已存在。'
+        : '生物已创建。';
       if (openCreated) openCreated.disabled = !this.created || this.creating || !isCurrentGmRuntime(environment.game);
       const sourceFile = root.querySelector('[name="sourceFile"]') as HTMLInputElement | null;
       if (sourceFile) sourceFile.disabled = this.creating || this.readingFile;
@@ -1341,10 +1312,31 @@ function formatChallengeRatingString(value: unknown): string {
 }
 
 function formatLineageChanges(value: unknown[]): string {
+  const labels: Record<string, string> = {
+    name: '名称', size: '体型', type: '类型', alignment: '阵营', ac: '护甲等级',
+    hp: '生命值', speed: '速度', cr: '挑战等级', abilities: '属性', components: '能力',
+    str: '力量', dex: '敏捷', con: '体质', int: '智力', wis: '感知', cha: '魅力',
+    mode: '攻击方式', ability: '豁免属性', hitBonus: '命中加值', dc: '豁免 DC',
+    range: '范围', success: '豁免成功', damage: '伤害', formula: '公式',
+  };
   return value.map((entry) => {
     const change = asRecord(entry);
-    return `${typeof change.path === 'string' ? change.path : '?'}: ${JSON.stringify(change.before)} → ${JSON.stringify(change.after)}`;
+    const field = String(change.path ?? '').split('/').filter(Boolean)
+      .map((part) => /^\d+$/u.test(part) ? String(Number(part) + 1) : labels[part] ?? '资料').join(' · ');
+    return `${field}　${blueprintChangeValue(change.before)} → ${blueprintChangeValue(change.after)}`;
   }).join('\n');
+}
+
+function blueprintChangeValue(value: unknown): string {
+  if (value === undefined || value === null) return '未填写';
+  if (Array.isArray(value)) return value.map(blueprintChangeValue).join('、') || '无';
+  if (typeof value === 'object') {
+    const named = asRecord(value);
+    if (typeof named.name === 'string') return named.name;
+    return Object.values(named).map(blueprintChangeValue).join('、');
+  }
+  const labels: Record<string, string> = { melee: '近战', ranged: '远程', attack: '攻击', save: '豁免', half: '伤害减半', none: '无额外效果' };
+  return labels[String(value)] ?? String(value);
 }
 
 function reconstructLineageParent(current: Record<string, any>): Record<string, any> | undefined {
@@ -1394,6 +1386,19 @@ function safeAbilities(artifact: unknown): Record<string, Record<string, number>
     result[key] = summary;
   }
   return result;
+}
+
+function standardActorSource(source: string): string {
+  if (!/^#{1,6}[ \t]/u.test(source.trimStart())) return source;
+  const analysis = analyzePlaintextActorSource(source);
+  if (analysis.canonicalSource && analysis.creature) {
+    const name = displayName(analysis.creature.chineseName, analysis.creature.englishName);
+    return analysis.canonicalSource.replace(/^(---\r?\n名称:[ \t]*)[^\r\n]+/u,
+      (_line, key: string) => key + JSON.stringify(name));
+  }
+  throw new Error(analysis.candidates.length > 1
+    ? '资料中有多只生物，请在此处保留一只，或使用「生物与召唤物」。'
+    : '无法从这份 Markdown 读取生物，请提供完整的生物规则块或标准资料文件。');
 }
 
 function valueOf(root: HTMLElement, name: string): string {
@@ -1486,19 +1491,4 @@ function workspaceConnectionIdentity(settings: ReturnType<typeof readForgeSessio
 function safeDownloadName(value: string): string {
   const normalized = value.replace(/[^\p{L}\p{N}_-]+/gu, '-').replace(/^-+|-+$/gu, '').slice(0, 80);
   return normalized || 'creature-blueprint';
-}
-
-function downloadTextFile(fileName: string, content: string, type: string): void {
-  const urlApi = (globalThis as any).URL;
-  const document = (globalThis as any).document;
-  if (!urlApi?.createObjectURL || !document?.createElement) throw new Error('当前浏览器不能下载文件。');
-  const url = urlApi.createObjectURL(new Blob([content], { type }));
-  try {
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = fileName;
-    anchor.click();
-  } finally {
-    urlApi.revokeObjectURL(url);
-  }
 }

@@ -38,6 +38,7 @@
     "./species": "./src/species.ts",
     "./species-v12": "./src/speciesV12.ts",
     "./species-v14": "./src/speciesV14.ts",
+    "./spell": "./src/spell.ts",
     "./spells-mapper": "./src/spellsMapper.ts",
     "./stable-id": "./src/stableId.ts",
     "./target": "./src/target.ts",

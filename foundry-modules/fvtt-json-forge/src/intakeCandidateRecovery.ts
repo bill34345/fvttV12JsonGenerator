@@ -1,4 +1,4 @@
-import { hashSource, hashArtifact, decodeForgeActorResponse, decodeForgeItemResponse } from '@fvtt-json-generator/forge-gateway-protocol';
+import { hashSource, hashArtifact, decodeForgeActorResponse, decodeForgeItemResponse, type ForgeActorResponse } from '@fvtt-json-generator/forge-gateway-protocol';
 import { type BrowserActorGenerationResult, type BrowserActorIntakeInput } from '@fvtt-json-generator/forge-browser-runtime/ai';
 import { assertCurrentBrowserItemIntakeCandidate, generateBrowserItemIntakeCandidate, type BrowserItemGenerationResult } from '@fvtt-json-generator/forge-browser-runtime/item-intake';
 import { decodeForgeIntakeReviewBundleText, serializeForgeIntakeReviewBundleV2, type ForgeIntakeReviewBundleV2 } from '@fvtt-json-generator/forge-browser-runtime/intake-review-import';
@@ -27,9 +27,20 @@ export interface IntakeCandidateRecord {
   candidate: BrowserActorGenerationResult | BrowserItemGenerationResult;
   checksum: string;
 }
+interface PlaintextBatchCandidateRecord {
+  version: 1;
+  mode: 'plaintext-actor';
+  queueAttempt: number;
+  response: ForgeActorResponse;
+}
+export type StoredIntakeCandidate = IntakeCandidateRecord | PlaintextBatchCandidateRecord;
+export interface StoredIntakeCandidates {
+  [key: string]: StoredIntakeCandidate | undefined;
+  single?: IntakeCandidateRecord;
+}
 export interface IntakeCandidateStore {
-  load(): Promise<Record<string, IntakeCandidateRecord>>;
-  put(key: string, value: IntakeCandidateRecord, guard?: () => void): Promise<void>;
+  load(): Promise<StoredIntakeCandidates>;
+  put(key: string, value: StoredIntakeCandidate, guard?: () => void): Promise<void>;
   clear(key: string, guard?: () => void): Promise<void>;
   reset(guard?: () => void): Promise<void>;
 }
@@ -47,6 +58,44 @@ function assertSecretsAbsent(content: string, secrets: readonly string[]) {
   }
 }
 function body(record: IntakeCandidateRecord) { const { checksum, ...value } = record; return value; }
+
+export function capturePlaintextBatchCandidate(
+  response: ForgeActorResponse, review: Readonly<ForgeIntakeReviewBundleV2>, queueAttempt: number, secrets: readonly string[],
+): PlaintextBatchCandidateRecord {
+  const record: PlaintextBatchCandidateRecord = { version: 1, mode: 'plaintext-actor', queueAttempt, response };
+  const text = serialized(record);
+  assertSize(text);
+  assertSecretsAbsent(text, secrets);
+  if (!matchPlaintextBatchResponse(response, review)) throw Error('生成的卡片与批量结果不一致。');
+  return record;
+}
+
+export function restorePlaintextBatchCandidate(
+  record: PlaintextBatchCandidateRecord, review: Readonly<ForgeIntakeReviewBundleV2>, queueAttempt: number,
+): ForgeActorResponse {
+  const text = serialized(record);
+  assertSize(text);
+  assertSecretsAbsent(text, []);
+  const response = matchPlaintextBatchResponse(record.response, review);
+  if (record.version !== 1 || record.queueAttempt !== queueAttempt || !response) {
+    throw Error('保存的卡片与当前批量结果不一致。');
+  }
+  return response;
+}
+
+export function matchPlaintextBatchResponse(
+  response: ForgeActorResponse, review: Readonly<ForgeIntakeReviewBundleV2>,
+): ForgeActorResponse | undefined {
+  const decoded = decodeForgeActorResponse(response);
+  if (!decoded.ok || !('result' in decoded.value)) return;
+  const { result, requestId } = decoded.value;
+  const { candidateResponse, sourceIdentity } = review;
+  if (review.mode === 'plaintext-actor' && result.artifact
+    && requestId === review.requestId && requestId === candidateResponse?.requestId
+    && result.status === candidateResponse.status && hashArtifact(result.artifact) === candidateResponse.artifactHash
+    && result.sourceIdentity.sourceId === sourceIdentity?.sourceId
+    && result.sourceIdentity.sourceHash === sourceIdentity.finalSourceHash) return decoded.value;
+}
 
 export function captureIntakeCandidate(input: Input, mode: IntakeCandidateRecord['mode'], bundle: ForgeIntakeReviewBundleV2,
   generation: IntakeCandidateRecord['candidate'], secrets: readonly string[] = [], now = Date.now(), queueAttempt?: number,
@@ -148,7 +197,7 @@ export async function revalidateIntakeCandidate(record: IntakeCandidateRecord,
   return JSON.parse(serialized(record));
 }
 
-type Envelope={version:1;revision:number;entries:Record<string,IntakeCandidateRecord>};
+type Envelope={version:1;revision:number;entries:StoredIntakeCandidates};
 function decode(raw:string|null):Envelope {
   if(raw===null)return{version:1,revision:0,entries:{}};
   const value=JSON.parse(raw);
@@ -159,9 +208,9 @@ function decode(raw:string|null):Envelope {
 }
 export class MemoryIntakeCandidateStore implements IntakeCandidateStore {
   private raw:string|null=null;
-  constructor(private readonly initial?:Record<string,IntakeCandidateRecord>){if(initial)this.raw=serialized({version:1,revision:1,entries:initial});}
+  constructor(private readonly initial?:StoredIntakeCandidates){if(initial)this.raw=serialized({version:1,revision:1,entries:initial});}
   async load(){return structuredClone(decode(this.raw).entries);}
-  async put(key:string,value:IntakeCandidateRecord,guard?:()=>void){if(!keyAllowed(key))throw Error('Invalid recovery key');const state=decode(this.raw);state.entries[key]=value;await this.write(state,guard);}
+  async put(key:string,value:StoredIntakeCandidate,guard?:()=>void){if(!keyAllowed(key))throw Error('Invalid recovery key');const state=decode(this.raw);state.entries[key]=value;await this.write(state,guard);}
   async clear(key:string,guard?:()=>void){const state=decode(this.raw);delete state.entries[key];await this.write(state,guard);}
   async reset(guard?:()=>void){guard?.();this.raw=null;}
   private async write(state:Envelope,guard?:()=>void){state.revision++;const text=serialized(state);assertSize(text);guard?.();this.raw=text;}
@@ -174,7 +223,7 @@ export class IndexedDbIntakeCandidateStore implements IntakeCandidateStore {
   private pending=Promise.resolve();
   constructor(private readonly scopeId:string,private readonly factory:IDBFactory|undefined=globalThis.indexedDB){if(!scopeId.trim())throw Error('Missing world/GM recovery scope');}
   async load(){const db=await this.open();try{const tx=db.transaction('candidates','readonly');const done=completed(tx);const raw=await requested<string|undefined>(tx.objectStore('candidates').get(this.scopeId));await done;this.base=raw??null;return structuredClone(decode(this.base).entries);}finally{db.close();}}
-  put(key:string,value:IntakeCandidateRecord,guard?:()=>void){if(!keyAllowed(key))throw Error('Invalid recovery key');return this.change(state=>{state.entries[key]=value;},guard);}
+  put(key:string,value:StoredIntakeCandidate,guard?:()=>void){if(!keyAllowed(key))throw Error('Invalid recovery key');return this.change(state=>{state.entries[key]=value;},guard);}
   clear(key:string,guard?:()=>void){return this.change(state=>{delete state.entries[key];},guard);}
   reset(guard?:()=>void){return this.change(state=>{state.entries={};},guard,true);}
   private change(update:(state:Envelope)=>void,guard?:()=>void,reset=false){

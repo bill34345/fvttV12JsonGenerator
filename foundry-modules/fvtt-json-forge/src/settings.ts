@@ -96,7 +96,7 @@ export function isForgeSessionConnectionReady(): boolean {
 }
 
 export function forgeConnectionSetupMessage(settings: ForgeClientSettings): string {
-  if (!settings.model && !settings.apiKey && settings.authScheme !== 'none') return '选择 Provider，填写模型和 API Key，然后保存并测试连接。';
+  if (!settings.model && !settings.apiKey && settings.authScheme !== 'none') return '选择服务商，填写模型和 API Key，然后保存并测试连接。';
   if (settings.authScheme !== 'none' && !settings.apiKey) return '重新输入 API Key，然后保存并测试连接。';
   if (!settings.model) return '选择或填写模型 ID，然后保存并测试连接。';
   return '测试当前配置后即可使用 AI 整理。';

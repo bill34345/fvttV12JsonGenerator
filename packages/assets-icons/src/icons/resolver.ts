@@ -117,6 +117,7 @@ type FunctionalCategory = keyof typeof FUNCTIONAL_CATEGORY_PATHS;
 
 interface ItemContext {
   actorName?: string;
+  standaloneSpell?: boolean;
 }
 
 export class V14IconResolver {
@@ -134,7 +135,7 @@ export class V14IconResolver {
   }
 
   public resolveStandaloneItem(item: Record<string, any>): void {
-    this.resolveItem(item, {});
+    this.resolveItem(item, { standaloneSpell: item?.type === 'spell' });
   }
 
   private resolveItem(item: Record<string, any>, context: ItemContext): void {
@@ -150,6 +151,7 @@ export class V14IconResolver {
       englishName: names.englishName,
       itemType,
       previousPath,
+      standaloneSpell: context.standaloneSpell,
       item: this.options.fuzzyContent ? sourceSemanticItem(item) : item,
     });
     item.img = resolution.selectedPath;
@@ -240,6 +242,7 @@ export class V14IconResolver {
     itemType: string;
     previousPath: string;
     activityContext?: boolean;
+    standaloneSpell?: boolean;
     item: Record<string, any>;
   }): IconResolution {
     const override = this.findOverride(input);
@@ -269,6 +272,10 @@ export class V14IconResolver {
 
     const visualFamily = matchVisualFamily(input);
     if (this.options.fuzzyContent) {
+      const namedSpell = input.standaloneSpell ? this.findExactCompendium(input) : undefined;
+      if (namedSpell && this.filePaths.has(namedSpell.img) && !genericPaths.has(namedSpell.img)) {
+        return { selectedPath: namedSpell.img, source: 'compendium-exact', confidence: 'exact', reasons: namedSpell.reasons, alternatives: namedSpell.alternatives };
+      }
       if (visualFamily && visualFamily !== 'ambiguous') {
         const visual = this.resolveVisualFamily(visualFamily);
         if (!visual) throw new Error(`Icon visual-family asset unavailable in verified catalog: ${visualFamily.family}`);
@@ -410,6 +417,7 @@ export class V14IconResolver {
     itemName: string;
     englishName?: string;
     itemType: string;
+    standaloneSpell?: boolean;
     item: Record<string, any>;
   }): { img: string; reasons: string[]; alternatives: IconCandidate[] } | undefined {
     const names = new Set(
@@ -418,6 +426,7 @@ export class V14IconResolver {
         .map(normalizeName),
     );
     const identifiers = new Set([...names].map(slugify));
+    if (input.standaloneSpell && typeof input.item.system?.identifier === 'string') identifiers.add(slugify(input.item.system.identifier));
     const sameTypeMatches = this.options.catalog.compendium
       .filter((entry) => entry.type === input.itemType)
       .filter((entry) => names.has(normalizeName(entry.name)) || (entry.identifier && identifiers.has(slugify(entry.identifier))))

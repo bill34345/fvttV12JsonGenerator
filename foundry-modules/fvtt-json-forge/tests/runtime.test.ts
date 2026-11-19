@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
+import { fakeWorldFolders } from '../../../tests/helpers/forge-world-folders';
 import { buildForgeActorRequest, convertFinalActorSource, FORGE_NATIVE_606_TARGET, isForgeRuntimeTargetSupported } from '@fvtt-json-generator/forge-browser-runtime';
 import { projectNativeDocument } from '@fvtt-json-generator/workflows/native-projection';
 import { createEncounterAutomationLifecycle } from '../src/encounterAutomationLifecycle';
@@ -477,7 +478,9 @@ describe('Foundry Forge Actor creation boundary', () => {
     expect(result.status).toBe('created');
     expect(result.uuid).toMatch(/^Actor\.[0-9a-f]{16}$/u);
     expect(collection.contents).toHaveLength(1);
+    expect(game.folders?.contents).toEqual([{ id: expect.any(String), name: 'Forge', type: 'Actor' }]);
     expect(collection.createInputs[0]).toMatchObject({
+      folder: game.folders?.contents[0]?.id,
       name: expect.any(String),
       items: expect.any(Array),
       flags: { [MODULE_ID]: { sourceId: result.sourceId, artifactHash: result.artifactHash } },
@@ -1034,7 +1037,7 @@ class FakeActorCollection implements ForgeActorCollectionLike {
 }
 
 function supportedGame(actors: FakeActorCollection): ForgeGameLike {
-  return { version: '14.370', system: { id: 'dnd5e', version: '6.0.6' }, user: { isGM: true }, actors };
+  return { version: '14.370', system: { id: 'dnd5e', version: '6.0.6' }, user: { isGM: true }, actors, folders: fakeWorldFolders() };
 }
 
 function reviewedCandidateResponse(status: 'needs_review' | 'failed'): ForgeActorResponse {

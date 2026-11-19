@@ -4,6 +4,7 @@ import { createForgeGuideApplicationClass } from './guideApplication';
 import {createEncounterAutomationLifecycle} from './encounterAutomationLifecycle';
 import {installEncounterDamageBridge,installPassiveActivityLockGuard} from './encounterAutomationRuntime';
 import {renderManualConditionEffects} from './manualConditionEffects';
+import { FORGE_ARCHIVE_SETTINGS } from './worldFolder';
 import {
   assertExactRuntime,
   assertGm,
@@ -18,11 +19,15 @@ export function openForgeItem(): unknown { return openForgeWorkspace('Item', glo
 const workspaces = new WeakMap<object, Map<string, any>>();
 const openingWorkspaces = new WeakSet<object>();
 
-function focusWorkspace(environment: any, key: string, create: () => any, mode?: ForgeWorkspaceMode): unknown {
+function focusWorkspace(environment: any, key: string, create: () => any, select?: (application: any) => void): unknown {
   let windows = workspaces.get(environment);
   if (!windows) { windows = new Map(); workspaces.set(environment, windows); }
   const existing = windows.get(key);
-  if (existing && (existing.rendered || openingWorkspaces.has(existing))) { if (mode) existing.selectMode?.(mode); existing.bringToFront?.(); return existing; }
+  if (existing && (existing.rendered || openingWorkspaces.has(existing))) {
+    select?.(existing);
+    existing.bringToFront?.();
+    return existing;
+  }
   const application = create();
   windows.set(key, application);
   openingWorkspaces.add(application);
@@ -55,7 +60,7 @@ export function openForgeGuide(environment: any = globalThis): unknown {
 export function openForgeWorkspace(kind: 'Actor' | 'Item', environment: any = globalThis, mode?: ForgeWorkspaceMode): unknown {
   if (kind !== 'Actor' && kind !== 'Item') throw new Error('请选择角色或物品目录。');
   if(kind==='Item'){assertGm(environment.game);assertExactRuntime(environment.game);}
-  return focusWorkspace(environment, kind, () => {
+  return focusWorkspace(environment, 'workbench', () => {
     const Application = createForgeWorkspaceApplicationClass({
       game: environment.game, ui: environment.ui, foundry: environment.foundry,
       window: environment.window, hooks: environment.Hooks, directoryKind: kind, initialMode: mode,
@@ -63,7 +68,10 @@ export function openForgeWorkspace(kind: 'Actor' | 'Item', environment: any = gl
       openGuide: () => openForgeGuide(environment),
     });
     return new Application();
-  }, mode);
+  }, application => {
+    if (mode === 'spell') application.selectMode('spell');
+    else application.selectObject(kind, mode);
+  });
 }
 
 /** Compatibility entry: new callers should use the Actor or Item directory. */
@@ -113,6 +121,9 @@ export function initializeForgeModule(globalEnvironment: any = globalThis): void
     if (registered || !globalEnvironment.game?.settings?.registerMenu) return;
     try {
       const type = createForgeConnectionApplicationClass(globalEnvironment);
+      globalEnvironment.game.settings.register?.(MODULE_ID, FORGE_ARCHIVE_SETTINGS, {
+        name: 'Forge · 归档位置', scope: 'world', config: false, restricted: true, type: Object, default: {},
+      });
       globalEnvironment.game.settings.registerMenu(MODULE_ID, 'connection', {
         name: 'Forge · AI 连接', label: '配置 AI 连接',
         hint: '设置 Provider、API Key 和模型。生成与导入请使用角色或物品目录中的 Forge 按钮。',

@@ -33,6 +33,7 @@ describe('FVTT JSON Forge bootstrap and client settings', () => {
     class ApplicationV2 {}
     const hooks = new Map<string, () => void>();
     const menus: Array<Record<string, unknown>> = [];
+    const worldSettings: Array<[string, string, Record<string, unknown>]> = [];
     const module = { api: undefined as unknown };
     const environment = {
       Hooks: { once: (name: string, callback: () => void) => hooks.set(name, callback) },
@@ -49,7 +50,10 @@ describe('FVTT JSON Forge bootstrap and client settings', () => {
         system: { id: 'dnd5e', version: '6.0.6' },
         user: { isGM: true },
         modules: { get: (id: string) => id === 'fvtt-json-forge' ? module : undefined },
-        settings: { registerMenu: (_id: string, _key: string, definition: Record<string, unknown>) => menus.push(definition) },
+        settings: {
+          register: (id: string, key: string, definition: Record<string, unknown>) => worldSettings.push([id, key, definition]),
+          registerMenu: (_id: string, _key: string, definition: Record<string, unknown>) => menus.push(definition),
+        },
       },
       ui: { notifications: { warn: () => undefined } },
       console: { error: () => undefined },
@@ -63,6 +67,9 @@ describe('FVTT JSON Forge bootstrap and client settings', () => {
     expect(menus.map((menu) => menu.name)).toEqual(['Forge · AI 连接']);
     expect(menus.every((menu) => menu.restricted === true)).toBe(true);
     expect(menus.every((menu) => (menu.type as any).prototype instanceof ApplicationV2)).toBe(true);
+    expect(worldSettings).toEqual([['fvtt-json-forge', 'archiveFolders',
+      expect.objectContaining({ scope: 'world', default: {}, config: false, restricted: true }),
+    ]]);
     expect(module.api).toBeDefined();
   });
 

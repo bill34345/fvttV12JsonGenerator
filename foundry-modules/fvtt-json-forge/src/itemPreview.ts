@@ -26,7 +26,8 @@ const movementLabels: Record<string, string> = {
 };
 
 export function renderForgeItemPreview(item: ForgeItemDocumentSummary, variants: readonly ForgeItemSpellVariant[] = []): string {
-  const description = String(item.description.value ?? '').replace(/<[^>]*>/gu, ' ').replace(/\s+/gu, ' ').trim().slice(0, 600);
+  const description = String(item.description.value ?? '')
+    .replace(/<\/(?:p|li|h[1-6])>|<br\s*\/?>/giu, '\n').replace(/<[^>]*>/gu, '').trim();
   const type = String(item.itemType.value || item.type);
   const rarity = String(item.rarity ?? '');
   const identity = [itemTypeLabels[type] ?? type, rarityLabels[rarity] ?? rarity, item.attunement === 'required' ? '需要同调' : ''].filter(Boolean).join(' · ');
@@ -62,7 +63,7 @@ export function renderForgeItemPreview(item: ForgeItemDocumentSummary, variants:
     volumeLimit?.value ? `${volumeLimit.value} ${volumeLimit.units === 'liter' ? '升' : '立方尺'}` : '',
     item.properties.includes('weightlessContents') ? '内容物不计重量' : '',
   ].filter(Boolean);
-  return `<dl><dt>物品</dt><dd>${escapeHtml(item.name)}</dd><dt>类型</dt><dd>${escapeHtml(identity)}</dd>
+  return `<article class="forge-document-sheet">${renderForgeCardHeading(item.name, identity)}<div class="forge-document-body"><dl>
     ${item.stage ? `<dt>装备阶段</dt><dd>${escapeHtml(String(item.stage.name))} · 由 GM 选择并替换原阶段卡</dd>` : ''}
     ${sharedUses ? `<dt>物品共用次数</dt><dd>${escapeHtml(sharedUses)}</dd>` : ''}
     ${item.lastChargeCheck ? `<dt>最后一发充能</dt><dd>用掉后在物品说明中掷 ${escapeHtml(String(item.lastChargeCheck.formula))}，掷出 ${escapeHtml(String(item.lastChargeCheck.destroyOn))} 时由 GM 销毁。</dd>` : ''}
@@ -87,8 +88,14 @@ export function renderForgeItemPreview(item: ForgeItemDocumentSummary, variants:
       const edition = spell.rules === '2014' ? '2014 旧版母本' : spell.rules ? `${spell.rules} 母本` : '母本未标明版本';
       return `<li>${escapeHtml(`${spell.name} · ${damageLabels[spell.damageType] ?? spell.damageType}伤害 · ${level} · ${edition}`)}</li>`;
     }).join('')}</ul></dd>` : ''}
-    ${activities.length ? `<dt>物品活动</dt><dd><ul>${activities.map(renderNativeActivity).join('')}</ul></dd>` : ''}
-    <dt>描述</dt><dd>${escapeHtml(description || '未提供')}</dd></dl>`;
+    </dl>${activities.length ? `<section class="forge-item-activities"><h3>物品活动</h3><ul>${activities.map(renderNativeActivity).join('')}</ul></section>` : ''}
+    ${description ? `<p class="forge-document-rules forge-item-description">${escapeHtml(description)}</p>` : ''}</div></article>`;
+}
+
+export function renderForgeCardHeading(name: string, identity: string): string {
+  const bilingual = /^(\p{Script=Han}.*?) ([a-z].*)$/iu.exec(name);
+  return `<header class="forge-document-heading"><p class="forge-document-type">${escapeHtml(identity)}</p>
+    <h2>${bilingual ? `${escapeHtml(bilingual[1]!)} <span lang="en">${escapeHtml(bilingual[2]!)}</span>` : escapeHtml(name)}</h2></header>`;
 }
 
 function renderEnchantments(activities: ForgeItemActivityDocumentSummary[], effects: ForgeItemDocumentSummary['effects']): string {
@@ -141,14 +148,24 @@ function renderNativeActivity(activity: ForgeItemActivityDocumentSummary): strin
   if (typeof activation?.condition === 'string') rows.push(activation.condition);
   const cost = Array.isArray(consumption?.targets) ? asRecord(consumption.targets[0]) : undefined;
   if (cost?.type === 'itemUses' && activity.type !== 'heal') rows.push(`消耗物品次数 ${cost.value} 次`);
-  return `<li><strong>${escapeHtml(activity.name)}</strong>${rows.filter(Boolean).map(row => ` · ${escapeHtml(row)}`).join('')}</li>`;
+  return `<li><strong>${escapeHtml(activity.name)}</strong><span>${escapeHtml(rows.filter(Boolean).join(' · '))}</span></li>`;
 }
 
 function rollFormula(part: JsonObject): string {
   const custom = asRecord(part.custom);
-  if (custom?.enabled && typeof custom.formula === 'string') return custom.formula;
+  if (custom?.enabled && typeof custom.formula === 'string') return humanFormula(custom.formula);
   const dice = part.number && part.denomination ? `${part.number}d${part.denomination}` : '';
-  return [dice, part.bonus].filter(Boolean).join(' + ');
+  return humanFormula([dice, part.bonus].filter(Boolean).join(' + '));
+}
+
+export function humanFormula(formula: string): string {
+  const refs: Record<string, string> = {
+    mod: '相关属性调整值', prof: '熟练加值', 'item.uses.value': '物品剩余次数', 'activity.uses.value': '此能力剩余次数',
+  };
+  return formula.replace(/@([a-z][\w.]*)/giu, (_match, ref: string) => {
+    const ability = /^abilities\.(\w+)\.(mod|value)$/u.exec(ref);
+    return ability && abilityLabels[ability[1]!] ? `${abilityLabels[ability[1]!]}${ability[2] === 'mod' ? '调整值' : '属性值'}` : refs[ref] ?? '对应数值';
+  }).replace(/\s*([+−-])\s*/gu, ' $1 ').trim();
 }
 
 function renderCast(activity: ForgeItemActivityDocumentSummary): string {
@@ -174,12 +191,11 @@ function renderCast(activity: ForgeItemActivityDocumentSummary): string {
     pool && cost ? `消耗${pool}次数 ${cost.value} 次` : !cost && consumption?.spellSlot === false ? '无需次数或法术位' : '',
     ownUses,
     scaling?.allowed === true && asRecord(cost?.scaling)?.mode === 'amount'
-      ? `每升 1 环多消耗 1 次${highest !== undefined ? `，受剩余次数限制，最高 ${highest} 环` : limit ? `，受上限 ${limit} 限制` : ''}`
+      ? `每升 1 环多消耗 1 次${highest !== undefined ? `，受剩余次数限制，最高 ${highest} 环` : limit ? `，最多额外消耗 ${humanFormula(limit)} 次` : ''}`
       : '',
     consumption?.spellSlot === false && cost ? '不消耗法术位' : '',
   ].filter(Boolean);
-  return `<li><strong>${escapeHtml(activity.name)}</strong>${rows.length ? ` · ${escapeHtml(rows.join(' · '))}` : ''}
-    ${typeof spell?.uuid === 'string' && spell.uuid ? `<details><summary>查看法术引用</summary><code>${escapeHtml(spell.uuid)}</code></details>` : ''}</li>`;
+  return `<li><strong>${escapeHtml(activity.name)}</strong>${rows.length ? ` · ${escapeHtml(rows.join(' · '))}` : ''}</li>`;
 }
 
 function poolSummary(uses?: JsonObject): string {
@@ -187,13 +203,13 @@ function poolSummary(uses?: JsonObject): string {
   const max = String(uses.max);
   const capacity = /^\d+$/u.test(max) && typeof uses.spent === 'number'
     ? `剩余 ${Math.max(0, Number(max) - uses.spent)} / ${max} 次`
-    : `上限 ${max} 次`;
+    : `上限 ${humanFormula(max)} 次`;
   const entries = Array.isArray(uses.recovery) ? uses.recovery.map(asRecord) : [];
   const recovery = entries.flatMap(entry => {
     if (!entry || typeof entry.period !== 'string') return [];
     const timing = recoveryLabels[entry.period] ?? entry.period;
     if (entry.type === 'recoverAll') return [`${timing}全部恢复`];
-    if (entry.type === 'formula' && entry.formula) return [`${timing}恢复 ${entry.formula} 次`];
+    if (entry.type === 'formula' && entry.formula) return [`${timing}恢复 ${humanFormula(String(entry.formula))} 次`];
     return [];
   });
   return [capacity, ...(entries.length ? recovery : ['无自动恢复'])].join('，');
@@ -203,6 +219,6 @@ function asRecord(value: JsonValue | undefined): JsonObject | undefined {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
 }
 
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/gu, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]!));
 }

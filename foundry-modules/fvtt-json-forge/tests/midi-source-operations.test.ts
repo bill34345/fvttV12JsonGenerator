@@ -1,4 +1,5 @@
 import {beforeAll,describe,expect,test} from 'bun:test';
+import { fakeWorldFolders } from '../../../tests/helpers/forge-world-folders';
 import {buildForgeActorRequest,convertFinalActorSource} from '@fvtt-json-generator/forge-browser-runtime';
 import {hashArtifact,hashSource,type ForgeActorResponse} from '@fvtt-json-generator/forge-gateway-protocol';
 import {prepareForgeEncounter} from '@fvtt-json-generator/forge-browser-runtime/encounter-preparation';
@@ -16,7 +17,7 @@ const nativeActivities=(actor:any)=>activities(actor).map(({midiProperties,other
 const moduleState=(version='14.6.7',active=true)=>({get:(id:string)=>id==='midi-qol'?{active,version}:undefined});
 function runtime(version:string|undefined='14.6.7',drift?:(data:any)=>void){
   function collection(kind:string){const docs=new Map<string,any>();const api={createCount:0,deleteCount:0,get:(id:string)=>docs.get(id),get contents(){return[...docs.values()];},documentClass:{async create(data:any){api.createCount++;const copy=structuredClone(data);drift?.(copy);const doc:any={id:copy._id,uuid:kind+'.'+copy._id,name:copy.name,data:copy,get flags(){return this.data.flags;},toObject(){return structuredClone(this.data);},async update(changes:Record<string,unknown>){for(const[path,value]of Object.entries(changes)){const parts=path.split('.');let owner=this.data;for(const key of parts.slice(0,-1))owner=owner[key]??={};owner[parts.at(-1)!]=value;}return this;},async delete(){api.deleteCount++;docs.delete(this.id);}};docs.set(doc.id,doc);return doc;}}};return api;}
-  const game={version:'14.370',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro'),...(version?{modules:moduleState(version)}:{})};
+  const game={version:'14.370',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro'),folders:fakeWorldFolders(),...(version?{modules:moduleState(version)}:{})};
   return{game,assets:{async ensure(){throw Error('No assets in this fixture');}}};
 }
 

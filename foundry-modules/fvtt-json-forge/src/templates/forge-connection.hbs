@@ -2,7 +2,7 @@
   <section class="forge-connection-card" aria-labelledby="forge-connection-basics-heading">
     <h3 id="forge-connection-basics-heading">基本连接</h3>
     <div class="forge-connection-grid">
-      <label for="forge-connection-provider">Provider
+      <label for="forge-connection-provider">服务商
         <select id="forge-connection-provider" name="provider">
           <option value="openai">OpenAI</option>
           <option value="anthropic">Anthropic (Claude)</option>
@@ -14,7 +14,7 @@
           <option value="alibaba-qwen">Alibaba Qwen</option>
           <option value="moonshot-kimi">Moonshot / Kimi</option>
           <option value="zhipu-glm">Zhipu GLM</option>
-          <option value="custom">Custom Provider</option>
+          <option value="custom">自定义服务</option>
         </select>
       </label>
       <div class="forge-model-field" data-model-field>
@@ -26,7 +26,7 @@
           <button type="button" data-action="clear-model" aria-label="清空模型 ID" title="清空模型 ID" disabled>
             <i class="fas fa-xmark" aria-hidden="true"></i>
           </button>
-          <button type="button" data-action="show-models" aria-label="选择 Provider 模型" title="选择 Provider 模型"
+          <button type="button" data-action="show-models" aria-label="选择模型" title="选择模型"
             aria-expanded="false" aria-controls="forge-provider-model-options">
             <i class="fas fa-chevron-down" aria-hidden="true"></i>
           </button>
@@ -37,7 +37,7 @@
             <p data-model-status role="status" aria-live="polite"></p>
             <button type="button" data-action="refresh-models">刷新列表</button>
           </div>
-          <ul id="forge-provider-model-options" data-model-options role="listbox" aria-label="Provider 模型"></ul>
+          <ul id="forge-provider-model-options" data-model-options role="listbox" aria-label="模型"></ul>
         </div>
       </div>
       <label for="forge-connection-api-key">API Key
@@ -53,7 +53,7 @@
   <section class="forge-connection-actions-card">
     <p data-connection-status role="status" aria-live="polite" aria-atomic="true">尚未测试当前连接。</p>
     <div class="forge-connection-actions">
-      <a data-provider-docs target="_blank" rel="noreferrer">Provider 文档</a>
+      <a data-provider-docs target="_blank" rel="noreferrer">服务商文档</a>
       <button type="button" data-action="save">保存配置</button>
       <button type="button" data-action="test-connection">测试连接</button>
     </div>
@@ -66,17 +66,17 @@
         <input id="forge-connection-auto-correct" name="autoCorrect" type="checkbox" aria-describedby="forge-connection-correction-note">
         开启自动纠错（额外 API 费用）
       </label>
-      <p id="forge-connection-correction-note" class="forge-field-note">默认关闭。开启后每只生物最多追加一次请求。纠错失败时仍可查看已有候选和问题提示。</p>
+      <p id="forge-connection-correction-note" class="forge-field-note">每只生物最多追加一次纠错请求，会产生额外费用。</p>
     </div>
   </details>
 
   <details class="forge-advanced-settings">
     <summary>高级连接设置</summary>
     <div class="forge-advanced-grid">
-      <label for="forge-connection-endpoint">HTTPS endpoint
+      <label for="forge-connection-endpoint">接口地址
         <span class="forge-field-controls forge-secret-input">
           <input id="forge-connection-endpoint" name="endpoint" type="url" placeholder="https://example.com/v1" aria-describedby="forge-connection-endpoint-note">
-          <button type="button" data-action="toggle-endpoint">自定义 endpoint</button>
+          <button type="button" data-action="toggle-endpoint">自定义地址</button>
         </span>
       </label>
       <p id="forge-connection-endpoint-note" class="forge-field-note">必须使用 HTTPS，URL 中不能包含凭据。</p>
@@ -98,15 +98,15 @@
       <label for="forge-connection-region">区域
         <select id="forge-connection-region" name="region"><option value="">默认</option></select>
       </label>
-      <label for="forge-connection-reasoning">Reasoning
-        <select id="forge-connection-reasoning" name="reasoning"><option value="auto">Auto</option></select>
+      <label for="forge-connection-reasoning">推理强度
+        <select id="forge-connection-reasoning" name="reasoning"><option value="auto">自动</option></select>
       </label>
-      <label for="forge-connection-structured-output">结构化输出
+      <label for="forge-connection-structured-output">回复格式
         <select id="forge-connection-structured-output" name="structuredOutput">
-          <option value="json_schema">JSON Schema</option>
-          <option value="json_object">JSON Object</option>
-          <option value="provider_schema">Provider Schema</option>
-          <option value="prompt_fallback">严格 Prompt JSON fallback</option>
+          <option value="json_schema">严格结构</option>
+          <option value="json_object">基础结构</option>
+          <option value="provider_schema">服务提供方结构</option>
+          <option value="prompt_fallback">使用文字约束</option>
         </select>
       </label>
     </div>

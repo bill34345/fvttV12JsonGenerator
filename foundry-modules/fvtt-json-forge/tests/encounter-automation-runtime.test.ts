@@ -1256,13 +1256,13 @@ describe('closed save failure and GM activity controls', () => {
     expect(manualRule.options[13]!.textContent).toBe('GM Rule 14');
     expect((panel.element.querySelector('details') as HTMLDetailsElement).open).toBe(false);
     expect(source.options).toHaveLength(2);
-    expect(source.options[0]!.textContent).toContain('Token first');
-    expect(source.options[1]!.textContent).toContain('Token second');
+    expect(source.options[0]!.textContent).toContain('场景棋子 1');
+    expect(source.options[1]!.textContent).toContain('场景棋子 2');
     source.value = '1'; source.dispatchEvent(new document.defaultView!.Event('change', { bubbles: true }));
     const firstOption = ability.options[0];
     ability.focus(); expect(ability.options[0]).toBe(firstOption);
     ability.value = '9'; ability.dispatchEvent(new document.defaultView!.Event('change', { bubbles: true }));
-    expect(panel.element.querySelector('[data-source-identity]').textContent).toContain('Token second');
+    expect(panel.element.querySelector('[data-source-identity]').textContent).toContain('场景棋子 2');
     let firstRuleOpened = 0, secondRuleOpened = 0;
     (first.actor.items.find((item) => item.name === 'GM Rule 14') as any).sheet = { render: async () => { firstRuleOpened++; } };
     (second.actor.items.find((item) => item.name === 'GM Rule 14') as any).sheet = { render: async () => { secondRuleOpened++; } };
@@ -1320,7 +1320,7 @@ describe('closed save failure and GM activity controls', () => {
     const toggle = panel.element.querySelector('[data-lock-toggle]') as HTMLButtonElement;
     const view = panel.element.querySelector('[data-manual-view]') as HTMLButtonElement;
     expect(source.disabled).toBe(false); expect(toggle.disabled).toBe(true);
-    expect(panel.element.querySelector('[data-source-identity]').textContent).toContain('当前场景无来源 Token');
+    expect(panel.element.querySelector('[data-source-identity]').textContent).toContain('当前场景没有棋子');
     expect(panel.element.querySelector('[data-manual-rule]').textContent).toBe('Eye Rays');
     await clickPanel(view); expect(opened).toBe(1);
     env.game.users.activeGM = { id: 'other-gm' };
@@ -1372,7 +1372,7 @@ describe('closed save failure and GM activity controls', () => {
     const handle = await installEncounterAutomation(env, { target: NATIVE_TARGET, packageId: 'crystal-package', packageHash: 'package-hash', bindings: { dragon: dragon.uuid }, config: newConfig });
     const panel: any = handle.showPanel(); await panel.ready;
     expect(dialogs[0].data.content).toContain('GM 裁定');
-    expect(dialogs[0].data.content).toContain('不会自动执行');
+    expect(dialogs[0].data.content).toContain('GM 手动处理效果和资源');
     const inspect = panel.element.querySelector('[data-manual-view]') as HTMLButtonElement;
     expect(inspect.type).toBe('button'); await clickPanel(inspect);
     expect(opened).toBe(1);

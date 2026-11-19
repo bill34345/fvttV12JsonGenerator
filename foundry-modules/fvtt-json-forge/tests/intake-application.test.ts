@@ -1,4 +1,6 @@
 import { NativeDocumentFixture } from './native-document-fixture';
+import { JSDOM } from 'jsdom';
+import Handlebars from 'handlebars';
 import { beforeAll, describe, expect, test } from 'bun:test';
 import type {BrowserActorGenerationResult} from '@fvtt-json-generator/forge-browser-runtime/ai';
 import { MemoryIntakeCandidateStore, captureIntakeCandidate, revalidateIntakeCandidate, INTAKE_CANDIDATE_MAX_AGE_MS,
@@ -69,6 +71,113 @@ beforeAll(async () => {
 });
 
 describe('Forge Intake Application review workspace', () => {
+  test('library lists direct source actions and keeps one inline history open without changing a draft or saved records', async () => {
+    let clock = 0;
+    const library = new ManagedForgeSourceLibrary(new MemoryForgeSourceLibraryStore(), () => new Date(Date.UTC(2026, 10, 18, 1, 22, clock++)).toISOString());
+    await library.saveReview(decodeForgeIntakeReviewBundleText(acceptedReviewBundleText()), '守卫 Guard');
+    await library.saveReview(decodeForgeIntakeReviewBundleText(acceptedReviewBundleText().replaceAll('old-request', 'second-request').replaceAll('old-attempt', 'second-attempt')), '守卫 Guard');
+    await library.saveReview(decodeForgeIntakeReviewBundleText(plaintextReviewBundleText()), '实验鼠 Rat');
+    await library.saveSource({objectKind:'actor', mode:'plaintext-actor', sourceLabel:'夜魇 Nightgaunt', rawSource:'saved nightgaunt source'});
+    const before = await library.load();
+    const views: string[] = [];
+    const fixture = makeApplication({}, undefined, library, undefined, undefined, {onRecordsViewChange:(view: string) => views.push(view)});
+    await settleLibrary(fixture.application, fixture.root);
+    const template = readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-intake.hbs', 'utf8');
+    const dom = new JSDOM(Handlebars.compile(template)({isActorDirectory:true}));
+    const root = dom.window.document.querySelector<HTMLElement>('[data-forge-pane="intake"]')!;
+    fixture.application.element = root;
+    try {
+      fixture.application._onRender({}, {});
+      await settleLibrary(fixture.application, root as any);
+      const source = root.querySelector<HTMLTextAreaElement>('[name="source"]')!;
+      source.value = 'unsaved current draft';
+      fixture.application.showRecords('saved');
+      const guard = before.sources.find(entry => entry.sourceLabel === '守卫 Guard')!;
+      const rat = before.sources.find(entry => entry.sourceLabel === '实验鼠 Rat')!;
+      const list = root.querySelector<HTMLElement>('[data-library-list]')!;
+      const toggle = (id: string) => list.querySelector<HTMLButtonElement>(`[data-library-toggle-history="${id}"]`)!;
+      expect(list.querySelectorAll('[data-library-open-source]')).toHaveLength(3);
+      expect(list.querySelectorAll('[data-library-open-review]')).toHaveLength(0);
+      toggle(guard.id).focus();
+      toggle(guard.id).click();
+      expect(dom.window.document.activeElement).toBe(toggle(guard.id));
+      expect(toggle(guard.id).getAttribute('aria-expanded')).toBe('true');
+      const history = dom.window.document.getElementById(toggle(guard.id).getAttribute('aria-controls')!)!;
+      const reviews = before.reviews.filter(review => review.sourceRecordId === guard.id)
+        .sort((left, right) => right.savedAt.localeCompare(left.savedAt));
+      expect(history.parentElement?.querySelector(`[data-library-open-source="${guard.id}"]`)).toBeTruthy();
+      expect(Array.from(history.querySelectorAll('[data-library-open-review]'), button => button.getAttribute('data-library-open-review')))
+        .toEqual(reviews.map(review => review.id));
+      toggle(rat.id).click();
+      expect(toggle(guard.id).getAttribute('aria-expanded')).toBe('false');
+      expect(toggle(rat.id).getAttribute('aria-expanded')).toBe('true');
+      expect(list.querySelectorAll('.forge-library-history:not([hidden])')).toHaveLength(1);
+      toggle(guard.id).click();
+      const search = root.querySelector<HTMLInputElement>('[name="sourceLibrarySearch"]')!;
+      search.value = 'Nightgaunt';
+      search.dispatchEvent(new dom.window.Event('input'));
+      expect(list.querySelector('strong')?.textContent).toBe('夜魇 Nightgaunt');
+      expect(list.querySelector('[data-library-toggle-history]')).toBeNull();
+      search.value = 'missing result';
+      search.dispatchEvent(new dom.window.Event('input'));
+      expect(list.querySelector('h3')?.textContent).toBe('没有匹配的资料');
+      search.value = '';
+      search.dispatchEvent(new dom.window.Event('input'));
+      expect(toggle(guard.id).getAttribute('aria-expanded')).toBe('true');
+      expect(source.value).toBe('unsaved current draft');
+      expect(await library.load()).toEqual(before);
+      expect(views).toContain('saved');
+    } finally {
+      await fixture.application.close();
+      dom.window.close();
+    }
+  });
+
+  test('saved views preserve the current draft and return to the editor only after replacement is confirmed', async () => {
+    const library = new ManagedForgeSourceLibrary(new MemoryForgeSourceLibraryStore());
+    await library.saveSource({objectKind:'actor', mode:'plaintext-actor', sourceLabel:'守卫 Guard', rawSource:'saved guard source'});
+    let replace = false;
+    let confirmations = 0;
+    const views: string[] = [];
+    const fixture = makeApplication({}, undefined, library, async () => { confirmations += 1; return replace; }, undefined, {onRecordsViewChange:(view: string) => views.push(view)});
+    await settleLibrary(fixture.application, fixture.root);
+    const template = readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-intake.hbs', 'utf8');
+    const dom = new JSDOM(Handlebars.compile(template)({isActorDirectory:true}));
+    const root = dom.window.document.querySelector<HTMLElement>('[data-forge-pane="intake"]')!;
+    fixture.application.element = root;
+    try {
+      fixture.application._onRender({}, {});
+      const source = root.querySelector<HTMLTextAreaElement>('[name="source"]')!;
+      source.value = 'unsaved current draft';
+      const button = (action: string) => root.querySelector<HTMLButtonElement>(`[data-action="${action}"]`)!;
+      button('view-saved').click();
+      expect(root.querySelector<HTMLElement>('[data-library-panel="saved"]')?.hidden).toBe(false);
+      expect(root.querySelector<HTMLElement>('[data-library-panel="editor"]')?.hidden).toBe(true);
+      expect(source.value).toBe('unsaved current draft');
+      const stored = (await library.load()).sources[0]!;
+      const open = root.querySelector<HTMLButtonElement>(`[data-library-open-source="${stored.id}"]`)!;
+      open.click();
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(source.value).toBe('unsaved current draft');
+      expect(button('view-saved').getAttribute('aria-pressed')).toBe('true');
+      expect(confirmations).toBe(0);
+      expect(root.querySelector('[data-library-reader]')?.textContent).toContain('saved guard source');
+      button('library-load-source').click();
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(confirmations).toBe(1);
+      expect(source.value).toBe('unsaved current draft');
+      replace = true;
+      button('library-load-source').click();
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(source.value).toBe('saved guard source');
+      expect(button('view-editor').getAttribute('aria-pressed')).toBe('true');
+      expect(views.at(-1)).toBe('editor');
+      expect((await library.load()).sources).toHaveLength(1);
+    } finally {
+      await fixture.application.close();
+      dom.window.close();
+    }
+  });
   test('actor delivery: plaintext content findings keep the generated Actor downloadable and directly creatable',async()=>{
     const response:any=structuredClone(acceptedActor);delete response.result.artifactHash;
     response.result.status='failed';response.result.verification.status='failed';
@@ -123,7 +232,7 @@ describe('Forge Intake Application review workspace', () => {
       expect(x.application.generation.candidateResponse).toEqual(before);expect(x.application.snapshot).toEqual(snapshot);
       expect(x.application.reviewSource).toBe('original completed source');expect(x.root.downloadActor.disabled).toBe(false);
       x.root.downloadActor.onclick?.();expect(JSON.parse(downloads[0]!)).toEqual((before as any).result.artifact);
-      expect(x.notifications.errors.some(message=>message.includes('此前候选完整保留'))).toBe(true);
+      expect(x.notifications.errors.some(message=>message.includes('已有结果已保留'))).toBe(true);
     }finally{await x.application.close();}
   });
   test('actor delivery: reading an existing large Actor does not reuse the new-write storage quota',async()=>{
@@ -167,7 +276,7 @@ describe('Forge Intake Application review workspace', () => {
     expect(context).toMatchObject({ directoryTitle: '物品工作台', isActorDirectory: false, isItemDirectory: true, initialMode: 'ai-item' });
     expect(root.mode.value).toBe('ai-item');
     expect(root.previewSection.hidden).toBe(true);
-    expect(root.status.textContent).toBe('等待输入资料');
+    expect(root.status.textContent).toBe('');
     root.mode.value = 'ai-monster';
     root.mode.onchange?.();
     expect(root.mode.value).toBe('ai-item');
@@ -498,7 +607,7 @@ describe('Forge Intake Application review workspace', () => {
     await pending;
     expect((application as any).status).toBe('failed');
     expect(root.cancel.hidden).toBe(true);
-    expect(root.diagnosticList.innerHTML).toContain('INTAKE_CANCELLED');
+    expect(root.diagnosticList.innerHTML).toContain('已取消，可以重新开始');
     await application.close();
   });
 
@@ -545,7 +654,7 @@ describe('Forge Intake Application review workspace', () => {
   test('keeps the stage renderer selectors aligned with the Forge Intake template', () => {
     const template = readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-intake.hbs', 'utf8');
     for (const selector of [
-      'forge-workspace"', 'data-workspace-scroll', 'data-advanced-workspace',
+      'forge-workspace"', 'data-workspace-scroll', 'data-library-panel="saved"', 'data-library-panel="batch"',
       'data-step="input"', 'data-step="review"', 'data-step="created"',
       'data-step-indicator="input"', 'data-step-indicator="review"', 'data-step-indicator="created"',
       'data-workspace-hint', 'data-created-document',
@@ -573,12 +682,12 @@ describe('Forge Intake Application review workspace', () => {
     await (application as any).analyze(root);
     await (application as any).generate(root);
     expect(root.humanPreview.innerHTML).toContain('夜魇');
-    expect(root.humanPreview.innerHTML).toContain('136 / 136');
+    expect(root.humanPreview.innerHTML).toContain('136（16d10+48）');
     expect(root.humanPreview.innerHTML).toContain('16');
     await (application as any).create(root);
     expect(root.createdDocument.hidden).toBe(false);
-    expect(root.createdDocument.innerHTML).toContain('Actor.intake');
-    expect(root.createdDocument.innerHTML).toContain('世界中 Actor 1');
+    expect(root.createdDocument.innerHTML).toContain('生物已创建');
+    expect(root.createdDocument.innerHTML).not.toContain('Actor.intake');
     (application as any).openCreatedDocument();
     expect(renders).toBe(1);
   });
@@ -737,7 +846,7 @@ describe('Forge Intake Application review workspace', () => {
     expect((application as any).status).toBe('ready_for_gm_review');
     expect(root.modelReview.hidden).toBe(true);
     expect(root.create.disabled).toBe(false);
-    expect(root.humanSummary.textContent).toContain('AI 内容复核已暂时关闭');
+    expect(root.humanSummary.textContent).toBe('');
     await (application as any).reviewCandidate(root);
     expect(calls).toEqual({ generate: 1, review: 0, approve: 0, create: 0 });
     expect(root.diagnosticList.innerHTML).not.toContain('AI_WARNING');
@@ -947,9 +1056,9 @@ describe('Forge Intake Application review workspace', () => {
     expect(root.rawSource.textContent).toBe(source);
     expect(root.canonical.textContent).toBe(ACTOR_SOURCE);
     expect(root.diagnostics.hidden).toBe(false);
-    expect(root.diagnosticList.innerHTML).toContain('SOURCE_REVIEW_REQUIRED');
-    expect(root.humanSummary.textContent).toContain('这些问题不会阻止生成或创建');
-    expect(root.humanSummary.textContent).toContain('AI内容复核已暂停');
+    expect(root.diagnosticList.innerHTML).not.toContain('SOURCE_REVIEW_REQUIRED');
+    expect(root.humanSummary.textContent).toContain('请核对下方标记的内容');
+    expect(root.humanSummary.textContent).not.toContain('AI内容复核');
     expect(root.humanSummary.textContent).not.toContain('本地校验通过');
     expect(download.disabled).toBe(false);download.onclick?.();
     expect(downloads).toHaveLength(1);expect(downloads[0]!.fileName).toMatch(/^forge-actor-.+\.json$/u);
@@ -960,7 +1069,7 @@ describe('Forge Intake Application review workspace', () => {
     expect((application as any).generation.formalStatus).toBe('failed');
     expect((application as any).response.result.status).toBe('failed');
     expect(root.completionDiagnostics.hidden).toBe(false);
-    expect(root.completionIssues.innerHTML).toContain('SOURCE_REVIEW_REQUIRED');
+    expect(root.completionIssues.innerHTML).toContain('这份资料有规则需要对照原文');
     expect(notifications.errors).toEqual([]);
     await application.close();
   });
@@ -1043,7 +1152,7 @@ describe('Forge Intake Application review workspace', () => {
     root.source.oninput?.();
     expect((application as any).status).toBe('needs_review');
     expect((application as any).response).toBe(acceptedActor);
-    expect(root.diagnosticList.innerHTML).toContain('STALE_SNAPSHOT');
+    expect(root.diagnosticList.innerHTML).toContain('请重新预览');
     await (application as any).create(root);
     expect(creates).toBe(1);
   });
@@ -1122,7 +1231,7 @@ describe('Forge Intake Application review workspace', () => {
     await pending;
     expect((application as any).status).toBe('needs_review');
     expect((application as any).analysis).toBeUndefined();
-    expect(root.diagnosticList.innerHTML).toContain('STALE_SNAPSHOT');
+    expect(root.diagnosticList.innerHTML).toContain('请重新预览');
     expect(root.create.disabled).toBe(true);
   });
 
@@ -1141,7 +1250,7 @@ describe('Forge Intake Application review workspace', () => {
     await pending;
     expect((application as any).status).toBe('failed');
     expect((application as any).response).toBeUndefined();
-    expect(root.diagnosticList.innerHTML).toContain('INTAKE_CANCELLED');
+    expect(root.diagnosticList.innerHTML).toContain('已取消，可以重新开始');
     expect(root.create.disabled).toBe(true);
   });
 
@@ -1153,8 +1262,8 @@ describe('Forge Intake Application review workspace', () => {
     (application as any).providerActivity=activity;
     (application as any).renderResult(root);
     expect(root.activitySummary.textContent).toContain('已经接通');
-    expect(root.activityDetail.textContent).toContain('12 字节');
-    expect(root.activityDetail.textContent).toContain('不能证明模型已开始生成');
+    expect(root.activityDetail.textContent).toContain('上次收到回复');
+    expect(root.activityDetail.textContent).not.toContain('字节');
     expect(JSON.parse(root.metadata.textContent).providerObservation.receivedBytes).toBe(12);
     for(const [failureReason,label] of [['deadline_exceeded','等待上限'],['user_cancelled','主动取消'],
       ['connection_failed','连接失败'],['response_interrupted','回复接收中断'],['provider_incomplete','尚未完成'],['invalid_json','格式无法读取'],
@@ -1167,7 +1276,7 @@ describe('Forge Intake Application review workspace', () => {
     for(const [failureEvidenceStatus,label]of [['saved','现场已保存'],['save_failed','现场保存失败'],['not_configured','正文未保存'],['metadata_only','未提供回复正文']]){
       (application as any).providerActivity={...activity,phase:'failed',failureReason:'provider_error',failureEvidenceStatus};
       (application as any).renderResult(root);
-      expect(root.activityDetail.textContent).toContain(label);
+      expect(root.activityDetail.textContent).not.toContain('现场');
       expect(JSON.parse(root.metadata.textContent).providerObservation.failureEvidenceStatus).toBe(failureEvidenceStatus);
     }
   });
@@ -1197,14 +1306,15 @@ describe('Forge Intake Application review workspace', () => {
 
     expect(await providerOptions.waitPolicy.onDecision(status)).toBe('continue');
     expect((application as any).controller.signal.aborted).toBe(false);
-    expect(dialogs[0].content).toContain('浏览器无法证明远端模型是否仍在思考');
-    expect(dialogs[0].content).toContain('不会重发');
+    expect(dialogs[0].content).toContain('还在等待 AI 服务回复');
+    expect(dialogs[0].content).toContain('继续等');
+    expect(dialogs[0].content).not.toMatch(/HTTP|SSE|TCP|pending/);
     expect(dialogs[0].buttons.map((button: any) => button.action)).toEqual(['continue', 'stop']);
 
     expect(await providerOptions.waitPolicy.onDecision({ ...status, completedCycles: 8, decisionRound: 2 })).toBe('stop');
     await pending;
     expect((application as any).status).toBe('failed');
-    expect(root.diagnosticList.innerHTML).toContain('INTAKE_CANCELLED');
+    expect(root.diagnosticList.innerHTML).toContain('已取消，可以重新开始');
   });
 
   test('closes a stale wait dialog when the original request settles while it is open', async () => {
@@ -1348,8 +1458,8 @@ describe('Forge Intake Application review workspace', () => {
     expect((application as any).importedReview.bundle.status).toBe('accepted');
     expect((application as any).status).toBe('empty');
     expect(root.source.value).toBe('existing live draft');
-    expect(root.status.textContent).toContain('只读历史状态：accepted');
-    expect(root.humanSummary.textContent).toContain('不能直接 Confirm Create');
+    expect(root.status.textContent).toBe('历史记录');
+    expect(root.humanSummary.textContent).toContain('重新预览');
     expect(root.rawSource.textContent).toBe('Rat source');
     expect(root.json.textContent).toContain('不包含可提交的完整');
     expect(root.create.disabled).toBe(true);
@@ -1357,7 +1467,7 @@ describe('Forge Intake Application review workspace', () => {
     expect({ providerCalls, actorCreates, itemCreates }).toEqual({ providerCalls: 0, actorCreates: 0, itemCreates: 0 });
     (application as any).exportBundle(root);
     expect(JSON.parse(downloads[0]!.content).version).toBe(2);
-    expect(notifications.infos).toContain('Review bundle 已作为只读历史记录导入；历史状态为 accepted，不能直接创建。');
+    expect(notifications.infos).toContain('已打开历史记录。创建卡片前需恢复资料并重新预览。');
   });
 
   test('does not let imported hidden key-clear handlers mutate client settings', async () => {
@@ -1509,7 +1619,7 @@ describe('Forge Intake Application review workspace', () => {
     });
     root.reviewBundleFile.files = [reviewBundleFile(plaintextReviewBundleText())];
     await (application as any).importBundle(root);
-    expect(notifications.infos).toContain('Review bundle 已作为只读历史记录导入；历史状态为 needs_review，不能直接创建。');
+    expect(notifications.infos).toContain('已打开历史记录。创建卡片前需恢复资料并重新预览。');
     const oldRequestId = (application as any).importedReview.bundle.requestId;
     const oldAttemptId = (application as any).importedReview.bundle.attemptId;
 
@@ -1569,7 +1679,7 @@ describe('Forge Intake Application review workspace', () => {
     (application as any).startNewAttempt(root);
     expect((application as any).importedReview).toBeDefined();
     expect(root.source.value).toBe('live draft');
-    expect(notifications.errors.at(-1)).toMatch(/target.*不兼容/u);
+    expect(notifications.errors.at(-1)).toContain('其他系统版本');
   });
 
   test('requires an explicit non-empty display name before a recovered draft can analyze', async () => {
@@ -1636,9 +1746,9 @@ describe('Forge Intake Application review workspace', () => {
     const reviewId = (application as any).libraryState.reviews[0].id;
     (application as any).clear(root);
     expect((application as any).importedReview).toBeUndefined();
-    (application as any).openLibraryReview(root, reviewId);
-    expect((application as any).importedReview).toBeDefined();
-    expect(root.status.textContent).toBe('导入的只读历史状态：accepted');
+    (application as any).showLibraryEntry(root, 'review', reviewId);
+    expect((application as any).selectedLibraryReview()?.id).toBe(reviewId);
+    expect((application as any).importedReview).toBeUndefined();
     expect(root.create.disabled).toBe(true);
     await (application as any).create(root);
     expect(providerCalls).toBe(0);
@@ -1700,6 +1810,11 @@ describe('Forge Intake Application review workspace', () => {
       (application as any).renderBatch(root);
       expect(root.libraryList.innerHTML).toContain('Sensitive library label');
       expect(root.batchList.innerHTML).toContain('Sensitive batch label');
+      const visible = new JSDOM(root.libraryList.innerHTML + root.batchList.innerHTML);
+      try {
+        expect(visible.window.document.body.textContent).toContain('排队中');
+        expect(visible.window.document.body.textContent).not.toMatch(/\b(?:pending|plaintext-actor|sourceId|sourceHash|accepted)\b/u);
+      } finally { visible.window.close(); }
 
       if (drift === 'gm') game.user.isGM = false;
       else game.version = '14.365';
@@ -1761,7 +1876,7 @@ describe('Forge Intake Application review workspace', () => {
     try{
       await settleLibrary(x.application,x.root);expect(x.root.libraryList.innerHTML).toContain('Item record');
       x.game.user.isGM=false;x.hooks.call('updateUser');
-      expect(x.root.libraryList.innerHTML).toContain('metadata 已隐藏');expect(x.root.libraryRefresh.disabled).toBe(true);
+      expect(x.root.libraryList.innerHTML).toBe('');expect(x.root.libraryRefresh.disabled).toBe(true);
     }finally{await x.application.close();}
   });
   test('rechecks GM authority after async delete confirmation and preserves records on authority loss', async () => {
@@ -1991,9 +2106,9 @@ describe('Forge Intake Application review workspace', () => {
     const fixture = batchCandidateFixture('ai-monster', strictStatus);
     const queue = new ManagedForgeBatchQueue(new MemoryForgeBatchQueueStore());
     const { application, root, notifications } = makeApplication(fixture.services, undefined, undefined, async (dialog) => {
-      expect(dialog.content).toContain(`正式检查：${strictStatus}`);
-      expect(dialog.content).toContain('SOURCE_REVIEW_REQUIRED');
-      expect(dialog.content).toContain('不会标为 accepted');
+      expect(dialog.content).toContain('将创建 1 张卡片');
+      expect(dialog.content).toContain('这份资料有规则需要对照原文');
+      expect(dialog.content).not.toContain(strictStatus);
       return true;
     }, queue);
     await settleBatch(application, root);
@@ -2028,8 +2143,8 @@ describe('Forge Intake Application review workspace', () => {
     for (const status of ['reviewed_candidate', 'committing_and_reading_back']) {
       root.reviewBundleFile.files = [reviewBundleFile(JSON.stringify({ ...applied.latestReview, status }))];
       await application.importBundle(root);
-      expect(root.humanSummary.textContent).toContain(`历史流程状态：${status}`);
-      expect(root.humanSummary.textContent).toContain(`正式检查结论：${strictStatus}`);
+      expect(root.humanSummary.textContent).toContain('历史记录');
+      expect(root.humanSummary.textContent).toContain('重新预览');
       expect(root.humanSummary.textContent).not.toContain('显示 accepted');
       expect(root.create.disabled).toBe(true);
       await application.create(root);
@@ -2058,7 +2173,7 @@ describe('Forge Intake Application review workspace', () => {
     expect(fixture.counts.analyses).toBe(1);
     expect(second.root.batchApply.disabled).toBe(true);
     expect(second.root.batchRun.disabled).toBe(false);
-    expect(second.root.batchSummary.textContent).toContain('不会自动请求模型');
+    expect(second.root.batchSummary.textContent).toBe('1 组资料 · 1 项任务');
     await second.application.applyBatch(second.root);
     expect(fixture.counts.strictCreates).toBe(0);
     setAiForm(second.application, second.root, mode, '');
@@ -2133,7 +2248,7 @@ describe('Forge Intake Application review workspace', () => {
     await (application as any).refreshBatch(root, false);
     await (application as any).cancelBatchJob(root, state.jobs[0]!.id);
     expect((await batchQueue.load()).jobs.map((job) => job.status)).toEqual(['cancelled', 'pending']);
-    expect(root.batchList.innerHTML).toContain('恢复为 pending');
+    expect(root.batchList.innerHTML).toContain('重新排队');
 
     await (application as any).runBatch(root);
     state = await batchQueue.load();
@@ -2183,9 +2298,63 @@ describe('Forge Intake Application review workspace', () => {
     expect(state.jobs.map((job) => job.status)).toEqual(['pending', 'accepted']);
     expect(state.jobs.map((job) => job.attemptCount)).toEqual([0, 1]);
     expect((await sourceLibrary.load()).reviews).toHaveLength(1);
-    expect(notifications.infos).toContainEqual(expect.stringContaining('本轮跳过该 pending job'));
+    expect(notifications.infos).toContainEqual(expect.stringContaining('需要先配置 AI 连接，已暂时跳过'));
     expect(providers).toBe(0);
     expect(creates).toBe(0);
+  });
+
+  test('restores the exact standard batch card after reopening, with a hash-checked path for older results', async () => {
+    const batchQueue = new ManagedForgeBatchQueue(new MemoryForgeBatchQueueStore());
+    const candidateStore = new MemoryIntakeCandidateStore();
+    const rawSource = [
+      '# **夜魇 (Nightgaunt)**', '_大型异怪，混乱邪恶_',
+      '**护甲等级 (Armor Class)**：16\n**先攻 (Initiative)**：+8\n**生命值 (Hit Points)**：136（16d10 + 48）\n**速度 (Speed)**：30 尺，飞行 40 尺',
+      '|STR|DEX|CON|INT|WIS|CHA|\n|---|---|---|---|---|---|\n|17 (+3)|20 (+5)|16 (+3)|13 (+1)|10 (+0)|10 (+0)|',
+      '**挑战等级 (Challenge)**：8（3,900 XP）',
+      '### 动作 (Actions)\n\n- **爪击 Claw**：近战攻击检定 +8，触及 5 尺。命中：13（2d8 + 4）挥砍伤害。',
+    ].join('\n\n');
+    await batchQueue.importCollection(createForgeBatchCollection({
+      label: 'Standard batch history',
+      entries: [{ objectKind: 'actor', mode: 'plaintext-actor', sourceLabel: 'Nightgaunt', rawSource }],
+    }));
+    const initial = makeApplication({}, undefined, undefined, undefined, batchQueue, { candidateStore });
+    await settleBatch(initial.application, initial.root);
+    await initial.application.runBatch(initial.root);
+    const before = await batchQueue.load();
+    const job = before.jobs[0]!;
+    expect(job.status, JSON.stringify(initial.notifications)).toBe('accepted');
+    const generated = initial.application.batchResponses.get(job.id).response;
+    expect((await candidateStore.load())[job.id]?.mode).toBe('plaintext-actor');
+
+    let conversions = 0;
+    const reopen = (store: IntakeCandidateStore) => makeApplication({
+      convertFinalActorSource: async (...args) => {
+        conversions += 1;
+        return convertFinalActorSource(...args);
+      },
+    }, undefined, undefined, undefined, batchQueue, { candidateStore: store });
+    const reopened = reopen(candidateStore);
+    await settleBatch(reopened.application, reopened.root);
+    expect(reopened.application.batchResponses.get(job.id)?.response).toEqual(generated);
+    expect(reopened.application.batchApplyCandidates(before)).toEqual([]);
+    expect(reopened.application.batchJobRunnable(job)).toBe(true);
+    expect(conversions).toBe(0);
+
+    const legacy = reopen(new MemoryIntakeCandidateStore());
+    await settleBatch(legacy.application, legacy.root);
+    expect(legacy.application.batchResponses.has(job.id)).toBe(false);
+    await legacy.application.restoreEarlierPlaintextCard(legacy.root, legacy.application.batchState, job);
+    expect(legacy.application.batchResponses.get(job.id)?.response.result.artifact).toEqual(generated.result.artifact);
+    expect(legacy.application.batchApplyCandidates(before)).toEqual([]);
+    expect(conversions).toBe(1);
+    expect(await batchQueue.load()).toEqual(before);
+
+    const mismatched = makeApplication({
+      convertFinalActorSource: async () => acceptedActor,
+    }, undefined, undefined, undefined, batchQueue);
+    await settleBatch(mismatched.application, mismatched.root);
+    await mismatched.application.restoreEarlierPlaintextCard(mismatched.root, mismatched.application.batchState, job);
+    expect(mismatched.application.batchResponses.has(job.id)).toBe(false);
   });
 
   test('routes a mixed accepted batch through the type-specific adapters and reports partial apply failure per job', async () => {
@@ -2458,7 +2627,7 @@ describe('explicit creature source routing and complete ordinary candidate refre
       await settleBatch(x.application,x.root);setAiForm(x.application,x.root,'ai-monster',f.source);
       await x.application.runAnalysis(x.root,false);await x.application.generate(x.root);
       expect(x.application.generation.candidateAvailable).toBe(true);expect(x.root.humanPreview.innerHTML).toContain(note);
-      expect(x.root.humanPreview.innerHTML).toContain('伤害易伤备注');expect(x.root.create.disabled).toBe(false);
+      expect(x.root.humanPreview.innerHTML).toContain('>易伤</dt>');expect(x.root.create.disabled).toBe(false);
       expect(f.counts).toEqual({discover:0,extract:0,create:0});
     }finally{await x.application.close();}
   });
@@ -2512,7 +2681,8 @@ describe('explicit creature source routing and complete ordinary candidate refre
         expect(x.application.generation).toEqual(before.generation);expect(x.root.create.disabled).toBe(false);
         expect(x.root.downloadActor.disabled).toBe(false);expect(x.notifications.errors).toEqual([]);
       }
-      expect(prompts[0].content).toContain('当前浏览器');expect(prompts[0].content).toContain('全部单条和批量候选恢复记录');
+      expect(prompts[0].window.title).toBe('清除自动保存的预览');
+      expect(prompts[0].content).toContain('当前浏览器');expect(prompts[0].content).toContain('包括单份资料和批量处理的预览');
       expect(x.notifications.infos.at(-1)).toContain('已清除');expect(f.counts.create).toBe(0);
     }finally{await x.application.close();}
   });
@@ -2539,8 +2709,8 @@ describe('explicit creature source routing and complete ordinary candidate refre
     expect(first.application.generation.candidateHash).toBe(previous.candidateHash);
     expect(first.application.generation.analysis.ir).toEqual(previous.analysis.ir);
     expect(first.application.generation.findings).toContainEqual(expect.objectContaining({code:outcome==='thrown failure'?'GENERATION_ATTEMPT_FAILED':'CUSTOM_RENDER_INCOMPLETE'}));
-    if(outcome==='thrown failure')expect(first.notifications.errors.some((message:string)=>message.includes('此前候选完整保留'))).toBe(true);
-    else expect(first.root.diagnosticList.innerHTML).toContain('CUSTOM_RENDER_INCOMPLETE');
+    if(outcome==='thrown failure')expect(first.notifications.errors.some((message:string)=>message.includes('已有结果已保留'))).toBe(true);
+    else expect(first.root.diagnosticList.innerHTML).toContain('部分规则需要手动填写');
     expect(first.root.create.disabled).toBe(false);
     expect(first.root.downloadActor.disabled).toBe(false);expect(first.root.downloadActor.hidden).toBe(false);
     expect(f.counts).toEqual({discover:0,extract:1,create:0});
@@ -2753,6 +2923,7 @@ describe('explicit creature source routing and complete ordinary candidate refre
     const before = (await queue.load()).jobs[0]!;
     const saved = (await store.load())[before.id]!;
     expect(saved, JSON.stringify(first.notifications)).toBeDefined();
+    if (saved.mode === 'plaintext-actor') throw Error('Expected an AI batch candidate');
     expect(saved.input.sourceScope).toBe(mode === 'ai-monster' ? 'discover' : undefined);
     expect((saved.candidate.analysis as any).sourceScope).toBe(mode === 'ai-monster' ? 'discover' : undefined);
     if (mode === 'ai-monster') expect(f.actorScopes).toEqual(['discover']);

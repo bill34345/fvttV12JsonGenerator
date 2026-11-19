@@ -46,7 +46,10 @@ const DEFAULT_SERVICES: ForgeConnectionApplicationServices = {
   discoverForgeProviderModels,
 };
 
-const PROVIDER_OPTIONS = FORGE_PROVIDER_PRESETS.map(preset => ({ value: preset.id, label: preset.label }));
+const PROVIDER_OPTIONS = FORGE_PROVIDER_PRESETS.map(preset => ({
+  value: preset.id,
+  label: preset.id === 'custom' ? '自定义服务' : preset.label,
+}));
 
 export function createForgeConnectionApplicationClass(environment: ForgeConnectionApplicationEnvironment): any {
   const foundryGlobal = environment.foundry ?? (globalThis as any).foundry;
@@ -204,7 +207,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
         });
         return await this.services.discoverForgeProviderModels(connection, { signal });
       } catch {
-        return { status: 'configuration', models: [], message: '请检查 Provider、区域和 HTTPS 地址后再刷新列表。' };
+        return { status: 'configuration', models: [], message: '请检查服务商、区域和接口地址后刷新列表。' };
       }
     }
 
@@ -250,8 +253,8 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
           const current = readForgeSessionSettings();
           if (sameConnection(form, current)) markForgeSessionConnectionTested();
           this.setStatus(root, 'success', sameConnection(form, current)
-            ? '连接测试通过，当前配置已验证，可供 Forge Intake 使用。'
-            : '连接测试通过；请点击“保存配置”后供其他 Forge 窗口使用。');
+            ? '连接可用。'
+            : '连接可用，请保存配置。');
           environment.ui?.notifications?.info?.(result.message);
         } else {
           this.testedDraftIdentity = '';
@@ -287,10 +290,10 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
         this.settings = saved;
         if (testedDraftMatches && connectionIdentity(saved) === connectionIdentity(form)) {
           markForgeSessionConnectionTested();
-          this.setStatus(root, 'success', '配置已保存，连接测试仍然有效；Forge Intake 可以直接使用。');
+          this.setStatus(root, 'success', '配置已保存，可以开始使用 AI 整理。');
         } else {
           this.testedDraftIdentity = '';
-          this.setStatus(root, 'info', '配置已保存。请测试当前连接后再开始 AI Intake。');
+          this.setStatus(root, 'info', '配置已保存，请测试连接。');
         }
         this.fillSettings(root);
         this.refreshProviderUi(root);
@@ -349,7 +352,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
         const preset = getForgeProviderPreset(provider);
         endpoint.value = preset.regions?.find(region => region.id === inputValue(root, 'region'))?.baseUrl ?? preset.defaultBaseUrl;
       }
-      if (button) button.textContent = endpoint.readOnly ? '自定义 endpoint' : '使用官方 endpoint';
+      if (button) button.textContent = endpoint.readOnly ? '自定义地址' : '使用官方地址';
       const key = root.querySelector('[name="apiKey"]') as HTMLInputElement | null;
       if (key) key.value = '';
       this.modelPicker?.reset();
@@ -371,7 +374,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       setValue(root, 'authScheme', settings.authScheme);
       setValue(root, 'region', settings.region);
       const { reasoning } = resolveForgeProviderCapabilities(settings.providerId, settings.protocol, settings.model);
-      populateSelect(root, 'reasoning', reasoning.map(value => ({ value, label: value === 'auto' ? 'Auto' : value })), settings.reasoning, false);
+      populateSelect(root, 'reasoning', reasoning.map(value => ({ value, label: reasoningLabel(value) })), settings.reasoning, false);
       setValue(root, 'reasoning', settings.reasoning);
       setValue(root, 'structuredOutput', settings.structuredOutput);
     }
@@ -386,7 +389,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       populateSelect(root, 'protocol', preset.protocols.map((value) => ({ value, label: protocolLabel(value) })), protocol, false);
       populateSelect(root, 'authScheme', preset.authSchemes.map((value) => ({ value, label: authSchemeLabel(value) })), inputValue(root, 'authScheme'), false);
       populateSelect(root, 'region', (preset.regions ?? []).map((value) => ({ value: value.id, label: value.label })), inputValue(root, 'region'), true, '默认');
-      populateSelect(root, 'reasoning', capabilities.reasoning.map((value) => ({ value, label: value === 'auto' ? 'Auto' : value })), inputValue(root, 'reasoning') || 'auto', false);
+      populateSelect(root, 'reasoning', capabilities.reasoning.map((value) => ({ value, label: reasoningLabel(value) })), inputValue(root, 'reasoning') || 'auto', false);
       populateSelect(root, 'structuredOutput', capabilities.structuredOutput.map((value) => ({ value, label: structuredOutputLabel(value) })), inputValue(root, 'structuredOutput'), false);
       const endpoint = root.querySelector('[name="endpoint"]') as HTMLInputElement | null;
       const endpointToggle = root.querySelector('[data-action="toggle-endpoint"]') as HTMLButtonElement | null;
@@ -401,7 +404,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       } else if (endpoint) {
         endpoint.readOnly = false;
       }
-      if (endpointToggle) endpointToggle.textContent = endpoint?.readOnly ? '自定义 endpoint' : '使用官方 endpoint';
+      if (endpointToggle) endpointToggle.textContent = endpoint?.readOnly ? '自定义地址' : '使用官方地址';
       const docs = root.querySelector('[data-provider-docs]') as HTMLAnchorElement | null;
       if (docs) {
         docs.hidden = !preset.docsUrl;
@@ -428,7 +431,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
       const ready = same && isForgeSessionConnectionReady();
       if (status && !this.testing) {
         if (this.statusOverride) setStatusElement(status, this.statusOverride.kind, this.statusOverride.message);
-        else if (ready) setStatusElement(status, 'success', '连接已验证，可供 Forge Intake 使用。');
+        else if (ready) setStatusElement(status, 'success', '连接可用。');
         else if (this.testedDraftIdentity === connectionIdentity(form)) setStatusElement(status, 'success', same
           ? '连接测试通过，点击“保存配置”后供其他 Forge 窗口使用。'
           : '连接测试通过；当前配置尚未保存。');
@@ -437,7 +440,7 @@ export function createForgeConnectionApplicationClass(environment: ForgeConnecti
         else if (!same) setStatusElement(status, 'info', '配置尚未保存，可先测试，也可保存后再测试。');
         else setStatusElement(status, 'info', '尚未测试当前连接。');
       } else if (status && this.testing) {
-        setStatusElement(status, 'pending', '正在测试连接并验证结构化输出…');
+        setStatusElement(status, 'pending', '正在测试连接…');
       }
       if (save) save.disabled = this.testing || !form.model.trim();
       if (test) test.disabled = this.testing || !form.model.trim() || (form.authScheme !== 'none' && !form.apiKey);
@@ -599,11 +602,16 @@ function authSchemeLabel(value: ForgeProviderAuthScheme): string {
   return 'Bearer';
 }
 
+function reasoningLabel(value: ForgeProviderReasoning): string {
+  const labels: Record<string, string> = { auto: '自动', none: '关闭', minimal: '最低', low: '低', medium: '中', high: '高', xhigh: '最高', max: '最大' };
+  return labels[value] ?? value;
+}
+
 function structuredOutputLabel(value: ForgeStructuredOutputMode): string {
-  if (value === 'json_schema') return 'JSON Schema';
-  if (value === 'json_object') return 'JSON Object';
-  if (value === 'provider_schema') return 'Provider Schema';
-  return '严格 Prompt JSON fallback';
+  if (value === 'json_schema') return '严格结构';
+  if (value === 'json_object') return '基础结构';
+  if (value === 'provider_schema') return '服务商格式';
+  return '文字约束';
 }
 
 function messageOf(error: unknown): string {

@@ -1,4 +1,5 @@
 import {legacyStagedProvider} from './helpers/forge-legacy-provider';
+import { fakeWorldFolders } from './helpers/forge-world-folders';
 import {test,expect} from 'bun:test';
 import fixture from './fixtures/forge-angel-chm-recorded-base.json';
 import vengeance from './fixtures/forge-vengeance-chm-recorded-base.json';
@@ -118,7 +119,7 @@ function lifecycleWorld(options:{drift?:boolean;failMacro?:boolean;failRelease?:
       for(const item of d.data.items)for(const a of Object.values(item.system.activities) as any[])if(typeof a.description?.chatFlavor==='string')a.description.chatFlavor=a.description.chatFlavor.trim();
     }return d;
   }}};}
-  const game:any={version:'14.368',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro')};
+  const game:any={version:'14.368',system:{id:'dnd5e',version:'6.0.6'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro'),folders:fakeWorldFolders()};
   return{game,events,scheduled,resolved,assets:{ensure:async()=>{throw Error('No assets expected');}}};
 }
 test('actual caster import verifies first and releases Resolver on the persisted metadata update',async()=>{

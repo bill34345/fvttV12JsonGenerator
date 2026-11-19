@@ -22,6 +22,7 @@
     "./encounter-preparation": "./src/encounterPreparation.ts",
     "./encounter-intake": "./src/encounterIntake.ts",
     "./item-intake": "./src/itemIntake.ts",
+    "./spell": "./src/spell.ts",
     "./plaintext": "./src/plaintext.ts",
     "./provider-connections": "./src/providerConnections.ts",
     "./creature-blueprint": "./src/creatureBlueprint.ts"

@@ -17,18 +17,19 @@ import {
 
 import { isForgeCoreVersionSupported, isForgeRuntimeTargetSupported } from './mirror-core-compatibility';
 import { isNativeForgeRuntimeTargetSupported } from '@fvtt-json-generator/forge-browser-runtime';
-import { FORGE_SPELL_IMPORT_PHASE, isForgeSpellImportPending } from '@fvtt-json-generator/contracts/forge-import-lifecycle';
+import { FORGE_IMPORT_FLAG_SCOPE, FORGE_SPELL_IMPORT_PHASE, isForgeSpellImportPending } from '@fvtt-json-generator/contracts/forge-import-lifecycle';
 import { RESOLVER_MODULE_ID } from '@fvtt-json-generator/spell-manifest-contracts';
 import {parseFragment, serialize} from 'parse5';
 import { isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
 import { FOUNDRY_V14_CORE_VERSION, DND5E_V14_SYSTEM_VERSION } from '@fvtt-json-generator/contracts/target';
+import { resolveForgeWorldFolder, type ForgeArchiveGame } from './worldFolder';
 
-export const MODULE_ID = 'fvtt-json-forge' as const;
+export const MODULE_ID = FORGE_IMPORT_FLAG_SCOPE;
 export const EXPECTED_FOUNDRY_VERSION = FOUNDRY_V14_CORE_VERSION;
 export const EXPECTED_SYSTEM_ID = 'dnd5e' as const;
 export const EXPECTED_SYSTEM_VERSION = DND5E_V14_SYSTEM_VERSION;
 
-export interface ForgeGameLike {
+export interface ForgeGameLike extends ForgeArchiveGame {
   version?: string;
   system?: { id?: string; version?: string };
   user?: { id?: string; isGM?: boolean };
@@ -206,6 +207,7 @@ async function createForgeActorDocument(
     throw new Error(`The deterministic Forge Actor ID ${documentId} is already occupied by another world Actor. Existing Actor was not changed.`);
   }
 
+  worldCreateData.folder = await resolveForgeWorldFolder(input.game, 'Actor', worldCreateData.folder);
   let created: ForgeActorLike | undefined;
   let cleanupRequired = true;
   try {

@@ -4,7 +4,7 @@ import { cropPdfArt, renderPdfArtPage, type ArtRect, type PdfArtPage } from './p
 import type { ForgeItemPdfInputReceipt } from './pdfInput';
 
 export const DEFAULT_ITEM_ICON = 'icons/svg/item-bag.svg';
-type IconChoice = { path: string; png?: Uint8Array };
+export type IconChoice = { path: string; png?: Uint8Array };
 
 /** Prefer one illustration wholly inside the item's own area, away from other entries. */
 export function findItemPdfIllustration(page: ForgeItemPdfInputReceipt['artPages'][number], ids: readonly string[], candidates: readonly {rect: ArtRect}[]): number | undefined {
@@ -81,32 +81,41 @@ export class ItemIconEditor {
   }
 
   mount(panel: HTMLElement | null, response: ForgeItemResponse | undefined, locked: boolean, foundry: any, changed: () => void): void {
-    if (!panel) return;
     const result = response && 'result' in response && response.result.status === 'accepted' ? response.result : undefined;
-    panel.hidden = !result;
-    if (!result) return;
-    this.locked = locked;
-    const authoredArt = result.iconReview?.entries.some(entry => entry.itemName === result.itemDocument.name
+    const authoredArt = result?.iconReview?.entries.some(entry => entry.itemName === result.itemDocument.name
       && (entry.source === 'existing' || entry.source === 'override') && entry.selectedPath === result.artifact.img);
-    this.initialPath = authoredArt ? String(result.artifact.img) : DEFAULT_ITEM_ICON;
+    this.mountSelection(panel, result ? {
+      initialPath: authoredArt ? String(result.artifact.img) : DEFAULT_ITEM_ICON,
+      resetPath: DEFAULT_ITEM_ICON,
+    } : undefined, locked, foundry, changed);
+  }
+
+  mountSelection(panel: HTMLElement | null, art: { initialPath: string; resetPath?: string } | undefined,
+    locked: boolean, foundry: any, changed: () => void): void {
+    if (!panel) return;
+    panel.hidden = !art;
+    if (!art) return;
+    this.locked = locked;
+    this.initialPath = art.initialPath;
     if (panel !== this.panel) {
       this.panel = panel;
-      panel.innerHTML = `<h4>物品图标</h4>
-        <div class="forge-item-icon-row">
-          <img data-icon-image alt="物品图标预览">
-          <div class="forge-item-icon-actions">
-            <label>上传图片 <input type="file" data-icon-file accept="image/png,image/jpeg,image/webp"></label>
-            <button type="button" data-icon-library>从图库选择</button>
+      const actions = `<div class="forge-item-icon-actions">
+            <label class="forge-icon-upload">上传图片 <input type="file" data-icon-file accept="image/png,image/jpeg,image/webp"></label>
+            <button type="button" data-icon-library>图库</button>
             <button type="button" data-icon-pdf>从 PDF 选图</button>
-            <button type="button" data-icon-default>使用默认图标</button>
-          </div>
-        </div>
-        <div data-icon-pdf-controls hidden>
+            <button type="button" data-icon-default>${art.resetPath ? '使用默认图标' : '恢复系统选图'}</button>
+          </div>`;
+      const pdf = `<div data-icon-pdf-controls hidden>
           <label>PDF 页码 <input type="number" min="1" data-icon-page-number></label>
           <div data-icon-pdf-choices></div>
           <div class="forge-item-icon-page" data-icon-page></div>
         </div>
         <p data-icon-status role="status" aria-live="polite"></p>`;
+      const image = '<img data-icon-image alt="卡片图标">';
+      panel.innerHTML = panel.classList.contains('forge-card-art')
+        ? `<div class="forge-item-icon-row">${image}</div>
+          <details><summary>更换图标</summary><div class="forge-card-art-options">${actions}${pdf}</div></details>`
+        : `<div class="forge-item-icon-row">${image}${actions}</div>${pdf}`;
     }
     const get = <T extends HTMLElement>(key: string) => panel.querySelector<T>(`[data-icon-${key}]`)!;
     const fileInput = get<HTMLInputElement>('file');
@@ -115,6 +124,7 @@ export class ItemIconEditor {
       get<HTMLImageElement>('image').src = this.previewUrl ?? this.selection.path;
       get('status').textContent = this.status;
       get<HTMLButtonElement>('pdf').hidden = !this.pdf;
+      get<HTMLButtonElement>('default').hidden = !this.choice;
       get('pdf-controls').hidden = !this.showingPdf;
       for (const control of panel.querySelectorAll<HTMLInputElement | HTMLButtonElement>('input,button')) control.disabled = this.locked;
       get<HTMLButtonElement>('library').hidden = typeof Picker !== 'function';
@@ -166,8 +176,8 @@ export class ItemIconEditor {
     get<HTMLButtonElement>('default').onclick = () => {
       this.controller?.abort();
       this.busy = false;
-      this.replace({ path: DEFAULT_ITEM_ICON });
-      this.status = '已使用默认图标。';
+      this.replace({ path: art.resetPath ?? art.initialPath });
+      this.status = art.resetPath ? '已使用默认图标。' : '已恢复系统选图。';
       notifyChange();
     };
     const pageInput = get<HTMLInputElement>('page-number');

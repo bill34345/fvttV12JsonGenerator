@@ -1545,9 +1545,9 @@ function showPanel(env: EncounterAutomationEnvironment, options: EncounterAutoma
   for (const actorKey of new Set([...locks, ...manuals].map((rule) => rule.actorKey))) {
     const bound = actors.get(actorKey);
     const tokens = (env.canvas?.tokens?.placeables ?? []).filter((token: any) => token?.actor && sameActor(token.actor, bound, options.bindings[actorKey]!));
-    const variants = tokens.length ? tokens.map((token: any) => ({ actor: token.actor, token,
-      label: `${token.name ?? token.actor.name ?? actorKey} · Token ${token.id}` }))
-      : [{ actor: bound, label: `${bound?.name ?? actorKey}（世界 Actor；当前场景无来源 Token）` }];
+    const variants = tokens.length ? tokens.map((token: any, index: number) => ({ actor: token.actor, token,
+      label: `${token.name ?? token.actor.name ?? '未命名生物'}${tokens.length > 1 ? ` · 场景棋子 ${index + 1}` : ''}` }))
+      : [{ actor: bound, label: `${bound?.name ?? '未命名生物'}（当前场景没有棋子）` }];
     for (const variant of variants) sources.push({ actorKey, ...variant,
       abilities: locks.filter((rule) => rule.actorKey === actorKey).flatMap((rule) => rule.parameters.activityItemNames.map((itemName) => ({ ruleId: rule.id, itemName }))),
       manuals: manuals.filter((rule) => rule.actorKey === actorKey) });
@@ -1557,23 +1557,22 @@ function showPanel(env: EncounterAutomationEnvironment, options: EncounterAutoma
     <p class="forge-encounter-control-identity" data-source-identity></p>
   </section>` : '';
   const lockContent = locks.length ? `<section class="forge-encounter-control-section" data-lock-section>
-    <h2>能力可用性</h2><p>GM 确认来源条件后选择具体能力；本控制器不判断 Bloodied、重击或随机结果。恢复须由 GM 明确操作。</p>
+    <h2>能力可用性</h2><p>请根据规则判断禁用或恢复哪些能力。</p>
     <label>能力<select data-lock-ability></select></label>
     <div class="forge-encounter-control-action"><p data-lock-state aria-live="polite"></p><button type="button" data-lock-toggle>禁用</button></div>
     <p class="forge-encounter-control-error" data-lock-error role="alert" hidden></p>
     <details><summary>全部能力与状态</summary><ul data-lock-inventory></ul></details>
-    <p class="forge-encounter-control-note">非链接 Token 状态独立；链接 Token 共享世界 Actor 状态。无来源 Token 时不能更改可用性。</p>
+    <p class="forge-encounter-control-note">链接到同一角色的棋子共享状态。非链接棋子的状态各自独立。</p>
   </section>` : '';
   const manualContent = manuals.length ? `<section class="forge-encounter-control-section" data-manual-section><h2>GM 裁定</h2>
-    <p>这里只打开原生 Item 规则；不会自动执行、施加状态或扣资源。</p>
+    <p>查看规则后，由 GM 手动处理效果和资源。</p>
     <label>规则<select data-manual-rule></select></label>
     <div class="forge-encounter-control-action"><p data-manual-identity></p><button type="button" data-manual-view>查看规则</button></div>
     <p class="forge-encounter-control-error" data-manual-error role="alert" hidden></p>
   </section>` : '';
-  const content = `<div class="forge-encounter-control" data-encounter-panel><p class="forge-encounter-control-intro">固定规则控制器已启用。未列出的能力继续使用原生 dnd5e 活动；来源未写出的裁定由 GM 确认。</p>
+  const content = `<div class="forge-encounter-control" data-encounter-panel>
     ${sourceContent}${lockContent}${manualContent}${wardContent}
-    <details class="forge-encounter-control-section"><summary>已绑定规则（${options.config.rules.length}）</summary><ul>${details}</ul></details>
-    <p class="forge-encounter-control-events">事件摘要：已记录 ${history.length} 条有界事件。</p></div>`;
+    <details class="forge-encounter-control-section"><summary>包含的规则</summary><ul>${details}</ul></details></div>`;
   const DialogV2 = env.DialogV2 ?? env.foundry?.applications?.api?.DialogV2;
   if (!DialogV2) return { content };
   let sourceIndex = 0; let abilityKey = ''; let manualKey = '';
@@ -1708,7 +1707,7 @@ function showPanel(env: EncounterAutomationEnvironment, options: EncounterAutoma
       root.addEventListener('toggle', () => this.setPosition(), true);
       refresh();
     }
-  }({ classes: ['fvtt-json-forge', 'forge-encounter-control-window'], position: { width: 720 }, window: { title: 'FVTT JSON Forge · 战斗控制', resizable: true }, content, buttons: [
+  }({ classes: ['fvtt-json-forge', 'forge-encounter-control-window'], position: { width: 720 }, window: { title: 'Forge · 战斗控制', resizable: true }, content, buttons: [
     { action: 'stop', label: '停用自动化', callback: async () => {
       const stop = env.game?.modules?.get?.(ENCOUNTER_AUTOMATION_FLAG_SCOPE)?.api?.stopEncounterAutomation;
       if (typeof stop !== 'function') {

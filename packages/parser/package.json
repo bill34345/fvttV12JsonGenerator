@@ -21,6 +21,7 @@
     "./normalize": "./src/normalize.ts",
     "./resource-semantics": "./src/resourceSemantics.ts",
     "./species-parser": "./src/speciesParser.ts",
+    "./spell-source": "./src/spellParser.ts",
     "./species-router": "./src/speciesRouter.ts",
     "./router": "./src/router.ts",
     "./structured-action": "./src/structuredAction.ts",

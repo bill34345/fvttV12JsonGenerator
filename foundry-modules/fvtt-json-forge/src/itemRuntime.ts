@@ -21,6 +21,7 @@ import {
   type ForgeGameLike,
 } from './runtime';
 import { nativeProjectionForGame } from './nativeProjection';
+import { resolveForgeWorldFolder } from './worldFolder';
 
 export interface ForgeItemLike {
   id?: string;
@@ -169,6 +170,8 @@ export async function createAcceptedForgeItem(
 
   const createDocument = collection.documentClass?.create;
   if (typeof createDocument !== 'function') throw new Error('Foundry Item documentClass.create() is unavailable.');
+  const folder = await resolveForgeWorldFolder(input.game, importArtifact.type === 'spell' ? 'Spell' : 'Item', importArtifact.folder);
+  const spellFolder = variants.some(variant => !variant.existing) ? await resolveForgeWorldFolder(input.game, 'Spell') : folder;
   if (icon?.png) await ensureForgeAsset(input.foundry, icon.path, icon.png, 'image/png', () => {
     assertGm(input.game);
     assertExactRuntime(input.game);
@@ -179,13 +182,13 @@ export async function createAcceptedForgeItem(
   try {
     for (const variant of variants) {
       if (variant.existing) continue;
-      const spell = await createDocument.call(collection.documentClass, structuredClone(variant.artifact), { renderSheet: false, keepId: true });
+      const spell = await createDocument.call(collection.documentClass, { ...structuredClone(variant.artifact), folder: spellFolder }, { renderSheet: false, keepId: true });
       if (!spell) throw new Error('Foundry 未返回新建的专用法术。');
       createdSpells.push(spell);
       assertSpellVariantReadback(spell, variant.plan, variant.artifact);
     }
     try {
-      created = await createDocument.call(collection.documentClass, importArtifact, { renderSheet: false, keepId: true });
+      created = await createDocument.call(collection.documentClass, { ...importArtifact, folder }, { renderSheet: false, keepId: true });
     } catch (error) {
       const concurrent = findItemById(collection, documentId);
       const concurrentIdentity = concurrent && readForgeItemIdentity(concurrent);

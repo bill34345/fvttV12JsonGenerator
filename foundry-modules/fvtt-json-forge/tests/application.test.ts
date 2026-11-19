@@ -96,7 +96,7 @@ describe('Forge Actor Application lifecycle', () => {
 
     expect((application as any).response).toBeDefined();
     expect(root.preview.hidden).toBe(false);
-    expect(root.status.textContent).toBe('状态：文件读取失败，请重新选择来源文件。');
+    expect(root.status.textContent).toBe('文件读取失败，请重新选择来源文件。');
     expect(root.error.hidden).toBe(false);
     expect(notifications.errors).toContainEqual(expect.stringMatching(/Markdown.*TXT/u));
   });
@@ -258,7 +258,7 @@ describe('Forge Actor Application lifecycle', () => {
 
     const pending = (application as any).create();
     await createStarted.promise;
-    expect(root.status.textContent).toBe('状态：正在提交并重新读取核对（不可取消）。');
+    expect(root.status.textContent).toBe('正在创建生物…');
     expect(root.generate.disabled).toBe(true);
     expect(root.create.disabled).toBe(true);
     expect(root.cancel.disabled).toBe(true);
@@ -271,7 +271,7 @@ describe('Forge Actor Application lifecycle', () => {
 
     expect((application as any).creating).toBe(false);
     expect((application as any).response).toBe(accepted);
-    expect(root.status.textContent).toBe('状态：Actor 已创建并完成回读核对，可打开角色卡。');
+    expect(root.status.textContent).toBe('Actor 已创建并完成回读核对，可打开角色卡。');
     expect(root.generate.disabled).toBe(false);
     expect(root.create.disabled).toBe(false);
     expect(root.cancel.disabled).toBe(true);

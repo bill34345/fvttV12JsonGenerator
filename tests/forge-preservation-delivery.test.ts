@@ -1,4 +1,5 @@
-import {afterAll, beforeAll, expect, test} from 'bun:test';
+import {afterAll, beforeAll, expect, spyOn, test} from 'bun:test';
+import { fakeWorldFolders } from './helpers/forge-world-folders';
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {buildForgeActorRequest, convertFinalActorSource} from '@fvtt-json-generator/forge-browser-runtime';
@@ -60,7 +61,7 @@ function runtime(){
       }}};
     return api;
   };
-  const game:any={version:'14.370',system:{id:'dnd5e',version:'6.0.6'},world:{id:'preservation-fixture'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro')};
+  const game:any={version:'14.370',system:{id:'dnd5e',version:'6.0.6'},world:{id:'preservation-fixture'},user:{id:'gm',isGM:true},actors:collection('Actor'),macros:collection('Macro'),folders:fakeWorldFolders()};
   return{game,get executions(){return executions;},assets:{async ensure(){throw Error('No fixture asset upload expected.');}}};
 }
 function appFor(game:any,prepared:any):any{
@@ -137,8 +138,8 @@ for(const [name,breakArtifact] of [
   expect(prepared.actors).toHaveLength(2);
   const before=JSON.stringify(prepared.actors[1]!.artifact),app=appFor(runtime().game,prepared);
   const context=await app._prepareContext();
-  expect(context.actors).toHaveLength(2);
-  const normal=context.actors.find((actor:any)=>actor.key==='main'),partial=context.actors.find((actor:any)=>actor.key==='summon');
+  expect(context.npcSheets).toHaveLength(2);
+  const normal=context.npcSheets.find((actor:any)=>actor.key==='main'),partial=context.npcSheets.find((actor:any)=>actor.key==='summon');
   expect(normal.hp).toBe(response.result.artifact.system.attributes.hp.max);
   expect(normal.ac).toBe(response.result.artifact.system.attributes.ac.override);
   expect(normal.cr).toBe(response.result.artifact.system.details.cr);
@@ -146,21 +147,49 @@ for(const [name,breakArtifact] of [
   expect(normal.previewIssues).toEqual([]);
   expect(partial.previewIssues.length).toBeGreaterThan(0);
   if(name==='missing system'){expect(partial.hp).toBe('未提供');expect(partial.ac).toBe('未提供');expect(partial.cr).toBe('未提供');}
-  expect(JSON.parse(partial.artifact)).toEqual(broken);
   const html=Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(context),dom=new JSDOM(html);
-  const normalButton=dom.window.document.querySelector('[data-export-actor="main"]'),partialButton=dom.window.document.querySelector('[data-export-actor="summon"]');
-  expect(normalButton).not.toBeNull();expect(partialButton).not.toBeNull();
-  const partialCard=partialButton!.closest('details')!;
-  expect(partialCard.textContent).toContain('原始 Actor JSON 仍可查看和下载');
-  expect([...partialCard.querySelectorAll('pre code')].at(-1)!.textContent).toBe(JSON.stringify(broken,null,2));
+  const document=dom.window.document;
+  const partialCard=document.querySelector('[data-npc-sheet="summon"]')!;
+  expect(partialCard.textContent).toContain(partial.previewIssues[0]);
+  expect(partialCard.querySelector('.forge-npc-detail pre')?.textContent).toBe(source);
+  expect(document.querySelector('[data-export-actor="main"]')).not.toBeNull();
+  const partialButton=document.querySelector<HTMLButtonElement>('[data-export-actor="summon"]')!;
+  expect(partialButton).not.toBeNull();
+  app.element=document.querySelector('.forge-encounter-panel');
+  app._onRender();
+  const originalDocument=Object.getOwnPropertyDescriptor(globalThis,'document');
+  const link={href:'',download:'',click:()=>{clicks+=1;}};
+  let downloaded:Blob|undefined,clicks=0;
+  const createUrl=spyOn(URL,'createObjectURL').mockImplementation(blob=>{downloaded=blob as Blob;return'blob:forge-preserved-actor';});
+  try{
+    Object.defineProperty(globalThis,'document',{configurable:true,value:{createElement:()=>link}});
+    partialButton.click();
+    expect(link.download).toBe('summon.json');
+    expect(clicks).toBe(1);
+    expect(await downloaded?.text()).toBe(JSON.stringify(broken,null,2));
+  }finally{
+    createUrl.mockRestore();
+    if(originalDocument)Object.defineProperty(globalThis,'document',originalDocument);else Reflect.deleteProperty(globalThis,'document');
+    await app.close();
+    dom.window.close();
+  }
   expect(JSON.stringify(prepared.actors[1]!.artifact)).toBe(before);
 });
 
 test('preservation F09 display: complete cards and their source and export controls remain intact',async()=>{
   const raw=bundle(),prepared=await prepareForgeEncounter(JSON.stringify(raw)),app=appFor(runtime().game,prepared);
   const context=await app._prepareContext();
-  expect(context.actors).toHaveLength(2);
-  for(const card of context.actors){expect(card.previewIssues).toEqual([]);expect(card.source).toBe(source);expect(card.artifact).toBe(JSON.stringify(response.result.artifact,null,2));expect(card.abilities).toHaveLength(response.result.artifact.items.length);}
+  expect(context.npcSheets).toHaveLength(2);
+  const html=Handlebars.compile(readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-encounter.hbs','utf8'))(context),dom=new JSDOM(html);
+  try{
+    for(const card of context.npcSheets){
+      expect(card.previewIssues).toEqual([]);
+      const sheet=dom.window.document.querySelector(`[data-npc-sheet="${card.key}"]`)!;
+      expect(sheet.querySelector('.forge-npc-detail pre')?.textContent).toBe(source);
+      expect(sheet.querySelectorAll('.forge-npc-ability')).toHaveLength(response.result.artifact.items.length);
+      expect(dom.window.document.querySelector(`[data-export-actor="${card.key}"]`)).not.toBeNull();
+    }
+  }finally{dom.window.close();}
 });
 
 test('preservation F10: malformed fixed macros fail individually through the real App import and never execute',async()=>{

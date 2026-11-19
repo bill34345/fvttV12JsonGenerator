@@ -34,18 +34,18 @@ const BASIC_ACTOR_SOURCE = `---
 describe('Forge Actor statblock renderer', () => {
   test.each(NATIVE_RECEIVER_CAPTURE.cases.filter(entry=>entry.kind==='Actor'))('renders the actual captured nullable native AC source for $key',captured=>{
     const before=structuredClone(captured.output),html=renderActorStatblock(captured.output);
-    expect(html).toContain(`AC 护甲等级</dt><dd>${captured.key==='sentinel'?17:5}`);
-    expect(html).toContain('HP 生命值</dt><dd>100');expect(html).not.toContain('AC 护甲等级</dt><dd>0');
+    expect(html).toContain(`护甲等级</dt><dd>${captured.key==='sentinel'?17:5}`);
+    expect(html).toContain('生命值</dt><dd>100');expect(html).not.toContain('护甲等级</dt><dd>0');
     expect(captured.output).toEqual(before);
   });
 
   test('native606: renders native AC override, formulas and nested literal or dynamic speeds',()=>{
     const artifact={name:'Native display fixture',type:'npc',system:{attributes:{ac:{override:17},movement:{speeds:{walk:'30',fly:'@abilities.dex.value'},units:'ft'}}}};
     const html=renderActorStatblock(artifact);
-    expect(html).toContain('AC 护甲等级</dt><dd>17');
-    expect(html).toContain('步行 30 ft');expect(html).toContain('飞行 @abilities.dex.value ft');
+    expect(html).toContain('护甲等级</dt><dd>17');
+    expect(html).toContain('步行 30 尺');expect(html).toContain('飞行 敏捷属性值 尺');
     const formula=renderActorStatblock({...artifact,system:{...artifact.system,attributes:{...artifact.system.attributes,ac:{formulas:[{formula:'10 + @abilities.dex.mod'}]}}}});
-    expect(formula).toContain('10 + @abilities.dex.mod');
+    expect(formula).toContain('10 + 敏捷调整值');
   });
   test('renders the actual generated native artifact with stats, attack, save, and base damage', async () => {
     const artifact = await generateBasicActor();
@@ -53,32 +53,29 @@ describe('Forge Actor statblock renderer', () => {
 
     expect(html).toContain('class="forge-statblock"');
     expect(html).toContain('试验兽 (Test Beast)'); // Preserve the authored Actor title.
-    expect(html).toContain('中型 · beast');
-    expect(html).toContain('HP 生命值</dt><dd>22（4d8+4）');
-    expect(html).toContain('AC 护甲等级');
-    expect(html).toContain('Initiative 先攻</dt><dd>未知（未提供）');
-    expect(html).toContain('CR 挑战等级');
-    expect(html).toContain('1（XP 200；PB +2）');
-    expect(html).toContain('步行 30 ft');
+    expect(html).toContain('中型 · 野兽');
+    expect(html).toContain('生命值</dt><dd>22（4d8+4）');
+    expect(html).toContain('护甲等级');
+    expect(html).toContain('先攻</dt><dd>未知（未提供）');
+    expect(html).toContain('挑战等级');
+    expect(html).toContain('1（经验值 200；熟练加值 +2）');
+    expect(html).toContain('步行 30 尺');
     for (const ability of ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA']) {
       expect(html).toContain(ability);
     }
 
-    expect(html).toContain('class="forge-statblock-ability-grid"');
-    expect((html.match(/class="forge-statblock-ability"/gu) ?? []).length).toBe(6);
-    expect(html).toContain('<span>Save</span><strong>未知（未提供）');
-    expect(html).not.toContain('<span>Save</span><strong>+3');
+    expect(html.match(/class="forge-statblock-ability-table"/gu)).toHaveLength(2);
+    expect(html.match(/<th scope="row">/gu)).toHaveLength(6);
+    expect(html.match(/title="创建后计算">—<\/td>/gu)).toHaveLength(6);
     expect(html).toContain('data-section="actions"');
-    expect(html).toContain('Melee Attack Roll 近战攻击检定');
+    expect(html).toContain('近战攻击检定');
     expect(html).not.toContain('(mwak)');
-    expect(html).toContain('最终命中：未知（由 Foundry 运行时计算');
-    expect(html).toContain('Saving Throw 豁免');
-    expect(html).toContain('DC 计算配置');
-    expect(html).toContain('最终 DC：未知（由 Foundry 运行时计算');
-    expect(html).toContain('基础伤害规则：包含基础伤害');
-    expect(html).toContain('1d8 piercing');
-    expect(html).toContain('总伤害未计算');
-    expect(html).toContain('效果提示：此项目包含 1 个 Active Effect');
+    expect(html).toContain('完整命中加值由角色卡计算');
+    expect(html).toContain('豁免：');
+    expect(html).toContain('DC 使用');
+    expect(html).toContain('完整 DC 由角色卡计算');
+    expect(html).toContain('1d8 穿刺');
+    expect(html).toContain('已配置 1 项效果');
     const items=(artifact as Record<string,any>).items;
     const attack=items.flatMap((item:any)=>Object.values<any>(item.system.activities)).find((activity:any)=>activity.type==='attack');
     const save=items.flatMap((item:any)=>Object.values<any>(item.system.activities)).find((activity:any)=>activity.type==='save');
@@ -91,14 +88,14 @@ describe('Forge Actor statblock renderer', () => {
     const artifact=await generateBasicActor() as Record<string,any>;
     const activity=artifact.items.flatMap((item:any)=>Object.values<any>(item.system.activities)).find((entry:any)=>entry.type==='attack');
     for(const[value,classification,label]of[
-      ['melee','weapon','Melee Attack Roll 近战攻击检定'],
-      ['ranged','weapon','Ranged Attack Roll 远程攻击检定'],
-      ['melee','spell','Melee Spell Attack Roll 近战法术攻击检定'],
-      ['ranged','spell','Ranged Spell Attack Roll 远程法术攻击检定'],
+      ['melee','weapon','近战攻击检定'],
+      ['ranged','weapon','远程攻击检定'],
+      ['melee','spell','近战法术攻击检定'],
+      ['ranged','spell','远程法术攻击检定'],
     ]){
       activity.attack.type={value,classification};const before=structuredClone(artifact),html=renderActorStatblock(artifact);
-      expect(html).toContain(label!);expect(html).toContain('最终命中：未知（由 Foundry 运行时计算');
-      expect(html).toContain('最终 DC：未知（由 Foundry 运行时计算');expect(artifact).toEqual(before);
+      expect(html).toContain(label!);expect(html).toContain('完整命中加值由角色卡计算');
+      expect(html).toContain('完整 DC 由角色卡计算');expect(artifact).toEqual(before);
     }
   });
 
@@ -112,15 +109,23 @@ describe('Forge Actor statblock renderer', () => {
     actor.items.push(...[
       ['Always On', 'passive'], ['Swift Step', 'bonus'], ['Parry', 'reaction'], ['Wing Beat', 'legendary'],
     ].map(([name, activation]) => ({ name, type: 'feat', system: { activities: { test: { type: 'utility', activation: { type: activation } } } } })));
+    actor.items.push({ name: 'Two-part action', type: 'feat', system: { activities: {
+      primary: { name: 'Primary check', type: 'utility', activation: { type: 'action' } },
+      followup: { name: 'Secondary save', type: 'save', activation: { type: 'special' }, save: { ability: ['con'], dc: { value: 14 } } },
+    } } });
     const html = renderActorStatblock(actor);
 
-    expect(html).toContain('中型 · beast · Neutral');
-    expect(html).toContain('Initiative 先攻</dt><dd>+4 (14)');
-    expect(html).toContain('<span>Save</span><strong>+5');
-    expect(html).toContain('<span>Save</span><strong>未知（未提供）');
+    expect(html).toContain('中型 · 野兽 · 绝对中立');
+    expect(html).toContain('先攻</dt><dd>+4 (14)');
+    expect(html).toMatch(/<th scope="row">力量 <small>STR<\/small><\/th>\s*<td>[^<]+<\/td><td>[^<]+<\/td><td>\+5<\/td>/u);
+    expect(html.match(/title="创建后计算">—<\/td>/gu)).toHaveLength(5);
     const order = ['data-section="traits"', 'data-section="actions"', 'data-section="bonus"', 'data-section="reactions"', 'data-section="legendary"'];
     expect(order.every((section) => html.includes(section))).toBe(true);
     expect(order.map((section) => html.indexOf(section))).toEqual([...order.map((section) => html.indexOf(section))].sort((a, b) => a - b));
+    expect(html.match(/<h5>Two-part action<\/h5>/gu)).toHaveLength(1);
+    expect(html).toContain('<h6>Primary check</h6>');
+    expect(html).toContain('<h6>Secondary save</h6>');
+    expect(html).not.toContain('失败造成 未知（未提供）');
   });
 
   test('renders a provisional draft from entered fields without invented save, initiative, XP, or PB', () => {
@@ -138,14 +143,28 @@ describe('Forge Actor statblock renderer', () => {
     const html = renderBlueprintDraftStatblock(draft);
 
     expect(html).toContain('forge-statblock--draft');
-    expect(html).toContain('尚未生成或验证 Actor');
-    expect(html).toContain('<span>Mod</span><strong>+3');
-    expect(html).toContain('<span>Save</span><strong>未知（未提供）');
-    expect(html).toContain('Initiative 先攻</dt><dd>未知（未提供）');
-    expect(html).toContain('输入命中加值 +5');
-    expect(html).not.toContain('XP 200');
-    expect(html).not.toContain('PB +2');
+    expect(html).toContain('编辑中的草稿');
+    expect(html).toContain('<td>16</td><td>+3</td>');
+    expect(html.match(/title="草稿未计算豁免">—<\/td>/gu)).toHaveLength(6);
+    expect(html).not.toContain('先攻');
+    expect(html).toContain('攻击检定 +5');
+    expect(html).not.toContain('经验值 200');
+    expect(html).not.toContain('熟练加值 +2');
     expect(html).not.toContain('最终命中：+5');
+  });
+
+  test('reads the authored NPC initiative from an unprepared native v14 artifact', () => {
+    const preview = (bonus: string, dex = 9, prepared?: number) => renderActorStatblock({
+      system: {
+        abilities: { dex: { value: dex } },
+        attributes: { init: { roll: { bonus }, ...(prepared === undefined ? {} : { total: prepared }) } },
+      },
+    });
+    expect(preview('+8')).toContain('先攻</dt><dd>+7</dd>');
+    expect(preview('-2', 14)).toContain('先攻</dt><dd>+0</dd>');
+    expect(preview('+8', 9, 3)).toContain('先攻</dt><dd>+3</dd>');
+    expect(preview('@prof')).toContain('先攻</dt><dd>未知（未提供）');
+    expect(preview('')).toContain('先攻</dt><dd>未知（未提供）');
   });
 
   test('keeps hostile draft fields inert and never treats partial initiative as a total', () => {
@@ -162,23 +181,23 @@ describe('Forge Actor statblock renderer', () => {
     expect(draftHtml).toContain('Slash');
 
     const actorHtml = renderActorStatblock({ system: { attributes: { init: { mod: 3, bonus: 2 } } } });
-    expect(actorHtml).toContain('Initiative 先攻</dt><dd>未知（未提供）');
+    expect(actorHtml).toContain('先攻</dt><dd>未知（未提供）');
   });
 
-  test('does not guess either legal CR 0 XP value', () => {
+  test('does not guess either legal CR 0 经验值 value', () => {
     const html = renderActorStatblock({ system: { details: { cr: 0, xp: { value: 0 } } } });
-    expect(html).toContain('CR 挑战等级</dt><dd>0（PB +2）');
-    expect(html).not.toContain('XP 0');
-    expect(html).not.toContain('XP 10');
+    expect(html).toContain('挑战等级</dt><dd>0（熟练加值 +2）');
+    expect(html).not.toContain('经验值 0');
+    expect(html).not.toContain('经验值 10');
   });
 
   test('does not mistake a skill ability modifier for the complete skill bonus', () => {
     const rawHtml = renderActorStatblock({ system: { skills: { prc: { mod: 3, value: 1 } } } });
-    expect(rawHtml).not.toContain('Skills 技能');
+    expect(rawHtml).not.toContain('技能');
     expect(rawHtml).not.toContain('PRC +3');
 
     const preparedHtml = renderActorStatblock({ system: { skills: { prc: { mod: 3, total: 5 } } } });
-    expect(preparedHtml).toContain('Skills 技能</dt><dd>PRC +5');
+    expect(preparedHtml).toContain('技能</dt><dd>PRC +5');
   });
 
   test('escapes hostile native names and renders descriptions as plain text', async () => {

@@ -25,11 +25,11 @@ describe('Forge Intake human workflow surface', () => {
     expect(template).toContain('data-step="input"');
     expect(template).toContain('data-step="review"');
     expect(template).toContain('data-step="created"');
-    for (const step of ['input', 'review', 'created']) expect(workspace).toContain(`data-workspace-stage="${step}"`);
+    expect(workspace).not.toContain('data-workspace-stage');
     expect(template).toContain('data-activity-card');
     expect(template).toContain('aria-live="polite"');
     for (const action of ['analyze', 'generate', 'create', 'repair', 'reject', 'cancel']) expect(template).toContain(`data-action="${action}"`);
-    expect(template).toContain('forge-technical-details');
+    expect(template).not.toContain('forge-technical-details');
   });
 
   test('makes the window and long evidence regions independently scrollable', () => {

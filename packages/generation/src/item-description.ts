@@ -5,8 +5,8 @@ const HTML_TAG_PATTERN = /<\/?[A-Za-z][^>]*>/u;
  * HTML payload byte-for-byte; otherwise render the bounded Markdown emitted by
  * the strict Item parser into safe block and inline HTML.
  */
-export function renderFoundryItemDescriptionHtml(value: string): string {
-  if (!value.trim() || isFoundryHtmlDescription(value)) return value;
+export function renderFoundryItemDescriptionHtml(value: string, { allowHtml = true } = {}): string {
+  if (!value.trim() || (allowHtml && isFoundryHtmlDescription(value))) return value;
 
   const output: string[] = [];
   let listType: 'ul' | 'ol' | undefined;

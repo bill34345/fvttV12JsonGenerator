@@ -3,44 +3,45 @@
     <div class="forge-workbench-brand"><i class="fas fa-hammer forge-workbench-mark" aria-hidden="true"></i><div><strong>Forge 生物</strong><small>生物创作工作台</small></div></div>
     <label for="forge-actor-mode">输入模式
       <select id="forge-actor-mode" name="mode">
-        <option value="structured">规范 Actor 文本，不调用 AI</option>
-        <option value="blueprint">生物蓝图，不调用 AI</option>
-        <option value="ai">普通文本，发送给所选模型</option>
+        <option value="structured">标准资料</option>
+        <option value="blueprint">手工蓝图</option>
+        <option value="ai">AI 整理</option>
       </select>
     </label>
   </header>
   <div class="forge-workbench-grid">
-    <aside class="forge-blueprint-library" data-blueprint-library aria-labelledby="forge-blueprint-library-heading" hidden>
-      <div class="forge-library-intro"><h2 id="forge-blueprint-library-heading">生物图鉴</h2><p>你的生物蓝图</p></div>
+    <div class="forge-editor-column">
+      <nav class="forge-blueprint-tabs" data-blueprint-tabs role="tablist" aria-label="蓝图编辑部分" hidden>
+        <button type="button" role="tab" id="forge-tab-basic" aria-controls="forge-panel-basic" data-blueprint-tab="basic" aria-selected="true">基础</button>
+        <button type="button" role="tab" id="forge-tab-abilities" aria-controls="forge-panel-abilities" data-blueprint-tab="abilities" aria-selected="false" tabindex="-1">能力</button>
+        <button type="button" role="tab" id="forge-tab-variant" aria-controls="forge-panel-variant" data-blueprint-tab="variant" aria-selected="false" tabindex="-1">变体</button>
+      </nav>
+      <div class="forge-editor-scroll">
+    <details class="forge-blueprint-library" data-blueprint-library aria-labelledby="forge-blueprint-library-heading" hidden>
+      <summary id="forge-blueprint-library-heading">已保存的蓝图</summary>
+      <div class="forge-blueprint-library-body">
       <label for="forge-blueprint-library-search">搜索蓝图
         <input id="forge-blueprint-library-search" name="blueprintLibrarySearch" type="search" autocomplete="off" placeholder="搜索蓝图…">
       </label>
       <button type="button" class="forge-library-new" data-action="blueprint-new"><i class="fas fa-plus" aria-hidden="true"></i> 新建蓝图</button>
-      <p data-blueprint-library-status role="status">尚未加载；只显示当前世界中由你保存的蓝图。</p>
+      <p data-blueprint-library-status role="status"></p>
       <div class="forge-blueprint-library-cards" data-blueprint-library-cards role="group" aria-label="已保存蓝图"></div>
       <label class="forge-library-native-select" for="forge-blueprint-library-select" hidden>已保存蓝图
         <select id="forge-blueprint-library-select" name="blueprintLibrarySelect" size="4" data-blueprint-library-list tabindex="-1"></select>
       </label>
       <div class="forge-library-utilities">
         <button type="button" data-action="blueprint-library-load">加载选中</button>
-        <button type="button" data-action="blueprint-library-save">保存当前来源</button>
+        <button type="button" data-action="blueprint-library-save">保存蓝图</button>
         <button type="button" data-action="blueprint-library-refresh"><i class="fas fa-arrows-rotate" aria-hidden="true"></i> 刷新列表</button>
-        <button type="button" data-action="blueprint-download"><i class="fas fa-download" aria-hidden="true"></i> 下载规范 Markdown</button>
+        <button type="button" data-action="blueprint-download"><i class="fas fa-download" aria-hidden="true"></i> 导出蓝图资料</button>
       </div>
-    </aside>
-    <div class="forge-editor-column">
-      <nav class="forge-blueprint-tabs" data-blueprint-tabs role="tablist" aria-label="蓝图编辑部分" hidden>
-        <button type="button" role="tab" id="forge-tab-basic" aria-controls="forge-panel-basic" data-blueprint-tab="basic" aria-selected="true">基础</button>
-        <button type="button" role="tab" id="forge-tab-abilities" aria-controls="forge-panel-abilities" data-blueprint-tab="abilities" aria-selected="false" tabindex="-1">能力</button>
-        <button type="button" role="tab" id="forge-tab-variant" aria-controls="forge-panel-variant" data-blueprint-tab="variant" aria-selected="false" tabindex="-1">变体</button>
-        <button type="button" role="tab" id="forge-tab-review" aria-controls="forge-panel-review" data-blueprint-tab="review" aria-selected="false" tabindex="-1">审阅</button>
-      </nav>
-      <div class="forge-editor-scroll">
+      </div>
+    </details>
         <label class="forge-actor-name" for="forge-actor-display-name">生物名称 <input id="forge-actor-display-name" name="displayName" type="text" autocomplete="off"></label>
-        <label class="forge-structured-file" data-structured-file for="forge-actor-source-file">读取 Markdown / TXT
+        <label class="forge-structured-file" data-structured-file for="forge-actor-source-file">选择资料文件
           <input id="forge-actor-source-file" name="sourceFile" type="file" accept=".md,.txt,text/plain,text/markdown">
         </label>
-        <label data-structured-source for="forge-actor-source">来源文本
+        <label data-structured-source for="forge-actor-source">生物资料
           <textarea id="forge-actor-source" name="source" rows="16" spellcheck="false" required></textarea>
         </label>
         <section class="forge-blueprint-editor" data-blueprint-editor hidden aria-labelledby="forge-blueprint-heading">
@@ -95,7 +96,7 @@
     </fieldset>
     <fieldset>
       <legend>动作与能力</legend>
-      <p class="forge-blueprint-help">第一期支持攻击和豁免两类能力，均作用于一个生物；不创建范围模板。</p>
+      <p class="forge-blueprint-help">这里可添加单目标攻击和豁免能力。</p>
       <div class="forge-actions forge-blueprint-component-actions">
         <button type="button" data-action="blueprint-add-attack">添加攻击</button>
         <button type="button" data-action="blueprint-add-save">添加豁免</button>
@@ -104,7 +105,7 @@
     </fieldset>
           </section>
           <section class="forge-blueprint-panel" id="forge-panel-variant" data-blueprint-panel="variant" role="tabpanel" aria-labelledby="forge-tab-variant" hidden>
-    <p class="forge-blueprint-variant-empty" data-blueprint-variant-empty role="status" hidden>当前蓝图未能初始化，暂时无法安全派生。请返回基础页核对内容；需要重试时可点击底部“清除”（会丢弃未保存修改）。</p>
+    <p class="forge-blueprint-variant-empty" data-blueprint-variant-empty role="status" hidden>请先填写基础资料，再创建变体。</p>
     <section class="forge-blueprint-variant" data-blueprint-variant hidden aria-labelledby="forge-blueprint-variant-heading">
       <h3 id="forge-blueprint-variant-heading">派生变体</h3>
       <p data-blueprint-parent hidden></p>
@@ -115,57 +116,36 @@
       <pre class="forge-blueprint-diff" data-blueprint-diff hidden aria-label="蓝图派生差异"></pre>
     </section>
           </section>
-          <section class="forge-blueprint-panel" id="forge-panel-review" data-blueprint-panel="review" role="tabpanel" aria-labelledby="forge-tab-review" hidden>
-            <header class="forge-blueprint-heading"><h3>审阅与来源</h3><p>检查诊断和规范来源，再生成正式候选。</p></header>
-            <details class="forge-blueprint-advanced"><summary>规范来源 · 高级</summary>
-              <label for="forge-blueprint-source">规范来源（只读）
-                <textarea id="forge-blueprint-source" data-blueprint-source rows="14" readonly spellcheck="false" aria-describedby="forge-blueprint-source-help"></textarea>
-              </label>
-              <p id="forge-blueprint-source-help" class="forge-blueprint-help">保存到来源库后可重新编辑。每次载入都需要重新生成预览。</p>
-            </details>
-            <details class="forge-blueprint-advanced"><summary>安全与创建说明</summary>
-              <p class="forge-security-note">API Key 默认仅在当前页面会话中共享，主动选择保存后才写入浏览器设置；同一 Foundry 页面内的其他模块理论上可能读取它。不会写入世界、Actor、聊天、日志或诊断。</p>
-              <p class="forge-creation-note">确认创建会用一次世界写入保存完整 Actor，再立即回读核对。提交前可以取消；世界写入开始后进入不可取消的短提交区间，普通 readback 失败会尝试删除。如果浏览器恰好在服务器写入后崩溃，完整且带 Forge 身份的 Actor 可能已经存在，重新确认时会按 sourceId 复用或报告冲突。</p>
-            </details>
-          </section>
         </section>
-        <details class="forge-nonblueprint-notes" data-nonblueprint-notes><summary>安全与创建说明</summary>
-          <p class="forge-security-note">API Key 默认仅在当前页面会话中共享，主动选择保存后才写入浏览器设置；同一 Foundry 页面内的其他模块理论上可能读取它。不会写入世界、Actor、聊天、日志或诊断。</p>
-          <p class="forge-creation-note">确认创建会用一次世界写入保存完整 Actor，再立即回读核对。提交前可以取消；世界写入开始后进入不可取消的短提交区间，普通 readback 失败会尝试删除。如果浏览器恰好在服务器写入后崩溃，完整且带 Forge 身份的 Actor 可能已经存在，重新确认时会按 sourceId 复用或报告冲突。</p>
-        </details>
-        <ol data-stages></ol>
         <section data-diagnostics hidden>
-          <h3>诊断</h3>
+          <h3>需要核对</h3>
           <ul data-diagnostic-list></ul>
         </section>
       </div>
-      <footer class="forge-workbench-actions">
-        <div class="forge-actions">
-          <button type="button" data-action="clear">清除</button>
-          <button type="button" data-action="generate">生成并验证</button>
-          <button type="button" data-action="cancel" disabled>取消</button>
-          <button type="button" data-action="create" disabled>确认创建生物</button>
-        </div>
-        <p data-error role="alert" hidden></p>
-        <section data-created-document hidden>
-          <p data-created-summary></p><button type="button" data-action="open-created">打开生物卡</button>
-        </section>
-        <p data-status role="status">尚未生成。</p>
-      </footer>
     </div>
     <aside class="forge-preview-pane" data-preview-pane aria-labelledby="forge-preview-heading">
-      <header class="forge-preview-header"><div><h2 id="forge-preview-heading">2024 格式 · 草稿视图</h2><p>随着蓝图编辑更新。正式验证后显示可创建候选。</p></div><span data-preview-badge>尚未验证</span></header>
+      <header class="forge-preview-header"><div><h2 id="forge-preview-heading">生物预览</h2></div><span data-preview-badge>尚未验证</span></header>
       <div class="forge-preview-scroll">
         <div data-statblock aria-live="polite"></div>
-        <section data-preview hidden>
-          <details class="forge-preview-technical"><summary>生成结果详情</summary>
-            <pre data-preview-text></pre>
-            <details><summary>完整候选 JSON</summary><pre data-json></pre></details>
-            <details><summary>AI 来源证据与身份链</summary><pre data-intake-evidence></pre></details>
-            <details><summary>最终规范来源</summary><pre data-final-source></pre></details>
-          </details>
-        </section>
       </div>
     </aside>
   </div>
+  <footer class="forge-workbench-actions forge-action-bar">
+    <div class="forge-action-bar-row">
+      <div class="forge-action-bar-start">
+        <button type="button" data-action="clear">清空资料</button>
+        <button type="button" data-action="cancel" disabled>停止处理</button>
+      </div>
+      <div class="forge-action-bar-end">
+        <p class="forge-card-destination" data-forge-destination="Actor"></p>
+        <button type="button" data-action="generate">预览生物</button>
+        <button type="button" data-action="create" disabled>创建生物</button>
+      </div>
+    </div>
+    <p data-error role="alert" hidden></p>
+    <section data-created-document hidden>
+      <p data-created-summary></p><button type="button" data-action="open-created">打开生物卡</button>
+    </section>
+    <p data-status role="status"></p>
+  </footer>
 </form>

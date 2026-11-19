@@ -286,10 +286,8 @@ export class ActorGenerator {
     this.consumedRuleActions = [];
     this.biographyRuleFacts = (parsed.biographyRuleFacts ?? []).filter(fact => parsed.biographyMode !== 'literal' || fact.kind === 'food-retention');
     this.route = options.route ?? 'chinese';
-    // Clone Base
-    const actor = this.goldenMaster 
-      ? JSON.parse(JSON.stringify(this.goldenMaster)) 
-      : this.createBaseActor();
+    const defaults = this.createBaseActor();
+    const actor = this.goldenMaster ? JSON.parse(JSON.stringify(this.goldenMaster)) : defaults;
 
     this.resetTokenDefaults(actor);
 
@@ -302,7 +300,7 @@ export class ActorGenerator {
     }
 
     // Patch Core Fields
-    actor.name = parsed.name || actor.name;
+    actor.name = parsed.name || defaults.name;
     if (typeof parsed.img === 'string' && parsed.img.trim()) {
       actor.img = parsed.img.trim();
     }
@@ -328,13 +326,14 @@ export class ActorGenerator {
       }
     }
 
+    // The schema template may have a real creature's HP. Only use source or neutral defaults.
+    const hp = parsed.attributes?.hp ?? defaults.system.attributes.hp;
+    actor.system.attributes.hp.value = hp.value;
+    actor.system.attributes.hp.max = hp.max;
+    actor.system.attributes.hp.formula = parsed.attributes?.hp?.formula || '';
+
     // Patch Attributes
     if (parsed.attributes) {
-      if (parsed.attributes.hp) {
-        actor.system.attributes.hp.value = parsed.attributes.hp.value;
-        actor.system.attributes.hp.max = parsed.attributes.hp.max;
-        actor.system.attributes.hp.formula = parsed.attributes.hp.formula || '';
-      }
       if (parsed.attributes.ac) {
         if (this.isV14()) {
           actor.system.attributes.ac = parsed.attributes.ac.calc === 'natural'

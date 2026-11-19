@@ -1,62 +1,51 @@
-<section data-forge-pane="formal" class="fvtt-json-forge-form forge-item-panel" aria-labelledby="forge-item-heading">
-  <header class="forge-form-header">
-    <h2 id="forge-item-heading">导入标准物品资料</h2>
-    <p>粘贴或读取已经整理好的 Markdown / TXT 资料，先生成安全预览，通过审核后再创建到 Item 目录。</p>
-  </header>
+<section data-forge-pane="formal" class="fvtt-json-forge-form forge-item-panel forge-card-editor" aria-label="创建物品">
+  <div class="forge-card-columns">
+    <section class="forge-card-input" aria-labelledby="forge-item-heading">
+      <h2 id="forge-item-heading">来源</h2>
+      <p data-item-file-name class="forge-card-source-name"></p>
+      <input type="hidden" name="mode" value="structured">
+      <label class="forge-icon-upload forge-choose-source">选择资料文件
+        <input name="sourceFile" type="file" accept=".md,.txt,text/plain,text/markdown">
+      </label>
+      <details class="forge-source-editor" data-document-source-editor>
+        <summary>粘贴或编辑资料</summary>
+        <label>物品资料 <textarea name="source" rows="12" spellcheck="false" placeholder="粘贴标准物品资料"></textarea></label>
+        <label>物品名称（可选） <input name="displayName" type="text" autocomplete="off"></label>
+      </details>
+      <article class="forge-source-reading" data-document-source aria-label="原文" hidden></article>
+      <label hidden>装备阶段 <select name="itemStage"></select></label>
+    </section>
 
-  <p class="forge-security-note">标准资料无需 AI。普通文本可切换顶部“AI 整理”；Provider、模型和 API Key 在独立连接设置中配置。</p>
-  <input type="hidden" name="mode" value="structured">
-
-  <div class="forge-input-grid">
-    <label>物品名称
-      <input name="displayName" type="text" autocomplete="off" value="" placeholder="可选；留空时使用资料文件名">
-    </label>
-    <label class="forge-source-file">读取 Markdown / TXT
-      <input name="sourceFile" type="file" accept=".md,.txt,text/plain,text/markdown">
-      <small>单个文件，最多 200 KB。读取后仍可编辑来源文本。</small>
-    </label>
+    <section class="forge-card-review" aria-label="物品预览">
+      <div class="forge-card-review-title"><strong>物品预览</strong><span data-item-preview-state></span></div>
+      <p class="forge-card-empty" data-item-empty>选择文件或粘贴资料，即可预览物品。</p>
+      <section data-diagnostics class="forge-card-findings" hidden>
+        <h3>需要核对</h3>
+        <ul data-diagnostic-list></ul>
+      </section>
+      <section data-preview hidden>
+        <div class="forge-paper-card">
+          <div data-preview-text></div>
+          <section class="forge-card-art" data-item-icon hidden></section>
+        </div>
+      </section>
+    </section>
   </div>
-
-  <label>来源文本
-    <textarea name="source" rows="16" spellcheck="false" placeholder="粘贴完整的规范 Item Markdown / YAML 来源……"></textarea>
-  </label>
-  <label hidden>装备阶段 <select name="itemStage"></select></label>
-
-  <div class="forge-actions">
-    <button type="button" data-action="generate"><i class="fas fa-eye" aria-hidden="true"></i> 生成预览</button>
-    <button type="button" data-action="cancel" disabled>取消生成</button>
-    <button type="button" data-action="clear">清除</button>
-  </div>
-
-  <p data-status role="status" aria-live="polite">尚未生成。</p>
-  <p class="forge-findings forge-error" data-error role="alert" hidden></p>
-
-  <section data-diagnostics hidden>
-    <h3>需要核对</h3>
-    <ul data-diagnostic-list></ul>
-  </section>
-
-  <section data-preview hidden>
-    <h3>物品安全预览</h3>
-    <section data-item-icon hidden></section>
-    <div data-preview-text></div>
-    <details>
-      <summary>候选 Item JSON</summary>
-      <pre data-json></pre>
-    </details>
-    <details>
-      <summary>来源身份</summary>
-      <pre data-final-source></pre>
-    </details>
-  </section>
-
-  <section class="forge-created-document" data-created-document role="status" hidden>
-    <strong>创建完成</strong>
-    <span data-created-summary>已通过回读核对，可以打开物品卡继续检查。</span>
-    <button type="button" data-action="open-created" disabled><i class="fas fa-cube" aria-hidden="true"></i> 打开物品卡</button>
-  </section>
-
-  <div class="forge-actions forge-submit">
-    <button type="button" data-action="create" disabled><i class="fas fa-cube" aria-hidden="true"></i> 确认创建物品</button>
-  </div>
+  <footer class="forge-action-bar forge-document-actions">
+    <div class="forge-action-bar-row">
+      <div class="forge-action-bar-start">
+        <button type="button" data-action="clear" hidden>清空资料</button>
+        <button type="button" data-action="cancel" hidden>停止处理</button>
+        <span data-created-document role="status" hidden><strong data-created-summary>物品已创建</strong></span>
+      </div>
+      <div class="forge-action-bar-end">
+        <p class="forge-card-destination" data-forge-destination="Item"></p>
+        <button type="button" data-action="generate">预览物品</button>
+        <button type="button" data-action="create" disabled>创建物品</button>
+        <button type="button" data-action="open-created" disabled>打开物品卡</button>
+      </div>
+    </div>
+    <p data-status class="forge-card-status" role="status" aria-live="polite"></p>
+    <p class="forge-card-status forge-error" data-error role="alert" hidden></p>
+  </footer>
 </section>

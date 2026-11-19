@@ -185,8 +185,8 @@ describe('PDF in the actual Forge creature entry',()=>{
     const session=harness({initialPdf:pdfFile,reader:async()=>reading}),{app}=session;
     app.pdfMonster='Rat Warlock and Lurker';await app.generateFromHuman();await app.saveRecovery();await app.close();
     const saved=structuredClone(session.saved),reopened=harness({stored:saved});await mount(reopened.app);
-    const visible=reopened.app.element.querySelector('[data-pdf-receipt]');
-    expect(JSON.parse(visible.value).responses).toEqual(reading.responses);
+    expect(reopened.app.element.querySelector('[data-pdf-receipt]')).toBeNull();
+    expect(reopened.app.pdfReceipt.responses).toEqual(reading.responses);
     expect(reopened.app.element.querySelector('script')).toBeNull();
     let downloaded:Blob|undefined,clicks=0;const link:any={click(){clicks++;}};
     const documentDescriptor=Object.getOwnPropertyDescriptor(globalThis,'document');

@@ -115,7 +115,8 @@ describe('Forge AI content review stays disabled',()=>{
       expect(html).not.toContain('付费模型审核须另行点击');expect(html).not.toContain('可主动请求AI审核');
     }
     const connection=readFileSync('foundry-modules/fvtt-json-forge/src/templates/forge-connection.hbs','utf8');
-    expect(connection).toContain(DISABLED);expect(connection).not.toContain('AI审核当前候选');
+    expect(connection).not.toMatch(/name="(?:reviewModel|useSeparateReviewModel)"/u);
+    expect(connection).not.toContain('AI审核当前候选');
     let called=0;const infos:string[]=[],game:any={version:'14.368',system:{id:'dnd5e',version:'6.0.6'},world:{id:'review-disabled'},user:{id:'gm',isGM:true}};
     class Base{render(){return this;}async close(){return this;}}
     const foundry:any={applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:(base:any)=>base}}};

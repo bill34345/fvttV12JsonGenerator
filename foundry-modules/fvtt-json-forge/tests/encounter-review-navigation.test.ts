@@ -159,7 +159,7 @@ describe('encounter review navigation',()=>{
     expect(opened).toBe(1);expect(app.prepared.hash).toBe('fixed-hash');expect(app.reviewed).toBe(true);
     expect(app.aiReport).toBe(visibleReport);
     expect(root.querySelector('[data-report-download]')).toBeTruthy();
-    expect(root.querySelector('[data-encounter-view-text]')).toBeTruthy();
+    expect(root.querySelector('[data-encounter-view-text]')).toBeNull();
     expect(root.querySelector('[data-action="encounter-import"]')).toBeTruthy();
     input.focus();input.value=source+' changed';input.setSelectionRange(9,9);
     const renderBeforeEdit=renders;
@@ -171,7 +171,7 @@ describe('encounter review navigation',()=>{
     expect((root.querySelector('[data-action="encounter-import"]') as HTMLButtonElement).disabled).toBe(true);
     expect((root.querySelector('[name="encounterReviewed"]') as HTMLInputElement).checked).toBe(false);
     for(const selector of ['.forge-error','[data-encounter-progress]'])expect(root.querySelector(selector)).toBeNull();
-    expect(root.querySelector('[data-encounter-status]')?.textContent).toContain('已有候选继续绑定原来源快照');
+    expect(root.querySelector('[data-encounter-status]')?.textContent).toContain('上次结果仍可查看');
     expect(revoked).toEqual([]);
     expect(()=>app.currentReportText()).toThrow('来源已改变');
     expect(JSON.parse(app.currentPackageText())).toEqual(candidate.bundle);
@@ -192,7 +192,7 @@ describe('encounter review navigation',()=>{
       else{control.value='zh-CN';control.dispatchEvent(new document.defaultView!.Event('change'));}
       expect(root.querySelector('[data-encounter-current-result]')?.childElementCount).toBeGreaterThan(0);
       expect(root.querySelector('[data-encounter-report-controls]')?.childElementCount).toBeGreaterThan(0);
-      expect(root.querySelector('[data-action="encounter-report-view"]')).toBeTruthy();
+      expect(root.querySelector('[data-action="encounter-report"]')).toBeTruthy();
       expect((root.querySelector('[data-action="encounter-import"]') as HTMLButtonElement).disabled).toBe(true);
       expect((root.querySelector('[name="encounterReviewed"]') as HTMLInputElement).checked).toBe(false);
       expect(root.querySelector('.forge-error')).toBeNull();expect(root.querySelector('[data-encounter-progress]')).toBeNull();
