@@ -92,8 +92,8 @@ input{caret-color:var(--accent)}
     if (!Array.isArray(entry.steps) || entry.steps.length === 0) {
       throw new TypeError(`entries[${index}].steps must be a nonempty array`);
     }
-    const steps = Object.freeze(entry.steps.map((value, stepIndex) => {
-      const step = record(value, `entries[${index}].steps[${stepIndex}]`);
+    const steps = Object.freeze(entry.steps.map((value2, stepIndex) => {
+      const step = record(value2, `entries[${index}].steps[${stepIndex}]`);
       const title = nonempty(step.title, `entries[${index}].steps[${stepIndex}].title`);
       const text = nonempty(step.text, `entries[${index}].steps[${stepIndex}].text`);
       if (step.command !== undefined && typeof step.command !== "string") {
@@ -270,8 +270,8 @@ input{caret-color:var(--accent)}
     const navigationSlot = root.querySelector("[data-navigation]");
     const breadcrumb = root.querySelector("[data-breadcrumb]");
     const toggle = root.querySelector("[data-menu-toggle]");
-    function navigation(active) {
-      navigationSlot.innerHTML = link("home", "手册概览", active === "home" ? "active" : "") + link("guide", "开始使用", active === "guide" ? "active" : "") + link("tool/version-selection", "版本与兼容性", active === "version-selection" ? "active" : "") + link("all", `全部工具 <span>${data.entries.length}</span>`, active === "all" ? "active" : "") + Object.entries(categories).map(([id, name]) => link(`category/${id}`, `${name} <span>${data.entries.filter((e) => e.category === id).length}</span>`, active === id ? "active" : "")).join("");
+    function navigation(active2) {
+      navigationSlot.innerHTML = link("home", "手册概览", active2 === "home" ? "active" : "") + link("guide", "开始使用", active2 === "guide" ? "active" : "") + link("tool/version-selection", "版本与兼容性", active2 === "version-selection" ? "active" : "") + link("all", `全部工具 <span>${data.entries.length}</span>`, active2 === "all" ? "active" : "") + Object.entries(categories).map(([id2, name]) => link(`category/${id2}`, `${name} <span>${data.entries.filter((e) => e.category === id2).length}</span>`, active2 === id2 ? "active" : "")).join("");
       navigationSlot.querySelectorAll("[data-route].active").forEach((a) => a.setAttribute("aria-current", "page"));
     }
     function moduleStateContent(moduleId, detail) {
@@ -291,15 +291,15 @@ input{caret-color:var(--accent)}
     function moduleState(entry, detail = false) {
       if (!showModuleStates || !entry.foundryModuleId)
         return "";
-      const content = moduleStateContent(entry.foundryModuleId, detail);
+      const content2 = moduleStateContent(entry.foundryModuleId, detail);
       const tag = detail ? "section" : "span";
-      return "<" + tag + ' class="module-state-' + (detail ? "detail" : "brief") + '" data-handbook-module-id="' + esc(entry.foundryModuleId) + '" data-handbook-module-view="' + (detail ? "detail" : "brief") + '" data-handbook-module-state="' + content.state + '">' + content.html + "</" + tag + ">";
+      return "<" + tag + ' class="module-state-' + (detail ? "detail" : "brief") + '" data-handbook-module-id="' + esc(entry.foundryModuleId) + '" data-handbook-module-view="' + (detail ? "detail" : "brief") + '" data-handbook-module-state="' + content2.state + '">' + content2.html + "</" + tag + ">";
     }
     function refreshModuleStates() {
       for (const element of root.querySelectorAll("[data-handbook-module-id]")) {
-        const content = moduleStateContent(element.dataset.handbookModuleId, element.dataset.handbookModuleView === "detail");
-        element.dataset.handbookModuleState = content.state;
-        element.innerHTML = content.html;
+        const content2 = moduleStateContent(element.dataset.handbookModuleId, element.dataset.handbookModuleView === "detail");
+        element.dataset.handbookModuleState = content2.state;
+        element.innerHTML = content2.html;
       }
       announce.textContent = "已刷新当前世界模块状态";
     }
@@ -309,15 +309,15 @@ input{caret-color:var(--accent)}
     function showHome() {
       navigation("home");
       return `<section class="hero"><h1>找到工具，开始下一场团。</h1><p class="intro">在 Foundry 中编辑生物、导入资料，或使用跑团辅助模块。先选择要做的事，再查看准备、步骤和适用版本。</p>${link("guide", "第一次使用：选择入口与准备资料 →", "guide-link")}<p class="subtle">主要平台为 Foundry V14。dnd5e 5.3.3 与 6.x 的支持按工具分别说明。${link("tool/version-selection", "先核对版本与兼容性 →")}</p></section>
-      <div class="task-grid">${Object.entries(categories).map(([id, name]) => link(`category/${id}`, `<strong>${name}<span aria-hidden="true">↗</span></strong><p>${descriptions[id]}</p>`, "task-link")).join("")}</div>
+      <div class="task-grid">${Object.entries(categories).map(([id2, name]) => link(`category/${id2}`, `<strong>${name}<span aria-hidden="true">↗</span></strong><p>${descriptions[id2]}</p>`, "task-link")).join("")}</div>
       <div class="section-heading"><h2>常用入口</h2><small>${data.entries.length} 项工具 · ${sourceNames.length} 份离线原始说明</small></div>
-      ${rows(["fvtt-json-forge", "open-session-deck", "web-workbench", "monster-spell-resolver"].map((id) => data.entries.find((e) => e.id === id)).filter((e) => e !== undefined))}
+      ${rows(["fvtt-json-forge", "open-session-deck", "web-workbench", "monster-spell-resolver"].map((id2) => data.entries.find((e) => e.id === id2)).filter((e) => e !== undefined))}
       <p class="subtle" style="margin-top:24px">最近内容核对：${esc(latest)}。核对日期表示手册内容审阅时间；功能的实际支持范围见各条目。</p>`;
     }
     function showEntry(e) {
       navigation(e.id === "version-selection" ? e.id : e.category);
       return `<article class="article">${link(`category/${e.category}`, `← ${categories[e.category]}`, "back-link")}<h1>${esc(e.title)}</h1><p class="intro">${esc(e.summary)}</p><div class="meta"><span class="tag">${categories[e.category]}</span><span>内容核对 ${esc(data.reviews[e.id]?.reviewedOn || "未登记")}</span></div>
-      ${moduleState(e, true)}<nav class="article-index" aria-label="本页内容">${[["prepare", "开始前准备"], ["steps", "操作步骤"], ["outputs", "产物"], ["limits", "适用范围"], ["sources", "原始说明"]].map(([id, label]) => `<button type="button" data-section="${id}">${label}</button>`).join("")}</nav>
+      ${moduleState(e, true)}<nav class="article-index" aria-label="本页内容">${[["prepare", "开始前准备"], ["steps", "操作步骤"], ["outputs", "产物"], ["limits", "适用范围"], ["sources", "原始说明"]].map(([id2, label]) => `<button type="button" data-section="${id2}">${label}</button>`).join("")}</nav>
       <div class="notice"><strong>什么时候用</strong><p>${esc(e.when)}</p></div>
       <section><h2 id="${esc(id("prepare"))}" data-handbook-section="prepare" tabindex="-1">开始前准备</h2>${list(e.requires)}</section>
       <section><h2 id="${esc(id("steps"))}" data-handbook-section="steps" tabindex="-1">怎么使用</h2>${e.steps.map((s, i) => {
