@@ -18,7 +18,7 @@ export function fixtureContract(pkg = fixturePackage()): MigrationContract {
   return {
     schemaVersion: 1,
     moduleId: 'fvtt-blood-hunter-2024',
-    version: '1.1.4',
+    version: '1.1.5',
     target: { foundry: '14.364', dnd5e: '5.3.3', rules: '2024', effectProfile: 'modded-v14' },
     logicalHash: pkg.logicalHash,
     documents,

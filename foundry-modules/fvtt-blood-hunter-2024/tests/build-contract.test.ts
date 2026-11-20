@@ -42,7 +42,7 @@ describe('module release contract', () => {
   test('manifest retains projection identities while opening the supported runtime majors and Item packs', async () => {
     const manifest = JSON.parse(await Bun.file(resolve(import.meta.dir, '../src/module.json')).text()) as Record<string, any>;
     expect(manifest.id).toBe('fvtt-blood-hunter-2024');
-    expect(manifest.version).toBe('1.1.4');
+    expect(manifest.version).toBe('1.1.5');
     expect(manifest.title).toBe('血猎手 2024');
     expect(manifest.compatibility).toEqual({ minimum: '14.368', verified: '14.368', maximum: '14.999' });
     expect(manifest.relationships.systems).toEqual([{

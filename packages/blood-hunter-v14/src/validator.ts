@@ -33,7 +33,7 @@ export function validateNativeBloodHunterPackage(value: unknown): BloodHunterVal
     return { ok: false, findings };
   }
   const pkg = value as NativeBloodHunterPackage;
-  if (pkg.moduleId !== BLOOD_HUNTER_MODULE_ID || pkg.version !== BLOOD_HUNTER_MODULE_VERSION) add('MODULE_IDENTITY_MISMATCH', '/', 'moduleId/version 必须锁定为 fvtt-blood-hunter-2024@1.1.4。');
+  if (pkg.moduleId !== BLOOD_HUNTER_MODULE_ID || pkg.version !== BLOOD_HUNTER_MODULE_VERSION) add('MODULE_IDENTITY_MISMATCH', '/', `moduleId/version 必须锁定为 ${BLOOD_HUNTER_MODULE_ID}@${BLOOD_HUNTER_MODULE_VERSION}。`);
   const dnd6 = pkg.target?.foundry === '14.368' && pkg.target?.dnd5e === '6.0.2';
   if ((!dnd6 && (pkg.target?.foundry !== '14.364' || pkg.target?.dnd5e !== '5.3.3')) || pkg.target?.rules !== '2024' || pkg.target?.effectProfile !== 'modded-v14') add('TARGET_VERSION_MISMATCH', '/target', '目标必须是精确的 14.364/5.3.3 或 14.368/6.0.2 配对。');
   if (pkg.sourceSha256 !== undefined && pkg.sourceSha256 !== EXPECTED_BLOOD_HUNTER_SOURCE_SHA256) add('SOURCE_HASH_MISMATCH', '/sourceSha256', 'byte-verified package 必须记录锁定 BloodHunter2024 SHA-256。');

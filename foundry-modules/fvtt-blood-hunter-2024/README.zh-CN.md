@@ -1,6 +1,6 @@
 # 血猎手 2024 独立 Foundry 模块
 
-本仓库提供血猎手 2024 1.1.4 的自动化源码与本地构建工具。构建后得到职业、四个结社和特性三个 Item 合集。源码不附带完整规则 JSON 或预构建安装包。请使用你已取得的匹配 enriched JSON；公开的规则 PDF 不是构建输入。[来源与公开范围](../../docs/reviews/2026-11-13-blood-hunter-public-source.md) · [更新日志](CHANGELOG.md)
+本仓库提供血猎手 2024 1.1.5 的自动化源码与本地构建工具。构建后得到职业、四个结社和特性三个 Item 合集。源码不附带完整规则 JSON 或预构建安装包。请使用你已取得的匹配 enriched JSON；公开的规则 PDF 不是构建输入。[来源与公开范围](../../docs/reviews/2026-11-13-blood-hunter-public-source.md) · [更新日志](CHANGELOG.md)
 
 生成内容沿用 Core 14.368／dnd5e 6.0.2 的投影身份；主要验证组合为 Core 14.370／dnd5e 6.0.6 系列。清单允许对应主版本内的后续版本，实际玩法范围见更新日志。
 

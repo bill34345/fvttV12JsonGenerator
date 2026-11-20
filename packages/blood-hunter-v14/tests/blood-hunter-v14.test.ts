@@ -39,7 +39,7 @@ describe('Blood Hunter v14 native compiler', () => {
     expect(source).toEqual(before);
     expect(first).toEqual(second);
     expect(first.moduleId).toBe('fvtt-blood-hunter-2024');
-    expect(first.version).toBe('1.1.4');
+    expect(first.version).toBe('1.1.5');
     expect(first.target).toEqual({ foundry: '14.364', dnd5e: '5.3.3', rules: '2024', effectProfile: 'modded-v14' });
     expect(first.classes).toHaveLength(1);
     expect(first.subclasses).toHaveLength(4);

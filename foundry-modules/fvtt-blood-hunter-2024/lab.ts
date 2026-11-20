@@ -5,6 +5,7 @@ import { assertNoHeldLevelDbLocks, assertServerMirrorStopped as assertDevelopmen
 
 import {
   MODULE_ID,
+  MODULE_VERSION,
   assertZipMatchesModule,
   buildBloodHunterModule,
   compareModuleStaticFiles,
@@ -258,7 +259,7 @@ async function rejectForeignOrUnsafeDestination(config: BloodHunterLabConfig, pa
   const markerStats = await lstat(markerPath).catch(() => undefined);
   if (!markerStats?.isFile() || markerStats.isSymbolicLink()) throw new Error(`Foreign same-ID Blood Hunter destination refused: ${paths.destination}`);
   const marker = await readJson(markerPath);
-  if (marker.owned !== true || marker.moduleId !== MODULE_ID || !['1.0.0', '1.1.0', '1.1.1', '1.1.2', '1.1.3', '1.1.4'].includes(String(marker.version))) throw new Error(`Foreign same-ID Blood Hunter destination refused: ${paths.destination}`);
+  if (marker.owned !== true || marker.moduleId !== MODULE_ID || !['1.0.0', '1.1.0', '1.1.1', '1.1.2', '1.1.3', '1.1.4', MODULE_VERSION].includes(String(marker.version))) throw new Error(`Foreign same-ID Blood Hunter destination refused: ${paths.destination}`);
   await assertNoLocksOrOccupancy(paths.destination);
 }
 

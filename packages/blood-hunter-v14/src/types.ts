@@ -1,3 +1,5 @@
+import type { BLOOD_HUNTER_MODULE_VERSION } from './constants';
+
 export type JsonObject = Record<string, unknown>;
 
 export type BloodHunterFeatureGroup = 'classFeature' | 'subclassFeature' | 'optionalfeature';
@@ -201,7 +203,7 @@ export interface BloodHunterActivitySummary {
 
 export interface NativeBloodHunterPackage {
   moduleId: 'fvtt-blood-hunter-2024';
-  version: '1.1.4';
+  version: typeof BLOOD_HUNTER_MODULE_VERSION;
   target: {
     foundry: '14.364' | '14.368';
     dnd5e: '5.3.3' | '6.0.2';
@@ -271,7 +273,7 @@ export interface NativeBloodHunterMigrationAction {
 
 export interface NativeBloodHunterMigrationPlan {
   moduleId: 'fvtt-blood-hunter-2024';
-  version: '1.1.4';
+  version: typeof BLOOD_HUNTER_MODULE_VERSION;
   actions: NativeBloodHunterMigrationAction[];
   mergePolicy: MigrationMergePolicy;
 }

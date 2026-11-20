@@ -142,6 +142,34 @@ describe('Curse Specialist', () => {
     expect(sources.map((target) => target.target)).toEqual(['blood-maledict', canonicalId, 'equipmentUses001', 'old-custom-fuel', '']);
   });
 
+  test('ordinary Marked resolves the target on the Activity read again by native consumption', () => {
+    const { actor, pool, otherCurse: marked } = curseFixture();
+    const saved = { type: 'itemUses', target: 'blood-maledict', value: '1' };
+    const ownedActivity = marked.system.activities.get('normal');
+    ownedActivity.consumption.targets = [saved];
+    pool.system.uses.spent = 3;
+    actor.items = new Map(actor.items.map((item: any) => [item.id, item]));
+    const updates: unknown[] = [];
+    const item = { ...marked, updateSource: (update: unknown) => updates.push(update) };
+    const createUsageActivity = () => ({ ...ownedActivity, item, consumption: { targets: [{ ...saved }] } });
+    const events = new Map<string, Function>();
+    registerBloodHunterAutomation({ Hooks: { on: (event: string, fn: Function) => events.set(event, fn), once: (event: string, fn: Function) => events.set(event, fn) } });
+
+    const earlyActivity = createUsageActivity();
+    events.get('dnd5e.preUseActivity')!(earlyActivity);
+    expect(earlyActivity.consumption.targets[0]?.target).toBe(pool.id);
+    const finalActivity = createUsageActivity();
+    events.get('dnd5e.preActivityConsumption')?.(finalActivity);
+    const finalTarget = finalActivity.consumption.targets[0]!;
+    expect(actor.items.get(finalTarget.target)).toBe(pool);
+    expect(finalTarget).toEqual({ ...saved, target: pool.id });
+
+    events.get('dnd5e.preActivityConsumption')!(ownedActivity);
+    expect(updates).toHaveLength(1);
+    expect(saved.target).toBe('blood-maledict');
+    expect(pool.system.uses.spent).toBe(3);
+  });
+
   test('exhausted or absent Hemocraft does not preempt each normal usage configuration or force free consumption', async () => {
     for (const missingPool of [false, true]) {
       const { actor, pool, specialist, selection, curse } = curseFixture();

@@ -246,7 +246,7 @@ async function makeSandbox(): Promise<Sandbox> {
   const identity = {
     schemaVersion: 1,
     moduleId: 'fvtt-blood-hunter-2024',
-    version: '1.1.4',
+    version: '1.1.5',
     target: { foundry: '14.368', dnd5e: '6.0.2', rules: '2024', effectProfile: 'modded-v14' },
     sourceSha256: 'fixture-source',
     logicalHash: 'fixture-logical-hash',
@@ -258,7 +258,7 @@ async function makeSandbox(): Promise<Sandbox> {
     activityCount: 0,
   };
   await writeFile(join(paths.buildRoot, 'data', 'identity-manifest.json'), `${JSON.stringify(identity, null, 2)}\n`, 'utf8');
-  await writeFile(join(paths.buildRoot, 'data', 'owned-marker.json'), JSON.stringify({ schemaVersion: 1, owned: true, moduleId: 'fvtt-blood-hunter-2024', version: '1.1.4', logicalHash: identity.logicalHash }), 'utf8');
+  await writeFile(join(paths.buildRoot, 'data', 'owned-marker.json'), JSON.stringify({ schemaVersion: 1, owned: true, moduleId: 'fvtt-blood-hunter-2024', version: '1.1.5', logicalHash: identity.logicalHash }), 'utf8');
   await writeFile(join(paths.buildRoot, 'data', 'canonical-package.json'), '{}\n', 'utf8');
   await writeFile(join(paths.buildRoot, 'data', 'migration-contract.json'), '{}\n', 'utf8');
   await writeFile(join(paths.buildRoot, 'data', 'coverage-ledger.json'), '[]\n', 'utf8');

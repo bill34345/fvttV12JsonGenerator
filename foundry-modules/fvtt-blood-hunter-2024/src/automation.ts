@@ -165,23 +165,26 @@ export async function useCurseSpecialist(activity: Document, selection?: CurseSe
   return results;
 }
 
-function prepareCurseConsumption(activity: Document): void {
+function prepareCurseConsumption(activity: Document, { updateCloneSource = true } = {}): void {
   if (!identifier(activity.item).startsWith('blood-curse-')) return;
   const actor = activity.actor ?? activity.item.actor;
   const items = values(actor?.items);
+  if (items.includes(activity.item)) return;
   const pool = items.find((item) => identifier(item) === 'blood-maledict' || sourceName(item) === 'hemocraft');
   if (!pool) return;
+  const canonicalId = pool.flags?.fvttJsonGenerator?.bloodHunter2024?.canonicalId;
   const targets = values(activity.consumption?.targets);
-  const updated = targets.map((target) => {
-    const data = target.toObject?.() ?? { ...target };
-    if (target.type !== 'itemUses' || !target.target || items.some((item) => item.id === target.target)) return { ...data, target: target.target };
-    const canonicalId = pool.flags?.fvttJsonGenerator?.bloodHunter2024?.canonicalId;
-    return { ...data, target: target.target === 'blood-maledict' || canonicalId && target.target === canonicalId ? pool.id : target.target };
+  const resolved = targets.map(({ type, target }) => {
+    if (type !== 'itemUses' || !target || (target !== 'blood-maledict' && target !== canonicalId)) return target;
+    return items.some((item) => item.id === target) ? target : pool.id;
   });
-  if (!updated.some((target, index) => target.target !== targets[index]!.target)) return;
-  activity.item.updateSource({ [`system.activities.${activity.id}.consumption.targets`]: updated });
-  // updateSource recreates the Item's Activity models; native use still holds this earlier model until its next stage.
-  for (const [index, target] of targets.entries()) target.target = updated[index]!.target;
+  if (!resolved.some((target, index) => target !== targets[index]!.target)) return;
+  if (updateCloneSource) {
+    const updated = targets.map((target, index) => ({ ...(target.toObject?.() ?? target), target: resolved[index] }));
+    activity.item.updateSource({ [`system.activities.${activity.id}.consumption.targets`]: updated });
+  }
+  // The current Activity retains its original target models after the clone's source is rebuilt.
+  for (const [index, target] of targets.entries()) target.target = resolved[index];
 }
 
 export function registerBloodHunterAutomation(root: Root = globalThis): void {
@@ -193,6 +196,8 @@ export function registerBloodHunterAutomation(root: Root = globalThis): void {
   registerMarkedAutomation(root, report);
   registerCastigationAutomation(root, report);
   hooks.on('midi-qol.preTargeting', ({ activity }: Document) => prepareCurseConsumption(activity));
+  // Native use reads the Activity again after configuration and scaling, then consumes these prepared targets.
+  hooks.on('dnd5e.preActivityConsumption', (activity: Document) => prepareCurseConsumption(activity, { updateCloneSource: false }));
   hooks.once('catReady', () => {
     if (typeof root.cat?.api?.registerFnMacro !== 'function' || typeof root.cat?.lib?.DamageBonus !== 'function') return report(new Error('破晓附伤需要 CPR 2.1.7／CAT 0.1.7 或兼容新版的公开 API。'));
     root.cat.api.registerFnMacro({ source: MODULE_ID, identifier: DAWN_MACRO, rules: 'all', documents: ['activeeffect'], roll: [{ pass: 'actorOptionalBonusDamage', priority: 250, macro: (args: any) => dawnDamageBonus(args, root) }] });

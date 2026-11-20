@@ -14,6 +14,7 @@
 - 正式资料生成默认采用 Core 14／dnd5e 6，固定投影为 Foundry `14.370` / dnd5e `6.0.6`。CLI、workflow 和 Web 默认 v14；显式兼容目标仍按支持范围使用。常规生成使用 `--fvtt-version 14 --effect-profile core --icon-mode off`。
 - Foundry Mod 的实现与开发默认采用 Core 14／dnd5e 6；版本准入和已验范围按[自研 Mod 的版本准入](docs/runbooks/foundry-environment-maintenance.md#自研-mod-的版本准入)核对。
 - 系统版本相关开发按 `docs/runbooks/dnd5e-version-following.md`，对照精确版本源码和已验范围。保留旧版本证据的原身份；版本声明不代替实机验收。
+- 每次升级 dnd5e 系统前，先读私用维护分支 `local/foundry-maintenance` 的 `docs/plans/foundry-environment-maintenance/assets.md`「系统升级默认复查项」，逐项核对已修行为和本地补丁，按影响复测。结项把本轮修复、已验版本和下次复测步骤补回该索引。
 - 每次正式生成都按 `docs/generated-actor-verification.md` 对照来源；schema、测试和 verifier 通过不能代替语义验收。
 
 ## 工作区与权限

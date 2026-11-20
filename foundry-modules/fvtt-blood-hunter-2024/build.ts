@@ -26,7 +26,7 @@ import { buildLegacyIconIndex } from './legacyIconIndex.ts';
 import type { LegacyIconIndex } from './src/legacy-icons.ts';
 
 export const MODULE_ID = 'fvtt-blood-hunter-2024' as const;
-export const MODULE_VERSION = '1.1.4' as const;
+export const MODULE_VERSION = '1.1.5' as const;
 const SERVER_NEXT_DND5E_COMPATIBILITY_MAXIMUM = '6.999.999' as const;
 export const EXPECTED_ACTIVITY_COUNT = 117;
 export const EXPECTED_LEDGER_COUNT = 94;
