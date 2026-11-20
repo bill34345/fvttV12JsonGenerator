@@ -1,3 +1,4 @@
+import { CombatEvidence, readCombatControl } from './combat-evidence';
 import { collectBrowserSample, StallWindowAccumulator, type MetricGlobals } from './metrics';
 import {
   createSanitizedError,
@@ -8,6 +9,7 @@ import {
   MODULE_ID,
   SAMPLE_INTERVAL_MS,
   sha256Text,
+  type CombatTiming,
   type MonitorEnvironment,
   type MonitorEvent,
   type MonitorEventKind,
@@ -186,6 +188,7 @@ interface PanelDragState {
 }
 
 interface EventContext {
+  timestamp: string;
   sceneId: unknown;
   combatId: unknown;
   round: number | null;
@@ -229,7 +232,8 @@ export class SessionMonitorRuntime {
   #limitReached = false;
   #panelError = false;
   #hookIds: Array<[string, unknown]> = [];
-  #eventHandlers: Array<[EventTarget, string, EventListener]> = [];
+  readonly #combatEvidence = new CombatEvidence();
+  #eventHandlers: Array<[EventTarget, string, EventListener, boolean]> = [];
   #seenGaps = new Set<string>();
   #sensitiveValues: string[] = [];
   #companionLastSeenAt: string | null = null;
@@ -378,7 +382,7 @@ export class SessionMonitorRuntime {
 
   async markJank(): Promise<void> {
     this.#requireActive();
-    await this.#recordEvent('jank-marker', 'player-reported');
+    await this.#recordEvent('jank-marker', 'gm-reported');
     this.#flashPanel('marker');
   }
 
@@ -397,7 +401,7 @@ export class SessionMonitorRuntime {
     if (!this.#meta) return null;
     if (this.#meta.state === 'active') {
       this.#accepting = false;
-      this.#endCollection();
+      this.#endCollection(true);
       this.#clearPanelCollapseTimers();
       await this.#samplingPromise?.catch(() => {});
       await this.#writeQueue;
@@ -495,7 +499,7 @@ export class SessionMonitorRuntime {
       const durationLimit = Date.now() - Date.parse(meta.startedAt) >= MAX_SESSION_MS;
       const sampleLimit = meta.sampleSequence >= MAX_SAMPLES;
       if (durationLimit || sampleLimit) {
-        await this.#persistEvent(meta, 'limit-reached', durationLimit ? 'max-duration' : 'sample-cap', {},
+        await this.#persistEvent(meta, 'limit-reached', durationLimit ? 'max-duration' : 'sample-cap',
           (draft) => { if (sampleLimit) draft.truncated.samples = true; });
         this.#limitReached = true;
         return true;
@@ -522,7 +526,7 @@ export class SessionMonitorRuntime {
       for (const gap of sample.capabilityGaps) {
         if (this.#seenGaps.has(gap)) continue;
         this.#seenGaps.add(gap);
-        await this.#persistEvent(meta, 'capability-gap', gap, {}, undefined, eventContext);
+        await this.#persistEvent(meta, 'capability-gap', gap, undefined, eventContext);
       }
       return false;
     }).then((limitReached) => {
@@ -567,7 +571,12 @@ export class SessionMonitorRuntime {
 
   #beginCollection(): void {
     this.#endCollection();
-    this.#stalls.start();
+    const environment = this.#meta?.environment;
+    this.#stalls.start(environment ? {
+      origin: this.#globals.window?.location?.origin ?? '',
+      moduleIds: new Set(environment.activeModules.map(module => module.id)),
+      systemId: environment.systemId,
+    } : undefined);
     this.#registerHooks();
     this.#nextExpectedAt = Date.now() + SAMPLE_INTERVAL_MS;
     this.#timer = setInterval(() => {
@@ -578,13 +587,16 @@ export class SessionMonitorRuntime {
     }, SAMPLE_INTERVAL_MS);
   }
 
-  #endCollection(): void {
+  #endCollection(keepWindow = false): void {
     if (this.#timer) clearInterval(this.#timer);
     this.#timer = null;
-    this.#stalls.stop();
+    this.#stalls.stop(keepWindow);
+    this.#combatEvidence.clear();
     for (const [name, id] of this.#hookIds) this.#globals.Hooks?.off?.(name, id);
     this.#hookIds = [];
-    for (const [target, name, handler] of this.#eventHandlers) target.removeEventListener(name, handler);
+    for (const [target, name, handler, capture] of this.#eventHandlers) {
+      target.removeEventListener(name, handler, capture);
+    }
     this.#eventHandlers = [];
   }
 
@@ -595,13 +607,34 @@ export class SessionMonitorRuntime {
       if (id !== undefined) this.#hookIds.push([name, id]);
     };
     on('canvasReady', () => { this.#observe(this.#recordEvent('canvas-ready')); });
-    on('canvasTearDown', () => { this.#observe(this.#recordEvent('canvas-teardown')); });
+    on('canvasTearDown', () => {
+      this.#combatEvidence.clear();
+      this.#observe(this.#recordEvent('canvas-teardown'));
+    });
     on('createCombat', (combat: any) => { this.#observe(this.#recordCombatEvent('combat-create', combat)); });
-    on('updateCombat', (combat: any) => { this.#observe(this.#recordCombatEvent('combat-update', combat)); });
+    on('updateCombat', (combat: any, change: object, _options: unknown, userId: string) => {
+      const timing = this.#combatEvidence.update(combat, change, userId === this.#globals.game?.user?.id, performance.now());
+      this.#observe(this.#recordCombatEvent('combat-update', combat, timing));
+    });
     on('deleteCombat', (combat: any) => { this.#observe(this.#recordCombatEvent('combat-delete', combat)); });
-    on('combatStart', (combat: any) => { this.#observe(this.#recordCombatEvent('combat-start', combat)); });
-    on('combatRound', (combat: any) => { this.#observe(this.#recordCombatEvent('combat-round', combat)); });
-    on('combatTurn', (combat: any) => { this.#observe(this.#recordCombatEvent('combat-turn', combat)); });
+    on('combatStart', (combat: any, change: any) => {
+      this.#combatEvidence.expect('start-combat', combat, change, performance.now());
+      this.#observe(this.#recordCombatEvent('combat-start', combat));
+    });
+    on('combatRound', (combat: any, change: any) => {
+      this.#combatEvidence.expect('next-turn', combat, change, performance.now());
+      this.#observe(this.#recordCombatEvent('combat-round', combat));
+    });
+    on('combatTurn', (combat: any, change: any) => {
+      this.#combatEvidence.expect('next-turn', combat, change, performance.now());
+      this.#observe(this.#recordCombatEvent('combat-turn', combat));
+    });
+    on('renderCombatTracker', (tracker: any) => {
+      const combat = tracker.viewed;
+      if (!combat) return;
+      const timing = this.#combatEvidence.render(combat, performance.now());
+      if (timing) this.#observe(this.#recordCombatEvent('combat-tracker-render', combat, timing));
+    });
     on('error', (_location: unknown, error: unknown, data: any) => {
       this.#observe(this.#recordError('foundry', error, packageIdsFrom(data)));
     });
@@ -609,46 +642,71 @@ export class SessionMonitorRuntime {
       this.#observe(this.#recordError('midi-qol', detail?.error ?? detail?.message ?? detail, ['midi-qol']));
     });
 
-    const addEvent = (target: EventTarget | undefined, name: string, handler: EventListener) => {
+    const addEvent = (target: EventTarget | undefined, name: string, handler: EventListener, capture = false) => {
       if (!target) return;
-      target.addEventListener(name, handler);
-      this.#eventHandlers.push([target, name, handler]);
+      target.addEventListener(name, handler, capture);
+      this.#eventHandlers.push([target, name, handler, capture]);
     };
-    addEvent(this.#globals.window, 'error', ((event: ErrorEvent) => {
-      this.#observe(this.#recordError('window-error', event.error ?? event.message));
-    }) as EventListener);
+    addEvent(this.#globals.document, 'click', (event) => {
+      const control = readCombatControl(event.target);
+      const combat = this.#globals.ui?.combat?.viewed;
+      if (!control || !combat?.id || !this.#acceptCollection()) return;
+      const timestamp = new Date(performance.timeOrigin + event.timeStamp).toISOString();
+      const timing = this.#combatEvidence.click(control, combat, timestamp, event.timeStamp);
+      this.#observe(this.#recordCombatEvent('combat-control', combat, timing, timestamp));
+    }, true);
+    addEvent(this.#globals.window, 'error', event => {
+      if ('message' in event) {
+        const error = event as ErrorEvent;
+        this.#observe(this.#recordError('window-error', error.error ?? error.message));
+      } else {
+        const tag = (event.target as Element | null)?.localName;
+        if (tag && ['img', 'script', 'link', 'audio', 'video', 'source'].includes(tag)) {
+          const error = new Error();
+          error.name = 'ResourceLoadError:' + tag;
+          error.stack = undefined;
+          this.#observe(this.#recordError('resource-error', error));
+        }
+      }
+    }, true);
+    for (const kind of ['online', 'offline'] as const) {
+      addEvent(this.#globals.window, kind, () => { this.#observe(this.#recordEvent(kind)); });
+    }
+    addEvent(this.#globals.window, 'webglcontextlost',
+      () => { this.#observe(this.#recordEvent('webgl-context-lost')); }, true);
+    addEvent(this.#globals.window, 'webglcontextrestored',
+      () => { this.#observe(this.#recordEvent('webgl-context-restored')); }, true);
     addEvent(this.#globals.window, 'unhandledrejection', ((event: PromiseRejectionEvent) => {
       this.#observe(this.#recordError('unhandled-rejection', event.reason));
     }) as EventListener);
     addEvent(this.#globals.document, 'visibilitychange', (() => {
-      this.#observe(this.#recordEvent('visibility', this.#globals.document?.visibilityState ?? 'unknown'));
+      const state = this.#globals.document?.visibilityState ?? 'unknown';
+      if (state !== 'visible') this.#combatEvidence.clear();
+      this.#observe(this.#recordEvent('visibility', state));
     }) as EventListener);
     addEvent(this.#globals.window, 'pagehide', (() => { this.#observe(this.#recordEvent('page-hide')); }) as EventListener);
   }
 
   #observe(work: Promise<void>): void { void work.catch(() => {}); }
 
-  async #recordCombatEvent(kind: MonitorEventKind, combat: any): Promise<void> {
+  async #recordCombatEvent(kind: MonitorEventKind, combat: any, timing?: CombatTiming, timestamp?: string): Promise<void> {
     const meta = this.#meta;
     if (!meta || !this.#acceptCollection() || meta.state !== 'active') return;
-    const context = this.#eventContext(combat);
-    await this.#queueWrite(() => this.#persistEvent(meta, kind, undefined, {}, undefined, context));
+    const context = this.#eventContext(combat, timestamp);
+    await this.#queueWrite(() => this.#persistEvent(meta, kind, undefined, undefined, context, timing));
   }
 
-  async #recordEvent(
-    kind: MonitorEventKind,
-    detail?: string,
-    overrides: Partial<Pick<MonitorEvent, 'sceneAlias' | 'combatAlias' | 'round' | 'turn'>> = {},
-  ): Promise<void> {
+  async #recordEvent(kind: MonitorEventKind, detail?: string): Promise<void> {
     const meta = this.#meta;
     if (!meta || !this.#acceptCollection() || meta.state !== 'active') return;
     const context = this.#eventContext();
-    await this.#queueWrite(() => this.#persistEvent(meta, kind, detail, overrides, undefined, context));
+    await this.#queueWrite(() => this.#persistEvent(meta, kind, detail, undefined, context));
   }
 
-  #eventContext(combat = this.#globals.game?.combat): EventContext {
+  #eventContext(combat = this.#globals.game?.combat, timestamp = new Date().toISOString()): EventContext {
     return {
-      sceneId: this.#globals.canvas?.scene?.id,
+      timestamp,
+      sceneId: this.#globals.canvas?.scene?.id ?? this.#globals.game?.scenes?.current?.id,
       combatId: combat?.id,
       round: finiteOrNull(combat?.round),
       turn: finiteOrNull(combat?.turn),
@@ -656,8 +714,7 @@ export class SessionMonitorRuntime {
   }
 
   async #persistEvent(meta: SessionMeta, kind: MonitorEventKind, detail?: string,
-    overrides: Partial<Pick<MonitorEvent, 'sceneAlias' | 'combatAlias' | 'round' | 'turn'>> = {},
-    mutateDraft?: (draft: SessionMeta) => void, context = this.#eventContext()): Promise<void> {
+    mutateDraft?: (draft: SessionMeta) => void, context = this.#eventContext(), timing?: CombatTiming): Promise<void> {
     const draft = structuredClone(meta);
     mutateDraft?.(draft);
     if (draft.eventSequence >= MAX_EVENTS) {
@@ -666,23 +723,24 @@ export class SessionMonitorRuntime {
       Object.assign(meta, draft);
       return;
     }
-    const timestamp = new Date().toISOString();
+    const { timestamp } = context;
     const event: MonitorEvent = {
       sequence: draft.eventSequence + 1,
       timestamp,
       elapsedMs: Math.max(0, Date.parse(timestamp) - Date.parse(draft.startedAt)),
       kind,
-      sceneAlias: overrides.sceneAlias ?? this.#alias(draft, 'scene', context.sceneId),
-      combatAlias: overrides.combatAlias ?? this.#alias(draft, 'combat', context.combatId),
-      round: overrides.round ?? context.round,
-      turn: overrides.turn ?? context.turn,
+      sceneAlias: this.#alias(draft, 'scene', context.sceneId),
+      combatAlias: this.#alias(draft, 'combat', context.combatId),
+      round: context.round,
+      turn: context.turn,
       ...(detail ? { detail: detail.slice(0, 80) } : {}),
+      ...(timing ? { combatTiming: timing } : {}),
     };
     draft.eventSequence = event.sequence;
-    draft.updatedAt = timestamp;
+    draft.updatedAt = new Date().toISOString();
     await this.#store.commitRecord(draft, { kind: 'event', value: event });
     Object.assign(meta, draft);
-    this.#renderPanel();
+    if (kind !== 'combat-control' && kind !== 'combat-tracker-render') this.#renderPanel();
   }
 
   async #recordError(
@@ -692,6 +750,7 @@ export class SessionMonitorRuntime {
   ): Promise<void> {
     const meta = this.#meta;
     if (!meta || !this.#acceptCollection() || meta.state !== 'active') return;
+    const timestamp = new Date().toISOString();
     await this.#queueWrite(async () => {
       const draft = structuredClone(meta);
       if (draft.errorSequence >= MAX_ERRORS) {
@@ -701,11 +760,11 @@ export class SessionMonitorRuntime {
         return;
       }
       const sanitized = await createSanitizedError({
-        sequence: draft.errorSequence + 1, startedAt: draft.startedAt,
+        sequence: draft.errorSequence + 1, startedAt: draft.startedAt, timestamp,
         source, error, sensitiveValues: this.#sensitiveValues, packageIds,
       });
       draft.errorSequence = sanitized.sequence;
-      draft.updatedAt = sanitized.timestamp;
+      draft.updatedAt = new Date().toISOString();
       await this.#store.commitRecord(draft, { kind: 'error', value: sanitized });
       Object.assign(meta, draft);
       this.#renderPanel();

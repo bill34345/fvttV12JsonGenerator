@@ -14,8 +14,9 @@ export type MonitorEventKind =
   | 'session-start' | 'session-stop' | 'session-resume' | 'page-hide'
   | 'visibility' | 'canvas-ready' | 'canvas-teardown' | 'scene'
   | 'combat-create' | 'combat-update' | 'combat-delete' | 'combat-start'
-  | 'combat-round' | 'combat-turn' | 'jank-marker' | 'capability-gap'
-  | 'companion-connected' | 'companion-lost' | 'limit-reached';
+  | 'combat-round' | 'combat-turn' | 'combat-control' | 'combat-tracker-render' | 'jank-marker' | 'capability-gap'
+  | 'companion-connected' | 'companion-lost' | 'limit-reached'
+  | 'online' | 'offline' | 'webgl-context-lost' | 'webgl-context-restored';
 
 export interface MonitorEnvironment {
   foundryVersion: string;
@@ -43,6 +44,31 @@ export interface LongTaskWindow {
   count: number;
   totalMs: number;
   maxMs: number;
+  longestStartedAt?: string;
+}
+
+interface BrowserSignalTiming {
+  startMs: number;
+  durationMs: number;
+}
+
+export type BrowserSignal = BrowserSignalTiming & (
+  | { kind: 'frame-gap' | 'long-task' }
+  | {
+    kind: 'long-frame';
+    blockingMs: number;
+    layoutOffsetMs?: number;
+    scripts: Array<{ owner?: string; durationMs: number; forcedLayoutMs: number }>;
+  }
+  | { kind: 'interaction'; event: string; inputDelayMs: number; handlerMs: number }
+  | { kind: 'resource'; initiator: string; owner?: string; status?: number }
+);
+export type BrowserSignalKind = BrowserSignal['kind'];
+
+export interface BrowserEvidenceWindow {
+  records: BrowserSignal[];
+  omitted: Partial<Record<BrowserSignalKind, number>>;
+  unavailable: BrowserSignalKind[];
 }
 
 export interface BrowserSample {
@@ -63,7 +89,16 @@ export interface BrowserSample {
   timerDriftMs: number;
   frames: FrameWindow;
   longTasks: LongTaskWindow;
+  browserEvidence?: BrowserEvidenceWindow;
   capabilityGaps: string[];
+}
+
+export type CombatControl = 'start-combat' | 'next-turn' | 'roll-initiative';
+
+export interface CombatTiming {
+  control: CombatControl;
+  clickedAt: string;
+  sinceClickMs: number;
 }
 
 export interface MonitorEvent {
@@ -76,13 +111,14 @@ export interface MonitorEvent {
   round?: number | null;
   turn?: number | null;
   detail?: string;
+  combatTiming?: CombatTiming;
 }
 
 export interface SanitizedError {
   sequence: number;
   timestamp: string;
   elapsedMs: number;
-  source: 'foundry' | 'window-error' | 'unhandled-rejection' | 'midi-qol' | 'cdp-runtime' | 'cdp-log';
+  source: 'foundry' | 'window-error' | 'resource-error' | 'unhandled-rejection' | 'midi-qol' | 'cdp-runtime' | 'cdp-log';
   name: string;
   template: string;
   frames: string[];

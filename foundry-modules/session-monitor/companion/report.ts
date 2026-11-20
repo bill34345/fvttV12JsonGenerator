@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { renderMarkerEvidence } from './marker-evidence';
 import {
   percentile,
   type BrowserSample,
@@ -62,12 +63,15 @@ export function renderMarkdownReport(combined: CombinedSessionExport): string {
     `- Long Tasks: ${samples.reduce((sum, sample) => sum + sample.longTasks.count, 0)}`,
     `- Exact ${299_958_272}-byte private committed allocations (last scan): ${last(companion.map((sample) => sample.wasmCommittedRegionCount).filter(isNumber)) ?? 'n/a'}`,
     '',
-    '## Markers',
+    '## 卡顿标记（北京时间）',
     '',
-    ...(markers.length ? markers.map((marker) => {
-      const nearest = nearestSample(samples, marker.timestamp);
-      return `- ${marker.timestamp}: heap ${formatBytes(nearest?.heap.usedBytes ?? null)}, frame max ${formatMs(nearest?.frames.maxMs ?? null)}, scene ${marker.sceneAlias ?? 'n/a'}, combat ${marker.combatAlias ?? 'n/a'}`;
-    }) : ['- None']),
+    ...(markers.length ? markers.flatMap(marker => {
+      const sample = nearestSample(samples, marker.timestamp);
+      const telemetry = `- ${marker.timestamp}: heap ${formatBytes(sample?.heap.usedBytes ?? null)}, frame max ${formatMs(sample?.frames.maxMs ?? null)}, scene ${marker.sceneAlias ?? 'n/a'}, combat ${marker.combatAlias ?? 'n/a'}`;
+      return [...renderMarkerEvidence(combined, marker), telemetry, ''];
+    }) : ['- 本次没有标记。']),
+    '',
+    'JSON 仍保留整场的采样、事件与错误。报告列出各标记附近的记录及缺失项。浏览器提供的脚本来源是执行入口，时间重叠也可能来自不同操作。',
     '',
     '## Chrome cold restart boundaries',
     '',
@@ -163,9 +167,9 @@ export async function readJsonLines<T>(path: string): Promise<T[]> {
 
 function nearestSample(samples: BrowserSample[], timestamp: string): BrowserSample | undefined {
   const target = Date.parse(timestamp);
-  return [...samples].sort((left, right) =>
-    Math.abs(Date.parse(left.timestamp) - target) - Math.abs(Date.parse(right.timestamp) - target)
-  )[0];
+  return samples.reduce<BrowserSample | undefined>((nearest, sample) => !nearest
+    || Math.abs(Date.parse(sample.timestamp) - target) < Math.abs(Date.parse(nearest.timestamp) - target)
+    ? sample : nearest, undefined);
 }
 
 function isNumber(value: number | null): value is number {

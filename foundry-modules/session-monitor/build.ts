@@ -32,7 +32,7 @@ const BROWSER_BUNDLE_SOURCE_LABELS = [
     pattern: /^\/\/ (?:.*[\\/])?packages[\\/]contracts[\\/]src[\\/]hash[.]ts\r?$/gm,
     canonical: '// @fvtt-json-generator/contracts/hash.ts',
   },
-  ...['schema', 'metrics', 'storage', 'runtime', 'index', 'help'].map((source) => ({
+  ...['schema', 'metrics', 'storage', 'runtime', 'index', 'help', 'combat-evidence', 'browser-evidence'].map((source) => ({
     pattern: new RegExp(`^// (?:.*[\\\\/])?src[\\\\/]${source}[.]ts\\r?$`, 'gm'),
     canonical: `// src/${source}.ts`,
   })),

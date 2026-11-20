@@ -2,7 +2,7 @@
   "id": "session-monitor",
   "title": "跑团会话监测器",
   "category": "maintain",
-  "summary": "由 GM-only Foundry 模块和 Windows/Chrome companion 共同记录隐私过滤的浏览器、进程和生命周期排障时间线。",
+  "summary": "在 GM 页记录浏览器时序、Foundry 事件和脱敏错误。可选伴随程序另记录 Chrome 与 Windows 进程指标。",
   "when": "需要定位跑团期间卡顿、renderer 变化、CDP 断连或浏览器内存信号时，按任务范围记录；长时验收须有明确要求及真实会话证据。",
   "requires": [
     "版本准入现按主版本开放：Foundry 14、dnd5e 6 的后续版本可继续使用，保留清单原最低版本和 verified；已验行为仍绑定下面列出的精确环境，不把准入范围当作功能验收。 可选 Midi 与 Sequencer 分别保留最低 14.0.11、4.2.3，不再按已验版本封顶。",
@@ -36,7 +36,12 @@
     },
     {
       "title": "停止并查看报告",
-      "text": "跑团记录结束后点击“停止并导出”或按 Ctrl+C 结束 companion；检查 browser-session.json、companion.jsonl、companion-events.jsonl、session-combined.json、report.md 和 heap-timeline.svg。"
+      "text": "团后在 GM 面板点击“停止并导出”，保留原 JSON。需要 Chrome/Windows 指标时，也可结束 companion 并查看合并产物。"
+    },
+    {
+      "title": "用原 JSON 查卡顿",
+      "text": "可直接离线生成 report.md。手动标记前 60 秒及后 10 秒内的 GM 页操作、慢帧、资源请求、错误等已采到的记录按时间排列。旧 JSON 仍显示原有采样与事件。",
+      "command": "bun run monitor:session -- report --browser \"<会话导出.json>\" --out \"<报告目录>\""
     },
     {
       "title": "保存失败后续接",
@@ -44,9 +49,10 @@
     }
   ],
   "outputs": [
-    "Foundry 模块导出的 browser-session.json",
+    "Foundry 模块导出的 browser-session.json，含 GM 页活动、画布、帧与交互时序、慢资源请求、脱敏错误和各来源缺失情况",
     "Chrome/Windows 采样、错误和浏览器/renderer 代际事件 JSONL",
-    "合并后的 session-combined.json、隐私过滤 report.md 和 heap-timeline.svg"
+    "合并后的 session-combined.json、隐私过滤 report.md 和 heap-timeline.svg",
+    "只用浏览器 JSON 即可离线生成逐标记的 report.md"
   ],
   "limits": [
     "历史接受绑定 Foundry 14.364 / dnd5e 5.3.3；Next 6.0.5 仅接受下列代表切片，v1 只在 GM 客户端运行；模块和 companion 只观察，不清缓存、不改设置、不删文档、不写 LevelDB",
@@ -55,7 +61,9 @@
     "本轮只执行短会话；长时 Foundry／Chrome 验收需明确任务授权，指标相关性不等于因果证明。",
     "Next 14.368／6.0.5 本轮短会话 start／mark／stop、重载和既有历史保护通过；不代表长时采样、companion 或四小时跑团接受。",
     "当前module/companion版本1.1.3、schema仍v1。1.1.3减少聊天和先攻刷新时监测浮窗自身的布局工作，不代表其他卡顿已经解决。以下保留1.1.2的历史接受：2026-10-25在14.368/6.0.6完成一个真实GM短会话：开始、卡顿标记、普通重载、同ID恢复、6采样/6事件与一次停止；测试归档清理后公开list/export确认缺席。Companion、四小时与非GM设备未覆盖。",
-    "本地候选将记录与计数一次提交，停止前等待已接纳写入；原生接受限于上述正常短会话，存储失败恢复与权限变化另有局部检查，不能据此承诺长时性能或任意真实故障无损。"
+    "本地候选将记录与计数一次提交，停止前等待已接纳写入；原生接受限于上述正常短会话，存储失败恢复与权限变化另有局部检查，不能据此承诺长时性能或任意真实故障无损。",
+    "浏览器明细记录事件的时间和耗时。脚本归属只记录 Core、系统或已启用的模块，网络记录只保留类别、可见的 HTTP 状态和耗时。",
+    "每个采样窗各类明细最多保留 12 条，达到容量时记录未保留数量。浏览器未提供的项目列为缺失。逐骰结算和服务器内部时序需另有记录。"
   ],
   "keywords": [
     "跑团",

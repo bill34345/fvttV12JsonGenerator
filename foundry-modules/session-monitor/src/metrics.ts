@@ -1,5 +1,7 @@
+import { BrowserEvidenceRecorder, type BrowserEvidenceScope } from './browser-evidence';
 import {
   percentile,
+  type BrowserEvidenceWindow,
   type BrowserSample,
   type FrameWindow,
   type LongTaskWindow,
@@ -29,34 +31,51 @@ export class StallWindowAccumulator {
   #frameId: number | null = null;
   #lastFrame: number | null = null;
   #frameDeltas: number[] = [];
-  #longTasks: number[] = [];
+  #longTasks: Array<Pick<PerformanceEntry, 'startTime' | 'duration'>> = [];
   #observer?: PerformanceObserver;
+  #longTaskSupported = false;
+  #startedAt = 0;
+  readonly #evidence = new BrowserEvidenceRecorder();
 
   constructor(globals: Pick<typeof globalThis, 'requestAnimationFrame' | 'cancelAnimationFrame'> = globalThis) {
     this.#globals = globals;
   }
 
-  start(): void {
+  start(scope?: BrowserEvidenceScope): void {
     if (this.#frameId !== null) return;
+    this.#startedAt = performance.now();
+    this.#evidence.start(scope, this.#startedAt);
     const frame = (timestamp: number) => {
-      if (this.#lastFrame !== null) this.#frameDeltas.push(Math.max(0, timestamp - this.#lastFrame));
+      if (this.#lastFrame !== null) {
+        const duration = Math.max(0, timestamp - this.#lastFrame);
+        this.#frameDeltas.push(duration);
+        this.#evidence.frame(this.#lastFrame, duration);
+      }
       this.#lastFrame = timestamp;
       this.#frameId = this.#globals.requestAnimationFrame(frame);
     };
     this.#frameId = this.#globals.requestAnimationFrame(frame);
     try {
-      this.#observer = new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) this.#longTasks.push(Math.max(0, entry.duration));
-      });
+      if (!PerformanceObserver.supportedEntryTypes.includes('longtask')) return;
+      this.#observer = new PerformanceObserver((list) => this.#addLongTasks(list.getEntries()));
       this.#observer.observe({ type: 'longtask' });
+      this.#longTaskSupported = true;
     } catch {
       this.#observer = undefined;
     }
   }
 
-  take(): { frames: FrameWindow; longTasks: LongTaskWindow; longTaskSupported: boolean } {
+  take(): {
+    frames: FrameWindow; longTasks: LongTaskWindow; longTaskSupported: boolean;
+    browserEvidence?: BrowserEvidenceWindow;
+  } {
+    this.#addLongTasks(this.#observer?.takeRecords() ?? []);
     const frames = this.#frameDeltas;
     const longTasks = this.#longTasks;
+    const longest = longTasks.reduce<(typeof longTasks)[number] | undefined>(
+      (best, task) => !best || task.duration > best.duration ? task : best,
+      undefined,
+    );
     this.#frameDeltas = [];
     this.#longTasks = [];
     return {
@@ -71,21 +90,37 @@ export class StallWindowAccumulator {
       },
       longTasks: {
         count: longTasks.length,
-        totalMs: longTasks.reduce((sum, value) => sum + value, 0),
-        maxMs: longTasks.length ? Math.max(...longTasks) : 0,
+        totalMs: longTasks.reduce((sum, task) => sum + task.duration, 0),
+        maxMs: longest?.duration ?? 0,
+        ...(longest ? { longestStartedAt: new Date(performance.timeOrigin + longest.startTime).toISOString() } : {}),
       },
-      longTaskSupported: this.#observer !== undefined,
+      longTaskSupported: this.#longTaskSupported,
+      browserEvidence: this.#evidence.take(this.#longTaskSupported),
     };
   }
 
-  stop(): void {
+  stop(keepWindow = false): void {
     if (this.#frameId !== null) this.#globals.cancelAnimationFrame(this.#frameId);
     this.#frameId = null;
     this.#lastFrame = null;
-    this.#frameDeltas = [];
-    this.#longTasks = [];
+    if (keepWindow) {
+      this.#addLongTasks(this.#observer?.takeRecords() ?? []);
+    } else {
+      this.#frameDeltas = [];
+      this.#longTasks = [];
+      this.#longTaskSupported = false;
+    }
     this.#observer?.disconnect();
     this.#observer = undefined;
+    this.#evidence.stop(keepWindow);
+  }
+
+  #addLongTasks(entries: PerformanceEntry[]): void {
+    for (const { startTime, duration } of entries) {
+      if (startTime < this.#startedAt) continue;
+      this.#longTasks.push({ startTime, duration });
+      this.#evidence.longTask(startTime, duration);
+    }
   }
 }
 
@@ -140,6 +175,7 @@ export function collectBrowserSample(input: {
     timerDriftMs: Math.max(0, Date.now() - input.expectedAt),
     frames: input.stalls.frames,
     longTasks: input.stalls.longTasks,
+    ...(input.stalls.browserEvidence ? { browserEvidence: input.stalls.browserEvidence } : {}),
     capabilityGaps: gaps,
   };
 }

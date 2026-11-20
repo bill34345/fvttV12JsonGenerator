@@ -16,7 +16,7 @@ import {
 } from './cdp';
 import { ChromeSupervisor } from './chromeSupervisor';
 import { sessionMonitorFoundryPaths, type SessionMonitorEnvironment } from '../foundryPaths';
-import { combineSession, readJsonLines, writeReportBundle } from './report';
+import { combineSession, readJsonLines, renderMarkdownReport, writeReportBundle } from './report';
 import { aggregateProcesses, WindowsProcessReader } from './windowsProcess';
 
 const COMPANION_VERSION = PRODUCT_VERSION;
@@ -353,10 +353,22 @@ function findChrome(): string {
 }
 
 async function runReport(options: CliOptions): Promise<string> {
-  if (!options.browserExport || !options.companionJsonl || !options.out) {
-    throw new Error('report requires --browser, --companion, and --out.');
+  if (!options.browserExport || !options.out) {
+    throw new Error('report requires --browser and --out.');
   }
-  const browser = JSON.parse(await readFile(options.browserExport, 'utf8')) as SessionExport;
+  const browser = JSON.parse((await readFile(options.browserExport, 'utf8')).replace(/^\uFEFF/, '')) as SessionExport;
+  if (browser?.schemaVersion !== 1 || !browser.session
+    || !Array.isArray(browser.samples) || !Array.isArray(browser.events) || !Array.isArray(browser.errors)) {
+    throw new Error('report requires a Session Monitor schema v1 export.');
+  }
+  if (!options.companionJsonl) {
+    const path = resolve(options.out, 'report.md');
+    await mkdir(options.out, { recursive: true });
+    const combined = 'companion' in browser
+      ? browser as ReturnType<typeof combineSession> : combineSession(browser, []);
+    await writeFile(path, renderMarkdownReport(combined));
+    return path;
+  }
   const samples = await readJsonLines<CompanionSample>(options.companionJsonl);
   const eventPath = options.companionEvents
     ?? resolve(dirname(options.companionJsonl), 'companion-events.jsonl');

@@ -170,9 +170,9 @@
     "note": "核对现有 Deck GM 操作和原生 6 版本准入，保留历史玩法范围。"
   },
   "session-monitor": {
-    "fingerprint": "2dff8edb4f754e5b819b8fd064e2bc30166693a3834a10d9c9e55358f8f513f4",
-    "reviewedOn": "2026-11-17",
-    "note": "核对 1.1.3 停止后计时与折叠布局修复，长时和 companion 接受按原记录。"
+    "fingerprint": "2aafb3643b6c85048272c45a8412d56ad0854cb6777161a6bdacd5c437da9f80",
+    "reviewedOn": "2026-11-20",
+    "note": "核对 GM 浏览器原始事件、慢帧、长任务、交互、慢资源、错误脱敏与容量。Chrome 非战斗时序已读回，修正浏览器迟报记录的开机边界并回放验证。"
   },
   "fvtt-weapon-mastery-properties": {
     "fingerprint": "fe128a328c2afe0ac5cb3668169337f8fd8f425ab3545d51ec2cb79461068b43",
