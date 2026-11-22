@@ -15,6 +15,7 @@ import {
 } from './localization.ts';
 
 const TOKEN_ACTION_HUD_CORE_ID = 'token-action-hud-core';
+const INJURY_STATUS_ID = 'fvtt-injury';
 const DICE_BADGE_CLASS = 'fvtt-custom-conditions-dice-face';
 const PARAMETERIZED_CONDITIONS = new Set<ConditionId>(['bleeding', 'burning', 'frozen', 'jinxed', 'valor']);
 const ownedConditionIds = new Set<ConditionId>();
@@ -57,6 +58,10 @@ export function registerConditionActionInterceptor(globals: any = globalThis): u
     extender.hudManager = rollHandler.hudManager;
     extender.prehandleActionEvent = function () {
       const statusId = this.action?.system?.actionId;
+      if (this.action?.system?.actionType === 'condition' && statusId === INJURY_STATUS_ID) {
+        routeInjuryAction(this.isRightClick ? -1 : 1, this.hudManager, globals);
+        return true;
+      }
       const conditionId = typeof statusId === 'string' ? logicalConditionId(statusId) : undefined;
       if (this.action?.system?.actionType !== 'condition'
         || !conditionId
@@ -255,6 +260,37 @@ function routeCustomConditionAction(conditionId: ConditionId, hudManager: any, g
     globals.console?.error?.(`[${MODULE_ID}] TAH ${name} action failed`, error);
     notify(globals, hudKey(conditionId, 'Failed'), `Custom ${name} could not be toggled. Check the GM console.`, { condition: label });
   });
+}
+
+function routeInjuryAction(delta: -1 | 1, hudManager: any, globals: any): void {
+  const actor = resolveHudActor(hudManager);
+  const label = localize(globals, 'FVTTCONDITIONS.Injury.Name', 'Injury');
+  if (!isActiveGM(globals) || !actor) {
+    notify(globals, 'FVTTCONDITIONS.Hud.ToggleUnavailable',
+      'Injury can only be changed by the active GM for one selected Actor.', { condition: label });
+    return;
+  }
+  const injury = globals.game?.modules?.get?.(MODULE_ID)?.api?.injury;
+  if (typeof injury?.getState !== 'function' || typeof injury?.setStacks !== 'function') {
+    notify(globals, 'FVTTCONDITIONS.Hud.ToggleFailed',
+      'Injury could not be changed. Check the GM console.', { condition: label });
+    return;
+  }
+  try {
+    const current = Number(injury.getState(actor)?.stacks);
+    if (!Number.isInteger(current) || current < 0 || current > 3) throw new Error('Injury state is invalid.');
+    const stacks = Math.max(0, Math.min(3, current + delta));
+    if (stacks === current) return;
+    void Promise.resolve(injury.setStacks(actor, stacks, 'token-action-hud')).catch((error: unknown) => {
+      globals.console?.error?.(`[${MODULE_ID}] TAH Injury action failed`, error);
+      notify(globals, 'FVTTCONDITIONS.Hud.ToggleFailed',
+        'Injury could not be changed. Check the GM console.', { condition: label });
+    });
+  } catch (error) {
+    globals.console?.error?.(`[${MODULE_ID}] TAH Injury action failed`, error);
+    notify(globals, 'FVTTCONDITIONS.Hud.ToggleFailed',
+      'Injury could not be changed. Check the GM console.', { condition: label });
+  }
 }
 
 function routeConditionManager(conditionId: ConditionId, hudManager: any, globals: any): void {

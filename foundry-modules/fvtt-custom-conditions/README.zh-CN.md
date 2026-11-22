@@ -36,7 +36,7 @@ Token Action HUD 中，**全部 19 个自定义状态**使用 `fvtt-custom-condi
 
 状态图标是所列来源 SVG 的原始字节副本。笨拙使用 Skoll 的 Drop Weapon，踉跄使用 Lorc 的 Foot Trip。作者署名、来源链接、许可声明和原文件 SHA-256 值见 [CREDITS.md](CREDITS.md)。
 
-伤势由本模块自己的 `flags.fvtt-custom-conditions.injury` 保存、结算和显示。GM 在本管理器或 Token 状态 HUD 调整 0–3 层；旧 `flags.fvtt-injury-fading-spirits.injury` 原值保留，合法数据经字段级迁移和读回验证后才启用新权威。多个旧伤势效果、未知 schema 或两处 flag 冲突时停止迁移并提示 GM。伤势是运行时分层状态，不属于共享 19 项 ConditionId，也不会自动加入生成器正式 JSON 支持。只有同时启用兼容新版“消逝的灵魂”模块时才显示复活仪式入口；不启用它仍可使用伤势规则。
+伤势由本模块自己的 `flags.fvtt-custom-conditions.injury` 保存、结算和显示。当前活动 GM 在本管理器或原生 Token 状态 HUD 调整 0–3 层。选中单个棋子后，也可从 Token Action HUD 的「效应 → 状态 → 伤势」左键加一层、右键减一层。旧 `flags.fvtt-injury-fading-spirits.injury` 原值保留，合法数据经字段级迁移和读回验证后才启用新权威。多个旧伤势效果、未知 schema 或两处 flag 冲突时停止迁移并提示 GM。伤势是运行时分层状态，不属于共享 19 项 ConditionId，也不会自动加入生成器正式 JSON 支持。只有同时启用兼容新版“消逝的灵魂”模块时才显示复活仪式入口；不启用它仍可使用伤势规则。
 
 伤势设置默认关闭，NPC 默认不纳入；首次迁移会读取旧模块的启用与 NPC 管理设置，保持既有自动化范围。正 HP 首次到 0 开启 episode；从该 episode 首次恢复正 HP 增加一层，0–2 层再次倒地设置对应死亡失败，3 层需 GM 先裁定。裸 d20 19/20 的死亡豁免大成功、真实治疗到满血与成功短/长休清伤势也由本模块处理。Actor flags 是权威，Active Effect 只作为显示投影。仅当前活动 GM 写入；若检测到仍运行旧伤势 hooks 的 IFS 版本，伤势自动化失败关闭，需先配对升级。
 

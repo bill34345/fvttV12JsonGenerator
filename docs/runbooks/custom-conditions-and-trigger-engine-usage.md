@@ -26,7 +26,7 @@
 
 名称和悬停规则说明跟随 Foundry 的核心界面语言：`cn` / `zh-CN` 为中文，`en` 或没有对应翻译的语言回退英文。改语言后重载世界。系统与模块没有两套彼此独立的语言选择。十九种自定义实例各使用一张选定的 Game-icons.net 原始 SVG，作者、作品、来源和 CC BY 3.0 许可见模块包内 `CREDITS.md`。笨拙使用 Drop Weapon，踉跄使用 Foot Trip。Token Action HUD 的完整提示使用 dnd5e 规则卡布局：左侧双语标题、右侧状态类别和分段正文；状态图标只留在 HUD 按钮，不放大到提示框内。仅名称和无提示模式仍按 TAH 设置生效。**所有 19 个自定义状态**使用 `fvtt-custom-conditions.<语义 ID>` 的独立状态 ID；dnd5e 原生与其他模组的裸 ID 按钮保留其原有规则。CoTN 中系统原生 `bleeding` 的中文按钮是「失血」，本模块自定义 `fvtt-custom-conditions.bleeding` 是「流血」；原生 `burning` 为「燃烧」，自定义 `fvtt-custom-conditions.burning` 为「灼烧」。自定义 Dazed 标题只显示「恍惚」或 Dazed，不显示辨识用后缀，仍与 MCDM 的裸 `dazed` 分立。不能把原生按钮当作已配置自定义骰式的实例。
 
-伤势由 Custom Conditions 自身管理。在模块设置打开“启用伤势自动化”，按需打开“管理 NPC 伤势”；新世界两项默认关闭，升级沿用旧伤势模块已有意图。在管理器的伤势区域查看或调整 0–3 层，不要求安装复活模块。Token HUD 左键增加、右键减少；状态标签显示层数。伤势采用此前选定的 Game-icons Bandaged 原 SVG，作者、来源和许可见 Custom Conditions 包内的 `CREDITS.md`。
+伤势由 Custom Conditions 自身管理。在模块设置打开“启用伤势自动化”，按需打开“管理 NPC 伤势”；新世界两项默认关闭，升级沿用旧伤势模块已有意图。在管理器的伤势区域查看或调整 0–3 层，不要求安装复活模块。原生 Token HUD 左键增加、右键减少。启用 Token Action HUD 时，当前活动 GM 选中单个棋子，也可从「效应 → 状态 → 伤势」用同样的左右键增减；按钮显示当前层数。伤势采用此前选定的 Game-icons Bandaged 原 SVG，作者、来源和许可见 Custom Conditions 包内的 `CREDITS.md`。
 
 HP 归零开启倒地 episode；第一次恢复正 HP 增加一层，恢复满血或成功短休／长休清除。死亡豁免只认保留的自然 d20 面值：19／20 清零成功与失败并恢复 1 HP，修正值和被丢弃的骰不算。第三层倒地先由 GM 裁定直接死亡、环境例外或稍后处理，不提前写入死亡。
 

@@ -140,14 +140,14 @@
     "note": "核对原生 6 准入和独立复活规则，明确原有实机接受范围。"
   },
   "fvtt-trigger-engine": {
-    "fingerprint": "7e79080fbce16d8a9d48c9883009328a62d8d57783d5fe7bd41477b37170fd21",
-    "reviewedOn": "2026-11-17",
-    "note": "核对原生 6 准入、活动 GM 和 API 边界，历史事件验收保持原目标。"
+    "fingerprint": "d80300f78939d37d02563f5d814f5e71169e8d40e94cf45cfa35229980d7f249",
+    "reviewedOn": "2026-11-22",
+    "note": "共享使用说明增加 Custom Conditions 的 TAH 伤势操作。Trigger Engine 的事件、权限和操作步骤经核对仍适用。"
   },
   "fvtt-custom-conditions": {
-    "fingerprint": "51e57d140d5e980e4abfb65a589e870fbac29ba7e43f1a6e9c72eb9e30571fdc",
-    "reviewedOn": "2026-11-17",
-    "note": "核对自定义状态模块的主版本准入、运行条件和代表功能；验收范围保留原记录。"
+    "fingerprint": "f627a328abcd34aa29827b9a844ec32016bf9a57ba326e88670f08c65210052b",
+    "reviewedOn": "2026-11-22",
+    "note": "核对 TAH 在伤势效果名称保存后重绘。原有入口、手势和规则说明继续适用。"
   },
   "fvtt-json-forge": {
     "fingerprint": "5a2960056498adf5f695458343636cda0cb1230a6a6cf360e1ff350516459da3",

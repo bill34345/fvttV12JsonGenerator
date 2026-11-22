@@ -222,6 +222,13 @@ export class InjuryRuntime {
     on('dnd5e.restCompleted', (actor, result, config) => { void this.onRestCompleted(actor, result, config).catch((error) => this.report(error)); });
     on('renderTokenHUD', (app, html) => this.decorateTokenHud(app, html));
     on('tokenActionHudCorePreRender', (hud, manager) => this.decorateActionHud(hud, manager));
+    on('updateActiveEffect', (effect, changes, options) => {
+      // TAH can render on the Actor update before the projected effect name is saved.
+      if (this.globals.game?.tokenActionHud && typeof changes?.name === 'string'
+        && options?.[MODULE_ID]?.injuryProjection === true && ownedProjection(effect)) {
+        this.globals.Hooks?.callAll?.('forceUpdateTokenActionHud');
+      }
+    });
     on('deleteActiveEffect', (effect, options) => { void this.onDeleteEffect(effect, options).catch((error) => this.report(error)); });
     const document = this.globals.document;
     if (typeof document?.addEventListener === 'function') {

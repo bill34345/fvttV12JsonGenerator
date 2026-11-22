@@ -549,6 +549,32 @@ describe('Custom Conditions injury ownership', () => {
     expect(details.updates).toBeUndefined();
   });
 
+  test('refreshes TAH after the managed injury effect name is saved', async () => {
+    const { actor, effects, globals, hookMap, runtime } = fixture();
+    const displayed: string[] = [];
+    globals.game.tokenActionHud = {};
+    globals.Hooks.callAll = (hook: string) => {
+      if (hook === 'forceUpdateTokenActionHud') displayed.push(effects[0]?.name);
+    };
+    const update = actor.updateEmbeddedDocuments.bind(actor);
+    actor.updateEmbeddedDocuments = async (type: string, changes: any[], options: any) => {
+      await update(type, changes);
+      for (const change of changes) hookMap.get('updateActiveEffect')?.(effects[0], change, options);
+    };
+
+    await runtime.setStacks(actor, 1, 'setup');
+    expect(displayed).toEqual([]);
+    await runtime.setStacks(actor, 2, 'token-action-hud');
+    await runtime.setStacks(actor, 1, 'token-action-hud');
+    expect(displayed).toEqual(['Injury (2/3)', 'Injury (1/3)']);
+
+    const onUpdate = hookMap.get('updateActiveEffect');
+    onUpdate(effects[0], { disabled: true }, { [CC]: { injuryProjection: true } });
+    onUpdate(effects[0], { name: 'User edit' }, {});
+    onUpdate({ flags: {}, statuses: new Set() }, { name: 'Other effect' }, { [CC]: { injuryProjection: true } });
+    expect(displayed).toHaveLength(2);
+  });
+
   test('owns the TAH Injury count and four-paragraph tooltip in each tooltip mode', () => {
     const { actor, globals, hookMap } = fixture({ legacy: true, stacks: 1 });
     globals.game.i18n = { localize: (key: string) => key === 'FVTTCONDITIONS.Injury.Name' ? '伤势'

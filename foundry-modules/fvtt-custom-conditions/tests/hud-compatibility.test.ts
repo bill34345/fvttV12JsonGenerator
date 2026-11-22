@@ -576,6 +576,93 @@ describe('Custom Conditions TAH compatibility', () => {
     expect(warnings).toContain('Multiple Custom Shocked instances found. Manage them in the Custom Conditions panel.');
   });
 
+  test('routes TAH Injury left/right clicks through the injury API instead of native status toggling', async () => {
+    const hooks = createFoundryHooksClass();
+    class FakeRollHandlerExtender {
+      hudManager: any;
+      get isRightClick(): boolean { return this.hudManager?.isRightClick === true; }
+    }
+    const target = actor('injured-target');
+    const calls: any[] = [];
+    let stacks = 1;
+    const api = {
+      injury: {
+        getState: () => ({ stacks }),
+        setStacks: async (...args: any[]) => { calls.push(args); stacks = args[1]; },
+      },
+    };
+    const globals = globalsFor({
+      hooks,
+      modules: {
+        'token-action-hud-core': { api: { RollHandlerExtender: FakeRollHandlerExtender } },
+        'fvtt-custom-conditions': { api },
+      },
+    });
+    registerConditionMappings(globals);
+    const manager: any = {
+      actor: target, token: { actor: target }, actors: [target], tokens: [{ actor: target }], isRightClick: false,
+    };
+    const host: any = {
+      hudManager: manager,
+      addRollHandlerExtender(extender: any) { this.extender = extender; },
+    };
+    hooks.callbacks.get('tokenActionHudCoreAddRollHandlerExtenders')![0]!(host);
+    host.extender.action = { system: { actionType: 'condition', actionId: 'fvtt-injury' } };
+
+    expect(host.extender.prehandleActionEvent({ button: 0 })).toBe(true);
+    await Promise.resolve();
+    expect(calls).toEqual([[target, 2, 'token-action-hud']]);
+    expect(stacks).toBe(2);
+
+    manager.isRightClick = true;
+    expect(host.extender.prehandleActionEvent({ button: 2 })).toBe(true);
+    await Promise.resolve();
+    expect(calls).toEqual([[target, 2, 'token-action-hud'], [target, 1, 'token-action-hud']]);
+    expect(stacks).toBe(1);
+
+    stacks = 3;
+    manager.isRightClick = false;
+    expect(host.extender.prehandleActionEvent({ button: 0 })).toBe(true);
+    await Promise.resolve();
+    expect(calls).toEqual([[target, 2, 'token-action-hud'], [target, 1, 'token-action-hud']]);
+
+    stacks = 0;
+    manager.isRightClick = true;
+    expect(host.extender.prehandleActionEvent({ button: 2 })).toBe(true);
+    await Promise.resolve();
+    expect(calls).toEqual([[target, 2, 'token-action-hud'], [target, 1, 'token-action-hud']]);
+  });
+
+  test('consumes TAH Injury clicks without writing when the user is not the active GM', async () => {
+    const hooks = createFoundryHooksClass();
+    class FakeRollHandlerExtender {
+      hudManager: any;
+      get isRightClick(): boolean { return this.hudManager?.isRightClick === true; }
+    }
+    const target = actor('injured-target');
+    const calls: any[] = [];
+    const user = { id: 'player', isGM: false, active: true };
+    const globals = globalsFor({
+      user,
+      activeGM: { id: 'gm', isGM: true, active: true },
+      hooks,
+      modules: {
+        'token-action-hud-core': { api: { RollHandlerExtender: FakeRollHandlerExtender } },
+        'fvtt-custom-conditions': { api: { injury: { getState: () => ({ stacks: 1 }), setStacks: (...args: any[]) => calls.push(args) } } },
+      },
+    });
+    registerConditionMappings(globals);
+    const host: any = {
+      hudManager: { actor: target, token: { actor: target }, actors: [target], tokens: [{ actor: target }], isRightClick: false },
+      addRollHandlerExtender(extender: any) { this.extender = extender; },
+    };
+    hooks.callbacks.get('tokenActionHudCoreAddRollHandlerExtenders')![0]!(host);
+    host.extender.action = { system: { actionType: 'condition', actionId: 'fvtt-injury' } };
+
+    expect(host.extender.prehandleActionEvent({ button: 0 })).toBe(true);
+    expect(calls).toEqual([]);
+  });
+
   test('serializes rapid parameterless clicks before reading the next state', async () => {
     for (const conditionId of ['dazed', 'shocked', 'addled'] as const) {
       const hooks = createFoundryHooksClass();
