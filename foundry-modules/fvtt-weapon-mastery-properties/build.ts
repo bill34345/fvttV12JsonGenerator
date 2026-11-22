@@ -37,7 +37,8 @@ async function sourceFiles(): Promise<FileDigest[]> {
     resolve(root, 'e2e/fixture-macro.js'), resolve(root, 'e2e/evidence.ts'),
     resolve(root, 'e2e/receipt-evidence.ts'),
     ...await collectFiles(source),
-    ...['conditions.ts', 'weapon-properties.ts', 'weapon-effects.ts'].map((name) => resolve(repoRoot, 'packages/contracts/src', name)),
+    ...['conditions.ts', 'weapon-properties.ts', 'weapon-effects.ts', 'version-admission.ts'].map((name) =>
+      resolve(repoRoot, 'packages/contracts/src', name)),
     resolve(root, 'README.md'), resolve(root, 'README.zh-CN.md'),
   ];
   return Promise.all(paths.sort((a, b) => a.localeCompare(b, 'en')).map(async (path) => ({
@@ -191,13 +192,13 @@ export function normalizeBunSourceBanners(bundle: string): string {
 export function validateManifest(manifest: Record<string, any>): void {
   if (manifest.id !== MODULE_ID || manifest.version !== MODULE_VERSION) throw new Error('Manifest identity/version mismatch.');
   const core = manifest.compatibility ?? {};
-  if (core.minimum !== '14.364' || core.verified !== '14.368' || core.maximum !== '14.368') {
-    throw new Error('Foundry manifest must bound the reviewed 14.364 and 14.368 pairs.');
+  if (core.minimum !== '14.364' || core.verified !== '14.368' || core.maximum !== '14.999') {
+    throw new Error('Foundry manifest must admit Core 14 while retaining its reviewed minimum and verified version.');
   }
   const dnd5e = (manifest.relationships?.systems ?? []).find((entry: any) => entry.id === 'dnd5e');
   const system = dnd5e?.compatibility ?? {};
-  if (system.minimum !== '5.3.3' || system.verified !== '6.0.5' || system.maximum !== '6.0.6') {
-    throw new Error('dnd5e manifest must bound reviewed 5.3.3/6.0.5 and candidate 6.0.6.');
+  if (system.minimum !== '5.3.3' || system.verified !== '6.0.5' || system.maximum !== '6.999.999') {
+    throw new Error('dnd5e manifest must admit major 6 while retaining its reviewed minimum and verified version.');
   }
   if (JSON.stringify(manifest.esmodules) !== JSON.stringify(['scripts/index.js'])) throw new Error('Browser entry contract drifted.');
   if (JSON.stringify(manifest.styles) !== JSON.stringify([{ src: 'styles/weapon-mastery-properties.css' }])) throw new Error('Style asset contract drifted.');
@@ -210,8 +211,8 @@ export function validateManifest(manifest: Record<string, any>): void {
   const required = new Map<string, any>((manifest.relationships?.requires ?? []).map((entry: any) => [entry.id, entry]));
   for (const id of ['fvtt-custom-conditions', 'fvtt-trigger-engine']) {
     const compatibility = required.get(id)?.compatibility ?? {};
-    if (compatibility.minimum !== '0.1.1' || compatibility.verified !== '0.2.0' || compatibility.maximum !== '0.2.0') {
-      throw new Error(`Required module ${id} must declare the bounded 0.1.1 through 0.2.0 compatibility range.`);
+    if (compatibility.minimum !== '0.1.1' || compatibility.verified !== '0.2.0' || compatibility.maximum !== undefined) {
+      throw new Error(`Required module ${id} must declare minimum 0.1.1 and reviewed 0.2.0 without a maximum version.`);
     }
   }
 }

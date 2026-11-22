@@ -1,4 +1,5 @@
-import { dnd5eMessageData, isReviewedMidiVersion, NEXT_MIDI_VERSION, originatingMessageData } from './adapters/dnd5e-message.ts';
+import { dnd5eMessageData, hasMidiAttackAndDamageRolls, isMidiAttackUsageCard, isSupportedMidiVersion, isNative6MidiVersion, originatingMessageData } from './adapters/dnd5e-message.ts';
+import { localizeMasteryLabel } from './localization.ts';
 import {
   parseWeaponConfiguration,
   readWeaponConfiguration,
@@ -801,8 +802,8 @@ export class WeaponMasteryRuntime {
     const state = attackId ? this.#pending.get(String(attackId)) : undefined;
     if (!state) return;
     const tracker = workflow.attackRollModifierTracker ?? workflow.attackRoll ?? workflow.attackRollConfig ?? workflow;
-    if (state.prepared.modifiers.advantage) addTracker(tracker?.advantage, 'Weapon mastery effect');
-    if (state.prepared.modifiers.disadvantage) addTracker(tracker?.disadvantage, 'Weapon mastery effect');
+    if (state.prepared.modifiers.advantage) addTracker(tracker?.advantage, localizeMasteryLabel(this.globals, 'vex'));
+    if (state.prepared.modifiers.disadvantage) addTracker(tracker?.disadvantage, localizeMasteryLabel(this.globals, 'sap'));
   }
 
 
@@ -1113,9 +1114,10 @@ export class WeaponMasteryRuntime {
   }
 
   private isMidiSameCard(message: any): boolean {
-    return this.globals?.game?.modules?.get?.('midi-qol')?.active === true
-      && isReviewedMidiVersion(this.globals.game.modules.get('midi-qol')?.version)
-      && [0, 4].includes(message?.flags?.['midi-qol']?.type);
+    const midi = moduleRecord(this.globals, 'midi-qol');
+    return midi?.active === true && isSupportedMidiVersion(midi.version)
+      && ([0, 4].includes(message?.flags?.['midi-qol']?.type)
+        || (isNative6MidiVersion(midi.version) && isMidiAttackUsageCard(message)));
   }
 
   private midiCardMatchesTarget(message: any, actor: any, targetTokenUuid?: string): boolean {
@@ -1133,10 +1135,7 @@ export class WeaponMasteryRuntime {
 
   private midiCardHasDamageRoll(message: any): boolean {
     if (message?.flags?.['midi-qol']?.type === 0) return this.globals.game.modules.get('midi-qol')?.version === '14.0.11' && midiItemCardDamageMatches(message);
-    const types = Array.isArray(message?.rolls)
-      ? message.rolls.map((roll: any) => roll?.options?.['midi-qol']?.rollType) : [];
-    return types.filter((type: string) => type === 'attack').length === 1
-      && types.some((type: string) => ['defaultDamage', 'otherDamage', 'bonusDamage'].includes(type));
+    return hasMidiAttackAndDamageRolls(message);
   }
 
   private midiLinkedAttackMessages(card: any): any[] {
@@ -1471,6 +1470,7 @@ export class WeaponMasteryRuntime {
       const effectKind = settlement.effectKind === 'attack-disadvantage' ? 'sap' : 'slow';
       const created = await api.apply(target, {
         effectKind,
+        name: this.weaponEffectName(effectKind, settlement.conditionId, state),
         ruleId: settlement.conditionId,
         stackingGroup: settlement.stackingGroup,
         params: settlement.effectKind === 'speed-reduction' ? { speedReduction: settlement.speedReductionFeet ?? 10 } : {},
@@ -1490,6 +1490,7 @@ export class WeaponMasteryRuntime {
       // ticket was committed above before this new instance is created.
       const created = await api.apply(source, {
         effectKind: 'vex',
+        name: this.weaponEffectName('vex', settlement.conditionId, state),
         ruleId: settlement.conditionId,
         stackingGroup: settlement.stackingGroup,
         source: sourceRef,
@@ -1520,6 +1521,12 @@ export class WeaponMasteryRuntime {
       return result.ok;
     }
     return false;
+  }
+
+  private weaponEffectName(kind: 'sap' | 'slow' | 'vex', ruleId: string, state: RuntimeState): string {
+    const custom = ruleId !== `dnd2024.${kind}`
+      ? state.ledger.configuration?.rules.find(rule => rule.ruleId === ruleId)?.label : undefined;
+    return custom ?? localizeMasteryLabel(this.globals, kind);
   }
 
   private requireAppliedWeaponEffect(
@@ -1973,7 +1980,7 @@ export class WeaponMasteryRuntime {
     const message = await this.resolveMessage(typeof id === 'string' ? id : undefined);
     if (!message || !this.bindAttackMessage(state, message)) return { outcome: 'failed', critical: false };
     const nativeMidi = this.isMidiSameCard(message)
-      && this.globals.game.modules?.get?.('midi-qol')?.version === NEXT_MIDI_VERSION;
+      && isNative6MidiVersion(this.globals.game.modules?.get?.('midi-qol')?.version);
     const roll = collection(message.rolls).find(candidate => Number.isFinite(candidate?.total)
       && (!nativeMidi || candidate?.options?.['midi-qol']?.rollType === 'attack'));
     if (!roll) return { outcome: 'failed', critical: false };

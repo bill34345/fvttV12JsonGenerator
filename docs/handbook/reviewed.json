@@ -175,9 +175,9 @@
     "note": "核对 GM 浏览器原始事件、慢帧、长任务、交互、慢资源、错误脱敏与容量。Chrome 非战斗时序已读回，修正浏览器迟报记录的开机边界并回放验证。"
   },
   "fvtt-weapon-mastery-properties": {
-    "fingerprint": "fe128a328c2afe0ac5cb3668169337f8fd8f425ab3545d51ec2cb79461068b43",
-    "reviewedOn": "2026-10-25",
-    "note": "已核源码active/API/能力门和持久marker，并对照总账WMP R5/R6：606单GM Sap预约取消、Club伤害/Slow、重复提交零重复结算、重载/清理已接受。README/手册/AGENTS统一该范围，manifest verified仍605；旧User UNKNOWN与完整精通/玩家/多GM/长时/生产缺口保留。"
+    "fingerprint": "21a04a1064e78d2f8d9bc3a48bea0b6bcf6dae011e5188cef4b0bce0892ce8d6",
+    "reviewedOn": "2026-11-22",
+    "note": "对照《DND5e不全书》2024 版、实机管理器和版本准入核对八项译名。记录 dnd5e 6.1.1 的本地 GM 缓速、侵扰及重击流血实测，线上读回限于部署文件和服务。保留历史验收范围。"
   },
   "midi-qol": {
     "fingerprint": "adce0fa2bd245d23bd076855fe14a331544dc87bdfe5008a8ca998f2fe9610cd",

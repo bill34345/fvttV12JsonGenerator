@@ -114,6 +114,28 @@ describe('weapon action adapters', () => {
     expect(cancelledGlobals.dialogCalls).toHaveLength(1);
   });
 
+  test('localizes actionable Push dialog controls through Foundry i18n', async () => {
+    const globals = environment({ dialogResult: undefined });
+    const values: Record<string, string> = {
+      'FVTTWMP.Actions.Push.Title': '推离目标位置',
+      'FVTTWMP.Actions.Push.Instruction': '选择一个远离攻击者的直线位置，距离不超过 {maxDistance} 尺。',
+      'FVTTWMP.Actions.Push.X': '横坐标',
+      'FVTTWMP.Actions.Push.Y': '纵坐标',
+      'FVTTWMP.Actions.Apply': '应用',
+      'FVTTWMP.Actions.Cancel': '取消',
+    };
+    globals.game.i18n = { localize: (key: string) => values[key] ?? key };
+    const context = baseContext({}, globals);
+
+    await applyPushAction({ ...context, rule: { distanceFeet: 10 } });
+
+    const dialog = globals.dialogCalls[0];
+    expect(dialog.window.title).toBe('推离目标位置');
+    expect(dialog.content).toContain('距离不超过 10 尺');
+    expect(dialog.content).toContain('横坐标');
+    expect(dialog.buttons.map((button: any) => button.label)).toEqual(['应用', '取消']);
+  });
+
   test('Cleave filters by primary distance and weapon reach and requires an explicit target choice', async () => {
     const globals = environment({ dialogResult: undefined });
     const context = baseContext({}, globals);

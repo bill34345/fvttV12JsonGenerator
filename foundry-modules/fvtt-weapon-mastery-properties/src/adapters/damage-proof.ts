@@ -8,7 +8,7 @@
  * Actor state that was observed around updateActor.
  */
 
-import { dnd5eMessageData, hasNativeMessageData, isReviewedMidiVersion, LEGACY_MIDI_VERSION } from './dnd5e-message.ts';
+import { dnd5eMessageData, hasMidiAttackAndDamageRolls, hasNativeMessageData, isMidiAttackUsageCard, isNative6MidiVersion, isSupportedMidiVersion, LEGACY_MIDI_VERSION } from './dnd5e-message.ts';
 
 export const DAMAGE_PROOF_SCHEMA_VERSION = 1 as const;
 
@@ -732,16 +732,14 @@ function validateMessages(proof: DamageProof, links: DamageMessageLinkEvidence):
     const attackItem = record(attackDnd?.item);
     const wmp = record(attackFlags?.['fvtt-weapon-mastery-properties']);
     const cardWmp = record(flags?.['fvtt-weapon-mastery-properties']);
-    const rolls = damage.rolls;
     const hitTargets = midiFlags?.hitTargetUuids;
-    const rollTypes = Array.isArray(rolls) ? rolls.map(roll => record(record(record(roll)?.options)?.['midi-qol'])?.rollType) : [];
-    const supportedDamage = midiFlags?.type === 4
-      ? rollTypes.filter(type => type === 'attack').length === 1
-        && rollTypes.some(type => type === 'defaultDamage' || type === 'otherDamage' || type === 'bonusDamage')
+    const rolledCard = midiFlags?.type === 4 || (isNative6MidiVersion(midi.version) && isMidiAttackUsageCard(damage));
+    const supportedDamage = rolledCard
+      ? hasMidiAttackAndDamageRolls(damage)
       : midi.version === LEGACY_MIDI_VERSION && midiFlags?.type === 0 && typeof midi?.targetTokenUuid === 'string'
         && midiItemCardDamageMatches(damage, { actorUuid: proof.targetActorUuid,
           tokenUuid: midi.targetTokenUuid, before: proof.before, after: proof.after });
-    if (!isReviewedMidiVersion(midi?.version) || !supportedDamage
+    if (!isSupportedMidiVersion(midi?.version) || !supportedDamage
       || !midi.activityUuid || activity?.uuid !== midi.activityUuid
       || !midi.itemUuid || item?.uuid !== midi.itemUuid
       || !midi.targetTokenUuid || !Array.isArray(hitTargets)

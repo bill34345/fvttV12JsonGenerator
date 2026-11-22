@@ -33,7 +33,7 @@ function fixture(ccVersion = '0.2.0', teVersion = '0.2.0') {
 }
 
 describe('WMP dependency compatibility gate', () => {
-  test('Next requires a positive native writer capability and the exact optional Midi adapter', () => {
+  test('Next requires a positive native writer capability and a supported optional Midi adapter', () => {
     const { globals, modules, weaponEffects } = fixture();
     globals.game.version = '14.368';
     globals.game.system.version = '6.0.5';
@@ -50,7 +50,7 @@ describe('WMP dependency compatibility gate', () => {
     modules.get('midi-qol').version = '14.6.0-beta.4338eeab.local.9';
     expect(inspectDependencies(globals).ready).toBeFalse();
     modules.delete('midi-qol');
-    for (const [core, system] of [['14.364', '6.0.5'], ['14.368', '5.3.2'], ['14.364', '6.0.6'], ['14.368', '6.0.7']]) {
+    for (const [core, system] of [['14.364', '6.0.5'], ['14.368', '5.3.2'], ['14.364', '6.0.6'], ['15.0', '6.0.6'], ['14.370', '7.0.0']]) {
       globals.game.version = core!;
       globals.game.system.version = system!;
       expect(inspectDependencies(globals).ready).toBeFalse();
@@ -76,14 +76,14 @@ describe('WMP dependency compatibility gate', () => {
     expect(inspectDependencies(fixture('0.1.1', '0.1.7').globals).ready).toBeTrue();
   });
 
-  test('rejects 0.2.1 separately for either dependency', () => {
+  test('accepts later dependency versions while retaining the API contract', () => {
     for (const [ccVersion, teVersion, rejectedId] of [
       ['0.2.1', '0.2.0', ccId],
       ['0.2.0', '0.2.1', teId],
     ] as const) {
       const report = inspectDependencies(fixture(ccVersion, teVersion).globals);
-      expect(report.ready).toBeFalse();
-      expect(report.modules.find((module) => module.id === rejectedId)?.reason).toBe('unsupported-module-version');
+      expect(report.ready).toBeTrue();
+      expect(report.modules.find((module) => module.id === rejectedId)?.compatible).toBeTrue();
     }
   });
 
@@ -119,9 +119,9 @@ describe('WMP dependency compatibility gate', () => {
 
   test('wrong required version or capability cannot leak an active retained API', () => {
     for (const change of [
-      (value: ReturnType<typeof fixture>) => { value.modules.get(ccId).version = '0.2.1'; },
+      (value: ReturnType<typeof fixture>) => { value.modules.get(ccId).version = '0.1.0'; },
       (value: ReturnType<typeof fixture>) => { value.weaponEffects.version = 2; },
-      (value: ReturnType<typeof fixture>) => { value.modules.get(teId).version = '0.2.1'; },
+      (value: ReturnType<typeof fixture>) => { value.modules.get(teId).version = '0.1.0'; },
       (value: ReturnType<typeof fixture>) => { value.triggerApi.capabilities.externalEvents = 0; },
     ]) {
       const value = fixture(); change(value);
@@ -131,7 +131,7 @@ describe('WMP dependency compatibility gate', () => {
     }
   });
 
-  test('inactive installed Midi does not block native6; active unreviewed Midi still blocks', () => {
+  test('inactive installed Midi does not block native6; active below-minimum Midi still blocks', () => {
     const { globals, modules, weaponEffects } = fixture();
     globals.game.version = '14.368';
     globals.game.system.version = '6.0.6';
@@ -156,10 +156,32 @@ describe('WMP dependency compatibility gate', () => {
   });
 });
 
-test('manifest accepts exact 0.2.0 dependency ceiling and rejects a later ceiling', () => {
+test('manifest preserves dependency minimum and reviewed version without a ceiling', () => {
   const manifest = JSON.parse(readFileSync(resolve(import.meta.dir, '../src/module.json'), 'utf8'));
   expect(() => validateManifest(manifest)).not.toThrow();
   const changed = structuredClone(manifest);
   changed.relationships.requires[0].compatibility.maximum = '0.2.1';
-  expect(() => validateManifest(changed)).toThrow('bounded 0.1.1 through 0.2.0');
+  expect(() => validateManifest(changed)).toThrow('without a maximum version');
+});
+
+
+test('native6 future releases admit current/future Midi but retain runtime major and API boundaries', () => {
+  for (const [core, system, midi] of [
+    ['14.369', '6.0.6', '14.6.7+local.1'],
+    ['14.370', '6.0.7', '14.6.8'],
+    ['14.370', '6.1.0', '15.0.0'],
+  ]) {
+    const { globals, modules, weaponEffects } = fixture('0.3.0', '1.0.0');
+    globals.game.version = core!;
+    globals.game.system.version = system!;
+    (weaponEffects as any).capabilities = { native6Effects: 1 };
+    modules.set('midi-qol', { id: 'midi-qol', active: true, version: midi });
+    expect(inspectDependencies(globals).ready).toBeTrue();
+    expect(customConditionsApi(globals)).toBe(weaponEffects);
+    delete (weaponEffects as any).capabilities;
+    expect(inspectDependencies(globals).ready).toBeFalse();
+  }
+  for (const [cc, te] of [['0.1.0', '0.2.0'], ['0.2.0', '0.1.0']]) {
+    expect(inspectDependencies(fixture(cc, te).globals).ready).toBeFalse();
+  }
 });

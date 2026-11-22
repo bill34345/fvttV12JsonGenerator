@@ -1,3 +1,4 @@
+import { isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
 import {
   WEAPON_MASTERY_IDS,
   officialMasteryRule,
@@ -13,7 +14,7 @@ export const NEXT_FOUNDRY_VERSION = '14.368' as const;
 export const NEXT_DND5E_VERSION = '6.0.5' as const;
 export const CURRENT_DND5E_VERSION = '6.0.6' as const;
 export function isNative6Dnd5eVersion(version: unknown): boolean {
-  return version === NEXT_DND5E_VERSION || version === CURRENT_DND5E_VERSION;
+  return version === NEXT_DND5E_VERSION || isVersionInMajor(version, CURRENT_DND5E_VERSION);
 }
 
 export const OFFICIAL_MASTERY_IDS = WEAPON_MASTERY_IDS;

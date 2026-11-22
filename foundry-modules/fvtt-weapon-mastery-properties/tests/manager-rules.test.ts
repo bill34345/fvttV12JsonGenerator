@@ -111,7 +111,7 @@ describe('weapon mastery manager configuration', () => {
     const config = configurationFromForm({ enabled: true, mastery: 'native', grantMastery: false, propertyKind: 'fatal', propertyDie: 10 });
     const preview = buildWeaponPreview({ system: { damage: { base: { formula: '1d6 + @mod' } } } }, config);
 
-    expect(preview.ordinary).toContain('普通命中 / Ordinary hit: 1d6 + @mod');
-    expect(preview.critical).toContain('重击 / Critical hit: 2d10 + @mod + 1d10');
+    expect(preview.ordinary).toContain('Ordinary hit: 1d6 + @mod');
+    expect(preview.critical).toContain('Critical hit: 2d10 + @mod + 1d10');
   });
 });

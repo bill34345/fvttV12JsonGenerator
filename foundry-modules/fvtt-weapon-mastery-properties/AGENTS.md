@@ -2,16 +2,15 @@
 
 ## Scope
 
-This directory is the owner of the standalone `fvtt-weapon-mastery-properties`
-module. Runtime gates accept only Foundry `14.364` / dnd5e `5.3.3`, Mirror
-`14.368` / `5.3.3`, or Next `14.368` / `6.0.5` or `6.0.6`. Core `14.368` alone does not
-select native6 adapters. Each pair retains its own bounded acceptance evidence.
-Next requires CC's positive `weaponEffects.capabilities.native6Effects === 1`.
-Native6 identities come from message `system`, and Midi support is pinned to
-`14.6.0-beta.4338eeab.local.10`; incomplete or unreviewed cards fail closed.
-The `6.0.6` pair has scoped single-GM Sap cancellation, Club hit/damage/Slow,
-duplicate settlement prevention, reload and owned-cleanup acceptance. Retain
-`6.0.5` as the manifest verified value; the full mastery/role matrix is unaccepted.
+This directory owns the standalone `fvtt-weapon-mastery-properties` module.
+For runtime admission, read `src/adapters/dependencies.ts`. Choose the adapter
+using both Core and dnd5e versions. The dnd5e 6 path requires CC's positive
+`weaponEffects.capabilities.native6Effects === 1`. Read native identities from
+message `system` and require the matching attack, target and actual damage
+before settling a damage-dependent rule. Check the module README and the
+[support matrix](../../docs/acceptance/current-support-matrix.md) for accepted
+behavior by version, build and role. Keep the manifest verified value tied to
+its reviewed range.
 
 The browser entry must remain browser safe. `src/core` contains pure,
 source-driven eligibility, critical-damage, and settlement helpers. It may
@@ -26,11 +25,10 @@ Pure helpers fail closed when an attack, source, target, turn, size, or damage
 context is missing. Cleave child attacks carry a parent ID and cannot generate
 another Cleave child.
 
-Official mastery IDs and parameters come from the locked dnd5e 5.3.3
-`content24` Weapon Masteries appendix. Do not infer a mastery from localized
-text or a weapon name. House properties use their configured rule ID and keep
-their identity separate from official masteries and the existing `slowed`
-condition.
+Use the locked dnd5e Weapon Masteries data for rule IDs and parameters. For
+Chinese labels, use the 2024 translation cited in `README.zh-CN.md`. Identify
+rules by stable ID. Keep house properties and the existing `slowed` condition
+distinct from official masteries.
 
 ## Verification
 

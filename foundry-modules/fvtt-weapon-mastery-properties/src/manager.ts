@@ -11,6 +11,7 @@ import {
   type WeaponRuleKind,
   type WeaponRuleParams,
 } from '@fvtt-json-generator/contracts/weapon-properties';
+import { localizeMasteryLabel, localizeWmp } from './localization.ts';
 
 export const WEAPON_MODULE_ID = 'fvtt-weapon-mastery-properties' as const;
 export const WEAPON_MANAGER_TEMPLATE = `modules/${WEAPON_MODULE_ID}/templates/weapon-manager.hbs` as const;
@@ -199,7 +200,7 @@ export function configurationFromForm(
   return parsed;
 }
 
-export function buildWeaponPreview(item: any, configuration: WeaponConfiguration): WeaponPreview {
+export function buildWeaponPreview(item: any, configuration: WeaponConfiguration, globals: any = globalThis): WeaponPreview {
   const ordinaryFormula = weaponBaseFormula(item);
   let criticalFormula = doubleWeaponDice(ordinaryFormula);
   const property = configuration.rules.find((rule) => !isWeaponMasteryId(rule.kind));
@@ -213,12 +214,17 @@ export function buildWeaponPreview(item: any, configuration: WeaponConfiguration
     criticalFormula = `${criticalFormula} + 1d${die}`;
   } else if (property?.kind === 'criticalBleeding') {
     const formula = String(property.params.formula ?? '1d6');
-    const mode = property.params.mode === 'hpLoss' ? 'HP loss / 生命值损失' : 'damage / 伤害';
-    criticalFormula = `${criticalFormula}; ${formula} bleeding (${mode}) / 流血（${mode}）`;
+    const mode = property.params.mode === 'hpLoss'
+      ? localizeWmp(globals, 'FVTTWMP.Manager.ModeHpLoss', 'Hit point loss')
+      : localizeWmp(globals, 'FVTTWMP.Manager.ModeDamage', 'Damage');
+    const bleeding = localizeWmp(globals, 'FVTTWMP.Manager.Bleeding', 'bleeding');
+    criticalFormula = `${criticalFormula}; ${formula} ${bleeding} (${mode})`;
   }
+  const ordinary = localizeWmp(globals, 'FVTTWMP.Manager.PreviewOrdinary', 'Ordinary hit');
+  const critical = localizeWmp(globals, 'FVTTWMP.Manager.PreviewCritical', 'Critical hit');
   return {
-    ordinary: `普通命中 / Ordinary hit: ${ordinaryFormula}`,
-    critical: `重击 / Critical hit: ${criticalFormula}`,
+    ordinary: `${ordinary}: ${ordinaryFormula}`,
+    critical: `${critical}: ${criticalFormula}`,
     ordinaryFormula,
     criticalFormula,
   };
@@ -317,7 +323,7 @@ export function createWeaponManagerApplicationClass(
       this.readbackErrors = effectReadback.errors;
       const selected = this.selectedChoice();
       const previewConfiguration = this.draftConfiguration();
-      const preview = selected ? buildWeaponPreview(selected.item, previewConfiguration) : buildWeaponPreview({}, previewConfiguration);
+      const preview = selected ? buildWeaponPreview(selected.item, previewConfiguration, globals) : buildWeaponPreview({}, previewConfiguration, globals);
       const configError = this.configurationError;
       return {
         items: this.weapons.map((choice) => {
@@ -326,17 +332,17 @@ export function createWeaponManagerApplicationClass(
         }),
         selectedItem: selected,
         configuration: this.configuration,
-        masteryOptions: masteryOptions(this.configuration),
+        masteryOptions: masteryOptions(this.configuration, globals),
         officialPresets: OFFICIAL_MASTERY_PRESETS.map((rule) => ({
           kind: rule.kind,
           ruleId: rule.ruleId,
-          label: masteryDisplayLabel(rule.kind as WeaponMasteryId),
+          label: localizeMasteryLabel(globals, rule.kind as WeaponMasteryId),
           params: rule.params,
           selected: rule.kind === this.copyPresetKind,
         })),
         propertyChoices: WEAPON_PROPERTY_KINDS.map((kind) => ({
           kind,
-          label: propertyDisplayLabel(kind),
+          label: propertyDisplayLabel(kind, globals),
           selected: kind === this.propertyKind,
         })),
         property: {
@@ -528,33 +534,28 @@ function createPropertyRule(
   return parsed;
 }
 
-function masteryOptions(configuration: WeaponConfiguration): Array<{ value: string; label: string; kind?: WeaponMasteryId; custom?: boolean; selected: boolean }> {
+function masteryOptions(configuration: WeaponConfiguration, globals: any = globalThis): Array<{ value: string; label: string; kind?: WeaponMasteryId; custom?: boolean; selected: boolean }> {
   const selected = configuration.mastery ?? 'native';
   const official = OFFICIAL_MASTERY_PRESETS.map((rule) => ({
     value: rule.ruleId,
-    label: masteryDisplayLabel(rule.kind as WeaponMasteryId),
+    label: masteryDisplayLabel(rule.kind as WeaponMasteryId, globals),
     kind: rule.kind as WeaponMasteryId,
     selected: selected === rule.ruleId,
   }));
   const copied = configuration.rules
     .filter((rule) => isWeaponMasteryId(rule.kind) && !rule.ruleId.startsWith('dnd2024.'))
     .map((rule) => ({ value: rule.ruleId, label: rule.label, kind: rule.kind as WeaponMasteryId, custom: true, selected: selected === rule.ruleId }));
-  return [{ value: 'native', label: 'Native / 原生', selected: selected === 'native' }, ...official, ...copied];
+  return [{ value: 'native', label: localizeWmp(globals, 'FVTTWMP.Manager.NativeOption', 'Native'), selected: selected === 'native' }, ...official, ...copied];
 }
 
-function propertyDisplayLabel(kind: WeaponPropertyKind): string {
-  if (kind === 'none') return 'None / 无';
-  if (kind === 'criticalBleeding') return 'Critical bleeding / 重击流血';
-  return `${kind[0]!.toUpperCase()}${kind.slice(1)} / ${kind}`;
+function propertyDisplayLabel(kind: WeaponPropertyKind, globals: any = globalThis): string {
+  const key = `FVTTWMP.Properties.${kind}`;
+  const fallback = kind === 'none' ? 'None' : kind === 'criticalBleeding' ? 'Critical bleeding' : `${kind[0]!.toUpperCase()}${kind.slice(1)}`;
+  return localizeWmp(globals, key, fallback);
 }
 
-function masteryDisplayLabel(kind: WeaponMasteryId): string {
-  const chinese: Record<WeaponMasteryId, string> = {
-    cleave: '劈砍', graze: '擦伤', nick: '轻灵', push: '推离',
-    sap: '震荡', slow: '减速', topple: '绊倒', vex: '扰敌',
-  };
-  const official = officialMasteryRule(kind).label;
-  return `${official} / ${chinese[kind]}`;
+export function masteryDisplayLabel(kind: WeaponMasteryId, globals: any = globalThis): string {
+  return localizeMasteryLabel(globals, kind);
 }
 
 function dependencyContext(state: WeaponDependencyState): { ready: boolean; issues: string[] } {

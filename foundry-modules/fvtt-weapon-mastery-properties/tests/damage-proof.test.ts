@@ -48,7 +48,7 @@ describe('native6 message evidence', () => {
     expect(validateDamageProof(proof(), e).ok).toBeFalse();
   });
 
-  test('local10 same-card type4 requires exact typed identity, one attack and actual damage; type0 remains closed', () => {
+  test.each(['14.6.0-beta.4338eeab.local.10', '14.6.7+local.1', '14.6.8', '15.0.0'])('%s same-card type4 requires exact typed identity, one attack and actual damage; type0 remains closed', version => {
     const e = native();
     const card: any = e.messages.attackMessage;
     card.type = 'usage';
@@ -57,7 +57,7 @@ describe('native6 message evidence', () => {
     e.messages.damageMessage = card;
     Object.assign(e.messages, { attackId: 'attack-1', actorUuid: 'Actor.attacker',
       requesterId: 'user-1', targetActorUuid: 'Actor.target' });
-    e.messages.midiSameCard = { version: '14.6.0-beta.4338eeab.local.10',
+    e.messages.midiSameCard = { version,
       activityUuid: 'Actor.attacker.Item.weapon.Activity.attack', itemUuid: 'Actor.attacker.Item.weapon',
       targetTokenUuid: 'Scene.scene.Token.target' };
     const p = proof({ damageMessageId: 'attack-message-1' });

@@ -1,6 +1,7 @@
-import { DND5E_VERSION, FOUNDRY_VERSION, NEXT_FOUNDRY_VERSION, MODULE_ID, isNative6Dnd5eVersion } from '../constants.ts';
+import { isVersionAtLeast, isVersionInMajor } from '@fvtt-json-generator/contracts/version-admission';
+import { DND5E_VERSION, FOUNDRY_VERSION, NEXT_FOUNDRY_VERSION, MODULE_ID } from '../constants.ts';
 import { collection, moduleRecord } from './foundry.ts';
-import { NEXT_MIDI_VERSION } from './dnd5e-message.ts';
+import { isNative6MidiVersion, MINIMUM_NATIVE6_MIDI_VERSION, NEXT_MIDI_VERSION } from './dnd5e-message.ts';
 
 export const CUSTOM_CONDITIONS_MODULE_ID = 'fvtt-custom-conditions' as const;
 export const TRIGGER_ENGINE_MODULE_ID = 'fvtt-trigger-engine' as const;
@@ -40,13 +41,14 @@ function moduleVersion(module: any): string | undefined {
 }
 
 function supportedDependencyVersion(version: string | undefined): boolean {
-  return version !== undefined && (/^0\.1\.[1-9][0-9]*$/.test(version) || version === '0.2.0');
+  return isVersionAtLeast(version, '0.1.1');
 }
 
 function native6Runtime(globals: any): boolean {
   const foundry = globals?.game?.version ?? globals?.game?.release?.version ?? globals?.game?.foundry?.version;
   const system = globals?.game?.system?.version ?? globals?.game?.system?.data?.version;
-  return foundry === NEXT_FOUNDRY_VERSION && isNative6Dnd5eVersion(system);
+  return (foundry === NEXT_FOUNDRY_VERSION && system === '6.0.5')
+    || (isVersionInMajor(foundry, NEXT_FOUNDRY_VERSION) && isVersionInMajor(system, '6.0.6'));
 }
 
 function conditionsStatus(globals: any, native6: boolean): DependencyStatus {
@@ -100,11 +102,10 @@ function conflictModules(globals: any): string[] {
 export function inspectDependencies(globals: any = globalThis): DependencyReport {
   const foundryValue = globals?.game?.version ?? globals?.game?.release?.version ?? globals?.game?.foundry?.version;
   const systemVersion = globals?.game?.system?.version ?? globals?.game?.system?.data?.version;
-  // Mirror and Next share the same Core. Only the exact Next system pair
-  // requires native6 CC effects and the native6 Midi adapter.
+  // Select native identities from the Core/system pair, never from Core alone.
   const native6 = native6Runtime(globals);
   const foundry = exactOrUnknown(foundryValue, FOUNDRY_VERSION);
-  foundry.compatible = foundry.value === FOUNDRY_VERSION || foundry.value === NEXT_FOUNDRY_VERSION;
+  foundry.compatible = foundry.value === FOUNDRY_VERSION || foundry.value === NEXT_FOUNDRY_VERSION || native6;
   const expectedSystem = native6 ? String(systemVersion) : DND5E_VERSION;
   const dnd5e = exactOrUnknown(systemVersion, expectedSystem);
   const systemId = globals?.game?.system?.id;
@@ -112,15 +113,15 @@ export function inspectDependencies(globals: any = globalThis): DependencyReport
   const modules = [conditionsStatus(globals, native6), triggerStatus(globals)];
   const midi = moduleRecord(globals, 'midi-qol');
   if (native6 && midi?.active === true) modules.push({
-    id: 'midi-qol', requiredVersion: NEXT_MIDI_VERSION, installedVersion: midi.version,
-    available: true, compatible: midi.version === NEXT_MIDI_VERSION,
-    ...(midi.version === NEXT_MIDI_VERSION ? {} : { reason: 'unsupported-native6-midi-version' }),
+    id: 'midi-qol', requiredVersion: `${NEXT_MIDI_VERSION} or >=${MINIMUM_NATIVE6_MIDI_VERSION}`, installedVersion: midi.version,
+    available: true, compatible: isNative6MidiVersion(midi.version),
+    ...(isNative6MidiVersion(midi.version) ? {} : { reason: 'unsupported-native6-midi-version' }),
   });
   const missing = modules.filter((entry) => !entry.available).map((entry) => entry.id);
   const incompatible = modules.filter((entry) => entry.available && !entry.compatible).map((entry) => entry.id);
   const conflicts = conflictModules(globals);
   const runtimeProblems = [
-    ...(foundry.compatible ? [] : [`Foundry ${foundry.value ?? 'unknown'} (requires ${FOUNDRY_VERSION} or 14.368)`]),
+    ...(foundry.compatible ? [] : [`Foundry ${foundry.value ?? 'unknown'} (requires legacy ${FOUNDRY_VERSION} or 14.368, or Core 14 from 14.368 with dnd5e 6 from 6.0.6)`]),
     ...(dnd5e.compatible ? [] : [`dnd5e ${dnd5e.value ?? 'unknown'} (requires ${expectedSystem} on this Core)`]),
     ...(systemId === 'dnd5e' ? [] : [`system ${systemId ?? 'unknown'} (requires dnd5e)`]),
   ];

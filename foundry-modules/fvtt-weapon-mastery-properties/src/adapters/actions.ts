@@ -9,6 +9,7 @@ import {
   targetActor,
   targetToken,
 } from './foundry.ts';
+import { formatWmp, localizeWmp } from '../localization.ts';
 
 export interface ActionContext {
   sourceActor: any;
@@ -262,22 +263,22 @@ function destinationFromDialogResult(result: unknown): Point | undefined {
 async function pushDialog(context: PushActionContext, maxDistance: number): Promise<ActionResult<Point>> {
   const globals = globalsFor(context);
   const DialogV2 = globals?.foundry?.applications?.api?.DialogV2;
-  if (typeof DialogV2?.wait !== 'function') return { ok: false, status: 'unavailable', reason: 'DialogV2.wait unavailable' };
+  if (typeof DialogV2?.wait !== 'function') return { ok: false, status: 'unavailable', reason: localizeWmp(globals, 'FVTTWMP.Actions.DialogUnavailable', 'DialogV2.wait unavailable') };
   const result = await DialogV2.wait({
-    window: { title: 'Push destination' },
-    content: `<p>Choose a destination straight away from the attacker, within 0–${maxDistance} feet.</p><label>X <input name="x" type="number"></label><label>Y <input name="y" type="number"></label>`,
+    window: { title: localizeWmp(globals, 'FVTTWMP.Actions.Push.Title', 'Push destination') },
+    content: `<p>${formatWmp(globals, 'FVTTWMP.Actions.Push.Instruction', 'Choose a destination straight away from the attacker, within 0–{maxDistance} feet.', { maxDistance })}</p><label>${localizeWmp(globals, 'FVTTWMP.Actions.Push.X', 'X')} <input name="x" type="number"></label><label>${localizeWmp(globals, 'FVTTWMP.Actions.Push.Y', 'Y')} <input name="y" type="number"></label>`,
     buttons: [
-      { action: 'confirm', label: 'Apply', callback: (_event: unknown, _button: unknown, dialog: any) => {
+      { action: 'confirm', label: localizeWmp(globals, 'FVTTWMP.Actions.Apply', 'Apply'), callback: (_event: unknown, _button: unknown, dialog: any) => {
         const element = dialog?.element ?? dialog?.form;
         const x = Number(element?.querySelector?.('[name="x"]')?.value);
         const y = Number(element?.querySelector?.('[name="y"]')?.value);
         return validPoint({ x, y }) ? { x, y } : undefined;
       } },
-      { action: 'cancel', label: 'Cancel', callback: () => undefined },
+      { action: 'cancel', label: localizeWmp(globals, 'FVTTWMP.Actions.Cancel', 'Cancel'), callback: () => undefined },
     ],
   });
   const point = destinationFromDialogResult(result);
-  return point ? { ok: true, status: 'selected', value: point } : { ok: false, status: 'cancelled', reason: 'Push destination selection cancelled.' };
+  return point ? { ok: true, status: 'selected', value: point } : { ok: false, status: 'cancelled', reason: localizeWmp(globals, 'FVTTWMP.Actions.Push.Cancelled', 'Push destination selection cancelled.') };
 }
 
 /** Validate a Push destination without mutating the TokenDocument. */
@@ -290,28 +291,28 @@ export async function validatePushDestination(
   const currentCenter = tokenCenter(context.targetToken, context.targetActor, globals);
   const destinationOrigin = tokenPosition(context.targetToken);
   if (!sourceCenter || !currentCenter || !destinationOrigin || !validPoint(destination)) {
-    return { ok: false, status: 'invalid', reason: 'Source/target token geometry is unavailable.' };
+    return { ok: false, status: 'invalid', reason: localizeWmp(globals, 'FVTTWMP.Actions.Push.GeometryUnavailable', 'Source/target token geometry is unavailable.') };
   }
   const maxDistance = context.rule?.maxDistanceFeet ?? context.rule?.distanceFeet ?? 10;
-  if (!finite(maxDistance) || maxDistance < 0) return { ok: false, status: 'invalid', reason: 'Push distance is invalid.' };
+  if (!finite(maxDistance) || maxDistance < 0) return { ok: false, status: 'invalid', reason: localizeWmp(globals, 'FVTTWMP.Actions.Push.DistanceInvalid', 'Push distance is invalid.') };
   const size = gridSize(globals);
-  if (!size) return { ok: false, status: 'unavailable', reason: 'Scene grid is unavailable.' };
+  if (!size) return { ok: false, status: 'unavailable', reason: localizeWmp(globals, 'FVTTWMP.Actions.Push.GridUnavailable', 'Scene grid is unavailable.') };
   const destinationCenter = {
     x: destination.x + footprintSquares(context.targetActor) * size / 2,
     y: destination.y + footprintSquares(context.targetActor) * size / 2,
   };
   if (!straightAway(sourceCenter, currentCenter, destinationCenter)) {
-    return { ok: false, status: 'invalid', reason: 'Push destination is not straight away from the attacker.' };
+    return { ok: false, status: 'invalid', reason: localizeWmp(globals, 'FVTTWMP.Actions.Push.NotStraight', 'Push destination is not straight away from the attacker.') };
   }
   const distanceFeet = measurePoints(globals, currentCenter, destinationCenter);
-  if (distanceFeet === null) return { ok: false, status: 'unavailable', reason: 'Scene grid measurement is unavailable.' };
+  if (distanceFeet === null) return { ok: false, status: 'unavailable', reason: localizeWmp(globals, 'FVTTWMP.Actions.Push.MeasurementUnavailable', 'Scene grid measurement is unavailable.') };
   if (distanceFeet < 0 || distanceFeet > maxDistance + 1e-6) {
-    return { ok: false, status: 'invalid', reason: 'Push destination exceeds the configured distance.' };
+    return { ok: false, status: 'invalid', reason: localizeWmp(globals, 'FVTTWMP.Actions.Push.ExceedsDistance', 'Push destination exceeds the configured distance.') };
   }
-  if (!withinScene(globals, destination, context.targetActor)) return { ok: false, status: 'invalid', reason: 'Push destination is outside the scene.' };
+  if (!withinScene(globals, destination, context.targetActor)) return { ok: false, status: 'invalid', reason: localizeWmp(globals, 'FVTTWMP.Actions.Push.OutsideScene', 'Push destination is outside the scene.') };
   const blocked = collisionBlocked(globals, context.targetToken, currentCenter, destinationCenter);
-  if (blocked === null) return { ok: false, status: 'unavailable', reason: 'Public movement collision API is unavailable.' };
-  if (blocked) return { ok: false, status: 'invalid', reason: 'Push destination is blocked.' };
+  if (blocked === null) return { ok: false, status: 'unavailable', reason: localizeWmp(globals, 'FVTTWMP.Actions.Push.CollisionUnavailable', 'Public movement collision API is unavailable.') };
+  if (blocked) return { ok: false, status: 'invalid', reason: localizeWmp(globals, 'FVTTWMP.Actions.Push.Blocked', 'Push destination is blocked.') };
   return { ok: true, status: 'selected', value: { destination: { x: destination.x, y: destination.y }, distanceFeet } };
 }
 
@@ -324,23 +325,25 @@ export async function applyPushAction(context: PushActionContext): Promise<Actio
   const validated = await validatePushDestination(context, selected.value);
   if (!validated.ok || !validated.value) return validated;
   const document = tokenDocument(context.targetToken);
-  if (typeof document?.update !== 'function') return { ok: false, status: 'unavailable', reason: 'TokenDocument.update unavailable.' };
+  if (typeof document?.update !== 'function') return { ok: false, status: 'unavailable', reason: localizeWmp(globalsFor(context), 'FVTTWMP.Actions.Push.UpdateUnavailable', 'TokenDocument.update unavailable.') };
   await document.update({ x: validated.value.destination.x, y: validated.value.destination.y }, context.updateOptions);
   return { ok: true, status: 'applied', value: validated.value };
 }
 
-function dialogCandidates(globals: any, candidates: readonly any[], title: string): Promise<any | undefined> {
+function dialogCandidates(globals: any, candidates: readonly any[], titleKey: string, fallbackTitle: string): Promise<any | undefined> {
   const DialogV2 = globals?.foundry?.applications?.api?.DialogV2;
   if (typeof DialogV2?.wait !== 'function') return Promise.resolve(undefined);
+  const title = localizeWmp(globals, titleKey, fallbackTitle);
+  const cancel = localizeWmp(globals, 'FVTTWMP.Actions.Cancel', 'Cancel');
   const buttons = candidates.map((candidate, index) => ({
     action: String(index),
-    label: String(targetActor(candidate)?.name ?? candidate?.name ?? candidate?.id ?? `Target ${index + 1}`),
+    label: String(targetActor(candidate)?.name ?? candidate?.name ?? candidate?.id ?? formatWmp(globals, 'FVTTWMP.Actions.Target', 'Target {index}', { index: index + 1 })),
     callback: () => candidate,
   }));
-  buttons.push({ action: 'cancel', label: 'Cancel', callback: () => undefined });
+  buttons.push({ action: 'cancel', label: cancel, callback: () => undefined });
   return DialogV2.wait({
     window: { title },
-    content: `<p>${candidates.map((candidate, index) => `${index + 1}. ${escapeHtml(String(targetActor(candidate)?.name ?? candidate?.name ?? candidate?.id ?? 'Target'))}`).join('<br>')}</p>`,
+    content: `<p>${candidates.map((candidate, index) => `${index + 1}. ${escapeHtml(String(targetActor(candidate)?.name ?? candidate?.name ?? candidate?.id ?? formatWmp(globals, 'FVTTWMP.Actions.Target', 'Target {index}', { index: index + 1 })))}`).join('<br>')}</p>`,
     buttons,
   }).then((result: unknown) => {
     if (candidates.includes(result)) return result;
@@ -382,17 +385,17 @@ export async function selectCleaveSecondary(context: CleaveActionContext): Promi
   const globals = globalsFor(context);
   const rawCandidates = context.candidates ?? collection(globals?.game?.user?.targets ?? globals?.game?.targets);
   const legal = rawCandidates.map((candidate) => validCleaveCandidate(context, candidate)).filter((entry): entry is CleaveSelection => Boolean(entry));
-  if (!legal.length) return { ok: false, status: 'invalid', reason: 'No legal Cleave secondary creature is available.' };
+  if (!legal.length) return { ok: false, status: 'invalid', reason: localizeWmp(globals, 'FVTTWMP.Actions.Cleave.NoLegalTarget', 'No legal Cleave secondary creature is available.') };
   if (context.selected !== undefined) {
     const selected = legal.find((entry) => sameDocument(entry.target, context.selected) || sameDocument(entry.actor, context.selected));
     return selected
       ? { ok: true, status: 'selected', value: selected }
-      : { ok: false, status: 'invalid', reason: 'The requested Cleave target is not legal.' };
+      : { ok: false, status: 'invalid', reason: localizeWmp(globals, 'FVTTWMP.Actions.Cleave.IllegalTarget', 'The requested Cleave target is not legal.') };
   }
-  const chosen = await dialogCandidates(globals, legal.map((entry) => entry.target), 'Cleave target');
-  if (!chosen) return { ok: false, status: 'cancelled', reason: 'Cleave target selection cancelled.' };
+  const chosen = await dialogCandidates(globals, legal.map((entry) => entry.target), 'FVTTWMP.Actions.Cleave.Title', 'Cleave target');
+  if (!chosen) return { ok: false, status: 'cancelled', reason: localizeWmp(globals, 'FVTTWMP.Actions.Cleave.Cancelled', 'Cleave target selection cancelled.') };
   const selected = legal.find((entry) => sameDocument(entry.target, chosen));
-  return selected ? { ok: true, status: 'selected', value: selected } : { ok: false, status: 'invalid', reason: 'Cleave dialog returned an unknown target.' };
+  return selected ? { ok: true, status: 'selected', value: selected } : { ok: false, status: 'invalid', reason: localizeWmp(globals, 'FVTTWMP.Actions.Cleave.UnknownTarget', 'Cleave dialog returned an unknown target.') };
 }
 
 function conditionImmune(actor: any, condition: string): boolean {
@@ -406,15 +409,16 @@ function conditionImmune(actor: any, condition: string): boolean {
 /** Roll the native dnd5e Constitution save and apply native Prone on failure. */
 export async function resolveToppleAction(context: ToppleActionContext): Promise<ActionResult<ToppleResult>> {
   const target = context.targetActor;
-  if (!target || typeof target.rollSavingThrow !== 'function') return { ok: false, status: 'unavailable', reason: 'Actor.rollSavingThrow unavailable.' };
-  if (!finite(context.dc)) return { ok: false, status: 'invalid', reason: 'Topple DC is invalid.' };
-  if (conditionImmune(target, 'prone')) return { ok: false, status: 'immune', reason: 'Target is immune to Prone.' };
+  const globals = globalsFor(context);
+  if (!target || typeof target.rollSavingThrow !== 'function') return { ok: false, status: 'unavailable', reason: localizeWmp(globals, 'FVTTWMP.Actions.Topple.RollUnavailable', 'Actor.rollSavingThrow unavailable.') };
+  if (!finite(context.dc)) return { ok: false, status: 'invalid', reason: localizeWmp(globals, 'FVTTWMP.Actions.Topple.InvalidDc', 'Topple DC is invalid.') };
+  if (conditionImmune(target, 'prone')) return { ok: false, status: 'immune', reason: localizeWmp(globals, 'FVTTWMP.Actions.Topple.Immune', 'Target is immune to Prone.') };
   const rolls = await target.rollSavingThrow({ ability: 'con', target: context.dc }, context.dialog ?? {}, context.message ?? {});
   const roll = Array.isArray(rolls) ? rolls[0] : rolls;
-  if (!roll || !finite(roll.total)) return { ok: false, status: 'cancelled', reason: 'Saving throw was cancelled.' };
+  if (!roll || !finite(roll.total)) return { ok: false, status: 'cancelled', reason: localizeWmp(globals, 'FVTTWMP.Actions.Topple.Cancelled', 'Saving throw was cancelled.') };
   const result: ToppleResult = { total: roll.total, dc: context.dc, roll, condition: 'prone' };
   if (roll.total >= context.dc) return { ok: true, status: 'success', value: result };
-  if (typeof target.toggleStatusEffect !== 'function') return { ok: false, status: 'unavailable', reason: 'Actor.toggleStatusEffect unavailable.' };
+  if (typeof target.toggleStatusEffect !== 'function') return { ok: false, status: 'unavailable', reason: localizeWmp(globals, 'FVTTWMP.Actions.Topple.EffectUnavailable', 'Actor.toggleStatusEffect unavailable.') };
   await target.toggleStatusEffect('prone', { active: true });
   return { ok: true, status: 'failure', value: result };
 }
@@ -425,16 +429,17 @@ export async function applyCriticalBleedingAction(
 ): Promise<ActionResult<{ result: unknown; params: Record<string, string | boolean> }>> {
   const target = context.targetActor;
   const rule = context.rule;
+  const globals = globalsFor(context);
   if (!target || !rule || typeof rule.formula !== 'string' || !rule.formula.trim()
     || (rule.mode !== 'damage' && rule.mode !== 'hpLoss')
     || (rule.mode === 'damage' && (typeof rule.damageType !== 'string' || !rule.damageType.trim()))) {
-    return { ok: false, status: 'invalid', reason: 'Critical bleeding parameters are invalid.' };
+    return { ok: false, status: 'invalid', reason: localizeWmp(globals, 'FVTTWMP.Actions.Bleeding.InvalidParameters', 'Critical bleeding parameters are invalid.') };
   }
   const source = actorUuid(context.sourceActor);
   const origin = activityUuid(context.activity) ?? itemUuid(context.item) ?? source;
-  if (!source || !origin) return { ok: false, status: 'invalid', reason: 'Critical bleeding source/origin is unavailable.' };
-  const api = moduleRecord(globalsFor(context), 'fvtt-custom-conditions')?.api;
-  if (typeof api?.apply !== 'function') return { ok: false, status: 'unavailable', reason: 'Custom Conditions apply API unavailable.' };
+  if (!source || !origin) return { ok: false, status: 'invalid', reason: localizeWmp(globals, 'FVTTWMP.Actions.Bleeding.SourceUnavailable', 'Critical bleeding source/origin is unavailable.') };
+  const api = moduleRecord(globals, 'fvtt-custom-conditions')?.api;
+  if (typeof api?.apply !== 'function') return { ok: false, status: 'unavailable', reason: localizeWmp(globals, 'FVTTWMP.Actions.Bleeding.ApiUnavailable', 'Custom Conditions apply API unavailable.') };
   const params: Record<string, string | boolean> = {
     formula: rule.formula,
     mode: rule.mode,

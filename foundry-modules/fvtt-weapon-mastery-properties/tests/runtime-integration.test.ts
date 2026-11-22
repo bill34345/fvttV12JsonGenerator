@@ -214,7 +214,7 @@ function createWeaponEffectApi(world: WorldFixture): AnyRecord {
         createdAt: 1,
         ...(input.expires ? { expires: input.expires } : {}),
       };
-      const effect = { id, name: input.effectKind, instance };
+      const effect = { id, name: input.name ?? input.effectKind, instance };
       actor.effects.push(effect);
       events.push(`apply:${id}`);
       return effect;
@@ -606,7 +606,7 @@ describe('weapon mastery runtime integration', () => {
       if (defect === 'cc-active-unknown') delete cc.active;
       if (defect === 'te-inactive') te.active = false;
       if (defect === 'te-active-unknown') delete te.active;
-      if (defect === 'te-version') te.version = '0.2.1';
+      if (defect === 'te-version') te.version = '0.1.0';
       if (defect === 'te-capability') te.api.capabilities.externalEvents = 0;
       const attacker = makeActor(`gate-${defect}-attacker`);
       const target = makeActor(`gate-${defect}-target`);
@@ -1314,16 +1314,21 @@ describe('weapon mastery runtime integration', () => {
   });
 
 
-  test('native6 local10 type4 settles Slow from canonical message identity and actual HP update once', async () => {
+  test.each([
+    ['14.368', '6.0.5', '14.6.0-beta.4338eeab.local.10'],
+    ['14.369', '6.0.6', '14.6.7+local.1'],
+    ['14.370', '6.1.0', '14.6.8'],
+    ['14.370', '6.1.0', '15.0.0'],
+  ])('%s/%s Midi %s type4 settles Slow from canonical identity and actual HP update once', async (core, system, midi) => {
     const world = createWorld();
-    world.globals.game.version = '14.368';
-    world.globals.game.system.version = '6.0.5';
+    world.globals.game.version = core;
+    world.globals.game.system.version = system;
     const originalGet = world.globals.game.modules.get;
     originalGet('fvtt-custom-conditions').version = '0.2.0';
     originalGet('fvtt-custom-conditions').api.weaponEffects.capabilities = { native6Effects: 1 };
     originalGet('fvtt-trigger-engine').version = '0.2.0';
     world.globals.game.modules.get = (id: string) => id === 'midi-qol'
-      ? { id, active: true, version: '14.6.0-beta.4338eeab.local.10' } : originalGet(id);
+      ? { id, active: true, version: midi } : originalGet(id);
     world.globals.fromUuidSync = (uuid: string) => world.tokens.get(uuid);
     const attacker = makeActor('next-attacker', 'player', ['longsword']);
     const target = makeActor('next-target');
@@ -1348,7 +1353,7 @@ describe('weapon mastery runtime integration', () => {
     await linkRollMessage(world, activity, cardId);
     expect((await runtime.commitUse(prepared!, { messageId: cardId })).status).toBe('pending');
     card.flags['midi-qol'].type = 4;
-    card.rolls.push({ total: 5, options: { 'midi-qol': { rollType: 'defaultDamage' } }, parent: card });
+    card.rolls.unshift({ total: 5, options: { 'midi-qol': { rollType: 'defaultDamage' } }, parent: card });
     const changed: AnyRecord = { 'system.attributes.hp.value': 15, 'system.attributes.hp.temp': 0 };
     await world.globals.Hooks.call('dnd5e.preApplyDamage', target, 5, changed, { originatingMessage: card });
     expect(changed['flags.' + MODULE_ID + '.damageProof']).toMatchObject({ attackId, attackMessageId: cardId, damageMessageId: cardId });
@@ -1783,7 +1788,7 @@ describe('weapon mastery runtime integration', () => {
     const midiAllowed = await playerWorld.globals.Hooks.call('midi-qol.preAttackRoll', workflow);
     expect(midiAllowed).not.toBeFalse();
     await playerWorld.globals.Hooks.callAll('midi-qol.preAttackRollConfig', workflow);
-    expect(workflow.attackRollModifierTracker.advantage.has('Weapon mastery effect')).toBeTrue();
+    expect(workflow.attackRollModifierTracker.advantage.has('Vex')).toBeTrue();
 
     putMessage(gmWorld, gmActivity, 'transport-message', { total: 15, isSuccess: true, attackId: prepared!.attackId, authorId: playerWorld.player.id });
     await linkRollMessage(gmWorld, gmActivity, 'transport-message');
@@ -2796,5 +2801,74 @@ describe('weapon mastery runtime integration', () => {
     await waitFor(() => attacker.getFlag(MODULE_ID, 'ledger')?.some((entry: any) => entry.attackId === prepared!.attackId && entry.step === 'committed') === true, 'linked Midi proof commit');
     expect(attacker.effects).toHaveLength(1);
     runtime.stop();
+  });
+
+  test.each(['slow', 'vex'] as const)('6.1.1 Midi usage card settles %s after actual damage once', async kind => {
+    const world = createWorld();
+    const localizedName = kind === 'slow' ? '缓速' : '侵扰';
+    world.globals.game.i18n = { localize: (key: string) => key === `FVTTWMP.Masteries.${kind}` ? localizedName : key };
+    world.globals.game.version = '14.370';
+    world.globals.game.system.version = '6.1.1';
+    const originalGet = world.globals.game.modules.get;
+    originalGet('fvtt-custom-conditions').version = '0.2.0';
+    originalGet('fvtt-custom-conditions').api.weaponEffects.capabilities = { native6Effects: 1 };
+    originalGet('fvtt-trigger-engine').version = '0.2.0';
+    world.globals.game.modules.get = (id: string) => id === 'midi-qol'
+      ? { id, active: true, version: '14.7.0+local.1' } : originalGet(id);
+    world.globals.fromUuidSync = (uuid: string) => world.tokens.get(uuid);
+    const attacker = makeActor('modern-midi-source');
+    const target = makeActor('modern-midi-target');
+    registerActor(world, attacker);
+    registerActor(world, target);
+    const token = makeToken(world, target);
+    const item = makeItem(world, attacker, 'modern-midi-weapon', masteryConfiguration(kind), { mastery: kind });
+    const activity = makeActivity(world, item, 'modern-midi-activity');
+    const runtime = createWeaponMasteryRuntime({ globals: world.globals });
+    runtime.start();
+    try {
+      const attackId = 'modern-midi-use';
+      const prepared = (await runtime.prepareUse(activity, { targetActor: target, targetToken: token, attackId }))!;
+      await runtime.startUse(prepared);
+      const card = putMessage(world, activity, 'modern-midi-card', { attackId });
+      const attack = putMessage(world, activity, 'modern-native-attack', { attackId, total: 18 });
+      const identities = { activity: { uuid: activity.uuid }, item: { uuid: item.uuid },
+        targets: [{ actor: target.uuid, token: token.uuid }] };
+      delete card.flags.dnd5e;
+      delete attack.flags.dnd5e;
+      card.type = 'usage';
+      card.system = { ...identities, origin: null };
+      card.flags[MODULE_ID].midiCardId = card.id;
+      card.flags['midi-qol'] = { messageType: 'attack' };
+      Object.defineProperties(card.flags['midi-qol'], {
+        sourceActorUuid: { get: () => attacker.uuid },
+        hitTargetUuids: { get: () => [token.uuid] },
+      });
+      attack.type = 'attack';
+      attack.system = { ...identities, origin: card.id };
+      attack.flags[MODULE_ID].midiCardId = card.id;
+      await linkRollMessage(world, activity, attack.id);
+      expect((await runtime.commitUse(prepared, { messageId: attack.id })).status).toBe('pending');
+      card.rolls = [{ total: 18, options: { 'midi-qol': { rollType: 'attack' } } }];
+      const changed: AnyRecord = { 'system.attributes.hp.value': 15, 'system.attributes.hp.temp': 0 };
+      await world.globals.Hooks.call('dnd5e.preApplyDamage', target, 5, changed, { originatingMessage: card });
+      expect(changed['flags.' + MODULE_ID + '.damageProof']).toBeUndefined();
+      card.rolls.push({ total: 5, options: { 'midi-qol': { rollType: 'defaultDamage' } } });
+      await world.globals.Hooks.call('dnd5e.preApplyDamage', target, 5, changed, { originatingMessage: card });
+      expect(changed['flags.' + MODULE_ID + '.damageProof']).toMatchObject({
+        attackId, attackMessageId: attack.id, damageMessageId: card.id,
+      });
+      target.system.attributes.hp.value = 15;
+      await world.globals.Hooks.callAll('updateActor', target, changed, {}, 'gm');
+      await waitFor(() => attacker.getFlag(MODULE_ID, 'ledger')?.some((entry: any) =>
+        entry.attackId === attackId && entry.step === 'committed') === true, '6.1.1 Midi proof commit');
+      const owner = kind === 'slow' ? target : attacker;
+      expect(owner.effects.map((effect: any) => effect.instance.effectKind)).toEqual([kind]);
+      expect(owner.effects[0].name).toBe(localizedName);
+      await world.globals.Hooks.callAll('updateActor', target, changed, {}, 'gm');
+      await settleAsync();
+      expect(owner.effects).toHaveLength(1);
+    } finally {
+      runtime.stop();
+    }
   });
 });
