@@ -60,9 +60,9 @@
     "note": "核对通用工具、实例身份与本机维护的分工。当前按 30001 开发、30004 ServerMirror 核对，实际安装和启停使用对应环境的已验工具。"
   },
   "verification-development": {
-    "fingerprint": "d3287e16d1e3972cd6d63adac878051a15f751d5b79323040b3b039d96a3189b",
-    "reviewedOn": "2026-11-20",
-    "note": "Ruler 生成与分层指令检查通过。系统升级时从根指令进入私用维护复查项，现有测试与检查入口沿用。"
+    "fingerprint": "0b3b66a13ca1462d53127cae6b46f32654b191583b7f7c9e77760c2d013cc7f4",
+    "reviewedOn": "2026-11-23",
+    "note": "核对新增 Boss 战提醒构建、测试与模块类型检查入口，并按实际投影更新手册数量。现有验证层级及操作说明仍适用。"
   },
   "human-encounter-intake": {
     "fingerprint": "fd982d87eb2626cffd58df8ed757b60dc557c595be683e9dc6d3d9293eb8f04e",
@@ -118,6 +118,11 @@
     "fingerprint": "89b383cc2c072bd95f6f9586218cc8355da21e3dc7e67119712a148d8b68a8d9",
     "reviewedOn": "2026-11-17",
     "note": "核对原有地形效果入口与主版本准入，玩法证明按已验效果保存。"
+  },
+  "fvtt-boss-combat-reminders": {
+    "fingerprint": "148759cdf7980a20adaf4fc1a38e1d15e0dbc9ecb368574101df227b3c7ed936",
+    "reviewedOn": "2026-11-23",
+    "note": "已核对 0.1.2 原生活动摘要显示和处理步骤"
   },
   "fvtt-blood-hunter-2024": {
     "fingerprint": "31f41db6f70f0c4c03f9509c00ff84ac88ea8642f5a6bb86717541067ff5a88b",
@@ -190,8 +195,8 @@
     "note": "核对战斗补丁和历史 DAE 的独立入口，以及主项目保留的 Classpack 与联调夹具。"
   },
   "fvtt-suite-console": {
-    "fingerprint": "3581d1f47820deacf8eca1b813dc25b7a7ac285fd4fd1893b5cc703ad715ca24",
-    "reviewedOn": "2026-11-17",
-    "note": "核对手册窗口的 Core 14 主版本准入、GM 权限及离线内容入口。"
+    "fingerprint": "897170cf6ada7335cf8e00e8baa89b56b5a5dd7f3e2b0cb8df8b294d712d2195",
+    "reviewedOn": "2026-11-23",
+    "note": "新增 Boss 战提醒用户条目与 delivery 映射。已核 Foundry 投影 29 条，完整离线手册 40 条，入口与访问权限未变化。"
   }
 }

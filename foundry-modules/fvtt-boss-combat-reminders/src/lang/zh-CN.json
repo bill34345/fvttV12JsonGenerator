@@ -1,0 +1,46 @@
+{
+  "FVTTBossCombatReminders": {
+    "Window": {
+      "Title": "Boss 战提醒",
+      "Skip": "跳过",
+      "Failed": "Foundry 未能使用此活动。请核对活动后再试。"
+    },
+    "Legendary": {
+      "Title": "传奇动作",
+      "Remaining": "剩余 {remaining} 点",
+      "Cost": "耗 {cost} 点"
+    },
+    "Resistance": {
+      "Title": "传奇抗力",
+      "Remaining": "剩余 {remaining} 次",
+      "Use": "使用传奇抗力"
+    },
+    "Lair": {
+      "Title": "巢穴动作",
+      "Timing": "第 {round} 轮 · 先攻 20"
+    },
+    "Health": {
+      "Death": "死亡能力",
+      "AtZero": "生命值归零",
+      "Bloodied": "陷入浴血",
+      "View": "查看 {name}"
+    },
+    "Config": {
+      "Open": "Boss 战提醒",
+      "Title": "Boss 战提醒 · {name}",
+      "Explanation": "备团时可以核对候选能力。自动识别使用活动上写明的触发条件。能力只有正文时，可在这里指定触发时机。",
+      "Disabled": "关闭这只怪的提醒",
+      "Automatic": "自动识别活动条件",
+      "Death": "生命值归零",
+      "Bloodied": "陷入浴血",
+      "BloodiedOnce": "首次陷入浴血",
+      "BloodiedAtZero": "陷入浴血，归零也触发",
+      "BloodiedOnceAtZero": "首次陷入浴血，归零也触发",
+      "Ignore": "忽略",
+      "SuggestDeath": "死亡能力候选",
+      "SuggestBloodied": "浴血响应候选",
+      "Save": "保存",
+      "Cancel": "取消"
+    }
+  }
+}

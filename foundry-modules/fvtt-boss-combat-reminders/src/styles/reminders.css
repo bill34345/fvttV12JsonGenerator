@@ -1,0 +1,183 @@
+#fvtt-boss-combat-reminders-window {
+  max-width: calc(100vw - 32px);
+  max-height: min(76vh, 680px);
+}
+#fvtt-boss-combat-reminders-window .window-content {
+  overflow: auto;
+  padding: 10px;
+}
+.boss-reminder-cards {
+  --bcr-ink: var(--color-text-primary, currentColor);
+  --bcr-muted: color-mix(in srgb, var(--bcr-ink) 77%, transparent);
+  --bcr-divider: color-mix(in srgb, var(--bcr-ink) 16%, transparent);
+  display: grid;
+  gap: 10px;
+  color: var(--bcr-ink);
+}
+.boss-reminder-card {
+  --bcr-accent: color-mix(in srgb, var(--bcr-hue) 58%, var(--bcr-ink));
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--bcr-divider);
+  border-radius: 12px;
+}
+.boss-reminder-card[data-kind="legendary"] { --bcr-hue: #bd812f; }
+.boss-reminder-card[data-kind="resistance"] { --bcr-hue: #578bc3; }
+.boss-reminder-card[data-kind="lair"] { --bcr-hue: #408e83; }
+.boss-reminder-card[data-kind="bloodied"] { --bcr-hue: #bc575c; }
+.boss-reminder-card[data-kind="death"] { --bcr-hue: #9682bd; }
+.boss-reminder-heading {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  background: color-mix(in srgb, var(--bcr-hue) 12%, transparent);
+  border-bottom: 1px solid var(--bcr-divider);
+}
+.boss-reminder-cards h2,
+.boss-reminder-cards h3,
+.boss-reminder-cards p { margin: 0; padding: 0; border: 0; text-shadow: none; }
+.boss-reminder-cards h2 {
+  font: 700 16px/1.25 var(--font-primary);
+  color: inherit;
+  overflow-wrap: anywhere;
+}
+.boss-reminder-cards .boss-reminder-timing {
+  margin-top: 2px;
+  color: var(--bcr-muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+.boss-reminder-emblem {
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  width: 34px;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bcr-hue) 20%, transparent);
+  color: var(--bcr-accent);
+  font-size: 15px;
+}
+.boss-reminder-group { padding: 9px 10px 10px; }
+.boss-reminder-group + .boss-reminder-group { border-top: 1px solid var(--bcr-divider); }
+.boss-reminder-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+  min-width: 0;
+}
+.boss-reminder-cards h3 {
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  font: 650 13px/1.3 var(--font-primary);
+  overflow-wrap: anywhere;
+}
+.boss-reminder-portrait,
+.boss-reminder-action-image {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 5px;
+  object-fit: cover;
+  color: var(--bcr-accent);
+  background: color-mix(in srgb, var(--bcr-hue) 14%, transparent);
+  font-size: 13px;
+}
+.boss-reminder-remaining,
+.boss-reminder-cost {
+  flex: none;
+  color: var(--bcr-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.boss-reminder-remaining {
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--bcr-hue) 15%, transparent);
+  font-weight: 600;
+}
+.boss-reminder-cards .boss-reminder-actions {
+  display: grid;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.boss-reminder-cards button {
+  box-shadow: none;
+  text-shadow: none;
+}
+.boss-reminder-cards .boss-reminder-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  height: auto;
+  min-height: 40px;
+  padding: 5px 8px 5px 5px;
+  gap: 8px;
+  background: color-mix(in srgb, var(--bcr-ink) 6%, transparent);
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: inherit;
+  font: 550 13px/1.35 var(--font-primary);
+  text-align: start;
+}
+.boss-reminder-choice {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+.boss-reminder-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 5px;
+}
+.boss-reminder-fact {
+  max-width: 100%;
+  padding: 1px 4px;
+  border: 1px solid var(--bcr-divider);
+  border-radius: 4px;
+  color: var(--bcr-muted);
+  font-size: 11px;
+  font-weight: 450;
+  font-variant-numeric: tabular-nums;
+}
+.boss-reminder-chevron { color: var(--bcr-muted); font-size: 9px; }
+.boss-reminder-cards .boss-reminder-skip {
+  width: auto;
+  min-height: 30px;
+  padding: 3px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--bcr-muted);
+  font: 550 12px/1.3 var(--font-primary);
+  white-space: nowrap;
+}
+.boss-reminder-cards .boss-reminder-action:enabled:hover,
+.boss-reminder-cards .boss-reminder-skip:hover {
+  background: color-mix(in srgb, var(--bcr-hue) 18%, transparent);
+  border-color: color-mix(in srgb, var(--bcr-accent) 55%, transparent);
+  color: var(--bcr-ink);
+}
+.boss-reminder-cards button:focus-visible {
+  outline: 2px solid var(--bcr-accent);
+  outline-offset: 1px;
+}
+.boss-reminder-action:disabled { opacity: .6; }
+.boss-reminder-action[aria-busy="true"] { cursor: progress; }
+
+.boss-reminder-bindings { margin-block: 10px; max-height: 50vh; overflow: auto; }
+.boss-reminder-bindings label { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-block: 4px; }
+.boss-reminder-bindings small { display: block; color: var(--color-text-secondary); }

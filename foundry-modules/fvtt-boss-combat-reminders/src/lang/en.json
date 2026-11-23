@@ -1,0 +1,46 @@
+{
+  "FVTTBossCombatReminders": {
+    "Window": {
+      "Title": "Boss Combat Reminders",
+      "Skip": "Skip",
+      "Failed": "Foundry could not use this activity. Review the action and try again."
+    },
+    "Legendary": {
+      "Title": "Legendary Actions",
+      "Remaining": "{remaining} left",
+      "Cost": "Cost {cost}"
+    },
+    "Resistance": {
+      "Title": "Legendary Resistance",
+      "Remaining": "{remaining} left",
+      "Use": "Use Legendary Resistance"
+    },
+    "Lair": {
+      "Title": "Lair Actions",
+      "Timing": "Round {round} · Initiative 20"
+    },
+    "Health": {
+      "Death": "Death Abilities",
+      "AtZero": "Drops to 0 HP",
+      "Bloodied": "Becomes Bloodied",
+      "View": "View {name}"
+    },
+    "Config": {
+      "Open": "Boss Combat Reminders",
+      "Title": "Boss Combat Reminders · {name}",
+      "Explanation": "Review candidate triggers before combat. Automatic uses explicit activation conditions. Choose a trigger to confirm an ability that only has rules text.",
+      "Disabled": "Disable reminders for this creature",
+      "Automatic": "Automatic (activation data)",
+      "Death": "At 0 HP",
+      "Bloodied": "Becomes Bloodied",
+      "BloodiedOnce": "First time Bloodied",
+      "BloodiedAtZero": "Becomes Bloodied, including at 0 HP",
+      "BloodiedOnceAtZero": "First time Bloodied, including at 0 HP",
+      "Ignore": "Ignore",
+      "SuggestDeath": "Possible death ability",
+      "SuggestBloodied": "Possible Bloodied response",
+      "Save": "Save",
+      "Cancel": "Cancel"
+    }
+  }
+}

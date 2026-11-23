@@ -1,0 +1,47 @@
+{
+  "id": "fvtt-boss-combat-reminders",
+  "title": "Boss 战提醒 Boss Combat Reminders",
+  "description": "Private, clickable GM reminders for native dnd5e combat. / 原生 dnd5e 战斗中的 GM 私密点选提醒。",
+  "version": "0.1.2",
+  "compatibility": {
+    "minimum": "14.370",
+    "maximum": "14.999"
+  },
+  "esmodules": [
+    "scripts/index.js"
+  ],
+  "styles": [
+    {
+      "src": "styles/reminders.css"
+    }
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    },
+    {
+      "lang": "cn",
+      "name": "简体中文",
+      "path": "lang/zh-CN.json"
+    },
+    {
+      "lang": "zh-CN",
+      "name": "简体中文",
+      "path": "lang/zh-CN.json"
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "6.1.1",
+          "maximum": "6.999.999"
+        }
+      }
+    ]
+  }
+}

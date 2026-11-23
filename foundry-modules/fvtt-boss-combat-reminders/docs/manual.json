@@ -1,0 +1,45 @@
+{
+  "id": "fvtt-boss-combat-reminders",
+  "module": "fvtt-boss-combat-reminders",
+  "title": "Boss 战提醒",
+  "category": "play",
+  "keywords": ["Boss","传奇动作","传奇抗力","巢穴动作","浴血","死亡能力"],
+  "summary": "向活动 GM 弹出传奇动作、传奇抗力、巢穴动作、死亡能力和即时浴血响应的可点选卡片。",
+  "when": "推进先攻、处理豁免或伤害时容易漏掉怪物的时机能力。",
+  "requires": [
+    "本地候选目标为 Foundry Core 14.370 和原生 dnd5e 6.1.1。",
+    "活动 GM。参与者在同一个战斗追踪器中。"
+  ],
+  "steps": [
+    {
+      "title": "启用并备团",
+      "text": "在本地测试世界启用 Boss 战提醒。怪物卡顶部菜单的“Boss 战提醒”可关闭该怪提醒，或确认死亡、即时浴血候选。"
+    },
+    {
+      "title": "确认巢穴与时机",
+      "text": "怪物具备巢穴动作时开启原生“在巢穴”。先攻到 20，且该值的普通回合已走完，才进入巢穴提示。"
+    },
+    {
+      "title": "处理提醒",
+      "text": "从 GM 私密弹卡按怪物头像找到相应动作。名称下方显示活动已有的射程、区域、目标和持续时间。传奇动作显示剩余点数和每项消耗。点整行走原生使用流程，标题旁可跳过这张提醒。传奇抗力改判对应的失败豁免。只有说明文字的能力可打开物品查看。"
+    }
+  ],
+  "outputs": [
+    "私密点选弹卡。",
+    "实际使用的原生动作或豁免记录。"
+  ],
+  "limits": [
+    "按能力原文支持死亡与即时浴血时机。仅有正文的候选需要 GM 确认。",
+    "Midi-QOL 是留待验证的可选兼容。本地候选状态以对应运行时验收为准。"
+  ],
+  "commands": [
+    "bun run build:boss-combat-reminders",
+    "bun run test:boss-combat-reminders"
+  ],
+  "sources": [
+    "foundry-modules/fvtt-boss-combat-reminders/README.zh-CN.md"
+  ],
+  "watch": [
+    "foundry-modules/fvtt-boss-combat-reminders/"
+  ]
+}
