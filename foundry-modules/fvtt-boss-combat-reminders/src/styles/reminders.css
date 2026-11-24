@@ -181,3 +181,18 @@
 .boss-reminder-bindings { margin-block: 10px; max-height: 50vh; overflow: auto; }
 .boss-reminder-bindings label { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-block: 4px; }
 .boss-reminder-bindings small { display: block; color: var(--color-text-secondary); }
+
+.boss-reminder-attack-rules {
+  display: grid;
+  gap: 4px;
+  margin-block: 6px;
+  padding: 6px 8px;
+  border-inline-start: 2px solid var(--color-border-highlight, #984964);
+  font-size: var(--font-size-13);
+}
+.boss-reminder-attack-rules[hidden] { display: none; }
+.boss-reminder-attack-rules p { margin: 0; }
+.boss-reminder-attack-rules label { display: flex; align-items: center; gap: 6px; }
+.boss-reminder-attack-targeting { display: block; font-size: var(--font-size-12); white-space: normal; }
+.item-name .boss-reminder-attack-targeting { flex: 1 0 100%; padding-inline-start: 4px; }
+.item-name:has(.boss-reminder-attack-targeting) { flex-wrap: wrap; }

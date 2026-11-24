@@ -36,6 +36,7 @@ export function createRemindersWindow(Application: AppConstructor, tr: (key: str
         const section = document.createElement('section');
         section.className = 'boss-reminder-card';
         section.dataset.kind = card.kind;
+        section.dataset.card = card.id;
         section.setAttribute('aria-label', card.title);
 
         const header = node('header', 'boss-reminder-heading');
@@ -66,6 +67,7 @@ export function createRemindersWindow(Application: AppConstructor, tr: (key: str
             const row = document.createElement('li');
             const button = node('button', 'boss-reminder-action');
             button.type = 'button';
+            button.dataset.choice = choice.id;
             button.disabled = busy;
             const copy = node('span', 'boss-reminder-choice');
             copy.append(node('span', 'boss-reminder-choice-name', choice.label));
@@ -108,7 +110,7 @@ export function createRemindersWindow(Application: AppConstructor, tr: (key: str
   return {
     show(card) {
       const existing = cards.get(card.id);
-      if (!existing) cards.set(card.id, card);
+      if (!existing || (card.persistent && card.kind === 'death')) cards.set(card.id, card);
       else {
         const present = new Set(existing.groups.map(group => group.id));
         existing.groups.push(...card.groups.filter(group => !present.has(group.id)));
@@ -125,9 +127,11 @@ export function createRemindersWindow(Application: AppConstructor, tr: (key: str
       if (!card.groups.length) cards.delete(id);
       void redraw();
     },
-    clear() {
+    clear(preservePersistent = false) {
       if (!cards.size) return;
-      cards.clear();
+      for (const [id, card] of cards) {
+        if (!preservePersistent || !card.persistent) cards.delete(id);
+      }
       void redraw();
     },
   };

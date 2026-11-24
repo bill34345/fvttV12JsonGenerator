@@ -13,8 +13,12 @@ export async function useFromCombatant(
   combat: NativeCombat, combatant: Combatant, activity: NativeActivity, event: Event,
   canvas: NativeSceneCanvas,
   speaker: (data: { scene?: unknown; actor: unknown; token?: unknown }) => unknown,
+  allowIncapacitated = false,
 ): Promise<boolean> {
-  const run = async () => Boolean(await activity.use({ event }, undefined, {
+  const run = async () => Boolean(await activity.use({
+    event,
+    ...(allowIncapacitated ? { midiOptions: { workflowOptions: { allowIncapacitated: true } } } : {}),
+  }, undefined, {
     data: { speaker: speaker({ scene: combat.scene, actor: combatant.actor, token: combatant.token }) },
   }));
 

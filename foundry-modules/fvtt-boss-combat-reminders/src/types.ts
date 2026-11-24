@@ -3,8 +3,12 @@ export const NS = 'FVTTBossCombatReminders';
 
 export interface NativeActivity {
   id: string;
+  uuid?: string;
   name: string;
   canUse: boolean;
+  type?: string;
+  actor?: NativeActor | null;
+  item?: NativeItem;
   activation: { type: string; value?: number | null; condition?: string };
   duration?: { units?: string };
   range?: { units?: string };
@@ -16,14 +20,32 @@ export interface NativeActivity {
   consumption?: { targets?: Array<{ type: string; target?: string }> };
   getUsageToken?(): { id: string } | undefined;
   uses?: { max?: number | null; value?: number | null };
-  use(config: { event: Event }, dialog?: object, message?: { data: { speaker: unknown } }): Promise<unknown>;
+  use(config: ActivityUseInput, dialog?: object, message?: NativeActivityMessage): Promise<unknown>;
+  rollDamage?(config: DamageInput, dialog?: object, message?: NativeActivityMessage): Promise<unknown[] | undefined>;
+}
+
+export interface DamageInput { event?: Event; isCritical?: boolean; ability?: string; ammunition?: NativeItem; attackMode?: string }
+export interface ActivityUseInput {
+  event?: Event;
+  subsequentActions?: boolean;
+  consume?: false;
+  create?: false;
+  midiOptions?: { workflowOptions?: { allowIncapacitated?: boolean } };
+}
+export interface NativeActivityMessage {
+  rollMode?: string;
+  create?: boolean;
+  data: { speaker?: unknown; whisper?: string[]; blind?: boolean; system?: { targets?: readonly object[]; origin?: string } };
 }
 
 export interface NativeItem {
   id: string;
+  documentName?: string;
+  uuid?: string;
   name: string;
   img?: string;
   parent?: NativeActor | null;
+  effects?: Iterable<NativeEffect>;
   sheet?: { render(options: { force: boolean }): Promise<unknown> };
   system: {
     activities?: Iterable<NativeActivity>;
@@ -36,13 +58,14 @@ export interface NativeItem {
   setFlag(scope: string, key: string, value: unknown): Promise<unknown>;
 }
 
-export interface HpData { value?: number | null; max?: number | null; effectiveMax?: number }
+export interface HpData { value?: number | null; max?: number | null; effectiveMax?: number; bloodied?: number }
 
 export interface NativeActor {
   documentName?: string;
   uuid: string;
   name: string;
   img?: string;
+  sheet?: { render(options: { force: boolean }): Promise<unknown> };
   system: {
     isNPC?: boolean;
     attributes?: { hp?: HpData };
@@ -57,6 +80,26 @@ export interface NativeActor {
   items: Iterable<NativeItem>;
   getFlag(scope: string, key: string): unknown;
   setFlag(scope: string, key: string, value: unknown): Promise<unknown>;
+  toggleStatusEffect?(status: string, options: { active: boolean; overlay?: boolean }): Promise<unknown>;
+  appliedEffects?: Iterable<NativeEffect>;
+  effects?: Iterable<NativeEffect>;
+  createEmbeddedDocuments?(name: 'ActiveEffect', data: object[]): Promise<NativeEffect[]>;
+  deleteEmbeddedDocuments?(name: 'ActiveEffect', ids: string[]): Promise<NativeEffect[]>;
+}
+
+export interface NativeEffect {
+  id: string;
+  name?: string;
+  origin?: string | null;
+  matchesOrigin?(uuid: string): boolean;
+  active?: boolean;
+  parent?: NativeActor | NativeItem | null;
+  target?: NativeActor | null;
+  statuses?: ReadonlySet<string> | readonly string[];
+  changes?: Iterable<{ key: string; value?: unknown }>;
+  system?: { changes?: Iterable<{ key: string; type?: string; value?: unknown }> };
+  getFlag?(scope: string, key: string): unknown;
+  delete(options?: Record<string, unknown>): Promise<unknown>;
 }
 
 export interface Combatant {
@@ -69,6 +112,7 @@ export interface Combatant {
   token?: { id: string };
   getFlag?(scope: string, key: string): unknown;
   setFlag?(scope: string, key: string, value: unknown): Promise<unknown>;
+  update?(data: { defeated: boolean }): Promise<unknown>;
 }
 
 export interface TurnState {
@@ -120,19 +164,22 @@ export interface ReminderCard {
   title: string;
   timing?: string;
   groups: ReminderGroup[];
+  persistent?: boolean;
 }
 
 export interface RemindersUI {
   show(card: ReminderCard): void;
   remove(id: string): void;
   removeGroup?(id: string, group: string): void;
-  clear(): void;
+  clear(preservePersistent?: boolean): void;
 }
 
 export interface Platform {
   isActiveGM(): boolean;
   combat(): NativeCombat | undefined;
+  automaticBloodied?(): boolean;
   format(key: string, data?: Record<string, string | number>): string;
   message(id: string): NativeSaveMessage | undefined;
-  useActivity(combat: NativeCombat, combatant: Combatant, activity: NativeActivity, event: Event): Promise<boolean>;
+  notify?(message: string): void;
+  useActivity(combat: NativeCombat, combatant: Combatant, activity: NativeActivity, event: Event, options?: { pendingDefeat: boolean }): Promise<boolean>;
 }

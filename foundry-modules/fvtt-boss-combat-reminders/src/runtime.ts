@@ -1,6 +1,10 @@
 import { activityFacts } from './activity-facts.ts';
-import { healthMoment, itemTrigger, matchesMoment } from './health.ts';
-import type { Health, HealthMoment } from './health.ts';
+import { hasBloodiedAttack } from './bloodied-attacks.ts';
+import { atBloodiedThreshold, bloodiedThreshold, crossedBloodiedThreshold, isActorBloodied, markBloodied } from './bloodied-status.ts';
+import { bloodiedAttackClauses } from './bloodied-attack-text.ts';
+import { applyBloodiedFrenzy, frenzyAlreadyApplied } from './bloodied-effect.ts';
+import { itemTrigger } from './health.ts';
+import type { Health, HealthTrigger } from './health.ts';
 import { lairRounds, legendaryReminder } from './opportunities.ts';
 import { MODULE_ID } from './types.ts';
 import type { Choice, Combatant, HpData, NativeActivity, NativeActor, NativeCombat, NativeItem, NativeSaveMessage, Platform, ReminderGroup, RemindersUI, TurnState } from './types.ts';
@@ -12,6 +16,10 @@ export class CombatReminders {
   #resisting = new Set<string>();
   #health = new Map<string, Health>();
   #firstBloodied = new Set<string>();
+  #bloodiedActors = new Set<string>();
+  #revivedIntoBloodied = new Set<string>();
+  #bloodiedTurns = new Set<string>();
+  #attackSummaries = new Set<string>();
   #encounterId = '';
   #lairCards = new Set<string>();
 
@@ -22,16 +30,17 @@ export class CombatReminders {
     const key = turnKey(combat, current);
     if (key === this.#turnKey) return;
     this.#turnKey = key;
-    this.seedHealth(combat);
     this.#turnRevision++;
     this.#offeredSaves.clear();
     this.#lairCards.clear();
-    this.ui.clear();
+    this.ui.clear(true);
+    this.seedHealth(combat);
 
     if (!advanced(previous, current)) return;
     if (previous.combatantId) this.#showLegendary(combat, previous.combatantId, this.#turnRevision);
     const outgoing = previous.combatantId ? combat.combatants.get(previous.combatantId) : undefined;
     const incoming = current.combatantId ? combat.combatants.get(current.combatantId) : undefined;
+    if (incoming) this.#showBloodiedTurn(combat, incoming, key);
     for (const round of lairRounds(previous.round, outgoing?.initiative ?? null, current.round, incoming?.initiative ?? null)) {
       this.#showLair(combat, round, this.#turnRevision);
     }
@@ -53,7 +62,10 @@ export class CombatReminders {
     for (const entry of combat.combatants) {
       const actor = entry.actor;
       const hp = actor && healthOf(actor.system.attributes?.hp);
-      if (actor && hp) this.#health.set(actor.uuid, hp);
+      if (!actor || !hp) continue;
+      const known = this.#health.has(actor.uuid);
+      this.#health.set(actor.uuid, hp);
+      if (!known) this.bloodiedStateChanged(actor, false);
     }
   }
 
@@ -69,24 +81,12 @@ export class CombatReminders {
     if (!after) return;
     this.#health.set(actor.uuid, after);
     if (!this.platform.isActiveGM()) return;
-    if (after.value > 0) for (const entry of entries) this.ui.removeGroup?.('health:death', entry.id);
-    if (after.value > after.max / 2 || after.value === 0) {
-      for (const entry of entries) this.ui.removeGroup?.('health:bloodied', entry.id);
-    }
-
-    const moment = before && healthMoment(before, after);
-    if (!moment || actor.getFlag(MODULE_ID, 'disabled')) return;
-    const revision = this.#turnRevision;
-    const cardKind = moment.zero ? 'death' : 'bloodied';
-    const groups = entries.flatMap(entry =>
-      this.#healthGroup(combat, entry, actor, moment, cardKind, revision));
-    if (groups.length) this.ui.show({
-      id: `health:${cardKind}`,
-      kind: cardKind,
-      title: this.platform.format(cardKind === 'death' ? 'Health.Death' : 'Health.Bloodied'),
-      timing: cardKind === 'death' ? this.platform.format('Health.AtZero') : undefined,
-      groups,
-    });
+    if (actor.getFlag(MODULE_ID, 'disabled')) return;
+    this.#revivedIntoBloodied.delete(actor.uuid);
+    if (before?.value === 0 && this.platform.automaticBloodied?.() !== false
+      && atBloodiedThreshold(after, bloodiedThreshold(actor))) this.#revivedIntoBloodied.add(actor.uuid);
+    this.#bloodiedStatusOpportunity(actor, entries, before, after);
+    this.bloodiedStateChanged(actor, before?.value !== 0);
   }
 
   #enterEncounter(id: string): void {
@@ -94,21 +94,138 @@ export class CombatReminders {
     this.#encounterId = id;
     this.#health.clear();
     this.#firstBloodied.clear();
+    this.#bloodiedActors.clear();
+    this.#revivedIntoBloodied.clear();
+    this.#bloodiedTurns.clear();
+    this.#attackSummaries.clear();
+  }
+
+  bloodiedStateChanged(actor: NativeActor, announceEntry = true): void {
+    const combat = this.platform.combat();
+    if (!this.platform.isActiveGM() || !combat?.started || !actor.system.isNPC || actor.getFlag(MODULE_ID, 'disabled')) return;
+    this.#enterEncounter(combat.id);
+    const entries = [...combat.combatants].filter(entry => entry.actor?.uuid === actor.uuid);
+    if (!entries.length) return;
+    if (!isActorBloodied(actor)) {
+      if (this.#bloodiedActors.delete(actor.uuid)) for (const entry of entries) {
+        for (const id of ['health:bloodied', 'health:bloodied-turn', 'health:bloodied-while', 'health:bloodied-attacks']) {
+          this.ui.removeGroup?.(id, entry.id);
+        }
+      }
+      return;
+    }
+    if (this.#bloodiedActors.has(actor.uuid)) return;
+    this.#bloodiedActors.add(actor.uuid);
+    const revived = this.#revivedIntoBloodied.delete(actor.uuid);
+    if (announceEntry && !revived) this.#showBloodiedEntry(combat, entries, actor);
+    this.#showWhileBloodied(combat, entries[0]!, actor);
+    const items = [...actor.items].filter(item => hasBloodiedAttack(item, actor));
+    for (const entry of entries) {
+      this.ui.removeGroup?.('health:mark-bloodied', entry.id);
+      if (!items.length || this.#attackSummaries.has(entry.id) || entry.getFlag?.(MODULE_ID, 'bloodiedAttacksOffered')) continue;
+      this.#attackSummaries.add(entry.id);
+      void entry.setFlag?.(MODULE_ID, 'bloodiedAttacksOffered', true).catch(console.error);
+      this.ui.show({
+        id: 'health:bloodied-attacks', kind: 'bloodied', persistent: true,
+        title: this.platform.format('Attack.Changed'),
+        groups: [{
+          id: entry.id, label: entry.name, portrait: actor.img,
+          choices: items.map(item => ({
+            id: item.id, label: item.name, image: item.img,
+            facts: [...new Set(bloodiedAttackClauses(item.system.description?.value ?? '', actor.name).map(clause => clause.text))],
+            run: async () => {
+              await item.sheet?.render({ force: true });
+              return true;
+            },
+          })),
+        }],
+      });
+    }
+  }
+
+  #showBloodiedEntry(combat: NativeCombat, entries: Combatant[], actor: NativeActor): void {
+    const groups = entries.flatMap(entry => this.#healthGroup(combat, entry, actor,
+      trigger => trigger.kind === 'bloodied', this.#turnRevision));
+    if (groups.length) this.ui.show({
+      id: 'health:bloodied', kind: 'bloodied', groups, title: this.platform.format('Health.Bloodied'),
+    });
+  }
+
+  #bloodiedStatusOpportunity(actor: NativeActor, entries: Combatant[], before: Health | undefined, after: Health): void {
+    const threshold = bloodiedThreshold(actor);
+    if (!atBloodiedThreshold(after, threshold) || isActorBloodied(actor) || this.platform.automaticBloodied?.() !== false) {
+      for (const entry of entries) this.ui.removeGroup?.('health:mark-bloodied', entry.id);
+      return;
+    }
+    if (!crossedBloodiedThreshold(before, after, threshold)) return;
+    this.ui.show({
+      id: 'health:mark-bloodied', kind: 'bloodied', persistent: true,
+      title: this.platform.format('Attack.MarkTitle'),
+      groups: entries.map(entry => ({
+        id: entry.id, label: entry.name, portrait: actor.img,
+        choices: [{
+          id: 'mark-bloodied', label: this.platform.format('Attack.Mark'),
+          facts: [this.platform.format('Attack.MarkThreshold', { threshold })],
+          run: async () => {
+            if (!this.platform.isActiveGM() || this.platform.automaticBloodied?.() !== false) return false;
+            const current = this.platform.combat()?.combatants.get(entry.id)?.actor;
+            if (!current) return false;
+            const marked = await markBloodied(current, 'confirmed', this.platform.format('Attack.ConfirmedEffect'));
+            if (marked) this.bloodiedStateChanged(current);
+            return marked;
+          },
+        }],
+      })),
+    });
+  }
+
+  #showBloodiedTurn(combat: NativeCombat, entry: Combatant, key: string): void {
+    const actor = entry.actor;
+    if (!actor?.system.isNPC || !isActorBloodied(actor)
+      || (entry.isDefeated ?? entry.defeated) || actor.getFlag(MODULE_ID, 'disabled')) return;
+    if (this.#bloodiedTurns.has(key)) return;
+    this.#bloodiedTurns.add(key);
+    const groups = this.#healthGroup(combat, entry, actor, trigger => trigger.kind === 'bloodied-turn', this.#turnRevision);
+    if (groups.length) this.ui.show({
+      id: 'health:bloodied-turn',
+      kind: 'bloodied',
+      title: this.platform.format('Health.BloodiedTurn'),
+      groups,
+    });
+  }
+
+  #showWhileBloodied(combat: NativeCombat, entry: Combatant, actor: NativeActor): void {
+    const groups = this.#healthGroup(combat, entry, actor, trigger => trigger.kind === 'bloodied-while', this.#turnRevision);
+    if (!groups.length) return;
+    this.ui.show({
+      id: 'health:bloodied-while',
+      kind: 'bloodied',
+      title: this.platform.format('Health.BloodiedWhile'),
+      persistent: true,
+      groups,
+    });
   }
 
   #healthGroup(
     combat: NativeCombat, entry: Combatant, actor: NativeActor,
-    moment: HealthMoment, kind: 'death' | 'bloodied', revision: number,
+    matches: (trigger: HealthTrigger) => boolean, revision: number,
   ): ReminderGroup[] {
     const persisted = entry.getFlag?.(MODULE_ID, 'firstBloodied');
     const seen = new Set<string>(Array.isArray(persisted) ? persisted : []);
     let persist = false;
     const choices = [...actor.items].flatMap(item => {
       const activities = [...(item.system.activities ?? [])];
+      let shownPassive = false;
       const set: (NativeActivity | undefined)[] = activities.length ? activities : [undefined];
       return set.flatMap<Choice>(activity => {
-        const trigger = itemTrigger(item, activity);
-        if (!trigger || !matchesMoment(trigger, moment)) return [];
+        const trigger = itemTrigger(item, activity, actor.name);
+        if (!trigger || !matches(trigger)) return [];
+        if (trigger.kind === 'bloodied-while') {
+          if (!trigger.advantage && hasBloodiedAttack(item, actor)) return [];
+          if (shownPassive) return [];
+          shownPassive = true;
+          return this.#passiveChoice(actor, item, trigger);
+        }
         const key = activity ? `${item.id}.${activity.id}` : item.id;
         const onceKey = `${entry.id}:${key}`;
         if (trigger.once && (seen.has(key) || this.#firstBloodied.has(onceKey))) return [];
@@ -118,13 +235,17 @@ export class CombatReminders {
           persist = true;
         }
 
+        const facts = [...(activity ? activityFacts(activity) : [])];
+        if (trigger.split) facts.push(this.platform.format('Health.SplitRequirements'));
         if (!activity || !available(item, activity)) return [{
           id: key,
           label: this.platform.format('Health.View', { name: activity?.name ?? item.name }),
           image: item.img,
-          facts: activity && activityFacts(activity),
+          facts,
           run: async () => {
-            if (revision === this.#turnRevision && this.platform.isActiveGM()) await item.sheet?.render({ force: true });
+            if (revision === this.#turnRevision && this.platform.isActiveGM() && isActorBloodied(actor)) {
+              await item.sheet?.render({ force: true });
+            }
             return false;
           },
         }];
@@ -133,8 +254,8 @@ export class CombatReminders {
           id: key,
           label: activities.length === 1 ? item.name : `${item.name} · ${activity.name}`,
           image: item.img,
-          facts: activityFacts(activity),
-          run: (event: Event) => this.#useHealth(combat, entry.id, item.id, activity.id, kind, revision, event),
+          facts,
+          run: (event: Event) => this.#useHealth(combat, entry.id, item.id, activity.id, trigger.kind, revision, event),
         }];
       });
     });
@@ -142,23 +263,38 @@ export class CombatReminders {
     return choices.length ? [{ id: entry.id, label: entry.name, portrait: actor.img, choices }] : [];
   }
 
+  #passiveChoice(actor: NativeActor, item: NativeItem, trigger: HealthTrigger): Choice[] {
+    if (trigger.advantage && frenzyAlreadyApplied(actor, item)) return [];
+    return [{
+      id: trigger.advantage ? `apply-bloodied-frenzy:${item.id}` : item.id,
+      label: this.platform.format(trigger.advantage ? 'Health.ApplyFrenzy' : 'Health.View', { name: item.name }),
+      image: item.img,
+      facts: trigger.advantage ? [this.platform.format('Health.FrenzyAdvantage')] : [],
+      run: async () => {
+        if (!this.platform.isActiveGM() || !isActorBloodied(actor)) return false;
+        if (trigger.advantage) return applyBloodiedFrenzy(actor, item);
+        await item.sheet?.render({ force: true });
+        return true;
+      },
+    }];
+  }
+
   async #useHealth(
     combat: NativeCombat, combatantId: string, itemId: string, activityId: string,
-    kind: 'death' | 'bloodied', revision: number, event: Event,
+    expected: HealthTrigger['kind'], revision: number, event: Event,
   ): Promise<boolean> {
     if (!this.platform.isActiveGM() || this.platform.combat()?.id !== combat.id
       || revision !== this.#turnRevision) return false;
     const entry = combat.combatants.get(combatantId);
     const actor = entry?.actor;
     if (!entry || !actor || actor.getFlag(MODULE_ID, 'disabled')) return false;
-    const hp = healthOf(actor.system.attributes?.hp);
-    if (!hp || (kind === 'death' ? hp.value !== 0 : hp.value <= 0 || hp.value > hp.max / 2)) return false;
+    if (!isActorBloodied(actor)) return false;
     const item = [...actor.items].find(candidate => candidate.id === itemId);
     if (!item) return false;
     const activity = [...(item.system.activities ?? [])].find(action => action.id === activityId);
     if (!activity || !available(item, activity)) return false;
-    const trigger = itemTrigger(item, activity);
-    if (!trigger || (kind === 'bloodied' ? trigger.kind !== kind : trigger.kind !== 'death' && !trigger.atZero)) return false;
+    const trigger = itemTrigger(item, activity, actor.name);
+    if (trigger?.kind !== expected) return false;
     return this.platform.useActivity(combat, entry, activity, event);
   }
 

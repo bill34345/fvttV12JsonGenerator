@@ -120,9 +120,9 @@
     "note": "核对原有地形效果入口与主版本准入，玩法证明按已验效果保存。"
   },
   "fvtt-boss-combat-reminders": {
-    "fingerprint": "148759cdf7980a20adaf4fc1a38e1d15e0dbc9ecb368574101df227b3c7ed936",
-    "reviewedOn": "2026-11-23",
-    "note": "已核对 0.1.2 原生活动摘要显示和处理步骤"
+    "fingerprint": "9941653567058c220cf8be8cd126f799933f5b63c825aeecf2d6f276a0b509d8",
+    "reviewedOn": "2026-11-24",
+    "note": "已核对四类浴血共用标记、直接归零的例外、狂热撤除和临时测试夹具更新。"
   },
   "fvtt-blood-hunter-2024": {
     "fingerprint": "31f41db6f70f0c4c03f9509c00ff84ac88ea8642f5a6bb86717541067ff5a88b",
